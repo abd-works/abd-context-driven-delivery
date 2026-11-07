@@ -4,7 +4,7 @@ import { RuleView } from './report-rule-view'
 
 export function ReportPanelHeadView({ panel }: { panel: ReportPanel }) {
   const { page } = useBoard()
-  const title = panel.fidelity ? (page.board.practiceOf(panel.fidelity)?.name ?? panel.fidelity) : panel.ticket.name
+  const title = panel.progress ? (page.board.practiceNamed(panel.progress.practice)?.name ?? panel.progress.slug) : panel.ticket.name
   return (
     <div className="panel-words">
       <div className="panel-kind">
@@ -58,7 +58,7 @@ export function ReportPanelBodyView({ panel }: { panel: ReportPanel }) {
         </button>
       ) : null}
       {panel.report.rules.map(rule => (
-        <RuleView key={`${rule.fidelity}/${rule.name}`} panel={panel} rule={rule} isOff={isOff} />
+        <RuleView key={`${rule.fidelity.slug}/${rule.rule.slug}`} panel={panel} rule={rule} isOff={isOff} />
       ))}
     </div>
   )

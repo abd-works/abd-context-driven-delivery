@@ -5,8 +5,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
+from harness.guidance.guidance import REPORT_DATE_FORMAT
+
+HANDOFF_FORMAT_FILE = Path(__file__).parent / "HANDOFF-FORMAT.md"
 _HANDOFF_FILES = "handoff-*.md"
-_HANDOFF_STAMP = "%Y%m%dT%H%M%S"
 
 
 class Handoffs:
@@ -25,6 +27,6 @@ class Handoffs:
     def write(self, document: str) -> Path:
         """Write document as a new handoff, creating the session folder when it is not there yet."""
         self._folder.mkdir(parents=True, exist_ok=True)
-        path = self._folder / f"handoff-{datetime.now(timezone.utc).strftime(_HANDOFF_STAMP)}.md"
+        path = self._folder / f"handoff-{datetime.now(timezone.utc).strftime(REPORT_DATE_FORMAT)}.md"
         path.write_text(document, encoding="utf-8")
         return path.resolve()

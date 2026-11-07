@@ -24,7 +24,6 @@ from harness.agent_tools.agent_tools import (
     instructions,
     AgentToolValidationError,
     CallNamesNoProject,
-    RecipeLineFailed,
     AgentToolSet,
     InstallDestination,
     ToolSetCollection,
@@ -35,6 +34,7 @@ from harness.agent_tools.agent_tools import (
 from harness.hooks.hooks import hook
 from harness.mcp.mcp_server import mcp
 from harness.agent_tools.agent_tools import AgentInstructions, ToolSetCollectionMark
+from harness.agent_tools.recipe import RecipeLineFailed, RecipePlaceholders
 from cdd_guidance.actions._examples.car_story.car_story import CarStory
 from harness.agent_tools._examples.super_delegation.super_delegation_demo import (
     EmptySuperChild,
@@ -43,9 +43,9 @@ from harness.agent_tools._examples.super_delegation.super_delegation_demo import
     SuperBase,
 )
 from cdd_guidance.practices.agent_bdd.yaml_fence import load_fenced
-from harness.agent_tools.agent_tools import AgentToolSet, agent_tool as _tool, tool_subject, tools, instructions
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference, agent_tool as _tool, tool_subject, tools, instructions
 
-Car = AgentToolSet._load("cdd_guidance.practices._examples.car.car:Car")
+Car = ToolsetReference("cdd_guidance.practices._examples.car.car:Car").toolset_class
 
 
 class CarInstance:
@@ -249,30 +249,19 @@ with description("an action"):
     with context("that has instructions with templating"):
         with context("with templated placeholders for a parameter"):
             with it("should put argument values into those instructions where {{param}} appears"):
-                rendered = AgentInstructions.substitute_template(
-                    "Go to {{destination}}",
-                    {"destination": "town"},
-                    {"destination"},
-                )
+                rendered = RecipePlaceholders({"destination": "town"}, {"destination"}).filled("Go to {{destination}}")
                 expect(rendered).to(equal("Go to town"))
 
         with context("with templated placeholders for an instance value"):
             with it("should put instance values into those instructions where {{self.attr}} appears"):
                 car = Car(make="Dodge", model="Charger", year=1969, personality="General Lee")
-                rendered = AgentInstructions.substitute_template(
-                    "Drive the {{self.make}}",
-                    {},
-                    set(),
-                    instance=car,
-                )
+                rendered = RecipePlaceholders({}, set(), car).filled("Drive the {{self.make}}")
                 expect(rendered).to(equal("Drive the Dodge"))
 
         with context("with {} single-brace placeholders"):
             with it("should leave single-brace {Placeholder} text unchanged"):
-                rendered = AgentInstructions.substitute_template(
-                    "Fill {Placeholder} then go {{destination}}",
-                    {"destination": "town"},
-                    {"destination"},
+                rendered = RecipePlaceholders({"destination": "town"}, {"destination"}).filled(
+                    "Fill {Placeholder} then go {{destination}}"
                 )
                 expect(rendered).to(equal("Fill {Placeholder} then go town"))
 
@@ -280,7 +269,7 @@ with description("an action"):
             with it("should fail expand/run"):
                 raised = False
                 try:
-                    AgentInstructions.substitute_template("Go to {{destination}}", {}, {"destination"})
+                    RecipePlaceholders({}, {"destination"}).filled("Go to {{destination}}")
                 except ValueError as error:
                     raised = True
                     expect("destination" in str(error)).to(be_true)

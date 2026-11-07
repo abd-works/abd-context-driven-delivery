@@ -35,7 +35,7 @@ class ScreenExample:
         self.screen = Screen(screen_name, 0)
         ux_map.append_screen(self.screen)
         for name in _STORIES[:shown]:
-            self.screen.attach_story_name(name)
+            self.screen.show_story(name)
 
     def violations(self, rule) -> list[str]:
         return rule.check(self.screen, RuleCheckContext(self.graph.practice("ux"), None))

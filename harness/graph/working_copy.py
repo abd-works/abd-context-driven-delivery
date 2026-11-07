@@ -1,50 +1,54 @@
-"""Load a working copy into the graph through the practices and pattern overlays registered with it.
+"""WorkingCopy. The folder a graph loads, read through the practices and pattern overlays registered with the graph.
 
-Each practice reads its own nodes (see ``graph_practice.py``); the graph reads them in the order their dependencies
-need, links them once all are read, adds the applied overlays' nodes, and then runs every practice's rules.
+Each practice reads its own nodes (see ``graph_practice.py``); the working copy reads them in the order their
+dependencies need, links them once all are read, adds the applied overlays' nodes, and then runs every practice's rules.
 """
 
 from __future__ import annotations
 
 from harness.graph.graph import EdgeType, Graph, edge_order
 from harness.graph.graph_practice import GraphPractices
-from harness.graph.rules import attach_rules
-from harness.graph.schema_rules import active_overlay_patterns
+from harness.graph.rules import PracticeChecks
+from harness.graph.schema_rules import PracticeSchema
 
 _LOADED = ["nodes", "edges", "rules"]
 
 
-def fill_working_copy(graph: Graph) -> None:
-    if graph._folder is None:
-        return
-    practices = GraphPractices.in_reading_order(list(graph.practices))
-    for graph_practice in practices:
-        practice = graph.practice(graph_practice.name)
-        practice.node_types.update(graph_practice.node_types)
-        graph_practice.read(practice)
-        practice.loaded = list(_LOADED)
-    for graph_practice in practices:
-        graph_practice.link(graph)
-    patterns = active_overlay_patterns(tuple(graph.overlays))
-    for pattern in patterns:
-        GraphPractices.overlay(pattern).read(graph)
-    _offer_overlay_types(graph, patterns)
-    for practice in graph.practices.values():
-        attach_rules(practice)
-        practice.loaded = list(_LOADED)
+class WorkingCopy:
+    """The working copy one graph loads from its folder."""
 
+    def __init__(self, graph: Graph) -> None:
+        self.graph = graph
 
-def _offer_overlay_types(graph: Graph, patterns: tuple[str, ...]) -> None:
-    """Offer the overlay schema's node and connector types in the filter lists before rules run."""
-    from harness.graph.schema_edges import overlay_edge_display, relationship_kinds_for_patterns
-    from harness.graph.schema_rules import schema_semantic_types_for_practice
+    def fill(self) -> None:
+        """Read every practice the graph holds, link them, add the overlays' nodes, and run every practice's rules."""
+        if self.graph.loaded_folder is None:
+            return
+        practices = GraphPractices.in_reading_order(list(self.graph.practices))
+        for graph_practice in practices:
+            practice = self.graph.practice(graph_practice.name)
+            practice.node_types.update(graph_practice.node_types)
+            graph_practice.read(practice)
+            practice.loaded = list(_LOADED)
+        for graph_practice in practices:
+            graph_practice.link(self.graph)
+        for pattern in self.graph.overlay_patterns:
+            GraphPractices.overlay(pattern).read(self.graph)
+        self._offer_overlay_types()
+        for practice in self.graph.practices.values():
+            PracticeChecks(practice).run()
+            practice.loaded = list(_LOADED)
 
-    if not patterns:
-        return
-    edge_kinds = relationship_kinds_for_patterns(patterns)
-    for name, practice in graph.practices.items():
-        practice.node_types.update(schema_semantic_types_for_practice(name, patterns))
-        for kind in edge_kinds.get(name, ()):
-            if kind not in practice.edge_types:
+    def _offer_overlay_types(self) -> None:
+        """Offer the overlay schemas' node and relationship types in the filter lists before rules run."""
+        patterns = self.graph.overlay_patterns
+        if not patterns:
+            return
+        overlays = [GraphPractices.overlay(pattern) for pattern in patterns]
+        for name, practice in self.graph.practices.items():
+            schema = PracticeSchema.load(name, patterns)
+            practice.node_types.update(schema.types)
+            for kind in schema.overlay_relationship_kinds - set(practice.edge_types):
+                display = "direct" if any(overlay.display_of(kind) == "direct" for overlay in overlays) else "relationship"
                 # A kind no edge was recorded under is listed after the ones the tree shows.
-                practice.edge_types[kind] = EdgeType(kind, edge_order(kind, "relationship"), overlay_edge_display(kind))
+                practice.edge_types[kind] = EdgeType(kind, edge_order(kind, "relationship"), display)

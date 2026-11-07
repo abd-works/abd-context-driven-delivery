@@ -32,7 +32,7 @@ def _open_session(root: Path, name: str = "my-session") -> Path:
 def _save_current(root: Path, name: str) -> None:
     sessions = root / ".sessions"
     sessions.mkdir(parents=True, exist_ok=True)
-    (sessions / "session.json").write_text(json.dumps({"current": name}), encoding="utf-8")
+    (sessions / "session.json").write_text(json.dumps({"session": name}), encoding="utf-8")
 
 
 with description("a session's handoff tools"):
@@ -44,9 +44,9 @@ with description("a session's handoff tools"):
         tools = AgentToolSet.instantiate(Session).tools
         expect(tools["handoff_session"].kind).to(equal("instructions"))
 
-    with it("should call write_handoff when running the handoff_session instructions"):
+    with it("should read the handoff format, then call write_handoff, when running the handoff_session instructions"):
         tools = AgentToolSet.instantiate(Session).tools["handoff_session"].tools
-        expect(tools).to(equal(["write_handoff"]))
+        expect(tools).to(equal(["read_handoff_format", "write_handoff"]))
 
 
 with description("a session writing a handoff"):

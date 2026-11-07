@@ -19,5 +19,5 @@ with description("a commit returned by an MCP tool"):
             "sha": "abc123",
             "subject": "Fix it",
             "message": "Fix it\nTicket: pet-visits",
-            "data": {"Ticket": "pet-visits"},
+            "trailers": {"Ticket": "pet-visits"},
         }))

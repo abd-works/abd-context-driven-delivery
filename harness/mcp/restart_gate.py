@@ -11,7 +11,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 
-class RestartGate:
+class _RestartGate:
     """Let any number of tool calls run at once, or one restart alone."""
 
     def __init__(self) -> None:

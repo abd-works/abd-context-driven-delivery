@@ -7,4 +7,4 @@
 
 ## Constraint
 
-*PromptLog* ships turned off with `@Hooks(disabled=True)`; remove that mark to turn the audit on. Its hooks only read the payload and never change what is sent. A *PromptLog* made with a log file writes there; otherwise `PROMPT_LOG_PATH` overrides where the log is written.
+*PromptLog* ships turned off with `@Hooks(disabled=True)`; remove that mark to turn the audit on. Its hooks only read the payload and never change what is sent. A *PromptLog* made with a log file writes there; otherwise it writes to `prompt-log.txt` in the logs folder of the session open in the event's project. Each event's entry is a *PromptLogEntry*, and each file an event names is a *LoggedFile*, which says what kind of guidance it is.

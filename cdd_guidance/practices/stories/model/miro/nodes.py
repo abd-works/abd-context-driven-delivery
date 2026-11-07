@@ -157,17 +157,7 @@ class MiroStory(DiagramStory):
 
     @property
     def y(self) -> int:
-        story_map = self._owning_map()
-        depth = story_map.max_sub_epic_depth if isinstance(story_map, DiagramStoryModel) else 0
-        deepest_bottom = (
-            DiagramEpic.row_y
-            + depth * (DiagramEpic.bar_height + DiagramEpic.depth_gap)
-            + DiagramEpic.bar_height
-        )
-        return max(
-            self.row_y,
-            deepest_bottom + self.actor_height + self.actor_gap + self.pad_below_sub_epic,
-        )
+        return self._layout().story_y
 
     def shapes(self, parent_id: str) -> List[dict]:
         parent = self.parent
@@ -224,7 +214,7 @@ class MiroEpic(DiagramEpic):
     @property
     def y(self) -> int:
         if isinstance(self.parent, Epic):
-            return self.nested_row_y + self.depth * (self.bar_height + self.depth_gap)
+            return self._layout().sub_epic_y(self.depth)
         return self.row_y
 
     @property

@@ -16,7 +16,7 @@ from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_origin, get_type_hints
 
-from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, OnSubject
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, OnSubject, ToolSubjectLoader
 from harness.name.name import Name
 from harness.installation.destination import DataField, Edits, Identity, Installation, LanguageAdapter, SourceFile
 
@@ -519,7 +519,7 @@ class TypeScriptToolset:
         """The arguments that name the object, its loader's: a loader with none, like the current board's, names none."""
         if not OnSubject.marks(tool.callable):
             return ()
-        load = AgentToolSet.tool_subject_of(type(self._toolset))
+        load = ToolSubjectLoader(type(self._toolset)).loader
         return tuple(inspect.signature(load).parameters)
 
     def result_of(self, tool: AgentTool) -> str:

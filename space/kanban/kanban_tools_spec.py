@@ -59,7 +59,7 @@ def _violation_counts(ticket: dict) -> dict[str, int]:
 
 def _next_action(ticket: dict) -> str:
     """The action Run next sends on a ticket's JSON: its next fidelity's next action, none when it has no next fidelity."""
-    return ticket["next"]["next_action"] if ticket["next"] else ""
+    return progress_in(ticket, ticket["next"]["slug"])["next_action"] if ticket["next"] else ""
 STAGE_COLUMNS = {"Discovery": 1, "Specification": 2, "Implementation": 3}
 
 DISCOVERY_DONE = [
@@ -388,11 +388,11 @@ with description("the board tools") as self:
 
             with it("should count the violations of each rule"):
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
-                expect((report["rules"][0]["name"], report["rules"][0]["count"])).to(equal(("domain-nouns-only", 2)))
+                expect((report["rules"][0]["rule"]["slug"], report["rules"][0]["count"])).to(equal(("domain-nouns-only", 2)))
 
             with it("should leave out the violations of other practices in the saved graph"):
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
-                expect([rule["name"] for rule in report["rules"]]).to(equal(["domain-nouns-only"]))
+                expect([rule["rule"]["slug"] for rule in report["rules"]]).to(equal(["domain-nouns-only"]))
 
             with it("should say the report has its saved graph"):
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
@@ -418,7 +418,7 @@ with description("the board tools") as self:
 
             with it("should show the text of each rule under its name"):
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="stories-story-map")
-                expect(report["rules"][0]["description"]).to(contain("verb"))
+                expect(report["rules"][0]["rule"]["body"]).to(contain("verb"))
 
             # The agent that ran validate adds its judgment to the report, and the report panel must agree with it.
             with context("with the judgment of the agent that validated it"):
@@ -450,7 +450,7 @@ with description("the board tools") as self:
 
                 with it("should list each rule the judgment fails after the graph's rules, once each"):
                     report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="stories-story-map")
-                    expect([rule["name"] for rule in report["rules"]]).to(equal(["verb-noun-format", "do-not-invent-requirements", "story-name-captures-system-mechanic"]))
+                    expect([rule["rule"]["slug"] for rule in report["rules"]]).to(equal(["verb-noun-format", "do-not-invent-requirements", "story-name-captures-system-mechanic"]))
 
                 with it("should count each finding of a judged rule in every judged file"):
                     report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="stories-story-map")
@@ -675,7 +675,7 @@ with description("the board tools") as self:
         # (S) Person --> Open Help
         with context("that opens help on a fidelity"):
             with before.each:
-                self.help = self.project.call("board.help", slug="stories-story-map")
+                self.help = self.project.call("fidelity-progress.help", ticket="pet-visits", fidelity="stories-story-map")
 
             with it("should show the fidelity's rules"):
                 expect([rule["slug"] for rule in self.help["rules"]]).to(contain("verb-noun-format"))
@@ -688,7 +688,7 @@ with description("the board tools") as self:
 
         with context("that opens help on a practice"):
             with before.each:
-                self.help = self.project.call("board.help", slug="stories")
+                self.help = self.project.call("board.help", practice="stories")
 
             with it("should show the practice's shared rules"):
                 expect([rule["slug"] for rule in self.help["rules"]]).to(contain("do-not-invent-requirements"))
@@ -696,14 +696,14 @@ with description("the board tools") as self:
             with it("should name no fidelity on a practice's help"):
                 expect((self.help["fidelity"], self.help["stage"])).to(equal((None, None)))
 
-        with context("that opens help on a slug no practice or fidelity of the board goes by"):
-            with it("should refuse it, naming the slug"):
+        with context("that opens help on a practice the board does not have"):
+            with it("should refuse it, naming the practice"):
                 try:
-                    self.project.call("board.help", slug="stories-horoscope")
+                    self.project.call("board.help", practice="astrology")
                     refused = None
                 except PracticeNotFoundError as error:
                     refused = (error.practice, error.within)
-                expect(refused).to(equal(("stories-horoscope", "the board")))
+                expect(refused).to(equal(("astrology", "the board")))
 
         # (E) Review
         # (S) Person --> List Ticket Files
@@ -864,7 +864,7 @@ with description("the board tools") as self:
 
             with it("should write the review to the session log"):
                 log = (self.project.sessions / "sign-up" / "session.log").read_text(encoding="utf-8")
-                expect(log.splitlines()[-1]).to(match(r" review Stories story_map$"))
+                expect(log.splitlines()[-1]).to(match(r" review stories story_map$"))
 
         with context("that a person names a fidelity the ticket does not have"):
             with it("should refuse it, naming the fidelity"):
@@ -936,11 +936,11 @@ with description("the board tools") as self:
 
         with it("should list the rules of every fidelity with violations"):
             rules = self.project.call("ticket.violations", ticket="sign-up")["rules"]
-            expect([rule["fidelity"] for rule in rules]).to(equal(["stories-story-map", "clean-engineering-modules"]))
+            expect([rule["fidelity"]["slug"] for rule in rules]).to(equal(["stories-story-map", "clean-engineering-modules"]))
 
         with it("should name the fidelity a rule was broken on"):
             report = self.project.call("fidelity-progress.report", ticket="sign-up", fidelity="stories-story-map")
-            expect(report["rules"][0]["fidelity"]).to(equal("stories-story-map"))
+            expect(report["rules"][0]["fidelity"]["slug"]).to(equal("stories-story-map"))
 
         with it("should give the folder of the reports for every fidelity"):
             expect(self.project.call("ticket.violations", ticket="sign-up")["path"]).to(equal(".sessions/sign-up/validation-reports"))
@@ -961,7 +961,7 @@ with description("the board tools") as self:
 
         with it("should list only the rules of the fidelities in the ticket's stage"):
             rules = self.project.call("ticket.violations", ticket="sign-up")["rules"]
-            expect({rule["fidelity"] for rule in rules}).to(equal({"stories-story-map"}))
+            expect({rule["fidelity"]["slug"] for rule in rules}).to(equal({"stories-story-map"}))
 
     with context("with violations two fidelities of one practice share in their saved graphs"):
         with before.each:
@@ -978,7 +978,7 @@ with description("the board tools") as self:
 
         with it("should list a rule two fidelities share once"):
             rules = self.project.call("ticket.violations", ticket="sign-up")["rules"]
-            expect([rule["fidelity"] for rule in rules]).to(equal(["stories-story-map"]))
+            expect([rule["fidelity"]["slug"] for rule in rules]).to(equal(["stories-story-map"]))
 
     # A saved graph holds the hits of every rule of its practice, but a report answers for its own fidelity.
     with context("with a scenarios report whose saved graph holds every stories rule's hits"):
@@ -992,7 +992,7 @@ with description("the board tools") as self:
 
         with it("should list the scenarios rules and the story map rules"):
             report = self.project.call("fidelity-progress.report", ticket="sign-up", fidelity="stories-scenarios")
-            expect([rule["name"] for rule in report["rules"]]).to(equal(["verb-noun-format", "plain-english-gwt-steps"]))
+            expect([rule["rule"]["slug"] for rule in report["rules"]]).to(equal(["verb-noun-format", "plain-english-gwt-steps"]))
 
         with it("should count the same rules on the ticket"):
             expect(_violation_counts(self.project.ticket_json("sign-up"))).to(equal({"stories-scenarios": 2}))
@@ -1004,7 +1004,7 @@ with description("the board tools") as self:
 
             with it("should leave the story map rules to the story map report"):
                 report = self.project.call("fidelity-progress.report", ticket="sign-up", fidelity="stories-scenarios")
-                expect([rule["name"] for rule in report["rules"]]).to(equal(["plain-english-gwt-steps"]))
+                expect([rule["rule"]["slug"] for rule in report["rules"]]).to(equal(["plain-english-gwt-steps"]))
 
             with it("should count only the rules the scenarios report answers for"):
                 expect(_violation_counts(self.project.ticket_json("sign-up"))).to(equal({"stories-scenarios": 1}))
@@ -1148,10 +1148,10 @@ with description("the board tools") as self:
             expect(names).to(equal({
                 "board.show", "board.help", "board.folders", "stage.set_wip_limit",
                 "ticket.create", "ticket.activate", "ticket.branch", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
-                "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files",
+                "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
-                "session.choose_workpath", "session.files", "session.folder_files", "session.read_file",
-                "session.write_handoff", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
+                "session.choose_workpath", "session.folder_files", "session.read_file",
+                "session.write_handoff", "session.read_handoff_format", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
                 "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root",
                 "backlog-item.create", "backlog-item.start",
             }))
@@ -1179,8 +1179,12 @@ with description("the board tools") as self:
             story_map = self.project.column("Discovery")["work_required"][0]
             expect(story_map).to(equal({"slug": "stories-story-map", "name": "story_map", "outputs": {"markdown": ".context/story-map.md", "drawio": ".context/story-map.drawio"}, "default_format": "markdown"}))
 
-        with it("should send a Ticket's next fidelity as its FidelityProgress"):
-            expect(set(self.project.ticket_json("pet-visits")["next"])).to(equal(set(self.project.ticket_json("pet-visits")["progress"][0])))
+        with it("should send a Ticket's next fidelity by its ticket and slug alone, since its progress sends it"):
+            expect(self.project.ticket_json("pet-visits")["next"]).to(equal({"ticket": "pet-visits", "slug": "stories-story-map"}))
+
+        with it("should send the board's active ticket by its name alone, since its column sends it"):
+            self.project.call("ticket.activate", ticket="pet-visits")
+            expect(self.project.call("board.show")["active"]).to(equal({"name": "pet-visits"}))
 
         with it("should return exactly the fields a Branch marks as its data"):
             subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)

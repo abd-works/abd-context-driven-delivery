@@ -126,7 +126,7 @@ class CddTools:
 
 
 class BoardTools:
-    """The board tools: board.show, and every other board tool by its name, such as board.help(slug=...)."""
+    """The board tools: board.show, and every other board tool by its name, such as board.help(practice=...)."""
 
     def __init__(self, cdd: CddTools) -> None:
         self._cdd = cdd

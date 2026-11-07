@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, ClassVar, Protocol
 
@@ -32,7 +33,10 @@ class ToolCall:
     """One call of a tool as its caller made it: the arguments it sent, the folder of the project the calling chat
     works on, and that chat. One cdd server answers every chat, so a tool reads its project, its chat, and the session
     open there from its own call; read from whatever the process worked on last, a call from one chat would act on
-    another chat's project. A call that names no project, such as one a spec makes in process, works in no session."""
+    another chat's project. A call that names no project, such as one a spec makes in process, works in no session.
+
+    A call the cdd server answers also names the tool it calls, by its published name, and the MCP host answering it,
+    which a diagnostics tool probes; a call made in process names neither."""
 
     _sessions: ClassVar[SessionOpener | None] = None
 
@@ -41,18 +45,32 @@ class ToolCall:
         arguments: dict[str, Any] | None = None,
         project: Path | str | None = None,
         chat: ChatPointer | None = None,
+        *,
+        tool: str = "",
+        mcp_host: Any = None,
     ) -> None:
         self.arguments = dict(arguments or {})
         self.project = Path(project).resolve() if project is not None else None
         self.chat = chat
+        self.tool = tool
+        self.mcp_host = mcp_host
         self._session: Any = None
 
     @classmethod
-    def sent(cls, arguments: dict[str, Any] | None, project: Path | str | None) -> ToolCall:
+    def sent(
+        cls, arguments: dict[str, Any] | None, project: Path | str | None, *, tool: str = "", mcp_host: Any = None
+    ) -> ToolCall:
         """A call as a chat sent it: the chat its arguments name is taken out of them and kept as the call's chat, so
         the tool is handed only its own arguments."""
         chat, remaining = ChatPointer.taken_from(arguments)
-        return cls(remaining, project, chat)
+        return cls(remaining, project, chat, tool=tool, mcp_host=mcp_host)
+
+    @property
+    def identity(self) -> str:
+        """Two calls with the same identity ask for the same work: the same tool, on the same project, with the same
+        arguments, from the same chat."""
+        chat = self.chat.id if self.chat is not None else ""
+        return json.dumps([self.tool, str(self.project), self.arguments, chat], sort_keys=True, default=str)
 
     @classmethod
     def open_sessions_with(cls, opener: SessionOpener) -> None:

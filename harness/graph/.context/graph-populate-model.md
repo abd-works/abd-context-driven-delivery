@@ -525,8 +525,8 @@ examples        direct        Scenario -> Example
 `link` (when Clean Engineering is loaded):
 
 ```
-invokes         relationship  step -> Operation it calls          (and Operation -> step, invokedBy, on Clean Engineering)
-uses            relationship  Epic -> Module of those operations  (usedBy back on Clean Engineering)
+invokes         relationship  step -> Operation it calls          (Operation -> step as invokedBy on Clean Engineering)
+uses            relationship  Epic -> Module of those operations  (the top-level epic whose tree holds the step; usedBy back on Clean Engineering)
 observes        relationship  phased step -> Example its body names
 demonstrates    grouped       Example -> OoadClass it names       (demonstrates, demonstratedThrough back on Clean Engineering)
 retrievedUsing  relationship  Example -> Property it reads        (and back on Clean Engineering)
@@ -534,7 +534,7 @@ retrievedUsing  relationship  Example -> Property it reads        (and back on C
 
 ## Rules
 
-`cdd_guidance.practices.stories.rules`, plus `model.typescript.rules` and `model.javascript.rules`.
+`cdd_guidance.practices.stories.rules`.
 
 # BDD
 

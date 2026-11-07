@@ -4,15 +4,11 @@
 # harness: in_chat
 # session: practices/agent_bdd/.agent_bdd_sessions/generate-action-example.json
 """Example — helpers: read → run_toolset → follow → ai_judge."""
-from cdd_guidance.practices.agent_bdd import (
-    agent,
-    ai_judge,
+from cdd_guidance.practices.agent_bdd.agent_block import agent
+from cdd_guidance.practices.agent_bdd.spec_helpers import (
     expect_instructions_contain,
     expect_ok_action,
-    follow_instructions,
-    read_workspace,
     repo_root_from,
-    run_toolset,
     sessions_dir,
 )
 from mamba import context, description, it
@@ -23,14 +19,14 @@ _SESSIONS = sessions_dir(__file__)
 with description("a CarChronicle generator"):
     with context("with agent and generate action"):
         with it("drives generate then judges the log"):
-            with agent(_REPO_ROOT, _SESSIONS / "generate-action-example.json"):
-                read_workspace(
-                    "practices/create_context_tool/_examples/car_chronicle/car_chronicle.py"
+            with agent(_REPO_ROOT, _SESSIONS / "generate-action-example.json") as run:
+                run.read_workspace(
+                    "cdd_guidance/builders/create_practice_guidance/_examples/car_chronicle/car_chronicle.py"
                 )
 
-                response = run_toolset(
+                response = run.run_toolset(
                     toolset=(
-                        "practices.create_context_tool._examples."
+                        "cdd_guidance.builders.create_practice_guidance._examples."
                         "car_chronicle.car_chronicle:CarChronicle"
                     ),
                     action="generate",
@@ -39,12 +35,12 @@ with description("a CarChronicle generator"):
                 expect_ok_action(response, "generate")
                 expect_instructions_contain(response, "use-driving-voice")
 
-                chronicle = follow_instructions(
+                chronicle = run.instruct(
                     "Follow the generate instructions and write a driving chronicle entry "
                     "for one trip from the Hazzard County garage to the courthouse.",
                     timeout_seconds=300,
                 ).text
-                ai_judge(
+                run.ai_judge(
                     chronicle,
                     "The chronicle is a first-person driving log with a named route, "
                     "mileage or odometer numbers, and the car's personality.",

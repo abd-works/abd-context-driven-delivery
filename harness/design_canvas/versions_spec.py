@@ -93,9 +93,9 @@ with description("a release's canvas") as self:
         self.folder.cleanup()
 
     with it("should keep its versions in the release's session folder"):
-        expect(CanvasVersions.in_release(WorkState(self.repo).release_folder()).root).to(equal(self.repo.resolve() / ".sessions" / "small-change" / "design-canvas"))
+        expect(CanvasVersions.in_release(WorkState(self.repo).sessions_folder / WorkState(self.repo).session).root).to(equal(self.repo.resolve() / ".sessions" / "small-change" / "design-canvas"))
 
     with it("should open a named release's canvas"):
-        expect(CanvasVersions.in_release(WorkState(self.repo).release_folder("design-system-setup")).root).to(
+        expect(CanvasVersions.in_release(WorkState(self.repo).sessions_folder / "design-system-setup").root).to(
             equal(self.repo.resolve() / ".sessions" / "design-system-setup" / "design-canvas")
         )

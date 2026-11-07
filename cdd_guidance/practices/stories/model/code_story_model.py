@@ -37,6 +37,7 @@ from cdd_guidance.practices.stories.model.story_model import (
     StepType,
     Story,
     StoryModel,
+    StoryType,
 )
 
 
@@ -111,17 +112,6 @@ class CodeScenario(Scenario, CodeStoryNode):
         for name in example_names or []:
             if re.search(rf"\b{re.escape(name)}\b", body):
                 self.examples[name] = name
-
-    @staticmethod
-    def background_lines(scenario, prefix: str) -> List[str]:
-        lines: List[str] = []
-        for background in scenario.backgrounds:
-            lines.append(f"{prefix}background: {background.name}")
-            for step in background.steps:
-                lines.append(f"{prefix}background-step: {step.keyword} | {step.text}")
-                for extra in step.ands:
-                    lines.append(f"{prefix}background-step: {extra.keyword} | {extra.text}")
-        return lines
 
     def _take_background_comments(self, body: str) -> str:
         kept: List[str] = []
@@ -226,6 +216,17 @@ class CodeStory(Story, CodeStoryNode):
 
     # A story test names its tier after the story; the tier is not part of the story's name.
     _TIER_NEUTRAL = re.compile(r"\s*\(tier-neutral\)\.?\s*$")
+    # What opens a line of the comment that describes a story in this language.
+    description_mark = r"\*\s*"
+
+    def read_description(self, content: str) -> None:
+        """The actor and kind the story's comment names; a story whose comment names no kind is a user story."""
+        actor = re.search(rf"{self.description_mark}Actor:\s*(.+)", content, re.MULTILINE)
+        if actor:
+            self.actors = [actor.group(1).strip()]
+        kind = re.search(rf"{self.description_mark}Kind:\s*(user|system|technical)\b", content, re.MULTILINE)
+        if kind:
+            self.story_type = StoryType.from_mark(kind.group(1))
 
     @classmethod
     def name_read(cls, found: Optional[str], story_slug: str) -> str:
@@ -372,7 +373,7 @@ class CodeStoryModel(StoryModel):
             raise CodeStoryModelError("previous must be the path-to-content map of the story tree already on disk")
         model = self._copy_of(canonical)
         if previous:
-            model.adopt_code(self.parse(previous))
+            model._adopt_code(self.parse(previous))
         return model.save()
 
     def _copy_of(self, canonical: StoryModel) -> "CodeStoryModel":
@@ -418,10 +419,10 @@ class CodeStoryModel(StoryModel):
         opened = len(lines)
         for scenario in story.scenarios:
             gap = [] if len(lines) == opened else self.scenario_gap
-            lines = joined(lines, self.scenario_lines(scenario, self.scenario_indent), self._is_as_read(scenario), gap)
+            lines = joined(lines, self._scenario_lines(scenario, self.scenario_indent), self._is_as_read(scenario), gap)
         return lines
 
-    def scenario_lines(self, scenario: Scenario, indent: str) -> List[str]:
+    def _scenario_lines(self, scenario: Scenario, indent: str) -> List[str]:
         """Read in this language and unchanged: every line as read. Otherwise the generic spelling, bodies kept."""
         written = as_read(scenario.written, self.language, scenario.code_key)
         if written is not None:
@@ -431,7 +432,7 @@ class CodeStoryModel(StoryModel):
         for background in scenario.backgrounds:
             lines.extend(self.scenario_background_lines(background, inner))
         if scenario.examples:
-            lines.extend(self.examples_lines(scenario, inner))
+            lines.extend(self._examples_lines(scenario, inner))
         for clause in self.clauses(scenario.steps):
             lines.extend(self.step_lines(clause, inner))
         if not scenario.steps and scenario.setup.is_empty:
@@ -441,16 +442,16 @@ class CodeStoryModel(StoryModel):
     def step_lines(self, clause: "StepClause", indent: str) -> List[str]:
         """One step and the steps chained onto it, each with its body. A body not written yet gets the placeholder."""
         step, verb, continuations = clause
-        lines = [self.step_open(verb, step, indent)] + self.body_lines(step, indent + self.language.indent)
+        lines = [self.step_open(verb, step, indent)] + self._body_lines(step, indent + self.language.indent)
         lines.extend(line for line in [self.step_close(indent)] if line is not None)
         for extra in [*step.ands, *continuations]:
             lines.append(self.and_open(extra, indent))
-            lines.extend(self.body_lines(extra, self.and_body_indent(indent)))
+            lines.extend(self._body_lines(extra, self.and_body_indent(indent)))
             lines.extend(line for line in [self.and_close(indent)] if line is not None)
         lines[-1] += self.statement_end
         return lines
 
-    def body_lines(self, step: Step, indent: str) -> List[str]:
+    def _body_lines(self, step: Step, indent: str) -> List[str]:
         """The step's body; an empty one carries the realization call graph as comments above the placeholder."""
         scaffold: List[str] = []
         if step.body.is_empty and step.call_graph:
@@ -464,6 +465,17 @@ class CodeStoryModel(StoryModel):
 
     def verb(self, step: Step) -> str:
         return step.keyword.lower()
+
+    def description_lines(self, story: Story, prefix: str) -> List[str]:
+        """The story's actor and, when it is not a user story, its kind, as the lines of its comment; the outline
+        notations name a kind the same way, only when it is not user."""
+        lines: List[str] = []
+        actor = (story.actors[0] if story.actors else "").strip()
+        if actor:
+            lines.append(f"{prefix}Actor: {actor}")
+        if story.story_type is not StoryType.USER:
+            lines.append(f"{prefix}Kind: {StoryType(story.story_type).value}")
+        return lines
 
     def read_code(self, content: str, stories: List[Story], path: str) -> Optional[WrittenBlock]:
         """Give each story, background, scenario, and step the code it was written with; return the file's own code.
@@ -501,7 +513,7 @@ class CodeStoryModel(StoryModel):
     def scenario_background_lines(self, background: Background, indent: str) -> List[str]:
         return []
 
-    def examples_lines(self, scenario: Scenario, indent: str) -> List[str]:
+    def _examples_lines(self, scenario: Scenario, indent: str) -> List[str]:
         return [f"{indent}{self.language.comment('examples: ' + ', '.join(scenario.examples))}"]
 
     def step_open(self, verb: str, step: Step, indent: str) -> str:
@@ -563,7 +575,7 @@ class CodeStoryModel(StoryModel):
     def _is_as_read(self, node: Union[Story, Scenario]) -> bool:
         return as_read(node.written, self.language, node.code_key) is not None
 
-    def adopt_code(self, kept: "CodeStoryModel") -> None:
+    def _adopt_code(self, kept: "CodeStoryModel") -> None:
         """Each epic, story, background, scenario, and step without code in this language takes kept's code
         for the node with the same name."""
         if self.language is None:

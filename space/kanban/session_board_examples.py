@@ -156,7 +156,6 @@ SIGN_UP_HELD = SessionSeed("sign-up", "Sign up", (f"{STAMP} move Discovery no-ch
 # The scenarios' own session log lines.
 GENERATED_STORY_MAP_IN_TWO_FOLDERS = f"{STAMP} generate /work, /work/docs stories story_map markdown stories no-chat"
 GENERATED_UX_MOCKUP = f"{STAMP} generate /work/ux ux mockup html ux no-chat"
-LOGGED_BEFORE_MOVES_WERE_NAMED_MOVE = (f"{STAMP} pull Specification no-chat", f"{STAMP} done Specification no-chat")
 
 # The scenarios' own idea files.
 GIFT_CARDS_HELD_FILE = BacklogFileSeed("gift-cards.md", "Gift cards", "Sell them at the till.")

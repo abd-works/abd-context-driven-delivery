@@ -10,7 +10,7 @@ from harness.agent_tools.agent_tools import tool_subject
 from harness.installation.destination import data_field, language_adapter
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
-from space.repo.git import Git, RepoConnectError
+from harness.process.git import Git, RepoConnectError
 from space.repo.latest_release import LatestRelease
 from space.repo.worktree import Worktree, Worktrees
 from space.work_state import WorkState
@@ -49,6 +49,20 @@ class BranchInWorktreeError(RuntimeError):
         )
 
 
+class CommitPathsRequiredError(ValueError):
+    """Raised when a commit is asked for with no path to commit, which would otherwise commit nothing or everything."""
+
+    def __init__(self) -> None:
+        super().__init__("commit requires at least one path")
+
+
+class CommitMessageRequiredError(ValueError):
+    """Raised when push-commit is called with an empty message, since git refuses a commit without one."""
+
+    def __init__(self) -> None:
+        super().__init__("commit message is required")
+
+
 class NoOpenWorktreeError(RuntimeError):
     """Raised when close-worktree runs with no worktree saved in ``.sessions/session.json``."""
 
@@ -82,7 +96,7 @@ class Commit:
 
     @property
     @data_field
-    def data(self) -> dict[str, str]:
+    def trailers(self) -> dict[str, str]:
         """The trailers: each ``Key: value`` line after the subject."""
         trailers = [line.split(": ", 1) for line in (self.message or "").splitlines()[1:] if ": " in line]
         return {key.strip(): value.strip() for key, value in trailers}
@@ -99,7 +113,7 @@ class Repo:
 
     @classmethod
     @tool_subject
-    def current(cls, project: Path) -> Repo:
+    def of_project(cls, project: Path) -> Repo:
         """The clone holding project, the project a tool call names. One cdd server answers every chat, so each call is
         handed its project and acts on that project's clone, never on a clone named by an earlier call."""
         return cls(cls(project).checkout_folder)
@@ -192,8 +206,7 @@ class Repo:
             args.extend(["--", self._relative(path)])
         return any(not self._is_runtime_log(line) for line in self.git.run(*args).splitlines() if line.strip())
 
-    @staticmethod
-    def _is_runtime_log(porcelain_line: str) -> bool:
+    def _is_runtime_log(self, porcelain_line: str) -> bool:
         raw = porcelain_line[3:] if len(porcelain_line) >= 3 else porcelain_line
         name = raw.split(" -> ")[-1].replace("\\", "/").strip()
         return Path(name).name == _RUNTIME_LOG
@@ -202,7 +215,7 @@ class Repo:
         """Commit the changes under paths with message, and with untracked also the new files there; the sha of HEAD
         afterwards, which is unchanged when there was nothing to commit. A merge in progress commits everything."""
         if not paths:
-            raise ValueError("commit requires at least one path")
+            raise CommitPathsRequiredError()
         add_flag = "-A" if untracked else "-u"
         merging = (self.root / ".git" / "MERGE_HEAD").is_file()
         named = [] if merging else ["--", *(self._relative(path) for path in paths)]
@@ -216,13 +229,12 @@ class Repo:
         self.git.run("push", "-u", "origin", self.current_branch)
 
     def needs_push(self) -> bool:
-        """True when the current branch has no upstream yet or is ahead of it."""
-        if not self.has_ref(f"refs/remotes/origin/{self.current_branch}"):
+        """True when origin has no copy of the current branch yet or the branch is ahead of it. A git failure is raised,
+        not read as nothing to push, so a close never reports a branch pushed that was not."""
+        branch = self.current_branch
+        if not self.has_ref(f"refs/remotes/origin/{branch}"):
             return True
-        try:
-            return int(self.git.run("rev-list", "@{upstream}..HEAD", "--count") or "0") > 0
-        except RepoConnectError:
-            return False
+        return int(self.git.run("rev-list", f"origin/{branch}..HEAD", "--count") or "0") > 0
 
     def fetch(self) -> None:
         self.git.run("fetch", "origin")
@@ -230,11 +242,11 @@ class Repo:
     def pull(self) -> None:
         self.git.run("pull", "--ff-only")
 
-    def merge_from(self, other: str, message: str = "") -> str:
-        """Merge *other* into the current branch without checking *other* out."""
-        if not other or other == self.current_branch:
+    def merge_from(self, other: Branch, message: str = "") -> str:
+        """Merge other into the current branch without checking other out."""
+        if other.name == self.current_branch:
             return self.current_commit
-        self.git.run("merge", other, *(["-m", message] if message else ["--no-edit"]))
+        self.git.run("merge", other.name, *(["-m", message] if message else ["--no-edit"]))
         return self.current_commit
 
     def _relative(self, path: str | Path) -> str:
@@ -293,6 +305,7 @@ class Repo:
         ``name`` as ``branch`` in ``.sessions/session.json``. Does not touch worktrees or sessions.
         """
         branch = self._named_or_saved_branch(name).switch_to()
+        self._work_state.branch_name = branch.name
         return f"on branch {branch.name!r} at {branch.repo.root}"
 
     @agent_tool
@@ -310,6 +323,7 @@ class Repo:
         branch = self._named_or_saved_branch(name)
         release = LatestRelease(branch.repo, self._work_state.session or branch.name)
         branch.close(commit_message)
+        self._work_state.branch_name = branch.repo.default_branch
         pruned = release.keep()
         kept = f"; kept {release.release!r} end-to-end results, removed {', '.join(pruned)}" if pruned else ""
         return f"closed branch {branch.name!r}: merged into {branch.repo.default_branch!r}, pushed, and deleted{kept}"
@@ -326,6 +340,8 @@ class Repo:
         When the worktree cannot be brought up to date with origin, the reply says so and why.
         """
         opened = self._named_or_saved_branch(name).move_to_worktree()
+        self._work_state.branch_name = opened.branch.name
+        self._work_state.worktree_folder = opened.path
         behind = f"; not updated from origin: {opened.sync_failure}" if opened.sync_failure else ""
         return f"worktree for {opened.branch.name!r} at {opened.path}{behind}"
 
@@ -391,7 +407,7 @@ class Repo:
         """Commit the working tree the repo tools act in using ``message`` (subject and optional body)."""
         text = (message or "").strip()
         if not text:
-            raise ValueError("commit message is required")
+            raise CommitMessageRequiredError()
         repository = self._checkout_tools_act_in()
         sha = repository.commit([str(repository.root)], text, untracked=untracked)
         if sync_remote:
@@ -498,12 +514,11 @@ class Branch:
         return self
 
     def switch_to(self) -> Branch:
-        """Check this branch out in its clone after saving the branch being left, and save it as the open branch."""
+        """Check this branch out in its clone after saving the branch being left."""
         repository = self._repo
         if repository.current_branch != self.name:
             repository.branch_named(repository.current_branch).save(f"branch: switch to {self.name}")
             self.check_out()
-        WorkState(repository.root).branch_name = self.name
         return self
 
     def open_in_worktree(self) -> Worktree:
@@ -511,19 +526,15 @@ class Branch:
         return self._repo.worktrees.open(self)
 
     def move_to_worktree(self) -> Worktree:
-        """Move this branch out of the main clone into its sibling worktree and save both as open. The clone goes
-        back to the default branch when it has this one checked out, after saving it."""
+        """Move this branch out of the main clone into its sibling worktree. The clone goes back to the default branch
+        when it has this one checked out, after saving it."""
         repository = self._repo
         if self.is_default:
             raise DefaultBranchError("open a worktree for", repository.default_branch)
         if repository.current_branch == self.name:
             self.save(f"worktree: move {self.name} to its worktree")
             repository.branch_named(repository.default_branch).check_out()
-        opened = self.open_in_worktree()
-        state = WorkState(repository.root)
-        state.branch_name = self.name
-        state.worktree_folder = opened.path
-        return opened
+        return self.open_in_worktree()
 
     def save(self, commit_message: str) -> None:
         """Commit every change on this checked-out branch, then push it when origin is behind.
@@ -542,7 +553,7 @@ class Branch:
         default = repository.default_branch
         repository.branch_named(default).check_out()
         repository.pull()
-        repository.merge_from(self.name, message=f"merge {self.name} into {default}")
+        repository.merge_from(self, message=f"merge {self.name} into {default}")
         repository.push_upstream()
 
     def delete(self) -> None:
@@ -552,8 +563,8 @@ class Branch:
             self._repo.git.run("push", "origin", "--delete", self.name)
 
     def close(self, commit_message: str = "branch: close") -> None:
-        """Save this branch, land it on the default branch, delete it here and on origin, and save the default branch
-        as the open one. Refuses the default branch, and a branch still checked out in a linked worktree."""
+        """Save this branch, land it on the default branch, and delete it here and on origin. Refuses the default
+        branch, and a branch still checked out in a linked worktree."""
         repository = self._repo
         if self.is_default:
             raise DefaultBranchError("close", repository.default_branch)
@@ -564,4 +575,3 @@ class Branch:
         self.save(commit_message)
         self.land_on_default()
         self.delete()
-        WorkState(repository.root).branch_name = repository.default_branch

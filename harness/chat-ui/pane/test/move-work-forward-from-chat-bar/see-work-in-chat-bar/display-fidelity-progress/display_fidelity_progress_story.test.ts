@@ -19,7 +19,7 @@ story('Display Fidelity Progress', CHAT_BAR, () => {
       scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'stories-scenarios': DONE, 'ux-mockup': GENERATED }))
     })
     when('the Chat Bar draws checkout-flow')
-    // ChatBarView -> FidelityView($, fidelity) for each FidelityClient; FidelityClient.status <- TicketData.progress
+    // ChatBarView -> FidelityView($, fidelity) for each FidelityProgressClient; FidelityProgressClient.word <- FidelityProgressData.state
     then('three dots show in the Stories, UX and Clean Engineering colours, shaded done, in progress and not started as on the board', async ($, on, scene) => {
       expect(buttonKeys(await drawn(scene.ui, 'line')).filter(key => key.startsWith('dot-'))).toEqual(['dot-stories-scenarios', 'dot-ux-mockup', 'dot-clean-engineering-model'])
       await expectMarkColours(scene.ui, { 'dot-stories-scenarios': '#6BCB77FF', 'dot-ux-mockup': '#E8439380', 'dot-clean-engineering-model': '#4FC3F740' })
@@ -31,7 +31,7 @@ story('Display Fidelity Progress', CHAT_BAR, () => {
       scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'clean-engineering-model': { ...VALIDATED, progress: 'violations', violations: 7 } }))
     })
     when('the Chat Bar draws checkout-flow')
-    // FidelityClient.violationCount <- FidelityProgressData.violation_count
+    // FidelityProgressClient.violationCount <- FidelityProgressData.violation_count
     then('the Clean Engineering dot keeps its colour and shows 7 in red', async ($, on, scene) => {
       await expectMarkColours(scene.ui, { 'dot-clean-engineering-model': '#4FC3F7FF' })
       const count = (await drawn(scene.ui, 'fidelity-clean-engineering-model'))?.children?.[1]

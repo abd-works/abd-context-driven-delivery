@@ -14,15 +14,15 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # Acceptance criteria:
 # - Fidelity help shows its overview, guidance, and rules. Observed.
 # - Practice help shows its overview, guidance, and shared rules. Observed.
-# - The Forge link opens the fidelity's or practice's page. Inferred: `FIDELITIES_WITHOUT_PAGE` in `space/kanban/board.py` leaves out fidelities with no page.
+# - The Forge link opens the fidelity's or practice's page, as the catalog generator names it; a fidelity the catalog has no page for links to its practice's page. Observed: `Help.href` reads `CatalogPractice`; kanban_spec 'with help open on a fidelity the catalog has no page for'.
 with story("Open Help"):
     with scenario("Open a fidelity's help"):
         # Evidence: observed: kanban_tools_spec 'that opens help on a fidelity' — 'should show the fidelity's rules', 'should name the stage a fidelity belongs to', 'should link to the fidelity's page on the forge'; story-actions.spec 'should show a fidelity's overview, guidance, rules, and Forge link'.
         with given("billing-report's story_map tile is shown"):
             pass
         with when("the Person opens help on the story_map fidelity"):
-            # Person -> Board.help('stories', 'story_map')
-            # Board <- practice, fidelity, stage Discovery, overview, guidance, rules, href
+            # Person -> FidelityProgress.help()
+            # FidelityProgress <- Help(practice, fidelity, stage Discovery): overview, guidance, rules, href
             pass
         with then("a side panel shows story_map's overview, guidance, and rules such as verb-noun-format"):
             pass
@@ -35,7 +35,7 @@ with story("Open Help"):
         with given("billing-report's [practices](../../../.context/kanban-model.md#practiceguidance) are shown in the details"):
             pass
         with when("the Person opens help on the Stories practice"):
-            # Person -> Board.help('stories', '')
+            # Person -> Board.help('stories')
             pass
         with then("a side panel shows Practice overview and SHARED RULES such as do-not-invent-requirements"):
             pass
@@ -43,12 +43,12 @@ with story("Open Help"):
             pass
         with and_("its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/context-tools/stories.html"):
             pass
-    with scenario("Link a fidelity with no page of its own to its practice's page"):
-        # Evidence: inferred: FIDELITIES_WITHOUT_PAGE in space/kanban/board.py; no spec opens help on ddd-model.
-        with given("the ddd model fidelity has no page on the forge"):
+    with scenario("Link the ddd model fidelity to its own page"):
+        # Evidence: observed: the catalog generator writes cdd_guidance/catalog/fidelities/ddd-model.html; guide-work-through-practices.story.shared.py.
+        with given("the catalog has a page for the ddd model fidelity"):
             pass
         with when("the Person opens help on the ddd model fidelity"):
-            # Person -> Board.help('ddd', 'model')
+            # Person -> FidelityProgress.help()
             pass
-        with then("its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/context-tools/ddd.html"):
+        with then("its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/fidelities/ddd-model.html"):
             pass

@@ -3,15 +3,10 @@ each guidance action with arguments made for the probe."""
 
 from __future__ import annotations
 
-import inspect
-import json
-import os
-import shutil
-import tempfile
-from pathlib import Path
 from typing import Any
 
-from harness.agent_tools.tool_call import ToolCall
+from harness.diagnostics.probe_arguments import ProbeArguments
+from harness.diagnostics.probe_outcome import ProbeOutcome, ProbeSection
 
 # The guidance probed when the caller names none: one practice and one fidelity of another practice.
 GUIDANCE_PROBE = ["stories", "clean-engineering-model"]
@@ -21,28 +16,18 @@ _WRITES_UNDER_SESSION_ROOT = frozenset({"sketch.save_sketch", "grill-context.wri
 
 
 class GuidanceProbe:
-    """A probe of one install, made for its Installer and the guidance slugs that filter what it calls. The probe makes
-    temporary files and folders for the actions it calls, and ``cleanup`` removes them."""
+    """A probe of the guidance one install deployed, made for its Installer and the guidance slugs that filter what it
+    calls. Its arguments make the temporary files and folders the actions it calls need, and remove them after."""
 
     def __init__(self, installer: Any, slugs: list[str]) -> None:
         self.installer = installer
         self.slugs = list(slugs)
-        self._created: list[Path] = []
+        self.arguments = ProbeArguments(installer.repo, self.slugs)
 
     @classmethod
-    def filtered_by(cls, installer: Any, guidance: list[str] | None) -> GuidanceProbe:
+    def from_filter(cls, installer: Any, guidance: list[str] | None) -> GuidanceProbe:
         """The probe for a diagnostics call, which probes ``GUIDANCE_PROBE`` when it names no guidance."""
         return cls(installer, list(guidance or GUIDANCE_PROBE))
-
-    @property
-    def guidance_folder(self) -> str:
-        """The repository's ``cdd_guidance`` folder. Probes pass it as ``paths`` rather than relying on an action's
-        default."""
-        return str(Path(self.installer.repo) / "cdd_guidance")
-
-    @property
-    def repo_root(self) -> str:
-        return str(Path(self.installer.repo))
 
     @property
     def prefixes(self) -> list[str]:
@@ -65,220 +50,63 @@ class GuidanceProbe:
             for prefix in self.prefixes
         )
 
-    @property
-    def content_paths(self) -> list[str]:
-        """The folder of each practice the slugs name, or of the practice whose fidelity they name: explicit ``paths``
-        targets, text-safe. The practices folder when no slug names a practice."""
-        from harness.guidance.practice_catalogue import PracticeCatalogue
-
-        base = Path(self.guidance_folder) / "practices"
-        found: list[str] = []
-        for slug in self.slugs:
-            practice = PracticeCatalogue.practice_named(slug)
-            folder = str(base / practice.key) if practice is not None else ""
-            if folder and folder not in found:
-                found.append(folder)
-        return found or [str(base)]
-
     def instructions(self) -> str:
         """Read the installed practice and fidelity instructions the slugs name, and write the result under
         ``guidance`` in diagnostics.json."""
-        names = self.installer.installed_items("mcp")
-        probes = [self._instructions_of(name) for name in names if self.matches(name)]
-        subsection = probe_subsection("instructions", self.slugs, probes)
-        self.installer.write_diagnostics_section(GUIDANCE_SECTION, {"filter": self.slugs, "instructions": subsection})
-        return f"green\n{subsection['report']}"
+        names = self.installer.diagnostics.installed_items("mcp")
+        section = ProbeSection("instructions", [self._instructions_of(name) for name in names if self.matches(name)], self.slugs)
+        self.installer.diagnostics.write_section(GUIDANCE_SECTION, {"filter": self.slugs, "instructions": section.record})
+        return section.reply
 
     def actions(self) -> str:
         """Call each installed guidance action's MCP operations, and write the result under ``guidance`` in
         diagnostics.json."""
-        published = set(self.installer.installed_items("mcp"))
-        probes: list[dict[str, Any]] = []
+        published = set(self.installer.diagnostics.installed_items("mcp"))
+        outcomes: list[ProbeOutcome] = []
         try:
-            for ref in self.installer.installed_items("toolset"):
+            for ref in self.installer.diagnostics.installed_items("toolset"):
                 if "cdd_guidance.actions." not in ref or "cdd_guidance.actions.improvement." in ref:
                     continue
-                probes.extend(self._action_toolset(ref, published))
+                outcomes.extend(self._action_toolset(ref, published))
         finally:
-            self.cleanup()
-        subsection = probe_subsection("actions", self.slugs, probes)
-        self.installer.write_diagnostics_section(GUIDANCE_SECTION, {"filter": self.slugs, "actions": subsection})
-        return f"green\n{subsection['report']}"
+            self.arguments.cleanup()
+        section = ProbeSection("actions", outcomes, self.slugs)
+        self.installer.diagnostics.write_section(GUIDANCE_SECTION, {"filter": self.slugs, "actions": section.record})
+        return section.reply
 
-    def arguments_for(self, mcp_name: str, member: Any) -> tuple[dict[str, Any], list[str]]:
-        """The arguments to probe an MCP operation with, and the names of the required ones the probe cannot make.
-        Corpus and sketches use explicit ``paths``, never action defaults."""
-        try:
-            signature = inspect.signature(member)
-        except (TypeError, ValueError):
-            return {}, ["callable"]
-        param_names = {
-            name
-            for name, param in signature.parameters.items()
-            if name != "self"
-            and param.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
-        }
-        content_paths = self.content_paths
-        args: dict[str, Any] = {}
-        if "guidance" in param_names:
-            args["guidance"] = self.slugs
+    def _instructions_of(self, mcp_name: str) -> ProbeOutcome:
+        from harness.agent_tools.agent_tools import AgentToolSet
+        from harness.guidance.practice_catalogue import PracticeCatalogue
 
-        if mcp_name == "render.render":
-            args["format"] = "markdown"
-            args["paths"] = content_paths
-            args["content"] = ""
-        elif mcp_name == "document.document":
-            args["paths"] = content_paths
-        elif mcp_name == "partition.verify_segment_completeness":
-            args["segment_path"] = self._temp_segment_file()
-        elif mcp_name in {"partition.index", "partition.partition"}:
-            args["paths"] = content_paths
-            if "context" in param_names:
-                args.setdefault("context", "")
-            if "mode" in param_names:
-                args.setdefault("mode", "index_only")
-        elif mcp_name == "grill-context.explore_context_files":
-            args["folder"] = self.repo_root
-        elif mcp_name == "grill-context.read_context_file":
-            args["path"] = self._sample_guidance_file()
-        elif mcp_name == "grill-context.write_grill_answer":
-            args["heading"] = "diagnostic-probe"
-            args["body"] = "probe"
-        elif mcp_name == "sketch.save_sketch":
-            args["paths"] = content_paths
-            if "content" in param_names:
-                args.setdefault("content", "")
-        elif "paths" in param_names and mcp_name.startswith("sketch."):
-            args["paths"] = content_paths
-
-        missing = [name for name in self._required_parameters(member) if name not in args]
-        return args, missing
-
-    def work_session(self) -> Any:
-        """The main session of a new temp project, for probing operations that write under the session's root, so a
-        probe never writes into the session being worked on; the probe removes the project, its log included. It is
-        opened the way every tool call opens its session."""
-        return ToolCall(project=self._temp_dir()).session
-
-    def cleanup(self) -> None:
-        """Remove the files and folders the probe made."""
-        for path in reversed(self._created):
-            if path.is_dir():
-                shutil.rmtree(path, ignore_errors=True)
-            elif path.is_file():
-                path.unlink(missing_ok=True)
-        self._created.clear()
-
-    def _instructions_of(self, mcp_name: str) -> dict[str, Any]:
         slug = mcp_name[: -len(".instructions")] if mcp_name.endswith(".instructions") else mcp_name
+        ref = PracticeCatalogue.toolset_ref(slug)
+        if ref is None:
+            return ProbeOutcome.from_refusal(mcp_name, "not a guidance slug")
         try:
-            from harness.agent_tools.agent_tools import AgentToolSet
-            from harness.guidance.practice_catalogue import PracticeCatalogue
-
-            ref = PracticeCatalogue.toolset_ref(slug)
-            if ref is None:
-                return {"mcp": mcp_name, "color": "red", "failure": "not a guidance slug"}
             text = AgentToolSet.instantiate(ref).instructions
-        except Exception as exc:
-            return {"mcp": mcp_name, "color": "red", "failure": failure_text(exc)}
-        return instruction_result(mcp_name, text)
+        except Exception as failure:
+            # A probe reports what failed: the failure is its red outcome.
+            return ProbeOutcome.from_failure(mcp_name, failure)
+        return ProbeOutcome.from_answer(mcp_name, text)
 
-    def _action_toolset(self, ref: str, published: set[str]) -> list[dict[str, Any]]:
+    def _action_toolset(self, ref: str, published: set[str]) -> list[ProbeOutcome]:
         from harness.agent_tools.agent_tools import AgentToolSet
 
         try:
             toolset = AgentToolSet.instantiate(ref)
-        except Exception as exc:
-            return [{"toolset": ref, "color": "red", "failure": failure_text(exc)}]
-        return [
-            self._action(toolset, tool)
-            for tool in toolset.tools.values()
-            if tool.install_to_mcp and tool.mcp_name in published
-        ]
+        except Exception as failure:
+            return [ProbeOutcome.from_failure(ref, failure)]
+        return [self._action(toolset, tool) for tool in toolset.tools.values() if tool.install_to_mcp and tool.mcp_name in published]
 
-    def _action(self, toolset: Any, tool: Any) -> dict[str, Any]:
+    def _action(self, toolset: Any, tool: Any) -> ProbeOutcome:
         if tool.mcp_name in _WRITES_UNDER_SESSION_ROOT:
-            toolset = type(toolset)(session=self.work_session())
+            toolset = type(toolset)(session=self.arguments.work_session())
         member = getattr(toolset, tool.name)
-        arguments, missing = self.arguments_for(tool.mcp_name, member)
+        arguments, missing = self.arguments.for_operation(tool.mcp_name, member)
         if missing:
-            return {"mcp": tool.mcp_name, "color": "red", "failure": "needs " + ", ".join(missing)}
+            return ProbeOutcome.from_refusal(tool.mcp_name, "needs " + ", ".join(missing))
         try:
-            if tool.kind != "tool":
-                result = tool.invoke(arguments)
-            elif arguments:
-                result = member(**arguments)
-            else:
-                result = member()
-        except Exception as exc:
-            return {"mcp": tool.mcp_name, "color": "red", "failure": failure_text(exc)}
-        item = instruction_result(tool.mcp_name, result)
-        if arguments.get("paths"):
-            item["paths"] = arguments["paths"]
-        return item
-
-    def _temp_dir(self) -> str:
-        path = Path(tempfile.mkdtemp(prefix="cdd-guidance-probe-"))
-        self._created.append(path)
-        return str(path)
-
-    def _temp_segment_file(self) -> str:
-        handle, name = tempfile.mkstemp(suffix="-segment.md", prefix="cdd-guidance-probe-")
-        os.write(handle, b"### diagnostic-probe\n\nprobe body for completeness check.\n")
-        os.close(handle)
-        path = Path(name)
-        self._created.append(path)
-        return str(path)
-
-    def _sample_guidance_file(self) -> str:
-        candidate = Path(self.guidance_folder) / "practices" / "bdd" / "bdd.md"
-        if candidate.is_file():
-            return str(candidate)
-        for path in sorted(Path(self.guidance_folder).rglob("*.md")):
-            if path.is_file():
-                return str(path)
-        return self.guidance_folder
-
-    @staticmethod
-    def _required_parameters(member: Any) -> list[str]:
-        try:
-            signature = inspect.signature(member)
-        except (TypeError, ValueError):
-            return []
-        return [
-            name
-            for name, param in signature.parameters.items()
-            if name != "self"
-            and param.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
-            and param.default is inspect.Parameter.empty
-        ]
-
-
-def probe_subsection(kind: str, slugs: list[str], probes: list[dict[str, Any]]) -> dict[str, Any]:
-    """One diagnostics.json subsection: red when nothing was probed or any probe failed."""
-    failed = [item for item in probes if item.get("color") == "red"]
-    color = "red" if not probes or failed else "green"
-    report = (
-        f"{kind}: {len(probes) - len(failed)} returned instructions, "
-        f"{len(failed)} failed, filter {', '.join(slugs)}"
-    )
-    return {"color": color, "report": report, "items": probes}
-
-
-def instruction_result(mcp_name: str, result: Any) -> dict[str, Any]:
-    """The probe record for what an operation returned: green with a preview, or red when it returned nothing."""
-    if isinstance(result, str):
-        text = result.strip()
-    elif result is None:
-        text = ""
-    else:
-        text = json.dumps(result, default=str)
-    if not text:
-        if mcp_name == "sketch.list_sketches":
-            return {"mcp": mcp_name, "color": "green", "chars": 0, "preview": "no sketches"}
-        return {"mcp": mcp_name, "color": "red", "failure": "no instructions", "chars": 0}
-    return {"mcp": mcp_name, "color": "green", "chars": len(text), "preview": text[:180]}
-
-
-def failure_text(exc: BaseException) -> str:
-    return f"{type(exc).__name__}: {exc}"[:400]
+            answer = member(**arguments) if tool.kind == "tool" else tool.invoke(arguments)
+        except Exception as failure:
+            return ProbeOutcome.from_failure(tool.mcp_name, failure)
+        return ProbeOutcome.from_answer(tool.mcp_name, answer).called_on(arguments.get("paths") or [])

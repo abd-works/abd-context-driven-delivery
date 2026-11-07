@@ -1,5 +1,5 @@
 # tools/file_manager
-*FileManager* lists and reads the files under a session's roots — the folder each of its practices works in — so every application shows files the same way instead of each object growing a read operation of its own. A tool call loads it with `FileManager.load(project=...)`, the file manager of the session open in the call's project; `session.file_manager` is the same object.
+*FileManager* lists and reads the files under a session's roots — the folder each of its practices works in — so every application shows files the same way instead of each object growing a read operation of its own. A tool call loads it with `FileManager.load(project=...)`, the file manager of the session open in the call's project; `session.session_files.file_manager` is the same object.
 
 *Folder* is a listed folder and its entries, folders first; *FolderEntry* is one entry with its path and size. *FileEntry* is a declared file with its path from the project and whether it exists. *FileText* is a file's path and its text.
 

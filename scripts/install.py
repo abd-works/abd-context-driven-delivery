@@ -51,7 +51,7 @@ def main() -> int:
     if args.pin_runtime or args.serve_from_checkout:
         print(f"cdd server: {server.pin_server() if args.pin_runtime else server.serve_from_checkout()}")
         if installer.ide == "Claude":
-            print(f"cdd-board: {installer.install_board_plugin()}")
+            print(f"cdd-board: {installer.claude_plugins.install_board()}")
         return 0
     if args.self:
         installer.install_self(replace=not args.no_replace)

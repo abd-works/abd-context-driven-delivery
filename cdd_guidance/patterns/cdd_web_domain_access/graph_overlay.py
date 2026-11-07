@@ -17,10 +17,10 @@ class WebDomainAccessOverlay(GraphOverlay):
         return CddWebDomainAccess()
 
     def read(self, graph: Graph) -> None:
-        if graph._folder is None or "ddd" not in graph.practices:
+        if not graph.folder or "ddd" not in graph.practices:
             return
         ddd = graph.practice("ddd")
-        root = graph._folder
+        root = Path(graph.folder)
         for file in scanned_files(root):
             tier = _access_tier(file, file.read_text(encoding="utf-8", errors="replace"))
             if tier is None:

@@ -38,7 +38,7 @@
                           "stepType": "then"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "storedAccountCredentialsWithToken"
                         }
@@ -81,7 +81,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "storedAccountCredentialsWithToken"
                         }
@@ -121,7 +121,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "storedAccountCredentialsWithToken"
                         },
@@ -150,7 +150,7 @@
                           "stepType": "then"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "storedAccountCredentialsWithToken"
                         },
@@ -223,7 +223,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "enteredValidAccountCredentials"
                         }
@@ -272,7 +272,7 @@
                           "stepType": "then"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "enteredAlreadyRegisteredAccountCredentials"
                         },
@@ -301,7 +301,7 @@
                           "stepType": "then"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "enteredValidAccountCredentials"
                         },
@@ -337,7 +337,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "enteredAlreadyRegisteredAccountCredentials"
                         },
@@ -382,7 +382,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "enteredValidAccountCredentials"
                         }
@@ -450,7 +450,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "storedAccountCredentialsWithToken"
                         }
@@ -467,7 +467,7 @@
                           "stepType": "given"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "enteredValidAccountCredentials"
                         },
@@ -522,7 +522,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "enteredValidAccountCredentials"
                         }
@@ -643,7 +643,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "storedUnconfirmedCognitoUser"
                         },
@@ -701,7 +701,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "enteredValidAccountCredentials"
                     }
@@ -727,7 +727,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "enteredValidAccountCredentials"
                     }
@@ -744,7 +744,7 @@
                       "stepType": "given"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "enteredValidAccountCredentials"
                     }
@@ -812,7 +812,7 @@
                           "stepType": "then"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "storedHeldAvailableNumber"
                         },
@@ -869,7 +869,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "storedHeldAvailableNumber"
                         },
@@ -904,7 +904,7 @@
                           "stepType": "then"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "customerWithCart"
                         },
@@ -964,7 +964,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "storedHeldAvailableNumber"
                         },
@@ -1016,7 +1016,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "storedHeldAvailableNumber"
                         },
@@ -1061,7 +1061,7 @@
                           "stepType": "then"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "storedAvailableNumbers"
                         },
@@ -1107,7 +1107,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "customerWithCart"
                         }
@@ -1150,7 +1150,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "storedHeldAvailableNumber"
                         },
@@ -1213,7 +1213,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "enteredChosenAvailableNumber"
                         },
@@ -1264,7 +1264,7 @@
                           "stepType": "then"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "storedHeldAvailableNumber"
                         },
@@ -1308,7 +1308,7 @@
                           "stepType": "then"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "enteredChosenAvailableNumber"
                         },
@@ -1340,7 +1340,7 @@
                           "stepType": "then"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "enteredChosenAvailableNumber"
                         },
@@ -1403,7 +1403,7 @@
                           "stepType": "then"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "enteredValidPortability"
                         },
@@ -1445,7 +1445,7 @@
                           "stepType": "then"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "enteredValidPortability"
                         },
@@ -1487,7 +1487,7 @@
                           "stepType": "then"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "enteredValidPortability"
                         },
@@ -1540,7 +1540,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "internalTestPlan"
                     },
@@ -1593,7 +1593,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "essentials"
                     },
@@ -1635,7 +1635,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "essentials"
                     },
@@ -1677,7 +1677,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "essentials"
                     },
@@ -1740,7 +1740,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "seedCustomerCart"
                     },
@@ -1789,7 +1789,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerWithCart"
                     },
@@ -1842,7 +1842,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerWithCart"
                     },
@@ -1887,7 +1887,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerWithCart"
                     },
@@ -1929,7 +1929,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerWithCart"
                     },
@@ -1995,7 +1995,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerReadyForPayment"
                     },
@@ -2044,7 +2044,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerReadyForPayment"
                     },
@@ -2090,7 +2090,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerReadyForPayment"
                     },
@@ -2150,7 +2150,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -2217,7 +2217,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerReadyForPayment"
                     },
@@ -2284,7 +2284,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -2342,7 +2342,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "bermudaApplePayCert"
                     },
@@ -2392,7 +2392,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "seedPurchasableCatalog"
                     }
@@ -2425,7 +2425,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "seedPurchasableCatalog"
                     },
@@ -2485,7 +2485,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "seedPurchasableCatalog"
                     },
@@ -2547,7 +2547,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "seedPurchasableCatalog"
                     },
@@ -2589,7 +2589,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "seedPurchasableCatalog"
                     },
@@ -2621,7 +2621,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "seedPurchasableCatalog"
                     },
@@ -2662,7 +2662,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "seedPurchasableCatalog"
                     },
@@ -2727,7 +2727,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -2756,7 +2756,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerReadyToChooseSim"
                     }
@@ -2799,7 +2799,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -2857,7 +2857,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -2886,7 +2886,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerReadyToChooseSim"
                     }
@@ -2929,7 +2929,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -2994,7 +2994,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -3036,7 +3036,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "enteredIccidWithSpaces"
                     },
@@ -3077,7 +3077,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "enteredInvalidIccid"
                     },
@@ -3135,7 +3135,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -3170,7 +3170,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "enteredValidIccid"
                     },
@@ -3199,7 +3199,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "enteredValidIccid"
                     },
@@ -3249,7 +3249,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerWithProfile"
                     }
@@ -3282,7 +3282,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerWithProfile"
                     },
@@ -3350,7 +3350,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "completedInquiryId"
                     },
@@ -3411,7 +3411,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "failedPersonaInquiryResult"
                     },
@@ -3457,7 +3457,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "completedInquiryWithoutDocument"
                     },
@@ -3503,7 +3503,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerWithProfile"
                     }
@@ -3539,7 +3539,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "completedPersonaInquiryResult"
                     },
@@ -3581,7 +3581,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "completedPersonaInquiryResult"
                     },
@@ -3625,7 +3625,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerWithProfile"
                     }
@@ -3658,7 +3658,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerWithProfile"
                     },
@@ -3703,7 +3703,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "completedInquiryId"
                     },
@@ -3751,7 +3751,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "completedInquiryId"
                     },
@@ -3799,7 +3799,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerWithProfile"
                     }
@@ -3849,7 +3849,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -3897,7 +3897,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "completedInquiryId"
                     },
@@ -3939,7 +3939,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerWithProfile"
                     }
@@ -3972,7 +3972,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "completedInquiryId"
                     },
@@ -4054,7 +4054,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -4106,7 +4106,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "anyPlanVoucher"
                     },
@@ -4154,7 +4154,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "ace"
                     },
@@ -4206,7 +4206,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "amountOffVoucher"
                     },
@@ -4278,7 +4278,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -4317,7 +4317,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerReadyToPlaceOrder"
                     }
@@ -4353,7 +4353,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -4406,7 +4406,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -4448,7 +4448,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -4487,7 +4487,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -4523,7 +4523,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerReadyToPlaceOrder"
                     }
@@ -4566,7 +4566,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -4597,7 +4597,7 @@
                       "stepType": "when"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "reloadCart"
                     },
@@ -4643,7 +4643,7 @@
                       "stepType": "then"
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "customerReadyToPlaceOrder"
                     },
@@ -4718,7 +4718,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "enteredAlreadyRegisteredAccountCredentials"
                     },
@@ -4759,7 +4759,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "enteredInvalidEmailFormat"
                     }
@@ -4814,7 +4814,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "enteredAlreadyRegisteredAccountCredentials"
                     },
@@ -4872,7 +4872,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "enteredValidAccountCredentials"
                     },
@@ -4935,7 +4935,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "enteredAlreadyRegisteredAccountCredentials"
                     },
@@ -4998,7 +4998,7 @@
                       ]
                     }
                   ],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "enteredAlreadyRegisteredAccountCredentials"
                     },

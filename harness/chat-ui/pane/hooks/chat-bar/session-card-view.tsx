@@ -36,7 +36,7 @@ function columnsOf(chatBar: ChatBarClient): { fidelities: number[]; stage: numbe
   let stage = column
   for (const entry of chatBar.stages) {
     if (entry.stage === chatBar.shownStage) stage = column
-    column += STAGE_ICON + (entry.status === 'in_progress' || entry.isShown ? OUTLINE : 0) + GAP
+    column += STAGE_ICON + (entry.isCurrent || entry.isShown ? OUTLINE : 0) + GAP
   }
   return { fidelities, stage }
 }
@@ -55,7 +55,7 @@ export function SessionCardView({ Box, Text }: ElementTable, { chatBar, view, he
       <Box flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.border} backgroundColor={BRAND.raised} {...shown}>
         {health.panel}
         {chatBar.fidelities.map((fidelity, index) => (
-          <Box key={`card-${fidelity.fidelity}`} flexDirection="row" gap={1} marginLeft={indentFor(columns.fidelities[index])}>
+          <Box key={`card-${fidelity.slug}`} flexDirection="row" gap={1} marginLeft={indentFor(columns.fidelities[index])}>
             <Text color={fidelity.colour}>{fidelity.mark}</Text>
             <Text color={BRAND.text}>{`${fidelity.name} ${fidelity.word}`}</Text>
             <Text color={BRAND.muted}>{fidelity.folder}</Text>

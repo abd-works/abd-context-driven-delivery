@@ -28,11 +28,13 @@ UxMap
          apply_layout layout_id
               // records the layout name; the caller appends the regions
          append_region region
-         attach_story_name story_name
-         attach_scenario_name scenario_name
-              // Story › Scenario
-         attach_step_name step_name
-              // Story › Scenario › Step — each name becomes a shownOn edge on the graph
+         show_story story
+         show_scenario scenario
+              // the Scenario, or its key Story › Scenario
+         show_step step
+              // the Step, or its key Story › Scenario › Step — each becomes a StoryLink and a shownOn edge on the graph
+         shows
+              // the Stories nodes on the screen's graph it shows
          attach_domain_term term
          domain_concepts
               // vocabulary labels for rules — not object-model JS

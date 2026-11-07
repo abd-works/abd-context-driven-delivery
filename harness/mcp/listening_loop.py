@@ -19,14 +19,21 @@ _ERROR_NETNAME_DELETED = 64
 _ACCEPT_FAILED = "Accept failed on a socket"
 
 
-def caller_hung_up(error: BaseException | None) -> bool:
-    """True when an accept failed only because the caller went away, so the listening socket is still sound."""
-    if isinstance(error, (ConnectionResetError, ConnectionAbortedError)):
-        return True
-    return isinstance(error, OSError) and getattr(error, "winerror", None) == _ERROR_NETNAME_DELETED
+class _AcceptFailure:
+    """What made one accept of a caller's connection fail, if anything did."""
+
+    def __init__(self, error: BaseException | None) -> None:
+        self.error = error
+
+    @property
+    def caller_hung_up(self) -> bool:
+        """True when the accept failed only because the caller went away, so the listening socket is still sound."""
+        if isinstance(self.error, (ConnectionResetError, ConnectionAbortedError)):
+            return True
+        return isinstance(self.error, OSError) and getattr(self.error, "winerror", None) == _ERROR_NETNAME_DELETED
 
 
-class ListeningLoop:
+class _ListeningLoop:
     """Makes the event loop for one uvicorn server. A failed accept that leaves the listening socket closed stops the
     server, so the process exits and frees the port, and the next connect starts a server that accepts again."""
 
@@ -34,7 +41,7 @@ class ListeningLoop:
         self._server = server
 
     def new_event_loop(self) -> asyncio.AbstractEventLoop:
-        loop = asyncio.ProactorEventLoop(AcceptRetryingProactor()) if sys.platform == "win32" else asyncio.SelectorEventLoop()
+        loop = asyncio.ProactorEventLoop(_AcceptRetryingProactor()) if sys.platform == "win32" else asyncio.SelectorEventLoop()
         loop.set_exception_handler(self._on_loop_error)
         return loop
 
@@ -49,7 +56,7 @@ class ListeningLoop:
 if sys.platform == "win32":
     from asyncio.windows_events import IocpProactor
 
-    class AcceptRetryingProactor(IocpProactor):
+    class _AcceptRetryingProactor(IocpProactor):
         """Windows' I/O completion port, accepting the next caller when one hangs up before it is accepted."""
 
         def accept(self, listener: socket.socket) -> asyncio.Future:
@@ -73,7 +80,7 @@ if sys.platform == "win32":
                 accepted.cancel()
                 return
             failure = attempt.exception()
-            if caller_hung_up(failure) and listener.fileno() != -1:
+            if _AcceptFailure(failure).caller_hung_up and listener.fileno() != -1:
                 logger.warning("a caller hung up before its connection was accepted (%s); accepting the next one", failure)
                 self._accept_into(listener, accepted)
                 return

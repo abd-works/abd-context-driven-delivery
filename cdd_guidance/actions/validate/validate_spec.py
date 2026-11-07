@@ -27,7 +27,8 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 )
 import harness.guidance.guidance as guidance_module
 from cdd_guidance.actions.validate.graph_json_reader import violations_from_graph_json_files
-from cdd_guidance.actions.validate.validate import PathsNotFoundError, Validate
+from cdd_guidance.actions.validate.checked_graph import CheckedGraph, PathsNotFoundError
+from cdd_guidance.actions.validate.validate import Validate
 
 
 _SAMPLE = _REPO_ROOT / "harness" / "graph" / "_examples" / "input"
@@ -187,6 +188,21 @@ with description("a validate action on practice guidance") as self:
             expect(report).to(contain("sampleOp"))
             expect(report).not_to(contain("OrderRepository"))
 
+    with context("with a clean-engineering-violations.json left in the session and no saved graph"):
+        with before.each:
+            self.folder = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
+            self.action = Validate(session=_working_in(self.project, self.folder, self.folder))
+            self.session = Path(self.action.session.session_path)
+            self.session.mkdir(parents=True, exist_ok=True)
+            shutil.copy(Path(__file__).with_name("fixtures") / "sample-graph-violations.json", self.session / "clean-engineering-violations.json")
+
+        with after.each:
+            shutil.rmtree(self.folder, ignore_errors=True)
+
+        with it("should not report that file's hits when graph is true"):
+            report = self.action.validate(guidance=["clean-engineering-code"], graph=True)
+            expect(report).not_to(contain("sampleOp"))
+
     with context("with the edited files"):
         with before.each:
             self.folder = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
@@ -316,26 +332,30 @@ with description("a validate action on practice guidance") as self:
                 # checking the markdown, in the same session, leaves out of its report.
                 with context("while another call checks the drawio"):
                     with before.each:
-                        resolve = self.action._resolve_graph_json_paths
+                        self.resolve = CheckedGraph.paths
+                        resolve = self.resolve
                         markdown_call_waiting = threading.Event()
                         drawio_call_done = threading.Event()
 
-                        def resolve_after_the_drawio_call(graph, prefixes):
+                        def resolve_after_the_drawio_call(checked_graph, graph, prefixes, reports):
                             if threading.current_thread() is markdown_call:
                                 markdown_call_waiting.set()
                                 drawio_call_done.wait(60)
-                            return resolve(graph, prefixes)
+                            return resolve(checked_graph, graph, prefixes, reports)
 
                         def check_the_markdown():
                             self.report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
 
-                        self.action._resolve_graph_json_paths = resolve_after_the_drawio_call
+                        CheckedGraph.paths = resolve_after_the_drawio_call
                         markdown_call = threading.Thread(target=check_the_markdown)
                         markdown_call.start()
                         markdown_call_waiting.wait(60)
                         self.action.made_for(self.action.session).validate(guidance="stories-story-map format=drawio")
                         drawio_call_done.set()
                         markdown_call.join()
+
+                    with after.each:
+                        CheckedGraph.paths = self.resolve
 
                     with it("should report the violations in the markdown it checks"):
                         expect(self.report).to(contain("Boarding Stuff"))

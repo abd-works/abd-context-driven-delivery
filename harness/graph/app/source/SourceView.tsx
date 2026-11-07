@@ -50,7 +50,7 @@ function SourceEditor({
   const markStart = violation?.startLine ?? source.start_line;
   const markEnd = violation?.endLine ?? source.end_line;
   const members = source.members ?? [];
-  const owner = members.find((member) => member.id === source.node_id)?.owner ?? '';
+  const owner = members.find((member) => member.node_id === source.node_id)?.owner ?? '';
   const prepared = useMemo(
     () =>
       inlineCallLayout(text, members, owner, {

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import inspect
 from pathlib import Path
 
+from cdd_guidance.actions.project_paths import PathsFromProject
 from harness.guidance_actions import GuidanceArg, GuidanceAction, source_label
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
 from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, Segment, SegmentCompletenessConfig
@@ -15,15 +15,11 @@ from harness.installation.files import Skill
 from harness.mcp.mcp_server import Mcp
 
 @agent_toolset
-class Partition(GuidanceAction):
+class Partition(PathsFromProject, GuidanceAction):
     """Corpus partition: index, segment, completeness.
 
     Slash ``/partition`` runs this action once for each listed guidance, in the session the call works in.
     """
-
-    @property
-    def module_dir(self) -> Path:
-        return Path(inspect.getfile(type(self))).resolve().parent
 
     @Mcp
     @agent_tool
@@ -34,8 +30,9 @@ class Partition(GuidanceAction):
         min_body_chars: int = MIN_ENTRY_BODY_CHARS,
         index_path: str = "",
     ) -> str:
-        """Run named-entry completeness on a ``*-segment.md`` chunk."""
-        path = Path(segment_path)
+        """Run named-entry completeness on a ``*-segment.md`` chunk.
+        segment_path, index_path: from the project's root, or absolute."""
+        path = self._from_project(segment_path)
         if not path.is_file():
             return f"completeness: FAIL\nerror: segment not found: {segment_path}\n"
         segment = self._segment_for(path, expected_names, min_body_chars, index_path)
@@ -76,13 +73,13 @@ class Partition(GuidanceAction):
 
     def _folder(self, out_root: str | None) -> Path:
         """The folder the index and segments go under: out_root when the call names one, else the session's root."""
-        return Path(out_root).resolve() if out_root else self.session.root
+        return self._from_project(out_root) if out_root else self.session.root
 
     def _read_partition_index(
         self, segment_path: Path, index_path: str
     ) -> PartitionIndex | None:
         resolved = (
-            Path(index_path)
+            self._from_project(index_path)
             if index_path.strip()
             else PartitionIndex.resolve_near(segment_path)
         )
@@ -101,7 +98,7 @@ class Partition(GuidanceAction):
         out_root: str | None = None,
         paths: list[str] | str | None = None,
     ) -> str:
-        """Write the partition index for this corpus in the .context folder under out_root, or under the session's root when out_root is omitted. Name every expected segment so completeness can be checked later.
+        """Write the partition index for this corpus in the .context folder under out_root (from the project's root, or absolute), or under the session's root when out_root is omitted. Name every expected segment so completeness can be checked later.
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context.
         context: in-process text. Leave this empty on an MCP call."""
         source = source_label(context, paths)
@@ -110,7 +107,7 @@ class Partition(GuidanceAction):
     @Mcp
     @agent_tool
     def segment(self, out_root: str | None = None) -> str:
-        """Write verbatim source chunks from the index into segment files under out_root, or under the session's root when out_root is omitted. Completeness must use named entries, not length alone."""
+        """Write verbatim source chunks from the index into segment files under out_root (from the project's root, or absolute), or under the session's root when out_root is omitted. Completeness must use named entries, not length alone."""
         return (
             f"Verbatim source chunks written under {self._folder(out_root).as_posix()}/{{artifact}}/.context/ "
             "from {subject}-index.md. "

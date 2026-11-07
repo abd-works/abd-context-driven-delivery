@@ -2150,15 +2150,6 @@ a ticket
       <- Ticket
       it should write the stage it entered to its session log
       ```
-  with a session log written before moves were named move
-    ```
-    // the graph holds no operation this observation calls
-    it should still be in the stage the log names
-    ```
-    ```
-    // the graph holds no operation this observation calls
-    it should still be marked done there
-    ```
   with its stage not done
     ```
     // the graph holds no operation this observation calls
@@ -2773,28 +2764,28 @@ the board tools
       ```
     that opens help on a fidelity
       ```
-      -> Board.help(practice: str, fidelity: str)
+      -> FidelityProgress.help()
       <- dict
       it should show the fidelity's rules
       ```
       ```
-      -> Board.help(practice: str, fidelity: str)
+      -> FidelityProgress.help()
       <- dict
       it should name the stage a fidelity belongs to
       ```
       ```
-      -> Board.help(practice: str, fidelity: str)
+      -> FidelityProgress.help()
       <- dict
       it should link to the fidelity's page on the forge
       ```
     that opens help on a practice
       ```
-      -> Board.help(practice: str, fidelity: str)
+      -> Board.help(practice: str)
       <- dict
       it should show the practice's shared rules
       ```
       ```
-      -> Board.help(practice: str, fidelity: str)
+      -> Board.help(practice: str)
       <- dict
       it should name no fidelity on a practice's help
       ```

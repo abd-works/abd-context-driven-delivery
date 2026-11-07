@@ -2,7 +2,7 @@
 
 Specs stay thin: construct or load a toolset, expand ``instructions[name]`` or
 invoke ``operations[name]``, assert the result. Import from
-``agent_bdd.spec_helpers`` (or re-exports on ``agent_bdd``).
+``cdd_guidance.practices.agent_bdd.spec_helpers``; the steps that need the agent are on the block ``agent(...)`` yields.
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import Any, Mapping, Sequence
 
 from expects import be_true, equal, expect
 
-from cdd_guidance.practices.agent_bdd.agent_bdd_common import RunResponse, invoke_run_request
+from cdd_guidance.practices.agent_bdd.agent_bdd_common import TOOL_RUN_TIMEOUT_SECONDS, RunResponse, invoke_run_request
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -101,7 +101,7 @@ def stage_invoke_commands(repo_root: Path) -> None:
     home.enter()
     server.install()
     try:
-        Installer("Cursor", path=repo_root / ".cursor").install([car, car_story], replace=False)
+        Installer("Cursor", path=repo_root / ".cursor", repo=repo_root_from(__file__, parents=3)).install([car, car_story], replace=False)
     finally:
         server.stop()
         home.leave()
@@ -145,13 +145,14 @@ def build_run_request(
 
 def invoke_toolset(
     *,
+    project: Path,
     toolset: str,
     tool: str | None = None,
     action: str | None = None,
     context: Mapping[str, Any] | None = None,
     arguments: Mapping[str, Any] | None = None,
 ) -> RunResponse:
-    """Invoke one tool or action in-process for specs."""
+    """Invoke one tool or action in-process on project, for specs that run no agent."""
     return invoke_run_request(
         build_run_request(
             toolset=toolset,
@@ -159,7 +160,8 @@ def invoke_toolset(
             action=action,
             context=context,
             arguments=arguments,
-        )
+        ),
+        project,
     )
 
 
@@ -183,9 +185,9 @@ def run_skill(
     repo_root: Path,
     context: Mapping[str, Any] | None = None,
     arguments: Mapping[str, Any] | None = None,
-    timeout_seconds: int = 180,
+    timeout_seconds: int = TOOL_RUN_TIMEOUT_SECONDS,
 ) -> RunResponse:
-    """Invoke a deployed skill path using its fixture run-request mapping."""
+    """Invoke a deployed skill path using its fixture run-request mapping, on repo_root."""
     request = invoke_request_for_path(command, repo_root=repo_root)
     merged = dict(request)
     if context:
@@ -194,35 +196,7 @@ def run_skill(
         merged["context"] = merged_context
     if arguments:
         merged["arguments"] = dict(arguments)
-    return invoke_run_request(merged, timeout_seconds)
-
-
-def run_toolset(
-    *,
-    toolset: str,
-    tool: str | None = None,
-    action: str | None = None,
-    context: Mapping[str, Any] | None = None,
-    arguments: Mapping[str, Any] | None = None,
-    timeout_seconds: int = 180,
-) -> RunResponse:
-    """Invoke one toolset member in-process; fails with ToolRunTimedOut when it outlives timeout_seconds."""
-    request = build_run_request(toolset=toolset, tool=tool, action=action, context=context, arguments=arguments)
-    return invoke_run_request(request, timeout_seconds)
-
-
-def read_workspace(path: str, *, timeout_seconds: int = 120) -> Any:
-    """Prime the agent by reading a workspace-relative file."""
-    from cdd_guidance.practices.agent_bdd import instruct
-
-    return instruct(f"Read {path} from the workspace.", timeout_seconds=timeout_seconds)
-
-
-def follow_instructions(prompt: str, *, timeout_seconds: int = 300) -> Any:
-    """Natural-language step after an action returned ``response.instructions``."""
-    from cdd_guidance.practices.agent_bdd import instruct
-
-    return instruct(prompt, timeout_seconds=timeout_seconds)
+    return invoke_run_request(merged, repo_root, timeout_seconds)
 
 
 # ---------------------------------------------------------------------------
@@ -307,23 +281,3 @@ def generate_similar_rubric(pass_path: str | Path) -> str:
         f"The output is a similar successful result to {location}: same kind of "
         "artifact, close in shape and intent, not an unrelated rewrite."
     )
-
-
-def generate_and_judge(
-    pass_path: str | Path,
-    rubric: str | None = None,
-    *,
-    timeout_seconds: int = 300,
-) -> str:
-    """Generate against the pass fixture, judge it, return the artifact for review.
-
-    Must be called inside ``with agent(...)``.
-    """
-    from cdd_guidance.practices.agent_bdd import ai_judge, follow_instructions
-
-    artifact = follow_instructions(
-        generate_similar_prompt(pass_path),
-        timeout_seconds=timeout_seconds,
-    ).text
-    ai_judge(artifact, rubric or generate_similar_rubric(pass_path))
-    return artifact

@@ -19,13 +19,12 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 sys.modules.pop("tools", None)
 sys.modules.pop("hooks", None)
 
-from expects import be_true, contain, equal, expect
+from expects import be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 from harness.agent_tools import agent_toolset
 
 from harness.agent_tools.agent_tools import agent_tool
 from harness.hooks.hook_server import (
-    CursorEvent,
     HandlerCatalog,
     HookPayload,
     HookResult,
@@ -169,12 +168,12 @@ with description("a handler catalog"):
 
         with it("should take hook operations from toolset tools"):
             catalog = HandlerCatalog([_HookToolset(), _ToolOnlyToolset()])
-            handlers = catalog.for_event(CursorEvent("stop"))
+            handlers = catalog.for_event("stop")
             expect([handler.label for handler in handlers]).to(equal(["_HookToolset.on_stop"]))
 
         with it("should hold the toolset's own agent tool for each hook operation"):
             toolset = _HookToolset()
-            handler = HandlerCatalog([toolset]).for_event(CursorEvent("stop"))[0]
+            handler = HandlerCatalog([toolset]).for_event("stop")[0]
             expect(handler.tool.hook_event).to(equal("stop"))
 
 
@@ -388,7 +387,7 @@ with description("hook dispatch"):
             try:
                 root = Path(tmp.name)
                 server = HookServer(root, HandlerCatalog([], root))
-                saved = server._chat_injection_path("chat-a")
+                saved = server.chat_injections.path_for("chat-a")
                 saved.parent.mkdir(parents=True, exist_ok=True)
                 saved.write_text(
                     "Before you continue, echo the following message to the user:\n\nrules injected for clean-engineering-code\n",
@@ -411,7 +410,7 @@ with description("hook dispatch"):
             try:
                 root = Path(tmp.name)
                 server = HookServer(root, HandlerCatalog([], root))
-                saved = server._chat_injection_path("chat-a")
+                saved = server.chat_injections.path_for("chat-a")
                 saved.parent.mkdir(parents=True, exist_ok=True)
                 saved.write_text(
                     "You just edited session.py. Check that edit against these rules and fix anything that does not follow them:\n"
@@ -846,11 +845,11 @@ with description("hook process helpers"):
 
     with it("should use python.exe for the Cursor dispatch command so stdout is returned"):
         from harness.hooks.hooks import HookInstallation
-        from harness.process.process import console_python_executable
+        from harness.process.process import PythonInterpreter
 
         install = HookInstallation("Cursor", _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
         command = install.dispatch_command.replace("\\", "/")
-        python = console_python_executable(sys.executable).replace("\\", "/")
+        python = PythonInterpreter(sys.executable).console.replace("\\", "/")
         expect(command).to(contain(python))
         expect(command).to(contain("harness/hooks/hook_server.py"))
         if sys.platform == "win32":
@@ -858,56 +857,130 @@ with description("hook process helpers"):
             expect(command).not_to(contain("pythonw.exe"))
 
     with it("should include CREATE_NO_WINDOW in detached daemon flags on Windows"):
-        from harness.process.process import detached_creationflags
+        from harness.process.process import BackgroundStart
 
-        flags = detached_creationflags()
+        flags = BackgroundStart().creationflags
         if sys.platform == "win32":
             expect(bool(flags & getattr(subprocess, "CREATE_NO_WINDOW", 0))).to(equal(True))
             expect(bool(flags & getattr(subprocess, "DETACHED_PROCESS", 0))).to(equal(False))
 
     with it("should start a single daemon when several hook commands arrive together"):
-        from harness.hooks.hook_daemon import HookDaemon
+        from harness.hooks.hook_daemon import HookDaemon, HookDaemonAddress
 
         calls: list[float] = []
 
-        def fake_connect(repo, path):
-            if calls and time.time() >= calls[0] + 0.4:
-                return HookServer(repo)
-            return None
+        class _CountingDaemon(HookDaemon):
+            def live_address(self):
+                if calls and time.time() >= calls[0] + 0.4:
+                    return HookDaemonAddress(self.HOST, self.port)
+                return None
 
-        def fake_spawn(self, repo, path):
-            calls.append(time.time())
+            def spawn(self):
+                calls.append(time.time())
 
-        original_connect = HookServer._connect
-        original_spawn = HookDaemon.spawn
-        HookServer._connect = fake_connect
-        HookDaemon.spawn = fake_spawn
-        try:
-            with tempfile.TemporaryDirectory() as tmp:
-                repo = Path(tmp)
-                path = repo / ".cursor" / "hook-server.json"
-                errors: list[BaseException] = []
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            errors: list[BaseException] = []
 
-                def arrive():
-                    try:
-                        HookServer._spawn(repo, path)
-                    except BaseException as exc:
-                        errors.append(exc)
+            def arrive():
+                try:
+                    _CountingDaemon(repo)._start_once()
+                except BaseException as exc:
+                    errors.append(exc)
 
-                arrivals = [threading.Thread(target=arrive) for _ in range(4)]
-                for arrival in arrivals:
-                    arrival.start()
-                for arrival in arrivals:
-                    arrival.join(5)
-            expect(errors).to(equal([]))
-            expect(len(calls)).to(equal(1))
-        finally:
-            HookServer._connect = original_connect
-            HookDaemon.spawn = original_spawn
+            arrivals = [threading.Thread(target=arrive) for _ in range(4)]
+            for arrival in arrivals:
+                arrival.start()
+            for arrival in arrivals:
+                arrival.join(5)
+        expect(errors).to(equal([]))
+        expect(len(calls)).to(equal(1))
 
     with it("should give one checkout the same daemon port every start"):
         from harness.hooks.hook_daemon import HookDaemon
 
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            expect(HookDaemon().repo_port(repo)).to(equal(HookDaemon().repo_port(repo)))
+            expect(HookDaemon(repo).port).to(equal(HookDaemon(repo).port))
+
+
+with description("a hook server whose project registers no sessions"):
+
+    with before.each:
+        @agent_toolset
+        class _ContextInject:
+            @Hook("postToolUse")
+            def on_inject(self, payload: HookPayload) -> dict:
+                return {"additional_context": "stories scenario rules"}
+
+        class _Sessionless(HookServer):
+            session = property(lambda self: None)
+
+        self.root = Path(tempfile.mkdtemp())
+        self.server = _Sessionless(self.root, HandlerCatalog([_ContextInject], self.root))
+
+    with after.each:
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    with it("should answer an event from a chat with its hooks' context"):
+        result = self.server.handle_stdin(
+            json.dumps({"hook_event_name": "postToolUse", "conversation_id": "chat-a"}).encode()
+        )
+        expect(result.additional_context).to(equal("stories scenario rules"))
+
+    with it("should answer a prompt from a chat"):
+        result = self.server.handle_stdin(
+            json.dumps({"hook_event_name": "beforeSubmitPrompt", "conversation_id": "chat-a"}).encode()
+        )
+        expect(result.permission).to(equal("allow"))
+
+
+with description("a hook install"):
+
+    with before.each:
+        from harness.hooks.hooks import HookInstallation
+
+        @agent_toolset
+        class _StopHook:
+            @Hook("stop")
+            def on_stop(self, payload: HookPayload) -> dict:
+                return {}
+
+        self.folder = Path(tempfile.mkdtemp())
+        self.install = HookInstallation("Cursor", self.folder, repo=_REPO_ROOT)
+        self.tool = _StopHook().tools["on_stop"]
+
+    with after.each:
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    with context("with the person's own hooks in hooks.json"):
+
+        with before.each:
+            (self.folder / "hooks.json").write_text(
+                json.dumps({"version": 1, "hooks": {"stop": [{"command": "my-own-hook"}]}}), encoding="utf-8"
+            )
+            self.install.write(self.tool)
+
+        with it("should keep the person's hook"):
+            hooks = json.loads((self.folder / "hooks.json").read_text(encoding="utf-8"))["hooks"]
+            expect([item["command"] for item in hooks["stop"]]).to(contain("my-own-hook"))
+
+    with context("with a hooks.json that is not JSON"):
+
+        with before.each:
+            self.manifest = self.folder / "hooks.json"
+            self.manifest.write_text('{"hooks": {"stop": [{"command": "my-own-hook"}', encoding="utf-8")
+
+        with it("should refuse to install the hook"):
+            from harness.hooks.hooks import HooksFileUnreadable
+
+            expect(lambda: self.install.write(self.tool)).to(raise_error(HooksFileUnreadable))
+
+        with it("should leave the person's file as it was"):
+            from harness.hooks.hooks import HooksFileUnreadable
+
+            try:
+                self.install.write(self.tool)
+            except HooksFileUnreadable:
+                pass
+            expect(self.manifest.read_text(encoding="utf-8")).to(contain("my-own-hook"))

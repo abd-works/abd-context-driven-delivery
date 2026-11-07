@@ -9,8 +9,9 @@ from harness.agent_tools.agent_tools import tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
+from harness.name.name import Name
 from space.repo.repo import Repo
-from space.session.session import COMPLETE_FOLDER, MAIN_SESSION_NAME, SESSION_FILE, Session, name_of
+from space.session.session import COMPLETE_FOLDER, MAIN_SESSION_NAME, SESSION_FILE, Session
 from space.work_state import WorkState
 
 BACKLOG_FOLDER = "_backlog"
@@ -37,7 +38,9 @@ class Sessions:
 
     def __init__(self, project: Path | str) -> None:
         self.project = Path(project).resolve()
-        self.root = Repo(self.project).checkout_folder
+        self._repo = Repo(Repo(self.project).checkout_folder)
+        self.root = self._repo.root
+        self._state = WorkState(self.root)
 
     @classmethod
     @tool_subject
@@ -48,7 +51,7 @@ class Sessions:
     @property
     def folder(self) -> Path:
         """The `.sessions` folder that holds the sessions and what they share on the board."""
-        return WorkState(self.root).sessions_folder
+        return self._state.sessions_folder
 
     @property
     def backlog_folder(self) -> Path:
@@ -62,7 +65,7 @@ class Sessions:
         preferred = self.folder / name
         candidates = [preferred]
         if name != MAIN_SESSION_NAME:
-            candidates.insert(0, WorkState(Repo(self.root).primary_root()).sessions_folder / name)
+            candidates.insert(0, WorkState(self._repo.primary_root()).sessions_folder / name)
         return next((folder for folder in candidates if (folder / SESSION_FILE).is_file()), preferred)
 
     def all(self) -> list[Session]:
@@ -77,8 +80,7 @@ class Sessions:
         closed_folders = sorted(folder for folder in closed.iterdir() if folder.is_dir()) if closed.is_dir() else []
         return open_folders + closed_folders
 
-    @staticmethod
-    def _is_work_session(name: str) -> bool:
+    def _is_work_session(self, name: str) -> bool:
         return bool(name) and name != MAIN_SESSION_NAME and not name.startswith(_SHARED_FOLDER_MARK)
 
     def named(self, name: str) -> Session | None:
@@ -96,7 +98,7 @@ class Sessions:
     @property
     def open_name(self) -> str:
         """The name of the session saved as open; main when none is."""
-        return WorkState(self.root).session or MAIN_SESSION_NAME
+        return self._state.session or MAIN_SESSION_NAME
 
     @property
     def saved(self) -> Session:
@@ -109,7 +111,7 @@ class Sessions:
         in its ``session.json``; it is not opened, because a session made for later, such as a board ticket, is not the
         one being worked on."""
         session = Session(self.root)
-        session.name = name_of(name)
+        session.name = Name(name).title_slug
         session.workpath = Path(workpath).resolve()
         session.session_path = self.folder / session.name
         session.save()
@@ -122,7 +124,7 @@ class Sessions:
         if workpath is not None:
             session.workpath = Path(workpath).resolve()
         session.save()
-        WorkState(self.root).session = "" if session.name == MAIN_SESSION_NAME else session.name
+        self._state.session = "" if session.name == MAIN_SESSION_NAME else session.name
         return session
 
     @mcp
@@ -148,8 +150,7 @@ class Sessions:
         return self.open(session, workpath).log.instructions()
 
     def _name_to_switch_to(self, name: str) -> str:
-        state = WorkState(self.root)
-        cleaned = name_of(name or state.session or state.branch_name)
+        cleaned = Name(name or self._state.session or self._state.branch_name).title_slug
         if not cleaned:
             raise SessionNameRequiredError()
         return cleaned
@@ -158,7 +159,7 @@ class Sessions:
         """Close session: when it is the open one, main becomes the open session."""
         if session.name != self.open_name:
             return
-        WorkState(self.root).session = ""
+        self._state.session = ""
 
 
 class CallSessions:

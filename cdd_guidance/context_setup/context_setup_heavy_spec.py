@@ -32,16 +32,8 @@ from mamba import after, before, context, description, it
 
 from inspect import signature
 
-from cdd_guidance.context_setup.context_setup import (
-    CaptureResult,
-    ContextSetup,
-    ConversionResult,
-    PageCapture,
-    ScoutResult,
-    ScreenResult,
-    SmokeTestResult,
-    StructureNote,
-)
+from cdd_guidance.context_setup.context_setup import ContextSetup, ConversionResult, StructureNote
+from cdd_guidance.context_setup.live_app_capture import CaptureResult, PageCapture, ScoutResult, ScreenResult, SmokeTestResult
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from space.session.throwaway_project import ThrowawayProject
@@ -129,13 +121,13 @@ class SpecFixture:
         partition it hands documents to works in the session open in that project."""
         call = ToolCall(project=ThrowawayProject().root)
         self.session_root = call.session.root
-        return ContextSetup.from_defaults().for_call(call)
+        return ContextSetup().for_call(call)
 
     def instructions_for(self, cs: ContextSetup, name: str) -> AgentInstructions:
         return AgentInstructions.for_callable(getattr(type(cs), name), cs)
 
     def expanded_capture_from_live_app(self) -> str:
-        cs = ContextSetup.from_defaults()
+        cs = ContextSetup()
         return "\n".join(self.instructions_for(cs, "capture_from_live_app").prompt)
 
     def write(self) -> Path:
@@ -152,23 +144,7 @@ fixture = SpecFixture()
 with description("a ContextSetup"):
     with context("that is created"):
         with it("should be a ContextSetup instance"):
-            expect(ContextSetup.from_defaults()).to(be_a(ContextSetup))
-
-    with context("that chooses where capture artifacts are written"):
-        with it("should write under repo_path when capture_repo is blank"):
-            app = Path(tempfile.mkdtemp())
-            cs = ContextSetup.from_defaults()
-            cs.repo_path = str(app)
-            cs.capture_repo = ""
-            expect(cs._write_root().resolve()).to(equal(app.resolve()))
-
-        with it("should write under capture_repo when it is given"):
-            app = Path(tempfile.mkdtemp())
-            capture = Path(tempfile.mkdtemp())
-            cs = ContextSetup.from_defaults()
-            cs.repo_path = str(app)
-            cs.capture_repo = str(capture)
-            expect(cs._write_root().resolve()).to(equal(capture.resolve()))
+            expect(ContextSetup()).to(be_a(ContextSetup))
 
     # ── Tool: Convert To Markdown ─────────────────────────────────────────────
 
@@ -179,7 +155,7 @@ with description("a ContextSetup"):
             fixture._name = "notes.md"
             fixture._content = "# Title\n\nSome body text with several words.\n"
             fixture.write()
-            self._result = ContextSetup.from_defaults().convert(str(self._root))
+            self._result = ContextSetup().convert(str(self._root))
 
         with after.each:
             fixture.release()
@@ -220,7 +196,7 @@ with description("a ContextSetup"):
             fixture._name = "deep.md"
             fixture._content = "# H1\n\n## H2\n\n### H3\n\nsome content words here\n"
             fixture.write()
-            self._result = ContextSetup.from_defaults().convert(str(self._root))
+            self._result = ContextSetup().convert(str(self._root))
 
         with after.each:
             fixture.release()
@@ -240,7 +216,7 @@ with description("a ContextSetup"):
             fixture._name = "flat.md"
             fixture._content = "Just plain prose with no headings at all.\n"
             fixture.write()
-            self._result = ContextSetup.from_defaults().convert(str(self._root))
+            self._result = ContextSetup().convert(str(self._root))
 
         with after.each:
             fixture.release()
@@ -263,7 +239,7 @@ with description("a ContextSetup"):
             fixture._name = "kept.md"
             fixture._content = "# Kept\n\nContent.\n"
             fixture.write()
-            self._result = ContextSetup.from_defaults().convert(str(self._root))
+            self._result = ContextSetup().convert(str(self._root))
 
         with after.each:
             fixture.release()
@@ -276,7 +252,7 @@ with description("a ContextSetup"):
 
     with context("whose convert tool is given an empty folder"):
         with before.each:
-            self._result = ContextSetup.from_defaults().convert(str(fixture.temporary_folder()))
+            self._result = ContextSetup().convert(str(fixture.temporary_folder()))
 
         with after.each:
             fixture.release()
@@ -297,7 +273,7 @@ with description("a ContextSetup"):
             fixture._name = "beta.md"
             fixture._content = "# Beta\n\nBeta content.\n"
             fixture.write()
-            self._result = ContextSetup.from_defaults().convert(str(self._root))
+            self._result = ContextSetup().convert(str(self._root))
 
         with after.each:
             fixture.release()
@@ -389,10 +365,9 @@ with description("a ContextSetup"):
                 be_true
             )
 
-        with it("should tell the AI to set capture_repo then call smoke_test with repo_path and surface"):
+        with it("should tell the AI to pass capture_repo to smoke_test with repo_path and surface"):
             prose = fixture.expanded_capture_from_live_app()
-            expect("capture_repo field" in prose).to(be_true)
-            expect("smoke_test(repo_path=repo_path, surface=surface)" in prose).to(be_true)
+            expect("smoke_test(repo_path=repo_path, surface=surface, capture_repo=capture_repo)" in prose).to(be_true)
 
         with it("should list smoke_test as a tool to call"):
             prose = fixture.expanded_capture_from_live_app()
@@ -416,25 +391,25 @@ with description("a ContextSetup"):
 
     with context("whose capture_from_live_app action tools are resolved"):
         with it("should include smoke_test"):
-            cs = ContextSetup.from_defaults()
+            cs = ContextSetup()
             func = getattr(type(cs), "capture_from_live_app")
             body = AgentInstructions.for_callable(func, cs)
             expect("smoke_test" in body.tools).to(be_true)
 
         with it("should include scout_app"):
-            cs = ContextSetup.from_defaults()
+            cs = ContextSetup()
             func = getattr(type(cs), "capture_from_live_app")
             body = AgentInstructions.for_callable(func, cs)
             expect("scout_app" in body.tools).to(be_true)
 
         with it("should include complete_capture"):
-            cs = ContextSetup.from_defaults()
+            cs = ContextSetup()
             func = getattr(type(cs), "capture_from_live_app")
             body = AgentInstructions.for_callable(func, cs)
             expect("complete_capture" in body.tools).to(be_true)
 
         with it("should include embed from ContextIndex"):
-            cs = ContextSetup.from_defaults()
+            cs = ContextSetup()
             func = getattr(type(cs), "capture_from_live_app")
             body = AgentInstructions.for_callable(func, cs)
             expect("embed" in body.tools).to(be_true)
@@ -446,12 +421,11 @@ with description("a ContextSetup"):
             self._folder = str(fixture.temporary_folder())
             port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
-            cs = ContextSetup.from_defaults()
-            cs.base_url = self._base_url
-            cs.entry_paths = ["/"]
-            self._result = cs.smoke_test(
+            self._result = ContextSetup().smoke_test(
                 repo_path=self._folder,
                 surface="web",
+                base_url=self._base_url,
+                entry_paths=["/"],
             )
 
         with after.each:
@@ -480,12 +454,11 @@ with description("a ContextSetup"):
     with context("whose smoke_test tool is probing a non-existent server"):
         with before.each:
             self._folder = str(fixture.temporary_folder())
-            cs = ContextSetup.from_defaults()
-            cs.base_url = "http://localhost:19999"
-            cs.entry_paths = ["/"]
-            self._result = cs.smoke_test(
+            self._result = ContextSetup().smoke_test(
                 repo_path=self._folder,
                 surface="web",
+                base_url="http://localhost:19999",
+                entry_paths=["/"],
             )
 
         with after.each:
@@ -502,12 +475,11 @@ with description("a ContextSetup"):
             self._folder = str(fixture.temporary_folder())
             port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
-            cs = ContextSetup.from_defaults()
-            cs.base_url = self._base_url
-            cs.entry_paths = ["/", "/login"]
-            self._result = cs.smoke_test(
+            self._result = ContextSetup().smoke_test(
                 repo_path=self._folder,
                 surface="web",
+                base_url=self._base_url,
+                entry_paths=["/", "/login"],
             )
 
         with after.each:
@@ -526,12 +498,11 @@ with description("a ContextSetup"):
             self._folder = str(fixture.temporary_folder())
             port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
-            cs = ContextSetup.from_defaults()
-            cs.base_url = self._base_url
-            cs.entry_paths = ["/", "/login"]
-            self._result = cs.scout_app(
+            self._result = ContextSetup().scout_app(
                 repo_path=self._folder,
                 surface="web",
+                base_url=self._base_url,
+                entry_paths=["/", "/login"],
             )
 
         with after.each:
@@ -572,16 +543,17 @@ with description("a ContextSetup"):
             self._folder = str(fixture.temporary_folder())
             port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
-            cs = ContextSetup.from_defaults()
-            cs.base_url = self._base_url
-            cs.entry_paths = ["/"]
+            cs = ContextSetup()
             self._scout = cs.scout_app(
                 repo_path=self._folder,
                 surface="web",
+                base_url=self._base_url,
+                entry_paths=["/"],
             )
             self._result = cs.complete_capture(
                 repo_path=self._folder,
                 missing_pages=["/login"],
+                base_url=self._base_url,
             )
 
         with after.each:

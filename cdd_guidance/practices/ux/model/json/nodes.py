@@ -69,9 +69,12 @@ class JsonUxMapReader:
     def _read_screen(self, screen: Screen, screen_data: dict[str, Any]) -> None:
         screen.chrome_of = self._screen_named(screen_data.get("chrome_of", ""))
         screen.inactive_tabs = list(screen_data.get("inactive_tabs", []))
-        screen.story_names = list(screen_data.get("story_names", []))
-        screen.scenario_names = list(screen_data.get("scenario_names", []))
-        screen.step_names = list(screen_data.get("step_names", []))
+        for story in screen_data.get("story_names", []):
+            screen.show_story(story)
+        for scenario in screen_data.get("scenario_names", []):
+            screen.show_scenario(scenario)
+        for step in screen_data.get("step_names", []):
+            screen.show_step(step)
         screen.domain_terms = list(screen_data.get("domain_terms", []))
         screen.domain_concepts = list(screen_data.get("domain_concepts", []))
         screen.image = screen_data.get("image", "")
@@ -175,9 +178,9 @@ class JsonUxMapWriter:
             "description": screen.description,
             "chrome_of": _name_of(screen.chrome_of),
             "inactive_tabs": list(screen.inactive_tabs),
-            "story_names": list(screen.story_names),
-            "scenario_names": list(screen.scenario_names),
-            "step_names": list(screen.step_names),
+            "story_names": screen.story_keys,
+            "scenario_names": screen.scenario_keys,
+            "step_names": screen.step_keys,
             "domain_terms": list(screen.domain_terms),
             "domain_concepts": list(screen.domain_concepts),
             "image": screen.image,

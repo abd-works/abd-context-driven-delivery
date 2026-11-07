@@ -22,25 +22,28 @@ with description("the action catalogue"):
         folders = sorted(
             folder.name for folder in _ACTIONS_FOLDER.iterdir() if folder.is_dir() and folder.name[0] not in "_."
         )
-        expect([kit.__module__.split(".")[-1] for kit in ActionCatalogue.kits()]).to(equal(folders))
+        expect([toolset.__module__.split(".")[-1] for toolset in ActionCatalogue.toolsets()]).to(equal(folders))
 
     with it("should list each operation a kit publishes as a skill"):
         expect(self.names).to(contain("generate", "validate", "sketch", "render", "grill", "partition"))
 
-    with it("should list every skill of a kit that publishes several"):
-        expect(self.names).to(contain("validate", "createRule", "repair", "verify_fix"))
+    with it("should list every skill of a toolset that installs several"):
+        expect(self.names).to(contain("repair", "verify_fix"))
 
-    with it("should leave out a kit's tools that are not skills"):
+    with it("should leave out a toolset's tools that are not skills"):
         expect("generate_fixes_from_validate" in self.names).to(be_false)
 
+    with it("should leave out a skill that is never installed"):
+        expect("create_rule" in self.names).to(be_false)
+
     with it("should leave out the folder of examples"):
-        expect("CarStory" in [kit.__name__ for kit in ActionCatalogue.kits()]).to(be_false)
+        expect("CarStory" in [toolset.__name__ for toolset in ActionCatalogue.toolsets()]).to(be_false)
 
     with description("that is asked for one action"):
-        with it("should give the kit that publishes it"):
-            expect(ActionCatalogue.action("createRule").kit_class.__name__).to(equal("Validate"))
+        with it("should give the toolset that installs it"):
+            expect(ActionCatalogue.action("verify_fix").toolset_class.__name__).to(equal("Improvement"))
 
-        with it("should give the kit's folder"):
+        with it("should give the toolset's folder"):
             expect(ActionCatalogue.action("grill").folder.name).to(equal("grill_context"))
 
         with it("should give nothing for a name no kit publishes"):

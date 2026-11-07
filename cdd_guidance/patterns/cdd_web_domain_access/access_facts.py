@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import ast
 import re
+
+from cdd_guidance.patterns.source_text import SourceText
 
 _TOOL_CALL = re.compile(r"\.call(?:<[^>]*>)?\(")
 _ADAPTER_IMPORT = re.compile(r"""from\s+['"]@cdd/""")
@@ -11,30 +14,23 @@ _STORE_IMPORT = re.compile(r"""from\s+['"]lowdb[^'"]*['"]""")
 # File names an application would give its own copy of what the installer generates.
 _HAND_WRITTEN_ADAPTER = re.compile(r"(?:-adapter|-tools|-connection-node|^cdd-connection)\.ts$")
 _MARK = re.compile(r"@language_adapter\(")
-_OPEN_RESULT = re.compile(r"def\s+(\w+)\(self[^)]*\)\s*->\s*dict\[str,\s*Any\]")
-_OPERATION_MARK = "@mcp"
-_DECORATOR_LINES = 4
-
-
-def _line_of(text: str, index: int) -> int:
-    return text.count("\n", 0, index) + 1
-
-
-def _hits(pattern: re.Pattern[str], text: str) -> list[list]:
-    return [[_line_of(text, match.start()), match.group(0).strip()] for match in pattern.finditer(text)]
+# The mark that publishes an operation on MCP, spelled `@mcp` or `@Mcp`; TypeScript reads what such an operation returns.
+_OPERATION_MARK = "mcp"
+_OPEN_RESULT = "dict[str, Any]"
 
 
 def route_facts(text: str) -> dict:
-    return {"tool_calls": _hits(_TOOL_CALL, text)}
+    return {"tool_calls": SourceText(text).hits(_TOOL_CALL)}
 
 
 def node_facts(text: str) -> dict:
+    source = SourceText(text)
     reaches_cdd = bool(_ADAPTER_IMPORT.search(text))
     return {
-        "tool_calls": _hits(_TOOL_CALL, text),
+        "tool_calls": source.hits(_TOOL_CALL),
         "reaches_cdd": reaches_cdd,
         "extends_adapter": bool(_EXTENDS_ADAPTER.search(text)),
-        "store_imports": _hits(_STORE_IMPORT, text) if reaches_cdd else [],
+        "store_imports": source.hits(_STORE_IMPORT) if reaches_cdd else [],
     }
 
 
@@ -50,10 +46,24 @@ def is_marked(text: str) -> bool:
 
 
 def marked_toolset_facts(text: str) -> dict:
-    return {"open_results": [[_line_of(text, match.start()), match.group(1)] for match in _OPEN_RESULT.finditer(text) if _reaches_typescript(text, match)]}
+    """[line, operation] for each MCP operation of a marked toolset that answers an open ``dict[str, Any]``, which
+    TypeScript then reads with no type. The decorators are read from the parsed file, so every spelling of the mark and
+    any number of other marks above it count."""
+    operations = [node for node in ast.walk(ast.parse(text)) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
+    return {"open_results": [[node.lineno, node.name] for node in operations if _answers_open_dict(node) and _is_published(node)]}
 
 
-def _reaches_typescript(text: str, match: re.Match[str]) -> bool:
-    """TypeScript reads what an MCP operation returns, and the properties a class marks with `@data_field`."""
-    decorators = text[: match.start()].rsplit("\n", _DECORATOR_LINES)[1:]
-    return _OPERATION_MARK in "\n".join(decorators)
+def _answers_open_dict(operation: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    return operation.returns is not None and ast.unparse(operation.returns) == _OPEN_RESULT
+
+
+def _is_published(operation: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    return any(_mark_name(decorator).lower() == _OPERATION_MARK for decorator in operation.decorator_list)
+
+
+def _mark_name(decorator: ast.expr) -> str:
+    """The name a decorator is written with: `Mcp` for `@Mcp`, `@Mcp(...)`, and `@mcp_server.Mcp`."""
+    marked = decorator.func if isinstance(decorator, ast.Call) else decorator
+    if isinstance(marked, ast.Attribute):
+        return marked.attr
+    return marked.id if isinstance(marked, ast.Name) else ""

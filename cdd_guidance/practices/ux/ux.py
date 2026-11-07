@@ -50,19 +50,20 @@ class Ux(PracticeGuidance):
             },
         )
 
-    # The practices whose JavaScript a mockup imports: story steps from Stories, the object model from Clean Engineering.
-    javascript_practices = ("stories", "clean_engineering")
-
     @agent_tool
     def ensure_javascript(self, practice: str, source_format: str, content: Any) -> dict:
         """Ensure Stories or Clean Engineering JS exists - transform via that practice if needed.
-        practice: 'stories' | 'clean_engineering', the practice's catalogue key. The practice works in this practice's
-        session and workspace. Returns {format: javascript, content: ...}."""
-        if practice not in self.javascript_practices:
-            raise NoJavascriptPractice(
-                f"Unsupported practice {practice!r}. Choose from: {', '.join(self.javascript_practices)}"
-            )
-        companion = PracticeCatalogue.create(practice)
-        companion.session = self.session
-        companion.workspace = self.workspace
-        return companion.render("javascript", content, source=source_format)
+        practice: 'stories' | 'clean_engineering', the practice's catalogue key: story steps come from Stories, the
+        object model from Clean Engineering. Returns {format: javascript, content: ...}."""
+        return self.javascript_practice(practice).render("javascript", content, source=source_format)
+
+    def javascript_practice(self, key: str) -> PracticeGuidance:
+        """The practice key, which writes the JavaScript a mockup imports: this session's own copy of it, made for the
+        session, or a new copy while Ux works in no session."""
+        # A practice built outside a session holds its fidelities collection as its workspace, so the session is the
+        # workspace that has practices.
+        session_practices = getattr(self.workspace, "practices", None)
+        practice = session_practices[key].guideline if isinstance(session_practices, dict) else PracticeCatalogue.create(key)
+        if "javascript" not in practice.formats:
+            raise NoJavascriptPractice(f"Practice {key!r} writes no JavaScript; Stories and Clean Engineering do.")
+        return practice

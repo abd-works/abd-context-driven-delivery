@@ -936,7 +936,7 @@ with description("a story map on a graph") as self:
         module.classes.append(account)
         account.properties.append(Property("token", 0))
         account.operations.append(Operation("register", 0))
-        Screen("Create Account", 0, graph=self.graph).story_names = ["Create Account"]
+        Screen("Create Account", 0, graph=self.graph).show_story("Create Account")
         Observation("Create account", graph=self.graph)
 
         stories = self.graph.practice("stories")

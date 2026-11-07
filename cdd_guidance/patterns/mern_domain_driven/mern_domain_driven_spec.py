@@ -82,7 +82,7 @@ with description("a MernDomainDriven generator"):
             companion = self.stories.fidelities.current.clean_engineering
             expect(companion.format).to(equal("typescript"))
 
-    with context("whose contexts slot is expanded"):
+    with context("whose contexts section is expanded"):
         with before.each:
             self.rendered = self.tool.scoped_markdown()
 

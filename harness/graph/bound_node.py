@@ -10,7 +10,6 @@ from contextlib import contextmanager
 from typing import Iterable, Iterator, Optional
 
 from harness.graph.graph import Graph, Node, Source, edge_order
-from harness.graph.schema_edges import sync_schema_edges
 
 # The file a new model object names until a loader tells it which file it came from.
 NO_SOURCE_FILE = "."
@@ -50,10 +49,18 @@ class BoundChildren(list):
         self.owner._link(child, self.kind)
 
 
+class ModelWithoutPractice(TypeError):
+    """A model object class that names no practice, so the graph cannot tell which practice graph it belongs to."""
+
+    def __init__(self, model_class: type) -> None:
+        super().__init__(f"{model_class.__name__} names no practice: set _graph_practice on it or a base class.")
+        self.model_class = model_class
+
+
 class BoundNode(Node):
     """Base model object for one practice. Subclasses name the practice and the belongsTo pairs."""
 
-    _graph_practice: str = "stories"
+    _graph_practice: str = ""
     _semantic_type_name: str = "Node"
     _belongs: set[tuple[str, str]] = set()
     _schema_edge_fields: frozenset[str] = frozenset({"source", "collaborators", "dependencies", "type_hint", "return_type", "callees"})
@@ -74,9 +81,10 @@ class BoundNode(Node):
         cls.__init__ = wrapped
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
+        if not type(self)._graph_practice:
+            raise ModelWithoutPractice(type(self))
         graph = graph or Graph()
-        practice_name = type(self)._graph_practice
-        practice = graph.practice(practice_name)
+        practice = graph.practice(type(self)._graph_practice)
         if practice.root_node.node_id not in practice.by_id:
             practice.by_id[practice.root_node.node_id] = practice.root_node
         semantic = type(self)._semantic_type_name
@@ -85,7 +93,7 @@ class BoundNode(Node):
             self,
             practice,
             semantic,
-            _node_id(practice, semantic, name),
+            practice.unused_node_id(semantic, name),
             name,
             Source(NO_SOURCE_FILE, sequential_order or 1, sequential_order or 1),
         )
@@ -179,7 +187,7 @@ class BoundNode(Node):
     def _move_to(self, practice) -> None:
         if self.practice is practice:
             return
-        node_id = _node_id(practice, self.type, self.name) if self.node_id in practice.by_id else self.node_id
+        node_id = practice.unused_node_id(self.type, self.name) if self.node_id in practice.by_id else self.node_id
         # add places a parsed node at its lines; a bound object keeps the source it already has, whatever its kind.
         source = self.source
         practice.add(self, node_id, NO_SOURCE_FILE, 1, 1)
@@ -205,34 +213,16 @@ class BoundNode(Node):
 
     @contextmanager
     def batch_schema_sync(self) -> Iterator[None]:
-        """Hold schema-edge rebuilds until a batch of child links is finished.
-
-        Each link used to rebuild every schema edge. On a story map that is
-        quadratic in the nodes already attached, and a workspace load never
-        returns.
-        """
-        graph = self.graph
-        graph._defer_schema_sync = True
-        try:
+        """Hold schema-edge rebuilds on this object's graph until a batch of child links is finished."""
+        with self.graph.schema_sync_held():
             yield
-        finally:
-            graph._defer_schema_sync = False
-            self._sync_schema_edges()
 
     def _sync_schema_edges(self) -> None:
         if _SCHEMA_SYNC_PAUSED[0] > 0:
             return
-        graph = getattr(self, "practice", None)
-        graph = getattr(graph, "graph", None)
-        if graph is None or getattr(graph, "_syncing_schema", False):
-            return
-        if getattr(graph, "_defer_schema_sync", False):
-            return
-        graph._syncing_schema = True
-        try:
-            sync_schema_edges(graph)
-        finally:
-            graph._syncing_schema = False
+        graph = getattr(getattr(self, "practice", None), "graph", None)
+        if graph is not None:
+            graph.sync_schema_edges()
 
     def _copies_on_graph(self, semantic: str) -> list:
         return [
@@ -259,13 +249,3 @@ def schema_sync_paused() -> Iterator[None]:
         yield
     finally:
         _SCHEMA_SYNC_PAUSED[0] -= 1
-
-
-def _node_id(practice, semantic: str, name: str) -> str:
-    base = f"{practice.name}:{semantic}:{name}"
-    if base not in practice.by_id:
-        return base
-    index = 2
-    while f"{base}:{index}" in practice.by_id:
-        index += 1
-    return f"{base}:{index}"

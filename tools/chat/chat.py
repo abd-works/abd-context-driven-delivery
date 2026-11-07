@@ -19,6 +19,7 @@ from harness.agent_tools.chat_pointer import ChatPointer
 CHAT_GONE_SECONDS = 5
 # A person can rename a chat at any time, so its title is read again this often.
 TITLE_READ_SECONDS = 30
+NANOSECONDS_PER_SECOND = 1_000_000_000
 TITLE_MARK = "custom-title"
 STATE_FILE = "chat.json"
 # Windows refuses to open or rename over a file another process is renaming, for a moment.
@@ -162,8 +163,7 @@ class Chat:
 
     def _check_in(self, is_busy: bool, name: str, folder: str) -> list[ChatCommand]:
         self._folder.mkdir(parents=True, exist_ok=True)
-        state = self._state
-        title, title_read = (_latest_title(self._transcript), self.clock()) if self.clock() - state.get("title_read", 0) > TITLE_READ_SECONDS else (state.get("title", ""), state["title_read"])
+        title, title_read = self._title_and_when_read(self._state)
         self._write({"name": name, "title": title, "is_busy": is_busy, "seen": self.clock(), "title_read": title_read, "folder": folder})
         self._finish_worked_on(is_busy)
         return self._take_ready(is_busy)
@@ -273,11 +273,18 @@ class Chat:
             elif not is_busy and sent.get("is_worked_on"):
                 self._move(path, DONE)
 
+    def _title_and_when_read(self, state: dict) -> tuple[str, float]:
+        """The chat's title and when it was read: read again from the transcript once the last read is older than
+        TITLE_READ_SECONDS, since reading a long transcript on every check-in is slow."""
+        if self.clock() - state.get("title_read", 0) > TITLE_READ_SECONDS:
+            return _latest_title(self._transcript), self.clock()
+        return state.get("title", ""), state["title_read"]
+
     # Windows' clock repeats within a quick burst of sends, so the name moves past every one already sent; it still
     # sorts in the order sent.
     def _next_file_name(self) -> str:
         latest = max((int(path.stem) for state in MESSAGE_STATES for path in self._sent_in(state)), default=0)
-        return f"{max(time.time_ns(), latest + 1)}.json"
+        return f"{max(int(self.clock() * NANOSECONDS_PER_SECOND), latest + 1)}.json"
 
     def _sent_in(self, state: str) -> list[Path]:
         folder = self._folder / state

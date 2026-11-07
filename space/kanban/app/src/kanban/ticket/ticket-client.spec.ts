@@ -79,7 +79,7 @@ describe('Review Fidelity', () => {
     it('should show the review done once Run next records it', async () => {
       const page = await validated()
       await ticketOn(page, OTHER).runNext()
-      expect(ticketOn(page, OTHER).actionsOf('stories-story-map').review).toBe('done')
+      expect(ticketOn(page, OTHER).progressNamed('stories-story-map')!.actions.review).toBe('done')
     })
   })
 })
@@ -171,9 +171,7 @@ describe('Send Next Fidelity Action', () => {
 
     it('should mark its tile as the next one', async () => {
       const { page } = await ran()
-      const discovery = page.board.stageNamed('Discovery')!
-      const storyMap = discovery.workRequired.find(fidelity => fidelity.slug === 'stories-story-map')!
-      expect(ticketOn(page, OTHER).isNext(discovery, storyMap)).toBe(true)
+      expect(ticketOn(page, OTHER).progressNamed('stories-story-map')!.isNext).toBe(true)
     })
   })
 
@@ -208,8 +206,9 @@ describe('Send Next Fidelity Action', () => {
 describe('Choose Ticket Practices', () => {
   async function turnedOff() {
     const { page } = await board.page()
-    const boundedContext = page.board.stageNamed('Discovery')!.workRequired.find(fidelity => fidelity.slug === 'ddd-bounded-context')!
-    page.store.change({ tiles: [{ ticket: ticketOn(page, ACTIVE), place: 'cell-Discovery-ddd-bounded-context', stage: 'Discovery', fidelities: [boundedContext], action: 'generate', picked: [], isPinned: true, files: {} }] })
+    const discovery = page.board.stageNamed('Discovery')!
+    const boundedContext = discovery.workRequired.find(fidelity => fidelity.slug === 'ddd-bounded-context')!
+    page.store.change({ tiles: [{ ticket: ticketOn(page, ACTIVE), place: 'cell-Discovery-ddd-bounded-context', stage: discovery, fidelities: [boundedContext], action: 'generate', picked: [], isPinned: true, files: {} }] })
     await ticketOn(page, ACTIVE).enablePractice('ddd', false)
     return page
   }

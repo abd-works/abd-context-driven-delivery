@@ -190,7 +190,7 @@ with description("a graph"):
                     {"Module", "OoadClass", "Operation", "Property", "Parameter"} <= owned_types(self.clean_tree, "clean_engineering")
                 ).to(equal(True))
 
-            with it("should order relative, owns, properties, belongsTo, hasParameter, hasType, invokes, and dependsOn"):
+            with it("should order relative, owns, properties, belongsTo, hasParameter, hasType, invokedBy, and dependsOn"):
                 expect(self.clean.edge_type_kinds).to(
                     equal(
                         [
@@ -205,7 +205,6 @@ with description("a graph"):
                             "invokedBy",
                             "returns",
                             "retrievedUsing",
-                            "invokes",
                             "dependsOn",
                             "usedBy",
                         ]
@@ -294,7 +293,7 @@ with description("a graph"):
                     expect(self.register.source.file).to(contain("account-credentials.ts"))
 
                 with it("should start at the file line Monaco numbers from"):
-                    expect(self.register.source.startLine).to(be_above(0))
+                    expect(self.register.source.start_line).to(be_above(0))
 
                 with it("should mark the emailValidationCode call"):
                     expect(self.register.source.text).to(contain("/* call:this.emailValidationCode */"))
@@ -324,8 +323,8 @@ with description("a graph"):
                     with before.all:
                         self.graph.filter.select_node_types(["Operation"])
 
-                    with it("should offer invokes for operations"):
-                        expect(self.graph.filter.relationships).to(contain("invokes"))
+                    with it("should offer invokedBy for operations"):
+                        expect(self.graph.filter.relationships).to(contain("invokedBy"))
 
                     with it("should offer the operation parameter rule"):
                         expect(self.graph.filter.rules).to(contain("clean_engineering.Operation.limit-operation-parameters"))
@@ -623,11 +622,7 @@ with description("a graph"):
                     expect(self.invoked["type"]).to(equal("Operation"))
                     expect(str(self.invoked["node_id"]).startswith("clean_engineering:")).to(equal(True))
 
-                with it("should place that step back under the operation"):
-                    operation = tree_by_id(self.clean_tree, self.invoked["node_id"])
-                    expect(tree_names(tree_child(operation, "invokes"))).to(contain(self.invoking_step["name"]))
-
-                with it("should name the inverse invokedBy on the operation"):
+                with it("should place that step back under the operation, under invokedBy"):
                     operation = tree_by_id(self.clean_tree, self.invoked["node_id"])
                     expect(tree_names(tree_child(operation, "invokedBy"))).to(contain(self.invoking_step["name"]))
 

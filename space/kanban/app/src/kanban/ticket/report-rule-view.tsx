@@ -23,7 +23,7 @@ function ViolationLocationView({ panel, rule, violation }: { panel: ReportPanel;
   // A location with no source has no file to open, so only one with source lines is a link.
   if (!violation.source.length) return <span className="file-location">{location}</span>
   return (
-    <button className="file-link" title={`Open at line ${line}`} onClick={() => void page.files.openFileAtLine(panel.ticket, rule.fidelity, violation.location, line)}>
+    <button className="file-link" title={`Open at line ${line}`} onClick={() => void page.files.openFileAtLine(panel.ticket, panel.ticket.progressNamed(rule.fidelity.slug), violation.location, line)}>
       {location}
     </button>
   )
@@ -70,11 +70,11 @@ function RuleHeadView({ ticket, report, rule, place, isOpen, isOff }: { ticket: 
         <h2>
           <button className="rule-toggle" aria-expanded={isOpen} onClick={() => page.panels.toggleRule(place)}>
             <ChevronIcon isTurned={!isOpen} />
-            <span>{rule.name}</span>
+            <span>{rule.rule.slug}</span>
             <span className="rule-count">{countOf(rule.count, 'violation')}</span>
           </button>
         </h2>
-        <p>{rule.description}</p>
+        <p>{rule.rule.body}</p>
       </div>
       <button className="ghost-button" disabled={isOff} onClick={() => void ticket.fixRule(report, rule)}>
         Fix all
@@ -84,7 +84,7 @@ function RuleHeadView({ ticket, report, rule, place, isOpen, isOff }: { ticket: 
 }
 
 export function RuleView({ panel, rule, isOff }: { panel: ReportPanel; rule: ReportRuleData; isOff: boolean }) {
-  const place = `${rule.fidelity}/${rule.name}`
+  const place = `${rule.fidelity.slug}/${rule.rule.slug}`
   const isOpen = !panel.closedRules.includes(place)
   return (
     <section className="report-rule">

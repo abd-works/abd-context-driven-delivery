@@ -202,9 +202,9 @@ class Utility:
 def catalog_utilities() -> list[Utility]:
     """Every toolset the installer finds in ``space`` and ``tools``, less those marked ``@noCatalog``, in the order
     the installer finds them. A toolset that cannot be imported raises rather than leaving a silent gap."""
-    from harness.installer.installer import Installer
+    from harness.installation.repository_toolsets import RepositoryToolsets
 
-    refs = [ref for ref in Installer().toolsets.collect() if ref.startswith(_UTILITY_PACKAGES)]
+    refs = [ref for ref in RepositoryToolsets(_REPO_ROOT).collect() if ref.startswith(_UTILITY_PACKAGES)]
     classes = [getattr(importlib.import_module(module), name) for module, name in (ref.split(":") for ref in refs)]
     return [Utility(toolset_class) for toolset_class in classes if not NoCatalog.marks(toolset_class)]
 
@@ -442,7 +442,7 @@ class LifecycleAction:
     def kit(self) -> object:
         """The action kit, built once."""
         if self._kit is None:
-            self._kit = self.action.kit_class()
+            self._kit = self.action.toolset_class()
         return self._kit
 
     @property
@@ -467,7 +467,7 @@ class LifecycleAction:
 def catalog_actions() -> list[LifecycleAction]:
     """Every action in the action catalogue whose kit has a live tool for it that the catalog shows: a kit or an
     operation marked ``@noCatalog`` stays out."""
-    shown = [LifecycleAction(action) for action in ActionCatalogue.actions() if not NoCatalog.marks(action.kit_class)]
+    shown = [LifecycleAction(action) for action in ActionCatalogue.actions() if not NoCatalog.marks(action.toolset_class)]
     return [action for action in shown if action.tool is not None]
 
 
@@ -543,7 +543,7 @@ def build_run_request(
     kit = ActionCatalogue.action(action)
     if kit is not None and _is_guidance_class(cls):
         return {
-            "toolset": kit.kit_ref,
+            "toolset": kit.toolset_ref,
             "action": action,
             "arguments": {
                 "guidance": [

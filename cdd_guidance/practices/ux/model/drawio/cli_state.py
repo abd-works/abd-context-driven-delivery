@@ -48,7 +48,7 @@ def _screen_to_cli(screen: Screen, column: int) -> Dict[str, Any]:
         "col": column,
         "row": 0,
         "regions": [_region_to_cli(region) for region in screen.regions],
-        "stories": list(screen.story_names),
+        "stories": screen.story_keys,
         "terms": list(screen.domain_terms or screen.domain_concepts),
     }
 

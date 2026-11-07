@@ -10,10 +10,10 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from expects import equal, expect
+from expects import equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.mcp.cdd_home import CddHome
+from harness.mcp.cdd_home import CddHome, RuntimeRecordUnreadable
 
 BOARD_MOD = Path("harness") / "chat-ui" / "pane"
 
@@ -87,3 +87,27 @@ with description("a cdd home's Claude Code plugins") as self:
 
             with it("should give it a new version"):
                 expect(_board_version(self.home)).not_to(equal(self.first_version))
+
+
+with description("a cdd home's runtime record") as self:
+    with before.each:
+        self.root = Path(tempfile.mkdtemp(prefix="cdd-home-"))
+        self.home = CddHome(self.root / ".cdd")
+
+    with after.each:
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    with context("that is not readable JSON"):
+        with before.each:
+            self.home.folder.mkdir(parents=True)
+            self.home.runtime_record.write_text('{"source": ', encoding="utf-8")
+
+        with it("should refuse to say whether cdd is installed, naming the file"):
+            expect(lambda: self.home.is_installed).to(raise_error(RuntimeRecordUnreadable))
+
+        with it("should leave the record as it was"):
+            try:
+                self.home.install(self.root, Path(__file__).resolve().parent / "scripts" / "connect.py")
+            except RuntimeRecordUnreadable:
+                pass
+            expect(self.home.runtime_record.read_text(encoding="utf-8")).to(equal('{"source": '))

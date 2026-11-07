@@ -127,15 +127,11 @@ class GuidanceAction:
     def _discover_operations(self) -> dict[str, AgentOperation]:
         from harness.agent_tools.agent_tools import AgentToolMark, GuidanceAgentOperation
 
-        discovered: dict[str, AgentOperation] = {}
-        for name, member in self._marked_members(type(self)):
-            if AgentToolMark.marks(member):
-                discovered[name] = GuidanceAgentOperation(
-                    name=name,
-                    callable=self._bound_callable(name, member),
-                    toolset=self,
-                )
-        return discovered
+        members = self._members
+        return {
+            name: GuidanceAgentOperation(name=name, callable=members.callable_on(self, name, member), toolset=self)
+            for name, member in members.marked if AgentToolMark.marks(member)
+        }
 
     def _work_on(self, guidance: GuidanceArg | None = None) -> None:
         """Guidance ref or dict: iterate Guidance. Other strings: run once on that text. Naming again what this action

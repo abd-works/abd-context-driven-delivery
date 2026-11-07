@@ -26,9 +26,7 @@ class JavaScriptStory(CodeStory):
     def load(cls, content: str, story_slug: str) -> "JavaScriptStory":
         name_match = re.search(r"story\(\s*(['\"])((?:\\.|(?!\1).)*)\1", content)
         story = cls(cls.name_read(name_match.group(2) if name_match else None, story_slug), 1)
-        actor_match = re.search(r"\*\s*Actor:\s*(.+)", content)
-        if actor_match:
-            story.actors = [actor_match.group(1).strip()]
+        story.read_description(content)
         story.fill(content)
         return story
 

@@ -7,11 +7,14 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
+import logging
+
 import anyio
 from expects import be_a, contain, equal, expect, raise_error
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
-from harness.mcp.tool_calls import StillRunning, ToolCalls, ToolRequest
+from harness.agent_tools.tool_call import ToolCall
+from harness.mcp.tool_calls import _StillRunning, _ToolCalls
 
 # Short enough that a held call outlives it; long enough that a released call finishes inside it.
 SHORT_SECONDS = 0.05
@@ -39,27 +42,38 @@ class FailedWork:
         raise ValueError("graph is corrupt")
 
 
-def _request(seconds: float, arguments: dict | None = None) -> ToolRequest:
-    return ToolRequest("validate.validate", Path("project"), arguments or {"paths": ["src"]}, seconds)
+def _call(arguments: dict | None = None) -> ToolCall:
+    return ToolCall.sent(arguments or {"paths": ["src"]}, Path("project"), tool="validate.validate")
+
+
+class LoggedFailures(logging.Handler):
+    """The failures the tool calls log, kept for the spec to read."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.messages: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.messages.append(record.getMessage())
 
 
 with description("tool calls on worker threads") as self:
     with before.each:
-        self.calls = ToolCalls()
+        self.calls = _ToolCalls()
         self.work = HeldWork()
 
     with context("with a call that outlives its time limit"):
         with before.each:
             async def outlive_then_collect():
-                self.first = await self.calls.run(_request(SHORT_SECONDS), self.work, None)
+                self.first = await self.calls.run(_call(), SHORT_SECONDS, self.work, None)
                 self.work.released.set()
                 await anyio.to_thread.run_sync(self.work.finished.wait, LONG_SECONDS)
-                self.again = await self.calls.run(_request(LONG_SECONDS), self.work, None)
+                self.again = await self.calls.run(_call(), LONG_SECONDS, self.work, None)
 
             anyio.run(outlive_then_collect)
 
         with it("should tell the caller the call is still running"):
-            expect(self.first).to(be_a(StillRunning))
+            expect(self.first).to(be_a(_StillRunning))
 
         with it("should tell the caller how to get the result"):
             expect(self.first.message).to(contain("Call validate.validate again with the same arguments"))
@@ -76,10 +90,10 @@ with description("tool calls on worker threads") as self:
     with context("with an identical call made while the first is still running"):
         with before.each:
             async def join():
-                self.joined = await self.calls.run(_request(LONG_SECONDS), self.work, None)
+                self.joined = await self.calls.run(_call(), LONG_SECONDS, self.work, None)
 
             async def call_twice():
-                await self.calls.run(_request(SHORT_SECONDS), self.work, None)
+                await self.calls.run(_call(), SHORT_SECONDS, self.work, None)
                 async with anyio.create_task_group() as group:
                     group.start_soon(join)
                     await anyio.sleep(SHORT_SECONDS)
@@ -96,8 +110,8 @@ with description("tool calls on worker threads") as self:
     with context("with a different call made while the first is still running"):
         with it("should start the work for it"):
             async def call_two_paths():
-                await self.calls.run(_request(SHORT_SECONDS, {"paths": ["src"]}), self.work, None)
-                await self.calls.run(_request(SHORT_SECONDS, {"paths": ["docs"]}), self.work, None)
+                await self.calls.run(_call({"paths": ["src"]}), SHORT_SECONDS, self.work, None)
+                await self.calls.run(_call({"paths": ["docs"]}), SHORT_SECONDS, self.work, None)
                 self.work.released.set()
                 # Let both runs end before the event loop closes, which would stop them.
                 await anyio.sleep(SHORT_SECONDS * 4)
@@ -110,8 +124,8 @@ with description("tool calls on worker threads") as self:
             self.work.released.set()
 
             async def call_twice_in_turn():
-                self.first = await self.calls.run(_request(LONG_SECONDS), self.work, None)
-                self.second = await self.calls.run(_request(LONG_SECONDS), self.work, None)
+                self.first = await self.calls.run(_call(), LONG_SECONDS, self.work, None)
+                self.second = await self.calls.run(_call(), LONG_SECONDS, self.work, None)
 
             anyio.run(call_twice_in_turn)
 
@@ -124,6 +138,43 @@ with description("tool calls on worker threads") as self:
     with context("with a call whose work fails"):
         with it("should raise the failure to the caller"):
             async def call_failing():
-                await self.calls.run(_request(LONG_SECONDS), FailedWork(), None)
+                await self.calls.run(_call(), LONG_SECONDS, FailedWork(), None)
 
             expect(lambda: anyio.run(call_failing)).to(raise_error(ValueError, "graph is corrupt"))
+
+    with context("with identical calls from two chats"):
+        with it("should start the work for each chat"):
+            async def call_from_two_chats():
+                for chat in ("chat-a", "chat-b"):
+                    arguments = {"paths": ["src"], "conversation_id": chat, "transcript_path": "transcript.jsonl"}
+                    await self.calls.run(_call(arguments), SHORT_SECONDS, self.work, None)
+                self.work.released.set()
+                await anyio.sleep(SHORT_SECONDS * 4)
+
+            anyio.run(call_from_two_chats)
+            expect(self.work.starts).to(equal(2))
+
+    with context("with a call whose caller stopped waiting before it failed"):
+        with before.each:
+            self.logged = LoggedFailures()
+            logging.getLogger("harness.mcp.tool_calls").addHandler(self.logged)
+
+        with after.each:
+            logging.getLogger("harness.mcp.tool_calls").removeHandler(self.logged)
+
+        with it("should log the failure nobody heard"):
+            failing = HeldWork(value=None)
+
+            def fail_when_released(reporter) -> object:
+                failing(reporter)
+                raise ValueError("graph is corrupt")
+
+            async def cancel_the_caller():
+                with anyio.move_on_after(SHORT_SECONDS) as scope:
+                    scope.cancel()
+                    await self.calls.run(_call(), LONG_SECONDS, fail_when_released, None)
+                failing.released.set()
+                await anyio.sleep(SHORT_SECONDS * 4)
+
+            anyio.run(cancel_the_caller)
+            expect(self.logged.messages).to(contain("MCP tool validate.validate failed after its caller stopped waiting"))

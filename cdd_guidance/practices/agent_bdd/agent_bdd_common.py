@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import contextvars
 import json
-import os
 import re
 import subprocess
 import sys
@@ -20,11 +19,6 @@ try:
     import yaml
 except ImportError:  # pragma: no cover
     yaml = None  # type: ignore
-
-_TOOLS_RUN = re.compile(
-    r"(?:toolset:\s*\S|action:\s*\w|tool:\s*\w)",
-    re.IGNORECASE,
-)
 
 JUDGE_TASK = """\
 You are an AI judge.
@@ -47,6 +41,12 @@ JUDGE_LAUNCH = (
 CMDLINE_SAFE = 4096
 
 INBOX_POLL_SECONDS = 0.25
+
+# How long each step may take before the spec fails: an agent step, the judge, an in-process toolset run, and a read.
+INSTRUCT_TIMEOUT_SECONDS = 300
+JUDGE_TIMEOUT_SECONDS = 180
+TOOL_RUN_TIMEOUT_SECONDS = 180
+READ_TIMEOUT_SECONDS = 120
 
 
 class AgentHarnessError(RuntimeError):
@@ -312,7 +312,7 @@ class AgentSession:
         log.write(f"session created: {session.chat_id}")
         return session
 
-    def run(self, prompt: str, workspace: Path, *, timeout_seconds: int = 300) -> AgentResult:
+    def run(self, prompt: str, workspace: Path, *, timeout_seconds: int = INSTRUCT_TIMEOUT_SECONDS) -> AgentResult:
         self._log.write(
             f"agent run starting (session={self.chat_id[:8]}..., timeout={timeout_seconds}s)"
         )
@@ -410,15 +410,6 @@ class ToolsRunYaml:
             for prefix in ("resources:", "instructions:", "action:", "tool:")
         )
 
-    def fenced_yaml_from_text(self, text: str) -> str | None:
-        if "ok:" not in text:
-            return None
-        for match in re.finditer(r"```(?:yaml)?\s*\n(.*?)```", text, re.DOTALL | re.IGNORECASE):
-            block = match.group(1)
-            if self.looks_like_tools_run_output(block):
-                return self._fence.fenced(block.strip())
-        return None
-
     def extract_yaml_from_command(self, command: str) -> str | None:
         powershell = re.search(r'@"\s*\r?\n(.*?)\"@', command, re.DOTALL)
         if powershell:
@@ -476,19 +467,10 @@ class ToolsRunYaml:
         parsed = yaml.safe_load(yaml_body)
         if not isinstance(parsed, dict):
             raise AgentHarnessError("run request must be a mapping", prefix=self._prefix)
-        response = invoke_run_request(parsed, timeout_seconds)
+        if self._workspace is None:
+            raise AgentHarnessError("a run request runs in a workspace; this reader was made with none", prefix=self._prefix)
+        response = invoke_run_request(parsed, self._workspace, timeout_seconds)
         return self._fence.fenced(self._fence.dump_manifest(response_to_dict(response)))
-
-    def replay(self, command: str) -> str | None:
-        if not _TOOLS_RUN.search(command):
-            return None
-        yaml_body = self.extract_yaml_from_command(command)
-        if not yaml_body:
-            return None
-        try:
-            return self.run_request(yaml_body)
-        except AgentHarnessError:
-            return None
 
 
 def looks_like_tools_run_output(text: str) -> bool:
@@ -512,15 +494,15 @@ class ToolsetInvoke:
         self._tool_name: str | None = None
 
     @classmethod
-    def create(cls, request: dict[str, Any]) -> ToolsetInvoke:
-        """The run a request names, on the project it names; a request that names none runs on the project the spec
-        works on, the one ``CDD_PROJECT`` names, else the current folder."""
+    def create(cls, request: dict[str, Any], project: Path) -> ToolsetInvoke:
+        """The run a request names, on the project it names; a request that names none runs on project, the one the
+        spec works in."""
         from harness.agent_tools.agent_tools import AgentToolSet
 
         toolset_path = request.get("toolset")
         if not toolset_path:
             raise AgentHarnessError("request missing toolset")
-        project = Path(request.get("project") or os.environ.get("CDD_PROJECT") or Path.cwd())
+        project = Path(request.get("project") or project)
         context = dict(request.get("context") or {})
         if request.get("session"):
             context["session"] = cls._session_named(str(request["session"]), project)
@@ -606,13 +588,13 @@ class ToolsetInvoke:
         return getattr(self._instance, self._tool_name)(**self._arguments)
 
 
-def invoke_run_request(request: dict[str, Any], timeout_seconds: float | None = None) -> RunResponse:
-    """Load a toolset and expand or invoke the named member the same way production does; with a timeout, fail
-    the spec when the run outlives it."""
+def invoke_run_request(request: dict[str, Any], project: Path, timeout_seconds: float | None = None) -> RunResponse:
+    """Load a toolset and expand or invoke the named member the same way production does, on project unless the
+    request names its own; with a timeout, fail the spec when the run outlives it."""
     if timeout_seconds is None:
-        return ToolsetInvoke.create(request).response()
+        return ToolsetInvoke.create(request, project).response()
     label = str(request.get("toolset") or "toolset run")
-    return ToolRunDeadline(timeout_seconds).run(lambda: ToolsetInvoke.create(request).response(), label)
+    return ToolRunDeadline(timeout_seconds).run(lambda: ToolsetInvoke.create(request, project).response(), label)
 
 
 _Outcome = TypeVar("_Outcome")

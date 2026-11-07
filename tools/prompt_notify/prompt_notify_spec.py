@@ -118,17 +118,6 @@ with description("prompt echo detection"):
             expect(kind).to(equal("guideline"))
             expect(label).to(equal("bdd"))
 
-    with context("that receives a legacy YAML action fence"):
-        with it("should name the action from the command text"):
-            kind, label = _prompt_notify.detect(
-                HookPayload({
-                    "tool_name": "Shell",
-                    "tool_input": {"command": "echo action: scan"},
-                })
-            )
-            expect(kind).to(equal("action"))
-            expect(label).to(equal("scan"))
-
     with context("that receives a source file whose path names a practice"):
         with it("should not toast a practice"):
             expect(
@@ -188,16 +177,10 @@ with description("prompt echo detection"):
                 _spec._echo(HookPayload({"tool_name": "validate.validate", "tool_input": {"paths": ["src"]}}))
             ).to(contain("Action \u2192 validate"))
 
-        with it("should put that echo in the IDE toast notice"):
-            expect(
-                _prompt_notify.toast_notice(_spec._echo(HookPayload({"tool_name": "validate.validate", "tool_input": {}})))["message"]
-            ).to(contain("Action \u2192 validate"))
-
         with it("should write that echo to the workspace toast notice"):
             with TemporaryDirectory() as tmp:
-                _prompt_notify.repo = Path(tmp)
-                dest = _prompt_notify.show_ide_toast(
-                    _spec._echo(HookPayload({"tool_name": "validate.validate", "tool_input": {}})),
+                [dest] = _prompt_notify.show_ide_toast(
+                    _spec._echo(HookPayload({"tool_name": "validate.validate", "tool_input": {}})), [Path(tmp)]
                 )
                 expect(json.loads(dest.read_text(encoding="utf-8"))["message"]).to(
                     contain("Action \u2192 validate")
@@ -209,13 +192,9 @@ with description("prompt echo detection"):
                 other = Path(tmp) / "app"
                 repo.mkdir()
                 other.mkdir()
-                _prompt_notify.repo = repo
-                _prompt_notify.toast_roots = [str(other)]
-                dest = _prompt_notify.show_ide_toast(
-                    "chat edit \u2192 rules : code",
-                )
+                _prompt_notify.show_ide_toast("chat edit \u2192 rules : code", [repo, str(other)])
                 copied = other / ".cursor" / "prompt-notify-toast.json"
-                expect(dest.is_file()).to(equal(True))
+                expect((repo / ".cursor" / "prompt-notify-toast.json").is_file()).to(equal(True))
                 expect(copied.is_file()).to(equal(True))
                 expect(json.loads(copied.read_text(encoding="utf-8"))["message"]).to(
                     contain("rules : code")
@@ -230,81 +209,27 @@ with description("prompt echo detection"):
                 resolved = other.resolve()
                 rest = resolved.as_posix().split(":", 1)[1]
                 slash_drive = f"/{resolved.drive[0].lower()}:{rest}"
-                _prompt_notify.repo = repo
-                _prompt_notify.toast_roots = [slash_drive]
-                _prompt_notify.show_ide_toast("chat edit \u2192 rules : code")
+                _prompt_notify.show_ide_toast("chat edit \u2192 rules : code", [slash_drive])
                 copied = other / ".cursor" / "prompt-notify-toast.json"
                 expect(copied.is_file()).to(equal(True))
 
-        with it("should use the composer chat name instead of a file path"):
-            with TemporaryDirectory() as tmp:
-                db = Path(tmp) / "state.vscdb"
-                import sqlite3
-
-                con = sqlite3.connect(db)
-                con.execute("CREATE TABLE cursorDiskKV (key TEXT, value TEXT)")
-                con.execute(
-                    "INSERT INTO cursorDiskKV (key, value) VALUES (?, ?)",
-                    (
-                        "composerData:chat-1",
-                        '{"name": "mm3e story map no yaml", "subtitle": "Edited story-map.md"}',
-                    ),
-                )
-                con.commit()
-                con.close()
-                echo = PromptNotify()
-                echo.state_db = db
-                expect(
-                    echo.chat_edit_source(
-                        HookPayload({
-                            "conversation_id": "chat-1",
-                            "transcript_path": str(
-                                Path(tmp) / "missing-transcript.jsonl"
-                            ),
-                        })
-                    )
-                ).to(equal("chat mm3e story map no yaml edited file"))
-
-        with it("should not use a file path from the first message as the chat title"):
-            with TemporaryDirectory() as tmp:
-                transcript = Path(tmp) / "chat.jsonl"
-                transcript.write_text(
-                    "<user_query>\n@abd-context-driven-delivery/sandbox/mm3e/story-map.md\n</user_query>\n",
-                    encoding="utf-8",
-                )
-                echo = PromptNotify()
-                echo.state_db = Path(tmp) / "missing.vscdb"
-                expect(
-                    echo.chat_edit_source(HookPayload({"transcript_path": str(transcript)}))
-                ).to(equal("chat edit"))
-
-        with it("should name the chat that edited the file"):
-            source = _prompt_notify.chat_edit_source(
-                HookPayload({"conversation_title": "Story map scenarios"})
-            )
-            expect(source).to(equal("chat Story map scenarios edited file"))
-            expect(
-                rules_toast(source, ["stories scenarios"])
-            ).to(equal("chat Story map scenarios edited file \u2192 rules : stories scenarios"))
-
         with it("should not rewrite practice echoes into a rules toast"):
             with TemporaryDirectory() as tmp:
-                _prompt_notify.repo = Path(tmp)
-                _prompt_notify.show_ide_toast("Practice \u2192 ddd")
-                dest = _prompt_notify.show_ide_toast("Practice \u2192 stories")
+                _prompt_notify.show_ide_toast("Practice \u2192 ddd", [Path(tmp)])
+                [dest] = _prompt_notify.show_ide_toast("Practice \u2192 stories", [Path(tmp)])
                 expect(json.loads(dest.read_text(encoding="utf-8"))["message"]).to(
                     equal("Practice \u2192 ddd; Practice \u2192 stories")
                 )
 
         with it("should stack rules notices from the same burst"):
             with TemporaryDirectory() as tmp:
-                _prompt_notify.repo = Path(tmp)
                 _prompt_notify.show_ide_toast(
                     "rules injected for clean-engineering-code\n"
-                    "rules injected for clean-engineering-modules"
+                    "rules injected for clean-engineering-modules",
+                    [Path(tmp)],
                 )
-                dest = _prompt_notify.show_ide_toast(
-                    "rules injected for ddd-tactics\nrules injected for ddd-bounded-context"
+                [dest] = _prompt_notify.show_ide_toast(
+                    "rules injected for ddd-tactics\nrules injected for ddd-bounded-context", [Path(tmp)]
                 )
                 message = json.loads(dest.read_text(encoding="utf-8"))["message"]
                 expect(message).to(
@@ -318,16 +243,9 @@ with description("prompt echo detection"):
 
         with it("should keep both inject toasts from the same burst"):
             with TemporaryDirectory() as tmp:
-                repo = Path(tmp)
-                _prompt_notify.repo = repo
-                _prompt_notify.show_ide_toast(
-                    rules_toast("chat edit", ["agent bdd"]),
-                )
-                dest = _prompt_notify.show_ide_toast(
-                    rules_toast(
-                        "chat edit",
-                        ["clean engineering code", "ddd tactics"],
-                    ),
+                _prompt_notify.show_ide_toast(rules_toast("chat edit", ["agent bdd"]), [Path(tmp)])
+                [dest] = _prompt_notify.show_ide_toast(
+                    rules_toast("chat edit", ["clean engineering code", "ddd tactics"]), [Path(tmp)]
                 )
                 message = json.loads(dest.read_text(encoding="utf-8"))["message"]
                 expect(message).to(

@@ -11,7 +11,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from space.repo.git import RepoConnectError
+from harness.process.git import RepoConnectError
 
 if TYPE_CHECKING:
     from space.repo.repo import Branch, Repo
@@ -24,6 +24,15 @@ _BRANCH_REF = "refs/heads/"
 _FOLDER_BRANCH_LENGTH = 24
 # A branch named for a ticket, such as `checkout-flow-87`, names its worktree folder by the ticket number alone.
 _TICKET_NUMBER = re.compile(r"-(\d+)$")
+
+
+class WorktreeNotRemovedError(RuntimeError):
+    """Raised when a worktree's folder is still there after git, a forced delete, and the Windows fallbacks each tried
+    to remove it, such as a checkout a running program holds open. It names the folder left behind."""
+
+    def __init__(self, folder: Path) -> None:
+        super().__init__(f"could not remove the worktree at {folder}; close what holds it open and close it again")
+        self.folder = folder
 
 
 class Worktree:
@@ -136,7 +145,14 @@ class Worktrees:
         slug = branch.name.replace("/", "-")
         ticket = _TICKET_NUMBER.search(slug)
         short = ticket.group(1) if ticket else slug[:_FOLDER_BRANCH_LENGTH].rstrip("-")
-        return primary.parent / f"{_abbreviated(primary.name)}-{short}"
+        return primary.parent / f"{self._abbreviated(primary.name)}-{short}"
+
+    def _abbreviated(self, folder: str) -> str:
+        """A clone folder's name shortened for its worktrees: `abd-context-driven` is `abd-cd`."""
+        tokens = [part for part in re.split(r"[-_]+", folder or "") if part]
+        if not tokens:
+            return folder or "repo"
+        return tokens[0] + ("-" + "".join(token[0] for token in tokens[1:]) if len(tokens) > 1 else "")
 
     def add(self, path: str | Path, branch: Branch) -> Worktree:
         """Check branch out in a new worktree at path; the worktree that already has it, when one does."""
@@ -152,23 +168,21 @@ class Worktrees:
         return Worktree.from_checkout(dest, branch.name)
 
     def remove(self, worktree: Worktree) -> None:
-        """Remove worktree's folder and forget it, forcing the folder away when git cannot delete a locked checkout."""
+        """Remove worktree's folder and forget it, forcing the folder away when git cannot delete a locked checkout.
+        A folder still there afterwards raises WorktreeNotRemovedError, so a close is never reported done for a checkout
+        that still exists."""
         dest = worktree.path
         try:
             self._repo.git.run("worktree", "remove", "--force", str(dest))
         except RepoConnectError as exc:
             logger.info("worktree remove failed; forcing directory delete: %s", exc)
+        if dest.exists():
+            self._rmtree_logged(dest)
+        if dest.exists():
             self._force_remove_directory_windows(dest)
         if dest.exists():
-            shutil.rmtree(dest, ignore_errors=True)
-        if dest.exists():
-            self._force_remove_directory_windows(dest)
-        if dest.exists():
-            return
-        try:
-            self._repo.git.run("worktree", "prune")
-        except RepoConnectError as exc:
-            logger.info("worktree prune failed: %s", exc)
+            raise WorktreeNotRemovedError(dest)
+        self._repo.git.run("worktree", "prune")
 
     def _force_remove_directory_windows(self, path: Path) -> bool:
         """Last resort when git/shutil cannot delete a locked checkout (Windows only)."""
@@ -216,10 +230,3 @@ def _repo_at(folder: Path | str) -> Repo:
 
     return Repo(folder)
 
-
-def _abbreviated(folder: str) -> str:
-    """A clone folder's name shortened for its worktrees: `abd-context-driven` is `abd-cd`."""
-    tokens = [part for part in re.split(r"[-_]+", folder or "") if part]
-    if not tokens:
-        return folder or "repo"
-    return tokens[0] + ("-" + "".join(token[0] for token in tokens[1:]) if len(tokens) > 1 else "")

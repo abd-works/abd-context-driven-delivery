@@ -97,6 +97,22 @@ class GraphRulesCollection(RulesCollection):
         super().__init__(entries)
         self.node = node
 
+    @classmethod
+    def from_node(cls, node: Any) -> GraphRulesCollection:
+        """The rules node's schema gives its type, each with its prose and, when one exists, the check that runs it."""
+        from harness.graph.graph_practice import GraphPractices
+        from harness.graph.schema_rules import PracticeSchema
+
+        patterns = node.practice.graph.overlay_patterns if node.practice.graph else ()
+        schema = PracticeSchema.load(node.practice.name, patterns)
+        checks = GraphPractices.named(node.practice.name).checks(patterns)
+        entries: dict[str, GraphRule] = {}
+        for slug in schema.slugs_for(node.type):
+            check = checks.get(slug)
+            node_types = tuple(check.node_types) if check is not None else (node.type,)
+            entries[slug] = GraphRule(node, slug, body=schema.rule_prose.get(slug, ""), node_types=node_types, check=check)
+        return cls(node, entries)
+
     @property
     @data_field
     def type(self) -> str:

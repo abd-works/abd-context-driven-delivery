@@ -12,7 +12,7 @@ drawio = DrawIOStoryModel().render(story_map)
 # practices/stories/model
 
 - **Purpose:** Keep stakeholder behaviour as one story model — epics, stories, and increments, then scenarios and steps — so a markdown file, a diagram, and a test file stay the same hierarchy every later fidelity reads.
-- **Seam (terms):** StoryNode, StoryModel, StoryModelFactory, Epic, Increment, Story, StoryType, Background, Scenario, Step, StepType, Example, Examples, SourceLocation, and one StoryModel subclass per format
+- **Seam (terms):** StoryNode, StoryModel, Epic, Increment, Story, StoryType, Background, Scenario, Step, StepType, Example, Examples, SourceLocation, and one StoryModel subclass per format
 - **Dependencies (one-way):** harness/graph (*BoundNode*, *Graph*), harness/name (*Name*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*, *SketchLens*)
 
 These dependencies are owned by the modules named; this model only uses them. *GraphStoryModel* writes a loaded model onto the stories practice graph; cross-practice links from steps and examples to Clean Engineering nodes are recorded there.
@@ -68,11 +68,6 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 + append_epic(epic: Epic): None
 + append_increment(increment: Increment): None
 + clone(): StoryModel
-
-## StoryModelFactory
-
-+ load(path: str): StoryModel
-	// a .drawio file reads through DrawIOStoryModel; anything else through StoryModel.load
 
 ## Epic : StoryNode
 

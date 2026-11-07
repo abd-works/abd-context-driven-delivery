@@ -87,6 +87,13 @@ class RepositoryToolsets:
         """One bytecode folder for this checkout, which keeps ``__pycache__`` out of the source tree."""
         return str(self.root / ".pycache")
 
+    def use_for_this_process(self) -> None:
+        """Import this checkout's modules in the running process, with their bytecode kept in its one folder. A process
+        started by path rather than through ``pythonpath()``, such as the IDE's hook command, calls it first."""
+        os.environ["PYTHONPYCACHEPREFIX"] = self.pycache_prefix()
+        sys.pycache_prefix = self.pycache_prefix()
+        self.ensure_import_path()
+
     def ensure_import_path(self) -> None:
         entries = self.import_path_entries()
         if entries[0] not in sys.path:

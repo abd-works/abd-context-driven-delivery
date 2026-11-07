@@ -183,9 +183,9 @@ def _(s):
     def _(world):
         world.reviewed = world.data_of(world.Ticket.load(BILLING_REPORT.name).progress_of(STORY_MAP).finish_review())
 
-    @s.then("billing-report's session log ends with review Stories story_map")
+    @s.then("billing-report's session log ends with review stories story_map")
     def _(world):
-        expect(log_lines(world, BILLING_REPORT)[-1]).to(end_with(" review Stories story_map"))
+        expect(log_lines(world, BILLING_REPORT)[-1]).to(end_with(" review stories story_map"))
 
     @s.and_("the story_map tile marks Review ✓ and the fidelity is done")
     def _(world):

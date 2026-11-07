@@ -22,7 +22,7 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.mcp.mcp_server import McpHost
-from space.repo.git import Git
+from harness.process.git import Git
 from space.repo.repo import (
     BranchInWorktreeError,
     BranchNameRequiredError,
@@ -58,7 +58,7 @@ with description("a Repo"):
             (self.clone / "a.py").write_text("work\n", encoding="utf-8")
             self.repo.commit([str(self.clone / "a.py")], "demo turn", untracked=True)
             self.repo.branch_named("main").check_out()
-            self.repo.merge_from("session/demo", message="merge demo")
+            self.repo.merge_from(self.repo.branch_named("session/demo"), message="merge demo")
             expect(_git(self.clone, "ls-tree", "--name-only", "main")).to(contain("a.py"))
 
         with it("should name the files a branch changed since it left main"):
@@ -263,7 +263,7 @@ with description("a branch opened through the repo toolset"):
             with before.each:
                 (Path(self.tmp.name) / "host").mkdir()
                 self.host_origin, self.host = _clone_with_origin(Path(self.tmp.name) / "host")
-                Repo.current(self.clone).switch_branch("feature/a")
+                Repo.of_project(self.clone).switch_branch("feature/a")
 
             with it("should switch that project's clone"):
                 expect(_git(self.clone, "branch", "--show-current")).to(equal("feature/a"))
@@ -276,11 +276,11 @@ with description("a branch opened through the repo toolset"):
 
             with it("should commit and push in that project's clone"):
                 (self.clone / "work.txt").write_text("feature work\n", encoding="utf-8")
-                Repo.current(self.clone).push_commit("work")
+                Repo.of_project(self.clone).push_commit("work")
                 expect(_git(self.origin, "ls-tree", "--name-only", "feature/a")).to(contain("work.txt"))
 
             with it("should close the branch in that project's clone"):
-                Repo.current(self.clone).close_branch()
+                Repo.of_project(self.clone).close_branch()
                 expect(_git(self.clone, "branch", "--list", "feature/a")).to(equal(""))
 
 
@@ -353,14 +353,14 @@ with description("a worktree opened through the repo toolset"):
 
         with context("loaded for the project a call names"):
             with before.each:
-                Repo.current(self.clone).switch_worktree("feature/a")
+                Repo.of_project(self.clone).switch_worktree("feature/a")
                 self.tree = WorkState(self.clone).worktree_folder
 
             with it("should open the worktree beside that project's clone"):
                 expect(_git(self.tree, "branch", "--show-current")).to(equal("feature/a"))
 
             with it("should remove that project's worktree when closed"):
-                Repo.current(self.clone).close_worktree()
+                Repo.of_project(self.clone).close_worktree()
                 expect(self.tree.exists()).to(equal(False))
 
 
@@ -489,7 +489,7 @@ with description("the repo push toolset"):
 
         with it("should commit when push_commit is called"):
             (self.repo_root / "note.txt").write_text("checkpoint\n", encoding="utf-8")
-            commit = Repo.current(self.repo_root).push_commit("push: checkpoint")
+            commit = Repo.of_project(self.repo_root).push_commit("push: checkpoint")
             expect(commit.sha).not_to(equal(""))
             expect(commit.subject).to(equal("push: checkpoint"))
 

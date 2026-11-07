@@ -68,6 +68,7 @@ def quote(value: str) -> str:
 
 class PythonStory(CodeStory):
     scenario_type = PythonScenario
+    description_mark = r"^#\s*"
 
     @classmethod
     def load_all(cls, content: str) -> List["PythonStory"]:
@@ -79,9 +80,7 @@ class PythonStory(CodeStory):
     def load(cls, content: str, story_slug: str) -> "PythonStory":
         name_match = re.search(r'with story\("([^"]+)"\)', content)
         story = cls(cls.name_read(name_match.group(1) if name_match else None, story_slug), 1)
-        actor_match = re.search(r"^# Actor:\s*(.+)$", content, re.MULTILINE)
-        if actor_match:
-            story.actors = [actor_match.group(1).strip()]
+        story.read_description(content)
         domain_match = re.search(r"^# Domain terms:\s*(.+)$", content, re.MULTILINE)
         if domain_match:
             story.domain_terms = [term.strip() for term in domain_match.group(1).split(",") if term.strip()]

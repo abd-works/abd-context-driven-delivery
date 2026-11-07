@@ -43,13 +43,18 @@ detect_echo(payload: HookPayload, toolsets: list | None): tuple[str, str] | None
 detect(payload: HookPayload): tuple[str, str] | None
 	// never toasts an action from a path
 	// names a guideline when the path is a rules path
-echo_toolsets(repo: Path | None): list
-show_toast(toast: str, workspace_roots: list[Path]): Path
-	// class operation the hook server calls for each merged toast
-	-> PromptNotify(toast_roots=workspace_roots).show_ide_toast
-show_ide_toast(echo: str): Path
-	// joins same-burst rule lines under one "rules :" prefix; never overwrites an earlier guideline in that burst
-chat_edit_source(payload: HookPayload): str
-toast_notice(echo: str): dict[str, str]
+echo_toolsets(): list
+	// the CDD checkout's installed toolsets, loaded once per process; a toolset that fails to load raises
+show_toast(toast: str, workspace_roots: list[Path]): list[Path]
+	// the operation the hook server calls for each merged toast, on the one PromptNotify it registered
+	-> PromptNotify.show_ide_toast
+show_ide_toast(echo: str, workspace_roots: list[Path | str]): list[Path]
+	-> ToastFile(folder).show(echo, now) for each workspace folder
 install_ide_toast_extension(): Path
 	// copies ide_toast into the Cursor extensions folder once per process
+
+## ToastFile
+The toast notice of one workspace folder, `.cursor/prompt-notify-toast.json`. Nothing about one hook event is kept on the shared *PromptNotify*; each toast is written through its own *ToastFile*.
+
+show(message: str, now: datetime): Path
+	// joins same-burst rule lines under one "rules :" prefix; never overwrites an earlier guideline in that burst

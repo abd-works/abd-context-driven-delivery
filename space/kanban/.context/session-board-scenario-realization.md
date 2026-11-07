@@ -3372,20 +3372,20 @@ it should show each fidelity's Generate, Validate, and Review
 
 ```
 it should show the fidelity's rules
--> Board.help(practice="stories", fidelity="story_map")
-<- dict
+-> FidelityProgress.help()
+<- Help
 ```
 
 ```
 it should name the stage a fidelity belongs to
--> Board.help(practice="stories", fidelity="story_map")
-<- dict
+-> FidelityProgress.help()
+<- Help
 ```
 
 ```
 it should link to the fidelity's page on the forge
--> Board.help(practice="stories", fidelity="story_map")
-<- dict
+-> FidelityProgress.help()
+<- Help
 ```
 
 ##### that opens help on a practice
@@ -3393,13 +3393,13 @@ it should link to the fidelity's page on the forge
 ```
 it should show the practice's shared rules
 -> Board.help(practice="stories")
-<- dict
+<- Help
 ```
 
 ```
 it should name no fidelity on a practice's help
 -> Board.help(practice="stories")
-<- dict
+<- Help
 ```
 
 ##### with a work folder outside the repository

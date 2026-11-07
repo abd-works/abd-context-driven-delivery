@@ -1,4 +1,5 @@
-"""Git - runs the git command line in one folder, with a time limit that suits the command."""
+"""Git - runs the git command line in one folder, with a time limit that suits the command. Every part of the
+framework that reads a checkout (the repository tools, the catalog citation, the pinned runtime) runs git through it."""
 
 from __future__ import annotations
 

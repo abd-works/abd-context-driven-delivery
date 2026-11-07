@@ -39,7 +39,7 @@ class FilesAndReportsAdapterDriver implements FilesAndReportsDriver {
   }
 
   async ruleNamesOf(ticket: string, fidelity: string): Promise<string[]> {
-    return (await this.progress(ticket, fidelity).report()).rules.map(rule => rule.name)
+    return (await this.progress(ticket, fidelity).report()).rules.map(rule => rule.rule.slug)
   }
 
   async failingLineOf(ticket: string, fidelity: string): Promise<number> {

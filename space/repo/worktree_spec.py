@@ -4,7 +4,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from expects import be_true, contain, equal, expect
+from expects import be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -12,6 +12,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from space.repo.repo import Repo  # noqa: E402
+from space.repo.worktree import WorktreeNotRemovedError  # noqa: E402
 from space.work_state import WorkState  # noqa: E402
 
 
@@ -72,3 +73,35 @@ with description("a worktree opened for a branch") as self:
 
             with it("should still open the worktree folder"):
                 expect(WorkState(self.clone).worktree_folder.is_dir()).to(be_true)
+
+    with context("whose folder cannot be removed"):
+        with before.each:
+            self.opened = Repo(self.clone).branch_named("feature/a").open_in_worktree()
+            self.worktrees = Repo(self.clone).worktrees
+            # Stands in for a checkout a running program holds open: every way of deleting the folder leaves it there.
+            self.worktrees._rmtree_logged = lambda folder: None
+            self.worktrees._force_remove_directory_windows = lambda folder: False
+            self.opened.path.joinpath(".git").unlink()
+
+        with it("should say the worktree was not removed, naming its folder"):
+            expect(lambda: self.worktrees.remove(self.opened)).to(raise_error(WorktreeNotRemovedError))
+
+
+with description("a branch on a clone") as self:
+    with before.each:
+        self.tmp = Path(tempfile.mkdtemp(prefix="branch-spec-"))
+        self.origin, self.clone = _clone_with_origin(self.tmp)
+
+    with after.each:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    with context("that origin has a copy of, with no upstream set, and a commit origin lacks"):
+        with before.each:
+            _git(self.clone, "checkout", "-q", "-b", "feature/a")
+            _git(self.clone, "push", "-q", "origin", "feature/a")
+            (self.clone / "work.txt").write_text("work\n", encoding="utf-8")
+            _git(self.clone, "add", "work.txt")
+            _git(self.clone, "commit", "-q", "-m", "work")
+
+        with it("should need a push"):
+            expect(Repo(self.clone).needs_push()).to(be_true)

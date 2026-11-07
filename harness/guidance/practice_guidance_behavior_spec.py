@@ -23,9 +23,9 @@ from harness.agent_tools.agent_tools import AgentInstructions
 from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.ddd.ddd import Ddd
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import ToolsetReference
 
-Car = AgentToolSet._load("cdd_guidance.practices._examples.car.car:Car")
+Car = ToolsetReference("cdd_guidance.practices._examples.car.car:Car").toolset_class
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
 from cdd_guidance.practices.stories.stories import Stories
 

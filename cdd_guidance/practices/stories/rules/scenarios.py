@@ -30,6 +30,8 @@ _GESTURE = re.compile(
 
 # Two alternatives read better as separate steps or scenarios; an outline earns its table with more.
 _ALTERNATIVES_WITHOUT_AN_OUTLINE = 2
+# A Then longer than this that mentions a story is continuing a flow into another story, so it should name that story.
+_CONTINUING_THEN_WORDS = 12
 
 # The parts of an aggregate a Given describes after naming the aggregate's root.
 _OWNED_PART_TYPES = ("Entity", "ValueObject")
@@ -222,7 +224,7 @@ class ScenarioNamesContinuation(PracticeGraphRule):
         text = _text(node)
         if "next story" in text.casefold() or "continues in" in text.casefold():
             return []
-        if re.search(r"\bstory\b", text, re.I) and len(text.split()) > 12:
+        if re.search(r"\bstory\b", text, re.I) and len(text.split()) > _CONTINUING_THEN_WORDS:
             return [
                 f"Long Then {text!r} should name the next story on the map when continuing a flow."
             ]

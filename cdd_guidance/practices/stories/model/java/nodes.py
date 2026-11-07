@@ -99,9 +99,7 @@ class JavaStory(CodeStory):
     def load(cls, content: str, story_slug: str) -> "JavaStory":
         name_match = re.search(r"Story:\s*(.+)", content)
         story = cls(cls.name_read(name_match.group(1) if name_match else None, story_slug), 1)
-        actor_match = re.search(r"Actor:\s*(.+)", content)
-        if actor_match:
-            story.actors = [actor_match.group(1).strip()]
+        story.read_description(content)
         story.fill(content)
         return story
 

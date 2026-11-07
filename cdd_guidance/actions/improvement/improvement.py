@@ -1,9 +1,6 @@
 """Improvement action: repair a toolset whose expected behaviour failed, then verify the fix by theme."""
 from __future__ import annotations
 
-import inspect
-from pathlib import Path
-
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.markdown import markdown
@@ -15,11 +12,6 @@ from harness.mcp.mcp_server import Mcp
 class Improvement(GuidanceAction):
     """Slash ``/repair`` runs this action on each listed guidance; it is an action of its own, not an operation of a
     practice."""
-
-    @property
-    def module_dir(self) -> Path:
-        """Directory of this module — used by @markdown extract."""
-        return Path(inspect.getfile(type(self))).resolve().parent
 
     @markdown(label="repair")
     def repair_loop(self) -> str:

@@ -18,8 +18,8 @@
 *And* it names no fidelity
 *And* its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/context-tools/stories.html
 
-#### Scenario: Link a fidelity with no page of its own to its practice's page
+#### Scenario: Link the ddd model fidelity to its own page
 
-*Given* the ddd model fidelity has no page on the forge
+*Given* the catalog has a page for the ddd model fidelity
 *When* the Person opens help on the ddd model fidelity
-*Then* its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/context-tools/ddd.html
+*Then* its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/fidelities/ddd-model.html

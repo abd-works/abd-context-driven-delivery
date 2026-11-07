@@ -62,6 +62,7 @@ from space.kanban.story_test import (
     expect_refused,
     expect_session_folder,
     names_in,
+    next_in,
     refusal_of,
     ticket_in,
 )
@@ -196,7 +197,7 @@ def _(s):
 
     @s.and_("its next step is Generate on stories-story-map")
     def _(world):
-        expect((world.opened["next"]["slug"], world.opened["next"]["next_action"])).to(equal(("stories-story-map", "generate")))
+        expect((world.opened["next"]["slug"], next_in(world.opened)["next_action"])).to(equal(("stories-story-map", "generate")))
 
     @s.and_("checkout-flow is still the active ticket")
     def _(world):

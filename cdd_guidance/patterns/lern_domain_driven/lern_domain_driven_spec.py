@@ -130,7 +130,7 @@ with description("a LernDomainDriven generator"):
             for leaf in leaves:
                 expect(paths[leaf]).to(contain('from "test-utils/story-test/story-test"'))
 
-    with context("whose contexts slot is expanded"):
+    with context("whose contexts section is expanded"):
         with before.each:
             self.rendered = (_MODULE_DIR / "lern_domain_driven.md").read_text(encoding="utf-8")
 

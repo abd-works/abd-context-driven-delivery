@@ -1,41 +1,27 @@
 """Workspace MCP probe for ``/agent-tools-diagnostics``.
 
-Uses the **live** cdd server's ``McpHost``, the one every chat talks to — ping, light invoke, and
-heavy invoke (``cdd-diagnostic`` fixtures) all call ``host.dispatch`` on that host. Tests
-without a live host use ``AgentToolsProbe.run_standalone`` (one-off host, not used in MCP).
-"""
+The probe calls tools through an MCP host: the live cdd server's host that answers the diagnostics call, the one every
+chat talks to, or, for specs and scripts, a one-off host in this process."""
 from __future__ import annotations
 
 import concurrent.futures
-import inspect
 import os
 import sys
 from pathlib import Path
 from typing import Any
 
-from harness.agent_tools.agent_tools import AgentToolSet
-from harness.name.name import Name
-from harness.diagnostics.cdd_diagnostic_bridge import probe_arguments_from_cdd_diagnostic
-from harness.diagnostics.guidance_probe import GuidanceProbe, failure_text, instruction_result, probe_subsection
-
-_HEAVY_INVOKE_PREFIXES = ("session.", "sessions.", "graph.")
-
-_INVOKE_DISPATCH_TIMEOUT_SECONDS = 12.0
-_INVOKE_SKIP_PREFIXES = (
-    "session.",
-    "sessions.",
-    "graph.",
-    "partition.",
-    "catalog.",
-    "repo.",
-)
+from harness.diagnostics.probe_arguments import ProbeArguments
+from harness.diagnostics.probe_outcome import ProbeOutcome, ProbeSection
 
 AGENT_TOOLS_PROBE_SECTION = "agent_tools"
-
 AGENT_TOOLS_TOOLSET_PREFIXES = ("space.", "harness.", "tools.")
 # Guidance and its diagnostics are probed by the guidance probe.
 AGENT_TOOLS_TOOLSET_EXCLUDES = ("harness.guidance.", "harness.guidance_actions.", "harness.diagnostics.guidance_diagnostics")
-
+# How long one probe call may run; a call still running then is reported red and left to finish on its own.
+_DISPATCH_SECONDS = 12.0
+# Session and graph tools are called only with the ``cdd-diagnostic`` fixtures, in the heavy phase.
+_HEAVY_INVOKE_PREFIXES = ("session.", "sessions.", "graph.")
+_INVOKE_SKIP_PREFIXES = ("session.", "sessions.", "graph.", "partition.", "catalog.", "repo.")
 _SKIP_INVOKE: dict[str, str] = {
     "repo.push_commit": "ping only (git)",
     "repo.close_branch": "ping only (git)",
@@ -44,365 +30,174 @@ _SKIP_INVOKE: dict[str, str] = {
     "repo.switch_worktree": "ping only (git)",
     "installer.install": "use /install shell",
     "installer.clean": "use /clean shell",
-    "agent-tools-diagnostics.agent_tools_diagnostics": "nested diagnostics probe",
-    "guidance-diagnostics.guidance_diagnostics": "nested guidance diagnostics probe",
 }
-
-_NEVER_PROBE: frozenset[str] = frozenset(
-    {
-        "agent-tools-diagnostics.agent_tools_diagnostics",
-        "guidance-diagnostics.guidance_diagnostics",
-    }
-)
+# The diagnostics tools themselves: probing them would run the probe inside itself.
+_NEVER_PROBE = frozenset({"agent-tools-diagnostics.agent_tools_diagnostics", "guidance-diagnostics.guidance_diagnostics"})
 
 
-def _probe_progress(phase: str, mcp_name: str, detail: str) -> None:
-    """Live trace on stderr only (stdout is MCP JSON-RPC). CDD_PROBE_QUIET=1 silences."""
-    if os.environ.get("CDD_PROBE_QUIET", "0") == "1":
-        return
-    sys.stderr.write(f"[agent-tools] {phase} {mcp_name}: {detail}\n")
-    sys.stderr.flush()
+class ProbeCallTimedOut(TimeoutError):
+    """A tool the probe called did not answer within the probe's time limit; it keeps running on its own."""
+
+    def __init__(self, tool: str, seconds: float) -> None:
+        super().__init__(f"{tool} did not finish within {seconds:g}s")
+        self.tool = tool
 
 
 def agent_tools_toolset_ref(ref: str) -> bool:
+    """True when the toolset is one this probe covers: a space, harness, or tools toolset other than guidance."""
     module = ref.split(":", 1)[0]
     if any(module.startswith(prefix) for prefix in AGENT_TOOLS_TOOLSET_EXCLUDES):
         return False
     return any(module.startswith(prefix) for prefix in AGENT_TOOLS_TOOLSET_PREFIXES)
 
 
-def _slug_for_toolset_ref(ref: str) -> str:
-    """Slug for install-log matching — no toolset ``__init__`` on the MCP worker thread."""
-    toolset_cls = AgentToolSet._load(ref)
-    return Name(getattr(toolset_cls, "domain_slug", None) or toolset_cls.__name__).kebab
-
-
-class ProbeRequiresServingHost(RuntimeError):
-    """Raised when diagnostics run outside the live CDD MCP host process."""
-
-
 class AgentToolsProbe:
     """A probe of the workspace MCP tools one install deployed (space, harness, and tools): ping each, call the light
     ones with probe arguments, and call session and graph tools with ``cdd-diagnostic`` fixtures. Made for its
-    Installer and the guidance slugs a tool needs as its ``guidance`` argument; results go under ``agent_tools`` in
-    diagnostics.json."""
+    Installer, the guidance slugs a tool needs as its ``guidance`` argument, the MCP host it calls through, and the
+    project the calls work on; results go under ``agent_tools`` in diagnostics.json. Without a host it stands up a
+    one-off host over every toolset of the Installer's checkout; without a project a call works on the folder
+    ``CDD_PROJECT`` names."""
 
-    def __init__(self, installer: Any, guidance: list[str] | None = None) -> None:
+    def __init__(
+        self, installer: Any, guidance: list[str] | None = None, mcp_host: Any = None, project: Path | None = None
+    ) -> None:
         self.installer = installer
         self.slugs = list(guidance or [])
+        self.project = project
+        self._mcp_host = mcp_host
+
+    @property
+    def host(self) -> Any:
+        """The host this probe calls through."""
+        if self._mcp_host is None:
+            from harness.mcp.mcp_server import McpHost
+
+            refs = tuple(self.installer.toolsets.collect())
+            self._mcp_host = McpHost.from_refs(refs, repo=str(self.installer.repo), project=str(self.installer.path))
+        return self._mcp_host
 
     @property
     def toolset_refs(self) -> tuple[str, ...]:
         """The deployed space, harness, and tools toolsets; every such toolset in the repository before an install."""
-        refs = [ref for ref in self.installer.installed_items("toolset") if agent_tools_toolset_ref(ref)]
+        refs = [ref for ref in self.installer.diagnostics.installed_items("toolset") if agent_tools_toolset_ref(ref)]
         if refs:
             return tuple(refs)
         return tuple(ref for ref in self.installer.toolsets.collect() if agent_tools_toolset_ref(ref))
 
     @property
     def published(self) -> list[str]:
-        """The installed workspace MCP names, limited to those the live host serves when one is running."""
-        from harness.mcp.mcp_server import serving_mcp_host
-
-        installed = {name for name in self.installer.installed_items("mcp") if name != "cdd.ping"}
-        slugs = {_slug_for_toolset_ref(ref) for ref in self.toolset_refs}
-        allowed = {
-            name
-            for name in installed
-            if name not in _NEVER_PROBE and any(name == slug or name.startswith(f"{slug}.") for slug in slugs)
-        }
-        live = serving_mcp_host()
-        if live is None:
-            return sorted(allowed)
-        runtime = live._runtime
-        return sorted({name for name in (*runtime._tools, *runtime._prompts) if name in allowed})
-
-    @property
-    def host(self) -> Any:
-        """The live cdd server's host; diagnostics never start a second one inside the server."""
-        from harness.mcp.mcp_server import serving_mcp_host
-
-        live = serving_mcp_host()
-        if live is None:
-            raise ProbeRequiresServingHost(
-                "Agent-tools diagnostics require serving_mcp_host() — invoke "
-                "agent-tools-diagnostics.agent_tools_diagnostics on the CDD MCP "
-                "host Cursor already runs, not a separate Python process."
-            )
-        return live
+        """The installed workspace MCP names the host publishes from the probed toolsets."""
+        installed = set(self.installer.diagnostics.installed_items("mcp")) - _NEVER_PROBE
+        server = self.host.checkout_server
+        refs = set(self.toolset_refs)
+        served = {name: tool for name, tool in (*server.tools.items(), *server.prompts.items())}
+        return sorted(name for name, tool in served.items() if name in installed and tool.registration_name in refs)
 
     def run(self) -> str:
-        """Ping, invoke, and heavy invoke on the live MCP host; on a one-off host when no host is serving."""
-        from harness.mcp.mcp_server import serving_mcp_host
-
-        _probe_progress("run", "agent-tools-diagnostics", "start")
-        if serving_mcp_host() is None:
-            report = self.run_standalone()
-            _probe_progress("run", "agent-tools-diagnostics", "done")
-            return report
-        self._prepare_workspace()
-        report = self._all_phases(self.host)
-        _probe_progress("run", "agent-tools-diagnostics", "done")
+        """Ping, invoke, and heavy invoke, each phase written to diagnostics.json; the reply holds each phase's colour."""
+        self._progress("run", "agent-tools-diagnostics", "start")
+        self.host
+        report = "\n\n".join((self.ping(), self.invoke(), self.heavy_invoke()))
+        self._progress("run", "agent-tools-diagnostics", "done")
         return report
 
-    def run_standalone(self) -> str:
-        """Ping, invoke, and heavy invoke on a one-off in-process host (specs and scripts)."""
-        from harness.mcp.mcp_server import McpHost
-
-        self._prepare_workspace()
-        refs = tuple(self.installer.toolsets.collect())
-        project = str(self.installer.path) if getattr(self.installer, "path", None) else str(self.installer.repo)
-        host = McpHost.from_refs(refs, repo=str(self.installer.repo), project=project)
-        host._mark_as_serving()
-        try:
-            return self._all_phases(host)
-        finally:
-            host._unbind_as_serving()
-
     def ping(self) -> str:
+        """Ping every published tool, and report as red each probed toolset the host skipped at start-up."""
         published = self.published
-        host = self.host
-        _probe_progress("ping", f"{len(published)} tools", "start")
-        probes: list[dict[str, Any]] = []
-        for mcp_name in published:
-            item = _probe_mcp_ping_host(host, mcp_name)
-            probes.append(item)
-            _probe_progress("ping", mcp_name, item.get("color", "done"))
-        subsection = probe_subsection("ping", [], probes)
-        self.installer.write_diagnostics_section(AGENT_TOOLS_PROBE_SECTION, {"ping": subsection})
-        return f"green\n{subsection['report']}"
+        self._progress("ping", f"{len(published)} tools", "start")
+        outcomes = [self._ping_one(name) for name in published] + self._skipped_at_start()
+        section = ProbeSection("ping", outcomes)
+        self.installer.diagnostics.write_section(AGENT_TOOLS_PROBE_SECTION, {"ping": section.record})
+        return section.reply
 
-    def invoke(self, host: Any | None = None) -> str:
-        published = set(self.published)
-        probe_host = host if host is not None else self.host
-        probes: list[dict[str, Any]] = []
-        files = GuidanceProbe(self.installer, self.slugs)
+    def invoke(self) -> str:
+        """Call each published tool the light phase does not skip, with arguments made for the probe."""
+        arguments = ProbeArguments(self.installer.repo, self.slugs)
         try:
-            _probe_progress("invoke", f"{len(published)} enrolled", "start")
-            for mcp_name in sorted(published):
-                skip = _invoke_skip_reason(mcp_name)
-                if skip:
-                    _probe_progress("invoke", mcp_name, f"skip ({skip})")
-                item = self.invoke_one(probe_host, mcp_name, files, phase="invoke")
-                probes.append(item)
-                if not skip:
-                    _probe_progress("invoke", mcp_name, item.get("color", item.get("skipped", "done")))
+            outcomes = [self._invoke_one(name, arguments) for name in self.published]
         finally:
-            files.cleanup()
-        subsection = probe_subsection("invoke", self.slugs, probes)
-        failures = [item for item in probes if item.get("color") == "red"]
-        color = "red" if failures else "green"
-        self.installer.write_diagnostics_section(
-            AGENT_TOOLS_PROBE_SECTION,
-            {
-                "color": color,
-                "scope": list(AGENT_TOOLS_TOOLSET_PREFIXES),
-                "toolset_count": len(self.toolset_refs),
-                "invoke": subsection,
-            },
-        )
-        prefix = "!" if color == "red" else ""
-        return f"{prefix}{color}\n{subsection['report']}"
+            arguments.cleanup()
+        section = ProbeSection("invoke", outcomes, self.slugs)
+        record = {"scope": list(AGENT_TOOLS_TOOLSET_PREFIXES), "toolset_count": len(self.toolset_refs), "invoke": section.record}
+        self.installer.diagnostics.write_section(AGENT_TOOLS_PROBE_SECTION, record)
+        return section.reply
 
-    def heavy_invoke(self, host: Any) -> str:
-        """Session/graph invokes using ``cdd-diagnostic`` workspace fixtures."""
-        try:
-            from cdd_diagnostic.workspace import WorkspaceFixtures  # noqa: F401
-        except ImportError:
-            subsection = probe_subsection(
-                "heavy_invoke",
-                [],
-                [{"mcp": "cdd-diagnostic", "color": "yellow", "skipped": "pip install -e ../cdd-diagnostic"}],
-            )
-            self.installer.write_diagnostics_section(AGENT_TOOLS_PROBE_SECTION, {"heavy_invoke": subsection})
-            return f"yellow\n{subsection['report']}"
+    def heavy_invoke(self) -> str:
+        """Call each session and graph tool with its ``cdd-diagnostic`` fixture; yellow without the package."""
+        arguments = ProbeArguments(self.installer.repo, [])
+        if not arguments.fixtures.is_installed:
+            outcomes = [ProbeOutcome.from_skip("cdd-diagnostic", "pip install -e ../cdd-diagnostic")]
+        else:
+            arguments.fixtures.prepare()
+            heavy = [name for name in self.published if name.startswith(_HEAVY_INVOKE_PREFIXES)]
+            outcomes = [self._heavy_invoke_one(name, arguments) for name in heavy]
+        section = ProbeSection("heavy_invoke", outcomes)
+        self.installer.diagnostics.write_section(AGENT_TOOLS_PROBE_SECTION, {"heavy_invoke": section.record})
+        return section.reply
 
-        files = GuidanceProbe(self.installer, [])
-        probes: list[dict[str, Any]] = []
-        try:
-            published = set(self.published)
-            _probe_progress("heavy_invoke", "session/graph", "start")
-            for mcp_name in sorted(published):
-                if not any(mcp_name.startswith(prefix) for prefix in _HEAVY_INVOKE_PREFIXES):
-                    continue
-                if probe_arguments_from_cdd_diagnostic(mcp_name, self.installer.repo) is None:
-                    _probe_progress("heavy_invoke", mcp_name, "skip (no fixture)")
-                    probes.append({"mcp": mcp_name, "color": "yellow", "skipped": "no cdd-diagnostic fixture"})
-                    continue
-                item = self.invoke_one(host, mcp_name, files, phase="heavy_invoke")
-                probes.append(item)
-                _probe_progress("heavy_invoke", mcp_name, item.get("color", "done"))
-            subsection = probe_subsection("heavy_invoke", [], probes)
-            failures = [item for item in probes if item.get("color") == "red"]
-            color = "red" if failures else "green"
-            self.installer.write_diagnostics_section(
-                AGENT_TOOLS_PROBE_SECTION,
-                {"heavy_invoke": subsection, "color": color},
-            )
-            prefix = "!" if color == "red" else ""
-            return f"{prefix}{color}\n{subsection['report']}"
-        finally:
-            files.cleanup()
+    def _ping_one(self, mcp_name: str) -> ProbeOutcome:
+        outcome = self._called(mcp_name, {"ping": True}, "ping")
+        if outcome.is_red or outcome.details.get("preview") == '{"ping": "pong", "tool": "' + mcp_name + '"}':
+            return outcome if outcome.is_red else ProbeOutcome(mcp_name, ProbeOutcome.GREEN, preview="pong")
+        return ProbeOutcome.from_refusal(mcp_name, f"unexpected ping response: {outcome.details.get('preview')}")
 
-    def invoke_one(
-        self,
-        host: Any,
-        mcp_name: str,
-        files: GuidanceProbe,
-        *,
-        phase: str = "invoke",
-    ) -> dict[str, Any]:
-        """Call one MCP operation on host with probe arguments; files makes, and later removes, any files they need."""
-        skip = _invoke_skip_reason(mcp_name)
+    def _skipped_at_start(self) -> list[ProbeOutcome]:
+        refs = set(self.toolset_refs)
+        return [
+            ProbeOutcome.from_refusal(item["tool"], f"skipped at start-up: {item['reason']}")
+            for item in self.host.checkout_server.skipped
+            if item["tool"] in refs or any(item["tool"] == name or item["tool"].startswith(f"{name}.") for name in self._probed_slugs)
+        ]
+
+    @property
+    def _probed_slugs(self) -> set[str]:
+        return {name.split(".", 1)[0] for name in self.installer.diagnostics.installed_items("mcp")} - {"cdd"}
+
+    def _invoke_one(self, mcp_name: str, arguments: ProbeArguments) -> ProbeOutcome:
+        skip = _SKIP_INVOKE.get(mcp_name) or ("skipped for invoke (heavy or mutating)" if mcp_name.startswith(_INVOKE_SKIP_PREFIXES) else "")
         if skip:
-            return {"mcp": mcp_name, "color": "yellow", "skipped": skip}
-        runtime = host._runtime
-        resolved = runtime.resolve_call_name(mcp_name)
-        if resolved not in runtime._tools and resolved not in runtime._prompts:
-            return {"mcp": mcp_name, "color": "red", "failure": "not enrolled on host"}
+            self._progress("invoke", mcp_name, f"skip ({skip})")
+            return ProbeOutcome.from_skip(mcp_name, skip)
+        return self._invoked_with(mcp_name, arguments, "invoke")
 
-        enrolled = runtime._tools.get(resolved) or runtime._prompts.get(resolved)
-        member = enrolled.callable
-        args, missing = files.arguments_for(mcp_name, member)
+    def _heavy_invoke_one(self, mcp_name: str, arguments: ProbeArguments) -> ProbeOutcome:
+        if arguments.fixtures.probe_arguments(mcp_name) is None:
+            self._progress("heavy_invoke", mcp_name, "skip (no fixture)")
+            return ProbeOutcome.from_skip(mcp_name, "no cdd-diagnostic fixture")
+        return self._invoked_with(mcp_name, arguments, "heavy_invoke")
+
+    def _invoked_with(self, mcp_name: str, arguments: ProbeArguments, phase: str) -> ProbeOutcome:
+        tool = self.host.checkout_server.enrolled(mcp_name)
+        if tool is None:
+            return ProbeOutcome.from_refusal(mcp_name, "not enrolled on host")
+        values, missing = arguments.for_operation(mcp_name, tool.callable)
         if missing:
-            extra, still_missing = self._workspace_arguments(mcp_name, member)
-            args = {**args, **extra}
-            missing = still_missing
-        if missing:
-            return {"mcp": mcp_name, "color": "red", "failure": "needs " + ", ".join(missing)}
+            return ProbeOutcome.from_refusal(mcp_name, "needs " + ", ".join(missing))
+        return self._called(mcp_name, values or None, phase).called_on(values.get("paths") or [])
+
+    def _called(self, mcp_name: str, values: dict[str, Any] | None, phase: str) -> ProbeOutcome:
+        """Call the tool through the host and wait at most ``_DISPATCH_SECONDS``. The call runs on a thread of its own
+        that the probe never waits for past the limit, so a tool that hangs cannot hang the diagnostics."""
+        self._progress(phase, mcp_name, f"call {values!r}"[:200])
+        pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         try:
-            result = _dispatch_timed(host, mcp_name, args or None, phase=phase)
-        except Exception as exc:
-            _probe_progress(phase, mcp_name, failure_text(exc))
-            return {"mcp": mcp_name, "color": "red", "failure": failure_text(exc)}
-        item = instruction_result(mcp_name, result)
-        if args.get("paths"):
-            item["paths"] = args["paths"]
-        return item
-
-    def _all_phases(self, host: Any) -> str:
-        return "\n\n".join((self.ping(), self.invoke(host), self.heavy_invoke(host)))
-
-    def _prepare_workspace(self) -> None:
-        """Make the ``cdd-diagnostic`` workspace fixtures when that package is present. No git clean or switch: that
-        can block on locks, and repo MCP invokes use probe arguments only."""
-        from harness.diagnostics.cdd_diagnostic_bridge import _ensure_cdd_diagnostic_path
-
-        _probe_progress("clean", "repo", "skip (no git switch/clean in diagnostics)")
-        _ensure_cdd_diagnostic_path()
-        try:
-            from cdd_diagnostic.workspace import WorkspaceFixtures
-        except ImportError:
-            return
-        WorkspaceFixtures(self.installer.repo)
-
-    def _workspace_arguments(self, mcp_name: str, member: Any) -> tuple[dict[str, Any], list[str]]:
-        try:
-            signature = inspect.signature(member)
-        except (TypeError, ValueError):
-            return {}, ["callable"]
-        bridged = probe_arguments_from_cdd_diagnostic(mcp_name, self.installer.repo)
-        if bridged is not None:
-            return bridged
-        repo_root = str(Path(self.installer.repo).resolve())
-        param_names = _signature_parameter_names(signature)
-        args = _builtin_workspace_probe_arguments(mcp_name, repo_root, param_names)
-        missing = _missing_required_arguments(signature, args)
-        if not missing and not args and not _missing_required_arguments(signature, {}):
-            return {}, []
-        return args, missing
-
-
-def _invoke_skip_reason(mcp_name: str) -> str | None:
-    if mcp_name in _SKIP_INVOKE:
-        return _SKIP_INVOKE[mcp_name]
-    for prefix in _INVOKE_SKIP_PREFIXES:
-        if mcp_name.startswith(prefix):
-            return "skipped for invoke (heavy or mutating)"
-    return None
-
-
-def _dispatch_timed(
-    host: Any,
-    mcp_name: str,
-    arguments: dict[str, Any] | None,
-    *,
-    phase: str = "invoke",
-) -> object:
-    """Invoke with a hard timeout so diagnostics never hang on git or sub-agents."""
-    _probe_progress(phase, mcp_name, f"call {arguments!r}"[:200])
-
-    from harness.mcp.mcp_server import serving_mcp_host
-
-    if phase == "ping" and serving_mcp_host() is not None:
-        result = host.dispatch(mcp_name, arguments)
-        _probe_progress(phase, mcp_name, "returned")
-        return result
-
-    def _call() -> object:
-        return host.dispatch(mcp_name, arguments)
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(_call)
-        try:
-            result = future.result(timeout=_INVOKE_DISPATCH_TIMEOUT_SECONDS)
+            answer = pool.submit(self.host.dispatch, mcp_name, values, self.project).result(timeout=_DISPATCH_SECONDS)
         except concurrent.futures.TimeoutError:
-            _probe_progress(phase, mcp_name, f"timeout ({_INVOKE_DISPATCH_TIMEOUT_SECONDS}s)")
-            raise TimeoutError(
-                f"{mcp_name} did not finish within {_INVOKE_DISPATCH_TIMEOUT_SECONDS}s"
-            ) from None
-    _probe_progress(phase, mcp_name, "returned")
-    return result
+            outcome = ProbeOutcome.from_failure(mcp_name, ProbeCallTimedOut(mcp_name, _DISPATCH_SECONDS))
+        except Exception as failure:
+            # A probe reports what failed: the failure is its red outcome.
+            outcome = ProbeOutcome.from_failure(mcp_name, failure)
+        else:
+            outcome = ProbeOutcome.from_answer(mcp_name, answer)
+        finally:
+            pool.shutdown(wait=False, cancel_futures=True)
+        self._progress(phase, mcp_name, outcome.color)
+        return outcome
 
-
-def _probe_mcp_ping_host(host: Any, mcp_name: str) -> dict[str, Any]:
-    try:
-        result = _dispatch_timed(host, mcp_name, {"ping": True}, phase="ping")
-    except KeyError:
-        return {"mcp": mcp_name, "color": "red", "failure": "not enrolled on host"}
-    except Exception as exc:
-        return {"mcp": mcp_name, "color": "red", "failure": failure_text(exc)}
-    if isinstance(result, dict) and result.get("ping") == "pong":
-        return {"mcp": mcp_name, "color": "green", "preview": "pong"}
-    return {
-        "mcp": mcp_name,
-        "color": "red",
-        "failure": f"unexpected ping response: {result!r}"[:400],
-    }
-
-
-def _signature_parameter_names(signature: inspect.Signature) -> set[str]:
-    return {
-        name
-        for name, param in signature.parameters.items()
-        if name not in {"self", "cls"}
-        and param.kind
-        not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
-    }
-
-
-def _missing_required_arguments(
-    signature: inspect.Signature,
-    args: dict[str, Any],
-) -> list[str]:
-    required = [
-        name
-        for name, param in signature.parameters.items()
-        if name not in {"self", "cls"}
-        and param.kind
-        not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
-        and param.default is inspect.Parameter.empty
-    ]
-    return [name for name in required if name not in args]
-
-
-def _builtin_workspace_probe_arguments(
-    mcp_name: str,
-    repo_root: str,
-    param_names: set[str],
-) -> dict[str, Any]:
-    if mcp_name == "sessions.switch":
-        return {"name": "_cdd_mcp_probe"}
-    if mcp_name.startswith("echo.") and "body" in param_names:
-        return {"body": "agent-tools-diagnostics probe"}
-    return {}
+    def _progress(self, phase: str, mcp_name: str, detail: str) -> None:
+        """A live trace on stderr, since stdout carries MCP; ``CDD_PROBE_QUIET=1`` silences it."""
+        if os.environ.get("CDD_PROBE_QUIET", "0") == "1":
+            return
+        sys.stderr.write(f"[agent-tools] {phase} {mcp_name}: {detail}\n")
+        sys.stderr.flush()

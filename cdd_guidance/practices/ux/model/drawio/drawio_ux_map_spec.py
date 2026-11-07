@@ -26,7 +26,7 @@ class SpecFixture:
         sheet.apply_layout("sidebar")
         sheet.append_region(Region("panel", 0, "panel"))
         sheet.append_region(Region("body", 1, "body"))
-        sheet.attach_story_name("Update Ability Rank")
+        sheet.show_story("Update Ability Rank")
         sheet.attach_domain_term("Character")
 
         abilities = Screen("Character Sheet - Abilities", 1, chrome_of=sheet)

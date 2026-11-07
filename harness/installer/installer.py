@@ -1,266 +1,120 @@
 """Installer: install every toolset a repository defines into one IDE folder, through every destination."""
 from __future__ import annotations
 
-import json
-import os
 import re
-import shutil
-import stat
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterable
 
+from harness.agent_tools.agent_tools import AgentTool, InstallDestination, agent_instructions, agent_tool, agent_toolset, tool_subject
+from harness.hooks.hooks import Hook, HookHandlersFile, HookInstallation, HooksManifest
 from harness.installation.destination import Installation, noCatalog
-from harness.agent_tools.agent_tools import (
-    AgentToolSet,
-    InstallDestination,
-    agent_instructions,
-    agent_tool,
-    agent_toolset,
-)
 from harness.installation.files import FileInstallation, command
+from harness.installation.ide_layout import IdeLayout
 from harness.installation.language_adapter import LanguageAdapterInstallation
 from harness.installation.repository_toolsets import RepositoryToolsets
-from harness.hooks.hooks import Hook
+from harness.installer.claude_plugins import ClaudePlugins
+from harness.installer.install_diagnostics import InstallDiagnostics
+from harness.installer.install_record import InstallRecord
 from harness.markdown import markdown
 
 if TYPE_CHECKING:
     from harness.hooks.hook_server import HookPayload
+    from harness.mcp.mcp_server import McpInstallation
+
+# The checkout this installer's code runs from. The cdd server is installed into ``~/.cdd`` from it, whichever
+# project's hook asks for the server.
+_CDD_CHECKOUT = Path(__file__).resolve().parents[2]
+# The record of the last install into a project's own IDE folder; an install into a temporary folder keeps its record
+# in that folder, so a spec's install never replaces the person's.
+_SHARED_RECORD = Path(__file__).resolve().parent / InstallRecord.NAME
+
+
+class ToolsetInstallFailed(Exception):
+    """Publishing one toolset failed; the install stops so no IDE folder is left with part of a toolset."""
+
+    def __init__(self, toolset: Any, cause: Exception) -> None:
+        super().__init__(f"install failed for {toolset}: {type(cause).__name__}: {cause}")
+        self.toolset = toolset
+        self.cause = cause
+
+
+class HookServerNotRunning(Exception):
+    """The install finished but the checkout's hook daemon does not answer, so hooks would not run."""
+
+    def __init__(self, repo: Path) -> None:
+        super().__init__(f"install failed: the hook server of {repo} is not running")
+        self.repo = repo
+
+
+class _InstallChannels:
+    """The MCP, hook, and language adapter installations of one install run, each tracking the files it writes in
+    the install record."""
+
+    def __init__(self, installer: Installer) -> None:
+        from harness.mcp.mcp_server import McpInstallation
+
+        self.mcp: McpInstallation = McpInstallation(installer.ide, installer.path, repo=installer.repo)
+        self.hook = HookInstallation(installer.ide, installer.path, repo=installer.repo)
+        self.language_adapters = LanguageAdapterInstallation(installer.ide, installer.path, repo=installer.repo)
+        for installation in (self.mcp, self.hook, self.language_adapters):
+            installer.track(installation)
+
 
 @noCatalog
 @agent_toolset
 class Installer:
-    """Collect installable toolsets; then install each tool."""
+    """Publish every marked member of the toolsets a repository defines into one IDE folder, through the installation
+    of each channel its marks name, then start the hook server and the cdd server the install points at."""
 
-    domain_slug = "installer"
     TOOLSET_REF = "harness.installer.installer:Installer"
-    _STATE_NAME = ".install-state.json"
-    _BOARD_PLUGIN = "cdd-board@cdd-home"
-    # A board mod installed from a checkout's own marketplace runs that branch's code, not the server's.
-    _CHECKOUT_BOARD_PLUGIN = "cdd-board@abd-works"
-    _CHECKOUT_MARKETPLACE = "abd-works"
-    _DEFAULT_PATHS = {
-        "Cursor": ".cursor",
-        "VS Code": ".github",
-        "Kilo": ".kilo",
-        "Claude": ".claude",
-    }
-    _DEPLOYED_CHANNELS = ("toolset", "skill", "command", "rules", "mcp", "hook", "agent", "language-adapter")
-    _GREEN_SURFACE_CHANGE = 0.10
-    _YELLOW_SURFACE_CHANGE = 0.50
-    _DIAGNOSTICS_LOG = "diagnostics.json"
-    def __init__(
-        self,
-        ide: str | None = None,
-        path: str | Path | None = None,
-        repo: str | Path | None = None,
-    ) -> None:
-        self.repo = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
-        shared_state = Path(__file__).resolve().parent / self._STATE_NAME
-        if ide is None and path is None and shared_state.is_file():
-            data = json.loads(shared_state.read_text(encoding="utf-8"))
-            ide = data.get("ide")
-            stored = data.get("path")
-            if stored and Path(stored).exists() and not self._is_ephemeral_install_path(stored):
-                path = stored
-        self.ide = ide or "Cursor"
-        default_path = self.repo / self._DEFAULT_PATHS.get(self.ide, ".cursor")
-        self.path = Path(path) if path is not None else default_path
-        if self._is_ephemeral_install_path(self.path):
-            self._state_file = self.path / self._STATE_NAME
-        else:
-            self._state_file = shared_state
-        from harness.mcp.mcp_server import McpInstallation
+    _SKILL_MCP_NAME = re.compile(r"Use MCP tool:\s*`([A-Za-z0-9_.-]+)")
 
-        self.toolsets.ensure_import_path()
-        self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
-        self._hook: Any = None
-        self._language_adapters = LanguageAdapterInstallation(self.ide, self.path, repo=self.repo)
-        self._installed_paths: list[str] = []
+    def __init__(self, ide: str | None = None, path: str | Path | None = None, *, repo: str | Path) -> None:
+        self.repo = Path(repo).resolve()
+        last = InstallRecord(_SHARED_RECORD).saved if ide is None and path is None else {}
+        self.ide = ide or last.get("ide") or IdeLayout.DEFAULT_IDE
+        self.layout = IdeLayout(self.ide)
+        self.path = Path(path) if path is not None else self._last_or_default_folder(last.get("path"))
+        self.record = InstallRecord(self.path / InstallRecord.NAME if self._is_temporary(self.path) else _SHARED_RECORD)
+        self.diagnostics = InstallDiagnostics(self.path, self.layout)
+        self.claude_plugins = ClaudePlugins()
+        self.toolsets = RepositoryToolsets(self.repo)
+        self._channels: _InstallChannels | None = None
         self._deployed_toolsets: list[str] = []
         self.diagnosis: list[str] = []
 
-    def _is_ephemeral_install_path(self, path: Path | str) -> bool:
-        try:
-            resolved = Path(path).resolve()
-            temp = Path(tempfile.gettempdir()).resolve()
-            return resolved == temp or temp in resolved.parents
-        except OSError:
-            return False
+    @classmethod
+    @tool_subject
+    def load(cls, *, project: Path | str) -> Installer:
+        """The installer of project, the folder the call names, into the IDE folder it last installed into."""
+        return cls(repo=project)
 
-    @property
-    def toolsets(self) -> RepositoryToolsets:
-        """The toolsets this repository defines, and the import path that loads them."""
-        return RepositoryToolsets(self.repo)
+    def track(self, installation: Installation) -> None:
+        """Have installation add each file it writes to the install record."""
+        installation.track_writes_with(lambda written: self.record.track(written, self.path))
 
-    def _track_write(self, dest: Path) -> None:
-        try:
-            rel = dest.resolve().relative_to(self.path.resolve())
-        except ValueError:
-            return
-        normalized = str(rel).replace("\\", "/")
-        if normalized not in self._installed_paths:
-            self._installed_paths.append(normalized)
-
-    def _track_installation(self, installation: Installation) -> None:
-        installation.track_writes_with(self._track_write)
-
-    def _load_state(self) -> dict[str, Any]:
-        if not self._state_file.is_file():
-            return {}
-        try:
-            return json.loads(self._state_file.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return {}
-
-    def _save_state(self) -> None:
-        payload = {
-            "ide": self.ide,
-            "path": str(self.path),
-            "installed_files": self._installed_paths,
-        }
-        self._state_file.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-
-    def _prune_empty_parents(self, file_path: Path) -> None:
-        stop_at = {self.path / name for name in ("skills", "rules", "commands", "prompts", "agents")}
-        parent = file_path.parent
-        while parent not in stop_at and parent != self.path:
-            if not parent.is_dir() or any(parent.iterdir()):
-                break
-            try:
-                parent.rmdir()
-            except OSError:
-                break
-            parent = parent.parent
-
-    def installations_for(self, tool: Any) -> list[Installation]:
+    def installations_for(self, tool: AgentTool) -> list[Installation]:
+        channels = self._channels_of_run()
         destinations = tool.destinations
-        installations: list[Installation] = []
         mcp_mode = InstallDestination.MCP in destinations
-        if mcp_mode:
-            self._track_installation(self._mcp)
-            installations.append(self._mcp)
-        for destination in (
-            InstallDestination.SKILL,
-            InstallDestination.COMMAND,
-            InstallDestination.RULE,
-        ):
+        installations: list[Installation] = [channels.mcp] if mcp_mode else []
+        for destination in (InstallDestination.SKILL, InstallDestination.COMMAND, InstallDestination.RULE):
             if destination in destinations:
-                markdown = FileInstallation(
-                    self.ide,
-                    self.path,
-                    destination,
-                    mcp_mode=mcp_mode,
-                    repo=self.repo,
-                )
-                self._track_installation(markdown)
-                installations.append(markdown)
-        # Claude Code hooks are not wired yet; its install carries no hook channel.
-        if InstallDestination.HOOK in destinations and self.ide != "Claude":
-            self._track_installation(self._hook)
-            installations.append(self._hook)
+                files = FileInstallation(self.ide, self.path, destination, mcp_mode=mcp_mode, repo=self.repo)
+                self.track(files)
+                installations.append(files)
+        if InstallDestination.HOOK in destinations and self.layout.runs_hooks:
+            installations.append(channels.hook)
         return installations
-
-    def _install_toolset(self, toolset: Any) -> None:
-        for tool in toolset.tools.values():
-            for installation in self.installations_for(tool):
-                installation.install(tool)
-        self._language_adapters.record(toolset)
 
     @command(name="clean")
     @agent_tool
     def clean(self) -> list[str]:
         """Remove files from the previous install on this IDE path."""
-        state = self._load_state()
-        install_path = Path(str(state.get("path", self.path)))
-        if str(install_path.resolve()) != str(self.path.resolve()):
-            return []
-        removed: list[str] = []
-        for rel in state.get("installed_files", []):
-            dest = install_path / rel
-            if Path(rel).name in {"mcp.json", self._DIAGNOSTICS_LOG}:
-                continue
-            if not dest.is_file():
-                continue
-            dest.unlink()
-            removed.append(rel)
-            self._prune_empty_parents(dest)
-        self._prune_empty_skill_dirs()
-        return removed
-
-    def _prune_empty_skill_dirs(self) -> None:
-        skills = self.path / "skills"
-        if not skills.is_dir():
-            return
-        for dirpath, _dirnames, _filenames in os.walk(skills, topdown=False):
-            folder = Path(dirpath)
-            if folder == skills:
-                continue
-            try:
-                next(folder.iterdir())
-            except StopIteration:
-                try:
-                    folder.rmdir()
-                except OSError:
-                    pass
-
-    def _rmtree(self, path: Path) -> None:
-        def onerror(func: Any, target: str, _exc: Any) -> None:
-            os.chmod(target, stat.S_IWRITE)
-            func(target)
-
-        shutil.rmtree(path, onerror=onerror)
-
-    def _remove_legacy_underscore_skills(self) -> None:
-        skills = self.path / "skills"
-        if not skills.is_dir():
-            return
-        for dirpath, dirnames, _filenames in os.walk(skills):
-            root = Path(dirpath)
-            for name in list(dirnames):
-                kebab = name.replace("_", "-")
-                if kebab == name or not (root / kebab).exists():
-                    continue
-                twin = root / name
-                if twin.is_dir():
-                    self._rmtree(twin)
-
-    _SKILL_MCP_NAME = re.compile(r"Use MCP tool:\s*`([A-Za-z0-9_.-]+)")
-
-    def _remove_skills_naming_missing_mcp(self) -> list[str]:
-        """Drop skill files that name an MCP tool this install did not enroll.
-
-        Orphan skills from a prior API (for example ``branch.create`` after the
-        tool became ``repo.new_branch``) survive ``clean`` when they were never
-        tracked. Agents then thrash searching for a tool that cannot exist.
-        Skills without an MCP invoke line are left alone (hand-authored orphans).
-        """
-        skills = self.path / "skills"
-        if not skills.is_dir():
-            return []
-        enrolled = set(self._mcp_names())
-        removed: list[str] = []
-        for path in skills.rglob("SKILL.md"):
-            try:
-                text = path.read_text(encoding="utf-8")
-            except OSError:
-                continue
-            names = self._SKILL_MCP_NAME.findall(text)
-            if not names:
-                continue
-            if all(name in enrolled for name in names):
-                continue
-            try:
-                rel = str(path.resolve().relative_to(self.path.resolve())).replace("\\", "/")
-            except ValueError:
-                continue
-            path.unlink()
-            removed.append(rel)
-            self._prune_empty_parents(path)
-            if rel in self._installed_paths:
-                self._installed_paths.remove(rel)
+        removed = self.record.remove_installed(self.path)
+        self.record.prune_empty_skill_folders(self.path)
         return removed
 
     @command(name="install")
@@ -279,42 +133,64 @@ class Installer:
 
     def install_self(self, *, replace: bool = False) -> Any:
         """Deploy only this Installer toolset — ``/install``, ``/clean``, and MCP-host hooks."""
-        return self._install_run([self.TOOLSET_REF], replace=replace)
+        return self._install_run([], replace=replace)
 
-    def _install_run(
-        self,
-        toolsets: Iterable[Any] | None,
-        replace: bool,
-    ) -> Any:
+    def _install_run(self, toolsets: Iterable[Any] | None, replace: bool) -> McpInstallation:
         if replace:
             self.clean()
-            self._installed_paths = []
         else:
-            self._installed_paths = [
-                rel
-                for rel in self._load_state().get("installed_files", [])
-                if (self.path / rel).is_file()
-            ]
+            self.record.keep_existing(self.path)
         self.toolsets.ensure_import_path()
-        self._reset_channels()
-        self._install_all(toolsets)
-        self._install_installer_toolset()
-        self._language_adapters.write_all()
+        self._channels = _InstallChannels(self)
+        self._install_all(self.toolsets.collect() if toolsets is None else toolsets)
+        self._install_toolset(self.TOOLSET_REF, self)
+        self._channels.language_adapters.write_all()
         self._install_agents()
         self._install_standing_rules()
-        self._remove_legacy_underscore_skills()
         if replace:
-            # Only after a full wipe+republish is `_mcp_names()` the whole catalog.
-            # A partial install must not delete skills for toolsets not in this run.
+            # Only after a full wipe and republish do the enrolled MCP names hold the whole catalog; a partial install
+            # must not delete skills for toolsets not in this run.
             self._remove_skills_naming_missing_mcp()
-        self._prune_empty_skill_dirs()
-        self._save_state()
+        self.record.prune_empty_skill_folders(self.path)
+        self.record.save(self.ide, self.path)
         self._standup_channels()
         self.diagnosis = self.diagnose_after_install()
         for report in self.diagnosis:
             if report.startswith("!"):
                 print(report, file=sys.stderr)
-        return self._mcp
+        return self._channels.mcp
+
+    def _install_all(self, toolsets: Iterable[Any]) -> None:
+        from harness.agent_tools.agent_tools import AgentToolSet
+
+        for item in toolsets:
+            try:
+                toolset = AgentToolSet.instantiate(item)
+                self._install_toolset(item, toolset)
+                for child in toolset.child_toolsets():
+                    self._install_toolset(item, child)
+            except ToolsetInstallFailed:
+                raise
+            # Any failure while publishing a toolset stops the install, named after the toolset, with its cause.
+            except Exception as error:  # noqa: BLE001
+                raise ToolsetInstallFailed(item, error) from error
+
+    def _install_toolset(self, item: Any, toolset: Any) -> None:
+        self._remember_toolset(item, toolset)
+        for tool in toolset.tools.values():
+            for installation in self.installations_for(tool):
+                installation.install(tool)
+        self._channels_of_run().language_adapters.record(toolset)
+
+    def _remember_toolset(self, item: Any, toolset: Any) -> None:
+        ref = item if isinstance(item, str) else f"{type(toolset).__module__}:{type(toolset).__name__}"
+        if ref not in self._deployed_toolsets:
+            self._deployed_toolsets.append(ref)
+
+    def _channels_of_run(self) -> _InstallChannels:
+        if self._channels is None:
+            self._channels = _InstallChannels(self)
+        return self._channels
 
     def _install_agents(self) -> None:
         """Copy cdd_guidance/agents into the IDE agents folder. The source stays on cdd_guidance."""
@@ -325,17 +201,7 @@ class Installer:
             dest = self.path / "agents" / f"{self._agent_name(path)}.md"
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
-            self._track_write(dest)
-
-    def _install_standing_rules(self) -> None:
-        """Install cdd_guidance/rules as always-on rules in the IDE rules folder."""
-        source = self.repo / "cdd_guidance" / "rules"
-        if not source.is_dir():
-            return
-        rules = FileInstallation(self.ide, self.path, "rules", repo=self.repo)
-        self._track_installation(rules)
-        for path in sorted([*source.glob("*.md"), *source.glob("*.mdc")]):
-            rules.write_standing_rule(path)
+            self.record.track(dest, self.path)
 
     def _agent_name(self, path: Path) -> str:
         text = path.read_text(encoding="utf-8")
@@ -344,498 +210,144 @@ class Installer:
         for line in text.splitlines()[1:]:
             if line.strip() == "---":
                 break
-            if line.startswith("name:"):
-                name = line.split(":", 1)[1].strip()
-                if name:
-                    return name
+            if line.startswith("name:") and line.split(":", 1)[1].strip():
+                return line.split(":", 1)[1].strip()
         return path.stem
 
-    def _reset_channels(self) -> None:
-        from harness.hooks.hooks import HookInstallation
-        from harness.mcp.mcp_server import McpInstallation
+    def _install_standing_rules(self) -> None:
+        """Install cdd_guidance/rules as always-on rules in the IDE rules folder."""
+        source = self.repo / "cdd_guidance" / "rules"
+        if not source.is_dir():
+            return
+        rules = FileInstallation(self.ide, self.path, "rules", repo=self.repo)
+        self.track(rules)
+        for path in sorted([*source.glob("*.md"), *source.glob("*.mdc")]):
+            rules.write_standing_rule(path)
 
-        self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
-        self._hook = HookInstallation(self.ide, self.path, repo=self.repo)
-        self._language_adapters = LanguageAdapterInstallation(self.ide, self.path, repo=self.repo)
-        self._track_installation(self._language_adapters)
+    def _remove_skills_naming_missing_mcp(self) -> list[str]:
+        """Drop skill files that name an MCP tool this install did not enroll.
 
-    def _install_installer_toolset(self) -> None:
-        toolset = AgentToolSet.instantiate(self.TOOLSET_REF)
-        self._remember_toolset(self.TOOLSET_REF, toolset)
-        self._install_toolset(toolset)
-
-    def _install_all(self, toolsets: Iterable[Any] | None) -> None:
-        if toolsets is None:
-            toolsets = self.toolsets.collect()
-        for item in toolsets:
-            try:
-                toolset = AgentToolSet.instantiate(item)
-                self._remember_toolset(item, toolset)
-                self._install_toolset(toolset)
-                for child in toolset.child_toolsets():
-                    self._install_toolset(child)
-            except Exception as error:
-                raise RuntimeError(f"install failed for {item}") from error
+        Orphan skills from a prior API (for example ``branch.create`` after the
+        tool became ``repo.new_branch``) survive ``clean`` when they were never
+        tracked. Agents then thrash searching for a tool that cannot exist.
+        Skills without an MCP invoke line are left alone (hand-authored orphans).
+        """
+        skills = self.path / "skills"
+        if not skills.is_dir():
+            return []
+        enrolled = set(self._mcp_names())
+        removed: list[str] = []
+        for path in skills.rglob("SKILL.md"):
+            names = self._SKILL_MCP_NAME.findall(path.read_text(encoding="utf-8"))
+            if not names or all(name in enrolled for name in names):
+                continue
+            relative = path.resolve().relative_to(self.path.resolve()).as_posix()
+            path.unlink()
+            removed.append(relative)
+            self.record.prune_empty_parents(path, self.path)
+            self.record.forget(relative)
+        return removed
 
     def _standup_channels(self) -> None:
-        # Installing via MCP runs inside the cdd server itself. A second McpHost.standup() reloads every toolset
+        # Installing via MCP runs inside the cdd server itself. A second McpHost.from_repo() reloads every toolset
         # mid-request, and the server is already running, so neither runs then.
-        if not self._mcp_host_is_this_process():
-            self._mcp.standup()
-            self._print_channel_notice(self._mcp.diagnose())
-        self._hook.standup()
-        self._print_channel_notice(self._hook.diagnose())
-        if not self._is_ephemeral_install_path(self.path) and not self._mcp_host_is_this_process():
+        channels = self._channels_of_run()
+        in_mcp_host = self._mcp_host_is_this_process()
+        if not in_mcp_host:
+            channels.mcp.standup()
+            self._print_channel_notice(channels.mcp.diagnose())
+        channels.hook.standup()
+        self._print_channel_notice(channels.hook.diagnose())
+        if not self._is_temporary(self.path) and not in_mcp_host:
             self.ensure_runtimes()
 
     def ensure_runtimes(self) -> dict[str, Any]:
         """Start the hook daemon and the cdd server; fail if either stays down."""
-        if self.ide == "Claude":
-            mcp = self._ensure_mcp_runtime()
-            return {"hook": "not installed", "mcp": mcp, "cdd plugin": self._install_cdd_plugin(), "board": self.install_board_plugin()}
-        hook_pid = self._ensure_hook_runtime()
-        mcp = self._ensure_mcp_runtime()
-        print(
-            f"hook server pid={hook_pid} cdd server={mcp}",
-            file=sys.stderr,
-        )
+        if not self.layout.runs_hooks:
+            return {
+                "hook": "not installed",
+                "mcp": self.ensure_mcp_server(),
+                "cdd plugin": self.claude_plugins.install_cdd(),
+                "board": self.claude_plugins.install_board(),
+            }
+        hook_pid = self._ensure_hook_server()
+        mcp = self.ensure_mcp_server()
+        print(f"hook server pid={hook_pid} cdd server={mcp}", file=sys.stderr)
         return {"hook": "running", "mcp": mcp}
 
-    def _ensure_hook_runtime(self) -> int | None:
+    def ensure_mcp_server(self) -> str:
+        """Start the one cdd server when none answers. Cursor and VS Code connect to its URL and cannot start it."""
+        return self._channels_of_run().mcp.ensure_server()
+
+    def _ensure_hook_server(self) -> int | None:
         from harness.hooks.hook_daemon import HookDaemon
-        from harness.hooks.hook_server import HookServer
 
-        HookServer.ensure(self.repo)
-        live = HookDaemon().live_address(HookServer.state_path(self.repo))
-        if live is None:
-            raise RuntimeError("install failed: hook server is not running")
-        return live[2]
-
-    def _ensure_mcp_runtime(self) -> str:
-        from harness.mcp.mcp_server import McpInstallation
-
-        return McpInstallation(self.ide, self.path, repo=self.repo).ensure_server()
-
-    def install_board_plugin(self) -> str:
-        """Install the ``cdd-board`` mod ``~/.cdd/`` publishes from the code the server runs, at user level, for every
-        project. Each claude command takes seconds, so one runs only for what is missing, old, or from a checkout.
-        The board is a convenience on top of the install, so a miss is printed, never raised."""
-        from harness.mcp.cdd_home import CddHome
-
-        installed = self._installed_plugins()
-        from_checkout = self._CHECKOUT_BOARD_PLUGIN in installed
-        if not from_checkout and installed.get(self._BOARD_PLUGIN) == self._published_board_version():
-            return "installed"
-        claude = self._claude_cli()
-        if claude is None:
-            print(f"{self._BOARD_PLUGIN} not installed: no claude command found", file=sys.stderr)
-            return "missing"
-        if from_checkout:
-            self._run_claude(claude, "plugin", "uninstall", self._CHECKOUT_BOARD_PLUGIN, "--scope", "user")
-            self._run_claude(claude, "plugin", "marketplace", "remove", self._CHECKOUT_MARKETPLACE)
-        self._run_claude(claude, "plugin", "marketplace", "add", str(CddHome().claude_plugins))
-        self._run_claude(claude, "plugin", "install", self._BOARD_PLUGIN, "--scope", "user")
-        self._run_claude(claude, "plugin", "update", self._BOARD_PLUGIN, "--scope", "user")
-        if self._BOARD_PLUGIN in self._run_claude(claude, "plugin", "list"):
-            return "installed"
-        print(f"{self._BOARD_PLUGIN} not installed: claude plugin install did not take", file=sys.stderr)
-        return "missing"
-
-    def _install_cdd_plugin(self) -> str:
-        """Install the ``cdd`` plugin from ``~/.cdd/`` at user level. It declares the cdd server for every chat, so
-        without it Claude Code has no cdd at all: a miss is printed with the command to run by hand. Claude Code
-        reads it from its folder, so one already installed needs no claude command."""
-        from harness.mcp.cdd_home import CLAUDE_MARKETPLACE, CLAUDE_PLUGIN, CddHome
-
-        plugin = f"{CLAUDE_PLUGIN}@{CLAUDE_MARKETPLACE}"
-        if plugin in self._installed_plugins():
-            return "installed"
-        claude = self._claude_cli()
-        marketplace = CddHome().claude_plugins
-        if claude is None:
-            print(f"{plugin} not installed: no claude command found. Run: claude plugin marketplace add {marketplace}", file=sys.stderr)
-            return "missing"
-        self._run_claude(claude, "plugin", "marketplace", "add", str(marketplace))
-        self._run_claude(claude, "plugin", "install", plugin, "--scope", "user")
-        self._run_claude(claude, "plugin", "update", plugin, "--scope", "user")
-        if plugin in self._run_claude(claude, "plugin", "list"):
-            return "installed"
-        print(f"{plugin} not installed: claude plugin install did not take", file=sys.stderr)
-        return "missing"
-
-    def _installed_plugins(self) -> dict[str, str]:
-        """Each plugin Claude Code has installed, with its version, from its own record of them."""
-        from harness.mcp.mcp_server import UserMcpConfig
-
-        record = UserMcpConfig("Claude").folder / "plugins" / "installed_plugins.json"
-        try:
-            plugins = json.loads(record.read_text(encoding="utf-8")).get("plugins", {})
-        except (OSError, ValueError, AttributeError):
-            return {}
-        return {name: str((entries or [{}])[0].get("version", "")) for name, entries in plugins.items()}
-
-    def _published_board_version(self) -> str:
-        from harness.mcp.cdd_home import BOARD_PLUGIN, CddHome
-
-        manifest = CddHome().claude_plugins / BOARD_PLUGIN / ".claude-plugin" / "plugin.json"
-        try:
-            return str(json.loads(manifest.read_text(encoding="utf-8")).get("version", ""))
-        except (OSError, ValueError):
-            return ""
-
-    def _claude_cli(self) -> str | None:
-        """The desktop app's newest Claude Code, else the one on PATH, which can be too old for the plugin."""
-        found = [path for folder in self._desktop_claude_code_folders() for path in folder.glob("*/*/claude.exe")]
-        versions = [path for path in found if re.fullmatch(r"[\d.]+", path.parent.parent.name)]
-        if versions:
-            return str(max(versions, key=lambda path: [int(part) for part in path.parent.parent.name.split(".")]))
-        return shutil.which("claude")
-
-    def _desktop_claude_code_folders(self) -> list[Path]:
-        """Where the desktop app keeps its Claude Code: under `%APPDATA%\\Claude`, or under each profile in
-        `%LOCALAPPDATA%\\Claude-Data`. Neither is on PATH, so without these the plugin never installs."""
-        roaming = Path(os.environ.get("APPDATA") or Path.home()) / "Claude" / "claude-code"
-        local = Path(os.environ.get("LOCALAPPDATA") or Path.home())
-        return [roaming, *local.glob("Claude-Data/*/claude-code")]
-
-    def _run_claude(self, claude: str, *args: str) -> str:
-        try:
-            run = subprocess.run([claude, *args], capture_output=True, text=True, encoding="utf-8", timeout=120)
-        except (OSError, subprocess.SubprocessError) as error:
-            return str(error)
-        return run.stdout + run.stderr
+        daemon = HookDaemon(self.repo)
+        daemon.ensure()
+        address = daemon.live_address()
+        if address is None:
+            raise HookServerNotRunning(self.repo)
+        return address.pid
 
     def _print_channel_notice(self, diagnosis: dict[str, Any]) -> None:
         notice = diagnosis.get("notice") or ""
         if notice:
             print(notice, file=sys.stderr)
 
-    def _remember_toolset(self, item: Any, toolset: Any) -> None:
-        if isinstance(item, str):
-            ref = item
-        else:
-            cls = type(toolset)
-            ref = f"{cls.__module__}:{cls.__name__}"
-        if ref not in self._deployed_toolsets:
-            self._deployed_toolsets.append(ref)
-
     def diagnose_after_install(self) -> list[str]:
         """Record install-channel diagnostics only; guidance probes use ``/guidance-diagnostics``."""
-        report = str(self.diagnose_install())
-        records = [
-            {"name": "diagnose_install", "report": report, "color": self._color_in(report)}
-        ]
-        self._append_install_log(records)
+        report = self.diagnose_install()
+        color = next((line for line in report.splitlines() if line in {"green", "yellow", "red"}), "green")
+        self.diagnostics.record_install(self._deployed_channels(), report, color)
         return [report]
 
     @agent_instructions
     def diagnose_install(self) -> str:
         """Compare this install with the last diagnostics.json entry and report counts, or what changed."""
-        actual = self._deployed_channels()
-        last = self._baseline_channels()
-        baseline = last if last is not None else {name: [] for name in self._DEPLOYED_CHANNELS}
-        added, removed = self._channel_delta(actual, baseline)
-        color = (
-            "green"
-            if last is None
-            else self._surface_color(self._surface_change(added, removed, actual, baseline))
-        )
-        body = "\n".join(
-            part
-            for part in (
-                self._compare_report(actual, baseline, added, removed),
-                self._runtime_status_report(),
-            )
-            if part.strip()
-        )
+        color, compared = self.diagnostics.compared(self._deployed_channels())
+        body = f"{compared}\n{self._runtime_status_report()}"
         if color != "red":
-            return self._colored_report(color, body)
-        return self._colored_report(color, f"!\n{body}\n{self.diagnose_instructions()}")
-
-    def _surface_change(
-        self,
-        added: dict[str, list[str]],
-        removed: dict[str, list[str]],
-        actual: dict[str, list[str]],
-        baseline: dict[str, list[str]],
-    ) -> float:
-        changed = sum(len(items) for items in added.values())
-        changed += sum(len(items) for items in removed.values())
-        total = 0
-        for name in self._DEPLOYED_CHANNELS:
-            total += len(actual.get(name, [])) + len(baseline.get(name, []))
-        if total == 0:
-            return 0.0
-        return changed / total
-
-    def _surface_color(self, ratio: float) -> str:
-        if ratio <= self._GREEN_SURFACE_CHANGE:
-            return "green"
-        if ratio <= self._YELLOW_SURFACE_CHANGE:
-            return "yellow"
-        return "red"
-
-    def _color_in(self, report: str) -> str:
-        for line in report.splitlines():
-            if line in {"green", "yellow", "red"}:
-                return line
-        return "green"
-
-    def _colored_report(self, color: str, body: str) -> str:
-        if body.startswith("!"):
-            rest = body[1:].lstrip("\n")
-            return f"!\n{color}\n{rest}"
-        return f"{color}\n{body}"
-
-    def _compare_report(
-        self,
-        actual: dict[str, list[str]],
-        baseline: dict[str, list[str]],
-        added: dict[str, list[str]],
-        removed: dict[str, list[str]],
-    ) -> str:
-        lines = ["installed"]
-        for name in self._DEPLOYED_CHANNELS:
-            previous = len(baseline.get(name, []))
-            current = len(actual.get(name, []))
-            lines.append(f"{name} {previous} -> {current} (delta {current - previous})")
-        for name in self._DEPLOYED_CHANNELS:
-            for item in added.get(name, []):
-                lines.append(f"new {name}: {item}")
-            for item in removed.get(name, []):
-                lines.append(f"deleted {name}: {item}")
-        return "\n".join(lines)
-
-    def _channel_delta(
-        self,
-        actual: dict[str, list[str]],
-        baseline: dict[str, list[str]],
-    ) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
-        added: dict[str, list[str]] = {}
-        removed: dict[str, list[str]] = {}
-        for name in self._DEPLOYED_CHANNELS:
-            got = set(actual.get(name, []))
-            expected = set(baseline.get(name, []))
-            extra = sorted(got - expected)
-            missing = sorted(expected - got)
-            if extra:
-                added[name] = extra
-            if missing:
-                removed[name] = missing
-        return added, removed
-
-    def _baseline_channels(self) -> dict[str, list[str]] | None:
-        path = self._diagnostics_log()
-        if not path.is_file():
-            return None
-        data = json.loads(path.read_text(encoding="utf-8"))
-        installs = data.get("installs") or []
-        if not installs:
-            return None
-        return self._channels_from_entry(installs[-1])
-
-    def _channels_from_entry(self, entry: dict[str, Any]) -> dict[str, list[str]]:
-        channels: dict[str, list[str]] = {}
-        for name in self._DEPLOYED_CHANNELS:
-            field = entry.get(name) or {}
-            items = field.get("items") if isinstance(field, dict) else field
-            channels[name] = [str(item) for item in items or []]
-        return channels
-
-    def _diagnostics_log(self) -> Path:
-        return self.path / self._DIAGNOSTICS_LOG
-
-    def _append_install_log(self, records: list[dict[str, str]]) -> None:
-        path = self._diagnostics_log()
-        installs: list[dict[str, Any]] = []
-        if path.is_file():
-            data = json.loads(path.read_text(encoding="utf-8"))
-            installs = list(data.get("installs") or [])
-        channels = self._deployed_channels()
-        color = "green"
-        for record in records:
-            if record["color"] == "red":
-                color = "red"
-                break
-            if record["color"] == "yellow":
-                color = "yellow"
-        entry: dict[str, Any] = {"color": color, "diagnostics": records}
-        for name in self._DEPLOYED_CHANNELS:
-            items = channels.get(name, [])
-            entry[name] = {"count": len(items), "items": items}
-        installs.append(entry)
-        data: dict[str, Any] = {}
-        if path.is_file():
-            data = json.loads(path.read_text(encoding="utf-8"))
-        data["installs"] = installs
-        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-
-    def write_diagnostics_section(self, section: str, payload: dict[str, Any]) -> None:
-        """Add or replace one top-level section in diagnostics.json. Install history stays."""
-        path = self._diagnostics_log()
-        data: dict[str, Any] = {}
-        if path.is_file():
-            data = json.loads(path.read_text(encoding="utf-8"))
-        current = data.get(section)
-        if isinstance(payload, dict):
-            merged = dict(current) if isinstance(current, dict) else {}
-            merged.update(payload)
-            child_colors = [
-                value.get("color")
-                for value in merged.values()
-                if isinstance(value, dict) and value.get("color") in {"green", "yellow", "red"}
-            ]
-            if child_colors:
-                merged["color"] = (
-                    "red"
-                    if "red" in child_colors
-                    else "yellow"
-                    if "yellow" in child_colors
-                    else "green"
-                )
-            data[section] = merged
-        else:
-            data[section] = payload
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-
-    def installed_items(self, channel: str) -> list[str]:
-        """What the latest install in diagnostics.json deployed on one channel, such as ``mcp`` operation names or
-        ``toolset`` references; none before the first install."""
-        path = self._diagnostics_log()
-        if not path.is_file():
-            return []
-        installs = list(json.loads(path.read_text(encoding="utf-8")).get("installs") or [])
-        if not installs:
-            return []
-        return [str(item) for item in (installs[-1].get(channel) or {}).get("items") or []]
+            return f"{color}\n{body}"
+        return f"!\n{color}\n{body}\n{self.diagnose_instructions()}"
 
     def _deployed_channels(self) -> dict[str, list[str]]:
-        return {
-            "toolset": list(self._deployed_toolsets),
-            "skill": self._markdown_names("skills", "SKILL.md"),
-            "command": self._command_names(),
-            "rules": self._rule_names(),
-            "mcp": self._mcp_names(),
-            "hook": self._hook_names(),
-            "agent": self._markdown_names("agents", "*.md"),
-            "language-adapter": self._language_adapter_names(),
-        }
-
-    def _language_adapter_names(self) -> list[str]:
-        folder = self.path / "language-adapters"
-        return sorted(path.relative_to(folder).as_posix() for path in folder.rglob("*.ts")) if folder.is_dir() else []
-
-    def _markdown_names(self, folder_name: str, file_name: str) -> list[str]:
-        folder = self.path / folder_name
-        if not folder.is_dir():
-            return []
-        if file_name == "SKILL.md":
-            names = {path.parent.name for path in folder.rglob(file_name)}
-        else:
-            names = {path.stem for path in folder.rglob(file_name)}
-        return sorted(names)
-
-    def _command_names(self) -> list[str]:
-        names = set(self._markdown_names("commands", "*.md"))
-        names.update(self._markdown_names("prompts", "*.md"))
-        return sorted(names)
-
-    def _rule_names(self) -> list[str]:
-        folder = self.path / "rules"
-        if not folder.is_dir():
-            return []
-        pattern = "*.md" if self.ide == "Claude" else "*.mdc"
-        return sorted(path.stem for path in folder.rglob(pattern))
+        return self.diagnostics.channels_in_folder(self._deployed_toolsets, self._mcp_names())
 
     def _mcp_names(self) -> list[str]:
-        operations = getattr(self._mcp, "mcp_operations", None) or []
-        names = [str(getattr(op, "mcp_name", "")) for op in operations if getattr(op, "mcp_name", "")]
-        if names:
-            return sorted(names)
-        stored = self._load_state().get("mcp") or []
-        return sorted(str(name) for name in stored)
-
-    def _hook_names(self) -> list[str]:
-        dest = self.path / "hook-handlers.json"
-        if not dest.is_file():
-            return []
-        try:
-            data = json.loads(dest.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return []
-        return sorted(
-            str(item.get("operation") or item.get("event") or "")
-            for item in data.get("handlers") or []
-            if item.get("operation") or item.get("event")
-        )
+        """The MCP operations this run enrolled; outside a run, the ones the last install recorded."""
+        if self._channels is None:
+            return self.diagnostics.installed_items("mcp")
+        return sorted(str(tool.mcp_name) for tool in self._channels.mcp.mcp_operations)
 
     def _mcp_host_is_this_process(self) -> bool:
-        from harness.mcp.mcp_server import serving_mcp_host
-
-        return serving_mcp_host() is not None
-
-    def _mcp_host_is_running(self) -> bool:
-        from harness.mcp.mcp_server import McpInstallation
-
-        return McpInstallation(self.ide, self.path, repo=self.repo).server_is_running()
-
-    def _hook_server_status(self) -> tuple[bool, int | None]:
-        from harness.hooks.hook_daemon import HookDaemon
-        from harness.hooks.hook_server import HookServer
-
-        live = HookDaemon().live_address(HookServer.state_path(self.repo))
-        if live is None:
-            return False, None
-        return True, live[2]
-
-    def _registered_hook_events(self) -> list[str]:
-        dest = self.path / "hooks.json"
-        if not dest.is_file():
-            return []
-        try:
-            data = json.loads(dest.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return []
-        hooks = data.get("hooks")
-        if not isinstance(hooks, dict):
-            return []
-        return sorted(str(name) for name in hooks if name)
-
-    def _registered_hook_operations(self) -> list[str]:
-        dest = self.path / "hook-handlers.json"
-        if not dest.is_file():
-            return []
-        try:
-            data = json.loads(dest.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return []
-        names = {
-            str(item.get("operation") or "")
-            for item in data.get("handlers") or []
-            if item.get("operation")
-        }
-        return sorted(name for name in names if name)
+        return self._channels_of_run().mcp.server_runs_this_process()
 
     def _runtime_status_report(self) -> str:
-        mcp = "running" if self._mcp_host_is_running() else "not running"
-        hook_live, hook_pid = self._hook_server_status()
-        hook = f"running (pid {hook_pid})" if hook_live else "not running"
-        events = self._registered_hook_events()
-        operations = self._registered_hook_operations()
-        lines = [
-            f"cdd server: {mcp}",
-            f"hook server: {hook}",
-        ]
-        if events:
-            lines.append(f"hooks registered (events): {', '.join(events)}")
-        else:
-            lines.append("hooks registered (events): none")
-        if operations:
-            lines.append(f"hook handlers (operations): {', '.join(operations)}")
-        else:
-            lines.append("hook handlers (operations): none")
-        return "\n".join(lines)
+        from harness.hooks.hook_daemon import HookDaemon
+
+        mcp = "running" if self._channels_of_run().mcp.server_is_running() else "not running"
+        address = HookDaemon(self.repo).live_address()
+        hook = f"running (pid {address.pid})" if address is not None else "not running"
+        events = HooksManifest(self.path / HooksManifest.NAME).registered_events
+        operations = HookHandlersFile(self.path / HookHandlersFile.NAME).operation_names
+        return "\n".join(
+            [
+                f"cdd server: {mcp}",
+                f"hook server: {hook}",
+                f"hooks registered (events): {', '.join(events) or 'none'}",
+                f"hook handlers (operations): {', '.join(operations) or 'none'}",
+            ]
+        )
+
+    def _last_or_default_folder(self, last: str | None) -> Path:
+        if last and Path(last).exists() and not self._is_temporary(Path(last)):
+            return Path(last)
+        return self.repo / self.layout.folder_name
+
+    def _is_temporary(self, folder: Path) -> bool:
+        temp = Path(tempfile.gettempdir()).resolve()
+        resolved = folder.resolve()
+        return resolved == temp or temp in resolved.parents
 
     @markdown("install")
     def install_instructions(self) -> str:
@@ -856,25 +368,17 @@ class Installer:
     @agent_instructions
     def diagnose_instructions(self) -> str:
         """How to diagnose an install whose deployed counts do not match."""
-        self.install_instructions
-        self.clean_instructions
-        self.diagnose_install_instructions
-        self.runtime_instructions
         return str(self.diagnose_install_instructions).strip()
-
-    def ensure_mcp_server(self) -> str:
-        """Start the one cdd server when none answers. Cursor and VS Code connect to its URL and cannot start it."""
-        from harness.mcp.mcp_server import McpInstallation
-
-        return McpInstallation(self.ide, self.path, repo=self.repo).ensure_server()
 
     @Hook("sessionStart")
     def ensure_mcp_server_on_session_start(self, payload: HookPayload) -> str:
-        return self.ensure_mcp_server()
+        """Start the cdd server when a chat starts; the hook server's toolset holds no project, so this builds the
+        installer of the checkout the server is installed from."""
+        return Installer(repo=_CDD_CHECKOUT).ensure_mcp_server()
 
     @Hook("afterAgentResponse")
     def ensure_mcp_server_after_agent_response(self, payload: HookPayload) -> str:
-        return self.ensure_mcp_server()
+        return Installer(repo=_CDD_CHECKOUT).ensure_mcp_server()
 
 
 __all__ = ["Installer"]

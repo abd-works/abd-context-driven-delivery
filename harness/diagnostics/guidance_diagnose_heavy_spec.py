@@ -23,7 +23,7 @@ from harness.diagnostics.guidance_diagnostics import GuidanceDiagnostics
 
 def _installer(tree: Path, payload: dict) -> Installer:
     installer = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT)
-    log = installer._diagnostics_log()
+    log = installer.diagnostics.path
     log.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return installer
 

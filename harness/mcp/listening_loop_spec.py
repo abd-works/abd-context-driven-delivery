@@ -12,7 +12,7 @@ if str(_REPO) not in sys.path:
 from expects import equal, expect
 from mamba import before, context, description, it
 
-from harness.mcp.listening_loop import ListeningLoop, caller_hung_up
+from harness.mcp.listening_loop import _AcceptFailure, _ListeningLoop
 
 # Windows reports a caller that hung up before its accept completed this way: a plain OSError, WinError 64.
 NETNAME_DELETED = OSError(22, "The specified network name is no longer available", None, 64)
@@ -41,9 +41,9 @@ async def _greeting_through(listener: socket.socket) -> bytes:
 
 
 if sys.platform == "win32":
-    from harness.mcp.listening_loop import AcceptRetryingProactor
+    from harness.mcp.listening_loop import _AcceptRetryingProactor
 
-    class FirstCallerHangsUp(AcceptRetryingProactor):
+    class FirstCallerHangsUp(_AcceptRetryingProactor):
         """Fails the first accept the way Windows does when that caller hangs up, then accepts for real."""
 
         hung_up = False
@@ -60,18 +60,18 @@ if sys.platform == "win32":
 with description("the cdd server's listening loop") as self:
     with context("with a failed accept"):
         with it("should count a caller that hung up as the caller's doing"):
-            expect(caller_hung_up(NETNAME_DELETED)).to(equal(True))
+            expect(_AcceptFailure(NETNAME_DELETED).caller_hung_up).to(equal(True))
 
         with it("should count a reset connection as the caller's doing"):
-            expect(caller_hung_up(ConnectionResetError())).to(equal(True))
+            expect(_AcceptFailure(ConnectionResetError()).caller_hung_up).to(equal(True))
 
         with it("should count any other failure as the listening socket's"):
-            expect(caller_hung_up(OSError(9, "bad file descriptor"))).to(equal(False))
+            expect(_AcceptFailure(OSError(9, "bad file descriptor")).caller_hung_up).to(equal(False))
 
     with context("that has closed its listening socket after a failed accept"):
         with before.each:
             self.server = SimpleNamespace(should_exit=False)
-            loop = ListeningLoop(self.server).new_event_loop()
+            loop = _ListeningLoop(self.server).new_event_loop()
             try:
                 loop.call_exception_handler({"message": "Accept failed on a socket", "exception": OSError(9, "closed")})
             finally:
@@ -83,7 +83,7 @@ with description("the cdd server's listening loop") as self:
     with context("that reports some other error"):
         with it("should keep the server running"):
             server = SimpleNamespace(should_exit=False)
-            loop = ListeningLoop(server).new_event_loop()
+            loop = _ListeningLoop(server).new_event_loop()
             try:
                 loop.call_exception_handler({"message": "Task exception was never retrieved"})
             finally:

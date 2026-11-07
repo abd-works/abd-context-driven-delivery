@@ -8,11 +8,10 @@ import re
 from pathlib import Path
 
 from harness.graph.graph import Graph, PracticeGraph
-from harness.graph.graph_practice import GraphPractice, GraphPractices, rules_in
+from harness.graph.graph_practice import GraphPractice, GraphPractices
 from harness.graph.skipped_folders import scanned_files
 
 _PACKAGE = "cdd_guidance.practices.stories"
-_LANGUAGES = ("typescript", "javascript")
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 _FUNCTION_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b")
 # A step's own lines and the calls just after it: the lines a step's operations are read from.
@@ -20,16 +19,7 @@ _STEP_LINES = 40
 
 
 class StoriesGraph(GraphPractice):
-    """The Stories practice's nodes, its rules, and the rules of each story-test language."""
-
-    def own_rules(self) -> dict:
-        merged = rules_in(f"{self.package}.rules")
-        for language in _LANGUAGES:
-            merged.update(self.language_rules(language))
-        return merged
-
-    def language_rules(self, language: str) -> dict:
-        return rules_in(f"{self.package}.model.{language}.rules") if language in _LANGUAGES else {}
+    """The Stories practice's nodes and its rules."""
 
     def read(self, practice: PracticeGraph) -> None:
         from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
@@ -95,7 +85,7 @@ class _StoryLinks:
 
     def __init__(self, graph: Graph) -> None:
         self.graph = graph
-        self.root = graph._folder
+        self.root = Path(graph.folder) if graph.folder else None
         self.stories = graph.practice("stories")
         self.clean = graph.practice("clean_engineering")
         self._lines: dict[str, list[str]] = {}
@@ -122,7 +112,6 @@ class _StoryLinks:
         modules = {node.name: node for node in self.clean.nodes.get("Module", [])}
         for operation in matched:
             self.stories.link("invokes", step, operation, "relationship")
-            self.clean.link("invokes", operation, step, "relationship")
             self.clean.link("invokedBy", operation, step, "relationship")
             module = modules.get(Path(operation.source.file).parent.name)
             if module is not None and epic is not None:
@@ -170,12 +159,13 @@ class _StoryLinks:
         return sources
 
     def _epic_for(self, step):
-        epics = [node for node in self.stories.by_id.values() if node.type in {"Epic", "SubEpic"}]
-        file = step.source.file
-        for epic in epics:
-            if epic.source.file and file.startswith(str(Path(epic.source.file).parent).replace("\\", "/")):
-                return epic
-        return epics[0] if epics else None
+        """The top-level epic whose tree holds the step; None for a step on no epic."""
+        from cdd_guidance.practices.stories.model.story_model import Epic
+
+        node = step.parent
+        while node is not None and not (isinstance(node, Epic) and not isinstance(node.parent, Epic)):
+            node = node.parent
+        return node
 
 
 GraphPractices.register(StoriesGraph("stories", _PACKAGE))

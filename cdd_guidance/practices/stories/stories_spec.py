@@ -143,6 +143,14 @@ with description("Stories"):
             with it("should name each story's file from that project's root"):
                 expect([str(story.source.file) for story in self.model.every_story()]).to(equal(["tests/story-map.md"]))
 
+        with context("that works in no session, so it has no project to name paths from"):
+            with it("should refuse to read story tests by a relative path rather than read them from the host's own folder"):
+                from cdd_guidance.practices.stories.stories import PracticeOutsideSession
+
+                expect(lambda: Stories(fidelity="story_map").read_paths("tests", "python")).to(
+                    raise_error(PracticeOutsideSession)
+                )
+
     # A module imported under two names loads twice, and an object made by one copy fails isinstance against the other.
     with context("that renders through a format adapter"):
         with it("should use the same adapter class the story model package defines"):
@@ -309,7 +317,7 @@ with description("Stories"):
             expect(any(p.startswith("tests/") for p in paths)).to(be_true)
             expect("tests/story-test.ts" in paths).to(be_true)
 
-    with context("whose contexts slot is expanded at story_map"):
+    with context("whose contexts section is expanded at story_map"):
         with before.each:
             self.stories = Stories(fidelity="story_map")
             self.contexts = self.stories.scoped_markdown()
@@ -333,7 +341,7 @@ with description("Stories"):
             expect("gwt-steps-trace-to-domain-operations" in self.contexts).to(equal(False))
             expect("behavioral-observable-outcomes" in self.contexts).to(equal(False))
 
-    with context("whose contexts slot is expanded at scenarios"):
+    with context("whose contexts section is expanded at scenarios"):
         with before.each:
             self.stories = Stories(fidelity="scenarios")
             self.contexts = self.stories.scoped_markdown()
@@ -368,7 +376,7 @@ with description("Stories"):
         with it("should omit the story_map heading"):
             expect("### story_map" in self.contexts).to(equal(False))
 
-    with context("whose contexts slot is expanded at acceptance_tests"):
+    with context("whose contexts section is expanded at acceptance_tests"):
         with before.each:
             self.stories = Stories(fidelity="acceptance_tests")
             self.contexts = self.stories.scoped_markdown()
@@ -389,7 +397,7 @@ with description("Stories"):
         with it("should omit the scenarios heading"):
             expect("### scenarios" in self.contexts).to(equal(False))
 
-    with context("whose examples slot is expanded at markdown"):
+    with context("whose examples section is expanded at markdown"):
         with it("should omit python example files"):
             text = Stories(fidelity="story_map", format="markdown").examples().expand()
             expect("/py/" in text).to(equal(False))
@@ -402,7 +410,7 @@ with description("Stories"):
             expect("scenario-main-flow.md" in text).to(equal(False))
             expect("scenario-template.md" in text).to(equal(False))
 
-    with context("whose templates slot is expanded at story_map markdown"):
+    with context("whose templates section is expanded at story_map markdown"):
         with before.each:
             self.templates = Stories(fidelity="story_map", format="markdown").templates
 
@@ -424,14 +432,14 @@ with description("Stories"):
             expect("_story.ts" in self.templates).to(equal(False))
             expect("_story.py" in self.templates).to(equal(False))
 
-    with context("whose templates slot is expanded at story_map markdown"):
+    with context("whose templates section is expanded at story_map markdown"):
         with it("should inline story-map template only"):
             templates = Stories(fidelity="story_map", format="markdown").templates
             expect("Story Map" in templates).to(be_true)
             expect("Thin slicing" in templates).to(equal(False))
             expect("thin-slice.md" in templates).to(equal(False))
 
-    with context("whose templates slot is expanded at scenarios python"):
+    with context("whose templates section is expanded at scenarios python"):
         with before.each:
             self.templates = Stories(fidelity="scenarios", format="python").templates
 
@@ -477,7 +485,7 @@ with description("Stories"):
             expect("scenario-outline.md" in self.templates).to(equal(False))
             expect("scenario-template.md" in self.templates).to(equal(False))
 
-    with context("whose templates slot is expanded at scenarios markdown"):
+    with context("whose templates section is expanded at scenarios markdown"):
         with before.each:
             self.templates = Stories(fidelity="scenarios", format="markdown").templates
 
@@ -488,7 +496,7 @@ with description("Stories"):
             expect("scenario-main-flow.md" in self.templates).to(equal(False))
             expect("scenario-outline.md" in self.templates).to(equal(False))
 
-    with context("whose templates slot is expanded at scenarios typescript"):
+    with context("whose templates section is expanded at scenarios typescript"):
         with it("should inline sign-up-style scenario-template.ts"):
             text = Stories(fidelity="scenarios", format="typescript").templates
             expect("Scenario template" in text).to(be_true)

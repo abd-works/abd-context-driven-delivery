@@ -4,9 +4,14 @@ import { BRAND } from '../brand'
 import { toggleActionPicker } from './action-picker-client'
 import { moveNext, type ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
-import { ACTION_ICONS, chooseAction, reviewFidelity, runAction } from './fidelity-client'
+import { chooseAction, reviewFidelity, runAction } from './fidelity-progress-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
+
+// The canvas's glyph for each action a stage sends and for advance, the button's own move to the next stage; an action
+// the canvas has no glyph for shows a dot.
+const ACTION_ICONS: Record<string, string> = { generate: '✦', validate: '◎', review: '✓', satisfy: '✚', iterate: '↻', sketch: '✎', render: '⇄', document: '▭', advance: '→' }
+const iconOf = (action: string): string => ACTION_ICONS[action] ?? '•'
 
 // The action the button shows: advance once the stage is done, else the action fidelity's next action, or none.
 export function actionOf(chatBar: ChatBarClient): string {
@@ -26,11 +31,11 @@ function pressAction($: EngineInterface, chatBar: ChatBarClient, action: string)
 export function ActionButtonView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar }: ChatBarDraw) {
   const action = actionOf(chatBar)
   if (!action) return null
-  const target = action === 'advance' ? `move ${chatBar.sessionName} on` : `${action} ${chatBar.actionFidelity?.guidance ?? ''}`
+  const target = action === 'advance' ? `move ${chatBar.sessionName} on` : `${action} ${chatBar.actionFidelity?.slug ?? ''}`
   return (
     <Box key="action" flexDirection="row" gap={0}>
       <Button key="next-action" plain label={target} onPress={() => pressAction($, chatBar, action)}>
-        <Text color={BRAND.accent}>{ACTION_ICONS[action] ?? '•'}</Text>
+        <Text color={BRAND.accent}>{iconOf(action)}</Text>
       </Button>
       <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
         <Text color={BRAND.text}>{target}</Text>
@@ -47,7 +52,7 @@ export function PickerView($: EngineInterface, { Box, Button }: ElementTable, { 
   return (
     <Box key="picker" flexDirection="row" gap={1} paddingX={1} borderStyle="single" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
       {chatBar.actions.map(action => (
-        <Button key={`pick-${action}`} label={`${ACTION_ICONS[action]} ${action}`} variant={action === fidelity.nextAction ? 'primary' : undefined} onPress={() => chooseAction($, fidelity, action)} />
+        <Button key={`pick-${action}`} label={`${iconOf(action)} ${action}`} variant={action === fidelity.nextAction ? 'primary' : undefined} onPress={() => chooseAction($, fidelity, action)} />
       ))}
     </Box>
   )

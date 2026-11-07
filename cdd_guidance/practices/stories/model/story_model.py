@@ -1133,18 +1133,3 @@ def is_story_map_file(path) -> bool:
     path = Path(path)
     stem = Name(path.stem).title_slug
     return path.suffix.lower() in STORY_MAP_SUFFIXES and (stem == "story-map" or stem.endswith("-story-map"))
-
-
-class StoryModelFactory:
-    """Pick the channel story map from a file or a folder and return a StoryModel."""
-
-    @staticmethod
-    def load(path: str) -> StoryModel:
-        from pathlib import Path
-
-        target = Path(path)
-        if target.is_file() and target.suffix == ".drawio":
-            from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryModel
-
-            return DrawIOStoryModel().load(target.read_text(encoding="utf-8"))
-        return StoryModel.load(path)

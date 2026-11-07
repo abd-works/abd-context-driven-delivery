@@ -62,6 +62,8 @@ Every node of the map. Each child belongs to its owner on the graph: a screen, t
 	// raises ScreenNotOnMap when the map has no screen of that name
 + all_story_names(): list[str]
 	// the story names on the screens, each name once
++ story_outline(): list[dict]
+	// the epics and sub-epics above the stories the screens show on the map's graph, for the story explorer
 
 ## ScreenNotOnMap : KeyError
 
@@ -78,12 +80,16 @@ Every node of the map. Each child belongs to its owner on the graph: a screen, t
 + chrome_of: Screen | None
 	// the screen whose chrome this tab shares
 + inactive_tabs: list[str]
-+ story_names: list[str]
-	// stories this screen shows, by name
-+ scenario_names: list[str]
-	// scenarios this screen shows, as Story › Scenario
-+ step_names: list[str]
-	// steps this screen shows, as Story › Scenario › Step
++ shows: list[Story]
+	// the stories on the screen's graph it shows; each records shownOn this screen
++ shows_scenarios: list[Scenario]
++ shows_steps: list[Step]
++ story_keys: list[str]
+	// the stories it shows as the formats write them, by name
++ scenario_keys: list[str]
+	// as Story › Scenario
++ step_keys: list[str]
+	// as Story › Scenario › Step
 + domain_terms: list[str]
 + domain_concepts: list[str]
 + image: str
@@ -96,11 +102,28 @@ Every node of the map. Each child belongs to its owner on the graph: a screen, t
 + apply_layout(layout_id: str): None
 	// sets layout. The caller appends the regions. This does not create regions
 + append_region(region: Region): None
-+ attach_story_name(story_name: str): None
-+ attach_scenario_name(scenario_name: str): None
-+ attach_step_name(step_name: str): None
-	// each name is stored once, and the graph's shownOn edges follow it
++ show_story(story: Story | str): None
++ show_scenario(scenario: Scenario | str): None
++ show_step(step: Step | str): None
+	// the node, or its key; each is held once as a StoryLink, and the graph's shows and shownOn edges follow it
++ lists(node: Story | Scenario | Step): bool
+	// true for a node it shows, or one with that node's key drawn on another graph
 + attach_domain_term(term: str): None
+
+## StoryLink
+
+A story, scenario, or step a screen shows: the Stories node once it is on the screen's graph, so a renamed story keeps its screens; until then the key the formats store.
+
++ kind: str
+	// Story, Scenario, or Step
++ node: Story | Scenario | Step | None
++ key: str
+	// the node's key once it holds the node, else the key it was given
+----
++ from_item(kind: str, item: Story | Scenario | Step | str): StoryLink
++ resolved_on(graph: Graph): Story | Scenario | Step | None
+	// finds the node with its key on graph and holds it from then on
++ names(node: Story | Scenario | Step): bool
 
 ## Region : UxNode
 

@@ -32,9 +32,9 @@ class LernOverlay(GraphOverlay):
         return LernDomainDriven()
 
     def read(self, graph: Graph) -> None:
-        if graph._folder is None:
+        if not graph.folder:
             return
-        _LernReading(graph, graph._folder).read()
+        _LernReading(graph, Path(graph.folder)).read()
 
 
 def _link(practice: PracticeGraph, kind: str, parent: Node, child: Node) -> None:

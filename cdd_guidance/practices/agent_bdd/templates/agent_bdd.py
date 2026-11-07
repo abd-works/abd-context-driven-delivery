@@ -3,7 +3,7 @@
 # =============================================================================
 # Fill placeholders (delete this block before committing):
 #
-#   {ToolsetPath}     e.g. cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle
+#   {ToolsetPath}     e.g. cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle
 #   {ActionName}      generate | validate | satisfy | repair | <custom>
 #   {SessionName}     stem for .agent_bdd_sessions/<name>.json
 #   {Description}     top-level describe label (e.g. "a CarChronicle generator")
@@ -16,14 +16,11 @@
 
 from mamba import context, description, it
 
-from cdd_guidance.practices.agent_bdd import (
-    agent,
+from cdd_guidance.practices.agent_bdd.agent_block import agent
+from cdd_guidance.practices.agent_bdd.spec_helpers import (
     expect_instructions_contain,
     expect_ok_action,
-    generate_and_judge,
-    read_workspace,
     repo_root_from,
-    run_toolset,
     sessions_dir,
 )
 
@@ -33,15 +30,14 @@ _SESSIONS = sessions_dir(__file__)
 with description("{Description}"):
     with context("{ScenarioLabel}"):
         with it("drives {ActionName} and asserts inline"):
-            with agent(_REPO_ROOT, _SESSIONS / "{SessionName}.json"):
-                read_workspace("{SetupPath}")
+            with agent(_REPO_ROOT, _SESSIONS / "{SessionName}.json") as run:
+                run.read_workspace("{SetupPath}")
 
-                response = run_toolset(
+                response = run.run_toolset(
                     toolset="{ToolsetPath}",
                     action="{ActionName}",
-                    timeout_seconds=180,
                 )
                 expect_ok_action(response, "{ActionName}")
                 expect_instructions_contain(response, "{ExpectedKeyword}")
 
-                generate_and_judge("{PassFixturePath}", "{JudgeRubric}")
+                run.generate_and_judge("{PassFixturePath}", "{JudgeRubric}")

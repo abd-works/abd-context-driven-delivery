@@ -3,21 +3,10 @@
 from __future__ import annotations
 
 from harness.agent_tools.agent_tools import agent_toolset
-from harness.guidance.guidance import PracticeGuidance
+
+from cdd_guidance.builders.builder import Builder
 
 
 @agent_toolset
-class CreatePracticeGuidance(PracticeGuidance):
-    """# Instructions"""
-
-    default_workspace_folder: str = "."
-
-    def __init__(
-        self,
-        format: str | None = None,
-        path: str | None = None,
-        session: str | None = None,
-        workspace: str | None = None,
-    ) -> None:
-        super().__init__(format=format)
-        self._attach_workspace(path=path, session=session, workspace=workspace)
+class CreatePracticeGuidance(Builder):
+    """Scaffold a new practice: its PracticeGuidance class, its markdown, templates, and examples."""

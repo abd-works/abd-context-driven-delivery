@@ -90,7 +90,7 @@ export function checkoutFlow(seed: TicketSeed = {}): TicketData {
     is_active: false,
     drop_targets: ['Backlog'],
     is_done: seed.is_done ?? false,
-    next: next ? progressOf(name, next) : null,
+    next: next ? { ticket: name, slug: next } : null,
     worktree: '',
   }
 }
@@ -131,9 +131,9 @@ const column = (name: string, tickets: TicketData[]): ColumnData => {
   return { name, in_progress: tickets.filter(ticket => ticket.column.name === name), ...stage }
 }
 
-// Seed: the board as board.show returns it, each ticket in the column it names and the active one whole.
+// Seed: the board as board.show returns it, each ticket in the column it names and the active one named.
 export function boardOf(active: string | null, ...tickets: TicketData[]): BoardData {
-  const activeTicket = tickets.find(ticket => ticket.name === active) ?? null
+  const activeTicket = tickets.some(ticket => ticket.name === active) ? { name: active! } : null
   return { project: 'abd-context-driven-delivery', practices: PRACTICES.map(practiceData), active: activeTicket, columns: [{ name: 'Backlog', items: [] }, ...STAGE_ORDER.map(name => column(name, tickets))] }
 }
 

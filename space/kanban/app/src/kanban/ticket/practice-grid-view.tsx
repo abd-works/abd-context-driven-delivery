@@ -24,7 +24,7 @@ function GridCornerView() {
 function GridStageHeadView({ ticket, stage }: { ticket: TicketClient; stage: ColumnClient }) {
   const { page } = useBoard()
   const place = headPlace(stage.name)
-  const spot = { ticket, stage, place, fidelities: ticket.enabledFidelities(stage) }
+  const spot = { ticket, stage, place, fidelities: ticket.progressIn(stage).map(progress => progress.fidelity) }
   const isOpen = page.tiles.isOpen(ticket.name, place)
   return (
     <StageHeadView stage={stage}>
@@ -63,7 +63,7 @@ function PracticeLabelView({ ticket, practice }: { ticket: TicketClient; practic
   const label = `${isOn ? 'Disable' : 'Enable'} ${practice.name} for ${ticket.title}`
   return (
     <div className={isOn ? 'practice-label' : 'practice-label is-off'} style={{ borderLeftColor: practice.color }}>
-      <button className="readme-link" onClick={() => void page.panels.openHelp(practice.slug)}>
+      <button className="readme-link" onClick={() => void page.panels.openPracticeHelp(practice)}>
         {practice.name}
       </button>
       <input type="checkbox" role="switch" className="practice-switch" title={label} aria-label={label} checked={isOn} disabled={ticket.isLocked} onChange={() => void ticket.enablePractice(practice.key, !isOn)} />
@@ -77,8 +77,8 @@ function PracticeLineView({ ticket, practice }: { ticket: TicketClient; practice
     <div className="column-grid details-grid">
       <PracticeLabelView ticket={ticket} practice={practice} />
       {page.board.stages.map(stage => {
-        const fidelity = stage.workRequired.find(required => practice.has(required.slug))
-        return fidelity ? <TileView key={fidelity.slug} ticket={ticket} stage={stage} fidelity={fidelity} hasPracticeChip={false} opensOnHover={false} /> : <span key={stage.name} />
+        const progress = ticket.progressOn(stage.workRequired.filter(required => practice.has(required.slug)))[0]
+        return progress ? <TileView key={progress.slug} ticket={ticket} stage={stage} progress={progress} hasPracticeChip={false} opensOnHover={false} /> : <span key={stage.name} />
       })}
       <span />
     </div>

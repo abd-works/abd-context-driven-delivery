@@ -48,13 +48,8 @@ class LanguageAdapter:
         self.language = language
 
     def __call__(self, toolset: Any) -> Any:
-        setattr(toolset, self.flag, (*self.languages_of(toolset), self.language))
+        setattr(toolset, self.flag, (*getattr(toolset, self.flag, ()), self.language))
         return toolset
-
-    @classmethod
-    def languages_of(cls, toolset: Any) -> tuple[str, ...]:
-        """The languages a toolset's class is marked for."""
-        return tuple(getattr(toolset, cls.flag, ()))
 
 
 language_adapter = LanguageAdapter
@@ -78,11 +73,6 @@ class Identity:
     def __call__(self, data_class: type) -> type:
         setattr(data_class, self.flag, self.fields)
         return data_class
-
-    @classmethod
-    def fields_of(cls, data_class: type) -> tuple[str, ...]:
-        """The fields that name one object of data_class, or none."""
-        return tuple(getattr(data_class, cls.flag, ()))
 
 
 identity = Identity
@@ -110,11 +100,6 @@ class Edits:
     def __call__(self, operation: Any) -> Any:
         setattr(operation, self.flag, self.fields)
         return operation
-
-    @classmethod
-    def fields_of(cls, operation: Any) -> tuple[str, ...]:
-        """The fields an operation's `@edits` mark names, or none."""
-        return tuple(getattr(operation, cls.flag, ()))
 
 
 edits = Edits
@@ -145,55 +130,83 @@ class DataField(Mark):
         setattr(getter, self.reference_flag, self.reference)
         return getter
 
-    @classmethod
-    def is_reference(cls, field: property) -> bool:
-        """Whether field sends its object by identity alone."""
-        return bool(getattr(field.fget, cls.reference_flag, False))
-
-    @classmethod
-    def fields_of(cls, data_class: type) -> dict[str, property]:
-        """The properties data_class marks as its data, by the name each takes in the data; a base class's come
-        first. A subclass that overrides a marked property, such as a card's title, is read through its own."""
-        attributes: dict[str, str] = {}
-        for klass in reversed(data_class.__mro__):
-            for attribute, member in vars(klass).items():
-                if isinstance(member, property) and cls.marks(member.fget):
-                    attributes[getattr(member.fget, cls.flag)] = attribute
-        return {key: inspect.getattr_static(data_class, attribute) for key, attribute in attributes.items()}
-
 
 data_field = DataField
+
+
+class DataClass:
+    """What the marks on one class declare about its objects' data: the properties that are its data (`@data_field`),
+    the fields that name one object (`@identity`), and the languages its operations are typed in
+    (`@language_adapter`). A language adapter types the data from it, and `data_of` sends an object's data by it."""
+
+    def __init__(self, data_class: type) -> None:
+        self.data_class = data_class
+
+    @property
+    def fields(self) -> dict[str, property]:
+        """The properties the class marks as its data, by the name each takes in the data; a base class's come first.
+        A subclass that overrides a marked property, such as a card's title, is read through its own."""
+        attributes: dict[str, str] = {}
+        for klass in reversed(self.data_class.__mro__):
+            for attribute, member in vars(klass).items():
+                if isinstance(member, property) and DataField.marks(member.fget):
+                    attributes[getattr(member.fget, DataField.flag)] = attribute
+        return {key: inspect.getattr_static(self.data_class, attribute) for key, attribute in attributes.items()}
+
+    @property
+    def identity(self) -> tuple[str, ...]:
+        """The fields that name one object of the class, or none."""
+        return tuple(getattr(self.data_class, Identity.flag, ()))
+
+    @property
+    def languages(self) -> tuple[str, ...]:
+        """The languages the class's language adapters are written in."""
+        return tuple(getattr(self.data_class, LanguageAdapter.flag, ()))
+
+    def edited_by(self, operation: Any) -> tuple[str, ...]:
+        """The fields of this class's data that operation's `@edits` mark names, or none."""
+        return tuple(getattr(operation, Edits.flag, ()))
+
+    def sends_by_identity(self, field: property) -> bool:
+        """Whether field sends the object it holds by that object's identity alone."""
+        return bool(getattr(field.fget, DataField.reference_flag, False))
+
+    def data(self, value: Any) -> dict[str, Any]:
+        """value's marked fields as plain data."""
+        return {
+            key: self._referenced(field.fget(value)) if self.sends_by_identity(field) else data_of(field.fget(value))
+            for key, field in self.fields.items()
+        }
+
+    def reference(self, value: Any) -> dict[str, Any]:
+        """value by its identity alone, such as `{"name": "Discovery"}` for a stage, so data can name an object that is
+        sent in full elsewhere without sending it again."""
+        if not self.identity:
+            raise ReferenceWithoutIdentityError(self.data_class)
+        fields = self.fields
+        return {key: data_of(fields[key].fget(value)) for key in self.identity}
+
+    def _referenced(self, held: Any) -> Any:
+        if held is None:
+            return None
+        if isinstance(held, (list, tuple)):
+            return [self._referenced(item) for item in held]
+        return DataClass(type(held)).reference(held)
 
 
 def data_of(value: Any) -> Any:
     """value as plain JSON data: an object with marked properties as its fields, each object it holds as its own data.
 
-    This is the one way an object becomes data, for MCP results and every other JSON answer, so a path reads the same
-    wherever it is sent: with forward slashes."""
+    This is the one way a value of any type becomes data, for MCP results and every other JSON answer, so a path reads
+    the same wherever it is sent: with forward slashes."""
     if isinstance(value, Path):
         return value.as_posix()
     if isinstance(value, dict):
         return {key: data_of(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
         return [data_of(item) for item in value]
-    fields = DataField.fields_of(type(value)) if not isinstance(value, type) else {}
-    if fields:
-        return {key: (reference_of if DataField.is_reference(field) else data_of)(field.fget(value)) for key, field in fields.items()}
-    return value
-
-
-def reference_of(value: Any) -> Any:
-    """value by its identity alone, such as `{"name": "Discovery"}` for a stage, so data can name an object that is
-    sent in full elsewhere without sending it again; none stays none."""
-    if value is None:
-        return None
-    if isinstance(value, (list, tuple)):
-        return [reference_of(item) for item in value]
-    named = Identity.fields_of(type(value))
-    if not named:
-        raise ReferenceWithoutIdentityError(type(value))
-    fields = DataField.fields_of(type(value))
-    return {key: data_of(fields[key].fget(value)) for key in named}
+    data_class = DataClass(type(value))
+    return data_class.data(value) if not isinstance(value, type) and data_class.fields else value
 
 
 class SourceFile:

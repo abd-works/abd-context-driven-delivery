@@ -13,7 +13,7 @@ const HOVER_CLOSE_MILLISECONDS = 250
 export const cellPlace = (stage: string, fidelity: FidelityGuidanceData): string => `cell-${stage}-${fidelity.slug}`
 export const headPlace = (stage: string): string => `head-${stage}`
 
-// A ticket names its progress on each fidelity by the fidelity's slug.
+// A command names each fidelity it acts on by its slug.
 export const slugsOf = (fidelities: FidelityGuidanceData[]): string[] => fidelities.map(fidelity => fidelity.slug)
 
 // Where a bar opens: on which ticket, in which stage, at which place, over which fidelities.
@@ -43,9 +43,9 @@ export class TileClient {
     const { ticket, stage, place, fidelities } = spot
     const order = ++this.opening
     this.latestOpening.set(`${ticket.name} ${place}`, order)
-    const shown: Tile = { ticket, place, stage: stage.name, fidelities, action: DEFAULT_ACTION, picked: defaultPicks(fidelities, {}), isPinned, files: {} }
+    const shown: Tile = { ticket, place, stage, fidelities, action: DEFAULT_ACTION, picked: defaultPicks(fidelities, {}), isPinned, files: {} }
     this.store.change(state => ({ tiles: [...this.othersKept(state.tiles, shown), shown] }))
-    const files = (await ticket.filesOf(slugsOf(fidelities))) ?? {}
+    const files = (await ticket.filesOf(ticket.progressOn(fidelities))) ?? {}
     if (this.latestOpening.get(`${ticket.name} ${place}`) !== order) return
     this.change(ticket.name, place, tile => this.withFiles(tile, shown, files))
   }
@@ -114,7 +114,7 @@ export class TileClient {
   }
 
   private async reloadFiles(tile: Tile): Promise<void> {
-    const files = await tile.ticket.filesOf(slugsOf(tile.fidelities))
+    const files = await tile.ticket.filesOf(tile.ticket.progressOn(tile.fidelities))
     if (files) this.change(tile.ticket.name, tile.place, open => ({ ...open, files }))
   }
 }

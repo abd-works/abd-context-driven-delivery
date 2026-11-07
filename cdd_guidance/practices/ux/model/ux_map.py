@@ -14,6 +14,27 @@ from .reference_paths import ReferencePaths
 from .ux_node import UxNode
 
 
+def _top_epic(story):
+    epic = None
+    current = story.parent
+    while current is not None and current.semantic_type() == "Epic":
+        epic, current = current, current.parent
+    return epic
+
+
+def _epic_outline(epic, shown: List) -> dict:
+    """An epic's outline entry: a group for each sub-epic, at any depth, that holds a shown story."""
+    groups: List[dict] = []
+    pending = list(epic.epics)
+    while pending:
+        sub_epic = pending.pop(0)
+        stories = [story.name for story in sub_epic.stories if story in shown]
+        if stories:
+            groups.append({"name": sub_epic.name, "stories": stories})
+        pending[:0] = sub_epic.epics
+    return {"name": epic.name, "groups": groups, "stories": [story.name for story in epic.stories if story in shown]}
+
+
 class ScreenNotOnMap(KeyError):
     """A link names a screen the map does not have; transitions, tabs, and destinations join screens on one map."""
 
@@ -108,7 +129,20 @@ class UxMap(UxNode):
     def all_story_names(self) -> List[str]:
         names: List[str] = []
         for screen in self.screens:
-            for story_name in screen.story_names:
+            for story_name in screen.story_keys:
                 if story_name not in names:
                     names.append(story_name)
         return names
+
+    def story_outline(self) -> List[dict]:
+        """The story map above the stories this map's screens show, for the story explorer to place screens under:
+        each epic in the order its screens first show it, with ``groups`` for its sub-epics and ``stories`` for the
+        stories on the epic itself, each in story-map order. Only stories on the map's graph have an epic to place
+        them under, so with no story map on the graph the outline is empty and the explorer lists the screens flat."""
+        shown = [story for screen in self.screens for story in screen.shows]
+        epics: List = []
+        for story in shown:
+            epic = _top_epic(story)
+            if epic is not None and epic not in epics:
+                epics.append(epic)
+        return [_epic_outline(epic, shown) for epic in epics]

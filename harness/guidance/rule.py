@@ -171,7 +171,7 @@ class RulesCollection(MarkdownCollection):
         if session is None or self._owner_practice() is None:
             return
         for bag in bags:
-            session.log.note_injected_rules(bag, path)
+            session.log.injected_rules.note(bag, path)
 
     @property
     def practice_key(self) -> str:

@@ -78,9 +78,25 @@ with description("Sketch toolset") as self:
                 expect(content).to(contain("demo agent template"))
 
         with it("falls back to the default when agent_dir is set but the directory is missing"):
-            sketcher = Sketch()
+            sketcher = Sketch(session=ToolCall(project=self.throwaway.root).session)
             content = sketcher.find_template(agent_dir="does/not/exist")
             expect(content).to(contain("heading-and-indent notation"))
+
+        with it("reads an agent_dir named from the project's root in the session's project"):
+            templates_dir = self.throwaway.root / "agents" / "demo" / "templates"
+            templates_dir.mkdir(parents=True)
+            (templates_dir / "demo-sketch.md").write_text("# project agent template\n", encoding="utf-8")
+            sketcher = Sketch(session=ToolCall(project=self.throwaway.root).session)
+            content = sketcher.find_template(agent_dir="agents/demo")
+            expect(content).to(contain("project agent template"))
+
+        with it("reads the agent_dir the sketch was made with when the call names none"):
+            import tempfile
+            with tempfile.TemporaryDirectory() as agent_dir:
+                (Path(agent_dir) / "templates").mkdir()
+                (Path(agent_dir) / "templates" / "made-sketch.md").write_text("# made-with template\n", encoding="utf-8")
+                content = Sketch(agent_dir=agent_dir).find_template()
+                expect(content).to(contain("made-with template"))
 
     with context("save_sketch tool"):
         with before.each:
@@ -220,7 +236,7 @@ with description("PracticeGuidance operations for sketch"):
     with it("should not expose sketch on practice Guidance"):
         cls = type(
             AgentToolSet.instantiate(
-                "cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle"
+                "cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle"
             )
         )
         practice = cls()

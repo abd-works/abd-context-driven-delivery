@@ -52,9 +52,10 @@ class BacklogItem(Card):
         return item
 
     @classmethod
-    def from_ticket(cls, ticket: Ticket, board: Board) -> BacklogItem:
+    def from_ticket(cls, ticket: Ticket) -> BacklogItem:
         """The item a ticket moved back into the Backlog becomes: its own folder, history and all, with its idea file
         inside."""
+        board = ticket.board
         return cls(board.sessions.backlog_folder / ticket.name / f"{ticket.name}.md", board)
 
     def write_if_missing(self, title: str) -> None:
@@ -130,6 +131,6 @@ class BacklogItem(Card):
         return Ticket(session, self._board)
 
     def _ticket_opened(self, scope: str, path: str) -> Ticket:
-        ticket = Ticket.create(self.title, scope, "", path, project=self._board.repo.root)
+        ticket = self._board.open_ticket(self.title, scope, "", path)
         ticket.session.log.record(f"backlog {self._path}")
         return ticket

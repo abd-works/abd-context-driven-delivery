@@ -28,7 +28,7 @@ function PlaceLinkView({ label, hint, isOff = false, onPress }: { label: string;
 function TicketBarView({ ticket }: { ticket: TicketClient }) {
   const { page } = useBoard()
   const stage = page.board.stageOf(ticket)
-  const stageSlugs = stage ? slugsOf(ticket.enabledFidelities(stage)) : []
+  const stageProgress = stage ? ticket.progressIn(stage) : []
   return (
     <div className="details-bar-words">
       <div className="details-heading">
@@ -40,7 +40,7 @@ function TicketBarView({ ticket }: { ticket: TicketClient }) {
             {' · root '}
             <PlaceLinkView label={ticket.session.workpath || 'whole repository'} hint="Choose the session's workpath and each practice's practice root" onPress={() => page.roots.openFor(ticket)} />
             {' · '}
-            <PlaceLinkView label={ticket.stagePlace} hint={`Browse the files of ${stage?.name ?? 'this stage'}`} isOff={!stageSlugs.length} onPress={() => page.files.openFiles(ticket, stageSlugs, 'folder')} />
+            <PlaceLinkView label={ticket.stagePlace} hint={`Browse the files of ${stage?.name ?? 'this stage'}`} isOff={!stageProgress.length} onPress={() => page.files.openFiles(ticket, stageProgress, 'folder')} />
           </span>
         </div>
         <div className="details-place">

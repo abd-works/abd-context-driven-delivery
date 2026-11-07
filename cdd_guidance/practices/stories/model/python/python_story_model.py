@@ -75,10 +75,7 @@ class PythonStoryModel(CodeStoryModel):
         return _VERBS.get(step.keyword, "then")
 
     def story_open(self, story: Story) -> List[str]:
-        lines: List[str] = [f"# Story: {story.name}"]
-        actor = (story.actors[0] if story.actors else "").strip()
-        if actor:
-            lines.append(f"# Actor: {actor}")
+        lines: List[str] = [f"# Story: {story.name}", *self.description_lines(story, "# ")]
         if story.domain_terms:
             lines.append("# Domain terms: " + ", ".join(story.domain_terms))
         example_line = self.story_type.background_example_line(story, "# ")

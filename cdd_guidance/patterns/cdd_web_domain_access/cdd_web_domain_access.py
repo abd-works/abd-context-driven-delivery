@@ -11,7 +11,7 @@ from harness.guidance.guidance import PracticeGuidance
 
 @agent_toolset
 class CddWebDomainAccess(PracticeGuidance):
-    """# Instructions"""
+    """How code outside Python reaches the CDD domain: through MCP tools, by a language adapter the installer deploys."""
 
     pattern = "cdd_web_domain_access"
 

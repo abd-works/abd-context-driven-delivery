@@ -72,13 +72,6 @@ class ChatPointer:
         return cls.of(chat_id, found) if found is not None else None
 
     @classmethod
-    def from_environment(cls) -> ChatPointer | None:
-        """The chat the environment names (``CDD_CONVERSATION_ID``, ``CDD_TRANSCRIPT_PATH``, ``CDD_TRANSCRIPT_LINES``),
-        which hooks and agent runs set for work that comes from no tool call; none when it names none."""
-        chat_id = os.environ.get("CDD_CONVERSATION_ID", "") or os.environ.get("CDD_CHAT_ID", "")
-        return cls.of(chat_id, os.environ.get("CDD_TRANSCRIPT_PATH", ""), os.environ.get("CDD_TRANSCRIPT_LINES", ""))
-
-    @classmethod
     def in_log_line(cls, line: str) -> ChatPointer | None:
         """The pointer at the end of a session.log line; none on a ``no-chat`` line or a line without one."""
         if " no-chat " in line:

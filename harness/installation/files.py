@@ -10,7 +10,7 @@ from harness.agent_tools.agent_tools import InstallDestination
 from harness.name.name import Name
 from harness.installation.destination import Installation
 from harness.markdown.markdown import strip_yaml_fences
-from harness.marks.mark import Destination, NamedDestination
+from harness.marks.mark import Destination, NamedDestination, mark_kinds
 
 
 class Skill(NamedDestination):
@@ -265,7 +265,7 @@ class FileInstallation(Installation):
             getter = getattr(member, "fget", member)
             invoke = (
                 f"Use MCP tool: `{getattr(child, 'slug', '')}()`"
-                if Destination.marked_for(InstallDestination.MCP, getter)
+                if mark_kinds.marked_for(InstallDestination.MCP, getter)
                 else ""
             )
             parts.append(

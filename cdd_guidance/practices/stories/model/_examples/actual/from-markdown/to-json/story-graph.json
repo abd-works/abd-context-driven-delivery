@@ -479,7 +479,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "email required",
                           "account credential requirements": "account credential requirements",
@@ -668,7 +668,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "email required",
                           "account credential requirements": "account credential requirements",
@@ -862,7 +862,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "email required",
                           "account credential requirements": "account credential requirements",
@@ -1024,7 +1024,7 @@
                 {
                   "name": "background",
                   "steps": [],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "email required",
                       "account credential requirements": "account credential requirements",
@@ -1379,7 +1379,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "valid validation code",
                           "validation code": "validation code",
@@ -1452,7 +1452,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "valid validation code",
                           "validation code": "validation code",
@@ -1539,7 +1539,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "valid validation code",
                           "validation code": "validation code",
@@ -1584,7 +1584,7 @@
                 {
                   "name": "background",
                   "steps": [],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "valid validation code",
                       "validation code": "validation code",
@@ -1669,7 +1669,7 @@
                           "stepType": "given"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "mismatch validation code",
                           "validation code": "validation code",
@@ -1725,7 +1725,7 @@
                           "stepType": "given"
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "mismatch validation code",
                           "validation code": "validation code",
@@ -1753,7 +1753,7 @@
                 {
                   "name": "background",
                   "steps": [],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "mismatch validation code",
                       "validation code": "validation code",
@@ -3183,7 +3183,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "held available number",
                           "available number": "available number",
@@ -3269,7 +3269,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "held available number",
                           "available number": "available number",
@@ -3340,7 +3340,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "held available number",
                           "available number": "available number",
@@ -3412,7 +3412,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "held available number",
                           "available number": "available number",
@@ -3444,7 +3444,7 @@
                 {
                   "name": "background",
                   "steps": [],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "held available number",
                       "available number": "available number",
@@ -4508,7 +4508,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "valid portability",
                           "portability": "portability",
@@ -4567,7 +4567,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "valid portability",
                           "portability": "portability",
@@ -4626,7 +4626,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "valid portability",
                           "portability": "portability",
@@ -4648,7 +4648,7 @@
                 {
                   "name": "background",
                   "steps": [],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "valid portability",
                       "portability": "portability",
@@ -5479,7 +5479,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "valid porting SMS code",
                           "porting SMS code": "porting SMS code",
@@ -5550,7 +5550,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "valid porting SMS code",
                           "porting SMS code": "porting SMS code",
@@ -5633,7 +5633,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "valid porting SMS code",
                           "porting SMS code": "porting SMS code",
@@ -5664,7 +5664,7 @@
                 {
                   "name": "background",
                   "steps": [],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "valid porting SMS code",
                       "porting SMS code": "porting SMS code",
@@ -8326,7 +8326,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "upgrade to Data Freedom",
                           "plan upgrade": "plan upgrade",
@@ -8389,7 +8389,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "upgrade to Data Freedom",
                           "plan upgrade": "plan upgrade",
@@ -8420,7 +8420,7 @@
                 {
                   "name": "background",
                   "steps": [],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "upgrade to Data Freedom",
                       "plan upgrade": "plan upgrade",
@@ -8719,7 +8719,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "stub auth",
                           "payment authorization": "payment authorization",
@@ -8792,7 +8792,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "stub auth",
                           "payment authorization": "payment authorization",
@@ -8860,7 +8860,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "stub auth",
                           "payment authorization": "payment authorization",
@@ -8928,7 +8928,7 @@
                           ]
                         }
                       ],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "stub auth",
                           "payment authorization": "payment authorization",
@@ -8947,7 +8947,7 @@
                 {
                   "name": "background",
                   "steps": [],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "stub auth",
                       "payment authorization": "payment authorization",
@@ -9023,7 +9023,7 @@
                     {
                       "name": "background",
                       "steps": [],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "completed auth",
                           "payment status": "payment status",
@@ -9099,7 +9099,7 @@
                     {
                       "name": "background",
                       "steps": [],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "completed auth",
                           "payment status": "payment status",
@@ -9175,7 +9175,7 @@
                     {
                       "name": "background",
                       "steps": [],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "completed auth",
                           "payment status": "payment status",
@@ -9203,7 +9203,7 @@
                 {
                   "name": "background",
                   "steps": [],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "completed auth",
                       "payment status": "payment status",
@@ -9268,7 +9268,7 @@
                     {
                       "name": "background",
                       "steps": [],
-                      "exampleRows": [
+                      "examples": [
                         {
                           "exampleName": "Bermuda Apple Pay cert",
                           "Apple Pay certificate": "Apple Pay certificate",
@@ -9285,7 +9285,7 @@
                 {
                   "name": "background",
                   "steps": [],
-                  "exampleRows": [
+                  "examples": [
                     {
                       "exampleName": "Bermuda Apple Pay cert",
                       "Apple Pay certificate": "Apple Pay certificate",

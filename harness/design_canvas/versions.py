@@ -35,8 +35,8 @@ class CanvasVersions:
 
     @classmethod
     def in_release(cls, release_folder: str | Path) -> CanvasVersions:
-        """The canvas a release keeps in its folder, such as ``WorkState(repo).release_folder()`` for the release being
-        worked on."""
+        """The canvas a release keeps in its folder, such as the open session's folder under
+        ``WorkState(repo).sessions_folder`` for the release being worked on."""
         return cls(Path(release_folder) / DESIGN_CANVAS_FOLDER)
 
     @property

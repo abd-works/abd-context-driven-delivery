@@ -119,7 +119,7 @@ with story("Display Board"):
             pass
         with when("a review of stories-story-map is written to billing-report's [session log](../../../.context/kanban-model.md#session)"):
             # Person -> Ticket.finish_review(['stories-story-map'])
-            # Ticket -> Ticket.record('review Stories story_map')
+            # Ticket -> Ticket.record('review stories story_map')
             # Board page -> Board.show()
             # Board <- stories-story-map done on billing-report
             pass

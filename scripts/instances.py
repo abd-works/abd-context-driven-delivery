@@ -284,15 +284,14 @@ class HookPing:
 
     def run(self) -> int:
         from harness.hooks.hook_daemon import HookDaemon
-        from harness.hooks.hook_server import HookServer
 
         found = self._daemons()
-        state = HookServer.state_path(self.processes.repo)
-        recorded = self._recorded_pid(state)
+        daemon = HookDaemon(self.processes.repo)
+        recorded = self._recorded_pid(daemon.state_path)
         keeper, stopped = self.processes.collapse(found, recorded)
-        address = HookDaemon().live_address(state)
+        address = daemon.live_address()
         ok = address is not None
-        host, port, pid = address if address is not None else (None, None, keeper)
+        host, port, pid = (address.host, address.port, address.pid) if address is not None else (None, None, keeper)
         return PingReport().emit(
             {
                 "ok": ok,

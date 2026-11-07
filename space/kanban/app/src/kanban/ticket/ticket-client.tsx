@@ -1,14 +1,14 @@
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
 import type { FidelityGuidanceData } from '@cdd/space/kanban/board'
-import { FidelityProgressClientGenerated, type ActionStatesData, type FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
+import type { FidelityProgressClientGenerated } from '@cdd/space/kanban/fidelity-progress'
 import { TicketClientGenerated, type ReportRuleData, type TicketData, type ViolationData } from '@cdd/space/kanban/ticket'
 import { PracticeSessionOutputClientGenerated } from '@cdd/space/session/practice-session-output'
 import { SessionClientGenerated } from '@cdd/space/session/session'
 
-import { STATES, WORK_LIGHT } from '../board/board-brand'
 import type { BoardPage } from '../board/board-page'
 import type { ColumnClient } from '../board/column-client'
 import { TicketChat } from '../chat/chat-client'
+import { FidelityProgressClient } from './fidelity-progress-client'
 import { fixReportPrompt, fixRulePrompt, fixViolationPrompt, ReportClient } from './report-client'
 
 const RUN_NEXT_COMMANDS: Record<string, string> = {
@@ -50,6 +50,32 @@ export class TicketClient extends TicketClientGenerated {
     return this.progress.filter(progress => progress.state === 'violations').map(progress => progress.slug)
   }
 
+  // Its progress on every fidelity the board requires, in stage order, each answering its own tools.
+  get fidelityProgress(): FidelityProgressClient[] {
+    return this.progress.map(progress => new FidelityProgressClient(progress, this))
+  }
+
+  // Its progress on the fidelities of a stage whose practices its session works on, in the order the stage requires them.
+  progressIn(stage: ColumnClient): FidelityProgressClient[] {
+    return this.fidelityProgress.filter(progress => progress.stage.name === stage.name && progress.isEnabled)
+  }
+
+  // Its progress on the fidelities a tile or a panel was opened over, read from this ticket as it is now.
+  progressOn(fidelities: FidelityGuidanceData[]): FidelityProgressClient[] {
+    return fidelities.flatMap(fidelity => this.progressNamed(fidelity.slug) ?? [])
+  }
+
+  // The data names a fidelity's progress by its slug, such as the ticket's next or a report rule's fidelity; this is
+  // the one place such a name is turned into the progress.
+  progressNamed(slug: string): FidelityProgressClient | undefined {
+    return this.fidelityProgress.find(progress => progress.slug === slug)
+  }
+
+  // The progress Run next works on: the one the ticket names as its next, none when it is done in its stage.
+  get nextProgress(): FidelityProgressClient | undefined {
+    return this.next ? this.progressNamed(this.next.slug) : undefined
+  }
+
   hasViolationsIn(stage: ColumnClient): boolean {
     return this.progress.some(progress => progress.state === 'violations' && progress.stage.name === stage.name)
   }
@@ -70,7 +96,7 @@ export class TicketClient extends TicketClientGenerated {
 
   // The action Run next sends: the next fidelity's own next action.
   get nextAction(): string {
-    return this.next?.next_action ?? ''
+    return this.nextProgress?.nextAction ?? ''
   }
 
   // The ticket's session, its practices, and its fidelities' progress each answer their own tools, built from the data
@@ -83,21 +109,6 @@ export class TicketClient extends TicketClientGenerated {
     return new PracticeSessionOutputClientGenerated(this.api, this.session.practices[practice] ?? null)
   }
 
-  progressNamed(slug: string): FidelityProgressData | undefined {
-    return this.progress.find(progress => progress.slug === slug)
-  }
-
-  // Python sends progress for every fidelity the board requires, so a fidelity the ticket has none for is a page bug.
-  progressOf(slug: string): FidelityProgressData {
-    const progress = this.progressNamed(slug)
-    if (!progress) throw new Error(`ticket ${this.name} has no progress on ${slug}`)
-    return progress
-  }
-
-  progressClient(slug: string): FidelityProgressClientGenerated {
-    return new FidelityProgressClientGenerated(this.api, this.progressOf(slug))
-  }
-
   // The chat working on this ticket, which every command the board sends for it goes to.
   get chat(): TicketChat {
     return new TicketChat(this.page.chat, this)
@@ -105,15 +116,15 @@ export class TicketClient extends TicketClientGenerated {
 
   // Each fidelity answers for its own files, so a tile or panel over several fidelities reads them side by side; none
   // when any read failed, because the page has already shown that failure.
-  async filesOf(slugs: string[]): Promise<FilesByFidelity | null> {
-    const read = await Promise.all(slugs.map(slug => this.progressClient(slug).files()))
+  async filesOf(progress: FidelityProgressClient[]): Promise<FilesByFidelity | null> {
+    const read = await Promise.all(progress.map(entry => entry.files()))
     if (read.some(files => !files)) return null
-    return Object.fromEntries(slugs.map((slug, index) => [slug, read[index]!]))
+    return Object.fromEntries(progress.map((entry, index) => [entry.slug, read[index]!]))
   }
 
-  // One fidelity's latest report, or with no fidelity the violations of every fidelity of the ticket's stage.
-  async reportOf(fidelity: string): Promise<ReportClient | null> {
-    const report = await (fidelity ? this.progressClient(fidelity).report() : this.violations())
+  // One fidelity's latest report, or with none the violations of every fidelity of the ticket's stage.
+  async reportOf(progress: FidelityProgressClient | null): Promise<ReportClient | null> {
+    const report = await (progress ? progress.report() : this.violations())
     return report ? new ReportClient(report) : null
   }
 
@@ -153,47 +164,6 @@ export class TicketClient extends TicketClientGenerated {
 
   isEnabled(practice: string): boolean {
     return this.session.practices[practice]?.enabled ?? true
-  }
-
-  // Whether the ticket's session works on the practice of the fidelity slug names.
-  isOn(slug: string): boolean {
-    return this.progressOf(slug).is_enabled
-  }
-
-  stateOf(slug: string): { label: string; color: string; key: string } {
-    const key = this.progressNamed(slug)?.state ?? 'not_started'
-    return { ...STATES[key]!, key }
-  }
-
-  lightOf(slug: string): number {
-    return this.isOn(slug) ? WORK_LIGHT[this.stateOf(slug).key]! : WORK_LIGHT.off!
-  }
-
-  actionsOf(slug: string): ActionStatesData {
-    return this.progressOf(slug).actions
-  }
-
-  // How far one action has got across slugs: done only when it is done on all of them.
-  standingOf(slugs: string[], action: keyof ActionStatesData): string {
-    const states = slugs.map(slug => this.actionsOf(slug)[action])
-    if (states.length && states.every(state => state === 'done')) return 'done'
-    return states.some(state => state !== 'to_do') ? 'in_progress' : 'to_do'
-  }
-
-  violationCountOf(slugs: string[]): number {
-    return slugs.reduce((total, slug) => total + (this.progressNamed(slug)?.violation_count ?? 0), 0)
-  }
-
-  enabledFidelities(stage: ColumnClient): FidelityGuidanceData[] {
-    return stage.workRequired.filter(fidelity => this.isOn(fidelity.slug))
-  }
-
-  allows(slug: string, action: string): boolean {
-    return (this.progressNamed(slug)?.allowed_actions ?? []).includes(action)
-  }
-
-  isNext(stage: ColumnClient, fidelity: FidelityGuidanceData): boolean {
-    return this.next?.slug === fidelity.slug && this.next.stage.name === stage.name
   }
 
   select(): void {
@@ -264,8 +234,8 @@ export class TicketClient extends TicketClientGenerated {
     return true
   }
 
-  private async review(slug: string): Promise<void> {
-    await this.progressClient(slug).finishReview()
+  private async review(progress: FidelityProgressClient): Promise<void> {
+    await progress.finishReview()
     await this.page.reader.refresh()
   }
 
@@ -308,11 +278,12 @@ export class TicketClient extends TicketClientGenerated {
 
   // Generate is sent straight to the chat, in the next fidelity's default format; the others fill the prompt.
   async runNext(): Promise<void> {
-    const slug = this.next?.slug ?? ''
-    if (this.nextAction === 'satisfy') return this.page.panels.openReport(this, slug)
-    if (this.nextAction === 'review') return this.review(slug)
-    if (this.nextAction !== 'generate') return this.chat.fill(this.actionCommand(`${RUN_NEXT_COMMANDS[this.nextAction]} ${slug}`))
-    const format = this.next?.fidelity.default_format
-    await this.chat.command(this.actionCommand(`/actions-generate ${slug}${format ? ` format=${format}` : ''}`))
+    const next = this.nextProgress
+    if (!next) return
+    if (this.nextAction === 'satisfy') return this.page.panels.openReport(this, next)
+    if (this.nextAction === 'review') return this.review(next)
+    if (this.nextAction !== 'generate') return this.chat.fill(this.actionCommand(`${RUN_NEXT_COMMANDS[this.nextAction]} ${next.slug}`))
+    const format = next.fidelity.default_format
+    await this.chat.command(this.actionCommand(`/actions-generate ${next.slug}${format ? ` format=${format}` : ''}`))
   }
 }

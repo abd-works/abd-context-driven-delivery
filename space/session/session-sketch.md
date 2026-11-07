@@ -161,36 +161,34 @@ Sessions, a session, and its log
 + choose_workpath(path: str): Session
 	// MCP `session.choose_workpath`; a practice root a person chose is saved again against the new workpath
 	-> PracticeSessionOutput.keep_root
-+ files(): dict
-	// MCP `session.files`
-	-> SessionFiles.declared
 + folder_files(): list[FileEntry]
 	// MCP `session.folder_files`
 	-> SessionFiles.in_folder
 + read_file(path: str): FileText
 	// MCP `session.read_file`
 	-> SessionFiles.read
-+ mark_loop(conversation_id: str, transcript_path: str, transcript_lines: str): str
-	// MCP `session.mark_loop`, slash `/mark-loop`
-	-> SessionLog.note_chat_given
++ mark_loop(): str
+	// MCP `session.mark_loop`, slash `/mark-loop`; the marker points at the chat the call came from
 	-> SessionLog.mark_loop
 + read_loop(number: int | None): str
 	// MCP `session.read_loop`, slash `/read-loop`
 	-> SessionLog.read_loop
-+ append_log(note: str, loop: int | None, paths: list[str], conversation_id: str, transcript_path: str, transcript_lines: str): str
++ append_log(note: str, loop: int | None, paths: list[str]): str
 	// MCP `session.append_log`, slash `/append-log`
 	-> SessionLog.append_note
 + write_handoff(content: str, paths: list[str]): str
 	// MCP `session.write_handoff`
 	-> Handoffs.write
-+ handoff_session(next_focus: str, session: str): str
-	// instructions: draft the handoff, then call write_handoff with its file
++ read_handoff_format(): str
+	// MCP `session.read_handoff_format`: HANDOFF-FORMAT.md
++ handoff_session(next_focus: str): str
+	// instructions: read the handoff format, draft the handoff, then call write_handoff with its file
 + read_cdr_format(): str
 + list_cdrs(): str
 	-> DecisionRecords.paths
 + write_cdr(slug: str, content: str, paths: list[str]): str
 	-> DecisionRecords.write
-+ record_decisions_session(session: str): str
++ record_decisions_session(): str
 	// instructions: offer a CDR when a decision is hard to reverse, surprising, and a real trade-off
 
 **Invariants**
@@ -227,9 +225,8 @@ Sessions, a session, and its log
 	// full trace to session.err, a line pointing at it to session.log; the failure still propagates from the caller
 + note_chat(chat: ChatPointer): None
 	// the next line points at chat, once
-+ note_chat_given(conversation_id: str, transcript_path: str, transcript_lines: str): None
-+ note_injected_rules(rules: RulesCollection, matched_path: str): None
-	// RulesCollection.inject_rules notes the rules a hook gave the agent, so the next line names them
++ injected_rules: InjectedRules
+	// the rules a hook gave the agent since the last line, which the next line names
 + append_chat(action: str, chat: ChatPointer): None
 	// points action's earlier lines at chat
 + seed_first_loop(): None
@@ -322,10 +319,8 @@ Sessions, a session, and its log
 + guideline: PracticeGuidance
 	// loads on first use
 + fidelities: GuidanceCollection
-+ folders: list[Path]
-	// the sets of peer folders the practice reads, remembered for the repository in `.context/practices.json`, else its default folder
 + graph: Graph
-	// built once from its first folder
+	// built once from its folder
 	-> Graph.of_practice
 + root_node_name: str
 + enabled: bool
@@ -333,7 +328,9 @@ Sessions, a session, and its log
 + working_fidelity: str
 + working_format: str
 + folder: Path
+	// the root chosen in session.json, else the folder config.json names, else the guidance's default folder
 + output_root: Path
+	// the root chosen or configured, else the session's root
 + root: str
 	// data field
 + is_root_chosen: bool
@@ -350,41 +347,49 @@ Sessions, a session, and its log
 + use_default_root(): PracticeSessionOutput
 	// MCP `practice-session-output.use_default_root`
 + keep_root(root: Path): None
-+ remember_folders(folders: list[list[Path]]): None
-	-> RememberedFolders.remember
++ of_fidelity(fidelity: FidelityGuidance): FidelitySessionOutput
+	// what PracticeGuidance.work_in gives each fidelity
 + keep_format(): None
+	-> FidelitySessionOutput.keep_format
 + use_kept_format(): None
+	-> FidelitySessionOutput.kept_format
 + log_validation(violations: list[str]): None
 	// Validate logs each run this way
 	-> SessionLog.line
-+ output_overrides(fidelity: str): dict
 
 ### **FidelitySessionOutput**
 
 + FidelitySessionOutput(practice: PracticeSessionOutput, fidelity: FidelityGuidance)
 ------
 + reports_folder: Path
++ root: Path
+	// the fidelity's own root when session.json names one, else the practice's output root
++ kept_format: str
 ----
++ keep_format(format: str): None
 + output_paths(): dict[str, list[str]]
-	// declared paths under the fidelity's own root when session.json names one, else under the practice's output root
+	// declared paths under the fidelity's root
 + files(): dict[str, list[FileEntry]]
 	-> SessionFiles.worked_on
 + has_output(): bool
 
-### **RememberedFolders**
+### **InjectedRules**
 
-+ RememberedFolders(repo_root: Path)
++ InjectedRules(log_path: Path | None)
+------
++ pending: list[str]
++ text: str
 ----
-+ of(practice: str): list[list[str]]
-+ remember(practice: str, folders: list[list[str]]): None
-	// folders that are the default are not kept
++ note(rules: RulesCollection, matched_path: str): None
+	// RulesCollection.inject_rules notes the rules a hook gave the agent, in the session folder's injected-rules.txt
++ clear(): None
 
 **Interactions**
 
 - A `ToolCall` asks `CallSessions` for the session of each call; the session's log lines point at that call's chat.
 - `GuidanceAction.run` logs through `SessionLog.guidance_action`, and a failure through `SessionLog.failure`; the MCP host logs each tool through `SessionLog.tool` and each failure through `SessionLog.failure`.
 - `Validate.validate` calls `log_validation` on each practice it checked. Generate and Satisfy call Validate, so their runs log the same line.
-- `RulesCollection.inject_rules` notes the rules it injected on the call's session through `SessionLog.note_injected_rules`.
+- `RulesCollection.inject_rules` notes the rules it injected on the call's session through `SessionLog.injected_rules`.
 - The board reads a ticket's work through its session: `Session.practices`, `PracticeSessionOutput.fidelities`, and `FidelitySessionOutput.files`.
 
 ---
@@ -520,7 +525,7 @@ it should point the session.log line at that session.err file
 #### that records a loop correction note
 
 ```
--> session.append_log(note, loop, paths, conversation_id, transcript_path, transcript_lines)
+-> session.append_log(note, loop, paths)
 it should append a note line with message paths and chat pointer
   -> expect(session.log.path).to contain note, paths, and the chat
 ```
@@ -605,14 +610,14 @@ it should refuse a .context folder
   -> expect(choose_root(".context")).to raise PracticeRootInContextError
 ```
 
-##### with parent folders that are not the default
+##### with a root a person chose for the practice
 
 ```
--> session.practice(name).remember_folders(folders)
-it should point that practice's graph root at those parent folders
-  -> expect(session.practice(name).folders).to equal folders
-it should save those folders in practices.json
-  -> expect(repo_path / ".context" / "practices.json").to contain the practice
+-> session.practice(name).keep_root(folder)
+it should point that practice's graph root at that folder
+  -> expect(session.practice(name).graph.practices[name].source_root).to equal folder
+it should keep that folder in the session's session.json and nowhere else
+  -> expect(repo_path / ".context" / "practices.json").not to exist
 ```
 
 ### a session's handoff

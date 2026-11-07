@@ -181,8 +181,6 @@ of(chat_id: str, transcript: str | Path | None, lines: str = ""): ChatPointer | 
 taken_from(arguments: dict | None): tuple[ChatPointer | None, dict]
 	// the chat named in a call's arguments, and the arguments left for the tool
 from_claude_chat(chat_id: str): ChatPointer | None
-from_environment(): ChatPointer | None
-	// CDD_CONVERSATION_ID, CDD_TRANSCRIPT_PATH, CDD_TRANSCRIPT_LINES, for work that comes from no tool call
 in_log_line(line: str): ChatPointer | None
 in_chat_file(path: Path): tuple[ChatPointer, str]
 transcript_text(): list[str]

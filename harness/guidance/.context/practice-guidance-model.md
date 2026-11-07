@@ -92,6 +92,8 @@ files(): dict[str, dict[str, list]]
 	-> FidelityGuidance.files
 output_paths(): dict[str, list[str]]
 	-> fidelities.current.output_paths
+work_in(session_output: PracticeSessionOutput): None
+	// the practice works in that output's session; each fidelity is given its FidelitySessionOutput through FidelityGuidance.work_in
 project_rules(): list[Rule]
 	// .context/rules/{practice}/rules.md and its per-fidelity folders in the working folder
 	-> ProjectRulesets.folders_for
@@ -155,6 +157,7 @@ rules: RulesCollection
 instructions: str
 	// practice overview, guidance, and shared rules, the companion's instructions, the template, and this fidelity's own text
 ----
+work_in(session_output: FidelitySessionOutput): None
 output_paths(): dict[str, list[str]]
 	-> session_output.output_paths
 files(): dict[str, list]
@@ -206,7 +209,7 @@ validate(): str
 inject_rules(payload: HookPayload): dict
 	// @Hook("postToolUse", disabled=True): the rules that apply to an edited file, as additional_context, with a read-only notice as the toast
 	// notes the rules in the session open in the hook's project, even while the hook is disabled
-	-> ToolCall(payload.tool_input, payload.project).session.log.note_injected_rules
+	-> ToolCall(payload.tool_input, payload.project).session.log.injected_rules.note
 scan(paths: Any): Any
 	// none here; a practice's rules collection that scans files overrides it
 

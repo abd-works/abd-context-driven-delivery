@@ -137,7 +137,7 @@ _BULLET_STEP = re.compile(r"^\s*[-*]\s+(Given|When|Then|And|But)\b\s*(.+?)\s*$",
 _BOLD_TERM = re.compile(r"\*\*([^*]+)\*\*")
 _ITALIC_VALUE = re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)")
 _STEP_CONTINUATION = re.compile(r"^(And|But)\s+", re.IGNORECASE)
-_TABLE_ROW = re.compile(r"^\s*\|(.+)\|\s*$")
+_TABLE_LINE = re.compile(r"^\s*\|(.+)\|\s*$")
 _H1 = re.compile(r"^#\s+(.+)$")
 _TREE_HEADING = re.compile(r"^#\s+(Epic|Sub-epic)\s*:\s*(.+?)\s*$", re.IGNORECASE)
 
@@ -160,6 +160,17 @@ class _StorySection:
 class MarkdownStep(Step):
     """Step whose text may still carry a markdown And or But prefix."""
 
+    def __init__(self, *args, read_line: Optional[str] = None, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        # The keyword, text, and line the step was read with, so an unchanged step is written back as read.
+        self.markdown_line: Optional[tuple] = (self.keyword, self.text, read_line) if read_line is not None else None
+
+    def line_as_read(self) -> Optional[str]:
+        """The line this step was read from, while its keyword and text are unchanged; otherwise None."""
+        if self.markdown_line is None or self.markdown_line[:2] != (self.keyword, self.text):
+            return None
+        return self.markdown_line[2]
+
     def display_text(self) -> str:
         """Step text without a leading And or But. The keyword already says which."""
         return _STEP_CONTINUATION.sub("", self.text).strip()
@@ -173,6 +184,15 @@ class MarkdownStep(Step):
 
 class MarkdownScenario(Scenario):
     """Scenario leaf node for the Markdown format. Knows how to parse BDD markdown files."""
+
+    def __init__(self, name: "str | Scenario" = "", sequential_order: int = 0, story_name: str = "") -> None:
+        super().__init__(name, sequential_order, story_name)
+        # The heading (name, outline, line) and the lines the scenario was read with, so an unchanged scenario is
+        # written back as read; None for a scenario not read from a scenarios document.
+        self.markdown_heading: Optional[tuple] = None
+        self.markdown_parts: Optional[list] = None
+        # The story's own background read above this scenario, which the scenario carries to its story.
+        self.story_backgrounds: Optional[List[Background]] = None
 
     @classmethod
     def from_workspace(cls, root: "Path", *, on_file=None) -> List["MarkdownScenario"]:
@@ -273,7 +293,7 @@ class MarkdownScenario(Scenario):
             if self._accept_step_line():
                 continue
             self._container.append(kept)
-            self._accept_example_row()
+            self._accept_example_line()
 
     def _accept_tree_heading(self) -> bool:
         match = _TREE_HEADING.match(self._raw_line)
@@ -446,40 +466,40 @@ class MarkdownScenario(Scenario):
             self._container.append(self._kept_line)
         return True
 
-    def _accept_example_row(self) -> None:
+    def _accept_example_line(self) -> None:
         if not self._in_examples:
             return
-        row_match = _TABLE_ROW.match(self._raw_line)
-        if row_match is None:
+        table_line = _TABLE_LINE.match(self._raw_line)
+        if table_line is None:
             return
-        cells = [c.strip() for c in row_match.group(1).split("|")]
+        cells = [c.strip() for c in table_line.group(1).split("|")]
         if not self._example_headers:
             if not all(re.fullmatch(r"-+|:-+:?|:?-+:?", c) for c in cells):
                 self._example_headers = [self._strip_markup(c) for c in cells]
             return
         if all(set(c.strip(":")) <= {"-"} for c in cells):
             return
-        row = dict(zip(self._example_headers, (self._strip_markup(c) for c in cells)))
-        if set(row) <= {"example", "group"} and row.get("example"):
-            row = {"example": row["example"]}
-        self._record_example_row(row)
+        fields = dict(zip(self._example_headers, (self._strip_markup(c) for c in cells)))
+        if set(fields) <= {"example", "group"} and fields.get("example"):
+            fields = {"example": fields["example"]}
+        self._record_example(fields)
 
-    def _record_example_row(self, row: dict) -> None:
+    def _record_example(self, fields: dict) -> None:
         if self._example_group:
-            row.setdefault("group", self._example_group)
+            fields.setdefault("group", self._example_group)
         if self._current is not None:
             index = len(self._current.examples) + 1
-            label = str(row.get("example") or row.get("name") or f"example-{index}")
-            self._current.examples[label] = row["example"] if set(row) <= {"example"} else row
+            label = str(fields.get("example") or fields.get("name") or f"example-{index}")
+            self._current.examples[label] = fields["example"] if set(fields) <= {"example"} else fields
             return
         if self._in_story_background and self._story_level is not None:
-            label = str(row.get("example") or row.get("name") or f"example-{len(self._story_level.examples) + 1}")
-            self._story_level.examples[label] = row["example"] if set(row) <= {"example"} else row
+            label = str(fields.get("example") or fields.get("name") or f"example-{len(self._story_level.examples) + 1}")
+            self._story_level.examples[label] = fields["example"] if set(fields) <= {"example"} else fields
             return
         index = len(self._shared_background.examples) + 1
-        first = str(row.get(self._example_headers[0], "")).strip("+ ") if self._example_headers else ""
-        label = str(row.get("example") or row.get("name") or first or self._example_group or f"example-{index}")
-        self._shared_background.examples[label] = row["example"] if set(row) <= {"example"} else row
+        first = str(fields.get(self._example_headers[0], "")).strip("+ ") if self._example_headers else ""
+        label = str(fields.get("example") or fields.get("name") or first or self._example_group or f"example-{index}")
+        self._shared_background.examples[label] = fields["example"] if set(fields) <= {"example"} else fields
 
     def _flush_current(self) -> None:
         if self._current is None:
@@ -531,8 +551,8 @@ class MarkdownScenario(Scenario):
             values=[v.strip("`").strip() for v in _ITALIC_VALUE.findall(text) if v],
             actor=match.group(1).strip() if match else "",
             source=self._clause_source,
+            read_line=self._kept_line,
         )
-        step.markdown_line = (step.keyword, step.text, getattr(self, "_kept_line", None))
         return step
 
     def _take_step(self, steps: List[Step], keyword: str, text: str) -> None:
@@ -596,21 +616,21 @@ class MarkdownScenario(Scenario):
 
     @classmethod
     def _link_terms(cls, line: str, following: str, domain_links: DomainModelLinks) -> str:
-        """Link terms in a step or an example row. Headers and separators stay as written."""
+        """Link terms in a step or an example table line. Headers and separators stay as written."""
         step = _ITALIC_STEP.match(line)
         if step is not None:
             keyword = line[: line.index(step.group(2))]
             return keyword + domain_links.link(step.group(2))
-        row = _TABLE_ROW.match(line)
-        if row is None or cls._is_separator(line) or cls._is_separator(following):
+        table_line = _TABLE_LINE.match(line)
+        if table_line is None or cls._is_separator(line) or cls._is_separator(following):
             return line
-        cells = row.group(1).split("|")
+        cells = table_line.group(1).split("|")
         return "|" + "|".join(domain_links.link(cell) for cell in cells) + "|"
 
     @staticmethod
     def _is_separator(line: str) -> bool:
-        row = _TABLE_ROW.match(line)
-        return row is not None and set(row.group(1).replace("|", "")) <= {"-", " ", ":"}
+        table_line = _TABLE_LINE.match(line)
+        return table_line is not None and set(table_line.group(1).replace("|", "")) <= {"-", " ", ":"}
 
     @classmethod
     def _render_scenario_lines(cls, scenarios, story_name, story_backgrounds) -> str:
@@ -648,16 +668,16 @@ class MarkdownScenario(Scenario):
                     lines.extend(cls._step_lines(step))
                 for step in then_steps:
                     lines.extend(cls._step_lines(step))
-            rows = sc.examples.table()
-            if rows:
+            records = sc.examples.table()
+            if records:
                 lines.append("")
                 lines.append("### Examples")
                 lines.append("")
-                headers = list(rows[0].keys())
+                headers = list(records[0].keys())
                 lines.append("| " + " | ".join(headers) + " |")
                 lines.append("| " + " | ".join("---" for _ in headers) + " |")
-                for row in rows:
-                    lines.append("| " + " | ".join(str(row.get(h, "")) for h in headers) + " |")
+                for record in records:
+                    lines.append("| " + " | ".join(str(record.get(h, "")) for h in headers) + " |")
             lines.append("")
         return "\n".join(lines).rstrip() + "\n"
 
@@ -688,13 +708,13 @@ class MarkdownScenario(Scenario):
                 position = index[key]
             buckets[position][2].append(cells)
         lines = ["### Examples", ""]
-        for group, headers, rows in buckets:
+        for group, headers, entries in buckets:
             if group:
                 lines.append(f"#### {group}")
                 lines.append("")
             lines.append("| " + " | ".join(headers) + " |")
             lines.append("| " + " | ".join("---" for _ in headers) + " |")
-            for cells in rows:
+            for cells in entries:
                 values = [str(cells.get(header, "")).replace("|", "/") for header in headers]
                 lines.append("| " + " | ".join(values) + " |")
             lines.append("")
@@ -730,6 +750,13 @@ class MarkdownScenario(Scenario):
 # -- Leaf node types -----------------------------------------------------------
 
 class MarkdownStory(Story):
+    def __init__(self, name: "str | Story", sequential_order: int = 0, story_type: StoryType = StoryType.USER) -> None:
+        super().__init__(name, sequential_order, story_type)
+        # The heading (name, line) and the lines the story was read with in a scenarios document, so an unchanged
+        # story is written back as read; None for a story read from anywhere else.
+        self.markdown_heading: Optional[tuple] = None
+        self.markdown_parts: Optional[list] = None
+
     def load_scenarios(self, root, scenarios=None) -> None:
         name = self.name.strip()
         took_examples = False
@@ -738,7 +765,7 @@ class MarkdownStory(Story):
         for scenario in found:
             if (scenario.story_name or "").strip() != name:
                 continue
-            carried = getattr(scenario, "story_backgrounds", None)
+            carried = scenario.story_backgrounds
             scenario = scenario.clone()
             if carried is not None:
                 scenario.story_backgrounds = carried
@@ -808,37 +835,37 @@ class _StepLines:
     unchanged on the model keeps its line, and steps added on the model follow the owner's last line."""
 
     def __init__(self, parts: list) -> None:
-        self._rows: Dict[int, list] = {}
+        self._pending: Dict[int, list] = {}
         self._left: Dict[int, int] = {}
         for part in parts:
             if isinstance(part, tuple) and part[0] == _STEP_LINE:
                 self._left[id(part[1])] = self._left.get(id(part[1]), 0) + 1
 
     @staticmethod
-    def rows(owner) -> list:
-        rows = []
+    def steps_of(owner) -> list:
+        pending = []
         for step in owner.steps:
-            rows.append((step, False))
-            rows.extend((extra, True) for extra in step.ands)
-        return rows
+            pending.append((step, False))
+            pending.extend((extra, True) for extra in step.ands)
+        return pending
 
     def write(self, part) -> str:
         if not (isinstance(part, tuple) and part[0] == _STEP_LINE):
             return part
         owner = part[1]
-        rows = self._rows.setdefault(id(owner), self.rows(owner))
+        pending = self._pending.setdefault(id(owner), self.steps_of(owner))
         self._left[id(owner)] -= 1
         if self._left[id(owner)] > 0:
-            return self.line(*rows.pop(0)) if rows else ""
-        written = "".join(self.line(*row) for row in rows)
-        rows.clear()
+            return self.line(*pending.pop(0)) if pending else ""
+        written = "".join(self.line(*entry) for entry in pending)
+        pending.clear()
         return written
 
     @staticmethod
     def line(step, continuation: bool) -> str:
-        keyword, text, line = getattr(step, "markdown_line", ("", "", None))
-        if line is not None and (keyword, text) == (step.keyword, step.text):
-            return line
+        as_read = step.line_as_read() if isinstance(step, MarkdownStep) else None
+        if as_read is not None:
+            return as_read
         indent = "  " if continuation else ""
         return f"{indent}*{step.keyword}* {MarkdownStep.prose(step)}  \n"
 
@@ -922,11 +949,11 @@ class MarkdownStoryModel(StoryModel):
     epic_type = MarkdownEpic
     story_type = MarkdownStory
 
-    def load_epic(self, source: MarkdownEpic) -> MarkdownEpic:
-        return MarkdownEpic(source.name, source.sequential_order)
-
-    def load_increment(self, source: Increment) -> MarkdownIncrement:
-        return MarkdownIncrement(source.name, source.sequential_order)
+    def __init__(self, source: Optional[StoryModel] = None) -> None:
+        super().__init__(source)
+        # The scenarios document this map was read from, kept so rendering it writes each unchanged line back;
+        # None for a map read from a story map.
+        self.scenario_document: Optional[_ScenarioDocument] = None
 
     @classmethod
     def from_workspace(cls, root: "Path", *, on_file=None, project: Optional["Path"] = None) -> Optional["MarkdownStoryModel"]:
@@ -992,16 +1019,14 @@ class MarkdownStoryModel(StoryModel):
         self,
         story_map: "MarkdownStoryModel",
         previous: Optional[str] = None,
-        links: Optional[StoryMapLinks] = None,
         workspace: Optional[str] = None,
     ) -> str:
-        """Write the story map. With *links* (or a *workspace* folder to find them in), each
-        story that has its own markdown file links to it; a story with no file stays plain text."""
-        document = getattr(story_map, "scenario_document", None)
+        """Write the story map. In a *workspace* folder, each story that has its own markdown file
+        there links to it; a story with no file stays plain text."""
+        document = story_map.scenario_document if isinstance(story_map, MarkdownStoryModel) else None
         if document is not None:
             return self._render_scenario_document(document)
-        if links is None and workspace:
-            links = StoryMapLinks.from_workspace(workspace)
+        links = StoryMapLinks.from_workspace(workspace) if workspace else None
         writer = _StoryMapWriter(links)
         if not self._should_render_outline(story_map, previous) and not self._is_discovery_story_map(story_map):
             return writer.headings(story_map)
@@ -1163,14 +1188,14 @@ class MarkdownStoryModel(StoryModel):
         return "".join(out)
 
     def _render_story(self, story) -> str:
-        parts = getattr(story, "markdown_parts", None)
+        parts = story.markdown_parts if isinstance(story, MarkdownStory) else None
         if parts is None:
             parts = [_HEADING_LINE, "\n"]
             for background in story.backgrounds:
                 parts.extend(["### Background\n", "\n"])
-                parts.extend((_STEP_LINE, background) for _ in _StepLines.rows(background))
+                parts.extend((_STEP_LINE, background) for _ in _StepLines.steps_of(background))
                 parts.append("\n")
-        name, heading = getattr(story, "markdown_heading", ("", None))
+        name, heading = story.markdown_heading if isinstance(story, MarkdownStory) and story.markdown_heading else ("", None)
         out: List[str] = []
         steps = _StepLines(parts)
         for part in parts:
@@ -1187,12 +1212,13 @@ class MarkdownStoryModel(StoryModel):
         return "".join(out)
 
     def _render_scenario(self, scenario) -> str:
-        parts = getattr(scenario, "markdown_parts", None)
+        parts = scenario.markdown_parts if isinstance(scenario, MarkdownScenario) else None
         if parts is None:
             parts = [_HEADING_LINE, "\n"]
-            parts.extend((_STEP_LINE, scenario) for _ in _StepLines.rows(scenario))
+            parts.extend((_STEP_LINE, scenario) for _ in _StepLines.steps_of(scenario))
             parts.append("\n")
-        name, is_outline, heading = getattr(scenario, "markdown_heading", ("", False, None))
+        read = scenario.markdown_heading if isinstance(scenario, MarkdownScenario) else None
+        name, is_outline, heading = read or ("", False, None)
         out: List[str] = []
         steps = _StepLines(parts)
         for part in parts:

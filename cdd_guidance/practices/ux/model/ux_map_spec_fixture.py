@@ -40,9 +40,9 @@ class OrderingMap:
 
     def _screens(self, ux_map: UxMap) -> tuple[Screen, Screen, Screen]:
         catalog = Screen("Catalog", 0, "catalog", "stack", "Browse products")
-        catalog.attach_story_name("Browse Product Catalog")
-        catalog.attach_scenario_name("Browse Product Catalog › Products are listed")
-        catalog.attach_step_name("Browse Product Catalog › Products are listed › the Customer opens the catalog")
+        catalog.show_story("Browse Product Catalog")
+        catalog.show_scenario("Browse Product Catalog › Products are listed")
+        catalog.show_step("Browse Product Catalog › Products are listed › the Customer opens the catalog")
         catalog.attach_domain_term("Product")
         catalog.domain_concepts = ["Catalog"]
         catalog.image = "screens/catalog.png"
@@ -93,7 +93,7 @@ def _screen_outline(screen: Screen) -> dict[str, Any]:
     return {
         "fields": (screen.name, screen.slug, screen.layout, screen.description, _name(screen.chrome_of),
                    screen.image, screen.prototype),
-        "lists": (screen.inactive_tabs, screen.story_names, screen.scenario_names, screen.step_names,
+        "lists": (screen.inactive_tabs, screen.story_keys, screen.scenario_keys, screen.step_keys,
                   screen.domain_terms, screen.domain_concepts),
         "regions": [
             (region.name, region.area, [_control_outline(control) for control in region.controls])

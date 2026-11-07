@@ -27,7 +27,6 @@ from space.kanban.session_board_examples import (
     DISCOVERY_FIDELITY_SLUGS,
     EVERY_DISCOVERY_FIDELITY_REVIEWED,
     GENERATED_STORY_MAP_IN_TWO_FOLDERS,
-    LOGGED_BEFORE_MOVES_WERE_NAMED_MOVE,
     MOVED_INTO_SPECIFICATION,
     PET_VISITS,
     READY_TO_MOVE,
@@ -39,7 +38,7 @@ from space.kanban.session_board_examples import (
     seed_checkout_flow_held_on_violations,
     validated,
 )
-from space.kanban.story_test import SharedStories, column_in, expect_action, expect_actions, expect_held_on_violations, expect_no_next, expect_placed, progress_in
+from space.kanban.story_test import SharedStories, column_in, expect_action, expect_actions, expect_held_on_violations, expect_no_next, expect_placed, next_in, progress_in
 
 shared_stories = SharedStories("Guide Work Through Practices")
 
@@ -194,21 +193,6 @@ def _(s):
         expect_placed(world.moved, "Discovery", is_done=False)
 
 
-@shared_stories.scenario("Mark Ticket Done In Stage", "Read a done mark from a log written before moves were named move")
-def _(s):
-    @s.given("pet-visits' session log has pull Specification then done Specification")
-    def _(world):
-        world.project.seed_session(PET_VISITS.with_log(*LOGGED_BEFORE_MOVES_WERE_NAMED_MOVE))
-
-    @s.when("the session board reads pet-visits")
-    def _(world):
-        world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
-
-    @s.then("pet-visits shows in Specification's Done")
-    def _(world):
-        expect_placed(world.read, "Specification", is_done=True)
-
-
 @shared_stories.scenario("Open Help", "Open a fidelity's help")
 def _(s):
     @s.given("billing-report's story_map tile is shown")
@@ -217,7 +201,7 @@ def _(s):
 
     @s.when("the Person opens help on the story_map fidelity")
     def _(world):
-        world.help = world.data_of(world.Board.load().help(slug="stories-story-map"))
+        world.help = world.data_of(world.Ticket.load(BILLING_REPORT.name).progress_of(STORY_MAP).help())
 
     @s.then("a side panel shows story_map's overview, guidance, and rules such as verb-noun-format")
     def _(world):
@@ -241,7 +225,7 @@ def _(s):
 
     @s.when("the Person opens help on the Stories practice")
     def _(world):
-        world.help = world.data_of(world.Board.load().help(slug="stories"))
+        world.help = world.data_of(world.Board.load().help(practice="stories"))
 
     @s.then("a side panel shows Practice overview and SHARED RULES such as do-not-invent-requirements")
     def _(world):
@@ -257,20 +241,19 @@ def _(s):
         expect(world.help["href"]).to(equal(f"{FORGE}/context-tools/stories.html"))
 
 
-@shared_stories.scenario("Open Help", "Link a fidelity with no page of its own to its practice's page")
+@shared_stories.scenario("Open Help", "Link the ddd model fidelity to its own page")
 def _(s):
-    @s.given("the ddd model fidelity has no page on the forge")
+    @s.given("the catalog has a page for the ddd model fidelity")
     def _(world):
-        # The forge's missing pages are the board's own list, FIDELITIES_WITHOUT_PAGE in space/kanban/board.py.
-        pass
+        world.project.seed_session(BILLING_REPORT)
 
     @s.when("the Person opens help on the ddd model fidelity")
     def _(world):
-        world.help = world.data_of(world.Board.load().help(slug="ddd-model"))
+        world.help = world.data_of(world.Ticket.load(BILLING_REPORT.name).progress_of("ddd-model").help())
 
-    @s.then("its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/context-tools/ddd.html")
+    @s.then("its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/fidelities/ddd-model.html")
     def _(world):
-        expect(world.help["href"]).to(equal(f"{FORGE}/context-tools/ddd.html"))
+        expect(world.help["href"]).to(equal(f"{FORGE}/fidelities/ddd-model.html"))
 
 
 @shared_stories.scenario("Send Next Fidelity Action", "Generate the next fidelity in its default format")
@@ -288,7 +271,7 @@ def _(s):
 
     @s.then("Run next read Run next: generate before it ran")
     def _(world):
-        expect((world.before["next"]["next_action"], world.before["next"]["slug"])).to(equal(("generate", STORY_MAP)))
+        expect((next_in(world.before)["next_action"], world.before["next"]["slug"])).to(equal(("generate", STORY_MAP)))
 
     # The board app writes the command from the stage's default format; the command itself is left to its specs.
     @s.and_("the chat receives the command /actions-generate stories-story-map format=markdown")
@@ -315,7 +298,7 @@ def _(s):
 
     @s.then("Run next read Run next: fix violations")
     def _(world):
-        expect(world.before["next"]["next_action"]).to(equal("satisfy"))
+        expect(next_in(world.before)["next_action"]).to(equal("satisfy"))
 
     @s.and_("the report panel opens on stories-story-map")
     def _(world):
@@ -359,7 +342,7 @@ def _(s):
 
     @s.then("Run next reads Run next: review on stories-story-map")
     def _(world):
-        expect((world.read["next"]["next_action"], world.read["next"]["slug"])).to(equal(("review", STORY_MAP)))
+        expect((next_in(world.read)["next_action"], world.read["next"]["slug"])).to(equal(("review", STORY_MAP)))
 
 
 @shared_stories.scenario("Send Next Fidelity Action", "Name nothing to run on a ticket done in its stage")

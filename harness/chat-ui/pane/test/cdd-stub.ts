@@ -43,9 +43,9 @@ function nextOf(ticket: TicketData): FidelityProgressData | null {
 const activeName = (world: World): string | null => world.board.active?.name ?? null
 
 function changed(world: World, ticket: TicketData, active: string | null = activeName(world)): TicketData {
-  // Ticket.next_fidelity is none once the stage is done or the ticket is Complete.
-  const next = ticket.column.name === 'Complete' || ticket.is_done ? null : nextOf(ticket)
-  const settled = { ...ticket, next }
+  // Ticket.next_fidelity is none once the stage is done or the ticket is Complete, and names its progress otherwise.
+  const progress = ticket.column.name === 'Complete' || ticket.is_done ? null : nextOf(ticket)
+  const settled = { ...ticket, next: progress && { ticket: progress.ticket, slug: progress.slug } }
   world.board = boardOf(active, ...ticketsOf(world.board).map(entry => (entry.name === settled.name ? settled : entry)))
   return settled
 }

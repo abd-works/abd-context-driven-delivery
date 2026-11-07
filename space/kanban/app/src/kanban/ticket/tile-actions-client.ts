@@ -1,12 +1,11 @@
 import { ACTION_STANDINGS, countOf, STEP_FAILED } from '../board/board-brand'
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
+import type { FidelityProgressClient } from './fidelity-progress-client'
 import type { TicketClient } from './ticket-client'
 import { slugsOf } from './tile-client'
 import { chipDoneCount, chipOfferedCount, chipsOf, chosenFormats } from './tile-formats'
 import type { FormatChip } from './tile-formats'
-
-const ACTIONS_WITH_FORMATS = ['generate', 'render']
 
 const namedIn = (tile: Tile): string => slugsOf(tile.fidelities).join(' ')
 
@@ -20,14 +19,21 @@ export type TileBar = {
   reviewOff: boolean
   validate: StepFace
   review: StepFace
-  reportSlug: string | undefined
+  report: FidelityProgressClient | undefined
   hasViolations: boolean
 }
 
 // A tile can hold several fidelities: its link opens the report of the one left with violations, else the first report.
-function reportSlugOf(ticket: TicketClient, tile: Tile): string | undefined {
-  const reported = slugsOf(tile.fidelities).filter(slug => ticket.progressNamed(slug)?.report_file)
-  return reported.find(slug => ticket.stateOf(slug).key === 'violations') ?? reported[0]
+function reportOf(progress: FidelityProgressClient[]): FidelityProgressClient | undefined {
+  const reported = progress.filter(entry => entry.reportFile)
+  return reported.find(entry => entry.state === 'violations') ?? reported[0]
+}
+
+// How far one action has got across a tile's fidelities: done only when it is done on all of them.
+function standingOf(progress: FidelityProgressClient[], action: 'validate' | 'review'): string {
+  const states = progress.map(entry => entry.actions[action])
+  if (states.length && states.every(state => state === 'done')) return 'done'
+  return states.some(state => state !== 'to_do') ? 'in_progress' : 'to_do'
 }
 
 function chipFaceOf(tile: Tile, chip: FormatChip): ChipFace {
@@ -44,15 +50,14 @@ const stepFaceOf = (standing: string, name: string): StepFace => {
   return { mark, color, hint: `${name}: ${label}`, text: '' }
 }
 
-function validateFaceOf(ticket: TicketClient, tile: Tile): StepFace {
-  const slugs = slugsOf(tile.fidelities)
-  if (!slugs.some(slug => ticket.stateOf(slug).key === 'violations')) return stepFaceOf(ticket.standingOf(slugs, 'validate'), 'Validate')
-  const count = ticket.violationCountOf(slugs)
+function validateFaceOf(progress: FidelityProgressClient[]): StepFace {
+  if (!progress.some(entry => entry.state === 'violations')) return stepFaceOf(standingOf(progress, 'validate'), 'Validate')
+  const count = progress.reduce((total, entry) => total + entry.violationCount, 0)
   const text = count ? countOf(count, 'violation') : 'violations'
   return { mark: STEP_FAILED, color: 'var(--violations)', hint: text, text }
 }
 
-const allowsAll = (ticket: TicketClient, tile: Tile, action: string): boolean => tile.fidelities.length > 0 && tile.fidelities.every(fidelity => ticket.allows(fidelity.slug, action))
+const allowsAll = (progress: FidelityProgressClient[], action: string): boolean => progress.length > 0 && progress.every(entry => entry.allows(action))
 
 // What an open action bar offers, and what its controls send to the chat.
 export class TileActionsClient {
@@ -81,29 +86,32 @@ export class TileActionsClient {
   }
 
   // The ticket says when Validate and Review have something to look at: an action it recorded, or a declared file there.
-  private hasSomethingToCheck(ticket: TicketClient, tile: Tile, action: string): boolean {
-    return !ticket.isLocked && allowsAll(ticket, tile, action)
+  private hasSomethingToCheck(ticket: TicketClient, progress: FidelityProgressClient[], action: string): boolean {
+    return !ticket.isLocked && allowsAll(progress, action)
   }
 
+  // ticket is the tile's ticket as the board shows it now, which holds the fidelities' latest progress.
   barOf(ticket: TicketClient, tile: Tile): TileBar {
-    const validate = validateFaceOf(ticket, tile)
+    const progress = ticket.progressOn(tile.fidelities)
+    const validate = validateFaceOf(progress)
     return {
       chips: chipsOf(tile.fidelities).map(chip => chipFaceOf(tile, chip)),
       isLocked: ticket.isLocked,
       runOff: !this.canRun(ticket, tile),
       // Validate runs in the chat; a review is the person's own approval, so it needs no chat.
-      validateOff: !this.chat.canSend || !this.hasSomethingToCheck(ticket, tile, 'validate'),
-      reviewOff: !this.hasSomethingToCheck(ticket, tile, 'review'),
+      validateOff: !this.chat.canSend || !this.hasSomethingToCheck(ticket, progress, 'validate'),
+      reviewOff: !this.hasSomethingToCheck(ticket, progress, 'review'),
       validate,
-      review: stepFaceOf(ticket.standingOf(slugsOf(tile.fidelities), 'review'), 'Review'),
-      reportSlug: reportSlugOf(ticket, tile),
+      review: stepFaceOf(standingOf(progress, 'review'), 'Review'),
+      report: reportOf(progress),
       hasViolations: validate.text !== '',
     }
   }
 
-  // One command names every fidelity the bar acts on, so a stage's work stays a single turn.
+  // One command names every fidelity the bar acts on, so a stage's work stays a single turn. The stage says which
+  // actions write a fidelity's files, and those name the formats chosen.
   async run(tile: Tile): Promise<void> {
-    if (!ACTIONS_WITH_FORMATS.includes(tile.action)) return this.sendFor(tile, `/actions-${tile.action} ${namedIn(tile)}`)
+    if (!tile.stage.producingActions.includes(tile.action)) return this.sendFor(tile, `/actions-${tile.action} ${namedIn(tile)}`)
     const formats = chosenFormats(tile.fidelities, tile.picked)
     this.save(tile, { picked: [] })
     await this.sendFor(tile, `/actions-${tile.action} ${namedIn(tile)} format=${formats.join(',')}`)
@@ -120,7 +128,7 @@ export class TileActionsClient {
 
   // The ticket writes the review to its session log, and the board read after it shows the fidelity done.
   async review(tile: Tile): Promise<void> {
-    await Promise.all(tile.fidelities.map(fidelity => tile.ticket.progressClient(fidelity.slug).finishReview()))
+    await Promise.all(tile.ticket.progressOn(tile.fidelities).map(progress => progress.finishReview()))
     await this.page.reader.refresh()
   }
 }

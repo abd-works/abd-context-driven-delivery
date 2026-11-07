@@ -21,6 +21,7 @@ from mamba import after, before, context, description, it
 from harness.agent_tools.parameter_schema import ParameterSchema
 from harness.installer.installer import Installer
 from harness.mcp._examples.parameter_types.parameter_types import ParameterTypes
+from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.mcp_server import McpHost, McpInstallation
 from harness.mcp.spec_support import UserHome
@@ -366,7 +367,7 @@ with description("an MCP host tool result") as self:
 with description("an MCP host") as self:
     with context("that has stood up over this checkout's toolsets"):
         with before.each:
-            self.host = McpHost.standup(repo=_REPO_ROOT)
+            self.host = McpHost.from_repo(_REPO_ROOT)
 
         with it("should answer ping with pong"):
             expect(self.host.diagnose()["ping"]).to(equal("pong"))
@@ -392,7 +393,7 @@ with description("an MCP host") as self:
             expect("repo.push" in tools).to(equal(False))
 
         with it("should resolve Cursor underscore aliases to enrolled names"):
-            expect(self.host._runtime.resolve_call_name("repo_push_commit")).to(
+            expect(self.host.checkout_server.resolve_call_name("repo_push_commit")).to(
                 equal("repo.push_commit")
             )
 
@@ -467,7 +468,7 @@ with description("an MCP host") as self:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
             Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([SampleMcpOps()])
-            self.host = McpHost.standup(repo=_REPO_ROOT)
+            self.host = McpHost.from_repo(_REPO_ROOT)
 
         with after.each:
             shutil.rmtree(self._tmp, ignore_errors=True)
@@ -524,7 +525,7 @@ with description("an MCP host tool ping") as self:
         expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(0))
 
     with it("should leave ping out of the tool schema"):
-        schema = self.host._runtime.tools["hosting-demo.increment"].input_schema
+        schema = self.host.checkout_server.tools["hosting-demo.increment"].input_schema
         expect("ping" in schema["properties"]).to(equal(False))
 
     with it("should still run a tool when ping is absent"):
@@ -564,7 +565,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
             expect("miro-mcp" in self.servers).to(equal(True))
 
         with it("should point at the one cdd server"):
-            expect(self.servers["cdd"]["url"]).to(equal(McpDaemon().url))
+            expect(self.servers["cdd"]["url"]).to(equal(McpDaemon(CddHome()).url))
 
         with it("should name the open project on every request"):
             expect(self.servers["cdd"]["headers"]).to(equal({"X-CDD-Project": "${workspaceFolder}"}))
@@ -572,7 +573,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
     with context("for Claude Code"):
         with before.each:
             self.config = self.root / ".claude.json"
-            old_entry = {"type": "http", "url": McpDaemon().url, "headersHelper": "python connect.py"}
+            old_entry = {"type": "http", "url": McpDaemon(CddHome()).url, "headersHelper": "python connect.py"}
             self.config.write_text(
                 json.dumps({"projects": {"x": {}}, "mcpServers": {"cdd": old_entry, "miro-mcp": {"url": "https://example"}}}),
                 encoding="utf-8",
@@ -597,7 +598,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
             expect([plugin["name"] for plugin in marketplace["plugins"]]).to(equal(["cdd"]))
 
         with it("should point the plugin's cdd server at the one cdd server over HTTP"):
-            expect(self.server["url"]).to(equal(McpDaemon().url))
+            expect(self.server["url"]).to(equal(McpDaemon(CddHome()).url))
 
         with it("should run the connect script in ~/.cdd"):
             expect(self.server["headersHelper"]).to(contain(str(self.root / ".cdd" / "connect.py")))

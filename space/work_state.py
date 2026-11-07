@@ -9,7 +9,6 @@ from pathlib import Path
 SESSIONS_FOLDER = ".sessions"
 STATE_NAME = "session.json"
 E2E_RESULTS_FOLDER = "e2e-test-results"
-_LEGACY_SESSION_KEY = "current"
 
 
 class WorkState:
@@ -55,25 +54,12 @@ class WorkState:
     def session(self, name: str) -> None:
         self._store("session", name)
 
-    @property
-    def release(self) -> str:
-        """The release this checkout's work belongs to: the open session, else the branch, else ``main``."""
-        return self.session or self._value("branch") or "main"
-
-    def release_folder(self, release: str = "") -> Path:
-        """``.sessions/<release>/``: the release's session files, its design canvas, and its end-to-end results."""
-        return self.sessions_folder / (release or self.release)
-
     def load(self) -> dict[str, str]:
         if not self.path.is_file():
             return {}
         data = json.loads(self.path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             return {}
-        # Files written before the branch and worktree keys named the session "current".
-        legacy = data.pop(_LEGACY_SESSION_KEY, None)
-        if legacy and not data.get("session"):
-            data["session"] = legacy
         return {str(key): str(value) for key, value in data.items() if str(value).strip()}
 
     def _value(self, key: str) -> str:

@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 
 _LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+# How much of a refused link an error quotes: enough to find it in the report, short enough to read.
+_QUOTED_LINK_CHARACTERS = 80
 
 
 def verify_report(markdown_path: Path) -> list[str]:
@@ -16,15 +18,15 @@ def verify_report(markdown_path: Path) -> list[str]:
     for _label, href in _LINK.findall(text):
         href = href.strip().strip("<>")
         if href.startswith("vscode:"):
-            errors.append(f"do not use vscode:// links in reports: {href[:80]}")
+            errors.append(f"do not use vscode:// links in reports: {href[:_QUOTED_LINK_CHARACTERS]}")
             continue
         if href.startswith("file:"):
-            errors.append(f"do not use file:// links in reports: {href[:80]}")
+            errors.append(f"do not use file:// links in reports: {href[:_QUOTED_LINK_CHARACTERS]}")
             continue
         path_part, _, fragment = href.partition("#")
         line: int | None = None
         if href.startswith(("http://", "https://")):
-            errors.append(f"unsupported href scheme: {href[:80]}")
+            errors.append(f"unsupported href scheme: {href[:_QUOTED_LINK_CHARACTERS]}")
             continue
         path_candidate = Path(path_part)
         if path_candidate.is_absolute():

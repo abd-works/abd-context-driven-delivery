@@ -1,5 +1,7 @@
 """BDD spec for HtmlUxMap - the mockup shell, and the map it carries read back."""
 
+import json
+import re
 import sys
 from pathlib import Path
 
@@ -10,9 +12,25 @@ _REPO = Path(__file__).resolve().parents[5]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
+from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel
 from cdd_guidance.practices.ux.model.html.nodes import HtmlUxMap, UxMapNotEmbedded
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import OrderingMap, outline
+
+
+def story_outline_in(page):
+    return json.loads(re.search(r'<script id="story-outline" type="application/json">(.*?)</script>', page).group(1))
+
+
+def ordering_story_map(graph):
+    story_map = StoryModel(graph=graph)
+    epic = Epic("Place New Order", 0)
+    browse = Epic("Browse", 0)
+    browse.append_story(Story("Browse Product Catalog", 0))
+    epic.append_epic(browse)
+    epic.append_story(Story("Check Out", 1))
+    story_map.append_epic(epic)
+    return story_map
 
 
 with description("a UX map written as an HTML mockup"):
@@ -34,6 +52,22 @@ with description("a UX map written as an HTML mockup"):
 
     with it("should escape control labels"):
         expect(self.rendered).to(contain("Browse &lt;all&gt;"))
+
+    with it("should leave the story outline empty while no story map is on the map's graph"):
+        expect(story_outline_in(self.rendered)).to(equal([]))
+
+    with context("with the story map on the map's graph"):
+        with before.each:
+            ordering_story_map(self.source.graph)
+            self.source.find_screen("Cart").show_story("Check Out")
+            self.rendered = HtmlUxMap.create().render(self.source)
+
+        with it("should outline each epic with the sub-epics and stories its screens show"):
+            expect(story_outline_in(self.rendered)).to(equal([{
+                "name": "Place New Order",
+                "groups": [{"name": "Browse", "stories": ["Browse Product Catalog"]}],
+                "stories": ["Check Out"],
+            }]))
 
     with context("that is read back"):
         with before.each:

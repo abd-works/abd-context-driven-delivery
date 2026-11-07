@@ -346,22 +346,22 @@ with description("a guidance action"):
         from harness.guidance_actions.guidance_actions import GUIDANCE_PARAMETER
 
         seen: list[str] = []
-        for kit_class in ActionCatalogue.kits():
-            kit = kit_class()
+        for toolset_class in ActionCatalogue.toolsets():
+            toolset = toolset_class()
             guidance_tools = [
                 tool
-                for tool in kit.tools.values()
+                for tool in toolset.tools.values()
                 if "guidance" in inspect.signature(tool.callable).parameters
             ]
             expect(len(guidance_tools) > 0).to(equal(True))
             for tool in guidance_tools:
                 expect(tool.docstring).to(contain(GUIDANCE_PARAMETER))
-                seen.append(f"{kit_class.__name__}.{tool.name}")
-            kit._work_on(["clean-engineering-model", "bdd-behavior"])
-            listed = kit.listed()
+                seen.append(f"{toolset_class.__name__}.{tool.name}")
+            toolset._work_on(["clean-engineering-model", "bdd-behavior"])
+            listed = toolset.listed()
             expect([type(item).__name__ for item in listed]).to(equal(["CleanEngineering", "Bdd"]))
             expect(listed[0].fidelities.current.name).to(equal("model"))
             expect(listed[1].fidelities.current.name).to(equal("behavior"))
         expect(seen).to(contain("Render.render"))
         expect(seen).to(contain("Validate.validate"))
-        expect(seen).to(contain("Validate.createRule"))
+        expect(seen).to(contain("Validate.create_rule"))

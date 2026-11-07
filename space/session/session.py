@@ -19,7 +19,7 @@ from harness.mcp.mcp_server import mcp
 from harness.installation.context_config import CONTEXT_FOLDER
 from space.repo.repo import Repo
 from space.session.decision_records import FORMAT_FILE, DecisionRecords
-from space.session.handoffs import Handoffs
+from space.session.handoffs import HANDOFF_FORMAT_FILE, Handoffs
 from space.session.practice_session_output import PracticeSessionOutput
 from space.session.session_files import SessionFiles
 from space.session.session_log import SessionLog
@@ -116,7 +116,7 @@ class Session:
     @property
     def repo(self) -> Repo:
         """The repository that holds this session's ``.sessions``."""
-        return Repo(self.repo_from_session())
+        return Repo(self.repo_path)
 
     def repo_from_session(self) -> Path:
         """The folder of the repository that holds this session's ``.sessions``: the one it was opened in."""
@@ -142,7 +142,7 @@ class Session:
         """The folder the session works in: its workpath, or the whole repository when it chose none. Actions write
         their sketches, grill answers, and partitions under it, each practice's folder is kept relative to it, and the
         file manager reads under it."""
-        return Path(self.workpath or self.repo_from_session()).resolve()
+        return Path(self.workpath or self.repo_path).resolve()
 
     @property
     @data_field(key="workpath")
@@ -229,11 +229,11 @@ class Session:
         # WHY: Sessions makes and loads Session objects, so space.session.sessions imports this module.
         from space.session.sessions import Sessions
 
-        return Sessions(self.repo_from_session())
+        return Sessions(self.repo_path)
 
     @property
     def _sessions_folder(self) -> Path:
-        return WorkState(self.repo_from_session()).sessions_folder
+        return WorkState(self.repo_path).sessions_folder
 
     def _move_folder_to(self, parent: Path) -> Session:
         """Move this session's folder under ``parent``, such as ``.sessions/_complete/``; the session as it is there."""
@@ -309,18 +309,11 @@ class Session:
         # A practice root a person chose is kept relative to the workpath, so each is saved again against the new one
         # and still names the same folder.
         chosen = {practice: practice.folder for practice in self.practices.values() if practice.is_root_chosen}
-        self.workpath = (self.repo_from_session() / path).resolve()
+        self.workpath = (self.repo_path / path).resolve()
         self.save()
         for practice, root in chosen.items():
             practice.keep_root(root)
         return self
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def files(self) -> dict[str, dict[str, dict[str, list[FileEntry]]]]:
-        """List the files every practice this session works on declares, by practice, fidelity, and format, each with its path from the project and whether it exists."""
-        return self.session_files.declared()
 
     @mcp
     @agent_tool
@@ -339,13 +332,12 @@ class Session:
     @mcp
     @command(name="mark-loop")
     @agent_tool
-    def mark_loop(self, conversation_id: str = "", transcript_path: str = "", transcript_lines: str = "") -> str:
+    def mark_loop(self) -> str:
         """Mark the next loop in this session's log (slash ``/mark-loop``); returns its number.
 
         ``session`` is the session's session.json; ask ``sessions.current`` for it when the user names no session.
-        Pass ``conversation_id``, ``transcript_path``, and ``transcript_lines`` (cumulative JSONL range for this chat);
-        the ``--- N`` marker carries that chat's pointer."""
-        self.log.note_chat_given(conversation_id, transcript_path, transcript_lines)
+        Pass ``conversation_id``, ``transcript_path``, and ``transcript_lines`` (cumulative JSONL range for this chat)
+        on the call; the ``--- N`` marker carries that chat's pointer."""
         return str(self.log.mark_loop())
 
     @mcp
@@ -361,15 +353,7 @@ class Session:
     @mcp
     @command(name="append-log")
     @agent_tool
-    def append_log(
-        self,
-        note: str = "",
-        loop: int | None = None,
-        paths: list[str] | None = None,
-        conversation_id: str = "",
-        transcript_path: str = "",
-        transcript_lines: str = "",
-    ) -> str:
+    def append_log(self, note: str = "", loop: int | None = None, paths: list[str] | None = None) -> str:
         """Append a correction or audit note to this session's log (slash ``/append-log``).
 
         **Agent steps:** name the session by its session.json in ``session`` (ask ``sessions.current`` when the user
@@ -378,13 +362,12 @@ class Session:
         ``paths``, cross-refs to earlier ``session.log`` lines); call MCP ``session.append_log`` with those fields.
 
         Omit ``loop`` to target the latest loop with log lines. Pass ``conversation_id``,
-        ``transcript_path``, and ``transcript_lines`` when hook metadata is missing.
+        ``transcript_path``, and ``transcript_lines`` on the call so the note points at this chat.
         Do not edit ``session.log`` by hand.
 
         **Session artifacts:** write large or temporary outputs (MCP ``graph_return_nodes`` JSON, diagnostics dumps,
         probe results) under the session's folder (``.sessions/{name}/``), not only under Cursor
         ``.cursor/projects/.../agent-tools``. Reference those files in ``paths`` on this call."""
-        self.log.note_chat_given(conversation_id, transcript_path, transcript_lines)
         return self.log.append_note(note, loop, paths)
 
     @mcp
@@ -402,58 +385,22 @@ class Session:
 
     @mcp
     @skill
+    @agent_tool
+    def read_handoff_format(self) -> str:
+        """Return HANDOFF-FORMAT.md - the structure of a handoff, where to find the corrections document, and how to
+        write the approach for the next agent. Read this before drafting a handoff."""
+        return HANDOFF_FORMAT_FILE.read_text(encoding="utf-8")
+
+    @mcp
+    @skill
     @agent_instructions
-    def handoff_session(self, next_focus: str = "", session: str = "") -> str:
-        """Write a compact handoff for the session whose session.json is {{session}} so the next agent can continue; when it is blank, ask sessions.current for the open session's session_file. Tailor to {{next_focus}} when provided."""
-        """Draft the handoff markdown from this conversation. Tailor it to {{next_focus}} when provided.
-
-        Use this exact structure:
-
-        # Handoff — {one-line description} ({today ISO date})
-
-        ## Outcome
-        One paragraph: what this session actually achieved and where the next session starts.
-
-        ## Progress
-        Keep this section terse. Do not write long essays.
-
-        ### Files
-        Short bullet list of created or modified files — relative paths plus a few words each.
-
-        ### Outstanding
-        Short bullet list of remaining work, failures, and partial items.
-
-        ## Key Learnings
-        Do not cross-check AGENTS.md or dump every learning. List only the most important rules / corrections from the corrections document: rule name + star count, optionally the session delta. One line per rule. If every learning is already in that file, the list of top rules is still required — do not write "All captured. No new items." as a substitute.
-
-        Find the corrections document in this order:
-        1. Assume it is in the current session folder (e.g. `.sessions/{name}/corrections.md` or a path the session already uses).
-        2. If not found, search the sessions root (`.sessions/corrections.md`, `.sessions/**/corrections.md`).
-        3. If still not found, look under `.sessions/main/`.
-        4. Also try the durable project location `.context/corrections.md` if the session copies are missing.
-
-        Read the current session block first (the latest `# Session: YYYY-MM-DD` heading). Prefer rules that appear in that block, ordered by star count.
-
-        ## Approach for Next Agent
-        Analyse the chat and/or the user's instructions for a deliberate numbered loop whose steps are context tools plus their parameters. Extract the actual slash-command / tool+parameter sequence used or instructed in this session. Do not invent a generic software process.
-
-        Examples of the style (replace with the sequence from this session):
-        - `/stories-scenarios` `/generate` `/markdown`
-        - `/clean-engineering-model` `/generate` `/markdown`
-        - `/stories-acceptance-tests` `/clean-engineering-code` `/generate` `/code`
-
-        Include:
-        - Read this handoff and the corrections document (session block first) to orient.
-        - The numbered context-tool loop extracted from this session.
-        - If a skill conflicts with corrections.md, follow corrections.md.
-        - A start-at pointer for the next agent.
-        - Corrections CLI commands if a `corrections-cli` exists in the project.
-
-        ## Correction trend
-        Include this section only if the corrections document was found. Compare this session's correction count (from the session block / conversation) to the previous session's count. State the trend in 1–2 sentences (e.g. "Session 2026-09-14 needed 5 corrections across 2 epics — roughly 2–3 per story. The previous session needed ~12. Trend is sharply down."). Optionally append the Corrections CLI cheat sheet (`list`, `add-correction`, `new-session`). If corrections cannot be found after the search order above, omit this section.
-        """
+    def handoff_session(self, next_focus: str = "") -> str:
+        """Write a compact handoff for this session so the next agent can continue. Tailor it to {{next_focus}} when provided. Pass the same session argument to every session tool this calls."""
+        """Step 1 - Read the handoff format once via read_handoff_format."""
+        tools(self.read_handoff_format)
+        """Step 2 - Draft the handoff markdown from this conversation in that format, tailored to {{next_focus}} when provided."""
+        """Step 3 - Write the handoff markdown to a file and call write_handoff with paths set to that file. Do not pass the handoff body. Report the returned path to the user."""
         tools(self.write_handoff)
-        """Write the handoff markdown to a file and call session.write_handoff with paths set to that file and session set to the session.json named above. Do not pass the handoff body. Report the returned path to the user."""
         return "Handoff written."
 
     @mcp
@@ -493,8 +440,8 @@ class Session:
     @mcp
     @skill
     @agent_instructions
-    def record_decisions_session(self, session: str = "") -> str:
-        """Offer and write Context Decision Records (CDRs) for the session whose session.json is {{session}} sparingly as decisions crystallise during the wrapped action - never batch; never invent decisions. When it is blank, ask sessions.current for the open session's session_file. Pass that session.json as session to session.list_cdrs and session.write_cdr."""
+    def record_decisions_session(self) -> str:
+        """Offer and write Context Decision Records (CDRs) for this session sparingly as decisions crystallise during the wrapped action - never batch; never invent decisions. Pass the same session argument to session.list_cdrs and session.write_cdr."""
         """Step 1 - Read the format once via read_cdr_format. Internalise the three-criteria gate and the minimal template."""
         tools(self.read_cdr_format)
         """Step 2 - Optionally call list_cdrs so you do not re-record an already-captured decision. Records live under the session workpath's .context/cdr/."""

@@ -34,7 +34,10 @@ let TWO_FIDELITIES: FidelityGuidanceData[]
 let NOTHING_MADE: FilesByFidelity
 let MARKDOWN_MADE: FilesByFidelity
 
-const filesOn = async (): Promise<FilesByFidelity> => (await ticketOn((await board.page()).page, TICKET).filesOf([SLUG]))!
+const filesOn = async (): Promise<FilesByFidelity> => {
+  const ticket = ticketOn((await board.page()).page, TICKET)
+  return (await ticket.filesOf([ticket.progressNamed(SLUG)!]))!
+}
 
 beforeAll(async () => {
   board = await BoardOnProject.start()
@@ -146,7 +149,7 @@ describe('Validate Fidelity', () => {
     board.write(`.sessions/${TICKET}/validation-reports/ddd-bounded-context-20261101T100000.md`, '# Graph rule validation\n')
     const { page, ticket } = await activeTicketPage()
     await page.tiles.open(spot(page, TWO_FIDELITIES, HEAD), true)
-    expect(page.tileActions.barOf(ticket, barAt(page, HEAD)!).reportSlug).toBe(OTHER_SLUG)
+    expect(page.tileActions.barOf(ticket, barAt(page, HEAD)!).report?.slug).toBe(OTHER_SLUG)
   })
 })
 

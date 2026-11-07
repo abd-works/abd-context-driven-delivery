@@ -11,8 +11,9 @@ from typing import Any, Iterable, List, Mapping, Optional
 
 from harness.name.name import Name
 from harness.graph.bound_node import BoundChildren
-from harness.graph.graph import Graph
+from harness.graph.graph import Graph, Node
 
+from .story_link import StoryLink
 from .ux_node import UxNode
 
 
@@ -129,13 +130,12 @@ class Region(UxNode):
 class Screen(UxNode):
     """One screen of the map.
 
-    Its story links are names written the way Stories keys them: a story by its name, a scenario as
-    ``Story › Scenario``, a step as ``Story › Scenario › Step``. Each story, scenario, and step on the same graph whose
-    key a screen lists records ``shownOn`` that screen, and the screen records ``shows`` each story.
+    It shows stories, scenarios, and steps through one StoryLink each: the Stories node once it is on the screen's
+    graph, else the key the formats store. ``shows``, ``shows_scenarios``, and ``shows_steps`` are the nodes the graph
+    records as the screen's edges of those names, and each of those nodes records ``shownOn`` this screen.
     """
 
     _semantic_type_name = "Screen"
-    _schema_edge_fields = UxNode._schema_edge_fields | {"story_names", "scenario_names", "step_names"}
 
     def __init__(
         self,
@@ -153,9 +153,7 @@ class Screen(UxNode):
         self.description = description
         self.chrome_of = chrome_of
         self.inactive_tabs: List[str] = []
-        self.story_names: List[str] = []
-        self.scenario_names: List[str] = []
-        self.step_names: List[str] = []
+        self._story_links: List[StoryLink] = []
         self.domain_terms: List[str] = []
         self.domain_concepts: List[str] = []
         self.image = ""
@@ -176,26 +174,65 @@ class Screen(UxNode):
         """
         self.layout = (layout_id or "").strip()
 
-    def attach_story_name(self, story_name: str) -> None:
-        self._attach(self.story_names, story_name)
+    def show_story(self, story: Node | str) -> None:
+        """A story this screen shows: the Story, or its name."""
+        self._show("Story", story)
 
-    def attach_scenario_name(self, scenario_name: str) -> None:
-        """A scenario this screen shows, named ``Story › Scenario``; the scenario's ``shownOn`` edge follows it."""
-        self._attach(self.scenario_names, scenario_name)
+    def show_scenario(self, scenario: Node | str) -> None:
+        """A scenario this screen shows: the Scenario, or its key ``Story › Scenario``."""
+        self._show("Scenario", scenario)
 
-    def attach_step_name(self, step_name: str) -> None:
-        """A step this screen shows, named ``Story › Scenario › Step``; the step's ``shownOn`` edge follows it."""
-        self._attach(self.step_names, step_name)
+    def show_step(self, step: Node | str) -> None:
+        """A step this screen shows: the Step, or its key ``Story › Scenario › Step``."""
+        self._show("Step", step)
+
+    @property
+    def shows(self) -> List[Node]:
+        """The stories on this screen's graph that it shows."""
+        return self._shown_nodes("Story")
+
+    @property
+    def shows_scenarios(self) -> List[Node]:
+        return self._shown_nodes("Scenario")
+
+    @property
+    def shows_steps(self) -> List[Node]:
+        return self._shown_nodes("Step")
+
+    @property
+    def story_keys(self) -> List[str]:
+        """The stories this screen shows, as the formats write them."""
+        return self._keys("Story")
+
+    @property
+    def scenario_keys(self) -> List[str]:
+        return self._keys("Scenario")
+
+    @property
+    def step_keys(self) -> List[str]:
+        return self._keys("Step")
+
+    def lists(self, node: Node) -> bool:
+        """True when this screen shows that story, scenario, or step, or one with its key drawn on another graph."""
+        return any(link.names(node) for link in self._story_links)
 
     def attach_domain_term(self, term: str) -> None:
         if term and term not in self.domain_terms:
             self.domain_terms.append(term)
 
-    def _attach(self, names: List[str], name: str) -> None:
-        if not name or name in names:
+    def _show(self, kind: str, item: Node | str) -> None:
+        link = StoryLink.from_item(kind, item)
+        if not link.key or link.key in self._keys(kind):
             return
-        names.append(name)
+        self._story_links.append(link)
         self._sync_schema_edges()
+
+    def _shown_nodes(self, kind: str) -> List[Node]:
+        found = (link.resolved_on(self.graph) for link in self._story_links if link.kind == kind)
+        return [node for node in found if node is not None]
+
+    def _keys(self, kind: str) -> List[str]:
+        return [link.key for link in self._story_links if link.kind == kind]
 
 
 class UxComponent(UxNode):

@@ -8,11 +8,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.graph.violation import UNKNOWN_LOCATION, Violation
+from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
+from harness.guidance.rule import Rule
 from harness.installation.destination import data_field
 
 if TYPE_CHECKING:
-    from space.kanban.ticket import FidelityProgress
     from space.repo.repo import Repo
+    from space.session import Session
 
 SOURCE_LINES_BEFORE = 2
 SOURCE_LINES_AFTER = 4
@@ -27,26 +29,23 @@ FINDING_LINE = re.compile(r"^- (?:(?P<file>[^\s:]+):(?P<line>\d+)\s+)?(?P<messag
 class ReportRule:
     """One rule a report finds broken, in the one shape the board reads for graph hits and judged findings alike."""
 
-    def __init__(self, fidelity: str, name: str, description: str, violations: list[Violation]) -> None:
+    def __init__(self, fidelity: FidelityGuidance, rule: Rule, violations: list[Violation]) -> None:
         self._fidelity = fidelity
-        self._name = name
-        self._description = description
+        self._rule = rule
         self._violations = list(violations)
 
     @property
     @data_field
-    def fidelity(self) -> str:
+    def fidelity(self) -> FidelityGuidance:
+        """The fidelity whose report found the rule broken, which a fix of the rule validates again."""
         return self._fidelity
 
     @property
     @data_field
-    def name(self) -> str:
-        return self._name
-
-    @property
-    @data_field
-    def description(self) -> str:
-        return self._description
+    def rule(self) -> Rule:
+        """The broken rule, with its name and what it asks for. A rule no fidelity describes, such as one only a graph
+        scanner checks, has its name alone."""
+        return self._rule
 
     @property
     @data_field
@@ -61,7 +60,7 @@ class ReportRule:
     @property
     def identity(self) -> tuple:
         """A saved graph holds its whole practice's hits, so two fidelities of one practice report the same broken rule."""
-        return (self._name, *((violation.practice, violation.location, violation.line, violation.message) for violation in self._violations))
+        return (self._rule.slug, *((violation.practice, violation.location, violation.line, violation.message) for violation in self._violations))
 
 
 class Report:
@@ -107,14 +106,26 @@ class Report:
 
 
 class ReportFile:
-    """A validation report saved in a session folder, with the graph the validation checked saved beside it."""
+    """A validation report of one fidelity, saved in a session folder, with the graph the validation checked saved
+    beside it. It knows which of its practice's rules it answers for."""
 
-    # It is made for the fidelity progress it reports on, which holds the ticket's session, the repository its files
-    # are named from, and the rules this report answers for.
+    # The session holds the fidelity's reports and the folder the saved graph names its files from; the repository
+    # names the report's files from its top.
 
-    def __init__(self, file: Path, progress: FidelityProgress) -> None:
+    def __init__(self, file: Path, fidelity: FidelityGuidance, session: Session, repo: Repo) -> None:
         self._file = file
-        self._progress = progress
+        self._fidelity = fidelity
+        self._session = session
+        self._repo = repo
+
+    @classmethod
+    def from_fidelity(cls, fidelity: FidelityGuidance, session: Session, repo: Repo) -> ReportFile | None:
+        """The latest report of fidelity in session that has its result, else its latest; none when it has none.
+        Validate saves a report before the agent judges it, so a report with no judgment and no saved graph yet does
+        not hide an earlier one that has its result."""
+        own = [cls(path, fidelity, session, repo) for path in fidelity.reports()]
+        with_result = [report for report in own if report.has_result]
+        return (with_result or own or [None])[-1]
 
     @property
     def file(self) -> Path:
@@ -142,36 +153,66 @@ class ReportFile:
         """The rules broken on the nodes of the saved graph, then each rule the agent's judgment fails that the graph did not hit."""
         text = self.text
         graph_rules = self._graph_rules() if self._graph.is_file() else []
-        hit = {rule.name for rule in graph_rules}
-        judged = [rule for rule in self._judged_rules(text) if rule.name not in hit]
+        hit = {rule.rule.slug for rule in graph_rules}
+        judged = [rule for rule in self._judged_rules(text) if rule.rule.slug not in hit]
         return Report(self._repo.path_from_top(self._file), text, graph_rules + judged, self._graph.is_file())
 
     @property
-    def _repo(self) -> Repo:
-        return self._progress.repo
+    def _practice(self) -> PracticeGuidance:
+        return self._fidelity.practice_guidance
 
     @property
     def _workpath(self) -> Path:
         """The folder the saved graph names its files from: the session's workpath, else the repository's top."""
-        return Path(self._progress.session.workpath or self._repo.root).resolve()
+        return Path(self._session.workpath or self._repo.root).resolve()
 
     @property
     def _graph(self) -> Path:
         return self._file.with_suffix(".json")
 
+    @property
+    def _answered_rules(self) -> list[Rule]:
+        """The rules this report answers for: its practice's shared rules, its fidelity's own, and every earlier
+        fidelity's but those an earlier fidelity's newer report answers for."""
+        earlier = [rule for fidelity in self._earlier_fidelities if not self._has_newer_report(fidelity) for rule in fidelity.rules]
+        return [*self._practice.rules, *earlier, *self._fidelity.rules]
+
+    @property
+    def _described_rules(self) -> list[Rule]:
+        """Every rule of the practice, its fidelity's own last: a saved graph holds the whole practice's hits, so every
+        fidelity's rules count, and a rule two fidelities share is described as this one describes it."""
+        others = [rule for fidelity in self._practice.fidelities for rule in fidelity.rules]
+        return [*self._practice.rules, *others, *self._fidelity.rules]
+
+    @property
+    def _earlier_fidelities(self) -> list[FidelityGuidance]:
+        """The fidelities of this report's practice that come before its fidelity."""
+        fidelities = list(self._practice.fidelities)
+        names = [fidelity.name for fidelity in fidelities]
+        return fidelities[:names.index(self._fidelity.name)] if self._fidelity.name in names else []
+
+    def _has_newer_report(self, earlier: FidelityGuidance) -> bool:
+        """Whether an earlier fidelity was validated after this report was written, so its own report answers for its rules."""
+        latest = ReportFile.from_fidelity(earlier, self._session, self._repo)
+        return latest is not None and latest.stamp > self.stamp
+
+    def _rule_named(self, name: str) -> Rule:
+        """The rule a graph hit or a judgment names, as this report's fidelity describes it; a rule no fidelity
+        describes has its name alone."""
+        return next((rule for rule in reversed(self._described_rules) if rule.slug == name), None) or Rule(name, "")
+
     def _graph_rules(self) -> list[ReportRule]:
-        return [self._rule(name, [self._violation_of(hit) for hit in hits]) for name, hits in self._hits_by_rule().items()]
+        return [ReportRule(self._fidelity, self._rule_named(name), [self._violation_of(hit) for hit in hits]) for name, hits in self._hits_by_rule().items()]
 
     def _hits_by_rule(self) -> dict[str, list[Violation]]:
         """The hits on the rules this report answers for: a saved graph holds its whole practice's hits. A rule no
         fidelity describes belongs to none, so every report keeps it."""
         from cdd_guidance.actions.validate.graph_json_reader import violations_by_rule, violations_from_graph_json_files
 
-        progress = self._progress
-        answered = progress.rules_answered_by(self)
-        described = progress.rule_descriptions
+        answered = {rule.slug for rule in self._answered_rules}
+        described = {rule.slug for rule in self._described_rules}
         scanned = self._scanned_rules()
-        hits = violations_by_rule(violations_from_graph_json_files([self._graph], [progress.practice]))
+        hits = violations_by_rule(violations_from_graph_json_files([self._graph], [self._practice.key]))
         return {name: rule_hits for name, rule_hits in hits.items() if name in scanned and (name in answered or name not in described)}
 
     def _scanned_rules(self) -> set[str]:
@@ -180,18 +221,14 @@ class ReportFile:
         from harness.graph.schema_rules import active_overlay_patterns
 
         overlays = json.loads(self._graph.read_text(encoding="utf-8")).get("overlays", [])
-        return set(GraphPractices.named(self._progress.practice).checks(active_overlay_patterns(tuple(overlays))))
+        return set(GraphPractices.named(self._practice.key).checks(active_overlay_patterns(tuple(overlays))))
 
     def _judged_rules(self, text: str) -> list[ReportRule]:
         """Each rule the judgment fails, once however many judged files fail it, with its findings at the judged files' lines."""
         findings: dict[str, list[Violation]] = {}
         for judgment in Judgment.from_report(text):
             findings.setdefault(judgment.rule, []).extend(self._judged_violation(judgment.file, finding) for finding in judgment.findings)
-        return [self._rule(rule, violations) for rule, violations in findings.items()]
-
-    def _rule(self, name: str, violations: list[Violation]) -> ReportRule:
-        progress = self._progress
-        return ReportRule(progress.fidelity_slug, name, progress.rule_descriptions.get(name, ""), violations)
+        return [ReportRule(self._fidelity, self._rule_named(rule), violations) for rule, violations in findings.items()]
 
     def _judged_violation(self, judged_file: str, finding: Violation) -> Violation:
         """A finding names the judged file by its name alone, or no file; one that names another file keeps that file's path."""

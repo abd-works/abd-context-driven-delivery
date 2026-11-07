@@ -4,19 +4,19 @@ Schema of ``story-graph.json`` (camelCase). Every epic, top-level or nested, has
 under ``subEpics``:
 
     {
-      "exampleRows": [{"exampleName": "...", "<cell>": "...", ...}],
+      "examples": [{"exampleName": "...", "<cell>": "...", ...}],
       "epics": [
         {
           "name": "...",
           "sequentialOrder": 1,
           "estimate": "...",
-          "exampleRows": [...],
+          "examples": [...],
           "stories": [
             {
               "name": "...", "sequentialOrder": 1, "storyType": "user", "actors": ["..."],
-              "backgrounds": [{"name": "background", "steps": [...], "exampleRows": [...]}],
+              "backgrounds": [{"name": "background", "steps": [...], "examples": [...]}],
               "scenarios": [
-                {"name": "...", "sequentialOrder": 1, "isOutline": false, "steps": [...], "exampleRows": [...]}
+                {"name": "...", "sequentialOrder": 1, "isOutline": false, "steps": [...], "examples": [...]}
               ]
             }
           ],
@@ -87,9 +87,9 @@ class JsonStoryModel(StoryModel):
         payload: Dict[str, Any] = {
             "epics": [self._epic_to_dict(epic) for epic in story_map.epics],
         }
-        rows = self._example_rows(story_map.examples)
-        if rows:
-            payload["exampleRows"] = rows
+        records = self._example_records(story_map.examples)
+        if records:
+            payload["examples"] = records
         if story_map.increments:
             payload["increments"] = [
                 self._increment_to_dict(increment) for increment in story_map.increments
@@ -143,9 +143,9 @@ class JsonStoryModel(StoryModel):
         }
         if epic.estimate:
             payload["estimate"] = epic.estimate
-        rows = self._example_rows(epic.examples)
-        if rows:
-            payload["exampleRows"] = rows
+        records = self._example_records(epic.examples)
+        if records:
+            payload["examples"] = records
         return payload
 
     def _story_to_dict(self, story: Story) -> Dict[str, Any]:
@@ -173,9 +173,9 @@ class JsonStoryModel(StoryModel):
         }
         if scenario.is_outline:
             payload["isOutline"] = True
-        rows = self._example_rows(scenario.examples)
-        if rows:
-            payload["exampleRows"] = rows
+        records = self._example_records(scenario.examples)
+        if records:
+            payload["examples"] = records
         if scenario.backgrounds:
             payload["backgrounds"] = [self._background_to_dict(background) for background in scenario.backgrounds]
         return payload
@@ -185,9 +185,9 @@ class JsonStoryModel(StoryModel):
             "name": background.name,
             "steps": [self._step_to_dict(step) for step in background.steps],
         }
-        rows = self._example_rows(background.examples)
-        if rows:
-            payload["exampleRows"] = rows
+        records = self._example_records(background.examples)
+        if records:
+            payload["examples"] = records
         return payload
 
     def _step_to_dict(self, step: Step) -> Dict[str, Any]:
@@ -217,14 +217,14 @@ class JsonStoryModel(StoryModel):
             payload["slicingNotes"] = increment.slicing_notes
         return payload
 
-    def _example_rows(self, examples: Examples) -> List[Dict[str, str]]:
+    def _example_records(self, examples: Examples) -> List[Dict[str, str]]:
         """Each example as its name under ``exampleName`` beside its own cells, so a cell named ``example`` stays a
         cell."""
-        rows = []
+        records = []
         for name, example in examples.items():
             cells = {key: "" if value is None else str(value) for key, value in example.cells().items()}
-            rows.append({"exampleName": name, **cells})
-        return rows
+            records.append({"exampleName": name, **cells})
+        return records
 
     # -- parse helpers ---------------------------------------------------------
 
@@ -304,9 +304,9 @@ class JsonStoryModel(StoryModel):
         return step
 
     def _take_examples(self, examples: Examples, record: Dict[str, Any]) -> None:
-        for index, row in enumerate(record.get("exampleRows") or [], start=1):
-            label = str(row.get("exampleName") or row.get("example") or row.get("name") or f"example-{index}")
-            cells = {key: value for key, value in row.items() if key != "exampleName"}
+        for index, record_cells in enumerate(record.get("examples") or [], start=1):
+            label = str(record_cells.get("exampleName") or record_cells.get("example") or record_cells.get("name") or f"example-{index}")
+            cells = {key: value for key, value in record_cells.items() if key != "exampleName"}
             examples[label] = cells if set(cells) - {"example"} else label
 
     def _increment_from_dict(self, increment_record: Dict[str, Any]) -> JsonIncrement:

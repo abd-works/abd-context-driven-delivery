@@ -10,7 +10,35 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from harness.installer.claude_plugins import ClaudePlugins
 from harness.installer.installer import Installer
+
+
+class _ScriptedClaude(ClaudePlugins):
+    """The plugin installer with a claude command that records each call and lists what the spec says."""
+
+    def __init__(self, listed: str) -> None:
+        super().__init__()
+        self.listed = listed
+        self.calls: list[tuple[str, ...]] = []
+        self.cli: str | None = "claude"
+        self.plugins_installed: dict[str, str] = {}
+
+    @property
+    def installed(self) -> dict[str, str]:
+        return self.plugins_installed
+
+    @property
+    def published_board_version(self) -> str:
+        return "0.6.3-abc"
+
+    @property
+    def claude_cli(self) -> str | None:
+        return self.cli
+
+    def run(self, claude: str, *args: str) -> str:
+        self.calls.append(args)
+        return self.listed
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(_REPO_ROOT).ensure_import_path()
@@ -28,11 +56,20 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeWithFidelities,
 )
 from harness.hooks.hooks import Hook
-from harness.mcp.mcp_server import McpServer
+from harness.mcp.cdd_home import CddHome
+from harness.mcp.mcp_server import McpInstallation, McpServer
 from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.spec_support import SpecServer, ThrowawayMachine, UserHome
 
 
+
+
+def _server_publishing(installation: McpInstallation) -> McpServer:
+    """A server publishing the operations an install recorded, as the cdd server publishes them."""
+    server = McpServer()
+    for tool in installation.mcp_operations:
+        server.enroll(tool)
+    return server
 
 
 class HookDecoration:
@@ -149,7 +186,7 @@ with description("an agent toolset") as self:
             with before.each:
                 self._tmp = tempfile.mkdtemp()
                 self.tree = Path(self._tmp)
-                self.installer = Installer(ide="Cursor", path=self.tree)
+                self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
                 self.installer.install([SampleAgenticOps()])
 
             with after.each:
@@ -190,7 +227,7 @@ with description("an agent toolset") as self:
                 with before.each:
                     self._branch_tmp = tempfile.mkdtemp()
                     self.tree = Path(self._branch_tmp)
-                    self.installer = Installer(ide="Cursor", path=self.tree)
+                    self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
                     self.mcp = self.installer.install([SampleMcpOps()])
 
                 with after.each:
@@ -240,8 +277,7 @@ with description("an agent toolset") as self:
                         expect(self.mcp.diagnosis["tools"]).to(contain("cdd.ping"))
 
                 with it("should return that operation's instructions when the installed tool is invoked"):
-                    server = McpServer()
-                    server.enroll_from(self.mcp)
+                    server = _server_publishing(self.mcp)
                     result = server.invoke_prompt("sample-mcp.generate")
                     expect(result).to(equal("full generate instructions that must not appear in the slash file"))
 
@@ -249,32 +285,26 @@ with description("an agent toolset") as self:
                 with context("with mcp.json on the tree"):
                     with it("should name the one cdd server by its URL, with no command or toolsets to start"):
                         server = json.loads((self.tree / "mcp.json").read_text(encoding="utf-8"))["mcpServers"]["cdd"]
-                        expect(server["url"]).to(equal(McpDaemon().url))
+                        expect(server["url"]).to(equal(McpDaemon(CddHome()).url))
                         expect(sorted(server)).to(equal(["headers", "url"]))
 
                     with it("should publish the server as cdd"):
                         data = json.loads((self.tree / "mcp.json").read_text(encoding="utf-8"))
                         expect(data["mcpServers"]).to(have_key("cdd"))
 
-                with context("with an MCP server started from manifest toolset refs written during that install"):
+                with context("with an MCP server publishing the operations that install recorded"):
                     with before.each:
-                        self.server = McpServer()
-                        self.server.enroll_from(self.mcp)
+                        self.server = _server_publishing(self.mcp)
 
                     with it("should enroll that operation as a prompt under the mcp name for generate"):
                         expect("sample-mcp.generate" in self.server.prompts).to(equal(True))
-
-                    with it(
-                        "should enroll from mcp operations recorded at deploy not from a second annotation scan on the class"
-                    ):
-                        expect(len(self.mcp.mcp_operations) > 0).to(equal(True))
 
             # (S) Installer --> Register Agent Toolsets as Cursor hooks
             with context("that are annotated as Cursor hooks"):
                 with before.each:
                     self._branch_tmp = tempfile.mkdtemp()
                     self.tree = Path(self._branch_tmp)
-                    self.installer = Installer(ide="Cursor", path=self.tree)
+                    self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
                     self.mcp = self.installer.install([SampleHookOps()])
 
                 with after.each:
@@ -303,10 +333,10 @@ with description("an agent toolset") as self:
 
                 with context("with the hook host stood up"):
                     with it("should diagnose that the hook server answers ping"):
-                        expect(self.installer._hook.diagnosis["ping"]).to(equal("pong"))
+                        expect(self.installer._channels_of_run().hook.diagnosis["ping"]).to(equal("pong"))
 
                     with it("should list the installed hook event"):
-                        expect(self.installer._hook.diagnosis["events"]).to(contain("stop"))
+                        expect(self.installer._channels_of_run().hook.diagnosis["events"]).to(contain("stop"))
 
             with context("that are not annotated as Cursor hooks and a hooks manifest is already on the IDE path"):
                 with before.each:
@@ -317,7 +347,7 @@ with description("an agent toolset") as self:
                         '{"version": 1, "hooks": {"stop": [{"command": "keep-me"}]}}\n',
                         encoding="utf-8",
                     )
-                    Installer(ide="Cursor", path=self.tree).install([SampleAgenticOps()])
+                    Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([SampleAgenticOps()])
 
                 with after.each:
                     shutil.rmtree(self._branch_tmp, ignore_errors=True)
@@ -332,7 +362,7 @@ with description("an agent toolset") as self:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
             self.tool = SampleGuidance(format="markdown")
-            self.installer = Installer(ide="Cursor", path=self.tree)
+            self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
             self.mcp = self.installer.install([self.tool])
 
         with after.each:
@@ -359,8 +389,7 @@ with description("an agent toolset") as self:
                 expect(getattr(self.mcp, "_bound", False)).to(equal(False))
 
             with it("should return the instructions the property assembles when the installed tool is invoked"):
-                server = McpServer()
-                server.enroll_from(self.mcp)
+                server = _server_publishing(self.mcp)
                 result = server.invoke_prompt("sample-tool.instructions")
                 expect(result).to(equal(self.tool.instructions))
 
@@ -378,7 +407,7 @@ with description("an agent toolset") as self:
                 with before.each:
                     self._tmp = tempfile.mkdtemp()
                     self.tree = Path(self._tmp)
-                    self.installer = Installer(ide="Cursor", path=self.tree)
+                    self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
                     self.installer.install([SampleAgenticOps()])
                     self.orphan = self.tree / "skills" / "stale-orphan" / "SKILL.md"
                     self.orphan.parent.mkdir(parents=True, exist_ok=True)
@@ -390,7 +419,7 @@ with description("an agent toolset") as self:
                 # (S) Installer --> Clean previously installed skills
                 with context("that has been cleansed"):
                     with before.each:
-                        self.removed = Installer(ide="Cursor", path=self.tree).clean()
+                        self.removed = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).clean()
 
                     with it("should remove the published skill"):
                         expect(len(self.removed) > 0).to(be_true)
@@ -456,7 +485,7 @@ with description("an agent toolset") as self:
                 with before.each:
                     self._tmp = tempfile.mkdtemp()
                     self.tree = Path(self._tmp)
-                    Installer(ide="Cursor", path=self.tree).install([SampleMcpOps()])
+                    Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([SampleMcpOps()])
 
                 with after.each:
                     shutil.rmtree(self._tmp, ignore_errors=True)
@@ -464,7 +493,7 @@ with description("an agent toolset") as self:
                 # (S) Installer --> Cleanse previously installed MCP tools
                 with context("that has been cleansed"):
                     with before.each:
-                        Installer(ide="Cursor", path=self.tree).clean()
+                        Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).clean()
 
                     with it("should keep the MCP manifest so Cursor stays connected to the cdd server"):
                         expect((self.tree / "mcp.json").is_file()).to(equal(True))
@@ -529,8 +558,8 @@ with description("an agent toolset") as self:
                 with before.each:
                     self._tmp = tempfile.mkdtemp()
                     self.tree = Path(self._tmp)
-                    self.mcp = Installer(ide="Cursor", path=self.tree).install(
-                        [Installer(ide="Cursor", path=self.tree)]
+                    self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                        [Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)]
                     )
 
                 with after.each:
@@ -735,8 +764,8 @@ with description("an agent toolset") as self:
                         after = shared.read_text(encoding="utf-8") if shared.is_file() else ""
                         expect(after).to(equal(before))
                         expect(
-                            Installer(path=tmp, repo=self.repo)._is_ephemeral_install_path(tmp)
-                        ).to(equal(True))
+                            Installer(path=tmp, repo=self.repo).record.path.parent
+                        ).to(equal(Path(tmp)))
                     finally:
                         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -756,7 +785,7 @@ with description("a practice guidance class") as self:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
             self.tool = SamplePracticeGuidance(format="markdown")
-            self.installer = Installer(ide="Cursor", path=self.tree)
+            self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
             self.mcp = self.installer.install([self.tool])
 
         with after.each:
@@ -864,8 +893,7 @@ with description("a practice guidance class") as self:
             expect(skill).not_to(contain("toolset:"))
 
         with it("should return the instructions the property assembles when the installed tool is invoked"):
-            server = McpServer()
-            server.enroll_from(self.mcp)
+            server = _server_publishing(self.mcp)
             result = server.invoke_prompt("sample-tool.instructions")
             expect(result).to(equal(self.tool.instructions))
 
@@ -892,7 +920,7 @@ with description("a practice guidance class") as self:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
             self.tool = SamplePracticeGuidance(format="markdown")
-            self.installer = Installer(ide="Cursor", path=self.tree)
+            self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
             self.mcp = self.installer.install([self.tool])
 
         with after.each:
@@ -956,9 +984,9 @@ with description("a practice guidance class") as self:
 
         with context("that do not inject"):
             with before.each:
-                from harness.agent_tools.agent_tools import AgentToolSet
+                from harness.agent_tools.agent_tools import ToolsetReference
 
-                Car = AgentToolSet._load("cdd_guidance.practices._examples.car.car:Car")
+                Car = ToolsetReference("cdd_guidance.practices._examples.car.car:Car").toolset_class
                 from cdd_guidance.actions._examples.car_story.car_story import CarStory
 
                 self._branch_tmp = tempfile.mkdtemp()
@@ -991,7 +1019,7 @@ with description("a practice guidance class") as self:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
             self.tool = SamplePracticeWithFidelities(format="markdown")
-            self.mcp = Installer(ide="Cursor", path=self.tree).install([self.tool])
+            self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([self.tool])
 
         with after.each:
             shutil.rmtree(self._tmp, ignore_errors=True)
@@ -1016,7 +1044,7 @@ with description("a practice guidance class") as self:
                 self.leftover = kebab_dir.parent / "sample_tool"
                 self.leftover.mkdir(parents=True, exist_ok=True)
                 (self.leftover / "SKILL.md").write_text("stale\n", encoding="utf-8")
-                Installer(ide="Cursor", path=self.tree).install(
+                Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                     [SamplePracticeWithFidelities(format="markdown")]
                 )
 
@@ -1090,8 +1118,7 @@ with description("a practice guidance class") as self:
                 expect(text).not_to(contain("sketch guidance body only"))
 
             with it("should return that fidelity's instructions when the installed tool is invoked"):
-                server = McpServer()
-                server.enroll_from(self.mcp)
+                server = _server_publishing(self.mcp)
                 sketch = self.tool.fidelities.entries["sketch"]
                 result = server.invoke_prompt("sample-tool-sketch")
                 expect(result).to(equal(sketch.instructions))
@@ -1106,8 +1133,7 @@ with description("a practice guidance class") as self:
                     self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                         [self.tool]
                     )
-                    self.server = McpServer()
-                    self.server.enroll_from(self.mcp)
+                    self.server = _server_publishing(self.mcp)
 
                 with after.each:
                     shutil.rmtree(self._branch_tmp, ignore_errors=True)
@@ -1124,7 +1150,7 @@ with description("a practice guidance class") as self:
                 with before.each:
                     self._branch_tmp = tempfile.mkdtemp()
                     self.tree = Path(self._branch_tmp)
-                    Installer(ide="VS Code", path=self.tree).install(
+                    Installer(ide="VS Code", path=self.tree, repo=_REPO_ROOT).install(
                         [SamplePracticeWithFidelities(format="markdown")]
                     )
 
@@ -1262,8 +1288,7 @@ with description("lifecycle actions annotated for installation") as self:
                     )
 
                 with it("should return that operation's instructions when the installed tool is invoked"):
-                    server = McpServer()
-                    server.enroll_from(self.mcp)
+                    server = _server_publishing(self.mcp)
                     result = server.invoke_prompt("generate.generate")
                     expect(str(result)).to(contain("Write artifacts for each listed guidance"))
 
@@ -1395,25 +1420,13 @@ with description("toolsets installed for Claude Code") as self:
 
     with context("installing the board plugin"):
         with before.each:
-            self.installer = Installer(ide="Claude", path=self.tree, repo=_REPO_ROOT)
-            self.calls = []
-            self.installer._claude_cli = lambda: "claude"
-            self.listed = "cdd-board@cdd-home"
-
-            def run(claude, *args):
-                self.calls.append(args)
-                return self.listed
-
-            self.installer._run_claude = run
-            self.installed = {}
-            self.installer._installed_plugins = lambda: self.installed
-            self.installer._published_board_version = lambda: "0.6.3-abc"
+            self.plugins = _ScriptedClaude(listed="cdd-board@cdd-home")
 
         # A board mod installed from a checkout's own marketplace runs that branch's code, not the server's.
         with it("should remove the board mod installed from a checkout's own marketplace"):
-            self.installed = {"cdd-board@abd-works": "0.6.3"}
-            self.installer.install_board_plugin()
-            expect(self.calls[:2]).to(equal([
+            self.plugins.plugins_installed = {"cdd-board@abd-works": "0.6.3"}
+            self.plugins.install_board()
+            expect(self.plugins.calls[:2]).to(equal([
                 ("plugin", "uninstall", "cdd-board@abd-works", "--scope", "user"),
                 ("plugin", "marketplace", "remove", "abd-works"),
             ]))
@@ -1421,66 +1434,56 @@ with description("toolsets installed for Claude Code") as self:
         # Each claude command starts the Claude Code CLI, which takes seconds, so an install with nothing to change runs none.
         with context("with the board mod the cdd home publishes already installed"):
             with before.each:
-                self.installed = {"cdd-board@cdd-home": "0.6.3-abc"}
-                self.answer = self.installer.install_board_plugin()
+                self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-abc"}
+                self.answer = self.plugins.install_board()
 
             with it("should say it is installed"):
                 expect(self.answer).to(equal("installed"))
 
             with it("should run no claude command"):
-                expect(self.calls).to(equal([]))
+                expect(self.plugins.calls).to(equal([]))
 
         with context("with an older board mod installed"):
             with it("should update it"):
-                self.installed = {"cdd-board@cdd-home": "0.6.3-old"}
-                self.installer.install_board_plugin()
-                expect(("plugin", "update", "cdd-board@cdd-home", "--scope", "user") in self.calls).to(equal(True))
+                self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-old"}
+                self.plugins.install_board()
+                expect(("plugin", "update", "cdd-board@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
 
         with it("should install the board mod the cdd home publishes, at user scope"):
-            expect(self.installer.install_board_plugin()).to(equal("installed"))
-            expect(("plugin", "install", "cdd-board@cdd-home", "--scope", "user") in self.calls).to(equal(True))
+            expect(self.plugins.install_board()).to(equal("installed"))
+            expect(("plugin", "install", "cdd-board@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
 
         with it("should say the plugin is missing when the list does not show it"):
-            self.listed = ""
-            expect(self.installer.install_board_plugin()).to(equal("missing"))
+            self.plugins.listed = ""
+            expect(self.plugins.install_board()).to(equal("missing"))
 
         with it("should say the plugin is missing when there is no claude command"):
-            self.installer._claude_cli = lambda: None
-            expect(self.installer.install_board_plugin()).to(equal("missing"))
+            self.plugins.cli = None
+            expect(self.plugins.install_board()).to(equal("missing"))
 
     with context("installing the cdd plugin"):
         with before.each:
-            self.installer = Installer(ide="Claude", path=self.tree, repo=_REPO_ROOT)
-            self.calls = []
-            self.installer._claude_cli = lambda: "claude"
-
-            def run(claude, *args):
-                self.calls.append(args)
-                return "cdd@cdd-home"
-
-            self.installer._run_claude = run
+            self.plugins = _ScriptedClaude(listed="cdd@cdd-home")
 
         # Claude Code reads the cdd plugin from its folder in ~/.cdd, so an installed one needs nothing more.
         with context("that is already installed"):
             with before.each:
-                self.installer._installed_plugins = lambda: {"cdd@cdd-home": "1.0.0"}
-                self.answer = self.installer._install_cdd_plugin()
+                self.plugins.plugins_installed = {"cdd@cdd-home": "1.0.0"}
+                self.answer = self.plugins.install_cdd()
 
             with it("should say it is installed"):
                 expect(self.answer).to(equal("installed"))
 
             with it("should run no claude command"):
-                expect(self.calls).to(equal([]))
+                expect(self.plugins.calls).to(equal([]))
 
         with context("that is not installed"):
             with it("should install it at user scope"):
-                self.installer._installed_plugins = lambda: {}
-                self.installer._install_cdd_plugin()
-                expect(("plugin", "install", "cdd@cdd-home", "--scope", "user") in self.calls).to(equal(True))
+                self.plugins.install_cdd()
+                expect(("plugin", "install", "cdd@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
 
     with context("finding Claude Code in the desktop app"):
         with before.each:
-            self.installer = Installer(ide="Claude", path=self.tree, repo=_REPO_ROOT)
             self.local = Path(tempfile.mkdtemp(prefix="cdd-local-app-data-"))
             self.saved = {name: os.environ.get(name) for name in ("APPDATA", "LOCALAPPDATA")}
             os.environ["APPDATA"] = str(self.local / "Roaming")
@@ -1501,7 +1504,7 @@ with description("toolsets installed for Claude Code") as self:
         with context("that keeps it under a profile in its local data folder"):
             with it("should use the newest version there"):
                 expected = self.local / "Claude-Data" / "claude_profile" / "claude-code" / "2.1.309" / "build" / "claude.exe"
-                expect(self.installer._claude_cli()).to(equal(str(expected)))
+                expect(ClaudePlugins().claude_cli).to(equal(str(expected)))
 
     with it("should install no hooks and leave the project's settings.json alone"):
         expect(self.settings).to(equal({"permissions": {"allow": ["Bash(ls)"]}}))

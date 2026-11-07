@@ -45,8 +45,8 @@ export class OpenCardClient {
 
   private async followBars(moved: TicketClient, stage: ColumnClient): Promise<void> {
     this.store.change(state => ({ tiles: withoutBarsOf(state.tiles, moved.name) }))
-    const fidelities = moved.enabledFidelities(stage)
-    const fidelity = fidelities.find(entry => moved.stateOf(entry.slug).key !== 'done') ?? fidelities[0]
+    const progress = moved.progressIn(stage)
+    const fidelity = (progress.find(entry => entry.state !== 'done') ?? progress[0])?.fidelity
     if (fidelity) await this.page.tiles.open({ ticket: moved, stage, place: cellPlace(stage.name, fidelity), fidelities: [fidelity] }, true)
   }
 

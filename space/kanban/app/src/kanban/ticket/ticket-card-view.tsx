@@ -7,7 +7,6 @@ import type { ColumnClient } from '../board/column-client'
 import { SessionActionIcon } from '../board/icons'
 import { FileViewsView } from './file-views-view'
 import type { TicketClient } from './ticket-client'
-import { slugsOf } from './tile-client'
 import { TileView } from './tile-view'
 
 export type CardSpot = 'left' | 'right' | 'only'
@@ -33,10 +32,10 @@ function SegmentsView({ ticket, stage, onSkill }: { ticket: TicketClient; stage:
   const { page, state } = useBoard()
   return (
     <div className="segments">
-      {ticket.enabledFidelities(stage).map(fidelity => {
-        const { slug } = fidelity
-        const { key, label, color } = ticket.stateOf(slug)
-        const practice = page.board.practiceOf(slug)
+      {ticket.progressIn(stage).map(progress => {
+        const { slug, fidelity } = progress
+        const { key, label, color } = progress.look
+        const practice = page.board.practiceNamed(progress.practice)
         const skill = practice?.skillOf(slug) ?? slug
         const isOpen = state.tiles.some(tile => tile.ticket.name === ticket.name && tile.fidelities.length === 1 && tile.fidelities[0]?.slug === slug)
         const leave = () => onSkill('')
@@ -44,7 +43,7 @@ function SegmentsView({ ticket, stage, onSkill }: { ticket: TicketClient; stage:
         const background = key === 'violations' ? color : practice?.color
         return (
           <button key={slug} className="segment-hit" title={label} aria-label={`${skill}: ${label}`} aria-expanded={isOpen} onClick={withoutSelecting(() => page.cards.openSegment(ticket, stage, fidelity))} onMouseEnter={enter} onMouseLeave={leave} onFocus={enter} onBlur={leave}>
-            <span className="segment" style={{ background, opacity: ticket.lightOf(slug) }} />
+            <span className="segment" style={{ background, opacity: progress.light }} />
           </button>
         )
       })}
@@ -77,13 +76,13 @@ function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
       <SegmentsView ticket={ticket} stage={stage} onSkill={setSkill} />
       {skill ? <div className="card-skill">{skill}</div> : null}
       {ticket.hasViolationsIn(stage) ? (
-        <button className="violations-link card-violations" onClick={withoutSelecting(() => page.panels.openReport(ticket, ''))}>
+        <button className="violations-link card-violations" onClick={withoutSelecting(() => page.panels.openReport(ticket, null))}>
           violations
         </button>
       ) : null}
       <div className="card-files">
         <SessionActionsView ticket={ticket} />
-        <FileViewsView ticket={ticket} slugs={slugsOf(ticket.enabledFidelities(stage))} />
+        <FileViewsView ticket={ticket} progress={ticket.progressIn(stage)} />
       </div>
     </>
   )
@@ -164,8 +163,8 @@ function OpenCardView({ ticket, stage, spot }: { ticket: TicketClient; stage: Co
   return (
     <div ref={card} className={opensLeft ? 'card-open grows-left' : 'card-open'} data-open-card={ticket.name} style={{ ...place, borderColor: borderColorOf(ticket), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}>
       <CardFaceView ticket={ticket} stage={stage} />
-      {ticket.enabledFidelities(stage).map(fidelity => (
-        <TileView key={fidelity.slug} ticket={ticket} stage={stage} fidelity={fidelity} hasPracticeChip opensOnHover />
+      {ticket.progressIn(stage).map(progress => (
+        <TileView key={progress.slug} ticket={ticket} stage={stage} progress={progress} hasPracticeChip opensOnHover />
       ))}
     </div>
   )

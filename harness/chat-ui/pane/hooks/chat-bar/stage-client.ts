@@ -1,44 +1,47 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
+import type { ColumnData } from '@cdd/space/kanban/board'
+
 const shownStage = atom({ plugin: 'cdd-board', key: 'shownStage' } as const, null as string | null)
 
-// One glyph per stage, standing for the canvas's icons: Backlog, Discovery (magnifier), Specification (document),
-// Implementation (gear), Complete (check).
+// One glyph for each column board.show sends, standing for the canvas's icons: Backlog, Discovery (magnifier),
+// Specification (document), Implementation (gear), Complete (check). A column the canvas has no icon for shows a dot.
 const STAGE_ICONS: Record<string, string> = { Backlog: '☰', Discovery: '⌕', Specification: '▤', Implementation: '⚙', Complete: '✓' }
 const INK = '#E5531A'
 const FAINT_INK = '#E5531A66'
 
-export type StageJson = { name: string; status: 'done' | 'in_progress' | 'not_reached'; isShown: boolean; canShow: boolean }
-
-// Backlog, Discovery, Specification, Implementation, or Complete.
+// One column of the board as board.show sends it, placed against the active session's column: the columns before it
+// are behind the session, the ones after it not yet reached.
 export class StageClient {
-  constructor(private readonly json: StageJson) {}
+  constructor(
+    readonly column: ColumnData,
+    private readonly place: number,
+    private readonly sessionPlace: number,
+    readonly isShown: boolean,
+  ) {}
 
   get stage(): string {
-    return this.json.name
+    return this.column.name
   }
 
-  get status(): StageJson['status'] {
-    return this.json.status
+  // The column the active session is in, which the line outlines.
+  get isCurrent(): boolean {
+    return this.place === this.sessionPlace
   }
 
-  get isShown(): boolean {
-    return this.json.isShown
-  }
-
-  // Backlog and Complete hold no fidelities, so only the three working stages can be shown.
+  // Only a stage requires fidelities, so the Backlog and Complete have none to show.
   get canShow(): boolean {
-    return this.json.canShow
+    return this.column.work_required !== undefined
   }
 
   get icon(): string {
-    return STAGE_ICONS[this.json.name] ?? '·'
+    return STAGE_ICONS[this.column.name] ?? '·'
   }
 
   // Stages not yet reached are faint, so the path still reads left to right.
   get ink(): string {
-    return this.json.status === 'not_reached' ? FAINT_INK : INK
+    return this.place > this.sessionPlace ? FAINT_INK : INK
   }
 }
 
@@ -47,9 +50,9 @@ export function shownStageName($: EngineInterface) {
   return read($, shownStage)
 }
 
-// Showing the stage in progress goes back to it. A fidelity of the last stage then reads as none selected, because
+// Showing the session's own stage goes back to it. A fidelity of the last stage then reads as none selected, because
 // ChatBarClient.selectedFidelity looks only among the shown stage's fidelities.
 export async function selectStage($: EngineInterface, stage: StageClient): Promise<void> {
   if (!stage.canShow) return
-  await update($, shownStage, () => (stage.status === 'in_progress' ? null : stage.stage))
+  await update($, shownStage, () => (stage.isCurrent ? null : stage.stage))
 }

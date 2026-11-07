@@ -7,7 +7,7 @@ from pathlib import Path
 from expects import be_false, be_true, contain, equal, expect, have_key, raise_error
 from mamba import before, context, description, it
 
-from harness.installer.installer import Installer
+from harness.installer.install_diagnostics import InstallDiagnostics
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 _REPO = Path(__file__).resolve().parents[2]
@@ -524,4 +524,4 @@ with description("a language adapter"):
 
     with description("the installer"):
         with it("should deploy this channel beside the others"):
-            expect("language-adapter" in Installer._DEPLOYED_CHANNELS).to(be_true)
+            expect("language-adapter" in InstallDiagnostics.CHANNELS).to(be_true)

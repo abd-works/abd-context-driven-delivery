@@ -47,9 +47,7 @@ class TypeScriptStory(CodeStory):
         call = re.search(r"(?i)(?:shareStory|story)\(\s*(['\"])((?:\\.|(?!\1).)*)\1", content)
         found = name_match.group(1) if name_match else call.group(2) if call else None
         story = cls(cls.name_read(found, story_slug), 1)
-        actor_match = re.search(r"\*\s*Actor:\s*(.+)", content)
-        if actor_match:
-            story.actors = [actor_match.group(1).strip()]
+        story.read_description(content)
         evidence_match = re.search(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)", content)
         if evidence_match:
             story.evidence = [part.strip() for part in evidence_match.group(1).split(",") if part.strip()]

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.guidance.guidance import FidelityGuidance
+from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 from space.kanban.board import (
@@ -17,13 +17,14 @@ from space.kanban.board import (
     Card,
     Column,
     FidelityNotFoundError,
+    Help,
     NotAStageError,
     Stage,
 )
 from harness.guidance.stages import GENERATE, REVIEW, VALIDATE
 from space.kanban.report import Report, ReportFile
-from space.repo.repo import Branch, Repo
-from space.session import Session, name_of
+from space.repo.repo import Branch
+from space.session import Session
 from space.session.session_log import LogEntry
 from tools.file_manager.file_manager import FileEntry
 
@@ -82,12 +83,7 @@ class Ticket(Card):
     @noSessionLog
     def create(cls, title: str, scope: str = "feature", parent: str = "", path: str = "", *, project: Path | str) -> Ticket:
         """Open a new ticket titled title in Discovery. scope is feature, story, or slice; parent names the ticket it was split from; path is the folder in the repository its session works on."""
-        board = Board.load(project)
-        name = name_of(title)
-        root = board.repo.root
-        workpath = (root / path).resolve() if path else root
-        board.sessions.create(name, workpath, title=title, scope=scope, parent=parent)
-        return board.ticket(name)
+        return Board.load(project).open_ticket(title, scope, parent, path)
 
     @property
     @data_field
@@ -183,10 +179,11 @@ class Ticket(Card):
         return all(progress.is_done for progress in self._enabled_progress if progress.stage is column)
 
     @property
-    @data_field(key="next")
+    @data_field(key="next", reference=True)
     def next_fidelity(self) -> FidelityProgress | None:
         """The first fidelity not done in its current stage or a stage before it, earliest stage first, since later work
-        builds on it; none when it is done in its stage or Complete."""
+        builds on it; none when it is done in its stage or Complete. Sent by its ticket and slug, since progress sends
+        it."""
         column = self.column
         if self.is_done or column not in self._stages:
             return None
@@ -322,7 +319,7 @@ class Ticket(Card):
 
         self._session.close()
         kept_in_backlog = Ticket(self._session.move_to_backlog(), self._board)
-        item = BacklogItem.from_ticket(kept_in_backlog, self._board)
+        item = BacklogItem.from_ticket(kept_in_backlog)
         item.write_if_missing(kept_in_backlog.title)
         return item
 
@@ -419,15 +416,21 @@ class FidelityProgress:
         return self._stage
 
     @property
-    @data_field
-    def practice(self) -> str:
-        return self._fidelity.practice_guidance.key
+    @data_field(key="practice")
+    def practice_key(self) -> str:
+        """Its practice's key, such as clean_engineering, by which the board's practices and its ticket's session name
+        the practice."""
+        return self._practice.key
 
     @property
     @data_field
     def is_enabled(self) -> bool:
         """Whether the ticket's session works on this fidelity's practice."""
-        return self._ticket.session.practices[self.practice].enabled
+        return self._ticket.session.practices[self._practice.key].enabled
+
+    @property
+    def _practice(self) -> PracticeGuidance:
+        return self._fidelity.practice_guidance
 
     @property
     def done_actions(self) -> list[str]:
@@ -495,19 +498,9 @@ class FidelityProgress:
 
     @property
     def latest_report(self) -> ReportFile | None:
-        """Its latest validation report that has its result, else its latest; none when it has none. Validate saves a
-        report before the agent judges it, so a report with no judgment and no saved graph yet does not hide an earlier
-        one that has its result."""
-        return self._latest_report_in(self._fidelity)
-
-    @property
-    def session(self) -> Session:
-        """The session of the ticket this progress is on, which holds its reports and the folder they name files from."""
-        return self._ticket.session
-
-    @property
-    def repo(self) -> Repo:
-        return self._ticket.board.repo
+        """Its latest validation report in its ticket's session that has its result, else its latest; none when it has
+        none."""
+        return ReportFile.from_fidelity(self._fidelity, self._ticket.session, self._ticket.board.repo)
 
     @property
     @data_field
@@ -520,8 +513,9 @@ class FidelityProgress:
     @noSessionLog
     def finish_review(self) -> FidelityProgress:
         """Record that a person has reviewed and approved this fidelity: a review line in its ticket's session log. A review counts until the fidelity is validated again, and a fidelity whose actions are all done is done in its stage."""
-        self._ticket.session.log.record(f"{REVIEW} {type(self._fidelity.practice_guidance).__name__} {self._fidelity.name}")
-        return self._ticket.progress_of(self.fidelity_slug)
+        session = self._ticket.session
+        session.log.record(f"{REVIEW} {self._practice.key} {self._fidelity.name}")
+        return FidelityProgress.from_log(self._fidelity, self._stage, session.log.entries, self._ticket)
 
     @mcp
     @agent_tool
@@ -530,6 +524,13 @@ class FidelityProgress:
         """Return this fidelity's latest validation report: its path and text, and the rules broken in it, each with its description and each violation with its line and the source around it. The rules are those broken on the nodes of the graph saved beside the report, then each rule the validating agent's judgment fails that the graph did not hit. has_saved_graph is false when the report has no saved graph, so its graph's rules are missing."""
         latest = self.latest_report
         return latest.report() if latest is not None else Report()
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def help(self) -> Help:
+        """Return the overview, guidance, and rules of this fidelity, with its stage and its page on the forge."""
+        return Help(self._practice, self._fidelity, self._stage)
 
     @mcp
     @agent_tool
@@ -544,46 +545,12 @@ class FidelityProgress:
         return FidelityProgress(self._fidelity, self._stage, kept, True, self._ticket)
 
     @property
-    def earlier_fidelities(self) -> list[FidelityGuidance]:
-        """The fidelities of this practice that come before this one."""
-        names = [fidelity.name for fidelity in self._practice_fidelities]
-        return self._practice_fidelities[:names.index(self._fidelity.name)] if self._fidelity.name in names else []
-
-    def rules_answered_by(self, report: ReportFile) -> set[str]:
-        """The rules report answers for: the practice's shared rules, this fidelity's own, and every earlier fidelity's
-        but those an earlier fidelity's newer report answers for."""
-        earlier = [rule for fidelity in self.earlier_fidelities if not self._has_newer_report(fidelity, report) for rule in fidelity.rules]
-        return {rule.slug for rule in [*self._fidelity.practice_guidance.rules, *earlier, *self._fidelity.rules]}
-
-    @property
-    def rule_descriptions(self) -> dict[str, str]:
-        """Each rule's text by slug. A saved graph holds the whole practice's hits, so every fidelity's rules count; this fidelity's own win."""
-        practice = self._fidelity.practice_guidance
-        rules = [*practice.rules, *(rule for fidelity in self._practice_fidelities for rule in fidelity.rules), *self._fidelity.rules]
-        return {rule.slug: rule.body.strip() for rule in rules}
-
-    @property
-    def _practice_fidelities(self) -> list[FidelityGuidance]:
-        return list(self._fidelity.practice_guidance.fidelities)
-
-    @property
     def _is_judged_failing(self) -> bool:
         """A validate the log shows passing still failed when the judgment the validating agent added to its report fails a rule."""
         if VALIDATE not in self._done_actions:
             return False
         latest = self.latest_report
         return latest is not None and latest.is_judged_failing
-
-    def _latest_report_in(self, fidelity: FidelityGuidance) -> ReportFile | None:
-        """The latest report of fidelity, this one or one of the practice's earlier ones, in the ticket's session."""
-        own = [ReportFile(path, self) for path in fidelity.reports()]
-        with_result = [report for report in own if report.has_result]
-        return (with_result or own or [None])[-1]
-
-    def _has_newer_report(self, earlier: FidelityGuidance, report: ReportFile) -> bool:
-        """Whether an earlier fidelity was validated after report was written, so its own report answers for its rules."""
-        latest = self._latest_report_in(earlier)
-        return latest is not None and latest.stamp > report.stamp
 
 
 class ActionStates:

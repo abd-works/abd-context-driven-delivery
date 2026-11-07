@@ -16,17 +16,21 @@ def main() -> None:
     )
     arguments = parser.parse_args()
     from harness.installation.repository_toolsets import RepositoryToolsets
+    from harness.mcp.cdd_home import CddHome
     from harness.mcp.mcp_daemon import McpDaemon
     from harness.mcp.mcp_server import McpHost
 
     source = Path.cwd().resolve()
-    daemon = McpDaemon(port=arguments.port)
+    # The server imports every toolset of the checkout it runs from by its full name.
+    toolsets = RepositoryToolsets(source)
+    toolsets.ensure_import_path()
+    daemon = McpDaemon(CddHome(), port=arguments.port)
     listener = daemon.claim_port()
     if listener is None:
         return
     refs = tuple(ref.strip() for ref in arguments.toolsets.split(",") if ref.strip())
     if not refs:
-        refs = tuple(RepositoryToolsets(source).collect())
+        refs = tuple(toolsets.collect())
     McpHost.from_refs(refs, repo=str(source)).serve(daemon, listener)
 
 

@@ -6,19 +6,21 @@ import importlib
 import inspect
 from pathlib import Path
 
+from harness.agent_tools.agent_tools import InstallDestination
 from harness.name.name import Name
-from harness.installation.files import Skill
+from harness.installation.files import Skill  # noqa: F401 - defining Skill registers the skill channel this reads
+from harness.marks.mark import mark_kinds
 
 _ACTIONS_FOLDER = Path(__file__).resolve().parents[2] / "cdd_guidance" / "actions"
 
 
 class Action:
-    """One action CDD ships: an operation an action kit publishes as a skill, such as generate, repair, or createRule.
-    One kit can publish several, as Validate publishes validate and createRule."""
+    """One action CDD ships: an operation an action toolset installs as a skill, such as generate, repair, or
+    validate. One toolset can install several, as Improvement installs repair and verify_fix."""
 
-    def __init__(self, name: str, kit_class: type) -> None:
+    def __init__(self, name: str, toolset_class: type) -> None:
         self._name = name
-        self._kit_class = kit_class
+        self._toolset_class = toolset_class
 
     @property
     def name(self) -> str:
@@ -26,51 +28,55 @@ class Action:
         return self._name
 
     @property
-    def kit_class(self) -> type:
-        """The action kit that holds the operation, such as Validate for createRule."""
-        return self._kit_class
+    def toolset_class(self) -> type:
+        """The action toolset that holds the operation, such as Improvement for repair."""
+        return self._toolset_class
 
     @property
-    def kit_ref(self) -> str:
-        """The kit as a toolset ref names it, by its module's full name, such as
+    def toolset_ref(self) -> str:
+        """The toolset as a toolset ref names it, by its module's full name, such as
         ``cdd_guidance.actions.generate.generate:Generate``."""
-        return f"{self._kit_class.__module__}:{self._kit_class.__name__}"
+        return f"{self._toolset_class.__module__}:{self._toolset_class.__name__}"
 
     @property
     def operation(self):
-        return vars(self._kit_class)[self._name]
+        return vars(self._toolset_class)[self._name]
 
     @property
     def folder(self) -> Path:
-        """The kit's folder under ``cdd_guidance/actions``, which holds its guide and module context."""
-        return Path(inspect.getfile(self._kit_class)).resolve().parent
+        """The toolset's folder under ``cdd_guidance/actions``, which holds its guide and module context."""
+        return Path(inspect.getfile(self._toolset_class)).resolve().parent
 
     def __repr__(self) -> str:
-        return f"Action({self._name!r}, {self._kit_class.__name__})"
+        return f"Action({self._name!r}, {self._toolset_class.__name__})"
 
 
 class ActionCatalogue:
     """Every action CDD ships, read from its action folders: each folder under ``cdd_guidance/actions`` whose name
-    does not start with ``_`` holds its kit in the module of the folder's name, as the class of that name in Pascal
-    case (``grill_context/grill_context.py`` holds ``GrillContext``). Each operation the kit marks as a skill is one
-    action. A new action folder joins the catalogue by being there, so no other list has to learn about it.
+    does not start with ``_`` holds its toolset in the module of the folder's name, as the class of that name in Pascal
+    case (``grill_context/grill_context.py`` holds ``GrillContext``). Each operation the toolset installs as a skill is
+    one action; an operation marked ``@noDeploy`` is not installed, so it is no action an agent or a person can run. A
+    new action folder joins the catalogue by being there, so no other list has to learn about it.
 
-    The kits are imported on first use and kept for the process, as the practice catalogue keeps its practices."""
+    The toolsets are imported on first use and kept for the process, as the practice catalogue keeps its practices."""
 
-    _kits: tuple[type, ...] | None = None
+    _toolsets: tuple[type, ...] | None = None
 
     @classmethod
-    def kits(cls) -> tuple[type, ...]:
-        """Each action folder's kit class, in folder order."""
-        if cls._kits is None:
-            cls._kits = tuple(cls._kit_in(folder.name) for folder in cls._folders())
-        return cls._kits
+    def toolsets(cls) -> tuple[type, ...]:
+        """Each action folder's toolset class, in folder order."""
+        if cls._toolsets is None:
+            cls._toolsets = tuple(cls._toolset_in(folder.name) for folder in cls._folders())
+        return cls._toolsets
 
     @classmethod
     def actions(cls) -> tuple[Action, ...]:
-        """Every action, kit by kit in folder order, and within a kit in the order it declares them."""
+        """Every action, toolset by toolset in folder order, and within a toolset in the order it declares them."""
         return tuple(
-            Action(name, kit) for kit in cls.kits() for name, member in vars(kit).items() if Skill.marks(member)
+            Action(name, toolset)
+            for toolset in cls.toolsets()
+            for name, member in vars(toolset).items()
+            if mark_kinds.publishes(InstallDestination.SKILL, member)
         )
 
     @classmethod
@@ -83,7 +89,7 @@ class ActionCatalogue:
 
     @classmethod
     def action(cls, name: str) -> Action | None:
-        """The action called name, such as createRule; none when no kit publishes it."""
+        """The action called name, such as repair; none when no toolset installs it."""
         return next((action for action in cls.actions() if action.name == name), None)
 
     @classmethod
@@ -94,6 +100,6 @@ class ActionCatalogue:
         ]
 
     @classmethod
-    def _kit_in(cls, folder: str) -> type:
+    def _toolset_in(cls, folder: str) -> type:
         module = importlib.import_module(f"cdd_guidance.actions.{folder}.{folder}")
         return getattr(module, Name(folder).title_pascal)

@@ -1,4 +1,5 @@
-"""MCP mark, install, and runtime — one destination packager."""
+"""The ``@mcp`` mark, the install that writes each IDE's MCP entry, and the cdd server's MCP side: one *McpServer* of
+toolsets for each project, and the *McpHost* answering every chat with them."""
 from __future__ import annotations
 
 import asyncio
@@ -11,7 +12,7 @@ import socket
 import sys
 import tempfile
 import threading
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -24,41 +25,26 @@ from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDest
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import Installation, data_of
 from harness.installation.repository_toolsets import RepositoryToolsets
-from harness.marks.mark import Destination
-from harness.mcp.restart_gate import RestartGate
-from harness.mcp.tool_calls import StillRunning, ToolCalls, ToolRequest
+from harness.marks.mark import Destination, Mark
+from harness.mcp.cdd_home import CddHome
+from harness.mcp.mcp_daemon import MCP_PATH, PING_PATH, PROJECT_HEADER, McpDaemon
+from harness.mcp.restart_gate import _RestartGate
+from harness.mcp.tool_calls import _StillRunning, _ToolCalls
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
 # Reloads the server's Python in place, so every chat picks up changed code without a new connection.
 BUILTIN_RESTART_TOOL = "cdd.restart"
-# Workspace diagnostics call ``serving_mcp_host().dispatch`` for many tools; that path
-# must not run on an anyio worker thread (deadlock / multi-minute stalls).
-_SYNC_DISPATCH_TOOLS = frozenset(
-    {
-        "agent-tools-diagnostics.agent_tools_diagnostics",
-        "guidance-diagnostics.guidance_diagnostics",
-    }
-)
-_CALL_TIMEOUT_SECONDS = 10
-# First graph builds walk the repo; cache hits must still finish under the default.
-_LONG_CALL_TIMEOUT_SECONDS = {
-    "graph.load_working_copy": 600,
-    # Applying an overlay rebuilds the graph from the open folder.
-    "graph.set_overlays": 600,
-    # Branch and worktree commands push and pull over the network.
-    "repo.switch_branch": 600,
-    "repo.close_branch": 600,
-    "repo.switch_worktree": 600,
-    "repo.close_worktree": 600,
-    "repo.push_commit": 600,
-}
-_SERVING_MCP_HOST: Any = None
-
-
-def serving_mcp_host() -> Any:
-    """The ``McpHost`` currently serving MCP requests in this process, if any."""
-    return _SERVING_MCP_HOST
+# How long a chat waits for a call before it hears that the call is still running.
+CALL_SECONDS = 10
+# The wait for an operation marked ``@long_call``, and for a restart, which waits for every running call to end.
+LONG_CALL_SECONDS = 600
+# What loading a toolset's module, making the toolset, or reading a tool's schema raises when that toolset's code or
+# configuration is wrong. The server skips that toolset or tool and serves the rest; anything else stops the start.
+_TOOLSET_LOAD_FAILURES = (ImportError, SyntaxError, NameError, AttributeError, TypeError, ValueError, LookupError, OSError)
+_LEGAL_MCP_NAME = re.compile(r"[A-Za-z0-9_.-]+")
+# Claude Code names the cdd plugin's tools mcp__plugin_cdd_cdd__{tool}, so this one entry allows every one of them.
+CLAUDE_TOOLS_PERMISSION = "mcp__plugin_cdd_cdd"
 
 
 class Mcp(Destination):
@@ -69,19 +55,23 @@ class Mcp(Destination):
 mcp = Mcp
 
 
-class McpStandupFailed(Exception):
-    """The MCP host could not stand up or failed diagnose."""
+class LongCall(Mark):
+    """Mark an MCP operation whose call may take minutes, such as one that walks the repository, waits on git over the
+    network, or probes every other tool. The cdd server waits ``LONG_CALL_SECONDS`` for its answer, not
+    ``CALL_SECONDS``, before telling the chat it is still running."""
 
-    def __init__(
-        self,
-        operation: str,
-        host: Any,
-        message: str,
-        cause: BaseException | None = None,
-    ) -> None:
-        super().__init__(message)
-        self.operation = operation
-        self.host = host
+    flag = "_long_call"
+
+
+long_call = LongCall
+
+
+class McpStandupFailed(Exception):
+    """The MCP host could not stand up over a checkout's toolsets."""
+
+    def __init__(self, repo: Path, cause: BaseException) -> None:
+        super().__init__(f"the MCP host could not stand up over {repo}: {cause}")
+        self.repo = repo
         self.cause = cause
 
 
@@ -95,18 +85,22 @@ class McpConfigUnreadable(Exception):
         self.cause = cause
 
 
-class McpIllegitimateTool(Exception):
-    """One published tool was skipped so the MCP host could finish standup."""
+class ToolNotEnrolled(LookupError):
+    """A call named a tool the server does not publish."""
+
+    def __init__(self, tool: str) -> None:
+        super().__init__(f"{tool} is not a tool the cdd server publishes")
+        self.tool = tool
+
+
+class _SkippedTool(Exception):
+    """One published tool or toolset the server skipped so it could serve the rest."""
 
     def __init__(self, tool: str, reason: str, cause: BaseException | None = None) -> None:
         super().__init__(f"{tool}: {reason}")
         self.tool = tool
         self.reason = reason
         self.cause = cause
-
-
-def _is_legal_mcp_name(name: str) -> bool:
-    return bool(name) and re.fullmatch(r"[A-Za-z0-9_.-]+", name) is not None
 
 
 class UserMcpConfig:
@@ -153,22 +147,26 @@ class UserMcpConfig:
         return base / "Code" / "User"
 
 
-# Claude Code names the cdd plugin's tools mcp__plugin_cdd_cdd__{tool}, so this one entry allows every one of them.
-CLAUDE_TOOLS_PERMISSION = "mcp__plugin_cdd_cdd"
-
-
 class McpInstallation(Installation):
-    """Record ``@Mcp`` ops, write ``mcp.json``, enroll at server start."""
+    """Record ``@mcp`` operations, write each IDE's ``cdd`` entry, and start the one cdd server from ``~/.cdd``."""
 
     channel = "mcp"
 
-    def __init__(self, ide: str, path: Path | str, toolset_ref: str = "", repo: Path | str | None = None) -> None:
+    def __init__(
+        self,
+        ide: str,
+        path: Path | str,
+        toolset_ref: str = "",
+        repo: Path | str | None = None,
+        home: CddHome | None = None,
+    ) -> None:
         super().__init__(ide, path, toolset_ref, repo=repo)
+        self.server_home = home or CddHome()
         self.mcp_operations: list[AgentTool] = []
         self.host: McpHost | None = None
         self.diagnosis: dict[str, Any] | None = None
 
-    def write(self, tool: Any) -> None:
+    def write(self, tool: AgentTool) -> None:
         if not tool.install_to_mcp:
             return
         self.record_operation(tool)
@@ -248,53 +246,42 @@ class McpInstallation(Installation):
 
     def drop_project_cdd_server(self) -> None:
         """A ``cdd`` entry in the project's ``.mcp.json`` outranks the user-level host in Claude
-        Code, so it goes; the project's other servers stay."""
-        project_config = self._project_root() / ".mcp.json"
-        try:
-            data = self._config_json(project_config, None)
-        except McpConfigUnreadable as unreadable:
-            logger.warning("a cdd entry in the project's config may still outrank the cdd plugin: %s", unreadable)
-            return
-        servers = data.get("mcpServers") if isinstance(data, dict) else None
-        if not isinstance(servers, dict) or "cdd" not in servers:
-            return
-        del servers["cdd"]
-        if servers or len(data) > 1:
-            project_config.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-        else:
-            project_config.unlink()
+        Code, so it goes; the project's other servers stay, and a file left holding nothing goes too."""
+        self._drop_cdd_entry(self._project_root() / ".mcp.json", "project's", remove_when_empty=True)
 
     def drop_user_cdd_server(self) -> None:
         """Claude Code runs a user-level entry's headersHelper in ``~/.claude`` for every chat, so the entry names no
         chat's project; the cdd plugin replaces it. ``~/.claude.json`` holds the app's own state too, so only ``cdd`` goes."""
         user = self.user_config
-        if user is None:
-            return
+        if user is not None:
+            self._drop_cdd_entry(user.path, "user's", remove_when_empty=False)
+
+    def _drop_cdd_entry(self, config: Path, whose: str, *, remove_when_empty: bool) -> None:
         try:
-            data = self._config_json(user.path, None)
+            data = self._config_json(config, None)
         except McpConfigUnreadable as unreadable:
-            logger.warning("a cdd entry in the user's config may still outrank the cdd plugin: %s", unreadable)
+            logger.warning("a cdd entry in the %s config may still outrank the cdd plugin: %s", whose, unreadable)
             return
         servers = data.get("mcpServers") if isinstance(data, dict) else None
         if not isinstance(servers, dict) or "cdd" not in servers:
             return
         del servers["cdd"]
-        user.path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        if remove_when_empty and not servers and len(data) == 1:
+            config.unlink()
+            return
+        config.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
     def _claude_plugin_server(self) -> dict[str, Any]:
         """The cdd server as the cdd plugin declares it: Claude Code fills in ``${CLAUDE_PROJECT_DIR}`` with the chat's
         folder and passes it to the connect script."""
-        from harness.mcp.mcp_daemon import McpDaemon
-
         home = self.server_home
-        return {"type": "http", "url": McpDaemon().url, "headersHelper": f'"{home.python}" "{home.connect_script}" "${{CLAUDE_PROJECT_DIR}}"'}
+        helper = f'"{home.python}" "{home.connect_script}" "${{CLAUDE_PROJECT_DIR}}"'
+        return {"type": "http", "url": self._daemon.url, "headersHelper": helper}
 
     def _server_manifest(self) -> dict[str, Any]:
         """The one ``cdd`` entry: the shared server's URL plus how each request names its project. A user-level entry
         serves every project, so it names the open one; a temp install tree names its own."""
-        from harness.mcp.mcp_daemon import PROJECT_HEADER, McpDaemon
-
-        server: dict[str, Any] = {"type": "http", "url": McpDaemon().url}
+        server: dict[str, Any] = {"type": "http", "url": self._daemon.url}
         user = self.user_config
         if user is None:
             server["headers"] = {PROJECT_HEADER: str(self._project_root().resolve())}
@@ -340,12 +327,9 @@ class McpInstallation(Installation):
         path = Path(self.path)
         return path.parent if path.name in {".cursor", ".claude"} else path
 
-    def enroll_operations(self, server: Any) -> None:
-        for tool in self.mcp_operations:
-            server.enroll(tool)
-
     def standup(self) -> McpHost:
-        self.host = McpHost.standup(repo=self.repo)
+        """A host over every toolset in this installation's checkout, in this process, to check it stands up."""
+        self.host = McpHost.from_repo(self._checkout)
         return self.host
 
     def diagnose(self) -> dict[str, Any]:
@@ -354,43 +338,37 @@ class McpInstallation(Installation):
         return self.diagnosis
 
     @property
-    def server_home(self) -> Any:
-        from harness.mcp.cdd_home import CddHome
-
-        return CddHome()
-
-    @property
     def connect_script(self) -> Path:
         return Path(__file__).resolve().parent / "scripts" / "connect.py"
 
     def ensure_server(self) -> str:
         """Install ``~/.cdd/`` on first use and start the one server when none answers. An install that finds a
         server already running leaves it, and the code it serves, alone."""
-        from harness.mcp.mcp_daemon import McpDaemon
-
         self.server_home.install(self._checkout, self.connect_script)
-        return self._server_status(McpDaemon(self.server_home).ensure())
+        return self._server_status(self._daemon.ensure())
 
     def pin_server(self) -> str:
         """Serve this checkout's current commit from ``~/.cdd/runtime``, restarting the server onto it."""
-        from harness.mcp.mcp_daemon import McpDaemon
-
         self.server_home.install(self._checkout, self.connect_script)
         self.server_home.pin(self._checkout)
-        return self._server_status(McpDaemon(self.server_home).restart())
+        return self._server_status(self._daemon.restart())
 
     def serve_from_checkout(self) -> str:
         """Serve this checkout as it is on disk, for working on CDD itself, restarting the server onto it."""
-        from harness.mcp.mcp_daemon import McpDaemon
-
         self.server_home.install(self._checkout, self.connect_script)
         self.server_home.serve_from(self._checkout)
-        return self._server_status(McpDaemon(self.server_home).restart())
+        return self._server_status(self._daemon.restart())
 
     def server_is_running(self) -> bool:
-        from harness.mcp.mcp_daemon import McpDaemon
+        return self._daemon.is_running()
 
-        return McpDaemon(self.server_home).is_running
+    def server_runs_this_process(self) -> bool:
+        """True when this process is the cdd server, as it is when an install runs as one of its tool calls."""
+        return self._daemon.runs_this_process()
+
+    @property
+    def _daemon(self) -> McpDaemon:
+        return McpDaemon(self.server_home)
 
     @property
     def _checkout(self) -> Path:
@@ -401,7 +379,8 @@ class McpInstallation(Installation):
 
 
 class McpServer:
-    """Load toolset refs and enroll only ``@Mcp`` ops from the deploy walk."""
+    """The toolsets one project's calls are answered by: every ``@mcp`` operation of the toolsets it was started with,
+    published under its MCP name, made for that project."""
 
     def __init__(
         self,
@@ -412,17 +391,12 @@ class McpServer:
         self.repo = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
         self.project = Path(project).resolve() if project is not None else self.repo
         self.venv = self.repo / ".venv"
-        self._apply_catalog_import_path()
-        self.mcp_installations: list[McpInstallation] = []
         self._tools: dict[str, AgentTool] = {}
         self._prompts: dict[str, AgentTool] = {}
-        self.exceptions: list[McpIllegitimateTool] = []
+        self.exceptions: list[_SkippedTool] = []
         self._started = False
         self._toolset_refs: tuple[str, ...] = ()
         self._constructor_context: dict[str, object] = {}
-
-    def _apply_catalog_import_path(self) -> None:
-        RepositoryToolsets(self.repo).ensure_import_path()
 
     @property
     def started(self) -> bool:
@@ -430,89 +404,85 @@ class McpServer:
 
     @property
     def tools(self) -> dict[str, AgentTool]:
-        return self._tools
+        return dict(self._tools)
 
     @property
     def prompts(self) -> dict[str, AgentTool]:
-        return self._prompts
+        return dict(self._prompts)
+
+    @property
+    def skipped(self) -> list[dict[str, str]]:
+        """Each tool or toolset the start skipped, and why."""
+        return [{"tool": item.tool, "reason": item.reason} for item in self.exceptions]
 
     def skip(self, tool: str, error: BaseException) -> None:
-        skipped = (
-            error
-            if isinstance(error, McpIllegitimateTool)
-            else McpIllegitimateTool(tool, str(error), error)
-        )
+        skipped = error if isinstance(error, _SkippedTool) else _SkippedTool(tool, str(error), error)
         self.exceptions.append(skipped)
-        logger.error(
-            "MCP standup exception: skipped %s: %s",
-            skipped.tool,
-            skipped.reason,
-            exc_info=skipped.cause,
-        )
+        logger.error("MCP standup exception: skipped %s: %s", skipped.tool, skipped.reason, exc_info=skipped.cause)
 
     def enroll(self, tool: AgentTool) -> None:
         """Publish tool under its MCP name: an operation as a tool, instructions as a prompt whose call answers with
-        them expanded."""
+        them expanded. A tool whose name is not a legal MCP name, is taken, or whose arguments' schema cannot be read
+        is skipped, so the tool list never fails."""
         name = tool.mcp_name
-        if not _is_legal_mcp_name(name):
-            self.skip(name, McpIllegitimateTool(name, "illegal MCP tool name"))
+        if not self._is_legal_name(name):
+            self.skip(name, _SkippedTool(name, "illegal MCP tool name"))
             return
         if name in self._tools or name in self._prompts:
-            self.skip(name, McpIllegitimateTool(name, "MCP name is already enrolled"))
+            self.skip(name, _SkippedTool(name, "MCP name is already enrolled"))
+            return
+        try:
+            tool.input_schema
+        except _TOOLSET_LOAD_FAILURES as unreadable:
+            self.skip(name, _SkippedTool(name, f"its argument schema cannot be read: {unreadable}", unreadable))
             return
         if tool.kind == "tool":
             self._tools[name] = tool
         else:
             self._prompts[name] = tool
 
-    def enroll_from(self, installation: McpInstallation) -> None:
-        installation.enroll_operations(self)
-        if installation not in self.mcp_installations:
-            self.mcp_installations.append(installation)
-
-    def start(
-        self,
-        toolset_refs: tuple[str, ...],
-        *,
-        constructor_context: dict[str, object] | None = None,
-    ) -> None:
-        context = dict(constructor_context or {})
+    def start(self, toolset_refs: tuple[str, ...], *, constructor_context: dict[str, object] | None = None) -> None:
+        """Enroll the ``@mcp`` operations of each toolset and its child toolsets. A toolset whose code or
+        configuration is wrong is skipped and recorded, so the server still serves the rest."""
         self._toolset_refs = tuple(toolset_refs)
-        self._constructor_context = context
-        self.mcp_installations = []
+        self._constructor_context = dict(constructor_context or {})
         self._tools.clear()
         self._prompts.clear()
         self.exceptions = []
         for ref in toolset_refs:
-            try:
-                loaded = AgentToolSet.from_items([ref], context=context)
-            except Exception as error:
-                self.skip(str(ref), error)
-                continue
-            for toolset in loaded:
-                try:
-                    self._enroll_toolset(toolset)
-                    for child in toolset.child_toolsets():
-                        self._enroll_toolset(child)
-                except Exception as error:
-                    self.skip(toolset.registration_name, error)
+            for toolset in self._loaded(ref):
+                self._enroll_with_children(toolset)
         self._started = True
 
+    def _loaded(self, ref: str) -> list[Any]:
+        try:
+            return AgentToolSet.from_items([ref], context=self._constructor_context)
+        except _TOOLSET_LOAD_FAILURES as error:
+            self.skip(str(ref), error)
+            return []
+
+    def _enroll_with_children(self, toolset: Any) -> None:
+        try:
+            for each in (toolset, *toolset.child_toolsets()):
+                self._enroll_toolset(each)
+        except _TOOLSET_LOAD_FAILURES as error:
+            self.skip(toolset.registration_name, error)
+
     def for_project(self, project: Path) -> McpServer:
-        """A runtime with the same toolsets working on ``project``. Toolsets keep state between calls, so each project
+        """A server with the same toolsets working on ``project``. Toolsets keep state between calls, so each project
         gets objects of its own and one chat's work never shows up in another's."""
-        runtime = type(self)(repo=self.repo, project=project)
-        runtime.start(self._toolset_refs, constructor_context=self._constructor_context)
-        return runtime
+        server = type(self)(repo=self.repo, project=project)
+        server.start(self._toolset_refs, constructor_context=self._constructor_context)
+        return server
 
     def restarted(self) -> McpServer:
-        """A new runtime with the same toolsets, on the code as it is now. Every module from this checkout is imported
+        """A new server with the same toolsets, on the code as it is now. Every module from this checkout is imported
         again, this one included, because a toolset enrolled by the old loader would keep the old classes."""
         self._forget_checkout_modules()
         fresh = importlib.import_module(__name__)
-        runtime = fresh.McpServer(repo=self.repo, project=self.project)
-        runtime.start(self._toolset_refs, constructor_context=self._constructor_context)
-        return runtime
+        server = fresh.McpServer(repo=self.repo, project=self.project)
+        server.start(self._toolset_refs, constructor_context=self._constructor_context)
+        return server
 
     def _forget_checkout_modules(self) -> None:
         for name, module in list(sys.modules.items()):
@@ -532,6 +502,9 @@ class McpServer:
         for tool in toolset.tools_for(InstallDestination.MCP):
             self.enroll(tool)
 
+    def _is_legal_name(self, name: str) -> bool:
+        return bool(name) and _LEGAL_MCP_NAME.fullmatch(name) is not None
+
     def resolve_call_name(self, name: str) -> str:
         """Map Cursor's underscore tool id (`slug_op`) back to the enrolled `slug.op`."""
         if name in self._tools or name in self._prompts:
@@ -547,24 +520,40 @@ class McpServer:
                 return enrolled
         return name
 
+    def enrolled(self, name: str) -> AgentTool | None:
+        """The tool or instructions published as name, or under the name a client spelled it; none when not published."""
+        resolved = self.resolve_call_name(name)
+        return self._tools.get(resolved) or self._prompts.get(resolved)
+
+    def call_seconds(self, name: str) -> float:
+        """How long a chat waits for a call of the tool published as name: longer for an operation marked
+        ``@long_call``, and for a restart."""
+        if name == BUILTIN_RESTART_TOOL:
+            return LONG_CALL_SECONDS
+        tool = self.enrolled(name)
+        return LONG_CALL_SECONDS if tool is not None and LongCall.marks(tool.callable) else CALL_SECONDS
+
     def invoke_tool(self, mcp_name: str, arguments: dict[str, object] | None = None) -> object:
-        """Call the tool published as mcp_name on this runtime's project."""
-        return self.answer_tool(mcp_name, ToolCall(arguments, self.project))
+        """Call the tool published as mcp_name on this server's project."""
+        return self.answer_tool(mcp_name, ToolCall(arguments, self.project, tool=mcp_name))
 
     def invoke_prompt(self, mcp_name: str, arguments: dict[str, object] | None = None) -> object:
-        """The instructions published as mcp_name, expanded for a call on this runtime's project."""
-        return self.answer_prompt(mcp_name, ToolCall(arguments, self.project))
+        """The instructions published as mcp_name, expanded for a call on this server's project."""
+        return self.answer_prompt(mcp_name, ToolCall(arguments, self.project, tool=mcp_name))
 
     def answer_tool(self, mcp_name: str, call: ToolCall) -> object:
         """Answer call with the tool published as mcp_name."""
         resolved = self.resolve_call_name(mcp_name)
         if resolved not in self._tools:
-            raise KeyError(resolved)
+            raise ToolNotEnrolled(resolved)
         return self._tools[resolved].answer(call)
 
     def answer_prompt(self, mcp_name: str, call: ToolCall) -> object:
         """Answer call with the instructions published as mcp_name, expanded for it."""
-        return self._prompts[self.resolve_call_name(mcp_name)].answer(call)
+        resolved = self.resolve_call_name(mcp_name)
+        if resolved not in self._prompts:
+            raise ToolNotEnrolled(resolved)
+        return self._prompts[resolved].answer(call)
 
 
 class _ProjectNamedOnly:
@@ -573,8 +562,6 @@ class _ProjectNamedOnly:
     an install, names its project on the next try instead of failing every call."""
 
     def __init__(self, app: Any) -> None:
-        from harness.mcp.mcp_daemon import PROJECT_HEADER
-
         self._app = app
         self._header = PROJECT_HEADER.lower().encode("latin-1")
         self._refusal = {"error": f"name the chat's project in the {PROJECT_HEADER} header"}
@@ -627,128 +614,115 @@ class _CddProtocolServer(Server):
 
 
 class McpHost:
-    """The cdd server's MCP side: one set of toolsets for each project a chat works on, answering every chat."""
+    """The cdd server's MCP side: one *McpServer* for each project a chat works on, answering every chat. The server
+    on the checkout it serves from answers the tool list, which every project shares, and gives each new project its
+    toolsets."""
 
-    def __init__(self, runtime: McpServer) -> None:
-        # New projects get their toolsets from this runtime; it also answers the tool list, which every project shares.
-        self._runtime = runtime
-        self._runtimes: dict[Path, McpServer] = {runtime.project: runtime}
-        self._runtimes_lock = threading.Lock()
-        self._restart_gate = RestartGate()
-        self._tool_calls = ToolCalls()
-        self._server = _CddProtocolServer("cdd")
+    def __init__(self, checkout_server: McpServer) -> None:
+        self._checkout_server = checkout_server
+        self._servers: dict[Path, McpServer] = {checkout_server.project: checkout_server}
+        self._servers_lock = threading.Lock()
+        self._restart_gate = _RestartGate()
+        self._tool_calls = _ToolCalls()
+        self._protocol = _CddProtocolServer("cdd")
         self._register_handlers()
 
-    def runtime_for(self, project: Path) -> McpServer:
+    @property
+    def checkout_server(self) -> McpServer:
+        """The server on the checkout this host serves from: the tools every chat lists, and what start-up skipped."""
+        return self._checkout_server
+
+    def server_for(self, project: Path) -> McpServer:
         """The toolsets working on ``project``, started the first time a call names it."""
-        with self._runtimes_lock:
-            runtime = self._runtimes.get(project)
-            if runtime is None:
-                runtime = self._runtime.for_project(project)
-                self._runtimes[project] = runtime
-            return runtime
+        with self._servers_lock:
+            server = self._servers.get(project)
+            if server is None:
+                server = self._checkout_server.for_project(project)
+                self._servers[project] = server
+            return server
 
     @property
     def projects(self) -> list[Path]:
-        with self._runtimes_lock:
-            return sorted(self._runtimes)
-
-    def _mark_as_serving(self) -> None:
-        global _SERVING_MCP_HOST
-        _SERVING_MCP_HOST = self
-
-    def _unbind_as_serving(self) -> None:
-        global _SERVING_MCP_HOST
-        if _SERVING_MCP_HOST is self:
-            _SERVING_MCP_HOST = None
+        with self._servers_lock:
+            return sorted(self._servers)
 
     def _register_handlers(self) -> None:
-        @self._server.list_tools()
+        @self._protocol.list_tools()
         async def handle_list_tools() -> list[types.Tool]:
-            tools = [
-                types.Tool(
-                    name=BUILTIN_PING_TOOL,
-                    description="Health check for the CDD MCP host process.",
-                    inputSchema={"type": "object", "properties": {}},
-                ),
-                types.Tool(
-                    name=BUILTIN_RESTART_TOOL,
-                    description="Restart the CDD MCP host on the code as it is now: reload its Python and start its toolsets again, on the same connection.",
-                    inputSchema={"type": "object", "properties": {}},
-                ),
-            ]
-            enrolled = (*self._runtime._tools.values(), *self._runtime._prompts.values())
-            tools.extend(listed for listed in map(self._listed_tool, enrolled) if listed is not None)
-            return tools
+            return self._tool_list()
 
-        @self._server.call_tool()
-        async def handle_call_tool(
-            name: str, arguments: dict[str, object] | None
-        ) -> Sequence[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-            blocks = await self._call_tool_blocks(name, arguments)
+        @self._protocol.call_tool()
+        async def handle_call_tool(name: str, arguments: dict[str, object] | None) -> types.CallToolResult:
+            result = await self._answer_chat(name, arguments)
             # A worker thread runs to the end even when the client cancels it, and
             # the cancellation has already answered the request. Stop here, because
             # a second answer raises in the MCP session and takes down the host.
             await anyio.lowlevel.checkpoint()
-            return blocks
+            return result
 
-        @self._server.list_prompts()
+        @self._protocol.list_prompts()
         async def handle_list_prompts() -> list[types.Prompt]:
             return []
 
-        @self._server.get_prompt()
-        async def handle_get_prompt(
-            name: str, arguments: dict[str, str] | None
-        ) -> types.GetPromptResult:
-            prompt = self._runtime._prompts.get(name)
+        @self._protocol.get_prompt()
+        async def handle_get_prompt(name: str, arguments: dict[str, str] | None) -> types.GetPromptResult:
+            prompt = self._checkout_server.prompts.get(name)
             if prompt is None:
-                raise ValueError(f"unknown prompt: {name}")
-            return types.GetPromptResult(
-                description=prompt.description or None,
-                messages=[
-                    types.PromptMessage(
-                        role="user",
-                        content=types.TextContent(
-                            type="text",
-                            text=prompt.description or "",
-                        ),
-                    )
-                ],
-            )
+                raise ToolNotEnrolled(name)
+            text = prompt.description or ""
+            message = types.PromptMessage(role="user", content=types.TextContent(type="text", text=text))
+            return types.GetPromptResult(description=prompt.description or None, messages=[message])
 
-    async def _call_tool_blocks(
-        self, name: str, arguments: dict[str, object] | None
-    ) -> list[types.TextContent]:
+    def _tool_list(self) -> list[types.Tool]:
+        builtins = [
+            types.Tool(
+                name=BUILTIN_PING_TOOL,
+                description="Health check for the CDD MCP host process.",
+                inputSchema={"type": "object", "properties": {}},
+            ),
+            types.Tool(
+                name=BUILTIN_RESTART_TOOL,
+                description="Restart the CDD MCP host on the code as it is now: reload its Python and start its toolsets again, on the same connection.",
+                inputSchema={"type": "object", "properties": {}},
+            ),
+        ]
+        enrolled = (*self._checkout_server.tools.values(), *self._checkout_server.prompts.values())
+        listed = [types.Tool(name=tool.mcp_name, description=tool.description or None, inputSchema=tool.input_schema) for tool in enrolled]
+        return [*builtins, *listed]
+
+    async def _answer_chat(self, name: str, arguments: dict[str, object] | None) -> types.CallToolResult:
+        """Answer one call a chat sent. A failure goes back as an error result, which the client shows as a failed call
+        rather than as the tool's output."""
         try:
-            resolved = self._runtime.resolve_call_name(name)
-            project = self._requested_project(resolved)
-            if resolved in _SYNC_DISPATCH_TOOLS:
-                value = self._dispatch_reporting(name, arguments, None, project)
-            else:
-                value = await self._dispatch_off_loop(name, resolved, arguments, project)
-            if resolved == BUILTIN_RESTART_TOOL:
+            call = self._call_from_chat(name, arguments)
+            value = await self._answer_off_loop(call)
+            if call.tool == BUILTIN_RESTART_TOOL:
                 await self._announce_tool_list_changed()
-            return self._content_blocks(value)
-        except Exception as error:
+            return types.CallToolResult(content=self._content_blocks(value))
+        except Exception as failure:
             logger.exception("MCP tool %s failed", name)
-            return self._content_blocks(f"{type(error).__name__}: {error}")
+            text = f"{type(failure).__name__}: {failure}"
+            return types.CallToolResult(content=[types.TextContent(type="text", text=text)], isError=True)
 
-    async def _dispatch_off_loop(
-        self, name: str, resolved: str, arguments: dict[str, object] | None, project: Path | None
-    ) -> object:
+    def _call_from_chat(self, name: str, arguments: dict[str, object] | None) -> ToolCall:
+        """The call as the chat sent it: the tool it names, the project its header names, and the chat its arguments
+        name, answered by this host."""
+        resolved = self._checkout_server.resolve_call_name(name)
+        return ToolCall.sent(arguments, self._requested_project(resolved), tool=resolved, mcp_host=self)
+
+    async def _answer_off_loop(self, call: ToolCall) -> object:
         """Run the call on a worker thread, because a synchronous call on the event loop holds every other chat's
         requests. A call still running at its time limit keeps running and is reported as still running, not failed."""
-        seconds = _LONG_CALL_TIMEOUT_SECONDS.get(resolved, _CALL_TIMEOUT_SECONDS)
-        request = ToolRequest(resolved, project, arguments, seconds)
+        seconds = self._checkout_server.call_seconds(call.tool)
         answer = await self._tool_calls.run(
-            request, lambda reporter: self._dispatch_reporting(name, arguments, reporter, project), self._progress_reporter()
+            call, seconds, lambda reporter: self._answer_reporting(call, reporter), self._progress_reporter()
         )
-        return answer.message if isinstance(answer, StillRunning) else answer
+        return answer.message if isinstance(answer, _StillRunning) else answer
 
     async def _announce_tool_list_changed(self) -> None:
         """A restart can add or drop tools, so the client is told to list them again."""
         try:
-            await self._server.request_context.session.send_tool_list_changed()
+            await self._protocol.request_context.session.send_tool_list_changed()
         except LookupError:
             return
 
@@ -756,7 +730,7 @@ class McpHost:
         """Sends a tool's progress reports as notifications for its call, when the caller asked for them with a progress
         token. The tool runs on a worker thread, so each report goes back through the event loop."""
         try:
-            context = self._server.request_context
+            context = self._protocol.request_context
         except LookupError:
             return None
         token = context.meta.progressToken if context.meta else None
@@ -772,10 +746,8 @@ class McpHost:
     def _requested_project(self, tool: str) -> Path | None:
         """The project the calling chat works on, from its ``X-CDD-Project`` header. Only ``cdd.ping`` and
         ``cdd.restart`` work without one; anything else would act on whichever folder the server started in."""
-        from harness.mcp.mcp_daemon import PROJECT_HEADER
-
         try:
-            request = self._server.request_context.request
+            request = self._protocol.request_context.request
         except LookupError:
             request = None
         named = request.headers.get(PROJECT_HEADER) if request is not None else None
@@ -787,42 +759,28 @@ class McpHost:
             return Path(named)
         raise ProjectNotNamed(tool)
 
-    def _dispatch_reporting(
-        self,
-        name: str,
-        arguments: dict[str, object] | None,
-        reporter: Callable[[str], None] | None,
-        project: Path | None,
-    ) -> object:
+    def _answer_reporting(self, call: ToolCall, reporter: Callable[[str], None] | None) -> object:
         # Read it from the module as it is now: a restart imports it again, and tools read the new one.
         from harness.agent_tools.progress import reporting_to
 
         with reporting_to(reporter):
-            return self.dispatch(name, arguments, project)
-
-    def _listed_tool(self, tool: AgentTool) -> types.Tool | None:
-        """tool as the tool list shows it; one whose schema cannot be read is skipped, so the rest still list."""
-        try:
-            return types.Tool(name=tool.mcp_name, description=tool.description or None, inputSchema=tool.input_schema)
-        except Exception as error:
-            self._runtime.skip(tool.mcp_name, error)
-            return None
+            return self.answer(call)
 
     def dispatch(self, name: str, arguments: dict[str, object] | None = None, project: Path | None = None) -> object:
-        """Run one tool call on project, the folder the calling chat names; a call made in process that names none works
-        on the folder ``CDD_PROJECT`` names, else the current folder. A true ``ping`` argument answers without entering the
-        tool."""
-        resolved = self._runtime.resolve_call_name(name)
-        if resolved == BUILTIN_PING_TOOL:
-            return self.ping()
-        if resolved == BUILTIN_RESTART_TOOL:
-            return self.restart()
-        return self._dispatch_on_project(resolved, arguments, project)
+        """Run one tool call made in process on project; one that names no project works on the folder ``CDD_PROJECT``
+        names, else the current folder. A true ``ping`` argument answers without entering the tool."""
+        resolved = self._checkout_server.resolve_call_name(name)
+        call = ToolCall.sent(arguments, project or self._project_named_outside_a_chat(), tool=resolved, mcp_host=self)
+        return self.answer(call)
 
-    def _dispatch_on_project(self, resolved: str, arguments: dict[str, object] | None, project: Path | None) -> object:
-        call = ToolCall.sent(arguments, project or self._project_named_outside_a_chat())
+    def answer(self, call: ToolCall) -> object:
+        """Answer call: the built-in ping and restart here, any other tool on the server of the project it names."""
+        if call.tool == BUILTIN_PING_TOOL:
+            return self.ping()
+        if call.tool == BUILTIN_RESTART_TOOL:
+            return self.restart()
         with self._restart_gate.running_call():
-            return self._dispatch_between_restarts(resolved, call)
+            return self._answer_between_restarts(call)
 
     def _project_named_outside_a_chat(self) -> Path:
         """The project of a call made in process, which no chat names: the folder ``CDD_PROJECT`` names, else the
@@ -830,50 +788,44 @@ class McpHost:
         named = os.environ.get("CDD_PROJECT")
         return Path(named).resolve() if named else Path.cwd().resolve()
 
-    def _dispatch_between_restarts(self, resolved: str, call: ToolCall) -> object:
-        runtime = self.runtime_for(call.project)
+    def _answer_between_restarts(self, call: ToolCall) -> object:
+        server = self.server_for(call.project)
         try:
             if call.arguments.get("ping") is True:
-                if not self._enrolled(resolved):
-                    raise KeyError(resolved)
-                return {"ping": "pong", "tool": resolved}
-            if resolved in runtime.prompts:
-                return runtime.answer_prompt(resolved, call)
-            return runtime.answer_tool(resolved, call)
+                return self._ping_tool(call.tool)
+            if call.tool in server.prompts:
+                return server.answer_prompt(call.tool, call)
+            return server.answer_tool(call.tool, call)
         except BaseException as failure:
-            self._log_failure(call, failure, resolved)
+            self._log_failure(call, failure)
             raise
 
-    def _log_failure(self, call: ToolCall, failure: BaseException, tool: str) -> None:
+    def _ping_tool(self, tool: str) -> dict[str, str]:
+        if self._checkout_server.enrolled(tool) is None:
+            raise ToolNotEnrolled(tool)
+        return {"ping": "pong", "tool": tool}
+
+    def _log_failure(self, call: ToolCall, failure: BaseException) -> None:
         session = call.session
         if session is not None:
-            session.log.failure(failure, tool=tool)
-
-    def _enrolled(self, name: str) -> bool:
-        return (
-            name in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL)
-            or name in self._runtime._tools
-            or name in self._runtime._prompts
-        )
+            session.log.failure(failure, tool=call.tool)
 
     def _content_blocks(self, value: object) -> list[types.TextContent]:
         text = value if isinstance(value, str) else json.dumps(data_of(value))
         return [types.TextContent(type="text", text=text)]
 
-    def serve(self, daemon: Any, listener: socket.socket) -> None:
+    def serve(self, daemon: McpDaemon, listener: socket.socket) -> None:
         """Answer every chat over HTTP on ``listener``, which ``daemon`` claimed, until the process is stopped."""
         import uvicorn
 
-        from harness.mcp.listening_loop import ListeningLoop
+        from harness.mcp.listening_loop import _ListeningLoop
 
-        self._mark_as_serving()
-        daemon.publish(self._runtime.repo)
+        daemon.publish(self._checkout_server.repo)
         try:
             server = uvicorn.Server(uvicorn.Config(self.http_app(daemon.port), log_level="warning"))
-            asyncio.run(server.serve(sockets=[listener]), loop_factory=ListeningLoop(server).new_event_loop)
+            asyncio.run(server.serve(sockets=[listener]), loop_factory=_ListeningLoop(server).new_event_loop)
         finally:
             daemon.withdraw()
-            self._unbind_as_serving()
 
     def http_app(self, port: int) -> Any:
         """MCP over Streamable HTTP at ``/mcp`` and a ``/ping`` that says which pid and checkout are serving. Only this
@@ -885,15 +837,13 @@ class McpHost:
         from starlette.responses import JSONResponse
         from starlette.routing import Route
 
-        from harness.mcp.mcp_daemon import MCP_PATH, PING_PATH
-
         security = TransportSecuritySettings(allowed_hosts=[f"127.0.0.1:{port}", f"localhost:{port}"], allowed_origins=[])
         # A chat can sit idle for hours, so its session lives until the chat closes it.
-        manager = StreamableHTTPSessionManager(app=self._server, security_settings=security, session_idle_timeout=None)
+        manager = StreamableHTTPSessionManager(app=self._protocol, security_settings=security, session_idle_timeout=None)
 
         async def ping(_request: Any) -> JSONResponse:
             return JSONResponse(
-                {"ok": True, "pid": os.getpid(), "source": str(self._runtime.repo), "projects": [str(item) for item in self.projects]}
+                {"ok": True, "pid": os.getpid(), "source": str(self._checkout_server.repo), "projects": [str(item) for item in self.projects]}
             )
 
         return Starlette(
@@ -905,48 +855,33 @@ class McpHost:
         return "pong"
 
     def restart(self) -> dict[str, Any]:
-        """Swap in a runtime on the code as it is now, for every chat. Connections, and this host object holding them,
+        """Swap in a server on the code as it is now, for every chat. Connections, and this host object holding them,
         stay. Each project's toolsets start again on the new code the next time a call names it."""
         # A call running on the old classes would find their modules gone, so the restart waits for it to end.
         with self._restart_gate.restarting():
-            self._runtime = self._runtime.restarted()
-            with self._runtimes_lock:
-                self._runtimes = {self._runtime.project: self._runtime}
-            sys.modules[__name__]._SERVING_MCP_HOST = self
-        return {
-            "is_restarted": True,
-            "tools": len(self._runtime.tools) + len(self._runtime.prompts),
-            "exceptions": [{"tool": item.tool, "reason": item.reason} for item in self._runtime.exceptions],
-        }
+            self._checkout_server = self._checkout_server.restarted()
+            with self._servers_lock:
+                self._servers = {self._checkout_server.project: self._checkout_server}
+        tools = self._checkout_server.tools
+        return {"is_restarted": True, "tools": len(tools) + len(self._checkout_server.prompts), "exceptions": self._checkout_server.skipped}
 
     def diagnose(self) -> dict[str, Any]:
-        reply = self.ping()
-        if reply != "pong":
-            raise McpStandupFailed("diagnose", self, "MCP host ping failed")
-        tools = [
-            BUILTIN_PING_TOOL,
-            BUILTIN_RESTART_TOOL,
-            *sorted(self._runtime.tools),
-            *sorted(self._runtime.prompts),
-        ]
-        exceptions = [
-            {"tool": item.tool, "reason": item.reason}
-            for item in self._runtime.exceptions
-        ]
+        """What this host publishes: the ping's answer, every tool name, and what start-up skipped."""
+        server = self._checkout_server
         return {
             "ok": True,
-            "ping": reply,
-            "tools": tools,
-            "exceptions": exceptions,
+            "ping": self.ping(),
+            "tools": [BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL, *sorted(server.tools), *sorted(server.prompts)],
+            "exceptions": server.skipped,
             "notice": self.notice(),
         }
 
     def notice(self) -> str:
-        if not self._runtime.exceptions:
+        skipped = self._checkout_server.skipped
+        if not skipped:
             return ""
         lines = ["MCP standup skipped illegitimate tools and continued:"]
-        for item in self._runtime.exceptions:
-            lines.append(f"- {item.tool}: {item.reason}")
+        lines.extend(f"- {item['tool']}: {item['reason']}" for item in skipped)
         return "\n".join(lines)
 
     def notify_exceptions(self) -> None:
@@ -955,14 +890,14 @@ class McpHost:
             print(text, file=sys.stderr)
 
     @classmethod
-    def standup(cls, *, repo: Path | str | None = None) -> McpHost:
+    def from_repo(cls, repo: Path | str) -> McpHost:
         """A host over every annotated toolset in ``repo``, in this process, to check it stands up."""
-        resolved = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
+        resolved = Path(repo).resolve()
         refs = tuple(RepositoryToolsets(resolved).collect())
         try:
             return cls.from_refs(refs, repo=str(resolved), project=str(resolved))
         except Exception as error:
-            raise McpStandupFailed("standup", None, str(error), error) from error
+            raise McpStandupFailed(resolved, error) from error
 
     @classmethod
     def from_refs(
@@ -973,9 +908,9 @@ class McpHost:
         repo: str | None = None,
         project: str | None = None,
     ) -> McpHost:
-        runtime = McpServer(repo=repo, project=project)
+        server = McpServer(repo=repo, project=project)
         if toolset_refs:
-            runtime.start(toolset_refs, constructor_context=constructor_context)
-        host = cls(runtime)
+            server.start(toolset_refs, constructor_context=constructor_context)
+        host = cls(server)
         host.notify_exceptions()
         return host

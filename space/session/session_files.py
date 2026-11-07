@@ -12,8 +12,9 @@ if TYPE_CHECKING:
 
 
 class SessionFiles:
-    """The files one session works with. Its file manager reads under the session's roots; the declared files are what
-    each practice it works on says it writes; the folder files are its log, handoffs, kept notes, and reports."""
+    """The files one session works with. Its file manager reads under the session's roots; the folder files are its log,
+    handoffs, kept notes, and reports. The files a practice declares are each fidelity's own, through its
+    FidelitySessionOutput."""
 
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -29,10 +30,6 @@ class SessionFiles:
         if self._file_manager is None or self._file_manager.roots != roots:
             self._file_manager = FileManager(self._session.root, roots)
         return self._file_manager
-
-    def declared(self) -> dict[str, dict[str, dict[str, list[FileEntry]]]]:
-        """The files every practice the session works on declares, by practice, fidelity, and format."""
-        return {name: practice.guideline.files() for name, practice in self._session.practices.items() if practice.enabled}
 
     def in_folder(self) -> list[FileEntry]:
         """Every file in the session's folder, each with its path from the project."""

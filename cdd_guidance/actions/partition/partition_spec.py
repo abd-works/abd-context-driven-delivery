@@ -14,7 +14,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_false, be_none, be_true, equal, expect, start_with
+from expects import be_false, be_none, be_true, contain, equal, expect, start_with
 from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
@@ -28,7 +28,7 @@ from harness.agent_tools.agent_tools import AgentToolSet
 from harness.agent_tools.tool_call import ToolCall
 
 _CAR_CHRONICLE_TOOLSET = (
-    "cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle"
+    "cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _STORIES_TOOLSET = "cdd_guidance.practices.stories.stories:Stories"
 _DEFAULT_PARTITION_SNIPPET = "Hard fail"
@@ -119,6 +119,29 @@ with description("a partition action"):
             reply = Partition().index(paths="README.md", out_root=str(folder))
             expect(f"under {folder.resolve().as_posix()}/.context/" in reply).to(be_true)
 
+    with context("that names an out_root from the project's root"):
+        with it("should index the corpus under that folder in the session's project"):
+            reply = Partition(session=_session_of(self.project)).index(paths="README.md", out_root="docs")
+            expect(f"under {(self.project / 'docs').resolve().as_posix()}/.context/" in reply).to(be_true)
+
+    with context("that checks a segment named from the project's root"):
+        with it("should read the segment in the session's project"):
+            segment = self.project / "docs" / "heroes-segment.md"
+            segment.parent.mkdir(parents=True, exist_ok=True)
+            segment.write_text(_SEGMENT_ALL_OK, encoding="utf-8")
+            report = Partition(session=_session_of(self.project)).verify_segment_completeness("docs/heroes-segment.md")
+            expect(report).to(contain("completeness: PASS"))
+
+    with context("that checks a segment against an index named from the project's root"):
+        with it("should read that index's config in the session's project"):
+            (self.project / "docs").mkdir(parents=True, exist_ok=True)
+            (self.project / "docs" / "heroes-segment.md").write_text(_SEGMENT_WITH_STUB, encoding="utf-8")
+            (self.project / "docs" / "test-index.md").write_text(_INDEX_WITH_SHORT_MINIMUM, encoding="utf-8")
+            report = Partition(session=_session_of(self.project)).verify_segment_completeness(
+                "docs/heroes-segment.md", index_path="docs/test-index.md"
+            )
+            expect(report).to(contain("completeness: PASS"))
+
     with context("that an agent calls on a fidelity with an out_root"):
         with before.each:
             self.folder = Path(tempfile.mkdtemp()).resolve().as_posix()
@@ -194,6 +217,14 @@ non-entry-headers:
   - COST
 short-body-pattern: \\bRANK
 min-body-chars: 80
+-->
+"""
+
+_INDEX_WITH_SHORT_MINIMUM = """\
+# Test Index
+
+<!-- partition-config
+min-body-chars: 3
 -->
 """
 
@@ -480,7 +511,7 @@ with description("Partition verifying segment completeness"):
     with context("that segment path does not exist"):
         with it("should return completeness FAIL with file-not-found error"):
             result = Partition().verify_segment_completeness(
-                segment_path="/nonexistent/path/segment.md"
+                segment_path=str(Path(tempfile.gettempdir()) / "nonexistent" / "segment.md")
             )
             expect("completeness: FAIL" in result).to(be_true)
             expect("segment not found" in result).to(be_true)

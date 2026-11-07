@@ -3,7 +3,9 @@ import type { BoardData, FidelityGuidanceData, HelpData } from '@cdd/space/kanba
 import type { BranchData } from '@cdd/space/kanban/ticket'
 
 import type { ChatData, ChatMessageData } from '@cdd/tools/chat/chat'
+import type { FidelityProgressClient } from '../ticket/fidelity-progress-client'
 import type { ReportClient } from '../ticket/report-client'
+import type { ColumnClient } from './column-client'
 import type { FilesByFidelity, TicketClient } from '../ticket/ticket-client'
 
 export type Toast = { id: number; text: string; isFailure: boolean }
@@ -11,8 +13,9 @@ export type Region = 'board' | 'details'
 export type BacklogDraft = { isOpen: boolean; title: string; text: string }
 
 // An open action bar: on a tile or on a stage head. One ticket and place hold at most one bar, and the bar holds its
-// ticket, whose tools its controls call.
-export type Tile = { ticket: TicketClient; place: string; stage: string; fidelities: FidelityGuidanceData[]; action: string; picked: string[]; isPinned: boolean; files: FilesByFidelity }
+// ticket, whose tools its controls call, its stage, and the fidelities it acts on, whose progress is read from the
+// ticket as the board shows it now.
+export type Tile = { ticket: TicketClient; place: string; stage: ColumnClient; fidelities: FidelityGuidanceData[]; action: string; picked: string[]; isPinned: boolean; files: FilesByFidelity }
 
 // A dialog or panel holds the ticket it is about, so its actions reach that ticket's tools without looking it up again.
 export type Activation = {
@@ -35,13 +38,14 @@ export type RootChoice = {
   browsing: { target: string; path: string; folders: string[] } | null
 }
 
-export type ReportPanel = { kind: 'report'; ticket: TicketClient; fidelity: string; report: ReportClient; closedRules: string[]; isExpanded: boolean }
+// A report panel holds the progress whose report it shows, or none for the violations of every fidelity of its ticket.
+export type ReportPanel = { kind: 'report'; ticket: TicketClient; progress: FidelityProgressClient | null; report: ReportClient; closedRules: string[]; isExpanded: boolean }
 export type FilesPanel = {
   kind: 'files'
   ticket: TicketClient
-  // A session folder's files, or the files of the fidelities in slugs.
+  // A session folder's files, or the files of the fidelities whose progress it holds.
   isSession: boolean
-  slugs: string[]
+  progress: FidelityProgressClient[]
   files: FilesByFidelity
   mode: string
   tabs: string[]

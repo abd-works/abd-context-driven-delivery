@@ -110,3 +110,8 @@ with description("a session's file manager"):
 
         with it("should give no text, such as for a file deleted since a page listed it"):
             expect(self.files.read("src/missing.ts").text).to(equal(""))
+
+    with context("that is asked for a folder that is not there"):
+
+        with it("should list no entries, such as for a folder deleted since a page listed it"):
+            expect(self.files.list("src/gone").entries).to(equal([]))

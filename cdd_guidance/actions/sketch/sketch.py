@@ -8,6 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from cdd_guidance.actions.grill_context.grill_context import GrillContext
+from cdd_guidance.actions.project_paths import PathsFromProject
 from harness.guidance.documents import load_document
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
@@ -18,7 +19,7 @@ from harness.mcp.mcp_server import Mcp
 _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 
 @agent_toolset
-class Sketch(GuidanceAction):
+class Sketch(PathsFromProject, GuidanceAction):
     """Sketch a solution interactively before generating the formal artifact."""
 
     def __init__(self, agent_dir: str = "", session=None) -> None:
@@ -42,7 +43,7 @@ class Sketch(GuidanceAction):
     @property
     def sketch_template(self) -> str:
         """The sketch template for this instance's agent_dir (tiered discovery)."""
-        return self.find_template(agent_dir=self._agent_dir)
+        return self.find_template()
 
     def _grill_context(self) -> GrillContext:
         """The grill this sketch runs: made for this sketch's session and working on what it lists."""
@@ -55,8 +56,10 @@ class Sketch(GuidanceAction):
         1. Session context - the caller passes an example directly (skip this tool).
         2. Convention - {agent_dir}/templates/*-sketch.* inside the wrapped agent's templates folder.
         3. Default - sketch/templates/sketch-template.md (this toolset's canonical heading-and-indent notation).
-        Returns the resolved template contents as a string."""
-        templates_dir = Path(agent_dir) / "templates" if agent_dir else None
+        Returns the resolved template contents as a string.
+        agent_dir: the wrapped agent's folder, from the project's root or absolute. Omit it for the folder this sketch was made with."""
+        agent_dir = agent_dir or self._agent_dir
+        templates_dir = self._from_project(agent_dir) / "templates" if agent_dir else None
         found = sorted(templates_dir.glob("*-sketch.*")) if templates_dir is not None and templates_dir.is_dir() else []
         return (found[0] if found else _DEFAULT_TEMPLATE).read_text(encoding="utf-8")
 

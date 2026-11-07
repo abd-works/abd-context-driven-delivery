@@ -30,6 +30,8 @@ screen:
   slug?: string
   chromeOf?: screen
   shows?: [story]
+  showsScenarios?: [scenario]
+  showsSteps?: [step]
   domainTerms?: [class]
   regions?: [region]
   where:
@@ -39,7 +41,8 @@ screen:
     - chromeOf shares chrome with the named screen
     - name uses a domain term
     - at ia, regions are named areas
-    - shows are the user stories this screen shows; each story it names records shownOn this screen
+    - shows are the user stories this screen shows; each one records shownOn this screen
+    - showsScenarios and showsSteps are the scenarios and steps this screen shows; each one records shownOn this screen
     - domainTerms are the classes named on the screen
   rules:
     - tab-states-are-separate-screens

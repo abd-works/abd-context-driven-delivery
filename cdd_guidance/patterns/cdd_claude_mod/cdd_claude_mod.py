@@ -10,7 +10,7 @@ from harness.guidance.guidance import PracticeGuidance
 
 @agent_toolset
 class CddClaudeMod(PracticeGuidance):
-    """# Instructions"""
+    """A Claude Code mod that is a view of the CDD domain: each component runs view, client, MCP tool, domain."""
 
     pattern = "cdd_claude_mod"
 

@@ -21,10 +21,10 @@ with story("Review Fidelity"):
             pass
         with when("the Person reviews story_map on billing-report"):
             # Person -> Ticket.finish_review(['stories-story-map'])
-            # Ticket -> Ticket.record('review Stories story_map')
+            # Ticket -> Ticket.record('review stories story_map')
             # Board page -> Board.show()
             pass
-        with then("billing-report's session log ends with review Stories story_map"):
+        with then("billing-report's session log ends with review stories story_map"):
             pass
         with and_("the story_map tile marks Review ✓ and the fidelity is done"):
             pass

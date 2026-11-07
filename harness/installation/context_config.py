@@ -7,8 +7,6 @@ from typing import Any, Mapping
 
 CONTEXT_FOLDER = ".context"
 CONFIG_NAME = "config.json"
-_LEGACY_GUIDELINES = "guidelines.config"
-_LEGACY_PRACTICE_FOLDERS = "practice-folders.config"
 
 
 class MalformedContextConfigError(ValueError):
@@ -21,7 +19,9 @@ class MalformedContextConfigError(ValueError):
 
 
 class ContextConfig:
-    """One project's ``.context/config.json``."""
+    """One project's ``.context/config.json``: the guidelines that apply to it, each ``enabled`` or ``disabled``, and
+    the folder each practice writes in. Names are matched without regard to case or to ``-`` against ``_``, so
+    ``mern-domain-driven`` and ``mern_domain_driven`` name one guideline."""
 
     def __init__(self, root: Path | str) -> None:
         self.root = Path(root).resolve()
@@ -31,122 +31,71 @@ class ContextConfig:
         return self.root / CONTEXT_FOLDER / CONFIG_NAME
 
     def exists(self) -> bool:
-        folder = self.root / CONTEXT_FOLDER
-        return (
-            self.path.is_file()
-            or (folder / _LEGACY_GUIDELINES).is_file()
-            or (folder / _LEGACY_PRACTICE_FOLDERS).is_file()
-        )
+        return self.path.is_file()
 
     def load(self) -> dict[str, Any]:
-        """The whole configuration. Raises ``MalformedContextConfigError`` when ``config.json`` is unreadable, so
-        ``update`` never saves a partial configuration over the project's file."""
-        if self.path.is_file():
-            return self._read_config_file()
-        return {
-            "guidelines": _parse_text_map(
-                _read_text(self.root / CONTEXT_FOLDER / _LEGACY_GUIDELINES)
-            ),
-            "practice_folders": _parse_text_map(
-                _read_text(self.root / CONTEXT_FOLDER / _LEGACY_PRACTICE_FOLDERS)
-            ),
-        }
-
-    def _read_config_file(self) -> dict[str, Any]:
+        """The whole configuration; empty when the project has none. Raises ``MalformedContextConfigError`` when
+        ``config.json`` is unreadable, so ``update`` never saves a partial configuration over the project's file."""
+        if not self.path.is_file():
+            return {}
         try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
+            configuration = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             raise MalformedContextConfigError(self.path, str(exc)) from exc
-        if not isinstance(data, dict):
-            raise MalformedContextConfigError(self.path, f"the top level is a {type(data).__name__}")
-        return data
+        if not isinstance(configuration, dict):
+            raise MalformedContextConfigError(self.path, f"the top level is a {type(configuration).__name__}")
+        return configuration
 
-    def save(self, data: Mapping[str, Any]) -> Path:
-        folder = self.path.parent
-        folder.mkdir(parents=True, exist_ok=True)
-        payload = dict(data)
-        self.path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    def save(self, configuration: Mapping[str, Any]) -> Path:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(json.dumps(dict(configuration), indent=2) + "\n", encoding="utf-8")
         return self.path
 
     def update(self, **sections: Any) -> dict[str, Any]:
-        data = self.load()
+        configuration = self.load()
         for key, value in sections.items():
             if value is None:
-                data.pop(key, None)
-            elif isinstance(value, Mapping) and isinstance(data.get(key), dict):
-                merged = dict(data[key])
-                merged.update(value)
-                data[key] = merged
+                configuration.pop(key, None)
+            elif isinstance(value, Mapping) and isinstance(configuration.get(key), dict):
+                configuration[key] = {**configuration[key], **value}
             else:
-                data[key] = value
-        self.save(data)
-        return data
+                configuration[key] = value
+        self.save(configuration)
+        return configuration
 
     def guidelines(self) -> dict[str, str]:
-        return _string_map(self.load().get("guidelines"))
+        return self._names_to_values("guidelines")
 
     def practice_folders(self) -> dict[str, str]:
-        return _string_map(self.load().get("practice_folders"))
+        return self._names_to_values("practice_folders")
 
     def guideline(self, pattern: str) -> str:
-        wanted = pattern.replace("-", "_").casefold()
-        for key, value in self.guidelines().items():
-            if key.replace("-", "_").casefold() == wanted:
-                return value.casefold()
-        return ""
+        """Whether the guideline named pattern is ``enabled`` or ``disabled``; empty when the project names none."""
+        return (self._value_named("guidelines", pattern) or "").casefold()
 
     def practice_folder(self, practice: str) -> str | None:
-        wanted = practice.replace("-", "_").casefold()
-        for key, value in self.practice_folders().items():
-            if key.replace("-", "_").casefold() == wanted:
-                return value
-        return None
+        return self._value_named("practice_folders", practice)
 
     def set_guidelines(self, guidelines: Mapping[str, str] | str) -> dict[str, Any]:
-        mapping = (
-            _parse_text_map(guidelines)
-            if isinstance(guidelines, str)
-            else {str(k).strip(): str(v).strip() for k, v in guidelines.items()}
-        )
-        return self.update(guidelines=mapping)
+        """Set guidelines, given as a mapping or as ``name: value`` lines."""
+        return self.update(guidelines=self._as_names_to_values(guidelines))
 
     def set_practice_folders(self, folders: Mapping[str, str] | str) -> dict[str, Any]:
-        mapping = (
-            _parse_text_map(folders)
-            if isinstance(folders, str)
-            else {str(k).strip(): str(v).strip() for k, v in folders.items()}
-        )
-        return self.update(practice_folders=mapping)
+        """Set practice folders, given as a mapping or as ``name: folder`` lines."""
+        return self.update(practice_folders=self._as_names_to_values(folders))
 
+    def _value_named(self, section: str, name: str) -> str | None:
+        wanted = self._match_key(name)
+        return next((value for key, value in self._names_to_values(section).items() if self._match_key(key) == wanted), None)
 
-def _read_text(path: Path) -> str:
-    if not path.is_file():
-        return ""
-    try:
-        return path.read_text(encoding="utf-8")
-    except OSError:
-        return ""
+    def _match_key(self, name: str) -> str:
+        return name.replace("-", "_").casefold()
 
+    def _names_to_values(self, section: str) -> dict[str, str]:
+        value = self.load().get(section)
+        return self._as_names_to_values(value) if isinstance(value, Mapping) else {}
 
-def _parse_text_map(text: str) -> dict[str, str]:
-    found: dict[str, str] = {}
-    for line in text.splitlines():
-        stripped = line.split("#", 1)[0].strip()
-        if ":" not in stripped:
-            continue
-        key, value = stripped.split(":", 1)
-        name = key.strip()
-        item = value.strip()
-        if name and item:
-            found[name] = item
-    return found
-
-
-def _string_map(value: object) -> dict[str, str]:
-    if not isinstance(value, Mapping):
-        return {}
-    return {
-        str(key).strip(): str(item).strip()
-        for key, item in value.items()
-        if str(key).strip() and str(item).strip()
-    }
+    def _as_names_to_values(self, given: Mapping[str, Any] | str) -> dict[str, str]:
+        pairs = (line.split("#", 1)[0].split(":", 1) for line in given.splitlines()) if isinstance(given, str) else given.items()
+        found = ((str(pair[0]).strip(), str(pair[1]).strip()) for pair in pairs if len(pair) == 2)
+        return {name: value for name, value in found if name and value}

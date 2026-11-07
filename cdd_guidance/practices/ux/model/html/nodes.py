@@ -43,9 +43,9 @@ class HtmlUxMap(UxMap):
         return {
             "@@TITLE@@": _text(ux_map.scope or ux_map.name),
             "@@SCREENS@@": screens or "<p>No screens yet.</p>",
-            "@@STORY_OUTLINE@@": _script_json(getattr(ux_map, "story_outline", None) or []),
+            "@@STORY_OUTLINE@@": _script_json(ux_map.story_outline()),
             "@@SCREEN_STORIES@@": _script_json([
-                {"name": screen.name, "stories": [{"name": story} for story in screen.story_names]}
+                {"name": screen.name, "stories": [{"name": story} for story in screen.story_keys]}
                 for screen in ux_map.screens
             ]),
             "@@ENSURE_HINT@@": self._ensure_hint(ux_map),
@@ -72,8 +72,8 @@ class HtmlUxMap(UxMap):
         hidden = " hidden" if index else ""
         regions = "".join(self._region_html(region) for region in screen.regions)
         stories_attr = ""
-        if screen.story_names:
-            joined = _text(", ".join(screen.story_names))
+        if screen.story_keys:
+            joined = _text(", ".join(screen.story_keys))
             stories_attr = f' data-stories="{joined}" data-for-story="{joined}"'
         layout_attr = f' data-layout="{_text(screen.layout)}"' if screen.layout else ""
         return (
@@ -82,7 +82,7 @@ class HtmlUxMap(UxMap):
             f"<h2>{_text(screen.name)}</h2>"
             f'<p class="layout">{_text(screen.layout) or "-"}</p>'
             f'<div class="regions">{regions}</div>'
-            f'<p class="screen-stories">Stories: {_text(" . ".join(screen.story_names)) or "-"}</p>'
+            f'<p class="screen-stories">Stories: {_text(" . ".join(screen.story_keys)) or "-"}</p>'
             f"</article>"
         )
 

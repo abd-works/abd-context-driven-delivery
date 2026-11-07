@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from harness.markdown.format import Format
+
+
+class PracticeOutsideSession(Exception):
+    """Raised when a practice is asked to read files by path but works in no session that names their project."""
 
 
 @agent_toolset
@@ -28,15 +33,15 @@ class Stories(PracticeGuidance):
         "spec_blurb": "Executable scenario-specifications with real-world examples",
     }
 
-    # Step library folder for the TypeScript render; a pattern names it. None keeps story-test.ts at the tests root.
-    story_test_folder: str | None = None
-
     def __init__(
         self,
         fidelity: str = "story_map",
         format: str | None = None,
         stage: str | None = None,
+        story_test_folder: str | None = None,
     ) -> None:
+        # Step library folder for the TypeScript render; a pattern names it. None keeps story-test.ts at the tests root.
+        self.story_test_folder = story_test_folder
         super().__init__(
             format=format,
             fidelity=None if stage is not None else fidelity,
@@ -64,16 +69,24 @@ class Stories(PracticeGuidance):
             return super().read_paths(paths, source)
         from cdd_guidance.practices.stories.model.story_model import StoryModel
 
-        project = self.project_folder
-        entries = [project / entry for entry in ([paths] if isinstance(paths, str) else paths)]
+        named = [Path(entry) for entry in ([paths] if isinstance(paths, str) else paths)]
+        project = self._project_of(named)
+        entries = [project / entry for entry in named]
         files = [found for entry in entries for found in (sorted(entry.rglob("*")) if entry.is_dir() else [entry])]
         return StoryModel.load_files([path for path in files if path.is_file()], project)
 
-    @property
-    def project_folder(self) -> Path:
-        """The project the session this practice works in names its paths from: the session's repository. A practice
-        made outside any session, as a script makes one, names its paths from the current folder."""
-        return Path(getattr(self.workspace, "repo_path", None) or Path.cwd())
+    def _project_of(self, named: list[Path]) -> Path:
+        """The folder paths are named from: the repository of the session this practice works in. The MCP host serves
+        every project from its own folder, so a practice in no session, as a script makes one, takes only absolute
+        paths and names its files from the folder those paths share."""
+        if self.workspace is not None:
+            return self.workspace.repo_path
+        if not named or not all(path.is_absolute() for path in named):
+            raise PracticeOutsideSession(
+                f"{type(self).__name__} works in no session, so it has no project to read {[str(path) for path in named]} from"
+            )
+        shared = Path(os.path.commonpath([str(path) for path in named]))
+        return shared if shared.is_dir() else shared.parent
 
     def _live_adapter(self, format_name: str):
         if self.story_test_folder is None or Format(format_name).name != "typescript":

@@ -4,7 +4,6 @@ import { FormatIcon } from '../board/icons'
 import { FileViewsView } from './file-views-view'
 import type { TicketClient } from './ticket-client'
 import type { ChipFace, StepFace, TileBar } from './tile-actions-client'
-import { slugsOf } from './tile-client'
 
 function StepMarkView({ step }: { step: StepFace }) {
   return (
@@ -33,7 +32,7 @@ function FormatChipView({ tile, chip, isOff }: { tile: Tile; chip: ChipFace; isO
 // The stage the bar is on says which actions write a fidelity's files.
 function ActionChoiceView({ tile, isOff }: { tile: Tile; isOff: boolean }) {
   const { page } = useBoard()
-  const actions = page.board.stageNamed(tile.stage)?.producingActions ?? []
+  const actions = tile.stage.producingActions
   return (
     <select className="step-control action-choice" aria-label="Action" disabled={isOff} value={tile.action} onChange={event => page.tileActions.chooseAction(tile, event.target.value)}>
       {actions.map(action => (
@@ -64,15 +63,15 @@ function RunLineView({ tile, bar }: { tile: Tile; bar: TileBar }) {
 
 function ValidateLineView({ ticket, tile, bar }: { ticket: TicketClient; tile: Tile; bar: TileBar }) {
   const { page } = useBoard()
-  const { reportSlug } = bar
+  const { report } = bar
   return (
     <div className="bar-line wide-gap">
       <button className="action step-control small" disabled={bar.validateOff} onClick={() => void page.tileActions.validate(tile)}>
         validate
       </button>
       <StepMarkView step={bar.validate} />
-      {reportSlug ? (
-        <button className={bar.hasViolations ? 'violations-link' : 'report-link'} onClick={() => void page.panels.openReport(ticket, reportSlug)}>
+      {report ? (
+        <button className={bar.hasViolations ? 'violations-link' : 'report-link'} onClick={() => void page.panels.openReport(ticket, report)}>
           {bar.hasViolations ? `${bar.validate.text} found` : 'report'}
         </button>
       ) : bar.validate.text ? (
@@ -103,7 +102,7 @@ export function ActionBarView({ ticket, tile, onMouseEnter, onMouseLeave }: Acti
   return (
     <div className="expansion" data-bar={tile.place} onClick={() => page.tiles.pin(tile.ticket.name, tile.place)} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <div className="bar-line bar-files">
-        <FileViewsView ticket={ticket} slugs={slugsOf(tile.fidelities)} />
+        <FileViewsView ticket={ticket} progress={ticket.progressOn(tile.fidelities)} />
       </div>
       <RunLineView tile={tile} bar={bar} />
       <ValidateLineView ticket={ticket} tile={tile} bar={bar} />

@@ -23,7 +23,7 @@ import space.session.session  # noqa: F401 - registers how a tool call opens its
 
 def _installer(tree: Path, payload: dict) -> Installer:
     installer = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT)
-    log = installer._diagnostics_log()
+    log = installer.diagnostics.path
     log.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return installer
 
@@ -32,11 +32,11 @@ with description("guidance diagnostics"):
     with it("should keep install history when it writes the guidance section"):
         tree = Path(tempfile.mkdtemp())
         installer = _installer(tree, {"installs": [{"color": "green", "mcp": {"items": []}}]})
-        installer.write_diagnostics_section(
+        installer.diagnostics.write_section(
             "guidance",
             {"filter": ["stories"], "instructions": {"color": "green", "items": []}},
         )
-        installer._append_install_log([{"name": "diagnose_install", "report": "green", "color": "green"}])
+        installer.diagnostics.record_install({}, "green", "green")
         data = json.loads((tree / "diagnostics.json").read_text(encoding="utf-8"))
         expect(data).to(have_key("installs"))
         expect(data).to(have_key("guidance"))

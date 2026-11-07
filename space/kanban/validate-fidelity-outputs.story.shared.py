@@ -182,7 +182,7 @@ def _(s):
 
     @s.and_("it lists verb-noun-format with one violation at .context/story-map.md line 6 and the source lines around it")
     def _(world):
-        listed = [(rule["name"], [(violation["location"], violation["line"], {"number": 6, "text": "- Handle Payment"} in violation["source"]) for violation in rule["violations"]]) for rule in world.report["rules"]]
+        listed = [(rule["rule"]["slug"], [(violation["location"], violation["line"], {"number": 6, "text": "- Handle Payment"} in violation["source"]) for violation in rule["violations"]]) for rule in world.report["rules"]]
         expect(listed).to(equal([("verb-noun-format", [(STORY_MAP_FILE, 6, True)])]))
 
 
@@ -198,7 +198,7 @@ def _(s):
 
     @s.then("the report panel shows .sessions/checkout-flow/validation-reports with every rule broken, each naming its fidelity")
     def _(world):
-        expect((world.report["path"], [(rule["fidelity"], rule["name"]) for rule in world.report["rules"]])).to(equal((REPORTS, [(STORY_MAP, "verb-noun-format")])))
+        expect((world.report["path"], [(rule["fidelity"]["slug"], rule["rule"]["slug"]) for rule in world.report["rules"]])).to(equal((REPORTS, [(STORY_MAP, "verb-noun-format")])))
 
 
 @shared_stories.scenario("Open Validation Report", "Say a report has no saved graph")

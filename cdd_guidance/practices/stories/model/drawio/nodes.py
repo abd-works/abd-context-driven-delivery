@@ -98,33 +98,13 @@ class DrawIOStory(DiagramStory):
 
     @property
     def y(self) -> int:
-        story_map = self._owning_map()
-        depth = story_map.max_sub_epic_depth if isinstance(story_map, DiagramStoryModel) else 0
-        shaping = isinstance(story_map, DrawIOStoryModel) and story_map.has_outline_estimates
-        base = DrawIOEpic.shaping_row_y if shaping else DrawIOEpic.row_y
-        deepest_bottom = base + depth * (DrawIOEpic.bar_height + DrawIOEpic.depth_gap) + DrawIOEpic.bar_height
-        if shaping:
-            return max(self.shaping_row_y, deepest_bottom + self.pad_below_sub_epic)
-        return max(
-            self.row_y,
-            deepest_bottom + self.actor_height + self.actor_gap + self.pad_below_sub_epic,
-        )
+        return self._layout().story_y
 
     def cells(self, parent_id: str) -> List["DrawIOStoryModel.Vertex"]:
-        parent = self.parent
-        index = parent.stories.index(self) if isinstance(parent, Epic) else 0
         actor = self.actors[0].strip() if self.actors else ""
-        previous = ""
-        if isinstance(parent, Epic) and index > 0:
-            prior = parent.stories[index - 1]
-            previous = prior.actors[0].strip() if prior.actors else ""
         cell_id = f"{parent_id}/{self.cell_slug}"
         drawn: List[DrawIOStoryModel.Vertex] = []
-        room = (
-            self.y >= parent.y + DrawIOEpic.bar_height + self.actor_height + self.actor_gap
-            if isinstance(parent, Epic) else False
-        )
-        if room and actor:
+        if actor:
             drawn.append(DrawIOStoryModel.Vertex.make(
                 f"{cell_id}/actor", actor, self.x,
                 self.y - self.actor_height - self.actor_gap,
@@ -178,10 +158,7 @@ class DrawIOEpic(DiagramEpic):
     def y(self) -> int:
         if not isinstance(self.parent, Epic):
             return self.row_y
-        story_map = self._owning_map()
-        shaping = isinstance(story_map, DrawIOStoryModel) and story_map.has_outline_estimates
-        base = self.shaping_row_y if shaping else self.nested_row_y
-        return base + self.depth * (self.bar_height + self.depth_gap)
+        return self._layout().sub_epic_y(self.depth)
 
     @property
     def x(self) -> int:
@@ -243,7 +220,7 @@ class DrawIOEpic(DiagramEpic):
             else:
                 estimate_x = self.x + self.tighten
             drawn.append(DrawIOStoryModel.Vertex.make(
-                f"{self.cell_id}/estimate", label, estimate_x, self.stories[0].y if self.stories else self._story_row(),
+                f"{self.cell_id}/estimate", label, estimate_x, self._layout().story_y,
                 max(self.bar_width - (estimate_x - self.x) - self.tighten, 80),
                 DiagramStory.size, self.estimate_style,
             ))
@@ -265,19 +242,6 @@ class DrawIOEpic(DiagramEpic):
         for child in self.epics:
             drawn.extend(child.cells())
         return drawn
-
-    def _story_row(self) -> int:
-        story_map = self._owning_map()
-        depth = story_map.max_sub_epic_depth if isinstance(story_map, DiagramStoryModel) else 0
-        shaping = isinstance(story_map, DrawIOStoryModel) and story_map.has_outline_estimates
-        base = self.shaping_row_y if shaping else self.row_y
-        deepest_bottom = base + depth * (self.bar_height + self.depth_gap) + self.bar_height
-        if shaping:
-            return max(DrawIOStory.shaping_row_y, deepest_bottom + DiagramStory.pad_below_sub_epic)
-        return max(
-            DiagramStory.row_y,
-            deepest_bottom + DiagramStory.actor_height + DiagramStory.actor_gap + DiagramStory.pad_below_sub_epic,
-        )
 
 
 # -- Root node + I/O -----------------------------------------------------------
@@ -395,18 +359,25 @@ class DrawIOStoryModel(DiagramStoryModel):
     def has_outline_estimates(self) -> bool:
         return any(epic._has_estimate() for epic in self.epics)
 
+    @property
+    def sub_epic_top(self) -> int:
+        """A shaping outline drops its sub-epics lower, leaving room for the epic estimate above them."""
+        return DrawIOEpic.shaping_row_y if self.has_outline_estimates else DrawIOEpic.nested_row_y
+
+    @property
+    def story_floor(self) -> int:
+        return DrawIOStory.shaping_row_y if self.has_outline_estimates else DrawIOStory.row_y
+
     def render(
         self,
         canonical: StoryModel | None = None,
         previous: str | None = None,
-        links=None,
         workspace: str | None = None,
     ) -> str:
-        """Draw the story map. With *links* (a ``StoryMapLinks``, or a *workspace* folder to find
-        them in), each epic, sub-epic, and story cell links to its ``story-map.md`` entry, and a
-        story to its own file when one exists. With no target file, the cell has no link."""
-        if links is None and workspace:
-            links = StoryMapLinks.from_workspace(workspace)
+        """Draw the story map. In a *workspace* folder, each epic, sub-epic, and story cell links to its
+        ``story-map.md`` entry there, and a story to its own file when one exists. With no target file,
+        the cell has no link."""
+        links = StoryMapLinks.from_workspace(workspace) if workspace else None
         drawn = type(self)(canonical if canonical is not None else self)
         return drawn._drawing(links)
 

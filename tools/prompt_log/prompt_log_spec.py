@@ -1,6 +1,5 @@
 """BDD development specs for the prompt_log audit hook."""
 import json
-import os
 import shutil
 import sys
 import tempfile
@@ -33,19 +32,19 @@ with description("a path classifier for prompt audit"):
 
     with context("that receives a project rule under .cursor/rules"):
         with it("should label it rule"):
-            expect(pl.classify_path(str(_RULE))).to(equal("rule"))
+            expect(pl.LoggedFile(str(_RULE)).kind).to(equal("rule"))
 
     with context("that receives a skill SKILL.md under .cursor/skills"):
         with it("should label it skill"):
-            expect(pl.classify_path(str(_SKILL))).to(equal("skill"))
+            expect(pl.LoggedFile(str(_SKILL)).kind).to(equal("skill"))
 
     with context("that receives a subagent definition under .cursor/agents"):
         with it("should label it agent"):
-            expect(pl.classify_path(str(_AGENT))).to(equal("agent"))
+            expect(pl.LoggedFile(str(_AGENT)).kind).to(equal("agent"))
 
     with context("that receives an ordinary source file"):
         with it("should label it file"):
-            expect(pl.classify_path(str(_REPO_ROOT / "pyproject.toml"))).to(equal("file"))
+            expect(pl.LoggedFile(str(_REPO_ROOT / "pyproject.toml")).kind).to(equal("file"))
 
 
 with description("a prompt log hook"):
@@ -178,7 +177,6 @@ with description("a prompt log hook"):
 
     with context("that was made with no log and hears an event from a project"):
         with before.each:
-            self.saved_override = os.environ.pop("PROMPT_LOG_PATH", None)
             self.project = ThrowawayProject()
             pl.PromptLog().subagent_start(
                 HookPayload({"hook_event_name": "subagentStart", "cwd": str(self.project.root), "task": "Audit the project log"})
@@ -186,8 +184,6 @@ with description("a prompt log hook"):
 
         with after.each:
             ThrowawayProject.close_all()
-            if self.saved_override is not None:
-                os.environ["PROMPT_LOG_PATH"] = self.saved_override
 
         with it("should write the entry into the log of the session open in the project the event names"):
             log = self.project.root / ".sessions" / "main" / "logs" / "prompt-log.txt"
@@ -197,7 +193,7 @@ with description("a prompt log hook"):
         with before.each:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
-            Installer(ide="Cursor", path=self.tree).install([pl.PromptLog()])
+            Installer(ide="Cursor", path=self.tree, repo=Path(__file__).resolve().parents[2]).install([pl.PromptLog()])
 
         with after.each:
             shutil.rmtree(self._tmp, ignore_errors=True)

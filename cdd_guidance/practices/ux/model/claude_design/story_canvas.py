@@ -16,9 +16,8 @@ from urllib.parse import quote, urlencode
 
 from harness.design_canvas.canvas import DesignCanvas, artboard, box, camel, escape, stem, thumbnail
 from harness.design_canvas.look import BACKGROUND, FONTS, LOOK
-from harness.graph.schema_edges import scenario_key, step_key
-
 from cdd_guidance.practices.ux.model.claude_design.nodes import ClaudeDesignUxMap
+from cdd_guidance.practices.ux.model.story_link import key_of
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
@@ -98,23 +97,23 @@ class ClaudeDesignStory(DiagramStory):
         ]
 
     def shown_screens(self, screens: List) -> List[tuple]:
-        """Each (scenario, step, screen) this story's steps are shown on, in scenario order, once per screen image."""
+        """Each (scenario, step, screen) this story's steps are shown on, in scenario order, then each screen that
+        shows the story itself as (None, None, screen); once per screen image."""
         seen: set = set()
         found: List[tuple] = []
+        story_screens = [(None, None, screen) for screen in screens if screen.lists(self)]
+        for scenario, step, screen in [*self._step_screens(screens), *story_screens]:
+            marker = screen.image or screen.name
+            if marker not in seen:
+                seen.add(marker)
+                found.append((scenario, step, screen))
+        return found
+
+    def _step_screens(self, screens: List) -> Iterable[tuple]:
         for scenario in [*self.backgrounds, *self.scenarios]:
             for step in _steps_of(scenario):
                 for screen in shown_on(step, screens):
-                    marker = screen.image or screen.name
-                    if marker in seen:
-                        continue
-                    seen.add(marker)
-                    found.append((scenario, step, screen))
-        for screen in screens:
-            marker = screen.image or screen.name
-            if marker not in seen and self.name in list(getattr(screen, "story_names", []) or []):
-                seen.add(marker)
-                found.append((None, None, screen))
-        return found
+                    yield scenario, step, screen
 
 
 class ClaudeDesignStoryModel(DiagramStoryModel):
@@ -130,7 +129,26 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
     margin = 24
     screens_per_story = 1
     blank_image_bytes = 10000
-    sources: Dict[str, str] = {}
+    explorer_width = 1880
+    explorer_height = 948
+
+    def __init__(
+        self,
+        source: Optional[StoryModel] = None,
+        graph=None,
+        *,
+        workspace: Optional[str] = None,
+        screens=None,
+        sources: Optional[Dict[str, str]] = None,
+    ) -> None:
+        """A canvas of source's story map. *screens* is a UxMap (or its screens); with only a *workspace* (the canvas
+        root), the UX map beside it — ``ux.json`` in the folder that holds the canvas — supplies them. *sources* maps a
+        story (``Story``) or scenario (``Story › Scenario``) to its ``path:line`` in the story code: the explorer
+        offers to copy an "open in the file viewer" request for it."""
+        super().__init__(source, graph)
+        self.workspace = Path(workspace) if workspace else None
+        self.screens = self._screens(screens)
+        self.sources = dict(sources or {})
 
     def render(
         self,
@@ -140,15 +158,10 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         screens=None,
         sources: Optional[Dict[str, str]] = None,
     ) -> str:
-        """The canvas files as JSON. *screens* is a UxMap (or its screens); with only a *workspace*
-        (the canvas root), the UX map beside it — ``ux.json`` in the folder that holds the canvas — supplies them.
-        *sources* maps a story (``Story``) or scenario (``Story › Scenario``) to its ``path:line`` in the story code:
-        the explorer offers to copy an "open in the file viewer" request for it."""
+        """The canvas files as JSON, drawn on a new canvas of canonical (else of this map) made for these screens and
+        sources, so this canvas keeps its own."""
         source = canonical if canonical is not None else self
-        drawn = source if isinstance(source, ClaudeDesignStoryModel) else type(self)(source)
-        drawn.workspace = Path(workspace) if workspace else None
-        drawn.screens = drawn._screens(screens)
-        drawn.sources = dict(sources or {})
+        drawn = type(self)(source, workspace=workspace, screens=screens, sources=sources)
         return json.dumps(drawn.files(), indent=1, ensure_ascii=False)
 
     def parse(self, text: str) -> "ClaudeDesignStoryModel":
@@ -169,7 +182,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         width, height, text = self._story_map()
         canvas.add_board("Main.dc.html", {"x": 0, "y": 0, "w": width, "h": height, "page": self.story_map_page,
                                           "title": "Story map", "is_interactive": True, "expand": "fill"}, text)
-        canvas.add_board(f"{self.screens_folder}/explorer.dc.html", {"x": 0, "y": 0, "w": 1880, "h": 948, "page": self.screens_page,
+        canvas.add_board(f"{self.screens_folder}/explorer.dc.html", {"x": 0, "y": 0, "w": self.explorer_width, "h": self.explorer_height, "page": self.screens_page,
                                                                      "title": "Story explorer", "is_interactive": True, "expand": "fill"}, self._explorer())
         for name, board in ClaudeDesignUxMap.boards(self.screens, self._screen_files()).items():
             canvas.add_board(name, board)
@@ -188,7 +201,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         found: List[str] = []
         for screen in self.screens:
             if screen.prototype and Path(screen.prototype).name == Path(name).name:
-                found += [story for story in (getattr(screen, "story_names", []) or []) if story not in found]
+                found += [story for story in screen.story_keys if story not in found]
         return found
 
     def _context_panel(self, focus: List[str], height: int) -> str:
@@ -310,7 +323,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
                     groups[0]["i"] = [f"../{image}"]
             background = scenario in story.backgrounds
             scenarios.append({"n": "Background" if background else scenario.name, "b": background, "p": prototype, "t": groups,
-                              "f": self.sources.get(scenario_key(scenario), "")})
+                              "f": self.sources.get(key_of(scenario), "")})
         return {"n": story.name, "f": self.sources.get(story.name, ""), "c": scenarios}
 
     def _screen_of(self, scenario, story: ClaudeDesignStory) -> tuple:
@@ -364,7 +377,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         return path.is_file() and path.stat().st_size < self.blank_image_bytes
 
     def _screens(self, screens) -> List:
-        if screens is None and getattr(self, "workspace", None) is not None:
+        if screens is None and self.workspace is not None:
             from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
 
             screens = JsonUxMap.from_workspace(self.workspace) or JsonUxMap.from_workspace(self.workspace.parent)
@@ -374,19 +387,12 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
 
 
 def shown_on(node, screens: Iterable) -> List:
-    """The screens a step, scenario or story is shown on: its ``shownOn`` edges, else the screens that list its key."""
-    practice = getattr(node, "practice", None)
-    edged = [edge.child for edge in practice.edges_from(_SHOWN_ON, node)] if practice is not None else []
+    """The screens a step, scenario or story is shown on: its ``shownOn`` edges, else the screens that list it, which
+    is how a story map drawn on its own graph finds the screens on the UX map's graph."""
+    edged = [edge.child for edge in node.practice.edges_from(_SHOWN_ON, node)]
     if edged:
         return edged
-    kind = node.semantic_type()
-    if kind == "Step":
-        key, names = step_key(node), "step_names"
-    elif kind in ("Scenario", "Background"):
-        key, names = scenario_key(node), "scenario_names"
-    else:
-        key, names = node.name, "story_names"
-    return [screen for screen in screens if key in list(getattr(screen, names, []) or [])]
+    return [screen for screen in screens if screen.lists(node)]
 
 
 def _steps_of(scenario) -> List:

@@ -12,7 +12,6 @@ from __future__ import annotations
 import importlib
 from typing import TYPE_CHECKING
 
-from harness.graph.language_for_node import language_for_node
 from harness.graph.practice_rule import PracticeGraphRule
 
 if TYPE_CHECKING:
@@ -53,6 +52,33 @@ class GraphPractice:
     node_types: tuple[str, ...] = ()
     """Node types the explorer offers for this practice even before any node of them is read."""
 
+    class_types: tuple[str, ...] = ()
+    """Node types that are classes, which the source view opens a call into and folds in place."""
+
+    member_types: tuple[str, ...] = ()
+    """Node types that are a class's operations and properties, which the source view can open a call to."""
+
+    class_node_type: str = ""
+    """The node type this practice's checks run on as a whole class. Another practice's node that lies inside one of
+    these classes skips this practice's checks, since they already ran on the class."""
+
+    source_ordered_types: frozenset[str] = frozenset()
+    """Node types the explorer lists in the order they appear in their files, not the order they were read."""
+
+    extends: str = ""
+    """The practice whose types this practice's schema builds on with ``is:``, such as a DDD entity that is a Clean
+    Engineering class; its types also carry that practice's rules."""
+
+    anchor_types: dict[str, str] = {}
+    """The ``is:`` words another practice's schema uses to say one of its types is a type of this practice
+    (``class`` for a Clean Engineering class), each with the node type it names."""
+
+    rule_types: dict[str, tuple[str, ...]] = {}
+    """Node types that also carry the rules the schema gives other types, such as every story node's rules on a story."""
+
+    def align(self, node: Node) -> None:
+        """Move node's source onto the lines that declare it, when a reader found it by a nearby line."""
+
     def read(self, practice: PracticeGraph) -> None:
         """Read this practice's nodes and edges from the working copy ``practice.graph`` is loading."""
 
@@ -81,14 +107,14 @@ class GraphPractice:
 
     def checks_for(self, node: Node, patterns: tuple[str, ...]) -> dict[str, PracticeGraphRule]:
         """The checks that apply to node: its type's, or the Clean Engineering type a pattern anchors it to."""
-        from harness.graph.schema_rules import ce_anchor_type
+        from harness.graph.schema_rules import PracticeSchema
 
         merged = self.checks(patterns)
-        language = language_for_node(node)
+        language = node.file_language
         if language and language not in _CODE_LANGUAGES:
             merged.update(self.language_rules(language))
         types = {node.type}
-        anchor = ce_anchor_type(self.name, node.type, patterns)
+        anchor = PracticeSchema.load(self.name, patterns).anchor_type(node.type)
         if anchor:
             types.add(anchor)
         return {slug: rule for slug, rule in merged.items() if any(rule.applies_to(type_name) for type_name in types)}
@@ -98,8 +124,16 @@ class GraphOverlay:
     """What one pattern gives the graph on top of the practices: the nodes it reads and the rules it adds to each
     practice, which live in ``<pattern>/practices/<practice>/rules``."""
 
+    direct_kinds: frozenset[str] = frozenset()
+    """Relationship kinds of the pattern's schema that place a node as a child in the explorer tree; every other kind is
+    listed under its kind's name."""
+
     def __init__(self, pattern: str) -> None:
         self.pattern = pattern
+
+    def display_of(self, kind: str) -> str:
+        """How the explorer tree shows an edge of this pattern's kind: as a child, or under the kind's name."""
+        return "direct" if kind in self.direct_kinds else "relationship"
 
     def read(self, graph: Graph) -> None:
         """Add this pattern's nodes and edges to the practices ``graph`` holds."""

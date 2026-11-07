@@ -67,27 +67,25 @@ class HookExercise:
 
     def _ping(self) -> dict[str, Any]:
         from harness.hooks.hook_daemon import HookDaemon
-        from harness.hooks.hook_server import HookServer
 
-        address = HookDaemon().live_address(HookServer.state_path(self.repo))
+        address = HookDaemon(self.repo).live_address()
         if address is None:
             return {"ping": "down"}
-        host, port, pid = address
-        return {"ping": "pong", "host": host, "port": port, "pid": pid}
+        return {"ping": "pong", "host": address.host, "port": address.port, "pid": address.pid}
 
     def _live_injects(self) -> bool:
-        from harness.hooks.hook_server import HookServer
+        from harness.hooks.hook_daemon import HookDaemon
 
         sample = self._example_for("modules", "clean-engineering")
         if sample is None:
             return False
         try:
-            result = HookServer.ensure(self.repo).handle_stdin(
+            result = HookDaemon(self.repo).ensure().handle_stdin(
                 json.dumps(self._payload(sample)).encode("utf-8")
             )
         except Exception:
             return False
-        return "domain-nouns-only" in (result.additional_context or "")
+        return "domain-nouns-only" in (result.get("additional_context") or "")
 
     def _server(self) -> Any:
         cached = getattr(self, "_hook_server", None)

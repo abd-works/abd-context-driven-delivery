@@ -3,7 +3,7 @@
 import json
 
 from mamba import description, context, it, before
-from expects import contain, equal, expect, have_keys, have_len
+from expects import be, contain, equal, expect, have_keys, have_len
 
 from cdd_guidance.practices.ux.model.claude_design.story_canvas import (
     ClaudeDesignEpic,
@@ -35,7 +35,7 @@ def _catalog_screen() -> Screen:
     screen = Screen("Plan catalog", 1)
     screen.image = "shots/plan-catalog.png"
     screen.prototype = "plan-catalog.dc.html"
-    screen.attach_step_name("Choose Plan \u203a See the plan catalog \u203a the Customer opens My Paradise")
+    screen.show_step("Choose Plan \u203a See the plan catalog \u203a the Customer opens My Paradise")
     return screen
 
 
@@ -93,10 +93,10 @@ with description("a Claude Design story map") as self:
         with before.each:
             select_plan = Screen("Select plan", 2)
             select_plan.prototype = "select-plan.dc.html"
-            select_plan.attach_scenario_name("Choose Plan \u203a Pick from the cart")
+            select_plan.show_scenario("Choose Plan \u203a Pick from the cart")
             credentials = Screen("Create account", 3)
             credentials.prototype = "create-credentials.dc.html"
-            credentials.attach_story_name("Create Credentials")
+            credentials.show_story("Create Credentials")
             story_map = _story_map()
             choose_plan = story_map.epics[0].epics[0].stories[0]
             from_cart = Scenario("Pick from the cart", 2)
@@ -111,7 +111,7 @@ with description("a Claude Design story map") as self:
             create.scenarios.append(refused)
             shot = Screen("an account exists", 4)
             shot.image = "shots/email-already-registered.png"
-            shot.attach_step_name("Create Credentials › Email already registered › an account exists")
+            shot.show_step("Create Credentials › Email already registered › an account exists")
             files = json.loads(ClaudeDesignStoryModel().render(story_map, screens=[_catalog_screen(), select_plan, credentials, shot]))
             self.explorer = files["project/screens/explorer.dc.html"]
 
@@ -135,10 +135,24 @@ with description("a Claude Design story map") as self:
             expect(self.explorer).to(contain('"n": "Choose Plan", "f": "tests/select_plan.story.shared.ts:69"'))
             expect(self.explorer).to(contain('"f": "tests/select_plan.story.shared.ts:73"'))
 
+    with context("rendered from a canvas the caller already holds"):
+        with before.each:
+            self.held = ClaudeDesignStoryModel(_story_map())
+            self.held.render(screens=[_catalog_screen()], sources={"Choose Plan": "tests/select_plan.story.shared.ts:69"})
+
+        with it("leaves the caller's canvas without the screens of that render"):
+            expect(self.held.screens).to(equal([]))
+
+        with it("leaves the caller's canvas without the sources of that render"):
+            expect(self.held.sources).to(equal({}))
+
+        with it("keeps each canvas's sources apart"):
+            expect(ClaudeDesignStoryModel().sources).not_to(be(self.held.sources))
+
     with context("rendered with a screen that serves a story"):
         with before.each:
             screen = _catalog_screen()
-            screen.attach_story_name("Choose Plan")
+            screen.show_story("Choose Plan")
             files = json.loads(ClaudeDesignStoryModel().render(_story_map(), screens=[screen]))
             self.canvas = json.loads(files["project/canvas.json"])
             self.panel = files["project/context/plan-catalog.dc.html"]

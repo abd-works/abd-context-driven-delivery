@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 
+from cdd_guidance.actions.project_paths import PathsFromProject
 from harness.guidance_actions import GuidanceArg, GuidanceAction, source_label
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import agent_tool
@@ -13,8 +14,17 @@ from harness.mcp.mcp_server import Mcp
 
 _NEVER_WALKED = frozenset({".git", ".venv", "node_modules"})
 
+
+class ContextFileNotFound(FileNotFoundError):
+    """Raised when read_context_file is named a context file that is not in the session's project."""
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(f"no context file at {path.as_posix()}; name it from the project's root, or absolute")
+        self.path = path
+
+
 @agent_toolset
-class GrillContext(GuidanceAction):
+class GrillContext(PathsFromProject, GuidanceAction):
     """Interview a plan relentlessly against the codebase context until reaching shared understanding."""
 
     @property
@@ -48,7 +58,7 @@ class GrillContext(GuidanceAction):
         Returns a JSON array of {path, kind} where kind is 'context-named' or 'context-folder'.
         folder: a folder the plan names, from the project's root or absolute. Omit it to scan the session's root."""
         results: list[dict] = []
-        root_path = Path(folder) if folder else self.session.root
+        root_path = self._from_project(folder) if folder else self.session.root
         if not root_path.exists():
             return json.dumps([])
         for candidate in self._files_under(root_path):
@@ -72,10 +82,11 @@ class GrillContext(GuidanceAction):
     @agent_tool
     def read_context_file(self, path: str) -> str:
         """Confirm a context file and return its path.
-        Pass the path. Do not paste the file body into this call. Read the file with the editor.
+        Pass the path, from the project's root or absolute. Do not paste the file body into this call. Read the file with the editor.
         Use after explore_context_files to choose files that are relevant."""
-        target = Path(path)
-        target.read_text(encoding="utf-8")
+        target = self._from_project(path)
+        if not target.is_file():
+            raise ContextFileNotFound(target)
         return str(target)
 
     @Mcp
@@ -110,8 +121,7 @@ class GrillContext(GuidanceAction):
     def _generate(self, item) -> str:
         from cdd_guidance.actions.generate.generate import Generate
 
-        worked_on = item if isinstance(item, str) else [item]
-        return self._inside(Generate, worked_on).generate(worked_on)
+        return self._inside(Generate).generate(item if isinstance(item, str) else [item])
 
     @agent_instructions
     def grill_with_context(self, plan: str = "", paths: list[str] | str | None = None) -> str:

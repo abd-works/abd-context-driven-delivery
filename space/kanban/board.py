@@ -17,6 +17,7 @@ from harness.installation.destination import data_field, identity, language_adap
 from harness.mcp.mcp_server import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.repo.repo import Repo
+from space.session import name_of
 from space.session.session_log import SessionLog
 from space.session.sessions import Sessions
 
@@ -34,8 +35,8 @@ COMPLETE_COLUMN = "Complete"
 DEFAULT_WIP_LIMIT = 3
 # The file in `.sessions` that holds what the sessions share on the board, such as each stage's work-in-progress limit.
 _BOARD_FILE = "_board.json"
+# Where the catalog is published; the catalog generator names each page in it.
 FORGE = "https://forge.abdworks.net/abd-context-driven-delivery"
-FIDELITIES_WITHOUT_PAGE = ("ddd-model", "bdd-realization")
 
 
 class ColumnNotFoundError(LookupError):
@@ -100,9 +101,9 @@ class Board:
     def repo(self) -> Repo:
         return self._repo
 
-    @property
+    @cached_property
     def sessions(self) -> Sessions:
-        """The sessions of the board's repository: each one a ticket, and which is open."""
+        """The sessions of the board's repository: each one a ticket, and which is open. Made once per board read."""
         return Sessions(self._repo.root)
 
     @property
@@ -158,9 +159,10 @@ class Board:
         return [*self.tickets, *self.backlog_items]
 
     @property
-    @data_field
+    @data_field(reference=True)
     def active(self) -> Ticket | None:
-        """The ticket of the session saved as open; none while main is, since main is not on the board."""
+        """The ticket of the session saved as open; none while main is, since main is not on the board. Sent by its
+        name, since its column sends the ticket."""
         return self.ticket(self.sessions.open_name)
 
     def column(self, name: str) -> Column:
@@ -180,6 +182,15 @@ class Board:
     def backlog_item(self, title: str) -> BacklogItem | None:
         return next((item for item in self.backlog_items if item.title == title), None)
 
+    def open_ticket(self, title: str, scope: str, parent: str, path: str) -> Ticket:
+        """A new ticket titled title in Discovery, its session working on path, a folder in the repository (its top when
+        empty)."""
+        name = name_of(title)
+        root = self._repo.root
+        workpath = (root / path).resolve() if path else root
+        self.sessions.create(name, workpath, title=title, scope=scope, parent=parent)
+        return self.ticket(name)
+
     @mcp
     @agent_tool
     @noSessionLog
@@ -197,18 +208,9 @@ class Board:
     @mcp
     @agent_tool
     @noSessionLog
-    def help(self, slug: str) -> Help:
-        """Return the overview, guidance, and rules of the practice or fidelity slug names, such as stories or stories-story-map, with the stage a fidelity belongs to and its page on the forge."""
-        for practice in self._practices:
-            if practice.slug == slug:
-                return Help(practice, None, None)
-            fidelity = next((entry for entry in practice.fidelities if entry.slug == slug), None)
-            if fidelity is not None:
-                return Help(practice, fidelity, self._stage_requiring(fidelity))
-        raise PracticeNotFoundError(slug, "the board")
-
-    def _stage_requiring(self, fidelity: FidelityGuidance) -> Stage | None:
-        return next((column for column in self._columns if isinstance(column, Stage) and fidelity in column.work_required), None)
+    def help(self, practice: str) -> Help:
+        """Return the overview, guidance, and shared rules of the board's practice named practice, such as stories or clean_engineering, with its page on the forge. A fidelity's help comes from its progress on a ticket: fidelity-progress.help."""
+        return Help(self.practice(practice), None, None)
 
     def practice(self, key: str) -> PracticeGuidance:
         """The board's practice whose folder name is key, such as clean_engineering."""
@@ -351,15 +353,21 @@ class Stage(Column):
     @noSessionLog
     def set_wip_limit(self, limit: int) -> Stage:
         """Set how many tickets this stage holds before its count shows as over its limit."""
-        limits = {**self._saved_wip_limits, self.name: limit}
-        self._board.file.write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
+        shared = self._shared_on_board
+        shared["wip_limits"] = {**shared.get("wip_limits", {}), self.name: limit}
+        self._board.file.write_text(json.dumps(shared), encoding="utf-8")
         return self
 
     @property
     def _saved_wip_limits(self) -> dict[str, int]:
         """Every stage's limit a person has set, by stage name: one file holds them all."""
+        return self._shared_on_board.get("wip_limits", {})
+
+    @property
+    def _shared_on_board(self) -> dict:
+        """Everything the board's file holds, so a change to one stage's limit keeps whatever else the sessions share there."""
         path = self._board.file
-        return json.loads(path.read_text(encoding="utf-8")).get("wip_limits", {}) if path.is_file() else {}
+        return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
 
 
 class Card(ABC):
@@ -444,8 +452,10 @@ class Help:
     @property
     @data_field
     def href(self) -> str:
-        """Its page on the forge: a fidelity's own page, or its practice's page for a fidelity the forge has none for."""
-        page = f"{self._practice.key}-{self._fidelity.name}" if self._fidelity else ""
-        if not page or page in FIDELITIES_WITHOUT_PAGE:
-            return f"{FORGE}/context-tools/{self._practice.key}.html"
-        return f"{FORGE}/fidelities/{page}.html"
+        """Its page on the forge, as the catalog generator names it: a fidelity's own page, or its practice's page for
+        a fidelity the catalog has no page for."""
+        from harness.catalog_generator.catalog_generator import CatalogPractice
+
+        catalogued = CatalogPractice(self._practice)
+        has_page = self._fidelity is not None and self._fidelity in catalogued.fidelities
+        return f"{FORGE}/{catalogued.fidelity_href(self._fidelity) if has_page else catalogued.href}"

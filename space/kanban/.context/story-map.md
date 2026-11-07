@@ -161,7 +161,7 @@ Inferred: the `prompt.compose` handler in `harness/chat-ui/pane/hooks/register.t
 
 ### (S) Person --> [Open Help](move-work-forward-on-session-board/guide-work-through-practices/open-help/open_help_story.test.md)
 
-Observed: `Board.help`; the ? on a tile or a practice name opens help in a side panel.
+Observed: `FidelityProgress.help` on a tile's ?, `Board.help` on a practice name; either opens help in a side panel. The Forge link is the page the catalog generator names.
 
 ### (S) Person --> [Send Next Fidelity Action](move-work-forward-on-session-board/guide-work-through-practices/send-next-fidelity-action/send_next_fidelity_action_story.test.md)
 

@@ -15,8 +15,9 @@ from cdd_guidance.practices.bdd.bdd import Bdd  # noqa: E402
 from cdd_guidance.practices.ddd.ddd import Ddd  # noqa: E402
 from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
 from cdd_guidance.practices.ux.ux import Ux  # noqa: E402
+from harness.guidance.guidance import FidelityGuidance  # noqa: E402
 from harness.installation.destination import data_of  # noqa: E402
-from space.kanban.board import Board, Card, ColumnNotFoundError  # noqa: E402
+from space.kanban.board import Board, Card, ColumnNotFoundError, Help  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
 from space.repo.repo import Repo  # noqa: E402
 
@@ -177,6 +178,34 @@ with description("a board") as self:
 
         with it("should list every column with its tickets or items"):
             expect([column["name"] for column in data_of(self.board)["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
+
+        with it("should send each card's title and last activity, whether a ticket or a backlog item"):
+            sent = [data_of(card) for card in self.board.cards]
+            expect([(bool(card["title"]), "last_activity" in card) for card in sent]).to(equal([(True, True)] * 4))
+
+    # (S) Person --> Open Help
+    with context("with help open on a fidelity the catalog has no page for"):
+        with before.each:
+            stories = Stories()
+            self.help = Help(stories, FidelityGuidance("unpublished", "discovery"), None)
+
+        with it("should link to its practice's page on the forge"):
+            expect(self.help.href).to(equal("https://forge.abdworks.net/abd-context-driven-delivery/context-tools/stories.html"))
+
+    # (S) Person --> Set WIP Limit
+    with context("with something else the sessions share saved in the board's file"):
+        with before.each:
+            self.sessions = SessionsFolder()
+            (self.sessions.root / "_board.json").write_text(json.dumps({"pinned": ["pet-visits"]}), encoding="utf-8")
+            self.board = Board(Repo(self.sessions.project), [Stories()])
+
+        with context("that a person sets a stage's limit"):
+            with before.each:
+                self.board.column("Discovery").set_wip_limit(5)
+
+            with it("should keep what else the board's file holds"):
+                saved = json.loads((self.sessions.root / "_board.json").read_text(encoding="utf-8"))
+                expect(saved).to(equal({"pinned": ["pet-visits"], "wip_limits": {"Discovery": 5}}))
 
 with description("a backlog item") as self:
     with after.each:

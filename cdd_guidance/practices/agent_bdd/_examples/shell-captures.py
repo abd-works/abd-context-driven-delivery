@@ -7,19 +7,12 @@
 from expects import be_true, expect
 from mamba import context, description, it
 
-from cdd_guidance.practices.agent_bdd import (
-    agent,
-    ai_judge,
-    combined_capture_text,
-    expect_capture_mentions,
+from cdd_guidance.practices.agent_bdd.agent_block import agent
+from cdd_guidance.practices.agent_bdd.spec_helpers import (
     expect_instructions_contain,
     expect_ok_action,
-    follow_instructions,
-    read_workspace,
     repo_root_from,
-    run_toolset,
     sessions_dir,
-    tools_run_captures,
 )
 
 _REPO_ROOT = repo_root_from(__file__, parents=3)
@@ -28,10 +21,10 @@ _SESSIONS = sessions_dir(__file__)
 with description("a Car toolset"):
     with context("with agent following travelTo instructions"):
         with it("drives travelTo, checks shell captures, then judges the story"):
-            with agent(_REPO_ROOT, _SESSIONS / "shell-captures-example.json") as block:
-                read_workspace("harness/agent_tools/_examples/car/car.py")
+            with agent(_REPO_ROOT, _SESSIONS / "shell-captures-example.json") as run:
+                run.read_workspace("harness/agent_tools/_examples/car/car.py")
 
-                response = run_toolset(
+                response = run.run_toolset(
                     toolset="agent_tools._examples.car:Car",
                     action="travelTo",
                     context={
@@ -49,16 +42,16 @@ with description("a Car toolset"):
                 expect_ok_action(response, "travelTo")
                 expect_instructions_contain(response, "courthouse")
 
-                story = follow_instructions(
+                story = run.instruct(
                     "Follow the travelTo instructions - call start, then speak once in character.",
                     timeout_seconds=180,
                 ).text
 
-                captures = tools_run_captures(block)
+                captures = run.session_shell_captures
                 expect(len(captures) >= 1).to(be_true)
-                expect_capture_mentions(combined_capture_text(captures), "start")
+                expect(any("start" in capture.command + capture.output for capture in captures)).to(be_true)
 
-                ai_judge(
+                run.ai_judge(
                     story,
                     "The story features General Lee traveling to a destination "
                     "with personality and at least one line of dialogue.",

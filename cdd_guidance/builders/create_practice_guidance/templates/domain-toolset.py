@@ -8,14 +8,12 @@ from harness.guidance.guidance import PracticeGuidance
 
 @agent_toolset
 class {ClassName}(PracticeGuidance):
-    """# Instructions"""
+    """{ClassName}: what this practice brings to the work, in one sentence."""
 
     def __init__(
         self,
         fidelity: str = "{default_fidelity}",
         format: str | None = None,
-        path: str | None = None,
-        session: str | None = None,
     ) -> None:
         super().__init__(
             format=format,
@@ -25,5 +23,3 @@ class {ClassName}(PracticeGuidance):
             #     "markdown": ("{domain_slug}.model.markdown.nodes", "MarkdownModel"),
             # }},
         )
-        if path is not None or session is not None:
-            self._attach_workspace(path=path, session=session)

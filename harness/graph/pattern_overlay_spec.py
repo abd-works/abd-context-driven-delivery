@@ -8,14 +8,15 @@ from expects import equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import description, it
 
-from harness.graph.graph import Edge, EdgeType, Node, PracticeGraph, Source, normalize_overlay, resolve_overlay_root
+from harness.graph.graph import Edge, EdgeType, Node, PracticeGraph, Source
+from harness.graph.pattern_overlays import PatternOverlays
 
 
 with description("pattern overlays"):
     with it("should resolve a pattern name and a practices folder path to the same root"):
-        named = resolve_overlay_root("lern_domain_driven")
+        named = PatternOverlays(["lern_domain_driven"]).paths
         folder = _HERE.parents[1] / "cdd_guidance" / "patterns" / "lern_domain_driven"
-        expect(normalize_overlay(str(folder))).to(equal(str(named.resolve())))
+        expect(PatternOverlays([str(folder)]).paths).to(equal(named))
 
     with it("should rebuild the tree from edges that still point at the practice root"):
         practice = PracticeGraph("ddd")

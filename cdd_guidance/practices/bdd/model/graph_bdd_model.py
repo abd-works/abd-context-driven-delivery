@@ -3,78 +3,64 @@
 The behavior tree is the graph's `bdd` nodes, in each spec file's order. Each observation's call graph starts at what
 its `invokes` edges name, and each call is followed through the Clean Engineering model's interactions, which the
 graph saves under `model_members` on the Clean Engineering practice's root. Each code member's saved facts name its
-class under `owner`. Every saved node and edge is read through the graph's own `Node.fact` and `Edge.fact`, so this
-model reads fields by name and never depends on how the graph lays them out in the file.
+class under `owner`. The saved file is read back into the graph's own nodes and edges, the way the graph reloads it,
+so this model asks nodes for their facts and edges for their ends and never reads the file's layout.
 """
 
 from __future__ import annotations
 
 import json
 import re
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
-from harness.graph.graph import Edge, Node
+from harness.graph.graph import Graph, Node, PracticeGraph
 
 # Following interactions further than this many calls deep adds lines nobody reads; a cycle is cut where it repeats.
 _DEEPEST_CALL = 6
 NO_OPERATION = "// the graph holds no operation this observation calls"
 _BEHAVIOR_TYPES = ("Description", "Context", "Observation")
+_MEMBER_TYPES = ("Operation", "Property")
 
 
 class GraphBddModel(BddModel):
     """Reads a saved graph (`Graph.write_json`, `graph.save_json`) into descriptions whose observations carry their realization."""
 
     def parse(self, text: str) -> "GraphBddModel":
-        practices = (json.loads(text) if text.strip() else {}).get("practices", {})
-        bdd = practices.get("bdd", {})
-        self._read_clean_engineering(practices.get("clean_engineering", {}))
-        self._invoked = self._invoked_members(bdd.get("edges", []))
-        for nodes in self._behavior_by_file(bdd.get("nodes", [])).values():
-            self._read_spec(sorted(nodes, key=lambda node: (node["line"], -node["end_line"])))
+        graph = _restored(text)
+        self._bdd = graph.practice("bdd")
+        self._clean = graph.practice("clean_engineering")
+        for nodes in self._behavior_by_file().values():
+            self._read_spec(sorted(nodes, key=lambda node: (node.source.start_line, -node.source.end_line)))
         return self
 
-    def _read_clean_engineering(self, saved: dict) -> None:
-        """The model's described members by `Class.member`, and the code's nodes by id."""
-        self._members: Dict[str, dict] = json.loads(saved.get("root_facts") or "{}").get("model_members", {})
-        code = (Node.fact(saved_node) for saved_node in saved.get("nodes", []))
-        self._code: Dict[str, dict] = {node["node_id"]: node for node in code if node is not None}
-
-    def _invoked_members(self, saved_edges: list) -> Dict[str, List[str]]:
-        """The code members each observation invokes, by observation id."""
-        invoked: Dict[str, List[str]] = {}
-        for edge in filter(None, (Edge.fact(saved_edge) for saved_edge in saved_edges)):
-            if edge["kind"] == "invokes":
-                invoked.setdefault(edge["parent_id"], []).append(edge["child_id"])
-        return invoked
-
-    def _behavior_by_file(self, saved_nodes: list) -> Dict[str, List[dict]]:
+    def _behavior_by_file(self) -> dict[str, List[Node]]:
         """The describe-tree nodes of each spec file."""
-        by_file: Dict[str, List[dict]] = {}
-        for node in filter(None, (Node.fact(saved_node) for saved_node in saved_nodes)):
-            if node["semantic_type"] in _BEHAVIOR_TYPES:
-                by_file.setdefault(node["file"], []).append(node)
+        by_file: dict[str, List[Node]] = {}
+        for node_type in _BEHAVIOR_TYPES:
+            for node in self._bdd.nodes.get(node_type, []):
+                by_file.setdefault(node.source.file, []).append(node)
         return by_file
 
-    def _read_spec(self, nodes: List[dict]) -> None:
+    def _read_spec(self, nodes: List[Node]) -> None:
         """One spec file's nodes, outermost first at each line: a node sits inside the open node whose lines enclose it."""
         open_nodes: List[tuple[int, object]] = []
         for saved in nodes:
-            while open_nodes and open_nodes[-1][0] < saved["line"]:
+            while open_nodes and open_nodes[-1][0] < saved.source.start_line:
                 open_nodes.pop()
             parent = open_nodes[-1][1] if open_nodes else None
-            if saved["semantic_type"] == "Observation":
+            if saved.type == "Observation":
                 self._add_observation(saved, parent)
                 continue
-            open_nodes.append((saved["end_line"], self._add_block(saved["name"], parent)))
+            open_nodes.append((saved.source.end_line, self._add_block(saved.name, parent)))
 
-    def _add_observation(self, saved: dict, parent) -> None:
+    def _add_observation(self, saved: Node, parent) -> None:
         if parent is None:
             return
-        observation = Observation(saved["name"], len(parent.observations) + 1)
-        observation.call_graph = self._realization(saved["node_id"])
+        observation = Observation(saved.name, len(parent.observations) + 1)
+        observation.call_graph = self._realization(saved)
         parent.observations.append(observation)
 
     def _add_block(self, name: str, parent):
@@ -87,18 +73,16 @@ class GraphBddModel(BddModel):
         parent.contexts.append(node)
         return node
 
-    def _realization(self, observation_id: str) -> List[CallGraphEntry]:
+    def _realization(self, observation: Node) -> List[CallGraphEntry]:
         entries: List[CallGraphEntry] = []
-        for member_id in self._invoked.get(observation_id, []):
-            member = self._code.get(member_id)
-            if member is not None:
-                facts = self._facts_of(member)
-                entries.extend(self._call(facts.get("owner", ""), member["name"], 0, set(), facts))
+        for edge in self._bdd.edges_from("invokes", observation):
+            facts = _member_facts(edge.child)
+            entries.extend(self._call(facts.get("owner", ""), edge.child.name, 0, set(), facts))
         return entries or [CallGraphEntry(depth=0, kind="call", text=NO_OPERATION)]
 
     def _call(self, owner: str, name: str, depth: int, trail: set, code_facts: Optional[dict] = None) -> List[CallGraphEntry]:
         """A call on owner.name, then the interactions the model gives it, then what it returns."""
-        described = self._members.get(f"{owner}.{name}", {})
+        described = self._described_members().get(f"{owner}.{name}", {})
         facts = {**(code_facts or {}), **described}
         is_property = facts.get("kind") == "Property"
         parameters = facts.get("model_parameters") or facts.get("parameters") or []
@@ -115,17 +99,41 @@ class GraphBddModel(BddModel):
             entries.append(CallGraphEntry(depth=depth, kind="in", text=returns))
         return entries
 
+    def _described_members(self) -> dict:
+        """The members the Clean Engineering model describes, by `Class.member`, as its practice's root records them."""
+        return self._clean.root_node.get_fact("model_members", {}) or {}
+
     def _code_facts(self, owner: str, name: str) -> Optional[dict]:
         """The facts on the code's member owner.name, when the graph loaded it."""
-        for member in self._code.values():
-            if member["name"] == name and member["semantic_type"] in ("Operation", "Property"):
-                if member["data"].get("owner") == owner:
-                    return self._facts_of(member)
+        for node_type in _MEMBER_TYPES:
+            for member in self._clean.nodes.get(node_type, []):
+                if member.name == name and member.facts.get("owner") == owner:
+                    return _member_facts(member)
         return None
 
-    def _facts_of(self, member: dict) -> dict:
-        """A code member's saved facts, with its kind (Operation or Property)."""
-        return {**member["data"], "kind": member["semantic_type"]}
+
+def _restored(text: str) -> Graph:
+    """The saved graph read back into a graph's own nodes and edges: every practice's nodes first, then the edges
+    between them, which may cross practices."""
+    saved = (json.loads(text) if text.strip() else {}).get("practices", {})
+    graph = Graph()
+    for name, practice in saved.items():
+        _restore_root_facts(graph.practice(name), practice)
+        graph.practice(name).restore(practice)
+    for name, practice in saved.items():
+        graph.practice(name).restore_links(practice)
+    return graph
+
+
+def _restore_root_facts(practice: PracticeGraph, saved: dict) -> None:
+    # The graph saves its root's facts beside the nodes (`Graph._practice_document`) but PracticeGraph.restore does not
+    # read them back yet, so the practice's whole-practice facts, such as the model's members, are restored here.
+    practice.root_node.data.update(json.loads(saved.get("root_facts") or "{}"))
+
+
+def _member_facts(member: Node) -> dict:
+    """A code member's saved facts, with its kind (Operation or Property)."""
+    return {**member.facts, "kind": member.type}
 
 
 def _member_named(interaction: str) -> Optional[tuple[str, str]]:

@@ -43,7 +43,7 @@ with description("a UxMap"):
             self.ux_map = UxMap.create()
             self.ux_map.story_references = ["stories/place_order.js"]
             sheet = Screen("Catalog", 0)
-            sheet.attach_story_name("Browse Product Catalog")
+            sheet.show_story("Browse Product Catalog")
             self.ux_map.append_screen(sheet)
 
         with it("should expose story_references as a list"):

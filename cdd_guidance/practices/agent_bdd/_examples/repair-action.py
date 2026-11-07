@@ -9,29 +9,29 @@ from pathlib import Path
 from expects import be_true, contain, equal, expect
 from mamba import context, description, it
 
-from cdd_guidance.practices.agent_bdd import agent, instruct, instruct_use_tool
+from cdd_guidance.practices.agent_bdd.agent_block import agent
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SESSIONS = Path(__file__).resolve().parents[1] / ".agent_bdd_sessions"
 
 _REPAIR_YAML = """\
-toolset: practices.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle
+toolset: cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle
 action: repair
 arguments:
-  asset: practices/create_context_tool/_examples/car_chronicle/output/driving-log.md
+  asset: cdd_guidance/builders/create_practice_guidance/_examples/car_chronicle/output/driving-log.md
   violation: Scanner use-driving-voice - chronicle reads like a spec sheet
 """
 
 with description("a CarChronicle generator"):
     with context("with agent and repair action"):
         with it("drives repair and asserts tools + argument substitution"):
-            with agent(_REPO_ROOT, _SESSIONS / "repair-action-example.json"):
-                instruct(
-                    "Read practices/create_context_tool/_examples/car_chronicle/car_chronicle.py from the workspace.",
+            with agent(_REPO_ROOT, _SESSIONS / "repair-action-example.json") as run:
+                run.instruct(
+                    "Read cdd_guidance/builders/create_practice_guidance/_examples/car_chronicle/car_chronicle.py from the workspace.",
                     timeout_seconds=60,
                 )
 
-                response = instruct_use_tool(
+                response = run.instruct_use_tool(
                     f"{_REPAIR_YAML}\n",
                     timeout_seconds=120,
                 )

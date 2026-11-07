@@ -4,7 +4,7 @@ import type { ActionPickerJson, ChatBarViewJson, FidelityFilesJson } from '../..
 import { BRAND } from '../brand'
 import { ActionButtonView, PickerView } from './action-button-view'
 import { runHandoff, type ChatBarClient } from './chat-bar-client'
-import { openBoard, selectFidelity, type FidelityClient } from './fidelity-client'
+import { openBoard, selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
 import { openFiles } from './fidelity-files-client'
 import { FidelityFilesView } from './fidelity-files-view'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
@@ -29,15 +29,15 @@ export type ChatBarDraw = {
 const SEPARATOR = '│'
 
 // The first press on a dot selects it; a press on the selected dot opens the board there.
-function pressDot($: EngineInterface, fidelity: FidelityClient): unknown {
+function pressDot($: EngineInterface, fidelity: FidelityProgressClient): unknown {
   return fidelity.isSelected ? openBoard($, fidelity) : selectFidelity($, fidelity)
 }
 
 // One dot in its practice colour, shaded by progress, with the violation count in red beside it.
-export function FidelityView($: EngineInterface, { Box, Button, Text }: ElementTable, fidelity: FidelityClient) {
+export function FidelityView($: EngineInterface, { Box, Button, Text }: ElementTable, fidelity: FidelityProgressClient) {
   return (
-    <Box key={`fidelity-${fidelity.fidelity}`} flexDirection="row" gap={0}>
-      <Button key={`dot-${fidelity.fidelity}`} plain label={`${fidelity.fidelity} ${fidelity.word}`} onPress={() => pressDot($, fidelity)}>
+    <Box key={`fidelity-${fidelity.slug}`} flexDirection="row" gap={0}>
+      <Button key={`dot-${fidelity.slug}`} plain label={`${fidelity.slug} ${fidelity.word}`} onPress={() => pressDot($, fidelity)}>
         <Text color={fidelity.shade} weight={fidelity.isSelected ? 'semibold' : undefined}>{fidelity.isSelected ? '◉' : '●'}</Text>
       </Button>
       {fidelity.violationCount ? <Text color={BRAND.error}>{String(fidelity.violationCount)}</Text> : null}
@@ -45,9 +45,9 @@ export function FidelityView($: EngineInterface, { Box, Button, Text }: ElementT
   )
 }
 
-// One stage icon, faint until reached; the stage in progress is outlined, and a shown stage reads in full ink.
+// One stage icon, faint until reached; the session's stage and a shown stage are outlined.
 export function StageView($: EngineInterface, { Box, Button, Text }: ElementTable, stage: StageClient) {
-  const outline = stage.status === 'in_progress' || stage.isShown ? { borderStyle: 'single' as const, borderColor: stage.ink } : {}
+  const outline = stage.isCurrent || stage.isShown ? { borderStyle: 'single' as const, borderColor: stage.ink } : {}
   return (
     <Box key={`stage-box-${stage.stage}`} {...outline}>
       <Button key={`stage-${stage.stage}`} plain label={stage.stage} onPress={() => selectStage($, stage)}>

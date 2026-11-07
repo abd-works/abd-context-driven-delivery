@@ -30,7 +30,7 @@ class Satisfy(GuidanceAction):
 
         def on(item) -> None:
             worked_on: GuidanceArg = item if isinstance(item, str) else [item]
-            sections.append(self._inside(Validate, worked_on).validate(worked_on))
+            sections.append(self._inside(Validate).validate(worked_on))
             fix_prose = AgentInstructions.for_callable(
                 Generate.generate_fixes_from_validate, self._inside(Generate, worked_on)
             ).expand({}).instructions

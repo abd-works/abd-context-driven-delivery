@@ -6,8 +6,8 @@ from harness.graph.practice_rule import PracticeGraphRule
 
 
 class ScreenStoryBudget(PracticeGraphRule):
-    """A screen shows about four stories. It counts its ``shows`` edges: the stories on the graph whose name the
-    screen lists, each recorded when the story's ``shownOn`` edge to the screen is."""
+    """A screen shows about four stories. It counts its ``shows`` edges: the stories on the graph the screen shows,
+    each recorded with the story's ``shownOn`` edge to the screen. Scenarios and steps it shows are not counted."""
 
     slug = "screen-story-budget"
     node_types = ("Screen",)

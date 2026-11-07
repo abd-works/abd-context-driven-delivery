@@ -1,13 +1,13 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { BoardData, ColumnData } from '@cdd/space/kanban/board'
+import type { BoardData, ColumnData, PracticeGuidanceData } from '@cdd/space/kanban/board'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
 import type { ChatBarJson } from '../../types'
 import { reasonOf } from '../failure'
 import { SERVER } from '../health/server-health-client'
-import { FidelityClient, selectedFidelitySlug } from './fidelity-client'
+import { FidelityProgressClient, selectedFidelitySlug } from './fidelity-progress-client'
 import { StageClient, shownStageName } from './stage-client'
 
 // The chat bar: the active session's line above the prompt. Sources: harness/chat-ui/.context/story-map.md,
@@ -68,19 +68,12 @@ export class ChatBarClient {
     return (this.ticket?.is_done ?? false) && this.stage !== 'Complete'
   }
 
-  // The board's columns in its order: Backlog, each stage, Complete. Only a stage holds fidelities to show.
+  // The board's columns in its order: Backlog, each stage, Complete, each placed against the session's column. Only a
+  // stage holds fidelities to show.
   get stages(): StageClient[] {
     const columns = this.board?.columns ?? []
-    const reached = columns.findIndex(column => column.name === this.stage)
-    return columns.map(
-      (column, index) =>
-        new StageClient({
-          name: column.name,
-          status: index < reached ? 'done' : index === reached ? 'in_progress' : 'not_reached',
-          isShown: column.name === this.shownStage && column.name !== this.stage,
-          canShow: column.work_required !== undefined,
-        }),
-    )
+    const sessionPlace = columns.findIndex(column => column.name === this.stage)
+    return columns.map((column, place) => new StageClient(column, place, sessionPlace, column.name === this.shownStage && column.name !== this.stage))
   }
 
   // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them.
@@ -90,36 +83,21 @@ export class ChatBarClient {
 
   // The shown stage's fidelities of the practices this session has turned on: the ticket's progress on each fidelity
   // names its stage and holds the fidelity itself, in the order the stage requires them.
-  get fidelities(): FidelityClient[] {
+  get fidelities(): FidelityProgressClient[] {
     const ticket = this.ticket
     if (!ticket) return []
     return ticket.progress
       .filter(progress => progress.stage.name === this.shownStage && progress.is_enabled)
-      .map(
-        progress =>
-          new FidelityClient({
-            slug: progress.slug,
-            practice: progress.practice,
-            name: progress.fidelity.name,
-            progress: progress.state,
-            violationCount: progress.violation_count,
-            actions: progress.actions,
-            defaultFormat: progress.fidelity.default_format,
-            nextAction: progress.next_action,
-            isSelected: progress.slug === this.selected,
-            folder: ticket.session.practices[progress.practice]?.root ?? '',
-            colour: this.board?.practices.find(practice => practice.key === progress.practice)?.colour ?? '',
-          }),
-      )
+      .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice), progress.slug === this.selected))
   }
 
   // The fidelity the action button acts on: the one a person selected, else the ticket's next, else the first shown.
-  get actionFidelity(): FidelityClient | null {
-    return this.selectedFidelity ?? this.fidelities.find(fidelity => fidelity.fidelity === this.ticket?.next?.slug) ?? this.fidelities[0] ?? null
+  get actionFidelity(): FidelityProgressClient | null {
+    return this.selectedFidelity ?? this.fidelities.find(fidelity => fidelity.slug === this.ticket?.next?.slug) ?? this.fidelities[0] ?? null
   }
 
   // Null when the stored fidelity is not one of the shown stage's, so the selection never points into a hidden stage.
-  get selectedFidelity(): FidelityClient | null {
+  get selectedFidelity(): FidelityProgressClient | null {
     return this.fidelities.find(fidelity => fidelity.isSelected) ?? null
   }
 
@@ -144,9 +122,15 @@ export class ChatBarClient {
     )
   }
 
-  // The board sends the active session's ticket whole.
+  // The board names the active session's ticket, which its column sends whole.
   private get ticket(): TicketData | null {
-    return this.board?.active ?? null
+    const active = this.board?.active?.name
+    return this.board?.columns.flatMap(ticketsOf).find(ticket => ticket.name === active) ?? null
+  }
+
+  // The practice a fidelity's progress names, as the board sends it with its colour.
+  private practiceNamed(key: string): PracticeGuidanceData | undefined {
+    return this.board?.practices.find(practice => practice.key === key)
   }
 }
 

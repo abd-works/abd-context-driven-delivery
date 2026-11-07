@@ -10,7 +10,7 @@ from pathlib import Path
 from expects import be_true, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from cdd_guidance.practices.agent_bdd import agent
+from cdd_guidance.practices.agent_bdd.agent_block import agent
 from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     AgentHarnessError,
     ToolRunDeadline,
@@ -53,7 +53,7 @@ with description("the agent bdd practice"):
     with context("that runs an agent for a spec"):
         with it("should load the agent's secrets"):
             statement = (
-                "from pathlib import Path\nfrom agent_bdd import agent\n"
+                "from pathlib import Path\nfrom cdd_guidance.practices.agent_bdd.agent_block import agent\n"
                 "with agent(Path('.'), Path('.agent_bdd_sessions/conf-spec.json'), in_chat=True):\n    pass"
             )
             expect(_secret_loaded_after(statement)).to(equal("True"))
@@ -125,11 +125,26 @@ with description("a toolset run request") as self:
     with context("that names a session the project has"):
         with it("should make the toolset for that session, not the one the project has open"):
             invoke = ToolsetInvoke.create(
-                {"toolset": "cdd_guidance.actions.sketch.sketch:Sketch", "action": "sketch", "session": "checkout-flow"}
+                {"toolset": "cdd_guidance.actions.sketch.sketch:Sketch", "action": "sketch", "session": "checkout-flow"},
+                self.project.root,
             )
             expect(invoke.toolset.session.name).to(equal("checkout-flow"))
 
     with context("that names a session the project does not have"):
         with it("should fail naming that session"):
             request = {"toolset": "cdd_guidance.actions.sketch.sketch:Sketch", "action": "sketch", "session": "billing"}
-            expect(lambda: ToolsetInvoke.create(request)).to(raise_error(AgentHarnessError, "request names session 'billing', which the project does not have"))
+            expect(lambda: ToolsetInvoke.create(request, self.project.root)).to(raise_error(AgentHarnessError, "request names session 'billing', which the project does not have"))
+
+    with context("that names no project, while CDD_PROJECT names another"):
+        with before.each:
+            self.elsewhere = ThrowawayProject()
+
+        with after.each:
+            self.elsewhere.close()
+
+        with it("should run in the project the spec gives it"):
+            invoke = ToolsetInvoke.create(
+                {"toolset": "cdd_guidance.actions.sketch.sketch:Sketch", "action": "sketch", "session": "checkout-flow"},
+                self.project.root,
+            )
+            expect(invoke.toolset.session.name).to(equal("checkout-flow"))

@@ -18,13 +18,13 @@ if TYPE_CHECKING:
 
 LOG_FILE = "session.log"
 ERROR_FILE = "session.err"
+# How an agent keeps the log: the text sessions.switch answers with.
+_INSTRUCTIONS_FILE = Path(__file__).parent / "SESSION-LOG.md"
 # The rules a hook gave the agent since the last log line. The hook server notes them and the cdd server writes the next
 # line, so they wait in the session's folder rather than in either process.
 _INJECTED_RULES_FILE = "injected-rules.txt"
 _TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 _LOOP_MARKER = re.compile(r"---\s+(\d+)(?:\s|$)")
-# Verbs older session logs wrote, by the verb that now records the same thing.
-_FORMER_VERBS = {"pull": "move"}
 # The arguments of a tool call that name a file or folder the call worked on.
 _TOOL_INPUT_PATH_KEYS = ("path", "file_path", "target_directory", "working_directory", "transcript_path", "agent_transcript_path")
 
@@ -51,9 +51,8 @@ class LogEntry:
 
     @property
     def verb(self) -> str:
-        """What the line records, such as move or generate; a log written before moves were named move says pull."""
-        written = self._parts[1] if len(self._parts) > 1 else ""
-        return _FORMER_VERBS.get(written, written)
+        """What the line records, such as move or generate."""
+        return self._parts[1] if len(self._parts) > 1 else ""
 
     @property
     def words(self) -> list[str]:
@@ -132,6 +131,38 @@ class Loop:
         return ""
 
 
+class InjectedRules:
+    """The rules a hook gave the agent for the files it edited since the last log line, kept in the session folder's
+    ``injected-rules.txt`` until the next line names them. The hook server notes them and the cdd server writes the
+    line, so the file is how the two processes hand them over."""
+
+    def __init__(self, log_path: Path | None) -> None:
+        self._path = log_path.with_name(_INJECTED_RULES_FILE) if log_path is not None else None
+
+    def note(self, rules: RulesCollection, matched_path: str) -> None:
+        """Note that rules were given for the edited file at matched_path, each named with its practice and fidelity."""
+        if self._path is None or not matched_path:
+            return
+        named = {" ".join(part for part in (rules.practice_key, rules.fidelity_name, rule.slug, matched_path) if part) for rule in rules}
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._path.write_text("\n".join(sorted(named | set(self.pending))) + "\n", encoding="utf-8")
+
+    @property
+    def pending(self) -> list[str]:
+        """The rules noted since the last log line; none when none were."""
+        return self._path.read_text(encoding="utf-8").splitlines() if self._path is not None and self._path.is_file() else []
+
+    @property
+    def text(self) -> str:
+        """The pending rules as a log line writes them."""
+        return " ".join(sorted(self.pending))
+
+    def clear(self) -> None:
+        """Forget the pending rules, once a log line has named them."""
+        if self._path is not None:
+            self._path.unlink(missing_ok=True)
+
+
 class SessionLog:
     """The log of one session: ``session.log``, one timestamped line per action, tool call, note, and loop marker, each
     ending with a pointer to the chat that caused it, and ``session.err``, the full trace of each failure a log line
@@ -183,50 +214,31 @@ class SessionLog:
         """Point the next log line at chat, in place of the chat of the tool call the session was opened for."""
         self._chat = chat
 
-    def note_chat_given(self, conversation_id: str, transcript_path: str, transcript_lines: str) -> None:
-        """Point the next log line at the chat a call from Python names in its own arguments; an MCP call's chat came
-        with the call the session was opened for."""
-        chat = ChatPointer.of(conversation_id, transcript_path, transcript_lines)
-        if chat is not None:
-            self.note_chat(chat)
-
-    def note_injected_rules(self, rules: RulesCollection, matched_path: str) -> None:
-        """Note that an inject_rules hook gave the agent rules for the edited file at matched_path, so the next log line
-        names each of those rules with its practice and fidelity."""
-        if self.path is None or not matched_path:
-            return
-        named = {" ".join(part for part in (rules.practice_key, rules.fidelity_name, rule.slug, matched_path) if part) for rule in rules}
-        pending = self.path.with_name(_INJECTED_RULES_FILE)
-        pending.parent.mkdir(parents=True, exist_ok=True)
-        pending.write_text("\n".join(sorted(named | set(self._injected_rules()))) + "\n", encoding="utf-8")
-
-    def _injected_rules(self) -> list[str]:
-        pending = self.path.with_name(_INJECTED_RULES_FILE) if self.path is not None else None
-        return pending.read_text(encoding="utf-8").splitlines() if pending is not None and pending.is_file() else []
-
-    def _clear_injected_rules(self) -> None:
-        self.path.with_name(_INJECTED_RULES_FILE).unlink(missing_ok=True)
+    @property
+    def injected_rules(self) -> InjectedRules:
+        """The rules a hook gave the agent since the last line, which the next line names."""
+        return InjectedRules(self.path)
 
     def line(self, line: str) -> None:
         """Append line with the noted chat's pointer, such as a practice's validate line."""
         if self.path is None:
             return
         self.record(f"{line} {self._line_chat()}")
-        self._clear_injected_rules()
+        self.injected_rules.clear()
 
     def action(self, action: str, paths: list[Path]) -> None:
         """Log action with the paths it worked on and what the session's opened practices were working at."""
         if self.path is None:
             return
         self.record(self._action_line(action, paths))
-        self._clear_injected_rules()
+        self.injected_rules.clear()
 
     def guidance_action(self, action: str) -> None:
         """Log a guidance action on the practices the session has opened, with the workpath and each practice's folders
         as the paths it worked on."""
         workpath = self._session.workpath
         work = [Path(workpath).resolve()] if workpath is not None else []
-        folders = [folder for practice in self._session.opened_practices for folder in practice.folders]
+        folders = [practice.folder for practice in self._session.opened_practices]
         self.action(action, list(dict.fromkeys([*work, *folders])))
 
     def tool(self, tool_name: str, tool_input: dict | None = None) -> None:
@@ -238,7 +250,7 @@ class SessionLog:
         paths = self._paths_from_tool_input(tool_input or {})
         if paths:
             parts.append(", ".join(str(path) for path in paths))
-        rules = self._rule_text()
+        rules = self.injected_rules.text
         if rules:
             parts.append(rules)
         # A tool line names its chat only when one is known; most tool calls come from a chat the server can name.
@@ -246,7 +258,7 @@ class SessionLog:
         if not chat.is_missing:
             parts.append(str(chat))
         self.record(" ".join(parts))
-        self._clear_injected_rules()
+        self.injected_rules.clear()
 
     def note(self, message: str, paths: list[Path] | None = None) -> None:
         """Record a correction or decision in the current loop."""
@@ -344,7 +356,7 @@ class SessionLog:
         """Append note to loop, the latest with lines when none is named, with the paths it names."""
         text = (note or "").strip()
         if not text:
-            raise ValueError("note is required")
+            return "nothing appended: the note is empty"
         loop_number = self._loop_to_append_to(loop)
         body = text if text.lower().startswith(f"loop {loop_number}") else f"loop {loop_number}: {text}"
         self.note(body, [Path(item) for item in (paths or []) if str(item).strip()] or None)
@@ -362,8 +374,8 @@ class SessionLog:
 
     def _line_chat(self) -> ChatPointer:
         """The chat the next log line points at: one noted for it, else the chat of the call the session was opened
-        for, else the chat the environment names, else ``no-chat``. A noted chat is used once."""
-        chat = self._chat or self._session.chat or ChatPointer.from_environment() or NO_CHAT
+        for, else ``no-chat``. A noted chat is used once."""
+        chat = self._chat or self._session.chat or NO_CHAT
         self._chat = None
         return chat
 
@@ -376,16 +388,12 @@ class SessionLog:
             ", ".join(entry.working_fidelity for entry in opened if entry.working_fidelity),
             ", ".join(entry.working_format for entry in opened if entry.working_format),
             " ".join(entry.root_node_name for entry in opened if entry.root_node_name),
-            self._rule_text(),
+            self.injected_rules.text,
             str(self._line_chat()),
         )
         return " ".join(part for part in parts if part)
 
-    def _rule_text(self) -> str:
-        return " ".join(sorted(self._injected_rules()))
-
-    @staticmethod
-    def _paths_from_tool_input(tool_input: dict) -> list[Path]:
+    def _paths_from_tool_input(self, tool_input: dict) -> list[Path]:
         raw_paths = tool_input.get("paths")
         listed = raw_paths if isinstance(raw_paths, list) else []
         tokens = [str(tool_input.get(key) or "").strip() for key in _TOOL_INPUT_PATH_KEYS] + [str(item).strip() for item in listed]
@@ -394,38 +402,5 @@ class SessionLog:
     def instructions(self) -> str:
         """How an agent keeps this log: what every line points at, how loops are marked and read, and where the
         session's files go."""
-        return (
-            "Session owns logging once sessions.switch has run. "
-            "CHAT POINTERS — required for continued conversations: every log line ends with a chat pointer, "
-            "the chat id, the agent transcript JSONL path, and the transcript line range "
-            "(`{id} {transcript} {lines}`), or `no-chat` when no chat can be named. "
-            "MCP: pass conversation_id, transcript_path, transcript_lines on any tool call; the server takes "
-            "them off the call and every line that call writes points at that chat. A Claude Code chat may "
-            "pass conversation_id alone, and its transcript is found by that id. "
-            "Without them the pointer comes from CDD_CONVERSATION_ID, CDD_TRANSCRIPT_PATH, CDD_TRANSCRIPT_LINES. "
-            "Long threads: use an accurate slice for this turn or a cumulative range (e.g. 1-1152, "
-            "then 1-1450) so read_loop can inline the full dialogue for that loop. "
-            "Missing chat on an earlier line: append_chat(action, chat) or session.append_log "
-            "(/append-log); never hand-edit session.log. "
-            "MARK-LOOP — link the entire conversation span: call session.mark_loop (/mark-loop) only "
-            "with chat fields on that MCP invoke. Dispatch writes tool session.mark_loop with a pointer; "
-            "the --- N marker line records the same pointer when bound—both tie the loop to the transcript. "
-            "After marking, log actions in that loop with the same thread id and growing line ranges so "
-            "read_loop(number) expands every line in the loop with matching transcript slices. "
-            "WHERE LINES COME FROM: every @agent_tool call the MCP host serves writes a tool line "
-            "(SessionLog.tool); a guidance action writes its line through SessionLog.guidance_action "
-            "(Validate writes each practice's log_validation instead); SessionLog.failure records each failed "
-            "action or MCP call. Cursor hooks do not write session.log. "
-            "SessionLog.action(action, paths) records an action with the paths it touched. "
-            "Do not duplicate unless a line lacks detail. "
-            "sessions.switch seeds --- 1 in a new session (chat on that marker when bound at open). "
-            "When the user corrects ai behavior or output, session.append_log with note, optional loop, "
-            "paths, and chat fields. "
-            "SESSION ARTIFACTS: with session_path set, write every large/temporary agent output "
-            "(graph JSON, MCP dumps, probes) under session_path—not only under Cursor agent-tools. "
-            "List artifact paths on append_log. "
-            "PERMANENT ARTIFACTS: fidelity outputs belong to the folder the session was opened on, its "
-            "workpath, and sit at the repository root only when the session names no folder. Markdown and "
-            "drawio go in that folder's .context/; code goes straight in that folder. "
-            f"Log file: {self.path or LOG_FILE}. Errors: {self.error_path or ERROR_FILE}."
-        )
+        guide = _INSTRUCTIONS_FILE.read_text(encoding="utf-8").strip()
+        return f"{guide}\n\nLog file: {self.path or LOG_FILE}. Errors: {self.error_path or ERROR_FILE}."

@@ -7,7 +7,6 @@ from pathlib import Path
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.hooks.hook_daemon import HookDaemon
-from harness.hooks.hook_server import HookServer
 from harness.installation.destination import data_field, language_adapter
 from harness.mcp.mcp_server import mcp
 from scripts.instances import GRAPH_APP_PORTS
@@ -30,10 +29,12 @@ class ServerHealth:
         repo_root: Path | str,
         graph_ports: tuple[int, ...] = GRAPH_APP_PORTS,
         kanban_ports: tuple[int, ...] = KANBAN_APP_PORTS,
+        hook_daemon: HookDaemon | None = None,
     ) -> None:
         self._repo_root = Path(repo_root).resolve()
         self._kanban_ports = kanban_ports
         self._graph_ports = graph_ports
+        self._hook_daemon = hook_daemon if hook_daemon is not None else HookDaemon(self._repo_root)
 
     @classmethod
     @tool_subject
@@ -61,7 +62,7 @@ class ServerHealth:
     @property
     @data_field
     def is_hook_server_running(self) -> bool:
-        return HookDaemon().live_address(HookServer.state_path(self._repo_root)) is not None
+        return self._hook_daemon.is_running()
 
     def _first_answering(self, ports: tuple[int, ...]) -> int | None:
         return next((port for port in ports if self._answers(port)), None)

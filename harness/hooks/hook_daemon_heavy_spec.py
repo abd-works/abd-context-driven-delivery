@@ -32,36 +32,23 @@ with description("a hook daemon"):
 
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            marker = repo / ".cursor" / "hook-server.json"
-            original_state_path = HookServer.state_path
-            HookServer.state_path = classmethod(lambda cls, _repo: marker)
-            try:
-                inner = HookServer(repo, HandlerCatalog([], repo))
-                daemons = [
-                    threading.Thread(
-                        target=HookDaemon().serve,
-                        args=(repo,),
-                        kwargs={"inner": inner},
-                        daemon=True,
-                    )
-                    for _ in range(4)
-                ]
-                for daemon in daemons:
-                    daemon.start()
-                deadline = time.time() + 5
-                while not marker.is_file() and time.time() < deadline:
-                    time.sleep(0.05)
-                for daemon in daemons:
-                    daemon.join(1)
-                expect(len([d for d in daemons if d.is_alive()])).to(equal(1))
-                expect(json.loads(marker.read_text(encoding="utf-8"))["port"]).to(
-                    equal(HookDaemon().repo_port(repo))
-                )
-            finally:
-                HookServer.state_path = original_state_path
+            marker = HookDaemon(repo).state_path
+            inner = HookServer(repo, HandlerCatalog([], repo))
+            daemons = [
+                threading.Thread(target=HookDaemon(repo).serve, args=(inner,), daemon=True) for _ in range(4)
+            ]
+            for daemon in daemons:
+                daemon.start()
+            deadline = time.time() + 5
+            while not marker.is_file() and time.time() < deadline:
+                time.sleep(0.05)
+            for daemon in daemons:
+                daemon.join(1)
+            expect(len([d for d in daemons if d.is_alive()])).to(equal(1))
+            expect(json.loads(marker.read_text(encoding="utf-8"))["port"]).to(equal(HookDaemon(repo).port))
 
     with it("should stay reachable while a dispatch is still in flight"):
-        from harness.hooks.hook_daemon import HookDaemon
+        from harness.hooks.hook_daemon import HookDaemon, HookDaemonAddress
 
         class _BlockingServer:
             def __init__(self) -> None:
@@ -75,31 +62,23 @@ with description("a hook daemon"):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            marker = root / ".cursor" / "hook-server.json"
-            original_state_path = HookServer.state_path
-            HookServer.state_path = classmethod(lambda cls, _repo: marker)
+            daemon = HookDaemon(root)
             blocking = _BlockingServer()
             try:
-                threading.Thread(
-                    target=HookDaemon().serve,
-                    args=(root,),
-                    kwargs={"inner": blocking},
-                    daemon=True,
-                ).start()
+                threading.Thread(target=daemon.serve, args=(blocking,), daemon=True).start()
                 deadline = time.time() + 5
-                while not marker.is_file() and time.time() < deadline:
+                while not daemon.state_path.is_file() and time.time() < deadline:
                     time.sleep(0.05)
-                state = json.loads(marker.read_text(encoding="utf-8"))
+                state = json.loads(daemon.state_path.read_text(encoding="utf-8"))
                 threading.Thread(
-                    target=HookDaemon(state["host"], state["port"]).call_handle_stdin,
+                    target=HookDaemonAddress(state["host"], state["port"]).handle_stdin,
                     args=(b'{"hook_event_name":"stop"}',),
                     daemon=True,
                 ).start()
                 expect(blocking.started.wait(5)).to(equal(True))
-                expect(HookDaemon().live_address(marker) is not None).to(equal(True))
+                expect(daemon.is_running()).to(equal(True))
             finally:
                 blocking.release.set()
-                HookServer.state_path = original_state_path
 
 
 with description("the Cursor hook_server.py command"):

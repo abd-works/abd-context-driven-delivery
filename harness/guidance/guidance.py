@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import inspect
 import json
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,18 @@ from harness.markdown.format import Format
 
 # Report names end with the time they were made, written so names sort by time.
 REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
+
+
+@dataclass(frozen=True)
+class RenderRequest:
+    """One render: the format to write, the content to render and the format it is in, the target file as it is now,
+    and the folder the files it links to are in."""
+
+    format: str
+    content: Any = ""
+    source: str | None = None
+    previous: str = ""
+    folder: str = ""
 
 
 class FidelityWithoutSessionError(ValueError):
@@ -353,6 +366,14 @@ class PracticeGuidance(Guidance):
         if workspace is not None:
             self.workspace = workspace
 
+    def work_in(self, session_output: Any) -> None:
+        """Work in the session that session_output, this practice's PracticeSessionOutput, belongs to: the practice
+        knows that session, and each of its fidelities is given what it has there, so it answers its outputs and files
+        itself."""
+        self.workspace = session_output.session
+        for fidelity in self.fidelities:
+            fidelity.work_in(session_output.of_fidelity(fidelity))
+
     @agent_instructions
     def generate_output(self) -> str:
         """Write this practice's artifact for the current fidelity.
@@ -477,28 +498,35 @@ class PracticeGuidance(Guidance):
     def render(self, format: str, content: Any = "", source: str | None = None, previous: str = "") -> dict:
         """Turn content into the practice object model, then render the target format. Content is in source, the
         format this practice works in when none is named; previous is the target file as it is now."""
-        return self._render(format, content, source, previous, folder="")
+        return self._render(RenderRequest(format, content, source, previous))
 
     def render_files(self, format: str, paths: list[str] | str, source: str | None = None) -> dict:
         """Render the files at paths into format. A renderer that links to other files, such as a story map linking
         to each story's file, finds them in the folder the first path is, or sits in."""
         content = self.read_paths(paths, source)
-        return self._render(format, self if content in ("", None) else content, source, "", _folder_of(paths))
+        return self._render(RenderRequest(format, self if content in ("", None) else content, source, "", _folder_of(paths)))
 
-    def _render(self, format: str, content: Any, source: str | None, previous: str, folder: str) -> dict:
+    def _render(self, request: RenderRequest) -> dict:
+        """The target format of one call is the call's: practices are shared between callers, so the format a practice
+        works in stays as it is and the render request carries the one it writes."""
         if not self.formats:
             companion = self.clean_engineering_companion
             owner = companion.practice_guidance if companion is not None else None
             if owner is None or owner is self:
-                return {"format": source or self.format or format, "content": content}
-            return owner._render(format, content, source, previous, folder)
-        model = self._to_object_model(content, source)
-        target = self._live_adapter(format)
-        # A sketch rendered to a document format keeps the sketch's own wording; code is never read from a sketch.
-        if (source or "").lower() == "sketch" and isinstance(content, str) and content.strip() and not Format(format).is_code:
-            previous = previous or content
-        rendered = self._call_render(target, self._model_for(target, model), previous, folder)
-        return {"format": format, "content": rendered}
+                return {"format": request.source or self.format or request.format, "content": request.content}
+            return owner._render(request)
+        model = self._to_object_model(request.content, request.source)
+        target = self._live_adapter(request.format)
+        rendered = self._call_render(target, self._model_for(target, model), self._kept_wording(request))
+        return {"format": request.format, "content": rendered}
+
+    def _kept_wording(self, request: RenderRequest) -> RenderRequest:
+        """A sketch rendered to a document format keeps the sketch's own wording; code is never read from a sketch."""
+        content = request.content
+        from_sketch = (request.source or "").lower() == "sketch" and isinstance(content, str) and content.strip()
+        if not from_sketch or Format(request.format).is_code:
+            return request
+        return replace(request, previous=request.previous or content)
 
     def _model_for(self, target: Any, model: Any) -> Any:
         """The object model in the form target renders; a practice whose formats read another practice's model
@@ -553,7 +581,7 @@ class PracticeGuidance(Guidance):
         adapter = self._live_adapter(source_format)
         return adapter.parse(self._incoming(source_format, content))
 
-    def _call_render(self, target: Any, parsed: Any, previous: str, folder: str) -> Any:
+    def _call_render(self, target: Any, parsed: Any, request: RenderRequest) -> Any:
         """Ask target to render parsed, giving it the previous file and the linked files' folder when it takes them."""
         try:
             parameters = inspect.signature(target.render).parameters
@@ -561,28 +589,32 @@ class PracticeGuidance(Guidance):
             return target.render(parsed)
         kwargs: dict[str, Any] = {}
         if "previous" in parameters:
-            kwargs["previous"] = previous or None
-        if folder and "workspace" in parameters:
-            kwargs["workspace"] = folder
+            kwargs["previous"] = request.previous or None
+        if request.folder and "workspace" in parameters:
+            kwargs["workspace"] = request.folder
         return target.render(parsed, **kwargs)
 
     def _live_adapter(self, format_name: str) -> Any:
+        """The format's adapter, made the way its class says: through its own ``create``, with the folder tests are
+        written under when its constructor takes ``tests_root``, or bare. An adapter whose constructor needs more is
+        used as its class, whose operations read and write the format."""
         adapter = self._format_adapter(format_name)
         if not inspect.isclass(adapter):
             return adapter
         create = getattr(adapter, "create", None)
-        if callable(create):
-            try:
-                return create()
-            except TypeError:
-                pass
-        try:
+        if callable(create) and self._takes_no_arguments(create):
+            return create()
+        parameters = inspect.signature(adapter).parameters
+        if "tests_root" in parameters:
             return adapter(tests_root=self.default_workspace_folder)
-        except TypeError:
-            try:
-                return adapter()
-            except TypeError:
-                return adapter
+        return adapter() if self._takes_no_arguments(adapter) else adapter
+
+    def _takes_no_arguments(self, operation: Any) -> bool:
+        required = (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        return all(
+            parameter.default is not inspect.Parameter.empty or parameter.kind not in required
+            for parameter in inspect.signature(operation).parameters.values()
+        )
 
     def _incoming(self, format_name: str, content: Any) -> Any:
         if Format(format_name).is_code:
@@ -605,9 +637,7 @@ class PracticeGuidance(Guidance):
         if md_path.is_file():
             current = self.fidelities.current
             current_name = current.name if current is not None else None
-            for name, body in Markdown.from_label(self, "fidelities").fidelity_blocks(
-                md_path.read_text(encoding="utf-8")
-            ):
+            for name, body in MarkdownText(md_path.read_text(encoding="utf-8")).fidelity_blocks():
                 if self._skip_inactive_fidelity(current_name, name):
                     continue
                 parts.append(f"### {name}\n\n{body}")
@@ -667,13 +697,17 @@ class FidelityGuidance(Guidance):
     @property
     @data_field
     def outputs(self) -> dict[str, str | list[str]]:
-        """Each format this fidelity writes, with its file, pattern, or folder; the yaml binder fills it, as it does
-        stage."""
+        """Each format this fidelity writes, with its file, pattern, or folder; the fidelity's YAML fields fill it, as they
+        do stage."""
         return dict(self._outputs)
 
     @outputs.setter
     def outputs(self, value: dict[str, str | list[str]]) -> None:
         self._outputs = dict(value or {})
+
+    def work_in(self, session_output: Any) -> None:
+        """Work in a session through session_output, the FidelitySessionOutput holding what this fidelity has there."""
+        self.session_output = session_output
 
     def output_paths(self) -> dict[str, list[str]]:
         """Where this fidelity writes each format in the session its practice works in: its declared paths under the
@@ -743,9 +777,13 @@ class FidelityGuidance(Guidance):
 
     @default_format.setter
     def default_format(self, value: str) -> None:
-        self._default_format = value or ""
+        """value as a practice document writes it, such as ``markdown (md)``: its first word, as the format's name."""
+        self._default_format = Format(self._first_word(value)).name if value else ""
         if self._default_format:
             self.format = self._default_format
+
+    def _first_word(self, value: str) -> str:
+        return value.split()[0].strip("()`") if value.strip() else ""
 
     @property
     def default_output(self) -> str | list[str]:
@@ -768,8 +806,9 @@ class FidelityGuidance(Guidance):
         return companion
 
     @clean_engineering.setter
-    def clean_engineering(self, value: Any) -> None:
-        self._clean_engineering = value
+    def clean_engineering(self, value: FidelityGuidance | str | None) -> None:
+        """A companion fidelity, or its name as a practice document writes it, such as ``code (Clean Engineering)``."""
+        self._clean_engineering = Name(self._first_word(value)).snake if isinstance(value, str) else value
 
     @property
     @data_field

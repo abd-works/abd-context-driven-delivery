@@ -13,11 +13,11 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_true, contain, equal, expect
+from expects import be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
-from cdd_guidance.actions.grill_context.grill_context import GrillContext
+from cdd_guidance.actions.grill_context.grill_context import ContextFileNotFound, GrillContext
 from harness.agent_tools.agent_tools import AgentToolSet
 from space.session import Session
 
@@ -125,6 +125,14 @@ with description("GrillContext toolset"):
 
                 expect(result).to(equal([]))
 
+        with context("that names a folder from the project's root"):
+            with it("should scan that folder in the session's project, not the server's working folder"):
+                (Path(self.root) / "billing").mkdir()
+                (Path(self.root) / "billing" / "module-context.md").write_text("context\n", encoding="utf-8")
+                gc = GrillContext(_session_at(Path(self.root)))
+                result = json.loads(gc.explore_context_files(folder="billing"))
+                expect([Path(item["path"]).parent for item in result]).to(equal([(Path(self.root) / "billing").resolve()]))
+
     with context("read_context_file tool"):
         with before.each:
             self.gc = GrillContext()
@@ -137,7 +145,20 @@ with description("GrillContext toolset"):
 
                 result = self.gc.read_context_file(path=str(target))
 
-                expect(result).to(equal(str(target)))
+                expect(result).to(equal(str(target.resolve())))
+
+        with context("that names a file from the project's root"):
+            with it("should confirm that file in the session's project"):
+                target = Path(self.tmp.name) / "billing" / "module-context.md"
+                target.parent.mkdir()
+                target.write_text("context\n", encoding="utf-8")
+                gc = GrillContext(_session_at(Path(self.tmp.name)))
+                expect(gc.read_context_file(path="billing/module-context.md")).to(equal(str(target.resolve())))
+
+        with context("that names a file that is not there"):
+            with it("should refuse it as a context file not found"):
+                gc = GrillContext(_session_at(Path(self.tmp.name)))
+                expect(lambda: gc.read_context_file(path="missing.md")).to(raise_error(ContextFileNotFound))
 
     with context("write_grill_answer tool"):
         with before.each:

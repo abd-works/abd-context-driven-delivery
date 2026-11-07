@@ -1,5 +1,6 @@
-"""One place a rule is broken. A graph rule records it on the node it checked, the saved graph keeps it, the explorer
-shows it under the node's rule, and the validation report and the board read it back from the saved graph."""
+"""One place a rule is broken. A graph rule records it on the node it checked, the saved graph keeps it as the same
+data ``graph.return_nodes`` sends, the explorer shows it under the node's rule, and the validation report and the board
+read it back from the saved graph."""
 
 from __future__ import annotations
 
@@ -76,27 +77,8 @@ class Violation:
         )
 
     @classmethod
-    def from_saved(cls, practice: str, saved: list, saved_nodes: dict[str, list]) -> Violation:
-        """A violation as the saved graph keeps it, ``[rule, node_id, message, file, line, end_line, severity]``; the
-        node as the saved graph keeps it names what the node is."""
-        rule, node_id, message, location, line, end_line, severity = (list(saved) + [""] * 7)[:7]
-        node = saved_nodes.get(node_id) or []
-        subject = f"{node[2]} `{node[1]}`" if len(node) > 2 and node[1] else ""
-        return cls(
-            str(rule),
-            str(message),
-            practice=practice,
-            node_id=str(node_id),
-            subject=subject,
-            location=str(location or (node[4] if len(node) > 4 else "")),
-            line=line or (node[5] if len(node) > 5 else None),
-            end_line=end_line or (node[6] if len(node) > 6 else None),
-            severity=str(severity or "error"),
-        )
-
-    @classmethod
     def from_data(cls, data: dict) -> Violation:
-        """A violation sent as data, the way ``data_of`` writes it for ``graph.return_nodes``."""
+        """A violation sent as data, the way ``data_of`` writes it for ``graph.return_nodes`` and the saved graph."""
         return cls(
             str(data.get("rule") or ""),
             str(data.get("message") or ""),
@@ -108,11 +90,6 @@ class Violation:
             end_line=data.get("end_line"),
             severity=str(data.get("severity") or "error"),
         )
-
-    @property
-    def saved(self) -> list:
-        """This violation as the saved graph keeps it."""
-        return [self._rule, self._node_id, self._message, self._location, self._line, self._end_line, self._severity]
 
     @property
     @data_field
@@ -201,10 +178,14 @@ class Violation:
         return [SourceLine(number, text.rstrip("\r")) for number, text in enumerate(lines[first - 1 : self._line + lines_after], first)]
 
     def __eq__(self, other: object) -> bool:
-        return isinstance(other, Violation) and self.saved == other.saved and self._practice == other._practice
+        return isinstance(other, Violation) and self._identity == other._identity
 
     def __hash__(self) -> int:
-        return hash((self._practice, *self.saved))
+        return hash(self._identity)
+
+    @property
+    def _identity(self) -> tuple:
+        return (self._practice, self._rule, self._node_id, self._message, self._location, self._line, self._end_line, self._severity)
 
     def __repr__(self) -> str:
         return f"Violation({self._rule!r}, {self.described!r} at {self._location}:{self._line})"
