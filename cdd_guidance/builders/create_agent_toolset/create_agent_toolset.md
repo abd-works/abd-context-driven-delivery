@@ -2,7 +2,7 @@
 
 Generate an **AgentToolSet** — a class decorated with `@agent_toolset` whose `@agent_tool` methods run as Python and whose `@agent_instructions` methods are recipes: string literals plus `tools(...)` / `instructions(...)` wrappers that expand to prose and a deferred tool list. Recipe bodies are never executed.
 
-Scaffold from **`templates/`**. **Matching by** the canonical example under **`examples/car/`**.
+Scaffold from **`templates/`**. **Matching by** the canonical example under **`_examples/car/`**.
 
 Every generate ends with **validate**.
 
@@ -10,11 +10,11 @@ Every generate ends with **validate**.
 # Overview
 ## Matching by the car example
 
-- **`matching-by`** — Shape the new toolset after **`examples/car/`**. Same decorator annotations, `recipe` first parameter on `@agent_instructions`, `tools(...)` / `instructions(...)` wrappers, ordinary `@property` state — not a parallel layout, not `@resource`, not bare `self.tool()` in a recipe.
+- **`matching-by`** — Shape the new toolset after **`_examples/car/`**. Same decorator annotations, `self` first parameter on `@agent_instructions`, `tools(...)` / `instructions(...)` wrappers, ordinary `@property` state — not a parallel layout, not `@resource`, not bare `self.tool()` in a recipe.
 
 ## Recipes are walked, not run
 
-- **`actions-are-recipes`** — `@agent_instructions` bodies are parsed with `ast`. First parameter is **`recipe`**. Reach the toolset with `recipe.toolset`. Wrap member calls in `tools(...)` (defer to agent invoke) or `instructions(...)` (expand nested recipe inline). Prose is string literals in the body. No conditionals-as-control-flow that the walker cannot see; no assignments except `recipe.toolset.mode`.
+- **`actions-are-recipes`** — `@agent_instructions` bodies are parsed with `ast`. First parameter is **`self`**, as in any method; the class is checked when it is decorated and a recipe with another first parameter is rejected. Wrap member references in `tools(...)` (`tools(self.start)`, deferred to the agent to call) or `instructions(...)` (expand nested recipe inline). Prose is string literals in the body. No conditionals-as-control-flow that the walker cannot see; no assignments except `self.mode`.
 
 ## Tools do the real work
 
@@ -36,7 +36,7 @@ Every generate ends with **validate**.
 ---
 # Generate
 
-1. Read § Overview and **`examples/car/`** — matching by that shape.
+1. Read § Overview and **`_examples/car/`** — matching by that shape.
 2. Scaffold from **`templates/`**.
 3. Fill every `{Placeholder}` — class name, constructor params, tools, recipe(s), return statement.
 4. Place the generated file in the domain folder that owns the toolset.

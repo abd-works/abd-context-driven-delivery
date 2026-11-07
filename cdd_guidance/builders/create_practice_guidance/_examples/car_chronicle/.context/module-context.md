@@ -14,7 +14,6 @@
 
 - `CarChronicle()`
 - `ChronicleWithOutput()`
-- `ChronicleWithOutput.toolset_name`
 - `ChronicleWithOutput.generate_output()`
 - `ChronicleWithOutput.add_epic()`
 - Everything *PracticeGuidance* gives a practice

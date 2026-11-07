@@ -3,30 +3,41 @@ from __future__ import annotations
 
 import dataclasses
 import json
-import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Protocol, Sequence
-
-_log = logging.getLogger(__name__)
+from typing import Any, Optional, Protocol
 
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import skill
+from harness.markdown.front_matter import FrontMatter
 from harness.mcp.mcp_server import mcp
 
-if TYPE_CHECKING:
-    pass
-
-# ── Result types ─────────────────────────────────────────────────────────────
+# ── Index entries and results ────────────────────────────────────────────────
 
 @dataclasses.dataclass
-class RankedChunk:
-    """One retrieved segment with its relevance score."""
+class IndexedSegment:
+    """One segment file a SegmentIndex holds: where it is, its section label (the file's stem), and the view its front
+    matter names (story | domain | architecture | ux | general)."""
 
-    path: str      # absolute path to the *-segment.md file
-    section: str   # stem of the segment file (used as section label)
-    view: str      # story | domain | architecture | ux | general
-    score: float   # similarity score in [0, 1]; higher is more relevant
+    path: str
+    section: str
+    view: str
+
+    @classmethod
+    def of_file(cls, path: Path, text: str) -> IndexedSegment:
+        """The entry for the segment file at path whose text is text; a file whose front matter names no view is
+        ``general``."""
+        return cls(path=str(path), section=path.stem, view=FrontMatter(text).fields.get("view") or "general")
+
+    def ranked(self, score: float) -> RankedChunk:
+        """This segment as a search answers it, with its relevance score."""
+        return RankedChunk(path=self.path, section=self.section, view=self.view, score=score)
+
+@dataclasses.dataclass
+class RankedChunk(IndexedSegment):
+    """One retrieved segment with its relevance score in [0, 1]; higher is more relevant."""
+
+    score: float
 
 @dataclasses.dataclass
 class EmbedResult:
@@ -41,6 +52,66 @@ class SearchResult:
     """Ordered list of ranked chunks from a search() call."""
 
     chunks: list[RankedChunk]
+
+# ── The index on disk ────────────────────────────────────────────────────────
+
+class SegmentIndex:
+    """The searchable index of segment files in one folder: ``index.faiss`` holds one vector per segment and
+    ``meta.json`` each segment's entry, in the same order. It is the one reader and writer of those two files, so the
+    entry a vector answers is always the one saved beside it."""
+
+    _VECTORS = "index.faiss"
+    _ENTRIES = "meta.json"
+
+    def __init__(self, folder: Path, vectors: Any, segments: list[IndexedSegment]) -> None:
+        self.folder = folder
+        self._vectors = vectors
+        self.segments = segments
+
+    @classmethod
+    def built(cls, folder: Path, segments: list[IndexedSegment], embeddings: list[list[float]]) -> SegmentIndex:
+        """The index of segments, one embedding each, saved into folder."""
+        import faiss
+        import numpy as np
+
+        matrix = np.array(embeddings, dtype=np.float32)
+        vectors = faiss.IndexFlatL2(matrix.shape[1])
+        vectors.add(matrix)
+        made = cls(folder, vectors, segments)
+        made._save()
+        return made
+
+    @classmethod
+    def opened(cls, folder: Path) -> SegmentIndex:
+        """The index embed saved into folder."""
+        import faiss
+
+        entries = json.loads((folder / cls._ENTRIES).read_text(encoding="utf-8"))
+        return cls(folder, faiss.read_index(str(folder / cls._VECTORS)), [IndexedSegment(**entry) for entry in entries])
+
+    @property
+    def views(self) -> list[str]:
+        """The distinct views its segments cover, sorted."""
+        return sorted({segment.view for segment in self.segments})
+
+    def ranked(self, query: list[float], top_k: int) -> list[RankedChunk]:
+        """The segments nearest query, at most top_k, most relevant first."""
+        import numpy as np
+
+        distances, positions = self._vectors.search(np.array([query], dtype=np.float32), min(top_k, self._vectors.ntotal))
+        return [
+            self.segments[int(position)].ranked(float(1.0 / (1.0 + distance)))
+            for distance, position in zip(distances[0], positions[0])
+            if position >= 0
+        ]
+
+    def _save(self) -> None:
+        import faiss
+
+        self.folder.mkdir(parents=True, exist_ok=True)
+        faiss.write_index(self._vectors, str(self.folder / self._VECTORS))
+        entries = [dataclasses.asdict(segment) for segment in self.segments]
+        (self.folder / self._ENTRIES).write_text(json.dumps(entries, indent=2), encoding="utf-8")
 
 # ── Embedding provider protocol (injectable for tests) ───────────────────────
 
@@ -93,40 +164,15 @@ class ContextIndex:
         segments_paths — absolute paths to *-segment.md files produced by context tool partitions.
         out_path — directory where index.faiss and meta.json are written (created if absent).
         Returns EmbedResult with index_path, segment_count, and views_covered."""
-        import numpy as np
-        import faiss
-
         out_dir = Path(out_path)
         out_dir.mkdir(parents=True, exist_ok=True)
-
-        texts: list[str] = []
-        metas: list[dict] = []
-        views_covered: set[str] = set()
-
-        for seg_path in segments_paths:
-            p = Path(seg_path)
-            content = p.read_text(encoding="utf-8") if p.exists() else ""
-            view = self._extract_view(content)
-            views_covered.add(view)
-            texts.append(content)
-            metas.append({"path": str(p), "view": view, "section": p.stem})
-
+        files = [Path(segment_path) for segment_path in segments_paths]
+        texts = [file.read_text(encoding="utf-8") if file.exists() else "" for file in files]
         if not texts:
             return EmbedResult(index_path=str(out_dir), segment_count=0, views_covered=[])
-
-        vectors = np.array(self._get_provider().embed_texts(texts), dtype=np.float32)
-        dim = vectors.shape[1]
-        index = faiss.IndexFlatL2(dim)
-        index.add(vectors)
-
-        faiss.write_index(index, str(out_dir / "index.faiss"))
-        (out_dir / "meta.json").write_text(json.dumps(metas, indent=2), encoding="utf-8")
-
-        return EmbedResult(
-            index_path=str(out_dir),
-            segment_count=len(texts),
-            views_covered=sorted(views_covered),
-        )
+        segments = [IndexedSegment.of_file(file, text) for file, text in zip(files, texts)]
+        index = SegmentIndex.built(out_dir, segments, self._get_provider().embed_texts(texts))
+        return EmbedResult(index_path=str(out_dir), segment_count=len(index.segments), views_covered=index.views)
 
     @mcp
     @skill
@@ -137,32 +183,8 @@ class ContextIndex:
         index_path — directory containing index.faiss and meta.json written by embed().
         top_k — maximum number of chunks to return (default 5).
         Returns SearchResult with chunks ordered from most to least relevant."""
-        import numpy as np
-        import faiss
-
-        idx_dir = Path(index_path)
-        index = faiss.read_index(str(idx_dir / "index.faiss"))
-        metas: list[dict] = json.loads((idx_dir / "meta.json").read_text(encoding="utf-8"))
-
-        query_vec = np.array([self._get_provider().embed_query(query)], dtype=np.float32)
-        k = min(top_k, index.ntotal)
-        distances, indices = index.search(query_vec, k)
-
-        chunks: list[RankedChunk] = []
-        for dist, idx in zip(distances[0], indices[0]):
-            if idx < 0:
-                continue
-            meta = metas[int(idx)]
-            score = float(1.0 / (1.0 + dist))
-            chunks.append(
-                RankedChunk(
-                    path=meta["path"],
-                    section=meta.get("section", ""),
-                    view=meta.get("view", "general"),
-                    score=score,
-                )
-            )
-        return SearchResult(chunks=chunks)
+        index = SegmentIndex.opened(Path(index_path))
+        return SearchResult(chunks=index.ranked(self._get_provider().embed_query(query), top_k))
 
     # ── @agent_instructions — AI reads recipe; owns judgment ──────────────────────────────
 
@@ -183,16 +205,3 @@ class ContextIndex:
         Write an answer in plain prose, citing source.path and section for every claim made.
         Do not include information that does not appear in the retrieved chunks."""
         return "Answer composed with citations."
-
-    def _extract_view(self, content: str) -> str:
-        if not content.startswith("---"):
-            return "general"
-        try:
-            end = content.index("---", 3)
-        except ValueError:
-            _log.exception("Segment front matter is not closed")
-            return "general"
-        for line in content[3:end].splitlines():
-            if line.startswith("view:"):
-                return line.split(":", 1)[1].strip()
-        return "general"
