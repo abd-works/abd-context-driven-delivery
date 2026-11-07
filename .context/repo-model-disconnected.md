@@ -420,3 +420,17 @@ Drawn as the code is today (dashed); the refactor changes each one to what *shou
 
 - The one-class packages and the split between the Installer and the installations: the lead holds that analysis.
 - Format adapters that wrap or copy a practice's domain class instead of subclassing it: that check belongs to the per-practice pages, which another chat is drawing.
+
+# One-class packages (approved by the user)
+
+| Package | What's in it | Used by | Decision |
+|---|---|---|---|
+| `harness/health` | `ServerHealth`, the MCP tool `server-health.report` (is the cdd server, hook server, board app and graph app up) | the chat bar's health mark | merge into `harness/diagnostics`; both report whether CDD is running |
+| `harness/name` | `Name`, the case conversion every published name goes through | 21 files in 12 modules | merge into `harness/annotations`; annotations publish under these names, and both are the bottom layer |
+| `tools/echo`, `tools/granola`, `tools/prompt_log`, `tools/prompt_notify` | one toolset each | their skills, MCP tools and hooks | one `tools` module of independent toolsets, one module card |
+| `tools/file_manager` | `FileManager` and its entries | `space/session` | move into `space/session`; the session owns its file manager |
+| `harness/installer` + `harness/installation` | 8 + 32 classes, split only to break an import cycle | — | one `harness/installation`, with `McpInstallation` and `HookInstallation` moved in when that makes no cycle |
+| `tools/chat` | `Chat` | the chat bar | moved to `harness/chat` |
+| `harness/sub_agent` | the `SubAgent` toolset | its skill and MCP tool | moved to `tools/sub_agent` |
+
+Not one-class, so no move: `harness/design_canvas` (8 classes), `cdd_guidance/practices/agent_bdd` (25), `tools/prompt_log` (3), `tools/prompt_notify` (2).
