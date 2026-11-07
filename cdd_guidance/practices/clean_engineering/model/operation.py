@@ -28,7 +28,7 @@ def operation_source_span(operation: "Operation") -> tuple[int, int] | None:
     return None
 
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
-from harness.graph.bound_node import BoundChildren
+from harness.graph.model_node import ModelChildren
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass, OoadNode
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
@@ -121,7 +121,7 @@ class Operation(OoadNode):
         self.return_type = return_type
         self.description = description
         self.callees: List[str] = list(callees) if callees is not None else []
-        self._parameters = BoundChildren(self, "parameters")
+        self._parameters = ModelChildren(self, "parameters")
         self.invariants: List = []
         self.line: int | None = None
         self.end_line: int | None = None

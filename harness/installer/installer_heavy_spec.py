@@ -264,10 +264,6 @@ with description("an agent toolset") as self:
                         expect(names).to(contain("sample-mcp.generate"))
                         expect(names).to(contain("sample-mcp.sketch"))
 
-                    with it("should not bind tool handlers during deploy"):
-                        server_bound = getattr(self.mcp, "_bound", False)
-                        expect(server_bound).to(equal(False))
-
                 # (S) Installer --> Configure and Start MCP Host Session
                 with context("with the MCP host stood up"):
                     with it("should diagnose that the MCP host answers ping"):
@@ -384,9 +380,6 @@ with description("an agent toolset") as self:
             with it("should record the instructions property for MCP enrollment"):
                 names = [op.mcp_name for op in self.mcp.mcp_operations]
                 expect(names).to(contain("sample-tool.instructions"))
-
-            with it("should not bind tool handlers during install"):
-                expect(getattr(self.mcp, "_bound", False)).to(equal(False))
 
             with it("should return the instructions the property assembles when the installed tool is invoked"):
                 server = _server_publishing(self.mcp)
@@ -1210,12 +1203,12 @@ with description("lifecycle actions annotated for installation") as self:
                         )
                     )
 
-                with it("should keep a single matching operation at the kit folder"):
+                with it("should keep a single matching operation at the toolset folder"):
                     expect(
                         (self.tree / "skills" / "actions" / "generate" / "SKILL.md").is_file()
                     ).to(equal(True))
 
-                with it("should name a single unmatched operation for the operation not the kit folder"):
+                with it("should name a single unmatched operation for the operation not the toolset folder"):
                     expect(
                         (
                             self.tree / "skills" / "actions" / "grill-context" / "grill" / "SKILL.md"

@@ -10,8 +10,8 @@ if str(_REPO) not in sys.path:
 from expects import be, be_none, equal, expect
 from mamba import before, context, description, it
 
-from harness.graph import bound_node
-from harness.graph.bound_node import schema_sync_paused
+from harness.graph import model_node
+from harness.graph.model_node import schema_sync_paused
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.ux.model.nodes import Region, Screen
@@ -50,8 +50,8 @@ with description("schema edges paused while models are parsed"):
             with schema_sync_paused():
                 with schema_sync_paused():
                     pass
-                self.after_inner = bound_node._SCHEMA_SYNC_PAUSED[0] > 0
-            self.after_outer = bound_node._SCHEMA_SYNC_PAUSED[0] > 0
+                self.after_inner = model_node._SCHEMA_SYNC_PAUSED[0] > 0
+            self.after_outer = model_node._SCHEMA_SYNC_PAUSED[0] > 0
 
         with it("should stay paused when the inner pause ends"):
             expect(self.after_inner).to(equal(True))

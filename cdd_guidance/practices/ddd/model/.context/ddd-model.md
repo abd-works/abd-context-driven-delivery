@@ -14,7 +14,7 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 
 - **Purpose:** Structure the software as DDD building blocks — bounded contexts, aggregates, and the stereotyped classes — so the model answers domain logic questions.
 - **Seam (terms):** BoundedContextMap, BoundedContext, Aggregate, Integration, Entity, InvariantObject, ValueObject, Repository, DomainService, DomainEvent, Specification, Factory, MarkdownBoundedContextMap, SketchDddModel, DrawIOBoundedContextMap, ClassCard
-- **Dependencies (one-way):** practices/clean_engineering/model — Module, OoadClass, Property, Operation, CleanEngineeringModel; harness/graph — Graph, BoundChildren; actions/sketch — SketchOutline, SketchLens
+- **Dependencies (one-way):** practices/clean_engineering/model — Module, OoadClass, Property, Operation, CleanEngineeringModel; harness/graph — Graph, ModelChildren; actions/sketch — SketchOutline, SketchLens
 
 *Module*, *OoadClass*, *Property*, *Operation*, and *CleanEngineeringModel* belong to Clean Engineering; this model only extends or uses them.
 
@@ -61,8 +61,8 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 ------
 + owner: str
 	// the heading text after |
-+ contexts: BoundChildren[BoundedContext]
-+ aggregates: BoundChildren[Aggregate]
++ contexts: ModelChildren[BoundedContext]
++ aggregates: ModelChildren[Aggregate]
 	// composition — an aggregate has no context outside this one
 + every_aggregate: list[Aggregate]
 	// this context's aggregates, then those of every context nested in it

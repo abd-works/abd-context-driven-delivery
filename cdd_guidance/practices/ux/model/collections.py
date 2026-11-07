@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Iterator, List, overload
 
-from harness.graph.bound_node import BoundChildren
+from harness.graph.model_node import ModelChildren
 
 from .nodes import ContentType, NavComponent, Transition, UxComponent
 from .ux_node import UxNode
@@ -18,7 +18,7 @@ class UxComponentCollection:
 
     def __init__(self, owner: UxNode) -> None:
         self._owner = owner
-        self._items = BoundChildren(owner, self._edge_kind)
+        self._items = ModelChildren(owner, self._edge_kind)
 
     def append(self, component: UxComponent) -> None:
         if not isinstance(component, self._item_type):

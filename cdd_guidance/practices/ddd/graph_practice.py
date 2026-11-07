@@ -8,7 +8,7 @@ import os
 import re
 from pathlib import Path
 
-from harness.graph.bound_node import schema_sync_paused
+from harness.graph.model_node import schema_sync_paused
 from harness.graph.graph import Node, PracticeGraph
 from harness.graph.graph_practice import GraphPractice, GraphPractices
 from harness.graph.skipped_folders import skips_folder

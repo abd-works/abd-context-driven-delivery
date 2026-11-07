@@ -13,11 +13,11 @@ markdown = MarkdownBddModel().render(model)
 
 - **Purpose:** Keep observable behaviour as one describe tree — descriptions, contexts, observations — so a sketch and a spec file stay the same hierarchy every later fidelity reads, and so the graph can check BDD rules against facts each node carries.
 - **Seam (terms):** BddModel, MarkdownBddModel, SketchBddModel, CodeBddModel, PythonBddModel, TypeScriptBddModel, GraphBddModel, BehaviorNode, Description, Context, Observation, UnreadableSpec
-- **Dependencies (one-way):** harness/graph (*BoundNode*, *BoundChildren*, *Graph*, *Node*, *Edge*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*, *SketchLens*)
+- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*, *Node*, *Edge*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*, *SketchLens*)
 
-*BoundNode*, *BoundChildren*, *CodeBody*, *CodeLanguage*, *WrittenBlock*, and *CallGraphEntry* are owned by the modules above; this model only uses them.
+*ModelNode*, *ModelChildren*, *CodeBody*, *CodeLanguage*, *WrittenBlock*, and *CallGraphEntry* are owned by the modules above; this model only uses them.
 
-## BehaviorNode : BoundNode
+## BehaviorNode : ModelNode
 
 Every description, context, and observation. It knows its own source lines and the facts BDD graph rules read.
 
@@ -45,8 +45,8 @@ Every description, context, and observation. It knows its own source lines and t
 
 + Description(name: str, sequential_order: int = 1)
 ------
-+ contexts: BoundChildren[Context]
-+ observations: BoundChildren[Observation]
++ contexts: ModelChildren[Context]
++ observations: ModelChildren[Observation]
 	// spec code often puts it straight under the outermost describe
 ----
 + clone(): Description
@@ -58,8 +58,8 @@ Every description, context, and observation. It knows its own source lines and t
 + Context(name: str, sequential_order: int = 1)
 	// a nested context is a context whose parent is a context
 ------
-+ contexts: BoundChildren[Context]
-+ observations: BoundChildren[Observation]
++ contexts: ModelChildren[Context]
++ observations: ModelChildren[Observation]
 ----
 + clone(): Context
 + load_context(source: Context): Context
@@ -80,13 +80,13 @@ Every description, context, and observation. It knows its own source lines and t
 	// also keeps body
 + clone(): Observation
 
-## BddModel : BoundNode
+## BddModel : ModelNode
 
 The spec, and the sketch format: an indented describe tree, with an observation's realization in a fenced block above its `it` line.
 
 + BddModel(graph: Graph | None = None)
 ------
-+ descriptions: BoundChildren[Description]
++ descriptions: ModelChildren[Description]
 	// composition — a description has no spec outside this spec
 + preamble: CodeBody
 	// the code above the first description as read: imports and helpers. Empty outside code

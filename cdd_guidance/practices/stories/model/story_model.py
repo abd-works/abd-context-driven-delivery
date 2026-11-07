@@ -10,8 +10,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional
 
-from harness.graph.bound_node import BoundChildren as _BoundChildren
-from harness.graph.bound_node import BoundNode
+from harness.graph.model_node import ModelChildren
+from harness.graph.model_node import ModelNode
 from harness.graph.graph import Graph
 from harness.name.name import Name
 
@@ -29,7 +29,7 @@ _BELONGS = {
 }
 
 
-class StoryNode(BoundNode, ABC):
+class StoryNode(ModelNode, ABC):
     """A story-model object and the graph node for that object.
 
     Subclasses declare `_semantic_type_name` so cross-format nodes
@@ -306,7 +306,7 @@ class Increment(StoryNode):
         self.slicing_notes: str = source.slicing_notes if source is not None else ""
         self.decision_prompt: str = source.decision_prompt if source is not None else ""
         self.source: Optional[SourceLocation] = source.source if source is not None else None
-        self._stories = _BoundChildren(self, "stories")
+        self._stories = ModelChildren(self, "stories")
         if source is None:
             for story in stories or []:
                 story.increment = self
@@ -372,7 +372,7 @@ class Step(StoryNode):
         self.text = text
         self.step_type = step_type
         self._keyword = (keyword or "").strip()
-        self._ands = _BoundChildren(self, "ands")
+        self._ands = ModelChildren(self, "ands")
         self.concepts: List[str] = list(concepts) if concepts is not None else []
         self.values: List[str] = list(values) if values is not None else []
         self.actor = actor
@@ -466,7 +466,7 @@ class Background(StoryNode):
             name=source.name if source is not None else name,
             sequential_order=source.sequential_order if source is not None else sequential_order,
         )
-        self._steps = _BoundChildren(self, "steps")
+        self._steps = ModelChildren(self, "steps")
         self.examples = source.examples.clone(self) if source is not None else Examples(self)
         if source is not None:
             self.take_code_from(source)
@@ -521,8 +521,8 @@ class Scenario(StoryNode):
             sequential_order=source.sequential_order if source is not None else sequential_order,
         )
         self.story_name: str = source.story_name if source is not None else story_name
-        self._backgrounds = _BoundChildren(self, "background")
-        self._steps = _BoundChildren(self, "steps")
+        self._backgrounds = ModelChildren(self, "background")
+        self._steps = ModelChildren(self, "steps")
         self.examples = source.examples.clone(self) if source is not None else Examples(self)
         self.is_outline: bool = source.is_outline if source is not None else False
         self.evidence: List[str] = list(source.evidence) if source is not None else []
@@ -636,8 +636,8 @@ class Epic(StoryNode):
             source.name if source is not None else name,
             source.sequential_order if source is not None else sequential_order,
         )
-        self._epics = _BoundChildren(self, "decomposedInto")
-        self._stories = _BoundChildren(self, "decomposedInto")
+        self._epics = ModelChildren(self, "decomposedInto")
+        self._stories = ModelChildren(self, "decomposedInto")
         self.examples = source.examples.clone(self) if source is not None else Examples(self)
         if source is None:
             return
@@ -823,8 +823,8 @@ class Story(StoryNode):
         self.actors: List[str] = list(source.actors) if source is not None else []
         self.domain_terms: List[str] = list(source.domain_terms) if source is not None else []
         self.evidence: List[str] = list(source.evidence) if source is not None else []
-        self._backgrounds = _BoundChildren(self, "background")
-        self._scenarios = _BoundChildren(self, "scenarios")
+        self._backgrounds = ModelChildren(self, "background")
+        self._scenarios = ModelChildren(self, "scenarios")
         if source is None:
             return
         self.take_code_from(source)
@@ -910,8 +910,8 @@ class StoryModel(StoryNode):
             graph = source
             source = None
         super().__init__(name="StoryModel", sequential_order=0, graph=graph)
-        self._epics = _BoundChildren(self, "decomposedInto")
-        self._increments = _BoundChildren(self, "increments")
+        self._epics = ModelChildren(self, "decomposedInto")
+        self._increments = ModelChildren(self, "increments")
         self.examples = Examples(self)
         if isinstance(source, StoryModel):
             self._copy_map(source)

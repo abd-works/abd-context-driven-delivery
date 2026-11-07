@@ -135,7 +135,7 @@ One practice's nodes and edges. An edge is recorded only once for a parent and c
 
 ## Node
 
-A parsed object a practice reader added, or a plain node read back from `graph.json`. Model objects that build their own edges extend `BoundNode`.
+A parsed object a practice reader added, or a plain node read back from `graph.json`. Model objects that build their own edges extend `ModelNode`.
 
 + practice: PracticeGraph
 + type: str
@@ -178,9 +178,9 @@ A parsed object a practice reader added, or a plain node read back from `graph.j
 + rule_category(): GraphRulesCollection | None
 + release(): None
 
-## BoundNode
+## ModelNode
 
-Extends `Node`. A model object that is its own node in the graph it was made on (`bound_node.py`). Appending a child to one of its `BoundChildren` lists records the edge.
+Extends `Node`. A model object that is its own node in the graph it was made on (`model_node.py`). Appending a child to one of its `ModelChildren` lists records the edge.
 
 + _graph_practice: str
 	// required; a model class that names no practice raises ModelWithoutPractice
@@ -196,11 +196,11 @@ Extends `Node`. A model object that is its own node in the graph it was made on 
 - _link(child, kind): None
 	// -> practice.record(kind, direct), belongsTo when the pair is listed, -> graph.sync_schema_edges()
 
-## BoundChildren
+## ModelChildren
 
 Extends `list`. `append`, `extend`, `insert`, `pop`, and slice assignment record or remove the owner's edge.
 
-+ owner: BoundNode
++ owner: ModelNode
 + kind: str
 
 ## EdgeType

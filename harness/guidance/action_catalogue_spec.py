@@ -18,13 +18,13 @@ with description("the action catalogue"):
     with before.all:
         self.names = ActionCatalogue.names()
 
-    with it("should hold a kit for every action folder"):
+    with it("should hold a toolset for every action folder"):
         folders = sorted(
             folder.name for folder in _ACTIONS_FOLDER.iterdir() if folder.is_dir() and folder.name[0] not in "_."
         )
         expect([toolset.__module__.split(".")[-1] for toolset in ActionCatalogue.toolsets()]).to(equal(folders))
 
-    with it("should list each operation a kit publishes as a skill"):
+    with it("should list each operation a toolset publishes as a skill"):
         expect(self.names).to(contain("generate", "validate", "sketch", "render", "grill", "partition"))
 
     with it("should list every skill of a toolset that installs several"):
@@ -46,8 +46,8 @@ with description("the action catalogue"):
         with it("should give the toolset's folder"):
             expect(ActionCatalogue.action("grill").folder.name).to(equal("grill_context"))
 
-        with it("should give nothing for a name no kit publishes"):
+        with it("should give nothing for a name no toolset publishes"):
             expect(ActionCatalogue.action("astrology")).to(be_none)
 
-        with it("should say whether a kit publishes the name"):
+        with it("should say whether a toolset publishes the name"):
             expect((ActionCatalogue.has("repair"), ActionCatalogue.has("review"))).to(equal((True, False)))

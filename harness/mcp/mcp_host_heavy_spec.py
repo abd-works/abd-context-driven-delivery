@@ -361,7 +361,7 @@ with description("an MCP host tool result") as self:
             expect(self.payload["message"]).to(equal("push: checkpoint\nReviewed-By: human"))
 
         with it("should expose the commit trailers as JSON"):
-            expect(self.payload["data"]).to(equal({"Reviewed-By": "human"}))
+            expect(self.payload["trailers"]).to(equal({"Reviewed-By": "human"}))
 
 
 with description("an MCP host") as self:

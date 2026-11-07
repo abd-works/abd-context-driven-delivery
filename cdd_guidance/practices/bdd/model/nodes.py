@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import List, Optional
 
-from harness.graph.bound_node import BoundChildren, BoundNode
+from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
@@ -34,7 +34,7 @@ def private_probe_in_text(text: str, start_line: int) -> dict:
     return {}
 
 
-class BehaviorNode(BoundNode):
+class BehaviorNode(ModelNode):
     """A describe-tree node read from spec code. Knows its own source lines and loads the facts BDD rules read.
 
     `written` is how the block was spelled in the language it was read from, and `setup` the code above its first
@@ -68,9 +68,9 @@ class Description(BehaviorNode):
 
     def __init__(self, name: str, sequential_order: int = 1) -> None:
         super().__init__(name=name, sequential_order=sequential_order)
-        self.contexts = BoundChildren(self, "contexts")
+        self.contexts = ModelChildren(self, "contexts")
         # Spec code often puts `it` straight under the outermost describe.
-        self.observations = BoundChildren(self, "observations")
+        self.observations = ModelChildren(self, "observations")
 
     def clone(self) -> "Description":
         cloned = type(self)(self.name, self.sequential_order)
@@ -91,8 +91,8 @@ class Context(BehaviorNode):
 
     def __init__(self, name: str, sequential_order: int = 1) -> None:
         super().__init__(name=name, sequential_order=sequential_order)
-        self.observations = BoundChildren(self, "observations")
-        self.contexts = BoundChildren(self, "contexts")
+        self.observations = ModelChildren(self, "observations")
+        self.contexts = ModelChildren(self, "contexts")
 
     def clone(self) -> "Context":
         cloned = type(self)(self.name, self.sequential_order)

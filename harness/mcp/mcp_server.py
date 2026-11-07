@@ -24,6 +24,7 @@ from mcp.server.models import InitializationOptions
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import Installation, data_of
+from harness.installation.ide_layout import IdeLayout
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.marks.mark import Destination, Mark
 from harness.mcp.cdd_home import CddHome
@@ -108,43 +109,25 @@ class UserMcpConfig:
 
     def __init__(self, ide: str) -> None:
         self.ide = ide
+        self.layout = IdeLayout(ide)
 
     @property
     def folder(self) -> Path | None:
         """The IDE's user settings folder; ``None`` for an IDE with no user-level MCP config."""
-        if self.ide == "Cursor":
-            return Path.home() / ".cursor"
-        if self.ide == "Claude":
-            return Path.home() / ".claude"
-        if self.ide == "VS Code":
-            return self._vscode_user_folder()
-        return None
+        return self.layout.user_settings_folder
 
     @property
     def path(self) -> Path | None:
-        if self.ide == "Claude":
-            return Path.home() / ".claude.json"
-        folder = self.folder
-        return folder / "mcp.json" if folder is not None else None
+        return self.layout.user_mcp_config
 
     @property
     def servers_key(self) -> str:
-        return "servers" if self.ide == "VS Code" else "mcpServers"
+        return self.layout.mcp_servers_key
 
     @property
     def project_folder(self) -> str:
         """The open project as Cursor and VS Code spell it inside a user-level server entry."""
         return "${workspaceFolder}"
-
-    def _vscode_user_folder(self) -> Path:
-        if sys.platform == "win32":
-            appdata = os.environ.get("APPDATA")
-            base = Path(appdata) if appdata else Path.home() / "AppData" / "Roaming"
-        elif sys.platform == "darwin":
-            base = Path.home() / "Library" / "Application Support"
-        else:
-            base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
-        return base / "Code" / "User"
 
 
 class McpInstallation(Installation):
@@ -162,6 +145,7 @@ class McpInstallation(Installation):
     ) -> None:
         super().__init__(ide, path, toolset_ref, repo=repo)
         self.server_home = home or CddHome()
+        self.layout = IdeLayout(ide)
         self.mcp_operations: list[AgentTool] = []
         self.host: McpHost | None = None
         self.diagnosis: dict[str, Any] | None = None
@@ -200,7 +184,7 @@ class McpInstallation(Installation):
         user = self.user_config
         if user is not None:
             return user.path
-        if self.ide == "Claude":
+        if self.layout.is_claude_code:
             return self._project_root() / ".mcp.json"
         return self.path / "mcp.json"
 
@@ -209,7 +193,7 @@ class McpInstallation(Installation):
             return
         dest = self.manifest_path
         dest.parent.mkdir(parents=True, exist_ok=True)
-        if self.ide == "Claude" and self.user_config is not None:
+        if self.layout.is_claude_code and self.user_config is not None:
             self.allow_cdd_tools(self.user_config.folder / "settings.json")
             self.drop_project_cdd_server()
             self.drop_user_cdd_server()
@@ -220,7 +204,7 @@ class McpInstallation(Installation):
         if self._has_cdd_entry(dest, manifest):
             self.track_write(dest)
             return
-        if self.ide == "Claude" or self.user_config is not None:
+        if self.layout.is_claude_code or self.user_config is not None:
             manifest = self._merged_with_other_servers(dest, manifest)
         dest.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
         self.track_write(dest)
@@ -287,7 +271,7 @@ class McpInstallation(Installation):
             server["headers"] = {PROJECT_HEADER: str(self._project_root().resolve())}
         else:
             server["headers"] = {PROJECT_HEADER: user.project_folder}
-        if self.ide == "Cursor":
+        if not self.layout.names_mcp_transport:
             del server["type"]
         key = user.servers_key if user is not None else "mcpServers"
         return {key: {"cdd": server}}

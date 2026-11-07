@@ -1,4 +1,4 @@
-"""Schema rules bind to nodes as a rules collection."""
+"""A practice schema gives each node type its rules as a rules collection."""
 
 from expects import be_a, contain, equal, expect
 from mamba import before, description, it

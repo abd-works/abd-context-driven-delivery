@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Any, Iterable, List, Mapping, Optional
 
 from harness.name.name import Name
-from harness.graph.bound_node import BoundChildren
+from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph, Node
 
 from .story_link import StoryLink
@@ -74,7 +74,7 @@ class Control(UxNode):
         self.label = label or name
         self.bound_field = bound_field
         self.states: List[str] = []
-        self.interactions = BoundChildren(self, "interactions")
+        self.interactions = ModelChildren(self, "interactions")
 
     def append_interaction(self, interaction: Interaction) -> None:
         self.interactions.append(interaction)
@@ -120,7 +120,7 @@ class Region(UxNode):
     def __init__(self, name: str, sequential_order: int, area: str = "", graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
         self.area = area
-        self.controls = BoundChildren(self, "controls")
+        self.controls = ModelChildren(self, "controls")
 
     def append_control(self, control: Control) -> None:
         self.controls.append(control)
@@ -158,7 +158,7 @@ class Screen(UxNode):
         self.domain_concepts: List[str] = []
         self.image = ""
         self.prototype = ""
-        self.regions = BoundChildren(self, "regions")
+        self.regions = ModelChildren(self, "regions")
 
     def append_region(self, region: Region) -> None:
         self.regions.append(region)

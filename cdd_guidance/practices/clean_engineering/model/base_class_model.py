@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, List, Optional
 
-from harness.graph.bound_node import BoundChildren, BoundNode
+from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
@@ -102,7 +102,7 @@ def companion_interface_name(class_name: str, known_names: Iterable[str]) -> str
     return None
 
 
-class OoadNode(BoundNode):
+class OoadNode(ModelNode):
     _graph_practice = "clean_engineering"
     _semantic_type_name: str = "OoadNode"
     _belongs = {
@@ -216,8 +216,8 @@ class OoadClass(OoadNode):
         self.peer_names: List[str] = []
         self.module_helpers: List[list] = []
         self.collaborators: List[str] = collaborators if collaborators is not None else []
-        self._properties = BoundChildren(self, "participants")
-        self._operations = BoundChildren(self, "participants")
+        self._properties = ModelChildren(self, "participants")
+        self._operations = ModelChildren(self, "participants")
         if properties:
             self._properties.extend(properties)
         if operations:
@@ -451,8 +451,8 @@ class Module(OoadNode):
         self.seam_terms: List[str] = list(seam_terms) if seam_terms is not None else []
         self.dependencies: List[str] = list(dependencies) if dependencies is not None else []
         self.preamble = CodeBody()
-        self._modules = BoundChildren(self, "participants")
-        self._classes = BoundChildren(self, "participants")
+        self._modules = ModelChildren(self, "participants")
+        self._classes = ModelChildren(self, "participants")
         self._class_blocks: List[str] = []
 
     @property
@@ -627,7 +627,7 @@ class CleanEngineeringModel(OoadNode):
             name = "model"
         super().__init__(name, sequential_order, graph)
         self.path = ""
-        self._modules = BoundChildren(self, "participants")
+        self._modules = ModelChildren(self, "participants")
         if opened:
             self._copy_modules_on_graph()
 

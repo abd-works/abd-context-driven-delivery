@@ -13,8 +13,9 @@ const API_ROOT = '/api';
 const BAD_REQUEST = 400;
 const FAILED = 500;
 
-// One cdd server holds the graph; every route reaches it through this connection.
-const cdd = new CddConnection(process.env.CDD_PROJECT);
+/// One cdd server holds the graph; every route reaches it through this connection, which names the project the
+// explorer was started on (GRAPH_PROJECT, set by scripts/start.py). CDD_PROJECT is only for a call made in process.
+const cdd = new CddConnection(process.env.GRAPH_PROJECT);
 
 const textOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure));
 

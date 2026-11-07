@@ -91,9 +91,10 @@ class ContextSetup:
         return self._session
 
     def _capture(self, repo_path: str, capture_repo: str, surface: str, base_url: str, entry_paths: Optional[list[str]]) -> LiveAppCapture:
-        """The application this call captures, with its folders read from the session's project."""
-        repository = str(self.session.path_named(repo_path))
-        written_to = str(self.session.path_named(capture_repo)) if capture_repo else ""
+        """The application this call captures, with its folders read from the session's project the way its partition,
+        made for the same session, reads them."""
+        repository = str(self.partition.path_named(repo_path))
+        written_to = str(self.partition.path_named(capture_repo)) if capture_repo else ""
         return LiveAppCapture(repository, written_to, surface, base_url, entry_paths)
 
     def _apply_tool_modes(self) -> None:
@@ -114,7 +115,7 @@ class ContextSetup:
         word_count)."""
         from markitdown import MarkItDown
 
-        root = self.session.path_named(folder_path)
+        root = self.partition.path_named(folder_path)
         out_dir = root / "markdown"
         out_dir.mkdir(parents=True, exist_ok=True)
         converter = MarkItDown()

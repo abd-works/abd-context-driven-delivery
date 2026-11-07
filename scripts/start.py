@@ -46,6 +46,8 @@ class ServiceStart:
 
     def graph_web(self) -> int:
         env = os.environ.copy()
+        # The explorer's server names the project it explores on every cdd call; by default this checkout.
+        env.setdefault("GRAPH_PROJECT", str(self.repo))
         python = self.repo / ".venv" / "Scripts" / "python.exe"
         if python.is_file():
             env["PYTHON"] = str(python)

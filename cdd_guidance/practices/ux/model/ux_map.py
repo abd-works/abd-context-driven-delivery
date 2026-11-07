@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable, List, Optional
 
-from harness.graph.bound_node import BoundChildren
+from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
 
 from .collections import ContentTypes, NavComponents, Transitions
@@ -55,7 +55,7 @@ class UxMap(UxNode):
         self.scope: str = ""
         self._story_references = ReferencePaths()
         self._object_references = ReferencePaths()
-        self.screens = BoundChildren(self, "screens")
+        self.screens = ModelChildren(self, "screens")
         self.transitions = Transitions(self)
         self.content_types = ContentTypes(self)
         self.nav_components = NavComponents(self)

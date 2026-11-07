@@ -1,6 +1,6 @@
 # Class model
 
-*CleanEngineeringModel* is one class model that every format reads and writes: modules holding classes, each with properties, operations and their parameters, and the relationships its properties name. A nested module is a module whose parent is a module. Every node is a graph node (*BoundNode*), so the same objects the formats build are the nodes the graph holds.
+*CleanEngineeringModel* is one class model that every format reads and writes: modules holding classes, each with properties, operations and their parameters, and the relationships its properties name. A nested module is a module whose parent is a module. Every node is a graph node (*ModelNode*), so the same objects the formats build are the nodes the graph holds.
 
 A format is one subclass of *CleanEngineeringModel*: markdown, JSON, sketch, Python, TypeScript, JavaScript, Java, and draw.io. Each format reads text with `parse(text)` and writes a model with `render(canonical, previous)`. Markdown also reads a file through the walk on the base nodes: `load(path)` asks `has_more_module` / `get_next_module_from_file`, each module asks `has_more_class` / `get_next_class_from_file`, and each class loads its properties, operations, and relationships the same way. A format overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its text contains.
 
@@ -19,15 +19,15 @@ python = PythonCleanEngineeringModel().render(model, previous)
 
 - **Purpose:** One class model for every format. Callers see the base nodes; a format only differs in how it reads and spells its text.
 - **Seam (terms):** CleanEngineeringModel, UnreadableSource, Module, OoadClass, Property, Operation, Parameter, Relationship, CodeBody
-- **Dependencies (one-way):** harness/graph (*BoundNode*, *BoundChildren*, *Graph*), actions/sketch (*SketchOutline*, *SketchLens*), practices/clean_engineering/model/drawio (*DrawIOCleanEngineeringModel*)
+- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*), actions/sketch (*SketchOutline*, *SketchLens*), practices/clean_engineering/model/drawio (*DrawIOCleanEngineeringModel*)
 
-*BoundNode*, *BoundChildren*, *Graph*, *SketchOutline*, and *SketchLens* are owned by the modules above; this model only uses them. The draw.io format — *DrawIOCleanEngineeringModel*, *DrawIOModule*, *DrawIOClass*, and its *DrawIOImportedClass* — is modelled in [drawio-model.md](../drawio/.context/drawio-model.md).
+*ModelNode*, *ModelChildren*, *Graph*, *SketchOutline*, and *SketchLens* are owned by the modules above; this model only uses them. The draw.io format — *DrawIOCleanEngineeringModel*, *DrawIOModule*, *DrawIOClass*, and its *DrawIOImportedClass* — is modelled in [drawio-model.md](../drawio/.context/drawio-model.md).
 
 ## UnreadableSource : ValueError
 
 A source file its language cannot read, such as Python that does not parse. Reading it as an empty or partial model would drop its classes from every check without saying so.
 
-## OoadNode : BoundNode
+## OoadNode : ModelNode
 
 + OoadNode(name: str, sequential_order: int, graph: Graph | None = None)
 ------

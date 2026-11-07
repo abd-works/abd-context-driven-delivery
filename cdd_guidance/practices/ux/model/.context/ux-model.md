@@ -1,6 +1,6 @@
 # UX map
 
-*UxMap* is one information architecture: screens, then each screen's regions, controls, and interactions, then the transitions between screens, the content types and nav components the screens share, and one context of notes and invariants. Every node is a graph node (*BoundNode*), so a map is also the UX practice's part of the knowledge graph.
+*UxMap* is one information architecture: screens, then each screen's regions, controls, and interactions, then the transitions between screens, the content types and nav components the screens share, and one context of notes and invariants. Every node is a graph node (*ModelNode*), so a map is also the UX practice's part of the knowledge graph.
 
 Each format is a *UxMap* subclass, listed by `Ux` under `formats`: drawio, html, markdown, json, claude_design. A format adds no node types of its own; it reads with `parse(content)` into a new map of its class and writes with `render(ux_map)`. JSON and HTML carry the whole map. Draw.io carries screens, their regions, and transitions. Markdown carries the scope and the context. Claude Design places the prototype screens on a canvas and is never read back.
 
@@ -13,11 +13,11 @@ drawio = DrawioUxMap.create().render(ux_map)
 
 - **Purpose:** Keep the information architecture as one UX map — screens, regions, controls, and the transitions between screens — so a diagram, a JSON file, and an HTML mockup stay the same hierarchy every later fidelity reads.
 - **Seam (terms):** UxMap, Screen, Region, Control, StoryDemoControl, StoryStep, Interaction, UxComponent, Transition, ContentType, NavComponent, UxContext, ReferencePaths, and one UxMap subclass per format
-- **Dependencies (one-way):** harness/graph (*BoundNode*, *BoundChildren*, *Graph*), harness/name (*Name*); the Claude Design story canvas also uses practices/stories/model (*DiagramStoryModel*, *StoryModel*) and harness/design_canvas (*DesignCanvas*)
+- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*), harness/name (*Name*); the Claude Design story canvas also uses practices/stories/model (*DiagramStoryModel*, *StoryModel*) and harness/design_canvas (*DesignCanvas*)
 
 These dependencies are owned by the modules named; this model only uses them. A screen names the stories, scenarios, and steps it shows as text keyed the way Stories keys them; the graph turns each name into a `shownOn` edge from the Stories node to the screen (`harness/graph/schema_edges.py`). A link from one screen to another — a transition, a tab's chrome, an interaction's destination, a nav destination — holds the *Screen* itself, so renaming a screen keeps it.
 
-## UxNode : BoundNode
+## UxNode : ModelNode
 
 Every node of the map. Each child belongs to its owner on the graph: a screen, transition, content type, nav component, and context to the map; a region to its screen; a control to its region; an interaction to its control.
 

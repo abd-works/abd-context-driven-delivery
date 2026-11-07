@@ -15,10 +15,10 @@ from harness.graph.graph import EdgeType, Graph, Node, Source
 NO_SOURCE_FILE = "."
 
 
-class BoundChildren(list):
+class ModelChildren(list):
     """The list callers already append to. Appending records the graph edge."""
 
-    def __init__(self, owner: "BoundNode", kind: str) -> None:
+    def __init__(self, owner: "ModelNode", kind: str) -> None:
         super().__init__()
         self.owner = owner
         self.kind = kind
@@ -57,7 +57,7 @@ class ModelWithoutPractice(TypeError):
         self.model_class = model_class
 
 
-class BoundNode(Node):
+class ModelNode(Node):
     """Base model object for one practice. Subclasses name the practice and the belongsTo pairs."""
 
     _graph_practice: str = ""
@@ -88,7 +88,7 @@ class BoundNode(Node):
         if practice.root_node.node_id not in practice.by_id:
             practice.by_id[practice.root_node.node_id] = practice.root_node
         semantic = type(self)._semantic_type_name
-        self._child_lists: list[BoundChildren] = []
+        self._child_lists: list[ModelChildren] = []
         Node.__init__(
             self,
             practice,
@@ -109,7 +109,7 @@ class BoundNode(Node):
         return str(getattr(self.source, "file", "") or "") not in ("", NO_SOURCE_FILE)
 
     @property
-    def node(self) -> "BoundNode":
+    def node(self) -> "ModelNode":
         """This object is its graph node."""
         return self
 
@@ -121,7 +121,7 @@ class BoundNode(Node):
         return self._semantic_type_name
 
     def _link(self, child, kind: str) -> None:
-        if not isinstance(child, BoundNode) or child is self:
+        if not isinstance(child, ModelNode) or child is self:
             return
         self._adopt(child)
         child.parent = self
@@ -131,7 +131,7 @@ class BoundNode(Node):
         self._sync_schema_edges()
 
     def _unlink(self, child, kind: str) -> None:
-        if not isinstance(child, BoundNode):
+        if not isinstance(child, ModelNode):
             return
         practice = self.practice
         for edge_kind, listed in list(practice.edges.items()):
@@ -144,14 +144,14 @@ class BoundNode(Node):
                 )
             ]
 
-    def _refill(self, children: BoundChildren, incoming: Iterable) -> None:
+    def _refill(self, children: ModelChildren, incoming: Iterable) -> None:
         for child in list(children):
             self._unlink(child, children.kind)
         children.clear()
         for child in incoming:
             children.append(child)
 
-    def _adopt(self, child: "BoundNode") -> None:
+    def _adopt(self, child: "ModelNode") -> None:
         if child.practice is self.practice:
             return
         subtree = child._subtree()
@@ -181,16 +181,16 @@ class BoundNode(Node):
         practice.add(self, node_id, NO_SOURCE_FILE, 1, 1)
         self.source = source
 
-    def _subtree(self) -> list["BoundNode"]:
-        found: list[BoundNode] = [self]
+    def _subtree(self) -> list["ModelNode"]:
+        found: list[ModelNode] = [self]
         for children in list(self._child_lists):
             for child in list(children):
-                if isinstance(child, BoundNode):
+                if isinstance(child, ModelNode):
                     found.extend(child._subtree())
         examples = getattr(self, "examples", None)
         if isinstance(examples, dict):
             for example in examples.values():
-                if isinstance(example, BoundNode):
+                if isinstance(example, ModelNode):
                     found.extend(example._subtree())
         return found
 
@@ -216,7 +216,7 @@ class BoundNode(Node):
         return [
             node
             for node in self.practice.nodes.get(semantic, [])
-            if node is not self and isinstance(node, BoundNode)
+            if node is not self and isinstance(node, ModelNode)
         ]
 
 

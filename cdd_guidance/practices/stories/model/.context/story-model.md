@@ -1,6 +1,6 @@
 # Story model
 
-*StoryModel* is one story map: epics, the sub-epics nested under them, the stories in each, and the increments that slice them, then each story's backgrounds and scenarios down to steps and examples. A nested epic is an epic whose parent is an epic. An increment is a thin slice: a name, an outcome, slicing notes, a decision, and the stories in that slice. Every node is a graph node (*BoundNode*), so a loaded model is also the stories practice's part of the knowledge graph.
+*StoryModel* is one story map: epics, the sub-epics nested under them, the stories in each, and the increments that slice them, then each story's backgrounds and scenarios down to steps and examples. A nested epic is an epic whose parent is an epic. An increment is a thin slice: a name, an outcome, slicing notes, a decision, and the stories in that slice. Every node is a graph node (*ModelNode*), so a loaded model is also the stories practice's part of the knowledge graph.
 
 Each format is a *StoryModel* subclass with its own node subclasses, listed by `Stories` under `formats`: sketch, markdown, json, drawio, miro, python, typescript, java, javascript. `StoryModel(source)` copies any model into the subclass's node types; `parse` reads text in that format and `render(canonical, previous)` writes a model out. Markdown, JSON, and the code formats carry scenarios, steps, and examples; the diagram formats (drawio, miro) stop at stories and still read increments. The Claude Design story canvas, which shows the stories on their screens, is a *DiagramStoryModel* the UX practice draws (`practices/ux/model/claude_design/story_canvas.py`).
 
@@ -13,11 +13,11 @@ drawio = DrawIOStoryModel().render(story_map)
 
 - **Purpose:** Keep stakeholder behaviour as one story model — epics, stories, and increments, then scenarios and steps — so a markdown file, a diagram, and a test file stay the same hierarchy every later fidelity reads.
 - **Seam (terms):** StoryNode, StoryModel, Epic, Increment, Story, StoryType, Background, Scenario, Step, StepType, Example, Examples, SourceLocation, and one StoryModel subclass per format
-- **Dependencies (one-way):** harness/graph (*BoundNode*, *Graph*), harness/name (*Name*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*, *SketchLens*)
+- **Dependencies (one-way):** harness/graph (*ModelNode*, *Graph*), harness/name (*Name*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*, *SketchLens*)
 
 These dependencies are owned by the modules named; this model only uses them. *GraphStoryModel* writes a loaded model onto the stories practice graph; cross-practice links from steps and examples to Clean Engineering nodes are recorded there.
 
-## StoryNode : BoundNode
+## StoryNode : ModelNode
 
 Every epic, increment, story, background, scenario, step, and example. It carries the facts story-map graph rules read.
 

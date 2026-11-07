@@ -72,18 +72,18 @@ with description("a guidance action"):
     with it("should run the passed operation once when guidance is a string"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction()
+        action = GuidanceAction()
         seen: list = []
-        kit._work_on("just this text")
-        kit.run(seen.append, action="generate")
+        action._work_on("just this text")
+        action.run(seen.append, action="generate")
         expect(seen).to(equal(["just this text"]))
 
     with it("should list a practice and a fidelity from their guidance slugs"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction()
-        kit._work_on(["stories", "clean-engineering-model"])
-        listed = kit.listed()
+        action = GuidanceAction()
+        action._work_on(["stories", "clean-engineering-model"])
+        listed = action.listed()
         expect([type(item).__name__ for item in listed]).to(equal(["Stories", "CleanEngineering"]))
         expect(listed[0].fidelities.current.name).to(equal("story_map"))
         expect(listed[1].fidelities.current.name).to(equal("model"))
@@ -91,9 +91,9 @@ with description("a guidance action"):
     with it("should list stories at the scenarios fidelity from the short fidelity slug"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction()
-        kit._work_on(["scenarios"])
-        listed = kit.listed()
+        action = GuidanceAction()
+        action._work_on(["scenarios"])
+        listed = action.listed()
         expect(len(listed)).to(equal(1))
         expect(type(listed[0]).__name__).to(equal("Stories"))
         expect(listed[0].fidelities.current.name).to(equal("scenarios"))
@@ -101,51 +101,51 @@ with description("a guidance action"):
     with it("should list each guidance slug in one string of slugs"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction()
-        kit._work_on("stories-story-map clean-engineering-modules format=markdown")
-        listed = kit.listed()
+        action = GuidanceAction()
+        action._work_on("stories-story-map clean-engineering-modules format=markdown")
+        listed = action.listed()
         expect([type(item).__name__ for item in listed]).to(equal(["Stories", "CleanEngineering"]))
 
     with it("should give each guidance slug the format named in the same string"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction()
-        kit._work_on("ux-ia format=drawio")
-        expect([item.format for item in kit.listed()]).to(equal(["drawio"]))
+        action = GuidanceAction()
+        action._work_on("ux-ia format=drawio")
+        expect([item.format for item in action.listed()]).to(equal(["drawio"]))
 
     with it("should keep prose made of ordinary words as guidance text"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction()
-        kit._work_on("write the story map")
-        expect(kit.guidance_text()).to(equal("write the story map"))
+        action = GuidanceAction()
+        action._work_on("write the story map")
+        expect(action.guidance_text()).to(equal("write the story map"))
 
     with it("should keep prose that contains a colon as guidance text"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction()
+        action = GuidanceAction()
         prose = "Three client perspectives: prospect onboarding, subscription, and active account."
-        kit._work_on(prose)
-        expect(kit.guidance_text()).to(equal(prose))
-        expect(kit.listed()).to(equal([]))
+        action._work_on(prose)
+        expect(action.guidance_text()).to(equal(prose))
+        expect(action.listed()).to(equal([]))
 
     with it("should treat a module class ref as a listed Guidance"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction()
-        kit._work_on("cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering")
-        listed = kit.listed()
+        action = GuidanceAction()
+        action._work_on("cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering")
+        listed = action.listed()
         expect(len(listed)).to(equal(1))
         expect(type(listed[0]).__name__).to(equal("CleanEngineering"))
 
     with it("should run the passed operation on each Guidance when guidance is a list"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction()
+        action = GuidanceAction()
         first, second = object(), object()
         seen: list = []
-        kit._work_on([first, second])
-        kit.run(seen.append, action="generate")
+        action._work_on([first, second])
+        action.run(seen.append, action="generate")
         expect(seen).to(equal([first, second]))
 
     with context("made for no session"):

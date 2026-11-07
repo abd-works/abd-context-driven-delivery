@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from harness.graph.bound_node import BoundChildren
+from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, OoadClass
@@ -356,8 +356,8 @@ class BoundedContext(Module):
         else:
             super().__init__(name, sequential_order, graph=graph)
             self.owner = ""
-        self.contexts = BoundChildren(self, "contexts")
-        self.aggregates = BoundChildren(self, "aggregates")
+        self.contexts = ModelChildren(self, "contexts")
+        self.aggregates = ModelChildren(self, "aggregates")
         self._map: BoundedContextMap | None = None
         self.context_file_lines = 1
         if graph is None:

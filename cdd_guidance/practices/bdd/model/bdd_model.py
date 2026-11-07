@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from harness.graph.bound_node import BoundChildren, BoundNode
+from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import (
@@ -16,7 +16,7 @@ from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observa
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 
 
-class BddModel(BoundNode):
+class BddModel(ModelNode):
     _graph_practice = "bdd"
     _semantic_type_name = "Spec"
     graph_facts = ("patches_infrastructure", "signature_marker", "top_level_describes", "code_like_describe_lines", "private_probe")
@@ -26,7 +26,7 @@ class BddModel(BoundNode):
         super().__init__("spec", 0, graph)
         self.preamble = CodeBody()
         self.written = None
-        self._descriptions = BoundChildren(self, "descriptions")
+        self._descriptions = ModelChildren(self, "descriptions")
         if graph is not None:
             self._copy_descriptions_on_graph()
 

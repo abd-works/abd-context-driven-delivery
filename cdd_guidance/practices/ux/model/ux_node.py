@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from harness.graph.bound_node import BoundNode
+from harness.graph.model_node import ModelNode
 from harness.graph.graph import Graph
 
 
-class UxNode(BoundNode):
+class UxNode(ModelNode):
     """Subclasses declare `_semantic_type_name`, the node type the graph records, and each child belongs to its owner."""
 
     _graph_practice = "ux"
