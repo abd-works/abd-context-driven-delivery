@@ -7,7 +7,7 @@ from pathlib import Path
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
 from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, Segment, SegmentCompletenessConfig
-from harness.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import skill
