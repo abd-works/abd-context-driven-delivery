@@ -41,6 +41,34 @@ class AgentToolValidationError(Exception):
         self.action_name = action_name
         self.lineno = lineno
 
+
+class RecipeLineFailed(Exception):
+    """A line of an ``@agent_instructions`` recipe raised while the recipe was expanded into instructions.
+
+    The message names the recipe, its file and line, and the line's source, so the broken line is found without
+    re-running the expansion; the original error is kept as ``__cause__``."""
+
+    def __init__(self, recipe: Callable[..., Any], line: ast.AST, cause: BaseException) -> None:
+        self.recipe_name = recipe.__qualname__
+        self.line_source = ast.unparse(line)
+        self.path, self.lineno = self._file_line(recipe, line)
+        super().__init__(
+            f"{self.recipe_name} recipe line {self.path}:{self.lineno} `{self.line_source}` failed: "
+            f"{type(cause).__name__}: {cause}"
+        )
+
+    def _file_line(self, recipe: Callable[..., Any], line: ast.AST) -> tuple[str, int]:
+        """The recipe's file and the line's number in it; the recipe is parsed from its own source, so the parsed line
+        number counts from the recipe's first line."""
+        relative = getattr(line, "lineno", 1)
+        try:
+            first = inspect.getsourcelines(recipe)[1]
+            path = inspect.getsourcefile(recipe) or "<unknown>"
+        except (OSError, TypeError):
+            return "<unknown>", relative
+        return path, first + relative - 1
+
+
 @dataclass(frozen=True)
 class ExpansionMode:
     value: str
@@ -907,9 +935,9 @@ class AgentToolDestination:
 
     @property
     def deploy_suppressed(self) -> bool:
-        from harness.installation.destination import omitted_from_deploy
+        from harness.installation.destination import NoDeploy
 
-        return omitted_from_deploy(self.callable)
+        return NoDeploy.marks(self.callable)
 
     @property
     def install_to_mcp(self) -> bool:
@@ -1777,24 +1805,29 @@ class AgentInstructions(AgentTool):
 
     def _eval_expr(self, node: ast.expr) -> Any:
         env = self._execution_env()
-        value = eval(compile(ast.Expression(node), "<agent_instructions>", "eval"), env, env)
+        code = compile(ast.Expression(node), "<agent_instructions>", "eval")
+        try:
+            value = eval(code, env, env)
+        except RecipeLineFailed:
+            raise
+        except Exception as exc:
+            raise RecipeLineFailed(self.callable, node, exc) from exc
         self._sync_execution_locals(env)
         return value
 
     def _execute_statement(self, statement: ast.stmt) -> None:
         env = self._execution_env()
-        exec(
-            compile(ast.Module(body=[statement], type_ignores=[]), "<agent_instructions>", "exec"),
-            env,
-            env,
-        )
+        code = compile(ast.Module(body=[statement], type_ignores=[]), "<agent_instructions>", "exec")
+        try:
+            exec(code, env, env)
+        except RecipeLineFailed:
+            raise
+        except Exception as exc:
+            raise RecipeLineFailed(self.callable, statement, exc) from exc
         self._sync_execution_locals(env)
 
     def _run_expr(self, node: ast.expr) -> None:
-        try:
-            value = self._eval_expr(node)
-        except Exception:  # noqa: BLE001
-            return
+        value = self._eval_expr(node)
         if isinstance(value, str) and value.strip():
             self._add_prompt(value.strip())
             return
@@ -1811,6 +1844,8 @@ class AgentInstructions(AgentTool):
         loop_item: Any | None = None,
     ) -> None:
         for body_stmt in body:
+            if loop_var is not None and self._reads_missing_loop_item(body_stmt, loop_var, loop_item):
+                continue
             if loop_var is not None and loop_item is not None:
                 mode_value = self._loop_var_mode_assign(body_stmt, loop_var)
                 if mode_value is not None:
@@ -1820,15 +1855,28 @@ class AgentInstructions(AgentTool):
                     continue
             self._dispatch_statement(body_stmt)
 
+    def _reads_missing_loop_item(self, statement: ast.stmt, loop_var: str, loop_item: Any | None) -> bool:
+        """An ``instructions(item...)`` line on the pass a loop makes without an item, which it makes only to list
+        the tools its body names: there is no item to read instructions from, so the line adds nothing."""
+        if loop_item is not None or not isinstance(statement, ast.Expr):
+            return False
+        call = statement.value
+        if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.func.id == "instructions"):
+            return False
+        return bool(call.args) and self._roots_at(call.args[0], loop_var)
+
+    def _roots_at(self, node: ast.AST, name: str) -> bool:
+        """True when an attribute or call chain such as ``item.rules.markdown_block`` starts at the name."""
+        while isinstance(node, (ast.Attribute, ast.Call)):
+            node = node.func if isinstance(node, ast.Call) else node.value
+        return isinstance(node, ast.Name) and node.id == name
+
     def _walk_generic_for(self, stmt: ast.For) -> None:
         if not isinstance(stmt.target, ast.Name):
             self._execute_statement(stmt)
             return
         var_name = stmt.target.id
-        try:
-            items = self._eval_expr(stmt.iter)
-        except Exception:  # noqa: BLE001
-            items = []
+        items = self._eval_expr(stmt.iter)
         if not isinstance(items, (list, tuple)):
             items = list(items) if items is not None else []
         previous = self._execution_locals.get(var_name, _EXEC_LOCAL_MISSING)
@@ -1857,10 +1905,7 @@ class AgentInstructions(AgentTool):
         if member and member in self.toolset.instruction_names(type(self.toolset)):
             self._expand_member(member, self.toolset)
             return True
-        try:
-            value = self._eval_expr(arg)
-        except Exception:
-            value = None
+        value = self._eval_expr(arg)
         if isinstance(value, str) and value.strip():
             self._add_prompt(value.strip())
             return True
@@ -1906,10 +1951,7 @@ class AgentInstructions(AgentTool):
         self._run_expr(value)
 
     def _dispatch_if_statement(self, statement: ast.If) -> None:
-        try:
-            take_body = bool(self._eval_expr(statement.test))
-        except Exception:  # noqa: BLE001
-            take_body = False
+        take_body = bool(self._eval_expr(statement.test))
         branch = statement.body if take_body else statement.orelse
         for body_stmt in branch:
             self._dispatch_statement(body_stmt)
@@ -1963,10 +2005,7 @@ class AgentInstructions(AgentTool):
         iter_member = self.self_member_name(iter_node)
         if iter_member is None:
             return
-        try:
-            items = getattr(self.toolset, iter_member)()
-        except Exception:  # noqa: BLE001
-            items = []
+        items = self._eval_expr(iter_node)
         if not isinstance(items, (list, tuple)):
             items = []
         if not items:
@@ -1979,10 +2018,7 @@ class AgentInstructions(AgentTool):
         for statement in function_def.body:
             if isinstance(statement, ast.Return):
                 if statement.value is not None:
-                    try:
-                        value = self._eval_expr(statement.value)
-                    except Exception:
-                        value = self._expression_text(statement.value)
+                    value = self._eval_expr(statement.value)
                     if isinstance(value, str) and value.strip():
                         self._add_prompt(value.strip())
                 continue

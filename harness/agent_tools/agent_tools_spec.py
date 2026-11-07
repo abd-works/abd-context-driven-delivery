@@ -13,7 +13,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 sys.modules.pop("actions", None)
 
 import yaml
-from expects import be_true, contain, equal, expect, have_key
+from expects import be_true, contain, equal, expect, have_key, raise_error
 from mamba import after, before, context, description, it
 from space.session.throwaway_project import ThrowawayProject
 
@@ -23,6 +23,7 @@ from harness.agent_tools.agent_tools import (
     tools,
     instructions,
     AgentToolValidationError,
+    RecipeLineFailed,
     AgentToolSet,
     InstallDestination,
     ToolSetCollection,
@@ -806,6 +807,20 @@ class _NestedRulesCaller:
         return "sketched"
 
 
+@agent_toolset
+class _EmptyListCaller:
+    def listed(self) -> list:
+        return []
+
+    @agent_instructions
+    def sketchish(self) -> str:
+        """Walk listed practices."""
+        "EMPTY_CALLER_MARKER: walk listed practices."
+        for item in self.listed():
+            instructions(item.rules.markdown_block)
+        return "sketched"
+
+
 with description("a for-each action over nested instruction properties"):
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
@@ -827,6 +842,11 @@ with description("a for-each action over nested instruction properties"):
         with it("should inline the nested markdown_block"):
             expect("NESTED_RULES_MARKER" in self.joined).to(be_true)
             expect("NESTED_RULES_BODY" in self.joined).to(be_true)
+
+    with context("with nothing listed"):
+        with it("should expand the rest of the recipe without reading an item"):
+            body = AgentInstructions.for_callable(_EmptyListCaller.sketchish, _EmptyListCaller())
+            expect(" ".join(body.prompt)).to(contain("EMPTY_CALLER_MARKER"))
 
 
 @agent_toolset
@@ -888,6 +908,58 @@ with description("an @agent_instructions body that runs unwrapped Python"):
 
         with it("should include prose from the else branch"):
             expect("ELSE_MARKER" in self.joined).to(be_true)
+
+
+@agent_toolset
+class _BrokenLineAgent:
+    """A recipe whose lines read an attribute the toolset does not have."""
+
+    @agent_instructions
+    def branch_on_missing(self) -> str:
+        """Branch on a flag the toolset does not have."""
+        if self.missing_flag:
+            "TAKEN_MARKER"
+        else:
+            "ELSE_MARKER"
+        return "done"
+
+    @agent_instructions
+    def return_missing(self) -> str:
+        """Return text the toolset does not have."""
+        return self.missing_text
+
+
+with description("an @agent_instructions body with a line that fails"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
+    with context("with an if test that fails"):
+        with before.each:
+            self.body = AgentInstructions.for_callable(_BrokenLineAgent.branch_on_missing, _BrokenLineAgent())
+
+        with it("should stop the expansion with a failed recipe line instead of taking the else branch"):
+            expect(lambda: self.body.prompt).to(raise_error(RecipeLineFailed))
+
+        with it("should name the recipe and the failing line's source"):
+            expect(lambda: self.body.prompt).to(
+                raise_error(RecipeLineFailed, contain("_BrokenLineAgent.branch_on_missing", "self.missing_flag"))
+            )
+
+        with it("should name the file line the failing line is on"):
+            source_line = next(
+                number for number, text in enumerate(Path(__file__).read_text(encoding="utf-8").splitlines(), 1)
+                if text.strip() == "if self.missing_flag:"
+            )
+            expect(lambda: self.body.prompt).to(raise_error(RecipeLineFailed, contain(f":{source_line} ")))
+
+    with context("with a return that fails"):
+        with it("should stop the expansion instead of sending the return's source as instructions"):
+            body = AgentInstructions.for_callable(_BrokenLineAgent.return_missing, _BrokenLineAgent())
+            expect(lambda: body.expand({}, {})).to(raise_error(RecipeLineFailed, contain("self.missing_text")))
 
 
 with description("a cross-instance call whose provider cannot resolve"):

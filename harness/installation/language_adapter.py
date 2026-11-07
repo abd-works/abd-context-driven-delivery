@@ -18,7 +18,7 @@ from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_or
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, OnSubject
 from harness.agent_tools.name import Name
-from harness.installation.destination import Edits, Installation, LanguageAdapter, SourceFile, data_fields_of
+from harness.installation.destination import DataField, Edits, Installation, LanguageAdapter, SourceFile
 
 _FOLDER = "language-adapters"
 _TYPESCRIPT = "typescript"
@@ -132,7 +132,7 @@ def _unwrapped(hint: object) -> object:
 
 def is_shape(hint: object) -> bool:
     """A class that marks properties as its data."""
-    return isinstance(hint, type) and bool(data_fields_of(hint))
+    return isinstance(hint, type) and bool(DataField.fields_of(hint))
 
 
 def shape_name(shape: type) -> str:
@@ -148,9 +148,9 @@ def shape_fields(shape: type, names: Mapping[str, Any]) -> dict[str, object]:
     """Each field's type by its name in the data. A field only some kinds of a class have, such as a stage's WIP
     limit on a column, is optional, so one type holds every kind. names resolves the types a module imports only
     for type checking."""
-    fields = {key: _return_hint(field, names) for key, field in data_fields_of(shape).items()}
+    fields = {key: _return_hint(field, names) for key, field in DataField.fields_of(shape).items()}
     for sub in _subclasses(shape):
-        for key, field in data_fields_of(sub).items():
+        for key, field in DataField.fields_of(sub).items():
             fields.setdefault(key, NotRequired[_return_hint(field, names)])
     return fields
 
@@ -285,7 +285,7 @@ class TypeScriptToolset:
     def _data_shape(self) -> type | None:
         """The toolset's class when it marks properties as its data."""
         toolset_class = type(self._toolset)
-        return toolset_class if data_fields_of(toolset_class) else None
+        return toolset_class if DataField.fields_of(toolset_class) else None
 
     @property
     def peer_classes(self) -> dict[str, type]:

@@ -874,6 +874,16 @@ class MarkdownCollection:
         return decorator
 
 
+class MarkdownTypeUnresolved(TypeError):
+    """A markdown property's annotations name a type its module cannot resolve, so the property cannot tell what to
+    turn its section's text into. Reading the annotation as a bare string would coerce the text into the wrong shape."""
+
+    def __init__(self, fn: Callable[..., Any], cause: BaseException) -> None:
+        self.property_name = fn.__qualname__
+        self.annotations = dict(getattr(fn, "__annotations__", {}) or {})
+        super().__init__(f"{self.property_name}: annotations {self.annotations!r} do not resolve: {cause}")
+
+
 class Markdown:
     def __init__(self, instance: Any, label: str, *, fidelity: str | None = None, format: str | None = None) -> None:
         self._instance = instance
@@ -981,9 +991,8 @@ class Markdown:
     def _return_hints(self, fn: Callable[..., Any]) -> dict[str, Any]:
         try:
             return get_type_hints(fn, globalns=getattr(fn, "__globals__", None))
-        except Exception:
-            annot = getattr(fn, "__annotations__", {}) or {}
-            return dict(annot)
+        except Exception as exc:
+            raise MarkdownTypeUnresolved(fn, exc) from exc
 
     def fidelity_blocks(self, text: str) -> list[tuple[str, str]]:
         return [

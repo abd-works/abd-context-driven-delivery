@@ -8,11 +8,6 @@ from typing import Any, Callable
 InstallTracker = Callable[[Path], None]
 
 
-_NO_CATALOG_FLAG = "_no_catalog"
-_NO_DEPLOY_FLAG = "_no_deploy"
-_DATA_FIELD_FLAG = "_data_field"
-
-
 class Mark:
     """A decorator that marks the operation or class it decorates, by setting its ``flag`` on it, so install and
     discovery can find what it marks. Each kind of mark is a subclass that names its flag and reads it with
@@ -63,36 +58,40 @@ class Mark:
         return self.annotate(target)
 
 
-def noCatalog(target: Any = None) -> Any:
+class OmissionMark(Mark):
+    """A mark that leaves what it marks out of something. A classmethod or bound method is marked through the function
+    it wraps, so the mark is read there too."""
+
+    copied = False
+
+    @classmethod
+    def marks(cls, target: Any) -> bool:
+        """True when target, or the function it wraps, carries this mark."""
+        return super().marks(target) or super().marks(getattr(target, "__func__", None))
+
+
+class NoCatalog(OmissionMark):
     """Omit this class or operation from the catalog.
 
     Install and deploy ignore this mark. Use it when the behavior is real
     but not ready to show in the catalog.
     """
 
-    def mark(obj: Any) -> Any:
-        setattr(obj, _NO_CATALOG_FLAG, True)
-        return obj
-
-    if target is None:
-        return mark
-    return mark(target)
+    flag = "_no_catalog"
 
 
-def noDeploy(target: Any = None) -> Any:
+class NoDeploy(OmissionMark):
     """Omit this operation from install.
 
     Skill, command, MCP, and hook marks on the same operation do not write
     files. The catalog can still list it.
     """
 
-    def mark(obj: Any) -> Any:
-        setattr(obj, _NO_DEPLOY_FLAG, True)
-        return obj
+    flag = "_no_deploy"
 
-    if target is None:
-        return mark
-    return mark(target)
+
+noCatalog = NoCatalog
+noDeploy = NoDeploy
 
 
 class LanguageAdapter:
@@ -156,31 +155,40 @@ class Edits:
 edits = Edits
 
 
-def data_field(target: Any = None, *, key: str = "") -> Any:
+class DataField(Mark):
     """Mark a property as part of the object's data: what its tools answer with and what a language adapter types.
 
     Put it under `@property`. key is the name the data uses when it differs from the property's, such as a ticket's
     `column_name` sent as `column`, because the property of that name returns the column itself.
     """
 
-    def mark(getter: Any) -> Any:
-        setattr(getter, _DATA_FIELD_FLAG, key or getter.__name__)
+    flag = "_data_field"
+    copied = False
+
+    def __new__(cls, target: Any = None, *, key: str = ""):
+        mark = object.__new__(cls)
+        mark.key = key
+        if callable(target):
+            return mark.annotate(target)
+        return mark
+
+    def annotate(self, getter: Any) -> Any:
+        setattr(getter, self.flag, self.key or getter.__name__)
         return getter
 
-    if target is None:
-        return mark
-    return mark(target)
+    @classmethod
+    def fields_of(cls, data_class: type) -> dict[str, property]:
+        """The properties data_class marks as its data, by the name each takes in the data; a base class's come
+        first. A subclass that overrides a marked property, such as a card's title, is read through its own."""
+        attributes: dict[str, str] = {}
+        for klass in reversed(data_class.__mro__):
+            for attribute, member in vars(klass).items():
+                if isinstance(member, property) and cls.marks(member.fget):
+                    attributes[getattr(member.fget, cls.flag)] = attribute
+        return {key: inspect.getattr_static(data_class, attribute) for key, attribute in attributes.items()}
 
 
-def data_fields_of(cls: type) -> dict[str, property]:
-    """The properties a class marks as its data, by the name each takes in the data; a base class's come first. A
-    subclass that overrides a marked property, such as a card's title, is read through its own."""
-    attributes: dict[str, str] = {}
-    for klass in reversed(cls.__mro__):
-        for attribute, member in vars(klass).items():
-            if isinstance(member, property) and hasattr(member.fget, _DATA_FIELD_FLAG):
-                attributes[getattr(member.fget, _DATA_FIELD_FLAG)] = attribute
-    return {key: inspect.getattr_static(cls, attribute) for key, attribute in attributes.items()}
+data_field = DataField
 
 
 def data_of(value: Any) -> Any:
@@ -194,7 +202,7 @@ def data_of(value: Any) -> Any:
         return {key: data_of(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
         return [data_of(item) for item in value]
-    fields = data_fields_of(type(value)) if not isinstance(value, type) else {}
+    fields = DataField.fields_of(type(value)) if not isinstance(value, type) else {}
     if fields:
         return {key: data_of(field.fget(value)) for key, field in fields.items()}
     return value
@@ -206,22 +214,6 @@ class SourceFile:
     A generated view draws a marked field as a link that opens the file in the shared source view, at the `line`, or
     the `start_line` to `end_line` range, that the same data holds.
     """
-
-
-def omitted_from_catalog(obj: Any) -> bool:
-    """True when ``obj`` or its underlying function carries ``@noCatalog``."""
-    if getattr(obj, _NO_CATALOG_FLAG, False):
-        return True
-    fn = getattr(obj, "__func__", None)
-    return bool(fn is not None and getattr(fn, _NO_CATALOG_FLAG, False))
-
-
-def omitted_from_deploy(obj: Any) -> bool:
-    """True when ``obj`` or its underlying function carries ``@noDeploy``."""
-    if getattr(obj, _NO_DEPLOY_FLAG, False):
-        return True
-    fn = getattr(obj, "__func__", None)
-    return bool(fn is not None and getattr(fn, _NO_DEPLOY_FLAG, False))
 
 
 class Destination(Mark):

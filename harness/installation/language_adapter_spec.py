@@ -14,10 +14,10 @@ Installer(repo=_REPO).ensure_import_path()
 
 from harness.agent_tools.agent_tools import AgentToolSet  # noqa: E402
 from harness.installation.destination import (  # noqa: E402
+    DataField,
     Edits,
     LanguageAdapter,
     data_field,
-    data_fields_of,
     data_of,
     edits,
     language_adapter,
@@ -131,10 +131,10 @@ with description("a language adapter"):
             self.card = PinnedCard("Visits", [Place(Path("notes"))])
 
         with it("should be the properties marked as its data, under their names"):
-            expect(list(data_fields_of(self.card_class))).to(equal(["title", "column", "places"]))
+            expect(list(DataField.fields_of(self.card_class))).to(equal(["title", "column", "places"]))
 
         with it("should keep the data a base class marks, ahead of its own"):
-            expect(list(data_fields_of(self.pinned_class))).to(equal(["title", "column", "places", "is_pinned"]))
+            expect(list(DataField.fields_of(self.pinned_class))).to(equal(["title", "column", "places", "is_pinned"]))
 
         with it("should be written as a plain value, each object it holds written as its own data"):
             expect(data_of(self.card)).to(equal({"title": "Pinned: Visits", "column": "Discovery", "places": [{"folder": "notes"}], "is_pinned": True}))

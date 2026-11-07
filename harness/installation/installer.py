@@ -1016,7 +1016,7 @@ class Installer:
         self.runtime_instructions
         return str(self.diagnose_install_instructions).strip()
 
-    def ensure_mcp_server(self, payload: dict[str, Any] | None = None) -> str:
+    def ensure_mcp_server(self) -> str:
         """Start the one cdd server when none answers. Cursor and VS Code connect to its URL and cannot start it."""
         from harness.mcp.mcp_server import McpInstallation
 
@@ -1024,13 +1024,13 @@ class Installer:
 
     @Hook("sessionStart")
     def ensure_mcp_server_on_session_start(self, payload: dict[str, Any] | None = None) -> str:
-        return self.ensure_mcp_server(payload)
+        return self.ensure_mcp_server()
 
     @Hook("afterAgentResponse")
     def ensure_mcp_server_after_agent_response(
         self, payload: dict[str, Any] | None = None
     ) -> str:
-        return self.ensure_mcp_server(payload)
+        return self.ensure_mcp_server()
 
 
 __all__ = ["Installation", "Installer"]

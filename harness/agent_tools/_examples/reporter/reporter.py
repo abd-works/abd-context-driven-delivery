@@ -4,7 +4,7 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
+from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.markdown import markdown
 
 
@@ -68,7 +68,7 @@ class Reporter:
     def gather(self, topic: str) -> str:
         """Gather notes on {{topic}} for the {{self.beat}} beat."""
         """Find 3-5 distinct facts or quotes. Record each with add_note."""
-        self.add_note()
+        tools(self.add_note())
         return f"gathered notes on {topic}"
 
     @agent_instructions
@@ -76,6 +76,6 @@ class Reporter:
         """Write a field report with the headline: {{headline}}."""
         self.style
         self.guidelines
-        self.read_notes()
-        self.clear_notes()
+        tools(self.read_notes())
+        tools(self.clear_notes())
         return f"report filed: {headline}"

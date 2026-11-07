@@ -37,6 +37,21 @@ agent = Agent
 agent_guidance = AgentGuidance
 
 
+class InstructionsUnreadableAtInstall(Exception):
+    """Reading an operation's instructions from its toolset failed while its slash command was being written.
+
+    Writing the operation's docstring in their place would install a command that tells the agent something other
+    than what the operation says, so the install stops and names the operation instead."""
+
+    def __init__(self, toolset: Any, operation: str, cause: BaseException) -> None:
+        self.toolset_name = type(toolset).__name__
+        self.operation = operation
+        super().__init__(
+            f"{self.toolset_name}.{operation}: reading its instructions to write its slash command failed: "
+            f"{type(cause).__name__}: {cause}"
+        )
+
+
 class FileInstallation(Installation):
     """Write skill, command, and rules markdown files."""
 
@@ -160,8 +175,8 @@ class FileInstallation(Installation):
         """Expand ``@agent_instructions`` on the live toolset when writing slash markdown."""
         try:
             value = getattr(toolset, tool.name)
-        except Exception:
-            value = None
+        except Exception as exc:
+            raise InstructionsUnreadableAtInstall(toolset, tool.name, exc) from exc
         if isinstance(value, str) and value.strip():
             return value.strip()
         return tool.docstring

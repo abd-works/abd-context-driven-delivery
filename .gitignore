@@ -113,3 +113,7 @@ sandbox/
 
 # pip install -e build metadata
 *.egg-info/
+
+# Local secrets never go to git
+.secrets
+**/.secrets

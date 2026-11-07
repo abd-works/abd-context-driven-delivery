@@ -10,7 +10,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_none, contain, equal, expect
+from expects import be_none, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from harness.guidance.fixtures.other_tool.other_tool_host import OtherTool
@@ -18,7 +18,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
     SampleTool,
 )
-from harness.markdown import AssetLocator, HTML, Markdown, YamlBinder
+from harness.markdown import AssetLocator, HTML, Markdown, MarkdownTypeUnresolved, YamlBinder, markdown
 
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "clean_engineering"
 _STORIES_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "stories"
@@ -58,6 +58,12 @@ with description("a co-located markdown file beside the module"):
                 expect(type(rendered)).to(equal(HTML))
                 expect(str(rendered)).to(contain("known prose for guidance in sample tool"))
                 expect(str(rendered)).to(contain("<p>"))
+
+
+class _MistypedSampleTool(SampleTool):
+    @markdown("guidance")
+    def mistyped(self) -> "NoSuchShape":  # noqa: F821
+        """A section whose return annotation names a type nothing defines."""
 
 
 with description("a templates folder beside the module"):
@@ -208,4 +214,12 @@ with description("a docstring used as install prose"):
             instance = SamplePracticeGuidance(format="markdown")
             expect(Markdown.from_label(instance, "").expand_docstring("plain install text")).to(
                 equal("plain install text")
+            )
+
+
+with description("a markdown property"):
+    with context("with a return annotation its module cannot resolve"):
+        with it("should fail naming the property instead of reading the annotation as a bare string"):
+            expect(lambda: _MistypedSampleTool().mistyped).to(
+                raise_error(MarkdownTypeUnresolved, contain("_MistypedSampleTool.mistyped", "NoSuchShape"))
             )
