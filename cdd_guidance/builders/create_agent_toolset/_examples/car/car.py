@@ -43,10 +43,10 @@ class Car:
         return f'{self._make} {self._model} says: "{line}"'
 
     @agent_instructions
-    def travel_to(recipe, destination: str) -> str:
+    def travel_to(self, destination: str) -> str:
         """Drive to {destination} in character."""
         """Start, speak as the trip needs, then stop."""
-        tools(recipe.toolset.start())
-        tools(recipe.toolset.speak())
-        tools(recipe.toolset.stop())
+        tools(self.start)
+        tools(self.speak)
+        tools(self.stop)
         return "Instructions for traveling to {{destination}}"

@@ -5,10 +5,11 @@ import socket
 import tempfile
 from pathlib import Path
 
-from expects import be_a, be_false, contain, equal, expect, have_len
+from expects import be_a, be_false, contain, equal, expect, have_len, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.tool_call import ToolCall
+from harness.guidance_actions import ActionWorksInNoSession
 from space.session.throwaway_project import ThrowawayProject
 from cdd_guidance.actions.partition.partition import Partition
 from cdd_guidance.context_setup.context_index import ContextIndex
@@ -52,16 +53,25 @@ with description("a ContextSetup"):
                 equal([(self.throwaway.root / "docs" / "markdown").resolve()])
             )
 
+    with context("that is made for no session and converts a folder"):
+        with it("should refuse, naming the toolset that works in no session"):
+            expect(lambda: ContextSetup().convert(tempfile.mkdtemp())).to(raise_error(ActionWorksInNoSession))
+
     with context("whose smoke_test is given a capture repository and an unreachable app"):
         with before.each:
+            self.throwaway = ThrowawayProject()
             self.app = Path(tempfile.mkdtemp())
             self.capture = Path(tempfile.mkdtemp())
-            self.result = ContextSetup().smoke_test(
+            setup = ContextSetup().for_call(ToolCall(project=self.throwaway.root))
+            self.result = setup.smoke_test(
                 repo_path=str(self.app),
                 capture_repo=str(self.capture),
                 base_url=_closed_port_url(),
                 entry_paths=["/", "/login"],
             )
+
+        with after.each:
+            self.throwaway.close()
 
         with it("should write the stub inventory under the capture repository"):
             expect(Path(self.result.inventory_path).resolve().is_relative_to(self.capture.resolve())).to(equal(True))

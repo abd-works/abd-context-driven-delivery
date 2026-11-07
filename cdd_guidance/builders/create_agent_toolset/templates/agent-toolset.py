@@ -38,8 +38,8 @@ class {ClassName}:
         ...
 
     @agent_instructions
-    def {action_name}(recipe, {action_param}: str) -> str:
+    def {action_name}(self, {action_param}: str) -> str:
         """{action_instruction}"""
         """{mid_action_prose}"""
-        tools(recipe.toolset.{tool_name}())
+        tools(self.{tool_name})
         return "Instructions for {action_name} - {action_param}: {{{action_param}}}"
