@@ -13,7 +13,6 @@ import { normalizeInventoryBundle } from './inventory-bundle';
 import { lernNodeTypesFromCatalog, lernOverlayActive, overlayPathLabel } from './overlay-labels';
 import type { ViolationFocus } from './source/violation-prompt';
 
-const PRACTICES = ['clean_engineering', 'stories', 'ddd', 'bdd', 'ux'];
 const LAST_FOLDER = 'cdd-graph-folder';
 const LAST_OVERLAYS = 'cdd-graph-overlays';
 const EMPTY: FilterSelection = {
@@ -35,6 +34,7 @@ export function App() {
   const [selection, setSelection] = useState<FilterSelection>(EMPTY);
   const [trees, setTrees] = useState<ExplorerEntryData[]>([]);
   const [catalog, setCatalog] = useState<Record<string, PracticeGraphData>>({});
+  const [practices, setPractices] = useState<string[]>([]);
   const [nodeTypes, setNodeTypes] = useState<string[]>([]);
   const [relationships, setRelationships] = useState<string[]>([]);
   const [rules, setRules] = useState<string[]>([]);
@@ -99,8 +99,11 @@ export function App() {
     };
   }, []);
 
-  function practiceRoots(root: string): Record<string, string> {
-    return Object.fromEntries(PRACTICES.map((name) => [name, root]));
+  // Every practice the graph can load, each opened on the folder the page loads.
+  async function practiceRoots(root: string): Promise<Record<string, string>> {
+    const names = (await graphs.practiceNames()) ?? [];
+    setPractices(names);
+    return Object.fromEntries(names.map((name) => [name, root]));
   }
 
   async function browse() {
@@ -124,7 +127,7 @@ export function App() {
     setLoadingLog([]);
     setError('');
     try {
-      await graphs.loadWorkingCopy(trimmed, practiceRoots(trimmed), trimmed, readSavedOverlays(), force);
+      await graphs.loadWorkingCopy(trimmed, await practiceRoots(trimmed), trimmed, readSavedOverlays(), force);
       if (generation !== loadGeneration.current) {
         return;
       }
@@ -340,7 +343,7 @@ export function App() {
           <FilterView
             open={filtersOpen}
             selection={selection}
-            practices={PRACTICES}
+            practices={practices}
             nodeTypes={nodeTypes}
             relationships={relationships}
             rules={rules}

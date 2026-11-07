@@ -109,7 +109,7 @@ on(toolset: AgentToolSet): AgentTool
 	// this tool on a toolset of the same class made for one call
 log_session_invocation(call: ToolCall): None
 	// skipped for ping calls and @noSessionLog members, and for a call that works in no session
-	-> toolset.session_for(call).log_agent_tool
+	-> toolset.session_for(call).log.tool
 
 ## AgentOperation : AgentTool                                     <!-- Md -->
 
@@ -128,7 +128,7 @@ arguments: dict
 project: Path | None
 session: Session | None
 	// the session saved as open in the project's checkout, read once for this call; none when the call names no project
-	-> Repo.current_session
+	-> Sessions.saved
 ----
 
 ## GuidanceAgentOperation : AgentOperation                        <!-- Md -->

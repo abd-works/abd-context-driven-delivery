@@ -12,9 +12,9 @@ from pathlib import Path
 from expects import be_false, be_true, contain, equal, expect, match, raise_error, start_with
 from mamba import after, before, context, description, it
 
-from harness.installation.installer import Installer
+from harness.installation.repository_toolsets import RepositoryToolsets
 
-Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
+RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from harness.installation.destination import DataField, data_of  # noqa: E402
 from space.kanban.backlog_item import BacklogItem  # noqa: E402
@@ -27,7 +27,7 @@ from space.repo.repo import Branch  # noqa: E402
 from space.kanban.board import FidelityNotFoundError, NotAStageError, PracticeNotFoundError  # noqa: E402
 from tools.file_manager.file_manager import PathOutsideRootsError  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
-from space.session import Session  # noqa: E402
+from space.session import Sessions  # noqa: E402
 from space.session.session import UnknownPracticeError  # noqa: E402
 
 TOOLSETS = (
@@ -37,7 +37,8 @@ TOOLSETS = (
     "space.kanban.ticket:FidelityProgress",
     "space.kanban.backlog_item:BacklogItem",
     "space.session.session:Session",
-    "space.session.session:PracticeSessionOutput",
+    "space.session.sessions:Sessions",
+    "space.session.practice_session_output:PracticeSessionOutput",
 )
 
 
@@ -189,11 +190,9 @@ class ProjectTools:
 
 with description("the board tools") as self:
     with before.each:
-        Session.forget_current()
         self.project = ProjectTools()
 
     with after.each:
-        Session.forget_current()
         os.environ.pop("CDD_PROJECT", None)
 
     # (E) See Work On Session Board
@@ -552,7 +551,7 @@ with description("the board tools") as self:
 
         with context("that closes the active ticket"):
             with before.each:
-                Session.load(self.project.sessions / "pet-visits", self.project.root).switch("pet-visits", repo_path=self.project.root)
+                Sessions(self.project.root).switch("pet-visits")
                 self.project.call("ticket.close", ticket="pet-visits")
 
             with it("should leave no ticket active"):
@@ -1078,7 +1077,7 @@ with description("the board tools") as self:
 
         with context("with the active ticket on no branch of its own"):
             with before.each:
-                Session.load(self.project.sessions / "pet-visits", self.project.root).switch("pet-visits", repo_path=self.project.root)
+                Sessions(self.project.root).switch("pet-visits")
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             with it("should say the ticket being left has no branch yet"):
@@ -1099,7 +1098,7 @@ with description("the board tools") as self:
                 subprocess.run(["git", "checkout", "-q", "-b", "pet-visits"], cwd=self.project.root, check=True)
                 subprocess.run(["git", "config", "user.name", "t"], cwd=self.project.root, check=True)
                 subprocess.run(["git", "config", "user.email", "t@t"], cwd=self.project.root, check=True)
-                Session.load(self.project.sessions / "pet-visits", self.project.root).switch("pet-visits", repo_path=self.project.root)
+                Sessions(self.project.root).switch("pet-visits")
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             with it("should say the ticket being left is on its branch"):
@@ -1126,7 +1125,7 @@ with description("the board tools") as self:
         with context("with the active ticket's branch not checked out"):
             with before.each:
                 subprocess.run(["git", "branch", "pet-visits"], cwd=self.project.root, check=True)
-                Session.load(self.project.sessions / "pet-visits", self.project.root).switch("pet-visits", repo_path=self.project.root)
+                Sessions(self.project.root).switch("pet-visits")
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             with it("should commit nothing on a branch that is not checked out"):
@@ -1136,7 +1135,7 @@ with description("the board tools") as self:
 
     with context("with a session open in the project"):
         with before.each:
-            Session.new("pet-visits", self.project.root, self.project.root)
+            Sessions(self.project.root).switch("pet-visits", self.project.root)
             self.log = self.project.sessions / "pet-visits" / "session.log"
             self.project.call("board.show")
 
@@ -1150,7 +1149,7 @@ with description("the board tools") as self:
                 "board.show", "board.help", "board.folders", "stage.set_wip_limit",
                 "ticket.create", "ticket.activate", "ticket.branch", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
                 "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files",
-                "session.current", "session.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
+                "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
                 "session.choose_workpath", "session.files", "session.folder_files", "session.read_file",
                 "session.write_handoff", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
                 "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root",

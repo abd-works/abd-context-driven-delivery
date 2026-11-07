@@ -4,7 +4,7 @@
 
 - **Purpose:** Give every guidance action the same way to take guidance, open its session, and run once per listed guidance, so each action holds only its own words and steps.
 - **Seam (terms):** GuidanceAction, GuidanceArg, ActionWorksInNoSession; `for_call(call)`, `made_for(session)`, `listed()`, `each(...)`, `run(...)`, `session`
-- **Dependencies (one-way):** harness/agent_tools (*ToolCall*), harness/guidance (*PracticeCatalogue* turns a slug into a practice and fidelity), harness/hooks, harness/installation, space/repo, space/session, tools/prompt_notify (imported through `sys.path` as `prompt_notify`). harness/agent_tools, harness/guidance, and space/session import this module back, so it sits in their dependency cycle (`.sessions/_backlog/break-module-dependency-cycles.md`).
+- **Dependencies (one-way):** harness/agent_tools (*ToolCall*; a guidance action explains its `guidance` parameter through `parameter_notes`), harness/guidance (*PracticeCatalogue* turns a slug into a practice and fidelity), harness/hooks, harness/name, space/repo and space/session (the session a `session=` word names), tools/prompt_notify (the toast `inject_rules` shows). Nothing in the framework imports this module; space/session does, so its space imports keep it in a cycle (`.sessions/_backlog/break-module-dependency-cycles.md`).
 
 ## Constraint
 

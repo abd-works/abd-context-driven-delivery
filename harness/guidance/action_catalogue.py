@@ -6,7 +6,7 @@ import importlib
 import inspect
 from pathlib import Path
 
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 from harness.installation.files import Skill
 
 _ACTIONS_FOLDER = Path(__file__).resolve().parents[2] / "cdd_guidance" / "actions"

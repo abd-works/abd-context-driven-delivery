@@ -17,19 +17,23 @@ from harness.installation.destination import data_field, identity, language_adap
 from harness.mcp.mcp_server import mcp
 from cdd_guidance.practices.stages import STAGES, ApproachStage, StageScope
 from space.repo.repo import Repo
-from space.session import Session
+from space.session.session_log import SessionLog
+from space.session.sessions import Sessions
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from space.kanban.backlog_item import BacklogItem
     from space.kanban.ticket import Ticket
-    from space.repo.repo import Branch, Worktree
+    from space.repo.repo import Branch
+    from space.repo.worktree import Worktree
 
 BACKLOG_COLUMN = "Backlog"
 COMPLETE_COLUMN = "Complete"
 # How many tickets a stage holds before its count shows as over its limit, until a person sets another.
 DEFAULT_WIP_LIMIT = 3
+# The file in `.sessions` that holds what the sessions share on the board, such as each stage's work-in-progress limit.
+_BOARD_FILE = "_board.json"
 FORGE = "https://forge.abdworks.net/abd-context-driven-delivery"
 FIDELITIES_WITHOUT_PAGE = ("ddd-model", "bdd-realization")
 
@@ -97,6 +101,16 @@ class Board:
         return self._repo
 
     @property
+    def sessions(self) -> Sessions:
+        """The sessions of the board's repository: each one a ticket, and which is open."""
+        return Sessions(self._repo.root)
+
+    @property
+    def file(self) -> Path:
+        """The file that holds what this repository's sessions share on the board."""
+        return self.sessions.folder / _BOARD_FILE
+
+    @property
     @data_field
     def project(self) -> str:
         return self._repo.root.name
@@ -107,7 +121,7 @@ class Board:
         call. A project that is no git clone has none."""
         if not self._repo.is_clone:
             return {}
-        return {tree.branch: tree for tree in self._repo.list_worktrees() if tree.branch is not None}
+        return {tree.branch: tree for tree in self._repo.worktrees if tree.branch is not None}
 
     @property
     @data_field
@@ -124,13 +138,13 @@ class Board:
     def tickets(self) -> list[Ticket]:
         from space.kanban.ticket import Ticket
 
-        return [Ticket(session, self) for session in self._repo.sessions()]
+        return [Ticket(session, self) for session in self.sessions.all()]
 
     @property
     def backlog_items(self) -> list[BacklogItem]:
         from space.kanban.backlog_item import BacklogItem
 
-        folder = self._repo.backlog_folder
+        folder = self.sessions.backlog_folder
         if not folder.is_dir():
             return []
         # An item is a file in the Backlog, or a folder holding a file of its own name: a ticket moved back keeps its
@@ -147,7 +161,7 @@ class Board:
     @data_field
     def active(self) -> Ticket | None:
         """The ticket of the session saved as open; none while main is, since main is not on the board."""
-        return self.ticket(self._repo.current_session.name)
+        return self.ticket(self.sessions.open_name)
 
     def column(self, name: str) -> Column:
         found = next((column for column in self._columns if column.name == name), None)
@@ -160,7 +174,7 @@ class Board:
         the board reads no other session to find it."""
         from space.kanban.ticket import Ticket
 
-        session = self._repo.work_session(name)
+        session = self.sessions.named(name)
         return Ticket(session, self) if session is not None else None
 
     def backlog_item(self, title: str) -> BacklogItem | None:
@@ -338,13 +352,13 @@ class Stage(Column):
     def set_wip_limit(self, limit: int) -> Stage:
         """Set how many tickets this stage holds before its count shows as over its limit."""
         limits = {**self._saved_wip_limits, self.name: limit}
-        self._board.repo.board_file.write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
+        self._board.file.write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
         return self
 
     @property
     def _saved_wip_limits(self) -> dict[str, int]:
         """Every stage's limit a person has set, by stage name: one file holds them all."""
-        path = self._board.repo.board_file
+        path = self._board.file
         return json.loads(path.read_text(encoding="utf-8")).get("wip_limits", {}) if path.is_file() else {}
 
 
@@ -379,7 +393,7 @@ class Card(ABC):
     def move_previous(self) -> Card: ...
 
     def _timestamp(self, moment: datetime) -> str:
-        return Session.timestamp(moment)
+        return SessionLog.timestamp(moment)
 
 
 class Help:

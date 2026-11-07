@@ -24,7 +24,7 @@ from cdd_guidance.practices.stages import GENERATE, REVIEW, VALIDATE
 from space.kanban.report import Report, ReportFile
 from space.repo.repo import Branch, Repo
 from space.session import Session, name_of
-from space.session.session import LogEntry
+from space.session.session_log import LogEntry
 from tools.file_manager.file_manager import FileEntry
 
 if TYPE_CHECKING:
@@ -86,7 +86,7 @@ class Ticket(Card):
         name = name_of(title)
         root = board.repo.root
         workpath = (root / path).resolve() if path else root
-        Session.new(name, workpath, root, is_current=False, title=title, scope=scope, parent=parent)
+        board.sessions.create(name, workpath, title=title, scope=scope, parent=parent)
         return board.ticket(name)
 
     @property
@@ -118,7 +118,7 @@ class Ticket(Card):
     def progress(self) -> list[FidelityProgress]:
         """One per fidelity the board requires, in stage order, each naming its fidelity; read from the session log each
         time, with the latest report's judgment able to fail a validate the log shows passing."""
-        entries = self._session.log_entries
+        entries = self._session.log.entries
         return [FidelityProgress.from_log(self._own(fidelity), stage, entries, self) for stage in self._stages for fidelity in stage.work_required]
 
     def _own(self, fidelity: FidelityGuidance) -> FidelityGuidance:
@@ -133,7 +133,7 @@ class Ticket(Card):
         if found is None:
             raise FidelityNotFoundError(slug, f"ticket {self.name!r}")
         fidelity, stage = found
-        return FidelityProgress.from_log(self._own(fidelity), stage, self._session.log_entries, self)
+        return FidelityProgress.from_log(self._own(fidelity), stage, self._session.log.entries, self)
 
     @property
     @data_field(reference=True)
@@ -158,7 +158,7 @@ class Ticket(Card):
     @data_field
     def is_active(self) -> bool:
         """Whether its session is the one saved as open, which the agent works in."""
-        return self._board.repo.current_session.name == self.name
+        return self._board.sessions.open_name == self.name
 
     @property
     @data_field
@@ -195,7 +195,7 @@ class Ticket(Card):
 
     @property
     def last_activity(self) -> str:
-        entries = self._session.log_entries
+        entries = self._session.log.entries
         return entries[-1].time if entries else ""
 
     @property
@@ -218,7 +218,7 @@ class Ticket(Card):
             repo.switch_branch(self.name)
         if OPEN_WORKTREE in (opening or []):
             repo.switch_worktree(self.name)
-        self._session.switch(self.name, repo_path=repo.root)
+        self._board.sessions.switch(self.name)
         return self
 
     @mcp
@@ -335,23 +335,23 @@ class Ticket(Card):
         return [entry for entry in self.progress if entry.is_enabled]
 
     def _moved_into(self) -> Stage | None:
-        moves = [entry.stage for entry in self._session.log_entries if entry.verb == MOVED_INTO and entry.stage]
+        moves = [entry.stage for entry in self._session.log.entries if entry.verb == MOVED_INTO and entry.stage]
         return next((stage for stage in self._stages if moves and stage.name == moves[-1]), None)
 
     def _latest_mark(self, stage: Stage) -> str | None:
         """The latest mark a person made in stage since entering it; none when they have made none."""
         latest = None
-        for entry in self._session.log_entries:
+        for entry in self._session.log.entries:
             if entry.stage == stage.name and entry.verb in (MOVED_INTO, MARKED_DONE, MARKED_IN_PROGRESS):
                 latest = None if entry.verb == MOVED_INTO else entry.verb
         return latest
 
     def _mark(self, mark: str, stage: Stage) -> Ticket:
-        self._session.record(f"{mark} {stage.name}")
+        self._session.log.record(f"{mark} {stage.name}")
         return self
 
     def _enter(self, stage: Stage) -> Ticket:
-        self._session.record(f"{MOVED_INTO} {stage.name}")
+        self._session.log.record(f"{MOVED_INTO} {stage.name}")
         return self
 
 
@@ -520,7 +520,7 @@ class FidelityProgress:
     @noSessionLog
     def finish_review(self) -> FidelityProgress:
         """Record that a person has reviewed and approved this fidelity: a review line in its ticket's session log. A review counts until the fidelity is validated again, and a fidelity whose actions are all done is done in its stage."""
-        self._ticket.session.record(f"{REVIEW} {type(self._fidelity.practice_guidance).__name__} {self._fidelity.name}")
+        self._ticket.session.log.record(f"{REVIEW} {type(self._fidelity.practice_guidance).__name__} {self._fidelity.name}")
         return self._ticket.progress_of(self.fidelity_slug)
 
     @mcp

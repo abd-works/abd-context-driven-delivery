@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 
 PROJECT = "project"
 

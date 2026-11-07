@@ -18,6 +18,7 @@ if str(_REPO) not in sys.path:
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.progress import report_progress
+from cdd_guidance.practices.stages import STAGES
 from harness.installation.destination import data_field, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
@@ -546,8 +547,8 @@ class Filter:
             practice = self.graph.practices.get(name)
             if practice is None:
                 continue
-            for rule, bound in practice.applicable.items():
-                for node_type in bound:
+            for rule, rule_types in practice.applicable.items():
+                for node_type in rule_types:
                     if node_type not in types:
                         continue
                     found.add(qualified_rule_label(name, node_type, rule, patterns))
@@ -795,7 +796,7 @@ class Node:
     @staticmethod
     def _stage_cell(row: Tuple) -> str:
         for cell in row[7:]:
-            if cell in {"discovery", "specification", "implementation"}:
+            if cell in STAGES.names:
                 return str(cell)
         return ""
 
@@ -901,7 +902,7 @@ class PracticeGraph:
         self._edges_by_parent: dict[str, tuple[tuple[int, int], dict[int, list[Edge]]]] = {}
         self._direct_parents: tuple[tuple, dict[int, Node]] = ((), {})
 
-    def bind_rule(self, rule: str, types: list[str]) -> None:
+    def apply_rule(self, rule: str, types: list[str]) -> None:
         current = self.applicable.setdefault(rule, [])
         for node_type in types:
             if node_type not in current:
@@ -975,9 +976,9 @@ class PracticeGraph:
 
     def _register(self, node: Node) -> Node:
         from harness.graph.node_rules import attach_node_rules
-        from harness.graph.schema_rules import bind_practice_rules
+        from harness.graph.schema_rules import apply_practice_rules
 
-        bind_practice_rules(self)
+        apply_practice_rules(self)
         self.node_types.add(node.type)
         attach_node_rules(node)
         self.nodes.setdefault(node.type, []).append(node)
@@ -1001,9 +1002,9 @@ class PracticeGraph:
                 parent.practice.record(fact, parent, child)
                 if parent.practice is not child.practice:
                     child.practice.record(fact, child, parent)
-        rows = {row[0]: row for row in saved.get("nodes") or [] if row}
+        saved_nodes = {node[0]: node for node in saved.get("nodes") or [] if node}
         for saved_violation in saved.get("rules") or []:
-            violation = Violation.from_saved(self.name, saved_violation, rows)
+            violation = Violation.from_saved(self.name, saved_violation, saved_nodes)
             node = self.registered(violation.node_id)
             if node is not None:
                 node.rules.restore(violation)
@@ -1511,6 +1512,14 @@ class Graph:
         if not (root / "practices").is_dir():
             raise GraphFailure("overlay_of", f"Not an overlay root (missing practices/): {folder}")
         return Overlay(normalize_overlay(str(root)))
+
+    @mcp
+    @agent_tool
+    def practice_names(self) -> list[str]:
+        """Return the name of every practice the graph can load, in the order the approach walks them."""
+        from harness.guidance.practice_catalogue import PracticeCatalogue
+
+        return list(PracticeCatalogue.keys())
 
     @mcp
     @agent_tool

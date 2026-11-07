@@ -76,21 +76,21 @@ class Violation:
         )
 
     @classmethod
-    def from_saved(cls, practice: str, saved: list, node_rows: dict[str, list]) -> Violation:
+    def from_saved(cls, practice: str, saved: list, saved_nodes: dict[str, list]) -> Violation:
         """A violation as the saved graph keeps it, ``[rule, node_id, message, file, line, end_line, severity]``; the
-        node's saved row names what the node is."""
+        node as the saved graph keeps it names what the node is."""
         rule, node_id, message, location, line, end_line, severity = (list(saved) + [""] * 7)[:7]
-        row = node_rows.get(node_id) or []
-        subject = f"{row[2]} `{row[1]}`" if len(row) > 2 and row[1] else ""
+        node = saved_nodes.get(node_id) or []
+        subject = f"{node[2]} `{node[1]}`" if len(node) > 2 and node[1] else ""
         return cls(
             str(rule),
             str(message),
             practice=practice,
             node_id=str(node_id),
             subject=subject,
-            location=str(location or (row[4] if len(row) > 4 else "")),
-            line=line or (row[5] if len(row) > 5 else None),
-            end_line=end_line or (row[6] if len(row) > 6 else None),
+            location=str(location or (node[4] if len(node) > 4 else "")),
+            line=line or (node[5] if len(node) > 5 else None),
+            end_line=end_line or (node[6] if len(node) > 6 else None),
             severity=str(severity or "error"),
         )
 

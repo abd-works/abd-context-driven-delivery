@@ -12,7 +12,7 @@ for path in (_HERE, _REPO):
 from expects import be_a, contain, equal, expect
 from mamba import before, description, it
 
-from graph import Graph, Node, Source
+from harness.graph.graph import Graph, Node, Source
 from harness.graph.graph_rules_collection import GraphRulesCollection
 from harness.graph.schema_rules import qualified_rule_label, slugs_for_type
 

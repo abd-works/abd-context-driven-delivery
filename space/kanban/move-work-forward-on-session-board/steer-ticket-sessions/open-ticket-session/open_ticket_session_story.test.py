@@ -20,7 +20,7 @@ with story("Open Ticket Session"):
             pass
         with when("the Person opens a new ticket titled Pet visits"):
             # Person -> Ticket.create('Pet visits', 'feature')
-            # Ticket -> Session.new('pet-visits', <repo>, <repo>, is_current=False, title, scope, parent)
+            # Ticket -> Sessions.create('pet-visits', <repo>, title, scope, parent)
             # Ticket <- Ticket pet-visits
             pass
         with then("pet-visits is In progress in Discovery, titled Pet visits"):
@@ -53,7 +53,7 @@ with story("Open Ticket Session"):
             pass
         with when("the Person opens a ticket titled Billing report on src/billing"):
             # Person -> Ticket.create('Billing report', 'feature', '', 'src/billing')
-            # Ticket -> Session.new('billing-report', <repo>/src/billing, <repo>, is_current=False, title, scope, parent)
+            # Ticket -> Sessions.create('billing-report', <repo>/src/billing, title, scope, parent)
             pass
         with then("billing-report's [session](../../../.context/kanban-model.md#session) works in src/billing"):
             pass

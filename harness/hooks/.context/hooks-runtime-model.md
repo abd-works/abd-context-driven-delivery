@@ -204,7 +204,7 @@ The long-running process that answers every hook call for one repository. `hook_
 + exceptions: list[HookIllegitimateHandler]
 + session: Session
 	// the session open in .sessions/session.json (main when none), read for each event
-	-> Repo.current_session
+	-> Sessions.saved
 ----
 + state_path(repo: Path): Path
 	// .cursor/hook-server.json, the running daemon's address

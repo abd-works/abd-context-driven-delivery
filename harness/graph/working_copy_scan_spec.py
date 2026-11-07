@@ -16,7 +16,7 @@ from expects import be_above, contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
-from graph import Graph
+from harness.graph.graph import Graph
 
 # Five parameters, over the three limit-operation-parameters allows.
 _OVER_LIMIT = "export class {name} {{\n  place(a: string, b: string, c: string, d: string, e: string): void {{}}\n}}\n"

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
+CONTEXT_FOLDER = ".context"
 CONFIG_NAME = "config.json"
 _LEGACY_GUIDELINES = "guidelines.config"
 _LEGACY_PRACTICE_FOLDERS = "practice-folders.config"
@@ -27,10 +28,10 @@ class ContextConfig:
 
     @property
     def path(self) -> Path:
-        return self.root / ".context" / CONFIG_NAME
+        return self.root / CONTEXT_FOLDER / CONFIG_NAME
 
     def exists(self) -> bool:
-        folder = self.root / ".context"
+        folder = self.root / CONTEXT_FOLDER
         return (
             self.path.is_file()
             or (folder / _LEGACY_GUIDELINES).is_file()
@@ -44,10 +45,10 @@ class ContextConfig:
             return self._read_config_file()
         return {
             "guidelines": _parse_text_map(
-                _read_text(self.root / ".context" / _LEGACY_GUIDELINES)
+                _read_text(self.root / CONTEXT_FOLDER / _LEGACY_GUIDELINES)
             ),
             "practice_folders": _parse_text_map(
-                _read_text(self.root / ".context" / _LEGACY_PRACTICE_FOLDERS)
+                _read_text(self.root / CONTEXT_FOLDER / _LEGACY_PRACTICE_FOLDERS)
             ),
         }
 

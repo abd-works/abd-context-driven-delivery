@@ -32,7 +32,7 @@ with story("List Ticket Files"):
             pass
         with when("the Person lists pet-visits' bdd behavior files"):
             # Person -> Ticket.files(['bdd-behavior'])
-            # Ticket -> Repo.files_changed_on('pet-visits')
+            # Ticket -> Branch('pet-visits').changed_files()
             pass
         with then("the files panel lists src/mine_spec.py"):
             pass

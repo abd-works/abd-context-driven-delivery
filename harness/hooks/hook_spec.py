@@ -32,7 +32,6 @@ from harness.hooks.hook_server import (
     HookServer,
 )
 from harness.hooks.hooks import Hook, Hooks
-from harness.installation.installer import Installer
 from space.session.sessions import Sessions
 from space.work_state import WorkState
 
@@ -809,11 +808,11 @@ with description("hook process helpers"):
 
     with it("should use python.exe for the Cursor dispatch command so stdout is returned"):
         from harness.hooks.hooks import HookInstallation
-        from harness.hooks.process import hook_cli_executable
+        from harness.process.process import console_python_executable
 
         install = HookInstallation("Cursor", _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
         command = install.dispatch_command.replace("\\", "/")
-        python = hook_cli_executable(sys.executable).replace("\\", "/")
+        python = console_python_executable(sys.executable).replace("\\", "/")
         expect(command).to(contain(python))
         expect(command).to(contain("harness/hooks/hook_server.py"))
         if sys.platform == "win32":
@@ -821,7 +820,7 @@ with description("hook process helpers"):
             expect(command).not_to(contain("pythonw.exe"))
 
     with it("should include CREATE_NO_WINDOW in detached daemon flags on Windows"):
-        from harness.hooks.process import detached_creationflags
+        from harness.process.process import detached_creationflags
 
         flags = detached_creationflags()
         if sys.platform == "win32":

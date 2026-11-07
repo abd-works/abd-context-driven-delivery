@@ -6,8 +6,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from harness.agent_tools.name import Name
-from harness.installation.destination import Destination, Installation
+from harness.agent_tools.agent_tools import InstallDestination
+from harness.name.name import Name
+from harness.installation.destination import Installation
+from harness.marks.mark import Destination
 
 
 class Hooks:
@@ -32,6 +34,8 @@ class Hooks:
 
 class Hook(Destination):
     flag = "_hook"
+    channel = InstallDestination.HOOK
+    enlists_member = True
     disabled_flag = "_hook_disabled"
     EVENTS = frozenset(
         {
@@ -115,11 +119,11 @@ class HookInstallation(Installation):
 
     @property
     def dispatch_command(self) -> str:
-        from harness.hooks.process import hook_cli_executable
+        from harness.process.process import console_python_executable
 
         repo = self.repo or Path(__file__).resolve().parents[2]
         script = (repo / self.DISPATCH_SCRIPT).resolve()
-        python = hook_cli_executable(self.python)
+        python = console_python_executable(self.python)
         return f"{python} -u {script}"
 
     def write(self, tool: Any) -> None:

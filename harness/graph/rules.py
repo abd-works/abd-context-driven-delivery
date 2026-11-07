@@ -6,12 +6,12 @@ from pathlib import Path
 
 from harness.graph.graph_practice import GraphPractices
 from harness.graph.rule_context import RuleCheckContext
-from harness.graph.schema_rules import active_overlay_patterns, bind_practice_rules
+from harness.graph.schema_rules import active_overlay_patterns, apply_practice_rules
 
 
 def attach_rules(practice) -> None:
     """Run every check this practice runs, over the whole practice and then node by node, and record what they find."""
-    bind_practice_rules(practice)
+    apply_practice_rules(practice)
     patterns = active_overlay_patterns(tuple(practice.graph.overlays) if practice.graph else ())
     graph_practice = GraphPractices.named(practice.name)
     checks = list(graph_practice.checks(patterns).values())

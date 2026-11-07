@@ -13,7 +13,7 @@ from expects import be_none, equal, expect
 from mamba import after, before, context, description, it
 
 from space.session.chat_pointer import ChatPointer
-from space.session.session import Session
+from space.session.sessions import Sessions
 from space.session.throwaway_project import ProjectCall
 
 CHAT_ID = "4f1c2b3a-1111-2222-3333-444455556666"
@@ -119,11 +119,10 @@ with description("a session loop"):
                 json.dumps({"role": "user", "message": {"content": [{"type": "text", "text": "question"}]}}),
                 encoding="utf-8",
             )
-            Session.forget_current()
-            Session.new("alpha", work, repo)
-            session = Session.current(repo)
-            session.record("--- 1")
+            Sessions(repo).switch("alpha", work)
+            session = Sessions(repo).current()
+            session.log.record("--- 1")
             chat_id = "b4c2a422-7199-47ce-9656-c0429af8adb8"
-            session.record(f"2026-10-20T12:00:00Z sketch {work / 'a.py'} {chat_id} {transcript} 1")
-            expanded = session.loop_at(1).expanded_text()
+            session.log.record(f"2026-10-20T12:00:00Z sketch {work / 'a.py'} {chat_id} {transcript} 1")
+            expanded = session.log.loop_at(1).expanded_text()
             expect("question" in expanded and "sketch" in expanded).to(equal(True))

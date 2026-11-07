@@ -89,11 +89,13 @@ class PracticeSessionOutput:
 
     @classmethod
     @tool_subject
-    def load(cls, session: str, practice: str) -> PracticeSessionOutput:
-        """The practice named practice in the session whose session.json is session, a path from the project."""
+    def load(cls, session: str, practice: str, project: Path) -> PracticeSessionOutput:
+        """The practice named practice in the session whose session.json is session, a path from project, the project
+        the tool call names."""
+        # WHY: Session makes its PracticeSessionOutput objects from this module, so Session is imported when first loaded.
         from space.session.session import Session
 
-        return Session.from_file(session).practice(practice)
+        return Session.from_file(session, project).practice(practice)
 
     @property
     @data_field
@@ -343,7 +345,7 @@ class FidelitySessionOutput:
         it exists. A pattern lists the files the session worked on, not every match in the repository."""
         # Asking git what the branch changed is slow, and a project that is no repository has no branch, so it is asked
         # only once a pattern finds files.
-        worked_on = cache(self._session.files.worked_on)
+        worked_on = cache(self._session.session_files.worked_on)
         return {label: [entry for path in paths for entry in self._declared_files(path, worked_on)] for label, paths in self.output_paths().items()}
 
     def has_output(self) -> bool:

@@ -19,7 +19,7 @@ for _entry in (_REPO, _REPO / "tools", _REPO / "cdd_guidance" / "practices", _RE
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
-from harness.hooks.stoppable_process import ProcessNotStopped, StoppableProcess  # noqa: E402
+from harness.process.stoppable_process import ProcessNotStopped, StoppableProcess  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +30,8 @@ _STOP_SECONDS = 3
 _SOURCE_STAMP_FILES = (
     Path("harness/hooks/hook_daemon.py"),
     Path("harness/hooks/hook_server.py"),
-    Path("harness/hooks/running_process.py"),
-    Path("harness/hooks/stoppable_process.py"),
+    Path("harness/process/running_process.py"),
+    Path("harness/process/stoppable_process.py"),
     Path("harness/guidance/rule.py"),
     Path("harness/guidance_actions/guidance_actions.py"),
 )
@@ -86,17 +86,17 @@ class HookDaemon:
         env["PYTHONPATH"] = os.pathsep.join(
             [*extra, *(existing.split(os.pathsep) if existing else ())]
         )
-        from harness.hooks.process import (
+        from harness.process.process import (
             detached_creationflags,
             hidden_process_startupinfo,
-            hook_python_executable,
+            windowless_python_executable,
         )
 
         flags = detached_creationflags()
         log = path.parent / "hook-server.log"
         stream = open(log, "a", encoding="utf-8")
         subprocess.Popen(
-            [hook_python_executable(), "-m", "harness.hooks.hook_daemon", root],
+            [windowless_python_executable(), "-m", "harness.hooks.hook_daemon", root],
             cwd=root,
             env=env,
             stdin=subprocess.DEVNULL,

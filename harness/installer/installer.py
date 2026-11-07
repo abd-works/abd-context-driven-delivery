@@ -1,7 +1,6 @@
-"""Installer — collect toolsets from the repo; install each tool on the installment."""
+"""Installer: install every toolset a repository defines into one IDE folder, through every destination."""
 from __future__ import annotations
 
-import ast
 import json
 import os
 import re
@@ -11,7 +10,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Iterable
+from typing import TYPE_CHECKING, Any, Iterable
 
 from harness.installation.destination import Installation, noCatalog
 from harness.agent_tools.agent_tools import (
@@ -23,15 +22,20 @@ from harness.agent_tools.agent_tools import (
 )
 from harness.installation.files import FileInstallation, command
 from harness.installation.language_adapter import LanguageAdapterInstallation
+from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.hooks.hooks import Hook
 from harness.markdown import markdown
+
+if TYPE_CHECKING:
+    from harness.hooks.hook_server import HookPayload
+
 @noCatalog
 @agent_toolset
 class Installer:
     """Collect installable toolsets; then install each tool."""
 
     domain_slug = "installer"
-    TOOLSET_REF = "harness.installation.installer:Installer"
+    TOOLSET_REF = "harness.installer.installer:Installer"
     _STATE_NAME = ".install-state.json"
     _BOARD_PLUGIN = "cdd-board@cdd-home"
     # A board mod installed from a checkout's own marketplace runs that branch's code, not the server's.
@@ -43,52 +47,10 @@ class Installer:
         "Kilo": ".kilo",
         "Claude": ".claude",
     }
-    _SKIP_DIRS = frozenset(
-        {
-            "__pycache__",
-            ".pycache",
-            "examples",
-            "_examples",
-            "example",
-            "fixtures",
-            "fixture",
-            "tests",
-            ".venv",
-            "node_modules",
-            ".git",
-            "retired",
-            "_retired",
-            ".retired",
-        }
-    )
-    _CATALOG_DIRS = (
-        "tools",
-        "cdd_guidance/practices",
-        "cdd_guidance/actions",
-        "cdd_guidance/patterns",
-        "cdd_guidance/builders",
-    )
-    _SKIP_FILE_NAMES = frozenset({"conftest.py"})
-    _SKIP_FILE_SUFFIXES = ("_spec.py", "_test.py")
     _DEPLOYED_CHANNELS = ("toolset", "skill", "command", "rules", "mcp", "hook", "agent", "language-adapter")
     _GREEN_SURFACE_CHANGE = 0.10
     _YELLOW_SURFACE_CHANGE = 0.50
     _DIAGNOSTICS_LOG = "diagnostics.json"
-    _ANNOTATIONS = frozenset(
-        {
-            "Skill",
-            "Command",
-            "Rules",
-            "Agent",
-            "AgentGuidance",
-            "Mcp",
-            "Hook",
-            "Hooks",
-            "agent_tool",
-            "agent_instructions",
-        }
-    )
-
     def __init__(
         self,
         ide: str | None = None,
@@ -112,7 +74,7 @@ class Installer:
             self._state_file = shared_state
         from harness.mcp.mcp_server import McpInstallation
 
-        self.ensure_import_path()
+        self.toolsets.ensure_import_path()
         self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
         self._hook: Any = None
         self._language_adapters = LanguageAdapterInstallation(self.ide, self.path, repo=self.repo)
@@ -128,126 +90,10 @@ class Installer:
         except OSError:
             return False
 
-    def import_path_entries(self, repo: Path | str | None = None) -> list[str]:
-        """Repo root plus tools and the guidance packages under ``cdd_guidance``. Never ``harness/`` (that shadows the MCP SDK). The deploy walk still parses ``harness/``."""
-        root = Path(repo).resolve() if repo is not None else self.repo
-        entries = [str(root)]
-        for name in self._CATALOG_DIRS:
-            folder = root / name
-            if folder.is_dir():
-                entries.append(str(folder))
-        return entries
-
-    def pythonpath(self, repo: Path | str | None = None) -> str:
-        return os.pathsep.join(self.import_path_entries(repo))
-
-    def pycache_prefix(self, repo: Path | str | None = None) -> str:
-        """One bytecode directory for this checkout. Keeps ``__pycache__`` out of the source tree."""
-        root = Path(repo).resolve() if repo is not None else self.repo
-        return str(root / ".pycache")
-
-    def ensure_import_path(self, repo: Path | str | None = None) -> None:
-        entries = self.import_path_entries(repo)
-        root = entries[0]
-        if root not in sys.path:
-            sys.path.insert(0, root)
-        for entry in entries[1:]:
-            if entry not in sys.path:
-                sys.path.insert(0, entry)
-
-    def collect_toolsets(self, repo: Path | None = None) -> list[Any]:
-        """Parse the repo for toolset classes whose members carry install annotations."""
-        root = (repo or self.repo).resolve()
-        self.ensure_import_path(root)
-        seen: set[str] = set()
-        toolsets: list[Any] = []
-        for py_file in self._iter_collect_files(root):
-            for ref in self._toolset_refs_in_file(py_file, root):
-                if ref in seen:
-                    continue
-                seen.add(ref)
-                toolsets.append(ref)
-        return toolsets
-
-    def _toolset_refs_in_file(self, py_file: Path, root: Path) -> list[str]:
-        try:
-            tree_ast = ast.parse(py_file.read_text(encoding="utf-8"))
-        except (OSError, SyntaxError, UnicodeDecodeError):
-            return []
-        module = self._module_name(py_file, root)
-        if not module:
-            return []
-        refs: list[str] = []
-        for node in tree_ast.body:
-            if not isinstance(node, ast.ClassDef):
-                continue
-            if node.name in AgentToolSet.HOSTED_ONLY_CLASS_NAMES:
-                continue
-            if not self._class_is_installable(node):
-                continue
-            refs.append(f"{module}:{node.name}")
-        return refs
-
-    def _iter_collect_files(self, root: Path) -> Iterable[Path]:
-        skip = {name.lower() for name in self._SKIP_DIRS}
-        for dirpath, dirnames, filenames in os.walk(root):
-            dirnames[:] = [
-                name
-                for name in sorted(dirnames)
-                if not name.startswith(".") and name.lower() not in skip
-            ]
-            for name in sorted(filenames):
-                if not name.endswith(".py"):
-                    continue
-                path = Path(dirpath) / name
-                if self._skip_collect_path(path):
-                    continue
-                yield path
-
-    def _skip_collect_path(self, py_file: Path) -> bool:
-        try:
-            rel_parts = py_file.resolve().relative_to(self.repo.resolve()).parts
-        except ValueError:
-            rel_parts = py_file.parts
-        if any(part.startswith(".") for part in rel_parts[:-1]):
-            return True
-        if any(part.lower() in self._SKIP_DIRS for part in rel_parts):
-            return True
-        name = py_file.name
-        if name in self._SKIP_FILE_NAMES:
-            return True
-        if name.startswith("test_") and name.endswith(".py"):
-            return True
-        return name.endswith(self._SKIP_FILE_SUFFIXES)
-
-    def _annotation_id(self, node: ast.expr) -> str | None:
-        target = node.func if isinstance(node, ast.Call) else node
-        if isinstance(target, ast.Name):
-            return target.id
-        if isinstance(target, ast.Attribute):
-            return target.attr
-        return None
-
-    def _class_is_installable(self, class_def: ast.ClassDef) -> bool:
-        if any(self._annotation_id(dec) == "agent_toolset" for dec in class_def.decorator_list):
-            return True
-        for item in class_def.body:
-            if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                continue
-            if any(self._annotation_id(dec) in self._ANNOTATIONS for dec in item.decorator_list):
-                return True
-        return False
-
-    def _module_name(self, py_file: Path, root: Path) -> str | None:
-        try:
-            rel = py_file.resolve().relative_to(root.resolve())
-        except ValueError:
-            return None
-        if rel.stem == "__init__":
-            parts = list(rel.parts[:-2]) + [rel.parent.name]
-        else:
-            parts = list(rel.parts[:-1]) + [rel.stem]
-        return ".".join(parts)
+    @property
+    def toolsets(self) -> RepositoryToolsets:
+        """The toolsets this repository defines, and the import path that loads them."""
+        return RepositoryToolsets(self.repo)
 
     def _track_write(self, dest: Path) -> None:
         try:
@@ -449,7 +295,7 @@ class Installer:
                 for rel in self._load_state().get("installed_files", [])
                 if (self.path / rel).is_file()
             ]
-        self.ensure_import_path()
+        self.toolsets.ensure_import_path()
         self._reset_channels()
         self._install_all(toolsets)
         self._install_installer_toolset()
@@ -520,7 +366,7 @@ class Installer:
 
     def _install_all(self, toolsets: Iterable[Any] | None) -> None:
         if toolsets is None:
-            toolsets = self.collect_toolsets()
+            toolsets = self.toolsets.collect()
         for item in toolsets:
             try:
                 toolset = AgentToolSet.instantiate(item)
@@ -1023,14 +869,12 @@ class Installer:
         return McpInstallation(self.ide, self.path, repo=self.repo).ensure_server()
 
     @Hook("sessionStart")
-    def ensure_mcp_server_on_session_start(self, payload: dict[str, Any] | None = None) -> str:
+    def ensure_mcp_server_on_session_start(self, payload: HookPayload) -> str:
         return self.ensure_mcp_server()
 
     @Hook("afterAgentResponse")
-    def ensure_mcp_server_after_agent_response(
-        self, payload: dict[str, Any] | None = None
-    ) -> str:
+    def ensure_mcp_server_after_agent_response(self, payload: HookPayload) -> str:
         return self.ensure_mcp_server()
 
 
-__all__ = ["Installation", "Installer"]
+__all__ = ["Installer"]

@@ -13,7 +13,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from space.session import Session
+from space.session import Sessions
 from space.work_state import working_on
 
 
@@ -28,9 +28,9 @@ with description("the current session"):
         self.first = _project()
         self.second = _project()
         with working_on(self.first):
-            Session().switch("alpha")
+            Sessions().switch("alpha")
         with working_on(self.second):
-            Session().switch("beta")
+            Sessions().switch("beta")
 
     with after.each:
         shutil.rmtree(self.first, ignore_errors=True)
@@ -39,9 +39,9 @@ with description("the current session"):
     with context("that two projects each have a session switched on"):
         with it("should be each project's own session for a call on that project"):
             with working_on(self.first):
-                first = Session.current().name
+                first = Sessions().current().name
             with working_on(self.second):
-                second = Session.current().name
+                second = Sessions().current().name
             expect((first, second)).to(equal(("alpha", "beta")))
 
         with context("with calls on both projects running at the same time"):
@@ -51,9 +51,9 @@ with description("the current session"):
 
                 def look(project: Path) -> None:
                     with working_on(project):
-                        Session.current()
+                        Sessions().current()
                         both_inside.wait(timeout=5)
-                        seen[project.name] = Session.current().name
+                        seen[project.name] = Sessions().current().name
 
                 calls = [threading.Thread(target=look, args=(project,)) for project in (self.first, self.second)]
                 for call in calls:

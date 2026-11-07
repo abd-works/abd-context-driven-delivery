@@ -1,17 +1,14 @@
 """Filter, stage, passing rules, and packages on a graph."""
 
-import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 from expects import contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import before, context, description, it
 
-from graph import Graph, Node, PracticeGraph, Source
+from harness.graph.graph import Graph, Node, PracticeGraph, Source
 
 
 with description("a graph"):
@@ -29,8 +26,8 @@ with description("a graph"):
             )
             root = self.practice.root_node
             root.children.extend([self.failure, self.register])
-            self.practice.bind_rule("limit-operation-parameters", ["Operation"])
-            self.practice.bind_rule("keep-operations-small-focused", ["Operation"])
+            self.practice.apply_rule("limit-operation-parameters", ["Operation"])
+            self.practice.apply_rule("keep-operations-small-focused", ["Operation"])
             self.graph.filter.select_rules(["limit-operation-parameters"])
             self.graph.filter.select_violations()
 

@@ -1,16 +1,13 @@
 """Stories scenario rules — shape and and-chaining."""
 
-import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 from expects import equal, expect
 from mamba import before, context, description, it
 
-from graph import Node, PracticeGraph, Source
+from harness.graph.graph import Node, PracticeGraph, Source
 from harness.graph.rule_context import RuleCheckContext
 from cdd_guidance.practices.stories.model.story_model import Step, StepType
 from cdd_guidance.practices.stories.rules.scenarios import AndChaining, ScenariosShape

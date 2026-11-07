@@ -1,16 +1,16 @@
-"""BDD spec for harness/agent_tools/sub_agent."""
+"""BDD spec for harness/sub_agent and the @subAgent mark."""
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from expects import contain, equal, expect
-from harness.agent_tools.sub_agent.fixtures import MarkedActionExample, MarkedToolExample
+from harness.sub_agent.fixtures import MarkedActionExample, MarkedToolExample
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.agent_tools.sub_agent.mark import SUB_AGENT_CALLER_PREAMBLE, marked_as_sub_agent
-from harness.agent_tools.sub_agent.sub_agent import SubAgent
+from harness.sub_agent.sub_agent import SubAgent
 from mamba import context, description, it
 
 

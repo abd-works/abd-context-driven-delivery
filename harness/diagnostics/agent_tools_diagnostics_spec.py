@@ -11,26 +11,27 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from harness.installation.installer import Installer
+from harness.installer.installer import Installer
+from harness.installation.repository_toolsets import RepositoryToolsets
 
-Installer(repo=_REPO_ROOT).ensure_import_path()
+RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
 from expects import contain, equal, expect
 from mamba import after, before, description, it
 from space.session.throwaway_project import ThrowawayProject
 from space.work_state import project_folder
 
-from harness.agent_tools.agent_tools_diagnostics import AgentToolsDiagnostics
+from harness.diagnostics.agent_tools_diagnostics import AgentToolsDiagnostics
 from harness.mcp.mcp_server import McpHost
 from harness.mcp.spec_support import SpecServer
-from harness.agent_tools.agent_tools_probe import (
+from harness.diagnostics.agent_tools_probe import (
     AGENT_TOOLS_PROBE_SECTION,
     AgentToolsProbe,
     agent_tools_toolset_ref,
 )
 
 _AGENT_TOOLS_DIAGNOSTICS_REF = (
-    "harness.agent_tools.agent_tools_diagnostics:AgentToolsDiagnostics"
+    "harness.diagnostics.agent_tools_diagnostics:AgentToolsDiagnostics"
 )
 _DIAGNOSTICS_SECONDS = 150
 
@@ -83,7 +84,7 @@ with description("mcp tools diagnostics"):
             equal(False)
         )
         expect(agent_tools_toolset_ref("harness.guidance.guidance:Guidance")).to(equal(False))
-        expect(agent_tools_toolset_ref("harness.guidance.guidance_diagnostics:GuidanceDiagnostics")).to(
+        expect(agent_tools_toolset_ref("harness.diagnostics.guidance_diagnostics:GuidanceDiagnostics")).to(
             equal(False)
         )
         expect(agent_tools_toolset_ref("harness.guidance_actions.guidance_actions:GuidanceAction")).to(
@@ -169,7 +170,7 @@ with description("mcp tools diagnostics"):
             mcp = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install(
                 [AgentToolsDiagnostics()]
             )
-            path = tree / "commands" / "harness" / "agent-tools" / "agent-tools-diagnostics.md"
+            path = tree / "commands" / "harness" / "diagnostics" / "agent-tools-diagnostics.md"
             expect(path.is_file()).to(equal(True))
             text = path.read_text(encoding="utf-8")
             expect(text).to(contain("agent-tools-diagnostics.agent_tools_diagnostics"))

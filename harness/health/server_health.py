@@ -37,11 +37,9 @@ class ServerHealth:
 
     @classmethod
     @tool_subject
-    def current(cls) -> ServerHealth:
-        """The health of the project being worked on."""
-        from space.work_state import project_checkout
-
-        return cls(project_checkout())
+    def load(cls, *, project: Path | str) -> ServerHealth:
+        """The health of project, the folder the call names."""
+        return cls(project)
 
     @mcp
     @agent_tool

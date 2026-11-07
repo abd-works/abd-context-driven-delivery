@@ -17,7 +17,7 @@ from cdd_guidance.patterns.lern_domain_driven.practices.ddd.rules.lern_tier_rule
 from cdd_guidance.patterns.lern_domain_driven.practices.stories.rules.shared_story_rules import (
     DomainOperationsInlineInSteps,
     NoExpectInGiven,
-    OutlineRowsLoopOverExamples,
+    OutlineEntriesLoopOverExamples,
     TierBoundRepositoryAccessor,
 )
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import (
@@ -198,8 +198,8 @@ with description("the lern_domain_driven pattern rules"):
         with it("should flag an outline row written by hand and pass the examples loop"):
             faulty = "scenario('Address requirement is unmet: parish', ({ when }) => {});\n"
             repaired = "expectedUnmetAddressOutlines.forEach(({ field }) => {\n  scenario(`Address requirement is unmet: ${field}`, ({ when }) => {});\n});\n"
-            expect(OutlineRowsLoopOverExamples().check(story_file(faulty, "PlaywrightSpec"), None)).to(have_len(1))
-            expect(OutlineRowsLoopOverExamples().check(story_file(repaired, "PlaywrightSpec"), None)).to(equal([]))
+            expect(OutlineEntriesLoopOverExamples().check(story_file(faulty, "PlaywrightSpec"), None)).to(have_len(1))
+            expect(OutlineEntriesLoopOverExamples().check(story_file(repaired, "PlaywrightSpec"), None)).to(equal([]))
 
         with it("should leave a screen gesture helper alone"):
             gesture = (

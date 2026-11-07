@@ -6,12 +6,11 @@ for the chosen kind then loads its own tactical facts, exactly as the DDD practi
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from harness.graph.ce_rule_eval_harness import practice_from_source
 from harness.graph.rule_context import RuleCheckContext
-from cdd_guidance.practices.ddd.model.stereotypes import class_declaration_decorated_name, inferred_tactical_kind
+from cdd_guidance.practices.ddd.model.stereotypes import decorated_name, inferred_tactical_kind
 
 
 def ddd_rule_by_slug(slug: str):
@@ -23,27 +22,28 @@ def ddd_rule_by_slug(slug: str):
     return rule
 
 
-def _node_type_for_class(source: str, class_name: str) -> str:
-    names = set(re.findall(r"^class\s+(\w+)", source, re.MULTILINE))
-    kind = inferred_tactical_kind(class_declaration_decorated_name(source, class_name), names)
-    if kind is None and class_name.endswith("Repository"):
+def _node_type_for_class(clean, class_node) -> str:
+    """The building block the DDD practice's graph reader names the class: its stereotypes first, then its name."""
+    names = {node.name for node in clean.nodes.get("OoadClass", [])}
+    kind = inferred_tactical_kind(decorated_name(class_node.name, class_node.get_fact("stereotypes") or []), names)
+    if kind is None and class_node.name.endswith("Repository"):
         return "Repository"
-    if kind is None and class_name.endswith("Service"):
+    if kind is None and class_node.name.endswith("Service"):
         return "DomainService"
     return kind or "Entity"
 
 
-def _ddd_node(source: str, class_name: str, kind: str, lang: str, filename: str | None):
+def _ddd_node(source: str, class_name: str, kind: str | None, lang: str, filename: str | None):
     from cdd_guidance.practices.ddd.graph_practice import _tactical_block
 
     clean, root = practice_from_source(source, lang=lang, filename=filename)
     class_node = next((node for node in clean.nodes.get("OoadClass", []) if node.name == class_name), None)
     if class_node is None:
         raise ValueError(f"class {class_name!r} not found in parsed source")
-    text = (root / class_node.source.file).read_text(encoding="utf-8")
+    kind = kind or _node_type_for_class(clean, class_node)
     source = class_node.source
     ddd = clean.graph.practice("ddd")
-    node = ddd.add(_tactical_block(class_node, kind, text), f"ddd:{kind}:{source.file}:{class_name}", source.file, source.start_line, source.end_line)
+    node = ddd.add(_tactical_block(class_node, kind), f"ddd:{kind}:{source.file}:{class_name}", source.file, source.start_line, source.end_line)
     node.set_fact("folder", class_node.get_fact("folder"))
     return node, ddd, root
 
@@ -57,8 +57,7 @@ def violations_for_ddd_rule(
     lang: str = "python",
     filename: str | None = None,
 ) -> list[str]:
-    kind = node_type or _node_type_for_class(source, class_name)
-    node, practice, root = _ddd_node(source, class_name, kind, lang, filename)
+    node, practice, root = _ddd_node(source, class_name, node_type, lang, filename)
     return list(rule.check(node, RuleCheckContext(practice, root)))
 
 

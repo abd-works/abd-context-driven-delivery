@@ -17,219 +17,134 @@ for _cat in ("tools", "cdd_guidance/practices"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_a, be_below, be_true, contain, equal, expect, raise_error
+from expects import be_below, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.mcp.mcp_server import McpHost
+from space.repo.git import Git
 from space.repo.repo import (
-    Branch,
     BranchInWorktreeError,
     BranchNameRequiredError,
-    CliAgents,
-    Commit,
     DefaultBranchError,
     NoOpenWorktreeError,
     Repo,
 )
-from space.work_state import WorkState, working_on
+from space.work_state import WorkState
 
 
-with description("a Commit"):
-    with it("should format a message with trailers"):
-        message = Commit.format(
-            "start workflow-package-87",
-            {
-                "GitHub-Issue": "demo-org/demo-repo#87",
-                "Workflow-State": "specification",
-            },
-        )
-        expect(message).to(contain("Workflow-State: specification"))
-
-
+# (E) Open Work Session
+# (E) Work With Repo Branch
 with description("a Repo"):
-    with context("opened in memory"):
+    with context("on a clone whose origin has a main branch"):
         with before.each:
-            self.repo = Repo.memory("/tmp/demo-clone")
+            self.tmp = tempfile.TemporaryDirectory()
+            self.origin, self.clone = _clone_with_origin(Path(self.tmp.name))
+            self.repo = Repo(self.clone)
 
-        # (E) Open Work Session
-        # (E) Work With Repo Branch
+        with after.each:
+            _remove_tree(self.tmp)
+
         # (S) Repo --> Commit Branch
-        with it("should expose branches that can commit"):
-            commit = self.repo.branch_named("session/demo").checkout().commit(
-                ["README.md"], "demo turn"
-            )
-            expect(commit).to(be_a(Commit))
-            expect(commit.message).to(equal("demo turn"))
-            expect(self.repo.current_branch).to(equal("session/demo"))
-
-        with it("should keep a branch's CLI agents on the branch tag"):
-            branch = self.repo.branch_named("session/demo")
-            branch.write_cli_agents(
-                CliAgents(
-                    status="open",
-                    doer="doer-chat",
-                    doer_pid=os.getpid(),
-                    judge="judge-chat",
-                    judge_pid=0,
-                )
-            )
-            loaded = branch.cli_agents()
-            expect(loaded.doer).to(equal("doer-chat"))
-            expect(loaded.judge).to(equal("judge-chat"))
-            expect(loaded.open).to(be_true)
+        with it("should commit work on the branch checked out"):
+            self.repo.branch_named("session/demo").check_out()
+            (self.clone / "a.py").write_text("work\n", encoding="utf-8")
+            self.repo.commit([str(self.clone / "a.py")], "demo turn", untracked=True)
+            expect(_git(self.clone, "log", "-1", "--pretty=%s", "session/demo")).to(equal("demo turn"))
 
         # (S) Repo --> Merge Branch
-        with it("should merge branches through Branch objects"):
-            self.repo.branch_named("session/demo").checkout()
-            self.repo.commit(["a.py"], "work")
-            main = self.repo.branch_named("main")
-            merge = main.merge(self.repo.branch_named("session/demo"), message="finish demo")
-            expect(merge.message).to(contain("finish demo"))
-            expect(self.repo.current_branch).to(equal("main"))
+        with it("should merge another branch into the branch checked out"):
+            self.repo.branch_named("session/demo").check_out()
+            (self.clone / "a.py").write_text("work\n", encoding="utf-8")
+            self.repo.commit([str(self.clone / "a.py")], "demo turn", untracked=True)
+            self.repo.branch_named("main").check_out()
+            self.repo.merge_from("session/demo", message="merge demo")
+            expect(_git(self.clone, "ls-tree", "--name-only", "main")).to(contain("a.py"))
+
+        with it("should name the files a branch changed since it left main"):
+            self.repo.branch_named("session/demo").check_out()
+            (self.clone / "a.py").write_text("work\n", encoding="utf-8")
+            expect(self.repo.branch_named("session/demo").changed_files()).to(equal(["a.py"]))
 
 
 # (E) Open Work Session
 # (E) Work With Repo Worktree
-with description("a Repo worktree"):
-    with context("opened in memory"):
+with description("a Repo's worktrees"):
+    with context("on a clone whose origin has a main branch"):
         with before.each:
-            self.repo = Repo.memory("/tmp/demo-clone")
+            self.tmp = tempfile.TemporaryDirectory()
+            self.origin, self.clone = _clone_with_origin(Path(self.tmp.name))
+            self.repo = Repo(self.clone)
+            self.folder = Path(self.tmp.name) / "wt-demo"
+
+        with after.each:
+            _remove_tree(self.tmp)
 
         # (S) Repo --> List Worktree
-        with it("should list the primary checkout"):
-            trees = self.repo.list_worktrees()
-            expect(len(trees)).to(equal(1))
-            expect(trees[0].branch.name).to(equal("main"))
+        with it("should list the main clone with the branch it has checked out"):
+            expect([tree.branch.name for tree in self.repo.worktrees]).to(equal(["main"]))
 
         # (S) Repo --> Open Worktree
         with it("should add a worktree for a session branch"):
-            added = self.repo.add_worktree("/tmp/wt-demo", self.repo.branch_named("session/demo"))
-            expect(added.path).to(equal(Path("/tmp/wt-demo")))
-            found = self.repo.branch_named("session/demo").worktree
-            expect(found is not None).to(be_true)
-            expect(found.branch.name).to(equal("session/demo"))
+            self.repo.worktrees.add(self.folder, self.repo.branch_named("session/demo"))
+            expect(self.repo.branch_named("session/demo").worktree.path.resolve()).to(equal(self.folder.resolve()))
 
         # (S) Repo --> Reuse Worktree
-        with it("should reuse an existing worktree for the same branch"):
-            first = self.repo.add_worktree("/tmp/wt-demo", self.repo.branch_named("session/demo"))
-            second = self.repo.add_worktree("/tmp/wt-demo-2", self.repo.branch_named("session/demo"))
-            expect(second).to(equal(first))
-            expect(len(self.repo.list_worktrees())).to(equal(2))
+        with it("should reuse the worktree a branch already has"):
+            first = self.repo.worktrees.add(self.folder, self.repo.branch_named("session/demo"))
+            second = self.repo.worktrees.add(Path(self.tmp.name) / "wt-demo-2", self.repo.branch_named("session/demo"))
+            expect(second.path.resolve()).to(equal(first.path.resolve()))
 
         # (S) Repo --> Remove Worktree
         with it("should remove a worktree"):
-            added = self.repo.add_worktree("/tmp/wt-demo", self.repo.branch_named("session/demo"))
-            self.repo.remove_worktree(added)
+            added = self.repo.worktrees.add(self.folder, self.repo.branch_named("session/demo"))
+            self.repo.worktrees.remove(added)
             expect(self.repo.branch_named("session/demo").worktree).to(equal(None))
 
         # (S) Repo --> Remove Worktree
         with it("should run Windows takeown icacls and Remove-Item as last resort"):
-            import os
             from unittest.mock import patch
 
-            with tempfile.TemporaryDirectory() as tmp:
-                target = Path(tmp) / "locked-wt"
-                target.mkdir()
-                calls: list[tuple[str, ...]] = []
+            target = Path(self.tmp.name) / "locked-wt"
+            target.mkdir()
+            calls: list[tuple[str, ...]] = []
 
-                def fake_run(args, **kwargs):
-                    calls.append(tuple(args))
-                    return subprocess.CompletedProcess(args, 0)
+            def fake_run(args, **kwargs):
+                calls.append(tuple(args))
+                return subprocess.CompletedProcess(args, 0)
 
-                with patch("space.repo.repo.os.name", "nt"):
-                    with patch.dict(os.environ, {"USERNAME": "tester"}):
-                        with patch("space.repo.repo.shutil.rmtree"):
-                            with patch("space.repo.repo.subprocess.run", side_effect=fake_run):
-                                self.repo._force_remove_directory_windows(target)
-                expect(calls[0][0]).to(equal("takeown"))
-                expect(calls[1][0]).to(equal("icacls"))
-                expect(any("Remove-Item" in " ".join(c) for c in calls)).to(be_true)
+            with patch("space.repo.worktree.os.name", "nt"):
+                with patch.dict(os.environ, {"USERNAME": "tester"}):
+                    with patch("space.repo.worktree.shutil.rmtree"):
+                        with patch("space.repo.worktree.subprocess.run", side_effect=fake_run):
+                            self.repo.worktrees._force_remove_directory_windows(target)
+            expect([calls[0][0], calls[1][0], any("Remove-Item" in " ".join(call) for call in calls)]).to(equal(["takeown", "icacls", True]))
 
-        # (S) Repo --> Fetch Worktree
-        with it("should fetch and pull in the current tree"):
-            self.repo.fetch_pull()
-            expect(self.repo._fetches).to(equal(["origin"]))
-            expect(self.repo._pulls).to(equal(["main"]))
+        with it("should name a branch's sibling folder by the clone and the branch"):
+            expect(self.repo.worktrees.sibling_folder(self.repo.branch_named("feature/a")).name).to(equal("clone-feature-a"))
 
-        # (E) Work With Repo Branch
-        # (S) Repo --> Merge Branch
-        with it("should merge another branch into the current branch"):
-            sha = self.repo.merge_from("session/demo", message="merge with main")
-            expect(sha).to(equal("merge-session/demo-into-main"))
-            expect(self.repo.current_branch).to(equal("main"))
-
-        # (S) Repo --> Push Branch
-        with it("should push the current head to another branch name"):
-            self.repo.push_to("main")
-            expect(self.repo.pushes).to(equal(["main"]))
-
-
-with description("an annotated tag"):
-    with before.each:
-        self.repo = Repo.memory("/tmp/demo-clone")
-        self.repo.branch_named("session/demo").checkout()
-
-    with context("that has been written on a commit"):
-        with it("should return that message when read by name"):
-            self.repo.write_annotated_tag("chat/session/demo", "C:/chats/one.jsonl")
-            expect(self.repo.read_annotated_tag("chat/session/demo")).to(
-                equal("C:/chats/one.jsonl")
-            )
-
-    with context("that has been written again under the same name"):
-        with it("should keep the later message"):
-            self.repo.write_annotated_tag("chat/session/demo", "first")
-            self.repo.write_annotated_tag("chat/session/demo", "first\nsecond")
-            expect(self.repo.read_annotated_tag("chat/session/demo")).to(
-                equal("first\nsecond")
-            )
-
-    with context("that shares a name prefix with other annotated tags"):
-        with it("should list every message for that prefix"):
-            self.repo.write_annotated_tag("chat/session/a", "a.jsonl")
-            self.repo.write_annotated_tag("chat/session/b", "b.jsonl")
-            self.repo.write_annotated_tag("cli-agent/session/a", "other")
-            expect(self.repo.list_annotated_tags("chat/session/")).to(
-                equal(
-                    {
-                        "chat/session/a": "a.jsonl",
-                        "chat/session/b": "b.jsonl",
-                    }
-                )
-            )
+        with it("should name a ticket branch's sibling folder by its ticket number"):
+            expect(self.repo.worktrees.sibling_folder(self.repo.branch_named("checkout-flow-87")).name).to(equal("clone-87"))
 
 
 with description("Repo dirty detection"):
     with it("should ignore events.log so session close is not blocked by the trail"):
-        from space.repo.repo import Repo
-
         tmp = Path(tempfile.mkdtemp(prefix="git_events_log_"))
-        Repo.git(tmp, "init")
-        Repo.git(tmp, "config", "user.email", "test@example.com")
-        Repo.git(tmp, "config", "user.name", "test")
-        Repo.git(tmp, "commit", "--allow-empty", "-m", "init")
+        git = Git(tmp)
+        git.run("init")
+        git.run("config", "user.email", "test@example.com")
+        git.run("config", "user.name", "test")
+        git.run("commit", "--allow-empty", "-m", "init")
         log = tmp / ".context" / "sessions" / "demo" / "logs" / "events.log"
         log.parent.mkdir(parents=True, exist_ok=True)
         log.write_text("trail\n", encoding="utf-8")
-        Repo.git(tmp, "add", "-f", str(log))
-        Repo.git(tmp, "commit", "-m", "track log")
+        git.run("add", "-f", str(log))
+        git.run("commit", "-m", "track log")
         log.write_text("more trail\n", encoding="utf-8")
         repo = Repo(tmp)
         expect(repo.is_dirty()).to(equal(False))
         (tmp / "real.txt").write_text("keep", encoding="utf-8")
         expect(repo.is_dirty()).to(equal(True))
-
-
-with description("Repo stash"):
-    with it("should clear every stash entry"):
-        from space.repo.repo import Repo
-
-        repo = Repo.memory("/tmp/stash-clear")
-        repo._stash = True
-        expect(repo.has_stash()).to(equal(True))
-        repo.clear_stash()
-        expect(repo.has_stash()).to(equal(False))
 
 
 # (E) Open Work Session
@@ -348,8 +263,7 @@ with description("a branch opened through the repo toolset"):
             with before.each:
                 (Path(self.tmp.name) / "host").mkdir()
                 self.host_origin, self.host = _clone_with_origin(Path(self.tmp.name) / "host")
-                with working_on(self.clone):
-                    Repo.current().switch_branch("feature/a")
+                Repo.current(self.clone).switch_branch("feature/a")
 
             with it("should switch that project's clone"):
                 expect(_git(self.clone, "branch", "--show-current")).to(equal("feature/a"))
@@ -362,13 +276,11 @@ with description("a branch opened through the repo toolset"):
 
             with it("should commit and push in that project's clone"):
                 (self.clone / "work.txt").write_text("feature work\n", encoding="utf-8")
-                with working_on(self.clone):
-                    Repo.current().push_commit("work")
+                Repo.current(self.clone).push_commit("work")
                 expect(_git(self.origin, "ls-tree", "--name-only", "feature/a")).to(contain("work.txt"))
 
             with it("should close the branch in that project's clone"):
-                with working_on(self.clone):
-                    Repo.current().close_branch()
+                Repo.current(self.clone).close_branch()
                 expect(_git(self.clone, "branch", "--list", "feature/a")).to(equal(""))
 
 
@@ -441,16 +353,14 @@ with description("a worktree opened through the repo toolset"):
 
         with context("loaded for the project a call names"):
             with before.each:
-                with working_on(self.clone):
-                    Repo.current().switch_worktree("feature/a")
+                Repo.current(self.clone).switch_worktree("feature/a")
                 self.tree = WorkState(self.clone).worktree.path
 
             with it("should open the worktree beside that project's clone"):
                 expect(_git(self.tree, "branch", "--show-current")).to(equal("feature/a"))
 
             with it("should remove that project's worktree when closed"):
-                with working_on(self.clone):
-                    Repo.current().close_worktree()
+                Repo.current(self.clone).close_worktree()
                 expect(self.tree.exists()).to(equal(False))
 
 
@@ -465,23 +375,23 @@ with description("a git command that outlives its timeout"):
                 "import subprocess, sys; subprocess.run([sys.executable, '-c', 'import time; time.sleep(60)'])",
             ]
             started = time.monotonic()
-            expect(lambda: Repo._run_git_process(launcher, 1)).to(raise_error(subprocess.TimeoutExpired))
+            expect(lambda: Git(".")._run_process(launcher, 1)).to(raise_error(subprocess.TimeoutExpired))
             expect(time.monotonic() - started).to(be_below(15))
 
     with context("that rewrites the working tree"):
         with it("should get the long limit so a slow checkout is not stopped partway"):
             from unittest.mock import patch
 
-            with patch.object(Repo, "_run_git_process", return_value=(0, "", "")) as run:
-                Repo.git(".", "checkout", "main")
+            with patch.object(Git, "_run_process", return_value=(0, "", "")) as run:
+                Git(".").run("checkout", "main")
             expect(run.call_args.args[1]).to(equal(180))
 
     with context("that only reads the repository"):
         with it("should keep the short limit so a hung git fails fast"):
             from unittest.mock import patch
 
-            with patch.object(Repo, "_run_git_process", return_value=(0, "", "")) as run:
-                Repo.git(".", "status")
+            with patch.object(Git, "_run_process", return_value=(0, "", "")) as run:
+                Git(".").run("status")
             expect(run.call_args.args[1]).to(equal(10))
 
 
@@ -579,8 +489,7 @@ with description("the repo push toolset"):
 
         with it("should commit when push_commit is called"):
             (self.repo_root / "note.txt").write_text("checkpoint\n", encoding="utf-8")
-            with working_on(self.repo_root):
-                commit = Repo.current().push_commit("push: checkpoint")
+            commit = Repo.current(self.repo_root).push_commit("push: checkpoint")
             expect(commit.sha).not_to(equal(""))
             expect(commit.subject).to(equal("push: checkpoint"))
 

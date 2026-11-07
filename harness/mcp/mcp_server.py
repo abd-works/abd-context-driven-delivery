@@ -22,7 +22,9 @@ from mcp.server.models import InitializationOptions
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
 from harness.agent_tools.tool_call import ToolCall
-from harness.installation.destination import Destination, Installation, data_of
+from harness.installation.destination import Installation, data_of
+from harness.installation.repository_toolsets import RepositoryToolsets
+from harness.marks.mark import Destination
 from harness.mcp.restart_gate import RestartGate
 from harness.mcp.tool_calls import StillRunning, ToolCalls, ToolRequest
 
@@ -61,6 +63,7 @@ def serving_mcp_host() -> Any:
 
 class Mcp(Destination):
     flag = "_mcp"
+    channel = InstallDestination.MCP
 
 
 mcp = Mcp
@@ -419,9 +422,7 @@ class McpServer:
         self._constructor_context: dict[str, object] = {}
 
     def _apply_catalog_import_path(self) -> None:
-        from harness.installation.installer import Installer
-
-        Installer(repo=self.repo).ensure_import_path()
+        RepositoryToolsets(self.repo).ensure_import_path()
 
     @property
     def started(self) -> bool:
@@ -944,10 +945,8 @@ class McpHost:
     @classmethod
     def standup(cls, *, repo: Path | str | None = None) -> McpHost:
         """A host over every annotated toolset in ``repo``, in this process, to check it stands up."""
-        from harness.installation.installer import Installer
-
         resolved = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
-        refs = tuple(Installer(repo=resolved).collect_toolsets())
+        refs = tuple(RepositoryToolsets(resolved).collect())
         try:
             return cls.from_refs(refs, repo=str(resolved), project=str(resolved))
         except Exception as error:

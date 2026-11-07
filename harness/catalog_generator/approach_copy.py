@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from cdd_guidance.practices.stages import STAGES
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 
 _LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 _EMPHASIS = re.compile(r"\*([^*]+)\*")

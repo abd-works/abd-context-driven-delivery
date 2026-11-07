@@ -4,7 +4,7 @@
 
 - **Purpose:** Let a practice publish its views as a Claude Design canvas without knowing the canvas's file layout, and regenerate it without overwriting what people edited.
 - **Seam (terms):** DesignCanvas, CanvasVersions, PublishedVersion; `artboard(...)`, `box(...)`, `thumbnail(...)`; the look `LOOK`, `FONTS`, `BACKGROUND`
-- **Dependencies (one-way):** harness/agent_tools (*Name*), space/work_state (the release folder a canvas's versions are kept in). Nothing in harness imports it back; cdd_guidance/practices/stories (`model/claude_design`) uses it.
+- **Dependencies (one-way):** harness/name (*Name*), space/work_state (the release folder a canvas's versions are kept in). Nothing in harness imports it back; cdd_guidance/practices/stories (`model/claude_design`) uses it.
 
 ## Constraint
 

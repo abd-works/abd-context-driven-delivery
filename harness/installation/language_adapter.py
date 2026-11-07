@@ -17,7 +17,7 @@ from pathlib import Path, PurePosixPath
 from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_origin, get_type_hints
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, OnSubject
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 from harness.installation.destination import DataField, Edits, Identity, Installation, LanguageAdapter, SourceFile
 
 _FOLDER = "language-adapters"
@@ -184,7 +184,8 @@ class TypeScriptOperation:
         self._owner = owner
         self.mcp_name = tool.mcp_name
         self.name = Name(tool.name).camel
-        self.is_static = inspect.ismethod(tool.callable)
+        # A class operation is bound to its class; an operation of a toolset with no loader is bound to the toolset.
+        self.is_static = inspect.ismethod(tool.callable) and isinstance(tool.callable.__self__, type)
         self.identity = owner.identity_of(tool)
         schema = tool.input_schema
         self.properties = {name: value for name, value in schema["properties"].items() if name not in self.identity}

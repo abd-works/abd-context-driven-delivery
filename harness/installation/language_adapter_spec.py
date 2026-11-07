@@ -7,10 +7,11 @@ from pathlib import Path
 from expects import be_false, be_true, contain, equal, expect, have_key, raise_error
 from mamba import before, context, description, it
 
-from harness.installation.installer import Installer
+from harness.installer.installer import Installer
+from harness.installation.repository_toolsets import RepositoryToolsets
 
 _REPO = Path(__file__).resolve().parents[2]
-Installer(repo=_REPO).ensure_import_path()
+RepositoryToolsets(_REPO).ensure_import_path()
 
 from harness.agent_tools.agent_tools import AgentToolSet  # noqa: E402
 from harness.installation.destination import (  # noqa: E402
@@ -37,7 +38,7 @@ _KANBAN = (
     "space.kanban.ticket:Ticket",
     "space.kanban.ticket:FidelityProgress",
     "space.kanban.backlog_item:BacklogItem",
-    "space.session.session:PracticeSessionOutput",
+    "space.session.practice_session_output:PracticeSessionOutput",
 )
 _ADAPTERS = "language-adapters/typescript"
 _IDENTITY_FLAG = Identity.flag
@@ -234,6 +235,18 @@ with description("a language adapter"):
             adapters.record(AgentToolSet.instantiate("space.kanban.ticket:Ticket"))
             adapters.write_all()
             expect(sorted(path.name for path in tracked)).to(equal(["cdd-connection.ts", "cdd-shared.ts", "cdd-views.tsx", "package.json", "ticket-views.tsx", "ticket.ts"]))
+
+        with context("whose tools run on the one toolset a project holds, which no call loads by name"):
+            with before.all:
+                install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
+                _install(install_path, ("harness.graph.graph:Graph",))
+                self.graph = (install_path / _ADAPTERS / "harness/graph/graph.ts").read_text(encoding="utf-8")
+
+            with it("should type data that holds a type another of its modules defines, as the graph's filtered nodes type their rules"):
+                expect(self.graph).to(contain("rules: GraphRuleData[]"))
+
+            with it("should call each operation on the client the page holds, not on the class"):
+                expect(self.graph).to(contain("  inventory(): Promise<InventoryData | null> {"))
 
         with context("that has no mark"):
             with it("should write nothing"):

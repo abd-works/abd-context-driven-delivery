@@ -3,20 +3,17 @@
 import json
 import os
 import shutil
-import sys
 import tempfile
 import time
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 from expects import contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
-from graph import Graph
+from harness.graph.graph import Graph
 
 _CLASS = "export class Cart {\n  total() { return 1; }\n}\n"
 

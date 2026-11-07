@@ -68,7 +68,7 @@ _ALL_RULE_SLUGS = (
     "throw-http-exceptions",
     "tier-bound-repository-accessor",
     "no-expect-in-given",
-    "outline-rows-loop-over-examples",
+    "outline-entries-loop-over-examples",
     "reset-every-repository",
     "shared-behavior-stays-tier-free",
     "tier-runs-shared-behavior",

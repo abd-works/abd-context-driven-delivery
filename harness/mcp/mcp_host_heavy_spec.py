@@ -19,7 +19,7 @@ from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.parameter_schema import ParameterSchema
-from harness.installation.installer import Installer
+from harness.installer.installer import Installer
 from harness.mcp._examples.parameter_types.parameter_types import ParameterTypes
 from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.mcp_server import McpHost, McpInstallation
@@ -341,11 +341,8 @@ with description("an MCP host tool result") as self:
         with it("should expose the session name as JSON"):
             expect(self.payload["name"]).to(equal("alpha"))
 
-        with it("should expose practice root folder paths"):
-            expect("stories" in self.payload["practice_roots"]).to(equal(True))
-            expect(self.payload["practice_roots"]["stories"][0][0]).to(
-                equal(str((self.work / "tests").resolve()))
-            )
+        with it("should expose each practice's root folder as a path from the project"):
+            expect(self.payload["practices"]["stories"]["root"]).to(equal("work/tests"))
 
     with context("that is a commit"):
         with before.each:
@@ -421,7 +418,7 @@ with description("an MCP host") as self:
             expect(tools).to(contain("sessions.switch"))
 
         with it("should open the named session in that project through sessions.switch"):
-            self.host.dispatch("sessions.switch", {"name": "mcp-host-spec-session"})
+            self.host.dispatch("sessions.switch", {"name": "mcp-host-spec-session"}, project=self.project)
             expect(WorkState(self.project).session).to(equal("mcp-host-spec-session"))
 
     with context("that has stood up with a published tool whose MCP name is illegitimate"):

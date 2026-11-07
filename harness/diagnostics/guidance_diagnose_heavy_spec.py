@@ -9,15 +9,16 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from harness.installation.installer import Installer
+from harness.installer.installer import Installer
+from harness.installation.repository_toolsets import RepositoryToolsets
 
-Installer(repo=_REPO_ROOT).ensure_import_path()
+RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
 from expects import contain, equal, expect
 from mamba import description, it
 
-from harness.guidance.guidance_probe import GuidanceProbe
-from harness.guidance.guidance_diagnostics import GuidanceDiagnostics
+from harness.diagnostics.guidance_probe import GuidanceProbe
+from harness.diagnostics.guidance_diagnostics import GuidanceDiagnostics
 
 
 def _installer(tree: Path, payload: dict) -> Installer:
@@ -60,7 +61,7 @@ with description("guidance diagnostics install"):
         tree = Path(tempfile.mkdtemp())
         try:
             mcp = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install([GuidanceDiagnostics()])
-            command_path = tree / "commands" / "harness" / "guidance" / "guidance-diagnostics.md"
+            command_path = tree / "commands" / "harness" / "diagnostics" / "guidance-diagnostics.md"
             expect(command_path.is_file()).to(equal(True))
             text = command_path.read_text(encoding="utf-8")
             expect(text).to(contain("guidance-diagnostics.guidance_diagnostics"))

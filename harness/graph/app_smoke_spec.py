@@ -1,17 +1,14 @@
 """The graph's tools report the same practice counts as Graph, a node-type filter keeps that type, and a node opens on its source."""
 
-import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 from expects import contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import before, context, description, it
 
-from graph import Graph
+from harness.graph.graph import Graph
 
 _SAMPLE = _HERE / "_examples" / "input"
 _PRACTICES = ["clean_engineering", "stories", "ddd", "bdd", "ux"]

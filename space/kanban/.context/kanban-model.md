@@ -85,17 +85,17 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 	// data field; always Backlog, then one Stage for each stage name in `stages.py`, then Complete
 + << composition >> tickets: list[Ticket]
 	// one per session of the repository
-	-> Repo.sessions
+	-> Sessions.all
 + << aggregation >> backlog_items: list[BacklogItem]
 	// every idea file in `.sessions/_backlog/`, and every ticket folder kept there
 + cards: list[Card]
 	// its tickets, then its backlog items
 + active: Ticket
 	// data field: the ticket of the session saved as open, sent whole; none while the main session is, since main is not on the board
-	-> Repo.current_session
+	-> Sessions.saved
 + worktrees: dict[Branch, Worktree]
 	// each branch's worktree, listed once per board read rather than once per ticket, because the board is read after every call; a project that is no git clone has none
-	-> Repo.list_worktrees
+	-> Repo.worktrees
 ----
 + load(project: Path): Board
 	// the `@tool_subject` of the `board.*` tools, handed the call's project: the board of that project's main checkout with every practice chosen, so a chat in a ticket's worktree reads the same board
@@ -231,7 +231,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> Board.ticket
 + create(title: str, scope: str, parent: str, path: str, project: Path): Ticket
 	// `ticket.create`: a new ticket in Discovery, in progress; it does not become the current session. scope is feature, story, or slice; parent names the ticket it was split from; path is its workpath
-	-> Session.new
+	-> Sessions.create
 + branch(): Branch
 	// `ticket.branch`: its own branch, named as the ticket, with whether the repository has it and whether it is checked out, so activating a ticket offers only what is missing and leaving one commits, pushes, and merges only its own branch
 	-> Repo.branch_named
@@ -242,7 +242,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> Ticket.leave
 	-> Repo.switch_branch
 	-> Repo.switch_worktree
-	-> Session.switch
+	-> Sessions.switch
 + open_worktree(): Ticket
 	// `ticket.open_worktree`: opens its own worktree beside the repository, creating its branch when missing; the ticket comes back from a new board read, which lists the new worktree
 	-> Branch.open_in_worktree
@@ -478,7 +478,11 @@ The classes below belong to other modules and are modelled there; each lists onl
 
 ## Repo
 
-`space/repo`: `sessions()`, `work_session(name)`, `current_session`, `branch_named(name)`, `list_worktrees()`, `checkout_folder`, `primary_root()`, `backlog_folder`, `board_file`, `switch_branch`, `switch_worktree`, `push_commit`, `close_branch`, `file_manager`.
+`space/repo`: `branch_named(name)`, `worktrees`, `checkout_folder`, `primary_root()`, `switch_branch`, `switch_worktree`, `push_commit`, `close_branch`, `file_manager`.
+
+## Sessions
+
+`space/session`: `all()`, `named(name)`, `open_name`, `create(name, workpath, title, scope, parent)`, `load(folder)`, `switch(name)`, `folder`, `backlog_folder`; the board's own `_board.json` sits in its `folder`.
 
 ## Branch
 
@@ -486,7 +490,7 @@ The classes below belong to other modules and are modelled there; each lists onl
 
 ## Session
 
-`space/session`: `name`, `title`, `log_entries`, `is_closed`, `practices`, `record(entry)`, `switch`, `close`, `reopen`, `move_to_closed`, `move_to_archive`, `move_to_backlog`, `keep_file`, `from_project(path)`, `reports_folder`; sent as a ticket's `session` data field.
+`space/session`: `name`, `title`, `log.entries`, `is_closed`, `practices`, `log.record(entry)`, `close`, `reopen`, `move_to_closed`, `move_to_archive`, `move_to_backlog`, `keep_file`, `from_project(path)`, `reports_folder`; sent as a ticket's `session` data field.
 
 ## PracticeGuidance
 

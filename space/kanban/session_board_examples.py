@@ -23,8 +23,7 @@ import tempfile
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
-from space.repo.repo import Repo
-from space.session import Session
+from space.kanban.board import Board
 from space.work_state import WorkState
 
 STAMP = "2026-11-01T10:00:00Z"
@@ -211,10 +210,8 @@ class SessionsProject:
         self.sessions.mkdir(parents=True)
         self._saved = os.environ.get("CDD_PROJECT")
         os.environ["CDD_PROJECT"] = str(self.root)
-        Session._current = None
 
     def close(self) -> None:
-        Session._current = None
         if self._saved is None:
             os.environ.pop("CDD_PROJECT", None)
         else:
@@ -250,11 +247,11 @@ class SessionsProject:
         return path
 
     def seed_active(self, seed: SessionSeed) -> None:
-        """The session saved as open, through WorkState, as Session.switch saves it."""
+        """The session saved as open, through WorkState, as Sessions.switch saves it."""
         WorkState(self.root).session = seed.name
 
     def seed_wip_limits(self, limits: dict[str, int]) -> None:
-        Repo(self.root).board_file.write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
+        Board.load(self.root).file.write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
 
     def seed_report(self, seed: SessionSeed, report: ReportSeed) -> Path:
         folder = self.sessions / seed.folder / seed.name / "validation-reports"

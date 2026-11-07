@@ -22,7 +22,7 @@ from expects import equal, expect
 from mamba import description, it
 
 from harness.hooks.hook_server import HandlerCatalog, HookResult, HookServer
-from harness.installation.installer import Installer
+from harness.installation.repository_toolsets import RepositoryToolsets
 
 
 with description("a hook daemon"):
@@ -116,8 +116,8 @@ with description("the Cursor hook_server.py command"):
             capture_output=True,
             env={
                 **os.environ,
-                "PYTHONPATH": Installer(repo=_REPO_ROOT).pythonpath(),
-                "PYTHONPYCACHEPREFIX": Installer(repo=_REPO_ROOT).pycache_prefix(),
+                "PYTHONPATH": RepositoryToolsets(_REPO_ROOT).pythonpath(),
+                "PYTHONPYCACHEPREFIX": RepositoryToolsets(_REPO_ROOT).pycache_prefix(),
             },
         )
         expect(proc.returncode).to(equal(0))

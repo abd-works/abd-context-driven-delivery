@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from harness.guidance.action_catalogue import ActionCatalogue
 from space.session.chat_pointer import NO_CHAT, ChatPointer
 
 if TYPE_CHECKING:
@@ -17,12 +18,13 @@ if TYPE_CHECKING:
 
 LOG_FILE = "session.log"
 ERROR_FILE = "session.err"
+# The rules a hook gave the agent since the last log line. The hook server notes them and the cdd server writes the next
+# line, so they wait in the session's folder rather than in either process.
+_INJECTED_RULES_FILE = "injected-rules.txt"
 _TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 _LOOP_MARKER = re.compile(r"---\s+(\d+)(?:\s|$)")
 # Verbs older session logs wrote, by the verb that now records the same thing.
 _FORMER_VERBS = {"pull": "move"}
-# The actions a chat injected under a loop can be added to, when the loop's lines name one of them.
-_KNOWN_ACTIONS = ("generate", "validate", "sketch", "document", "satisfy", "iterate", "createRule")
 # The arguments of a tool call that name a file or folder the call worked on.
 _TOOL_INPUT_PATH_KEYS = ("path", "file_path", "target_directory", "working_directory", "transcript_path", "agent_transcript_path")
 
@@ -122,8 +124,9 @@ class Loop:
             self.entries.extend(body.splitlines())
 
     def _action_from_entries(self) -> str:
+        names = ActionCatalogue.names()
         for line in reversed(self.entries):
-            for name in _KNOWN_ACTIONS:
+            for name in names:
                 if f" {name} " in f" {line} " or line.endswith(f" {name}"):
                     return name
         return ""
@@ -136,8 +139,6 @@ class SessionLog:
 
     def __init__(self, session: Session) -> None:
         self._session = session
-        # The rules an inject_rules hook gave the agent since the last log line, each with the edited file it matched.
-        self._injected: list[tuple[RulesCollection, str]] = []
         # A chat named for the next log line only, ahead of the chat of the tool call being served.
         self._chat: ChatPointer | None = None
 
@@ -173,6 +174,8 @@ class SessionLog:
         """Append line to session.log, stamped with the time it was written."""
         if self.path is None:
             return
+        # A project's main session has no folder until something is written in it.
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8") as handle:
             handle.write(f"{self.timestamp(datetime.now(timezone.utc))} {line}\n")
 
@@ -192,23 +195,31 @@ class SessionLog:
         names each of those rules with its practice and fidelity."""
         if self.path is None or not matched_path:
             return
-        entry = (rules, matched_path)
-        if entry not in self._injected:
-            self._injected.append(entry)
+        named = {" ".join(part for part in (rules.practice_key, rules.fidelity_name, rule.slug, matched_path) if part) for rule in rules}
+        pending = self.path.with_name(_INJECTED_RULES_FILE)
+        pending.parent.mkdir(parents=True, exist_ok=True)
+        pending.write_text("\n".join(sorted(named | set(self._injected_rules()))) + "\n", encoding="utf-8")
+
+    def _injected_rules(self) -> list[str]:
+        pending = self.path.with_name(_INJECTED_RULES_FILE) if self.path is not None else None
+        return pending.read_text(encoding="utf-8").splitlines() if pending is not None and pending.is_file() else []
+
+    def _clear_injected_rules(self) -> None:
+        self.path.with_name(_INJECTED_RULES_FILE).unlink(missing_ok=True)
 
     def line(self, line: str) -> None:
         """Append line with the noted chat's pointer, such as a practice's validate line."""
         if self.path is None:
             return
         self.record(f"{line} {self._line_chat()}")
-        self._injected.clear()
+        self._clear_injected_rules()
 
     def action(self, action: str, paths: list[Path]) -> None:
         """Log action with the paths it worked on and what the session's opened practices were working at."""
         if self.path is None:
             return
         self.record(self._action_line(action, paths))
-        self._injected.clear()
+        self._clear_injected_rules()
 
     def guidance_action(self, action: str) -> None:
         """Log a guidance action on the practices the session has opened, with the workpath and each practice's folders
@@ -235,7 +246,7 @@ class SessionLog:
         if not chat.is_missing:
             parts.append(str(chat))
         self.record(" ".join(parts))
-        self._injected.clear()
+        self._clear_injected_rules()
 
     def note(self, message: str, paths: list[Path] | None = None) -> None:
         """Record a correction or decision in the current loop."""
@@ -371,8 +382,7 @@ class SessionLog:
         return " ".join(part for part in parts if part)
 
     def _rule_text(self) -> str:
-        named = {(rules.practice_key, rules.fidelity_name, rule.slug, path) for rules, path in self._injected for rule in rules}
-        return " ".join(" ".join(part for part in entry if part) for entry in sorted(named))
+        return " ".join(sorted(self._injected_rules()))
 
     @staticmethod
     def _paths_from_tool_input(tool_input: dict) -> list[Path]:

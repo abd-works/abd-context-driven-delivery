@@ -18,7 +18,6 @@ from harness.catalog_generator.approach_copy import load_approach_copy
 from harness.catalog_generator.catalog_generator import Catalog
 from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN
 from harness.catalog_generator.foundry_chrome import approach_board_stages, render_hub_board
-from harness.installation.installer import Installer  # noqa: F401
 
 _MINIMAL_MD = """# Approach
 

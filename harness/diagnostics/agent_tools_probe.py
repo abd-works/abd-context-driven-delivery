@@ -14,9 +14,9 @@ from pathlib import Path
 from typing import Any
 
 from harness.agent_tools.agent_tools import AgentToolSet
-from harness.agent_tools.name import Name
-from harness.agent_tools.cdd_diagnostic_bridge import probe_arguments_from_cdd_diagnostic
-from harness.guidance.guidance_probe import GuidanceProbe, failure_text, instruction_result, probe_subsection
+from harness.name.name import Name
+from harness.diagnostics.cdd_diagnostic_bridge import probe_arguments_from_cdd_diagnostic
+from harness.diagnostics.guidance_probe import GuidanceProbe, failure_text, instruction_result, probe_subsection
 
 _HEAVY_INVOKE_PREFIXES = ("session.", "sessions.", "graph.")
 
@@ -33,7 +33,8 @@ _INVOKE_SKIP_PREFIXES = (
 AGENT_TOOLS_PROBE_SECTION = "agent_tools"
 
 AGENT_TOOLS_TOOLSET_PREFIXES = ("space.", "harness.", "tools.")
-AGENT_TOOLS_TOOLSET_EXCLUDES = ("harness.guidance.", "harness.guidance_actions.")
+# Guidance and its diagnostics are probed by the guidance probe.
+AGENT_TOOLS_TOOLSET_EXCLUDES = ("harness.guidance.", "harness.guidance_actions.", "harness.diagnostics.guidance_diagnostics")
 
 _SKIP_INVOKE: dict[str, str] = {
     "repo.push_commit": "ping only (git)",
@@ -96,8 +97,7 @@ class AgentToolsProbe:
         refs = [ref for ref in self.installer.installed_items("toolset") if agent_tools_toolset_ref(ref)]
         if refs:
             return tuple(refs)
-        self.installer.ensure_import_path(self.installer.repo)
-        return tuple(ref for ref in self.installer.collect_toolsets() if agent_tools_toolset_ref(ref))
+        return tuple(ref for ref in self.installer.toolsets.collect() if agent_tools_toolset_ref(ref))
 
     @property
     def published(self) -> list[str]:
@@ -150,8 +150,7 @@ class AgentToolsProbe:
         from harness.mcp.mcp_server import McpHost
 
         self._prepare_workspace()
-        self.installer.ensure_import_path(self.installer.repo)
-        refs = tuple(self.installer.collect_toolsets())
+        refs = tuple(self.installer.toolsets.collect())
         project = str(self.installer.path) if getattr(self.installer, "path", None) else str(self.installer.repo)
         host = McpHost.from_refs(refs, repo=str(self.installer.repo), project=project)
         host._mark_as_serving()
@@ -287,7 +286,7 @@ class AgentToolsProbe:
     def _prepare_workspace(self) -> None:
         """Make the ``cdd-diagnostic`` workspace fixtures when that package is present. No git clean or switch: that
         can block on locks, and repo MCP invokes use probe arguments only."""
-        from harness.agent_tools.cdd_diagnostic_bridge import _ensure_cdd_diagnostic_path
+        from harness.diagnostics.cdd_diagnostic_bridge import _ensure_cdd_diagnostic_path
 
         _probe_progress("clean", "repo", "skip (no git switch/clean in diagnostics)")
         _ensure_cdd_diagnostic_path()

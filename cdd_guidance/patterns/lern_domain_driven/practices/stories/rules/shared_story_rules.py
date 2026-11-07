@@ -46,15 +46,15 @@ class DomainOperationsInlineInSteps(PracticeGraphRule):
         ]
 
 
-class OutlineRowsLoopOverExamples(PracticeGraphRule):
-    """`scenario('Outline: row', …)` with a fixed string is one outline row written by hand."""
+class OutlineEntriesLoopOverExamples(PracticeGraphRule):
+    """`scenario('Outline: entry', …)` with a fixed string is one outline example entry written by hand."""
 
-    slug = "outline-rows-loop-over-examples"
+    slug = "outline-entries-loop-over-examples"
     node_types = ("StoryShared", "PlaywrightSpec")
 
     def check(self, node, context) -> list[str]:
         return [
-            f"{node.source.file}:{line}: scenario {outline!r} row {row!r} is written by hand; "
+            f"{node.source.file}:{line}: scenario {outline!r} entry {entry!r} is written by hand; "
             f"loop over the outline's examples export instead."
-            for line, outline, row in node.get_fact("hand_written_rows", [])
+            for line, outline, entry in node.get_fact("hand_written_entries", [])
         ]

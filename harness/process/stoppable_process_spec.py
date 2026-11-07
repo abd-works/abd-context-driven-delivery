@@ -12,8 +12,8 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import equal, expect
 from mamba import after, before, context, description, it
 
-from harness.hooks.running_process import RunningProcess
-from harness.hooks.stoppable_process import StoppableProcess
+from harness.process.running_process import RunningProcess
+from harness.process.stoppable_process import StoppableProcess
 
 WAIT_SECONDS = 5
 

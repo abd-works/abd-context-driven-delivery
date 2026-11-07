@@ -10,9 +10,10 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from harness.installation.installer import Installer
+from harness.installer.installer import Installer
+from harness.installation.repository_toolsets import RepositoryToolsets
 
-Installer(repo=_REPO_ROOT).ensure_import_path()
+RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
 from expects import be_true, contain, equal, expect, have_key, raise_error, start_with
 from mamba import after, before, context, description, it
@@ -695,19 +696,15 @@ with description("an agent toolset") as self:
             with context("that resolves deploy imports and toolsets from the repo catalog"):
                 with before.each:
                     self.repo = Path(__file__).resolve().parents[2]
-                    Installer(repo=self.repo).ensure_import_path()
+                    RepositoryToolsets(self.repo).ensure_import_path()
 
                 with it("should not collect toolsets under examples folders"):
-                    refs = Installer(
-                        ide="Cursor", path=self.repo / ".cursor", repo=self.repo
-                    ).collect_toolsets()
+                    refs = RepositoryToolsets(self.repo).collect()
                     expect(any("examples" in ref.replace("\\", "/") for ref in refs)).to(equal(False))
                     expect(any("car_story" in ref for ref in refs)).to(equal(False))
 
                 with it("should collect deployable toolsets under harness and patterns"):
-                    refs = Installer(
-                        ide="Cursor", path=self.repo / ".cursor", repo=self.repo
-                    ).collect_toolsets()
+                    refs = RepositoryToolsets(self.repo).collect()
                     expect(refs).to(contain("cdd_guidance.patterns.lern_domain_driven.lern_domain_driven:LernDomainDriven"))
                     expect(refs).to(contain("cdd_guidance.patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven"))
                     expect(refs).to(contain("harness.graph.graph:Graph"))
@@ -719,13 +716,13 @@ with description("an agent toolset") as self:
                     import harness.agent_tools as agent_tools
                     import harness.guidance_actions as guidance_actions
 
-                    installer = Installer(repo=self.repo)
+                    toolsets = RepositoryToolsets(self.repo)
                     expect("agent_toolset" in dir(agent_tools)).to(equal(True))
                     expect(guidance_actions.GuidanceAction.__name__).to(equal("GuidanceAction"))
-                    expect(installer.pythonpath()).to(contain("actions"))
-                    expect(installer.pythonpath()).to(contain("patterns"))
-                    expect(installer.pythonpath()).not_to(contain(str(self.repo / "harness" / "installation") + os.sep))
-                    expect(installer.pythonpath().split(os.pathsep)).not_to(
+                    expect(toolsets.pythonpath()).to(contain("actions"))
+                    expect(toolsets.pythonpath()).to(contain("patterns"))
+                    expect(toolsets.pythonpath()).not_to(contain(str(self.repo / "harness" / "installation") + os.sep))
+                    expect(toolsets.pythonpath().split(os.pathsep)).not_to(
                         contain(str(self.repo / "harness"))
                     )
 

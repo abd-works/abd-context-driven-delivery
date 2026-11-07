@@ -3,23 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
 from space.repo.repo import Repo
-from space.work_state import WorkState, project_checkout, project_folder
+from space.session.session import COMPLETE_FOLDER, MAIN_SESSION_NAME, SESSION_FILE, Session, name_of
+from space.work_state import WorkState, project_folder
 
-if TYPE_CHECKING:
-    from space.session.session import Session
-
-MAIN_SESSION_NAME = "main"
-COMPLETE_FOLDER = "_complete"
-ARCHIVE_FOLDER = "_archive"
 BACKLOG_FOLDER = "_backlog"
-SESSION_FILE = "session.json"
 # Folders in `.sessions` whose names start with this are the ones the sessions share, such as the backlog.
 _SHARED_FOLDER_MARK = "_"
 
@@ -38,26 +31,18 @@ class SessionNameRequiredError(ValueError):
 class Sessions:
     """The work sessions of one checkout: open ones in ``.sessions/{name}/``, closed ones in ``.sessions/_complete/``,
     and the one saved as open in ``.sessions/session.json``. ``main`` works on the whole repository and is open when no
-    other is. The open session is held in memory per checkout, so what one call does to it, such as the practices it
-    opened, is still there on the next call from the same chat."""
-
-    # One cdd server works on every chat's project, so each checkout keeps its own open session.
-    _held: dict[Path, Session] = {}
+    other is. The open session is read from that file each time it is asked for, so a switch or a close made by another
+    chat or by the hook server is seen at once."""
 
     def __init__(self, project: Path | str | None = None) -> None:
-        self.root = Repo(project if project is not None else project_checkout()).checkout_folder
+        self.project = Path(project).resolve() if project is not None else project_folder()
+        self.root = Repo(self.project).checkout_folder
 
     @classmethod
     @tool_subject
     def of_project(cls, project: Path) -> Sessions:
         """The sessions of the checkout holding project, the project the running call names."""
         return cls(project)
-
-    @classmethod
-    def forget_all(cls) -> None:
-        """Drop every checkout's open session held in memory, so the next call reads ``.sessions/`` again; specs start
-        each example this way."""
-        cls._held.clear()
 
     @property
     def folder(self) -> Path:
@@ -105,8 +90,6 @@ class Sessions:
 
     def load(self, folder: Path) -> Session:
         """The session kept in folder, read without opening it."""
-        from space.session.session import Session
-
         return Session.load(folder, self.root)
 
     @property
@@ -124,8 +107,6 @@ class Sessions:
         """A new session called name, working in workpath, with the title, scope, and parent a board ticket shows saved
         in its ``session.json``; it is not opened, because a session made for later, such as a board ticket, is not the
         one being worked on."""
-        from space.session.session import Session, name_of
-
         session = Session(self.root)
         session.name = name_of(name)
         session.workpath = Path(workpath).resolve()
@@ -136,12 +117,11 @@ class Sessions:
         return session
 
     def open(self, session: Session, workpath: Path | None = None) -> Session:
-        """Make session the open session of this checkout, working in workpath when one is given, and hold it."""
+        """Make session the open session of this checkout, working in workpath when one is given."""
         if workpath is not None:
             session.workpath = Path(workpath).resolve()
         session.save()
         WorkState(self.root).session = "" if session.name == MAIN_SESSION_NAME else session.name
-        type(self)._held[self.root] = session
         return session
 
     @mcp
@@ -149,11 +129,7 @@ class Sessions:
     @agent_tool
     def current(self) -> Session:
         """The open session of this project; the main session, which works on the whole repository, when none is named."""
-        name = self.open_name
-        held = type(self)._held.get(self.root)
-        if held is not None and held.name == name and held.session_path is not None:
-            return held
-        return self.open(self.load(self.folder_of(name)), self.root if name == MAIN_SESSION_NAME else None)
+        return self.saved
 
     @mcp
     @command(name="switch-session")
@@ -167,12 +143,10 @@ class Sessions:
         wanted = self._name_to_switch_to(name)
         folder = self.folder_of(wanted)
         is_kept = (folder / SESSION_FILE).is_file()
-        session = self.load(folder) if is_kept else self.create(wanted, workpath if workpath is not None else project_folder())
+        session = self.load(folder) if is_kept else self.create(wanted, workpath if workpath is not None else self.project)
         return self.open(session, workpath).log.instructions()
 
     def _name_to_switch_to(self, name: str) -> str:
-        from space.session.session import name_of
-
         state = WorkState(self.root)
         branch = state.branch
         cleaned = name_of(name or state.session or (branch.name if branch is not None else ""))
@@ -185,8 +159,3 @@ class Sessions:
         if session.name != self.open_name:
             return
         WorkState(self.root).session = ""
-        self.forget()
-
-    def forget(self) -> None:
-        """Drop this checkout's open session held in memory, so the next call reads ``.sessions/`` again."""
-        type(self)._held.pop(self.root, None)

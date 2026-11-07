@@ -2,10 +2,9 @@
 from __future__ import annotations
 
 import fnmatch
-import json
 import re
 from pathlib import Path
-from typing import Any, Iterator
+from typing import TYPE_CHECKING, Any, Iterator
 
 from harness.agent_tools.agent_tools import (
     agent_instructions,
@@ -13,10 +12,14 @@ from harness.agent_tools.agent_tools import (
     agent_toolset,
     instructions,
 )
-from harness.agent_tools.name import Name
+from harness.name.name import Name
+from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import data_field
 from harness.markdown.markdown import MarkdownCollection
 from harness.hooks.hooks import Hook
+
+if TYPE_CHECKING:
+    from harness.hooks.hook_server import HookPayload
 
 class AppliesTo:
     """Cursor attach data for a rules section — owned in the practice markdown fence."""
@@ -139,20 +142,20 @@ class RulesCollection(MarkdownCollection):
 
    
     @Hook("postToolUse", disabled=True)
-    def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        hook_payload = payload or {}
+    def inject_rules(self, payload: HookPayload) -> dict[str, Any]:
+        hook_payload = payload
         if self._just_edited(hook_payload):
-            path = self._payload_path(hook_payload)
+            path = hook_payload.edited_path()
             bags = self._bags_for_path(path) if path else []
             if bags:
-                self._note_session_injected_rules(path, bags)
+                self._note_session_injected_rules(hook_payload, path, bags)
         if Hook.disabled_on(type(self).inject_rules):
             return {}
         from tools.prompt_notify.prompt_notify import PromptNotify
 
         if not self._just_edited(hook_payload):
             return {}
-        path = self._payload_path(hook_payload)
+        path = hook_payload.edited_path()
         bags = self._bags_for_path(path) if path else []
         parts, _labels = self._bodies(bags)
         if not parts:
@@ -165,16 +168,14 @@ class RulesCollection(MarkdownCollection):
             echo.show_ide_toast(notice)
         return {"additional_context": body}
 
-    def _note_session_injected_rules(self, path: str, bags: list[RulesCollection]) -> None:
-        try:
-            from space.session import Session
-        except ImportError:
+    def _note_session_injected_rules(self, payload: HookPayload, path: str, bags: list[RulesCollection]) -> None:
+        """Note bags in the log of the session open in the project the hook fired in, so that session's next log line
+        names the rules the agent was given; nothing for a hook that names no project."""
+        session = ToolCall(payload.tool_input, payload.project).session
+        if session is None or self._owner_practice() is None:
             return
-        if self._owner_practice() is None:
-            return
-        session = Session.current()
         for bag in bags:
-            session.note_injected_rules(bag, path)
+            session.log.note_injected_rules(bag, path)
 
     @property
     def practice_key(self) -> str:
@@ -192,21 +193,6 @@ class RulesCollection(MarkdownCollection):
             current = getattr(getattr(parent, "fidelities", None), "current", None)
             return str(getattr(current, "name", "") or "")
         return str(getattr(parent, "name", "") or "")
-
-    def _payload_path(self, hook_payload: dict[str, Any]) -> str:
-        for key in ("file_path", "path", "uri"):
-            value = hook_payload.get(key)
-            if isinstance(value, str) and value.strip():
-                return value
-        raw = hook_payload.get("tool_input") or {}
-        if isinstance(raw, str):
-            try:
-                raw = json.loads(raw)
-            except json.JSONDecodeError:
-                return ""
-        if not isinstance(raw, dict):
-            return ""
-        return str(raw.get("path") or raw.get("file_path") or raw.get("target_notebook") or "")
 
     def _owner_practice(self) -> Any:
         node = self.parent

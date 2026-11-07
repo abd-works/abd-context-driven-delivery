@@ -60,7 +60,7 @@ with story("Add Backlog Item"):
         with when("the Person chooses src/visits as its root"):
             # Person -> BacklogItem.start(path='src/visits')
             # BacklogItem -> Ticket.create('Gift cards', 'feature', '', 'src/visits')
-            # Ticket -> Session.new('gift-cards', <repo>/src/visits, <repo>, is_current=False, title, scope, parent)
+            # Ticket -> Sessions.create('gift-cards', <repo>/src/visits, title, scope, parent)
             # BacklogItem -> Ticket.record('backlog .sessions/_backlog/gift-cards.md')
             # BacklogItem -> Session.keep_file(gift-cards.md)
             # BacklogItem <- Ticket gift-cards

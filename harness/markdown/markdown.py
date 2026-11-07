@@ -8,8 +8,8 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Literal, TypeVar, get_args, get_origin, get_type_hints
 
-from harness.agent_tools.name import Name
-from harness.installation.destination import Mark
+from harness.name.name import Name
+from harness.marks.mark import Mark
 from harness.markdown.format import Format
 
 _F = TypeVar("_F", bound=Callable[..., Any])
@@ -925,14 +925,13 @@ class Markdown:
             return ExtractedMarkdown(text)
         if origin is dict:
             return self.templates_path_map()
-        from harness.guidance.rule import RulesCollection
-
-        if return_type is RulesCollection:
-            return RulesCollection.from_markdown(text, parent=self._instance)
         from_markdown = getattr(return_type, "from_markdown", None)
-        if callable(from_markdown):
-            return from_markdown(text)
-        return text
+        if not callable(from_markdown):
+            return text
+        # A type read with the object it belongs to, such as a practice's rules, takes that object as its parent.
+        if "parent" in inspect.signature(from_markdown).parameters:
+            return from_markdown(text, parent=self._instance)
+        return from_markdown(text)
 
     def _format_key_for_template(self, path: Path) -> str:
         parts = path.relative_to(self._templates_folder).parts

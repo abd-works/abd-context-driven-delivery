@@ -1,17 +1,14 @@
 """Pattern overlays extend practice query packs without replacing them."""
 
-import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 from expects import equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import description, it
 
-from graph import Edge, EdgeType, Node, PracticeGraph, Source, normalize_overlay, resolve_overlay_root
+from harness.graph.graph import Edge, EdgeType, Node, PracticeGraph, Source, normalize_overlay, resolve_overlay_root
 
 
 with description("pattern overlays"):
@@ -40,7 +37,7 @@ with description("pattern overlays"):
         expect(practice.root_node.children[0].node_id).to(equal(child.node_id))
 
     with it("should add the lern nodes when that overlay is applied to the example"):
-        from graph import Graph
+        from harness.graph.graph import Graph
 
         sample = _HERE / "_examples" / "input"
         graph = Graph()
@@ -53,7 +50,7 @@ with description("pattern overlays"):
         expect("StoryShared" in story_types).to(equal(True))
 
     with it("should load the full source file for a lern domain node"):
-        from graph import Graph
+        from harness.graph.graph import Graph
 
         sample = _HERE / "_examples" / "input"
         graph = Graph()
@@ -66,7 +63,7 @@ with description("pattern overlays"):
         expect(len(node.source.text.splitlines()) > 1).to(equal(True))
 
     with it("should parent lern tier files on their aggregate in the explorer tree"):
-        from graph import Graph
+        from harness.graph.graph import Graph
 
         sample = _HERE / "_examples" / "input"
         graph = Graph()

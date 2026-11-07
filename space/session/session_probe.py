@@ -29,29 +29,26 @@ def probe_session_log() -> dict[str, Any]:
 
 
 def _probe_in(repo: Path, work: Path) -> dict[str, Any]:
-    from space.session import Session
     from space.session.chat_pointer import ChatPointer
+    from space.session.sessions import Sessions
 
     try:
-        Session.forget_current(repo)
-        Session.new(_SESSION_PROBE_NAME, work, repo)
-        session = Session.current()
+        sessions = Sessions(repo)
+        sessions.switch(_SESSION_PROBE_NAME, work)
+        session = sessions.current()
         chats = session.session_path / "chats"
         chats.mkdir(parents=True, exist_ok=True)
         transcript = chats / "guidance-probe.md"
         transcript.write_text("guidance diagnostics probe\n", encoding="utf-8")
-        Session.forget_current(repo)
 
         from cdd_guidance.actions.generate.generate import Generate
         from cdd_guidance.actions.validate.validate import Validate
 
         with ChatPointer.serving(ChatPointer("guidance-probe", transcript, "1")):
-            Generate().generate(["bdd"])
-            Validate().validate(["bdd"])
+            Generate(sessions.current()).generate(["bdd"])
+            Validate(sessions.current()).validate(["bdd"])
 
-        session = Session.current()
-
-        log_path = session.log_path
+        log_path = session.log.path
         log_text = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
         checks = {
             "generate_line": "generate" in log_text and "bdd" in log_text,
@@ -78,14 +75,13 @@ def _probe_in(repo: Path, work: Path) -> dict[str, Any]:
     except Exception as exc:
         return _fail(_failure_text(exc))
     finally:
-        Session.forget_current(repo)
         shutil.rmtree(repo, ignore_errors=True)
 
 
 def _has_loop_markers(session) -> bool:
-    session.loop()
-    session.loop()
-    log = session.log_path
+    session.log.next_loop()
+    session.log.next_loop()
+    log = session.log.path
     text = log.read_text(encoding="utf-8") if log.is_file() else ""
     return "--- 1" in text and "--- 2" in text
 

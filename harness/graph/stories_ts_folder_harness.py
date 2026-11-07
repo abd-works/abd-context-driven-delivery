@@ -6,7 +6,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from graph import Node, PracticeGraph, Source
+from harness.graph.graph import Node, PracticeGraph, Source
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.stories_example_harness import stories_rule_by_slug
 

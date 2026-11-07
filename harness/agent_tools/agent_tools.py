@@ -13,10 +13,11 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, ClassVar, Mapping, cast, get_args, get_origin, get_type_hints
 
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 from harness.agent_tools.parameter_schema import ParameterSchema
 from harness.agent_tools.tool_call import ToolCall
-from harness.installation.destination import Mark
+from harness.markdown.markdown import Markdown, MarkdownCollection
+from harness.marks.mark import Destination, Mark
 
 ContextDocument = dict[str, Any]
 ArgumentDocument = dict[str, Any]
@@ -153,8 +154,6 @@ class ToolSetCollection:
         return f"{typ.__module__}:{typ.__name__}"
 
     def attach(self, instance: Any, name: str | None = None) -> None:
-        from harness.markdown.markdown import MarkdownCollection
-
         MarkdownCollection.attach(self, instance, name)
 
     @property
@@ -321,7 +320,7 @@ class AgentToolSetTools:
         merged: dict[str, AgentTool] = {}
         merged.update(self._discover_instruction_members())
         merged.update(self.operations)  # @agent_tool wins same name — MCP must invoke, not only expand
-        for name, tool in self._discover_hook_members().items():
+        for name, tool in self._discover_enlisted_members().items():
             merged.setdefault(name, tool)
         merged.update(self._discover_collection_tools())
         return merged
@@ -346,6 +345,9 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
     """Classes whose tools run only through the practice or toolset that holds them. Install and the hook server skip
     them by class name, because the installer reads class names from source without importing it."""
     _member_walk: ClassVar[dict[type, list[tuple[str, Any]]]] = {}
+    parameter_notes: ClassVar[dict[str, str]] = {}
+    """What an agent reads about a parameter, by its name, after the description of every tool on this toolset that
+    takes it; a guidance action explains its ``guidance`` parameter this way."""
 
     @property
     def mode(self) -> ExpansionMode:
@@ -362,16 +364,12 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
 
     @staticmethod
     def _member_marked(member: Any) -> bool:
-        """True when member is a tool, an instructions operation, or a hook."""
-        from harness.hooks.hooks import Hook
-
-        return AgentToolMark.marks(member) or AgentInstructionsMark.marks(member) or Hook.marks(member)
+        """True when member is a tool, an instructions operation, or a member a destination enlists, such as a hook."""
+        return AgentToolMark.marks(member) or AgentInstructionsMark.marks(member) or Destination.enlisting(member)
 
     @staticmethod
     def _rules_marked(member: Any) -> bool:
-        from harness.installation.files import Rules
-
-        return Rules.marks(member)
+        return Destination.marked_for(InstallDestination.RULE, member)
 
     def _discover_operations(self) -> dict[str, AgentOperation]:
         discovered: dict[str, AgentOperation] = {}
@@ -428,12 +426,10 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
                 )
         return discovered
 
-    def _discover_hook_members(self) -> dict[str, AgentTool]:
-        from harness.hooks.hooks import Hook
-
+    def _discover_enlisted_members(self) -> dict[str, AgentTool]:
         discovered: dict[str, AgentTool] = {}
         for name, member in self._marked_members(type(self)):
-            if Hook.marks(member):
+            if Destination.enlisting(member):
                 discovered[name] = AgentTool(
                     name=name,
                     callable=self._bound_callable(name, member),
@@ -964,11 +960,16 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
         self._validate_toolset_class(type(self))
 
 class InstallDestination:
+    """The channels a member is published to, in the order a tool lists them. Each channel's mark is a *Destination*
+    its publisher defines (harness/installation, harness/mcp, harness/hooks), so this module names the channels and
+    never imports the publishers."""
+
     MCP = "mcp"
     HOOK = "hook"
     SKILL = "skill"
     COMMAND = "command"
     RULE = "rules"
+    LISTED = (MCP, SKILL, COMMAND, RULE, HOOK)
 
 
 class AgentToolDestination:
@@ -977,77 +978,28 @@ class AgentToolDestination:
     callable: Callable[..., Any]
 
     @property
-    def deploy_suppressed(self) -> bool:
-        from harness.installation.destination import NoDeploy
-
-        return NoDeploy.marks(self.callable)
-
-    @property
     def install_to_mcp(self) -> bool:
-        from harness.mcp.mcp_server import Mcp
-
-        return not self.deploy_suppressed and Mcp.marks(self.callable)
+        return self.install_to(InstallDestination.MCP)
 
     @property
     def install_to_hook(self) -> bool:
-        from harness.hooks.hooks import Hook
-
-        if Hook.disabled_on(self.callable):
-            return False
-        return not self.deploy_suppressed and Hook.marks(self.callable)
+        return self.install_to(InstallDestination.HOOK)
 
     @property
     def hook_event(self) -> str:
         """The IDE event this tool's ``@Hook`` mark names, or empty when the tool is not a hook."""
-        from harness.hooks.hooks import Hook
-
-        return Hook.name_marked_on(self.callable)
+        return Destination.name_given_for(InstallDestination.HOOK, self.callable)
 
     @property
     def install_to_skill(self) -> bool:
-        from harness.installation.files import Skill
-
-        return not self.deploy_suppressed and Skill.marks(self.callable)
-
-    @property
-    def install_to_command(self) -> bool:
-        from harness.installation.files import Command
-
-        return not self.deploy_suppressed and Command.marks(self.callable)
-
-    @property
-    def install_to_rule(self) -> bool:
-        from harness.installation.files import Rules
-
-        return not self.deploy_suppressed and Rules.marks(self.callable)
+        return self.install_to(InstallDestination.SKILL)
 
     def install_to(self, destination: str) -> bool:
-        if destination == InstallDestination.MCP:
-            return self.install_to_mcp
-        if destination == InstallDestination.HOOK:
-            return self.install_to_hook
-        if destination == InstallDestination.SKILL:
-            return self.install_to_skill
-        if destination == InstallDestination.COMMAND:
-            return self.install_to_command
-        if destination == InstallDestination.RULE:
-            return self.install_to_rule
-        return False
+        return Destination.publishes(destination, self.callable)
 
     @property
     def destinations(self) -> list[str]:
-        destinations: list[str] = []
-        if self.install_to_mcp:
-            destinations.append(InstallDestination.MCP)
-        if self.install_to_skill:
-            destinations.append(InstallDestination.SKILL)
-        if self.install_to_command:
-            destinations.append(InstallDestination.COMMAND)
-        if self.install_to_rule:
-            destinations.append(InstallDestination.RULE)
-        if self.install_to_hook:
-            destinations.append(InstallDestination.HOOK)
-        return destinations
+        return [destination for destination in InstallDestination.LISTED if self.install_to(destination)]
 
 
 @dataclass
@@ -1067,9 +1019,11 @@ class AgentTool(AgentToolDestination):
 
     @property
     def deploy_name(self) -> str:
-        from harness.installation.files import Command, Skill
-
-        return Command.name_marked_on(self.callable) or Skill.name_marked_on(self.callable) or self.name
+        return (
+            Destination.name_given_for(InstallDestination.COMMAND, self.callable)
+            or Destination.name_given_for(InstallDestination.SKILL, self.callable)
+            or self.name
+        )
 
     @property
     def mcp_name(self) -> str:
@@ -1160,22 +1114,19 @@ class AgentTool(AgentToolDestination):
             body = self._body
         else:
             body = (inspect.getdoc(self.callable) or "").strip()
-        return self._with_guidance_parameter(self._with_sub_agent_preamble(body))
+        return self._with_parameter_notes(self._with_sub_agent_preamble(body))
 
-    def _with_guidance_parameter(self, text: str) -> str:
+    def _with_parameter_notes(self, text: str) -> str:
+        """text followed by the note its toolset gives each parameter this tool takes, once each."""
         try:
-            signature = inspect.signature(self.callable)
+            parameters = inspect.signature(self.callable).parameters
         except (TypeError, ValueError):
             return text
-        if "guidance" not in signature.parameters:
-            return text
-        from harness.guidance_actions.guidance_actions import GUIDANCE_PARAMETER
-
-        if GUIDANCE_PARAMETER in text:
-            return text
-        if not text:
-            return GUIDANCE_PARAMETER
-        return f"{text}\n\n{GUIDANCE_PARAMETER}"
+        notes = getattr(self.toolset, "parameter_notes", {})
+        for parameter, note in notes.items():
+            if parameter in parameters and note not in text:
+                text = f"{text}\n\n{note}" if text else note
+        return text
 
     def _with_sub_agent_preamble(self, text: str) -> str:
         from harness.agent_tools.sub_agent.mark import (
@@ -1190,8 +1141,6 @@ class AgentTool(AgentToolDestination):
     @functools.cached_property
     def description(self) -> str:
         """What the tool does, expanded from its docstring once: MCP lists it on every request for the tool list."""
-        from harness.markdown.markdown import Markdown
-
         expanded = Markdown.from_label(self.toolset, "").expand_docstring(self.docstring)
         if expanded:
             return expanded

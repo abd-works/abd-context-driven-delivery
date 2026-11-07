@@ -1,73 +1,14 @@
-"""Destination mark and Installation write channel — no hook or installer import."""
+"""What install reads from a toolset beside its destinations: the omission marks, the data marks a language adapter
+and every MCP answer read, and the Installation that writes one destination's files."""
 from __future__ import annotations
 
 import inspect
 from pathlib import Path
 from typing import Any, Callable
 
+from harness.marks.mark import Mark, OmissionMark
+
 InstallTracker = Callable[[Path], None]
-
-
-class Mark:
-    """A decorator that marks the operation or class it decorates, by setting its ``flag`` on it, so install and
-    discovery can find what it marks. Each kind of mark is a subclass that names its flag and reads it with
-    ``marks``; together the subclasses are the one list of marks."""
-
-    flag = ""
-    # A wrapper of a marked operation, such as a collected or markdown property, copies the marks whose kinds say so,
-    # so the wrapper installs the way the operation does.
-    copied = True
-    _kinds: list[type[Mark]] = []
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        super().__init_subclass__(**kwargs)
-        if cls.flag and all(kind.flag != cls.flag for kind in Mark._kinds):
-            Mark._kinds.append(cls)
-
-    def __new__(cls, target: Any = None):
-        mark = object.__new__(cls)
-        if callable(target):
-            return mark.annotate(target)
-        return mark
-
-    @classmethod
-    def marks(cls, target: Any) -> bool:
-        """True when this kind of mark is on target."""
-        return bool(getattr(target, cls.flag, False))
-
-    @classmethod
-    def copied_flags(cls) -> tuple[str, ...]:
-        """Every attribute a wrapper copies from the operation it wraps: each copied kind's flag and the attributes that
-        go with it, such as the name a skill mark gives."""
-        flags: list[str] = []
-        for kind in Mark._kinds:
-            if kind.copied:
-                flags.extend((kind.flag, *kind.companion_flags()))
-        return tuple(dict.fromkeys(flags))
-
-    @classmethod
-    def companion_flags(cls) -> tuple[str, ...]:
-        """The other attributes this kind of mark sets beside its flag."""
-        return ()
-
-    def annotate(self, target: Any) -> Any:
-        setattr(target, self.flag, True)
-        return target
-
-    def __call__(self, target: Any) -> Any:
-        return self.annotate(target)
-
-
-class OmissionMark(Mark):
-    """A mark that leaves what it marks out of something. A classmethod or bound method is marked through the function
-    it wraps, so the mark is read there too."""
-
-    copied = False
-
-    @classmethod
-    def marks(cls, target: Any) -> bool:
-        """True when target, or the function it wraps, carries this mark."""
-        return super().marks(target) or super().marks(getattr(target, "__func__", None))
 
 
 class NoCatalog(OmissionMark):
@@ -88,6 +29,7 @@ class NoDeploy(OmissionMark):
     """
 
     flag = "_no_deploy"
+    omits_install = True
 
 
 noCatalog = NoCatalog
@@ -260,42 +202,6 @@ class SourceFile:
     A generated view draws a marked field as a link that opens the file in the shared source view, at the `line`, or
     the `start_line` to `end_line` range, that the same data holds.
     """
-
-
-class Destination(Mark):
-    """Base annotation to define the installation destination of a tool."""
-
-    def annotate(self, fn: Callable[..., Any]) -> Callable[..., Any]:
-        setattr(fn, self.flag, True)
-        name = getattr(self, "name", None)
-        if name is not None:
-            setattr(fn, f"{self.flag}_name", name)
-        return fn
-
-    @classmethod
-    def name_marked_on(cls, operation: Any) -> str:
-        """The name this destination's mark gave the operation, such as the event a hook runs on; empty when the
-        operation carries no such mark."""
-        return str(getattr(operation, f"{cls.flag}_name", "") or "")
-
-    @classmethod
-    def companion_flags(cls) -> tuple[str, ...]:
-        return (f"{cls.flag}_name",)
-
-
-class NamedDestination(Destination):
-    """A destination whose mark may name what it installs: ``@skill("name")``, ``@skill(name="name")``, or bare
-    ``@skill`` for the operation's own name."""
-
-    def __new__(cls, fn: Any = None, name: str | None = None):
-        mark = object.__new__(cls)
-        if isinstance(fn, str):
-            mark.name = fn
-            return mark
-        mark.name = name
-        if callable(fn):
-            return mark.annotate(fn)
-        return mark
 
 
 class Installation:

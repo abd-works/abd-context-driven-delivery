@@ -32,7 +32,4 @@ class ToolCall:
             from space.session.sessions import Sessions
 
             self._session = Sessions(self.project).saved
-            # WHY: a project's main session has no folder until something saves it, and the call logs there.
-            if not self._session.session_file.is_file():
-                self._session.save()
         return self._session

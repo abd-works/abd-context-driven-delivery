@@ -13,7 +13,7 @@ for path in (_HERE, _REPO):
 from expects import be_true, equal, expect
 from mamba import before, context, description, it
 
-from graph import Node, PracticeGraph, Source
+from harness.graph.graph import Node, PracticeGraph, Source
 from harness.graph.rule_context import RuleCheckContext
 from cdd_guidance.practices.clean_engineering.model.drawio.rules import BY_SLUG
 

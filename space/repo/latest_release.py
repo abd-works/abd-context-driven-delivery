@@ -83,4 +83,4 @@ class LatestRelease:
         self._git("push", "origin", "HEAD")
 
     def _git(self, *args: str, env: dict[str, str] | None = None) -> str:
-        return type(self._repository).git(self._repository.root, *args, env=env, timeout=_LARGE_TRANSFER_SECONDS)
+        return self._repository.git.run(*args, env=env, timeout=_LARGE_TRANSFER_SECONDS)

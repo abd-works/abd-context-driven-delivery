@@ -20,6 +20,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 )
 from harness.guidance.fixtures.split_tool.split_tool import SplitPracticeGuidance
 from harness.markdown import HTML, Markdown
+from harness.hooks.hook_server import HookPayload
 
 _READS_PER_FIDELITY = 10
 
@@ -84,10 +85,10 @@ with description("context guidance"):
         with it("should inject rules markdown when the agent writes a matching path"):
             guidance = SampleGuidance(format="markdown")
             result = guidance.rules.inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Write",
                     "tool_input": {"path": "pkg/foo_sample_bar.py"},
-                }
+                })
             )
             expect(result).to(equal({}))
             inject = type(guidance.rules).inject_rules
@@ -115,12 +116,12 @@ with description("context guidance"):
             from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
             result = CleanEngineering().rules.inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Write",
                     "tool_input": {
                         "path": "cdd_guidance/actions/validate/validate.py",
                     },
-                }
+                })
             )
             expect(result).to(equal({}))
 
@@ -128,10 +129,10 @@ with description("context guidance"):
             from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
             result = CleanEngineering().rules.inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Read",
                     "tool_input": {"path": "cdd_guidance/actions/validate/validate.py"},
-                }
+                })
             )
             expect(result).to(equal({}))
 
@@ -139,20 +140,20 @@ with description("context guidance"):
             from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
             result = CleanEngineering().rules.inject_rules(
-                {
+                HookPayload({
                     "hook_event_name": "afterFileEdit",
                     "file_path": r"C:\dev\other-repo\src\cart.py",
-                }
+                })
             )
             expect(result).to(equal({}))
 
         with it("should not inject rules markdown when the agent writes a non-matching path"):
             guidance = SampleGuidance(format="markdown")
             result = guidance.rules.inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Write",
                     "tool_input": {"path": "pkg/other.py"},
-                }
+                })
             )
             expect(result).to(equal({}))
 

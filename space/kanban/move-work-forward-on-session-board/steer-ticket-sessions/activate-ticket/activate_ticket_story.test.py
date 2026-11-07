@@ -34,7 +34,7 @@ with story("Activate Ticket"):
             # Ticket -> Repo.push_commit('checkout-flow: leave session', sync_remote=True)
             # Ticket -> Repo.close_branch('checkout-flow')
             # Ticket -> Repo.switch_branch('billing-report')
-            # Ticket -> Session.switch('billing-report', repo_path)
+            # Ticket -> Sessions.switch('billing-report')
             pass
         with then("billing-report is the active ticket with a thick orange outline"):
             pass
@@ -48,7 +48,7 @@ with story("Activate Ticket"):
             pass
         with when("the Person activates billing-report with nothing chosen"):
             # Person -> Ticket.activate([], [])
-            # Ticket -> Session.switch('billing-report', repo_path)
+            # Ticket -> Sessions.switch('billing-report')
             pass
         with then("billing-report is the active ticket"):
             pass
@@ -64,7 +64,7 @@ with story("Activate Ticket"):
             pass
         with when("the Person activates billing-report with commit chosen"):
             # Person -> Ticket.activate(['commit'], [])
-            # Ticket -> Session.switch('billing-report', repo_path)
+            # Ticket -> Sessions.switch('billing-report')
             pass
         with then("billing-report is the active ticket"):
             pass
@@ -88,7 +88,7 @@ with story("Activate Ticket"):
         with when("the Person activates billing-report with a new branch"):
             # Person -> Ticket.activate(opening=['branch'])
             # Ticket -> Repo.switch_branch('billing-report')
-            # Ticket -> Session.switch('billing-report', repo_path)
+            # Ticket -> Sessions.switch('billing-report')
             pass
         with then("the repository has the branch billing-report"):
             pass

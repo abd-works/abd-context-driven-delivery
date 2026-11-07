@@ -22,7 +22,7 @@ with story("Split Ticket Into Child Tickets"):
             pass
         with when("the chat opens a child ticket Enter card details with parent checkout-flow"):
             # Agent -> Ticket.create('Enter card details', 'story', 'checkout-flow')
-            # Ticket -> Session.new('enter-card-details', <repo>, <repo>, is_current=False, parent=checkout-flow)
+            # Ticket -> Sessions.create('enter-card-details', <repo>, parent=checkout-flow)
             pass
         with then("enter-card-details is In progress in Discovery"):
             pass

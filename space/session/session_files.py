@@ -50,4 +50,4 @@ class SessionFiles:
         repo = self._session.repo
         if self._session.root != repo.root:
             return None
-        return {(repo.root / path).resolve() for path in repo.files_changed_on(repo.branch_named(self._session.name))}
+        return {(repo.root / path).resolve() for path in repo.branch_named(self._session.name).changed_files()}

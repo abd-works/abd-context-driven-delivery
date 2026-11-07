@@ -6,20 +6,26 @@ import re
 from pathlib import Path
 from typing import Any
 
-from harness.agent_tools.name import Name
-from harness.installation.destination import Destination, Installation, NamedDestination
+from harness.agent_tools.agent_tools import InstallDestination
+from harness.name.name import Name
+from harness.installation.destination import Installation
+from harness.markdown.markdown import strip_yaml_fences
+from harness.marks.mark import Destination, NamedDestination
 
 
 class Skill(NamedDestination):
     flag = "_skill"
+    channel = InstallDestination.SKILL
 
 
 class Command(NamedDestination):
     flag = "_command"
+    channel = InstallDestination.COMMAND
 
 
 class Rules(Destination):
     flag = "_rules"
+    channel = InstallDestination.RULE
 
 
 class Agent(NamedDestination):
@@ -252,8 +258,6 @@ class FileInstallation(Installation):
         )
 
     def _fidelity_invoke_parts(self, toolset: Any) -> list[str]:
-        from harness.mcp.mcp_server import Mcp
-
         entries = getattr(getattr(toolset, "fidelities", None), "entries", None) or {}
         parts: list[str] = []
         for _name, child in entries.items():
@@ -261,7 +265,7 @@ class FileInstallation(Installation):
             getter = getattr(member, "fget", member)
             invoke = (
                 f"Use MCP tool: `{getattr(child, 'slug', '')}()`"
-                if Mcp.marks(getter)
+                if Destination.marked_for(InstallDestination.MCP, getter)
                 else ""
             )
             parts.append(
@@ -301,9 +305,7 @@ class FileInstallation(Installation):
         text = self.render("\n\n".join(p for p in parts if p), member, toolset)
         rel = self.relative_path(kind, toolset, member, tool.deploy_name)
         if kind == "rules":
-            from harness.guidance.rule import AppliesTo
-
-            text = AppliesTo.strip_fence(text)
+            text = strip_yaml_fences(text)
             text = self._rules_front_matter(text, toolset) + text
         elif kind == "skill":
             text = self._skill_front_matter(rel.parent.name, self._skill_overview(toolset, parts)) + text

@@ -6,7 +6,7 @@ import re
 import tempfile
 from pathlib import Path
 
-from graph import Node, PracticeGraph
+from harness.graph.graph import Node, PracticeGraph
 from harness.graph.rule_context import RuleCheckContext
 
 

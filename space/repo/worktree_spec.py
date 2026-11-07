@@ -7,9 +7,9 @@ from pathlib import Path
 from expects import be_true, contain, equal, expect
 from mamba import after, before, context, description, it
 
-from harness.installation.installer import Installer
+from harness.installation.repository_toolsets import RepositoryToolsets
 
-Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
+RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from space.repo.repo import Repo  # noqa: E402
 from space.work_state import WorkState  # noqa: E402

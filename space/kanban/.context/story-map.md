@@ -59,7 +59,7 @@ Observed. With Active session only on, every ticket that is not the active sessi
 
 ### (S) Person --> [Open Ticket Session](move-work-forward-on-session-board/steer-ticket-sessions/open-ticket-session/open_ticket_session_story.test.md)
 
-Observed: `Ticket.new` calls `Session.new`; `board-page.ts` `openNewTicket`.
+Observed: `Ticket.new` calls `Sessions.create`; `board-page.ts` `openNewTicket`.
 
 ### (S) Person --> [Close Active Session](move-work-forward-on-session-board/steer-ticket-sessions/close-active-session/close_active_session_story.test.md)
 

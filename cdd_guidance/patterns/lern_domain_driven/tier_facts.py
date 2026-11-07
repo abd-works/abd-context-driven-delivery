@@ -18,7 +18,7 @@ _MODULE_FUNCTION = re.compile(r"^(?:export\s+)?function\s+(\w+)\s*\(", re.MULTIL
 _TOP_LEVEL_HELPER = re.compile(r"^(?:export\s+)?(?:async\s+)?function\s+(\w+)|^(?:export\s+)?const\s+(\w+)\s*=\s*(?:async\s*)?\(", re.M)
 _TOP_LEVEL_END = re.compile(r"^\};?\s*$", re.M)
 _DOMAIN_CALL = re.compile(r"\brepositories\.\w+(?:\.\w+)?")
-_HAND_WRITTEN_ROW = re.compile(r"\bscenario\(\s*(['\"])(?P<outline>[^'\"]+?):\s+(?P<row>[^'\"]+)\1")
+_HAND_WRITTEN_ENTRY = re.compile(r"\bscenario\(\s*(['\"])(?P<outline>[^'\"]+?):\s+(?P<entry>[^'\"]+)\1")
 _SCHEMA_PARSE = re.compile(r"(?<!JSON)\.(?:safe)?[pP]arse\s*\(")
 _LOOSE_BODY_READ = re.compile(r"\breq\.body(?:\??\.\w+|\s*\[)|=\s*req\.body\b(?!\s*\?\?)")
 _AD_HOC_THROW = re.compile(r"\bthrow\s*(?:\{|['\"`])")
@@ -137,9 +137,9 @@ def story_file_facts(text: str) -> dict:
         "context_casts": [[_line_of(text, match.start()), match.group(0)] for match in _CTX_CAST.finditer(text)],
         "asserting_givens": asserting,
         "domain_wrapping_helpers": _domain_wrapping_helpers(text),
-        "hand_written_rows": [
-            [_line_of(text, match.start()), match.group("outline"), match.group("row")]
-            for match in _HAND_WRITTEN_ROW.finditer(text)
+        "hand_written_entries": [
+            [_line_of(text, match.start()), match.group("outline"), match.group("entry")]
+            for match in _HAND_WRITTEN_ENTRY.finditer(text)
         ],
     }
 

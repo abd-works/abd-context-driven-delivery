@@ -8,15 +8,16 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from harness.installation.installer import Installer
+from harness.installer.installer import Installer
+from harness.installation.repository_toolsets import RepositoryToolsets
 
-Installer(repo=_REPO_ROOT).ensure_import_path()
+RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
 from expects import contain, equal, expect, have_key
 from mamba import description, it
 
-from harness.guidance.guidance_probe import GuidanceProbe, instruction_result
-from harness.guidance.guidance_diagnostics import GuidanceDiagnostics
+from harness.diagnostics.guidance_probe import GuidanceProbe, instruction_result
+from harness.diagnostics.guidance_diagnostics import GuidanceDiagnostics
 
 
 def _installer(tree: Path, payload: dict) -> Installer:

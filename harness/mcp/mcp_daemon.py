@@ -11,7 +11,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from harness.hooks.stoppable_process import StoppableProcess
+from harness.process.stoppable_process import StoppableProcess
 from harness.mcp.cdd_home import CddHome
 
 SERVER_PORT_ENV = "CDD_SERVER_PORT"
@@ -83,7 +83,7 @@ class McpDaemon:
         StoppableProcess(int(answer.get("pid") or 0)).stop(_STOP_SECONDS)
 
     def spawn(self) -> None:
-        from harness.hooks.process import detached_creationflags
+        from harness.process.process import detached_creationflags
 
         self.home.folder.mkdir(parents=True, exist_ok=True)
         log = open(self.home.log_path, "a", encoding="utf-8")
@@ -97,10 +97,10 @@ class McpDaemon:
             self._start_process(log, detached_creationflags() & ~_CREATE_BREAKAWAY_FROM_JOB)
 
     def _start_process(self, log, creationflags: int) -> None:
-        from harness.hooks.process import hidden_process_startupinfo, hook_python_executable
+        from harness.process.process import hidden_process_startupinfo, windowless_python_executable
 
         subprocess.Popen(
-            [hook_python_executable(self.home.python), "-m", "harness.mcp", "--port", str(self.port)],
+            [windowless_python_executable(self.home.python), "-m", "harness.mcp", "--port", str(self.port)],
             cwd=str(self.home.source),
             env={**os.environ, **self.home.server_environment},
             stdin=subprocess.DEVNULL,

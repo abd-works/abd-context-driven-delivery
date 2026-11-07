@@ -36,11 +36,12 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
-from harness.installation.installer import Installer
+from harness.agent_tools.tool_call import ToolCall
+from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.hooks.hooks import Hook
-from harness.hooks.running_process import RunningProcess
+from harness.process.running_process import RunningProcess
 
-Installer(repo=_REPO_ROOT).ensure_import_path()
+RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
 logger = logging.getLogger(__name__)
 
@@ -388,9 +389,7 @@ class HandlerCatalog:
         return list(self.refs_from_handlers((self.repo_root or Path()) / ".cursor" / "hook-handlers.json"))
 
     def _collect_refs(self) -> list[str]:
-        from harness.installation.installer import Installer
-
-        return list(Installer(repo=self.repo_root).collect_toolsets())
+        return list(RepositoryToolsets(self.repo_root).collect())
 
     def for_event(self, event: CursorEvent) -> list[HookHandler]:
         handlers: list[HookHandler] = []
@@ -662,10 +661,9 @@ class HookServer:
     @property
     def session(self) -> Session:
         """The session saved as open in the project's ``.sessions/session.json``, main when none is. It is read for each
-        event, so hooks follow a switch or a close made through MCP at once."""
-        from space.session.sessions import Sessions
-
-        return Sessions(self._repo_root).saved
+        event, so hooks follow a switch or a close made through MCP at once. The hook server reads it the way every
+        tool call reads its session, through a call on this repository."""
+        return ToolCall(project=self._repo_root).session
 
     def _write_last_chat_injected(self, result: HookResult) -> None:
         folder = self.session.session_path

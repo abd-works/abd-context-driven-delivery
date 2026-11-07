@@ -1,17 +1,14 @@
 """Rules attach to the node they check, and a violation filter keeps those hits on the graph."""
 
-import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 from expects import be_above, contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import before, context, description, it
 
-from graph import Graph, Node, Source
+from harness.graph.graph import Graph, Node, Source
 
 
 def rule_on(node: dict, slug: str) -> dict:

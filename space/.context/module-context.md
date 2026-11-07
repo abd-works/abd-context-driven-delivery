@@ -3,9 +3,9 @@
 
 *WorkState* is the branch, worktree, and session saved as open in a checkout's `.sessions/session.json`, so the repo and session commands agree on what is open after a restart as well as before it. Its release folder, `.sessions/{release}/`, holds a release's session files, design canvas, and end-to-end results.
 
-*ContextConfig* is a project's `.context/config.json`: the guidelines that apply to file patterns and the folder each practice writes in.
+*ContextConfig* is a project's `.context/config.json` (`CONTEXT_FOLDER` names the `.context` folder once): the guidelines that apply to file patterns and the folder each practice writes in.
 
-The work itself is kept by the child modules, each with its own card: the *Session* an agent works in, with the handoff the next agent resumes from and its Context Decision Records (`space/session`), the *Repo* that session sits in (`space/repo`), and the *Board* that shows every session as a *Ticket* and moves it through the delivery stages (`space/kanban`, with the Session Board app in `space/kanban/app`). The board is part of tracking the work, so it sits beside the session and the repo it reads.
+The work itself is kept by the child modules, each with its own card: the *Sessions* of a checkout and the *Session* an agent works in, with its log, the handoff the next agent resumes from, and its Context Decision Records (`space/session`), the *Repo* those sessions sit in, with its branches and worktrees (`space/repo`), and the *Board* that shows every session as a *Ticket* and moves it through the delivery stages (`space/kanban`, with the Session Board app in `space/kanban/app`). The board is part of tracking the work, so it sits beside the session and the repo it reads.
 
 - **Purpose:** Tell every tool which project, checkout, and open work a call is about, and what the project configured, so sessions, the board, and the repo tools all find the same `.sessions/` and the same settings.
 - **Seam (terms):** WorkState, ContextConfig, `working_on`, `project_folder`, `project_checkout`

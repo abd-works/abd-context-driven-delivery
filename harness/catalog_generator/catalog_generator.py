@@ -32,7 +32,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 from harness.catalog_generator.foundry_chrome import STAGE_COLUMNS, StageColumn
 from harness.guidance.action_catalogue import Action, ActionCatalogue
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
@@ -202,9 +202,9 @@ class Utility:
 def catalog_utilities() -> list[Utility]:
     """Every toolset the installer finds in ``space`` and ``tools``, less those marked ``@noCatalog``, in the order
     the installer finds them. A toolset that cannot be imported raises rather than leaving a silent gap."""
-    from harness.installation.installer import Installer
+    from harness.installer.installer import Installer
 
-    refs = [ref for ref in Installer().collect_toolsets() if ref.startswith(_UTILITY_PACKAGES)]
+    refs = [ref for ref in Installer().toolsets.collect() if ref.startswith(_UTILITY_PACKAGES)]
     classes = [getattr(importlib.import_module(module), name) for module, name in (ref.split(":") for ref in refs)]
     return [Utility(toolset_class) for toolset_class in classes if not NoCatalog.marks(toolset_class)]
 

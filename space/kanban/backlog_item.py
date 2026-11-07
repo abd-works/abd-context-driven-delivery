@@ -11,7 +11,7 @@ from harness.installation.destination import data_field, identity, language_adap
 from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
 from space.kanban.ticket import Ticket
 from harness.mcp.mcp_server import mcp
-from space.session import Session, name_of
+from space.session import name_of
 
 
 class BacklogItemNotFoundError(LookupError):
@@ -47,7 +47,7 @@ class BacklogItem(Card):
     def create(cls, title: str, text: str = "", *, project: Path | str) -> BacklogItem:
         """Add an idea to the Backlog: one markdown file, with title as its heading and text under it."""
         board = Board.load(project)
-        item = cls(board.repo.backlog_folder / f"{name_of(title)}.md", board)
+        item = cls(board.sessions.backlog_folder / f"{name_of(title)}.md", board)
         item._write(title, text)
         return item
 
@@ -55,7 +55,7 @@ class BacklogItem(Card):
     def from_ticket(cls, ticket: Ticket, board: Board) -> BacklogItem:
         """The item a ticket moved back into the Backlog becomes: its own folder, history and all, with its idea file
         inside."""
-        return cls(board.repo.backlog_folder / ticket.name / f"{ticket.name}.md", board)
+        return cls(board.sessions.backlog_folder / ticket.name / f"{ticket.name}.md", board)
 
     def write_if_missing(self, title: str) -> None:
         """Give an item whose ticket never had an idea file one holding title, so it shows in the Backlog."""
@@ -126,10 +126,10 @@ class BacklogItem(Card):
         return self._path.parent if self._path.parent.name == self._path.stem else self._path.with_suffix("")
 
     def _ticket_brought_back(self, kept_folder: Path) -> Ticket:
-        session = Session.load(kept_folder, self._board.repo.root).reopen()
+        session = self._board.sessions.load(kept_folder).reopen()
         return Ticket(session, self._board)
 
     def _ticket_opened(self, scope: str, path: str) -> Ticket:
         ticket = Ticket.create(self.title, scope, "", path, project=self._board.repo.root)
-        ticket.session.record(f"backlog {self._path}")
+        ticket.session.log.record(f"backlog {self._path}")
         return ticket

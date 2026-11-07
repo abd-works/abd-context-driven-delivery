@@ -7,7 +7,7 @@ import os
 import signal
 import time
 
-from harness.hooks.running_process import RunningProcess
+from harness.process.running_process import RunningProcess
 
 # How long a stop waits between looks at whether the process has ended.
 _POLL_SECONDS = 0.05

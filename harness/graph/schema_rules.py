@@ -268,7 +268,7 @@ def _active_patterns_for_practice_graph(practice_graph) -> tuple[str, ...]:
     return active_overlay_patterns(tuple(graph.overlays))
 
 
-def bind_practice_rules(practice_graph) -> None:
+def apply_practice_rules(practice_graph) -> None:
     """Register every schema rule slug against the node types it applies to.
 
     Epic, sub-epic, and story are story nodes. Their filter list includes the
@@ -277,12 +277,12 @@ def bind_practice_rules(practice_graph) -> None:
     active = _active_patterns_for_practice_graph(practice_graph)
     for node_type, slugs in rules_for_practice(practice_graph.name, active).items():
         for slug in slugs:
-            practice_graph.bind_rule(slug, [node_type])
+            practice_graph.apply_rule(slug, [node_type])
     if practice_graph.name != "stories":
         return
     for node_type in ("Epic", "SubEpic", "Story"):
         for slug in slugs_for_type(practice_graph.name, node_type, active):
-            practice_graph.bind_rule(slug, [node_type])
+            practice_graph.apply_rule(slug, [node_type])
 
 
 def qualified_rule_label(practice: str, node_type: str, slug: str, patterns: tuple[str, ...] = ()) -> str:
@@ -294,10 +294,10 @@ def qualified_rule_label(practice: str, node_type: str, slug: str, patterns: tup
     return f"{owner.replace('_', '.')}.{body}"
 
 
-def qualified_rule_labels(practice: str, bindings: dict[str, list[str]], patterns: tuple[str, ...] = ()) -> list[str]:
+def qualified_rule_labels(practice: str, types_by_rule: dict[str, list[str]], patterns: tuple[str, ...] = ()) -> list[str]:
     labels = [
         qualified_rule_label(practice, node_type, slug, patterns)
-        for slug, types in bindings.items()
+        for slug, types in types_by_rule.items()
         for node_type in types
     ]
     return sorted(set(labels))

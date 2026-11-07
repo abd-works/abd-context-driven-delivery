@@ -1,18 +1,15 @@
 """A graph loaded from the account-credentials working copy."""
 
 import json
-import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 from expects import be_above, contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
-from graph import Graph, Node, PracticeGraph, Source
+from harness.graph.graph import Graph, Node, PracticeGraph, Source
 
 _ROOT = _HERE
 _SAMPLE = _ROOT / "_examples" / "input"
@@ -158,6 +155,10 @@ def edges_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, st
 
 
 with description("a graph"):
+    with context("with nothing loaded yet"):
+        with it("should name every practice it can load, so the explorer loads each one on the folder it opens"):
+            expect(Graph().practice_names()).to(equal(["stories", "ddd", "ux", "clean_engineering", "bdd"]))
+
     with context("loaded from the account credentials working copy"):
         with before.all:
             self.graph = Graph()

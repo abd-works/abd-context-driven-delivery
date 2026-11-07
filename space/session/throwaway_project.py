@@ -7,7 +7,6 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from space.session.session import Session
 from space.work_state import working_on
 
 
@@ -23,7 +22,6 @@ class ThrowawayProject:
         self.root = Path(tempfile.mkdtemp(prefix="cdd-spec-project-"))
         self._saved = os.environ.get("CDD_PROJECT")
         os.environ["CDD_PROJECT"] = str(self.root)
-        Session.forget_current()
         type(self)._open.append(self)
 
     @classmethod
@@ -35,7 +33,6 @@ class ThrowawayProject:
         """Name the project that was named before, and remove this one."""
         if self in type(self)._open:
             type(self)._open.remove(self)
-        Session.forget_current()
         if self._saved is None:
             os.environ.pop("CDD_PROJECT", None)
         else:

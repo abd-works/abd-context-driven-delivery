@@ -33,7 +33,7 @@ from harness.catalog_generator.catalog_generator import (
 from harness.guidance.action_catalogue import Action
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.installation.files import Skill, skill
-from harness.installation.installer import Installer
+from harness.installation.repository_toolsets import RepositoryToolsets
 from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.actions.generate.generate import Generate
@@ -106,8 +106,8 @@ with description("noCatalog"):
 
             expect(NoCatalog.marks(sketch)).to(be_true)
             expect(Skill.marks(sketch)).to(be_true)
-            expect("noCatalog" in Installer._ANNOTATIONS).to(equal(False))
-            expect("Skill" in Installer._ANNOTATIONS).to(be_true)
+            expect("noCatalog" in RepositoryToolsets.ANNOTATIONS).to(equal(False))
+            expect("Skill" in RepositoryToolsets.ANNOTATIONS).to(be_true)
             source = ast.parse(
                 "@agent_toolset\n"
                 "class Kit:\n"
@@ -116,8 +116,8 @@ with description("noCatalog"):
                 "    def sketch(self):\n"
                 "        pass\n"
             )
-            installer = object.__new__(Installer)
-            expect(installer._class_is_installable(source.body[0])).to(be_true)
+            toolsets = RepositoryToolsets(Path.cwd())
+            expect(toolsets._class_is_installable(source.body[0])).to(be_true)
 
 
 with description("Load Context Tool And Utility Registry"):

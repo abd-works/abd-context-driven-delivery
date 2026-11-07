@@ -1,16 +1,13 @@
 """Node rows must not be edge query tuples mis-decoded into the graph."""
 
-import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 from expects import equal, expect
 from mamba import description, it
 
-from graph import Node
+from harness.graph.graph import Node
 
 
 with description("node facts"):

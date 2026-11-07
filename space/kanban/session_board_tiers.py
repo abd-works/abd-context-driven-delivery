@@ -18,9 +18,9 @@ from pathlib import Path
 from typing import Any
 
 from harness.installation.destination import data_of
-from harness.installation.installer import Installer
+from harness.installation.repository_toolsets import RepositoryToolsets
 
-Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
+RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from cdd_guidance.actions.generate.generate import Generate  # noqa: E402
 from space.kanban.backlog_item import BacklogItem, BacklogItemNotFoundError  # noqa: E402
@@ -29,7 +29,7 @@ from space.kanban.session_board_examples import SURFACE_FIXTURE_PROJECT, Session
 from space.kanban.story_test import World, progress_in, ticket_in  # noqa: E402
 from space.kanban.ticket import FidelityNotFoundError, Ticket, TicketNotFoundError  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
-from space.session import Session  # noqa: E402
+from space.session import Session, Sessions  # noqa: E402
 from cdd_guidance.actions.validate.validate import Validate  # noqa: E402
 
 TOOLSETS = (
@@ -38,7 +38,8 @@ TOOLSETS = (
     "space.kanban.ticket:Ticket",
     "space.kanban.ticket:FidelityProgress",
     "space.session.session:Session",
-    "space.session.session:PracticeSessionOutput",
+    "space.session.sessions:Sessions",
+    "space.session.practice_session_output:PracticeSessionOutput",
     "space.kanban.backlog_item:BacklogItem",
     "cdd_guidance.actions.validate.validate:Validate",
     "cdd_guidance.actions.generate.generate:Generate",
@@ -53,7 +54,16 @@ class DomainTier:
     def open(self) -> World:
         project = SessionsProject(SURFACE_FIXTURE_PROJECT)
         on_project = {name: OnProject(domain_class, project.root) for name, domain_class in (("Board", Board), ("Stage", Stage), ("Ticket", Ticket), ("BacklogItem", BacklogItem))}
-        return World(project=project, **on_project, Session=Session, Validate=Validate, Generate=Generate, data_of=data_of)
+        # The cdd server makes each action for the session open in the call's project; so does this tier.
+        sessions = Sessions(project.root)
+        return World(
+            project=project,
+            **on_project,
+            Session=Session,
+            Validate=lambda: Validate(sessions.current()),
+            Generate=lambda: Generate(sessions.current()),
+            data_of=data_of,
+        )
 
     def close(self, world: World) -> None:
         world.project.close()

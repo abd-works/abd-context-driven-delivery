@@ -14,7 +14,6 @@ for _cat in ("cdd_guidance/practices", "tools"):
 from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
-from harness.installation.installer import Installer  # noqa: F401 — load Destination before Catalog
 from harness.catalog_generator.foundry_chrome import (
     Brand,
     _drawio_frame_viewport,

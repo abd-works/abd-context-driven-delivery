@@ -7,7 +7,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from harness.agent_tools.name import Name
+from harness.name.name import Name
+from harness.guidance.documents import load_document
+from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.rule import RulesCollection
 from harness.agent_tools.agent_tools import (
     collect,
@@ -469,8 +471,6 @@ class PracticeGuidance(Guidance):
 
     def read_paths(self, paths: list[str] | str, source: str | None = None) -> Any:
         """What render converts from the files at paths: their text, one after another."""
-        from harness.guidance_actions.guidance_actions import load_document
-
         return load_document("", paths)
 
     @agent_tool
@@ -761,9 +761,8 @@ class FidelityGuidance(Guidance):
             return stored
         if not isinstance(stored, str) or not stored:
             return None
-        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-
-        companion = CleanEngineering().fidelities[stored]
+        # A companion of its own, since it knows this fidelity as the one it accompanies.
+        companion = PracticeCatalogue.create("clean_engineering").fidelities[stored]
         companion.companion_of = self
         self._clean_engineering = companion
         return companion

@@ -895,6 +895,9 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
   if (operation === 'inventory') {
     return inventoryBundle();
   }
+  if (operation === 'practice_names') {
+    return ['stories', 'ddd', 'ux', 'clean_engineering', 'bdd'];
+  }
   if (operation === 'set_overlays') {
     activeOverlays = Array.isArray(body.overlays) ? (body.overlays as string[]) : [];
     return inventoryBundle();

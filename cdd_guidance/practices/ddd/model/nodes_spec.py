@@ -18,7 +18,7 @@ from harness.graph.graph import Graph
 
 from cdd_guidance.practices.ddd.model import ddd_class_kind
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, Entity
-from cdd_guidance.practices.ddd.model.stereotypes import inferred_tactical_kind
+from cdd_guidance.practices.ddd.model.stereotypes import decorated_name, inferred_tactical_kind
 
 
 with description("DDD model nodes"):
@@ -34,12 +34,8 @@ with description("DDD model nodes"):
     with it("should not infer tactical kinds for screen registry class names"):
         expect(inferred_tactical_kind("OnboardingStepScreen", set())).to(equal(None))
 
-    with it("should read @repository decorators from class declarations"):
-        from cdd_guidance.practices.ddd.model.stereotypes import class_declaration_decorated_name
-
-        source = "@repository\nclass CartRepository:\n    pass\n"
-        decorated = class_declaration_decorated_name(source, "CartRepository")
-        expect(ddd_class_kind(decorated)).to(equal("Repository"))
+    with it("should read the repository stereotype the graph reads from a @repository decorator"):
+        expect(ddd_class_kind(decorated_name("CartRepository", ["Repository"]))).to(equal("Repository"))
 
 
 with description("a bounded context on a graph"):

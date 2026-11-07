@@ -6,7 +6,7 @@
 
 - **Purpose:** Let a class keep its words in markdown beside it, read them back typed, and convert them to HTML.
 - **Seam (terms):** Markdown, MarkdownCollection, MarkdownText, HTML, Format; the marks `@markdown` and `@markdownCollection`
-- **Dependencies (one-way):** harness/agent_tools (*Name*), harness/installation (the install marks on a property are kept when `@markdown` wraps it), harness/guidance (*RulesCollection*, when a property returns rules). harness/agent_tools, harness/installation (the installer reads `@markdown`), and harness/guidance import this module back, so it sits in a dependency cycle with all three; `.sessions/_backlog/break-module-dependency-cycles.md` lists the imports.
+- **Dependencies (one-way):** harness/name, harness/marks (the marks on a property are kept when `@markdown` wraps it). A property whose type reads itself from markdown with the object it belongs to, such as a practice's *RulesCollection*, is built through that type's `from_markdown(text, parent=...)`, so this module names no type above it. harness/agent_tools, harness/installation, and harness/guidance depend on it.
 
 ## Constraint
 

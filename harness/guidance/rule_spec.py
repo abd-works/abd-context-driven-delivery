@@ -16,6 +16,7 @@ from mamba import before, context, description, it
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
+from harness.hooks.hook_server import HookPayload
 
 
 with description("a shared rules section containing rule bullets") as self:
@@ -66,28 +67,28 @@ with description("a shared rules section containing rule bullets") as self:
             from cdd_guidance.practices.agent_bdd.agent_bdd import AgentBdd
 
             result = AgentBdd().rules.inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Write",
                     "tool_input": {"path": "harness/guidance/rule.py"},
-                }
+                })
             )
             expect(result).to(equal({}))
 
         with it("should inject rules markdown when the written path matches"):
             result = self.guidance.rules.inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Write",
                     "tool_input": {"path": "pkg/foo_sample_bar.py"},
-                }
+                })
             )
             expect(result).to(equal({}))
 
         with it("should ask the agent to check an edit it just made"):
             result = self.guidance.rules.inject_rules(
-                {
+                HookPayload({
                     "hook_event_name": "afterFileEdit",
                     "file_path": "pkg/foo_sample_bar.py",
-                }
+                })
             )
             expect(result).to(equal({}))
 
@@ -99,12 +100,12 @@ with description("a shared rules section containing rule bullets") as self:
             try:
                 with TemporaryDirectory() as tmp:
                     self.guidance.rules.inject_rules(
-                        {
+                        HookPayload({
                             "hook_event_name": "afterFileEdit",
                             "file_path": "pkg/foo_sample_bar.py",
                             "conversation_id": "chat-a",
                             "workspace_roots": [tmp],
-                        }
+                        })
                     )
                     expect((Path(tmp) / ".cursor" / "prompt-notify-toast.json").is_file()).to(
                         equal(False)
@@ -119,26 +120,26 @@ with description("a shared rules section containing rule bullets") as self:
             notice = _REPO_ROOT / ".cursor" / "prompt-notify-toast.json"
             before = notice.read_text(encoding="utf-8") if notice.is_file() else ""
             self.guidance.rules.inject_rules(
-                {
+                HookPayload({
                     "hook_event_name": "afterFileEdit",
                     "file_path": "pkg/foo_sample_bar.py",
-                }
+                })
             )
             after = notice.read_text(encoding="utf-8") if notice.is_file() else ""
             expect(after).to(equal(before))
 
         with it("should not inject rules when the tool only reads the file"):
             result = self.guidance.rules.inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Read",
                     "tool_input": {"path": "pkg/foo_sample_bar.py"},
-                }
+                })
             )
             expect(result).to(equal({}))
 
         with it("should not inject when the payload has a path and no edit"):
             result = self.guidance.rules.inject_rules(
-                {"tool_input": {"path": "pkg/foo_sample_bar.py"}}
+                HookPayload({"tool_input": {"path": "pkg/foo_sample_bar.py"}})
             )
             expect(result).to(equal({}))
 
@@ -146,10 +147,10 @@ with description("a shared rules section containing rule bullets") as self:
             from harness.guidance.rule import RulesCollection
 
             result = RulesCollection().inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Write",
                     "tool_input": {"path": "cdd_guidance/actions/validate/validate.py"},
-                }
+                })
             )
             expect(result).to(equal({}))
 

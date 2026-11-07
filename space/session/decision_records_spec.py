@@ -18,15 +18,15 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions, AgentToolSet
 from space.session.session import Session, SessionNotFoundError
+from space.session.sessions import Sessions
 from space.session.throwaway_project import ProjectCall, ThrowawayProject
 
 
 def _open_session(root: Path) -> Path:
     work = root / "work"
     work.mkdir(parents=True, exist_ok=True)
-    Session.forget_current()
     ProjectCall(root)
-    Session.new("decisions", work, root)
+    Sessions(root).switch("decisions", work)
     return work
 
 
@@ -42,12 +42,11 @@ with description("a session's decision records"):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
         self.work = _open_session(self.root)
-        self.session = Session.current()
+        self.session = Sessions().current()
         self.cdr_dir = self.work / ".context" / "cdr"
 
     with after.each:
         ProjectCall.close_all()
-        Session.forget_current()
         self.tmp.cleanup()
 
     with context("whose format is read"):
@@ -122,14 +121,13 @@ with description("a session's decision records"):
 with description("decision records of the main session"):
     with before.each:
         self.project = ThrowawayProject()
-        Session.forget_current()
 
     with after.each:
         ThrowawayProject.close_all()
 
     with context("that has no workpath of its own"):
         with it("should write the record under the project's .context/cdr"):
-            written = Path(Session.current().write_cdr(slug="main", content="# Main"))
+            written = Path(Sessions().current().write_cdr(slug="main", content="# Main"))
             expect(written.parent).to(equal(self.project.root.resolve() / ".context" / "cdr"))
 
 
@@ -153,19 +151,19 @@ with description("decision records asked for a board ticket's session"):
 
     with context("that names a ticket other than the open session"):
         with it("should write the record under the named session's workpath"):
-            written = Path(self.tool.callable(session=".sessions/checkout-flow/session.json", slug="named", content="# Named"))
+            written = Path(self.tool.invoke({"session": ".sessions/checkout-flow/session.json", "slug": "named", "content": "# Named"}, project=self.root))
             expect(written.parent).to(equal(self.ticket_work / ".context" / "cdr"))
 
         with it("should leave the open session's workpath without a record"):
-            self.tool.callable(session=".sessions/checkout-flow/session.json", slug="named", content="# Named")
+            self.tool.invoke({"session": ".sessions/checkout-flow/session.json", "slug": "named", "content": "# Named"}, project=self.root)
             expect((self.open_work / ".context" / "cdr").exists()).to(equal(False))
 
     with context("that names no session"):
-        with it("should write the record under the open session's workpath"):
-            written = Path(self.tool.callable(session="", slug="open", content="# Open"))
-            expect(written.parent).to(equal(self.open_work.resolve() / ".context" / "cdr"))
+        with it("should refuse rather than write under whichever session is open"):
+            write = lambda: self.tool.invoke({"session": "", "slug": "open", "content": "# Open"}, project=self.root)
+            expect(write).to(raise_error(SessionNotFoundError))
 
     with context("that names a session the project does not have"):
         with it("should refuse rather than write into another session"):
-            write = lambda: self.tool.callable(session=".sessions/no-such-ticket/session.json", slug="x", content="# X")
+            write = lambda: self.tool.invoke({"session": ".sessions/no-such-ticket/session.json", "slug": "x", "content": "# X"}, project=self.root)
             expect(write).to(raise_error(SessionNotFoundError))

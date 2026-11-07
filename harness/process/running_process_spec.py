@@ -11,7 +11,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import equal, expect
 from mamba import context, description, it
 
-from harness.hooks.running_process import RunningProcess
+from harness.process.running_process import RunningProcess
 
 
 with description("a running process"):

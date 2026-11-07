@@ -2,7 +2,6 @@
 
 Each signature here has a test of the same name in `harness/chat-ui/pane/hooks/register.test.ts`."""
 import json
-import os
 import shutil
 import socket
 import tempfile
@@ -11,9 +10,9 @@ from pathlib import Path
 from expects import be_false, be_none, equal, expect
 from mamba import after, before, context, description, it
 
-from harness.installation.installer import Installer
+from harness.installation.repository_toolsets import RepositoryToolsets
 
-Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
+RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from harness.health.server_health import ServerHealth  # noqa: E402
 from harness.installation.destination import data_of  # noqa: E402
@@ -82,14 +81,10 @@ with description("server health") as self:
             state.write_text(json.dumps({"port": closed_port()}), encoding="utf-8")
             expect(data_of(ServerHealth(self.root).report())["is_hook_server_running"]).to(be_false)
 
-    with context("called through the MCP server"):
+    with context("called through the MCP server for the project the call names"):
         with before.each:
-            os.environ["CDD_PROJECT"] = str(self.root)
             self.server = McpServer(project=self.root)
             self.server.start(("harness.health.server_health:ServerHealth",))
-
-        with after.each:
-            os.environ.pop("CDD_PROJECT", None)
 
         with it("should answer the band's call with every part"):
             result = self.server.invoke_tool("server-health.report", {})

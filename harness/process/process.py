@@ -1,4 +1,5 @@
-"""Subprocess helpers for hook and daemon processes — no console windows on Windows."""
+"""How the hook server, the MCP server, and the scripts start a Python process on this computer: in the background
+with no console window on Windows, or on a console whose output a caller reads."""
 from __future__ import annotations
 
 import subprocess
@@ -6,7 +7,7 @@ import sys
 from pathlib import Path
 
 
-def hook_python_executable(python: str | None = None) -> str:
+def windowless_python_executable(python: str | None = None) -> str:
     """Return pythonw.exe on Windows so a background daemon does not open a console."""
     exe = Path(python or sys.executable)
     if sys.platform == "win32":
@@ -16,7 +17,7 @@ def hook_python_executable(python: str | None = None) -> str:
     return str(exe)
 
 
-def hook_cli_executable(python: str | None = None) -> str:
+def console_python_executable(python: str | None = None) -> str:
     """Return python.exe. pythonw.exe drops stdout, so Cursor never sees hook JSON."""
     exe = Path(python or sys.executable)
     if sys.platform == "win32" and exe.name.lower() == "pythonw.exe":

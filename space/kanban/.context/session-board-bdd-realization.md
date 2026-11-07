@@ -1920,7 +1920,7 @@ a backlog item
       <- list[BacklogItem]
       -> BacklogItem.start(scope: str, path: str)
         -> Ticket.new(title: str, scope: str, parent: str, path: str)
-          -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+          -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
           <- str
         <- Ticket
       <- Ticket
@@ -1932,7 +1932,7 @@ a backlog item
       <- list[BacklogItem]
       -> BacklogItem.start(scope: str, path: str)
         -> Ticket.new(title: str, scope: str, parent: str, path: str)
-          -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+          -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
           <- str
         <- Ticket
       <- Ticket
@@ -1946,7 +1946,7 @@ a backlog item
       <- list[BacklogItem]
       -> BacklogItem.start(scope: str, path: str)
         -> Ticket.new(title: str, scope: str, parent: str, path: str)
-          -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+          -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
           <- str
         <- Ticket
       <- Ticket
@@ -1974,7 +1974,7 @@ a backlog item
       <- list[BacklogItem]
       -> BacklogItem.start(scope: str, path: str)
         -> Ticket.new(title: str, scope: str, parent: str, path: str)
-          -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+          -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
           <- str
         <- Ticket
       <- Ticket
@@ -1986,7 +1986,7 @@ a backlog item
       <- list[BacklogItem]
       -> BacklogItem.start(scope: str, path: str)
         -> Ticket.new(title: str, scope: str, parent: str, path: str)
-          -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+          -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
           <- str
         <- Ticket
       <- Ticket
@@ -2053,7 +2053,7 @@ a ticket
     ```
     -> TicketTools.new(title: str, scope: str, parent: str, path: str)
     -> Ticket.new(title: str, scope: str, parent: str, path: str)
-      -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+      -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
       <- str
     <- Ticket
     it should be in Discovery, in progress
@@ -2061,7 +2061,7 @@ a ticket
     ```
     -> TicketTools.new(title: str, scope: str, parent: str, path: str)
     -> Ticket.new(title: str, scope: str, parent: str, path: str)
-      -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+      -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
       <- str
     <- Ticket
     -> Ticket.lineage
@@ -2071,7 +2071,7 @@ a ticket
     ```
     -> TicketTools.new(title: str, scope: str, parent: str, path: str)
     -> Ticket.new(title: str, scope: str, parent: str, path: str)
-      -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+      -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
       <- str
     <- Ticket
     -> FidelityProgress.remaining_actions
@@ -2353,7 +2353,7 @@ the board tools
             -> FidelityGuidance.outputs
             <- dict
           <- dict
-          -> Repo.files_changed_on(branch: str)
+          -> Branch.changed_files()
           <- list[str]
         <- dict
         it should write that practice's files there
@@ -2389,7 +2389,7 @@ the board tools
         ```
         -> BacklogItem.start(scope: str, path: str)
           -> Ticket.new(title: str, scope: str, parent: str, path: str)
-            -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+            -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
             <- str
           <- Ticket
         <- Ticket
@@ -2591,14 +2591,14 @@ the board tools
     that opens a new ticket
       ```
       -> Ticket.new(title: str, scope: str, parent: str, path: str)
-        -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+        -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
         <- str
       <- Ticket
       it should return the new ticket in Discovery
       ```
       ```
       -> Ticket.new(title: str, scope: str, parent: str, path: str)
-        -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+        -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
         <- str
       <- Ticket
       -> Board.show()
@@ -2608,7 +2608,7 @@ the board tools
     that opens a ticket on a folder in the repository
       ```
       -> Ticket.new(title: str, scope: str, parent: str, path: str)
-        -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+        -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
         <- str
       <- Ticket
       it should save that folder as the session's workpath
@@ -2616,7 +2616,7 @@ the board tools
     that opens a ticket with no folder
       ```
       -> Ticket.new(title: str, scope: str, parent: str, path: str)
-        -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+        -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
         <- str
       <- Ticket
       it should leave the session working on the repository
@@ -2624,7 +2624,7 @@ the board tools
     that opens a ticket split from another
       ```
       -> Ticket.new(title: str, scope: str, parent: str, path: str)
-        -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+        -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
         <- str
       <- Ticket
       it should name the ticket it was split from
@@ -2644,7 +2644,7 @@ the board tools
       ```
       -> BacklogItem.start(scope: str, path: str)
         -> Ticket.new(title: str, scope: str, parent: str, path: str)
-          -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+          -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
           <- str
         <- Ticket
       <- Ticket
@@ -2653,7 +2653,7 @@ the board tools
       ```
       -> BacklogItem.start(scope: str, path: str)
         -> Ticket.new(title: str, scope: str, parent: str, path: str)
-          -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+          -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
           <- str
         <- Ticket
       <- Ticket
@@ -2801,7 +2801,7 @@ the board tools
           -> FidelityGuidance.outputs
           <- dict
         <- dict
-        -> Repo.files_changed_on(branch: str)
+        -> Branch.changed_files()
         <- list[str]
       <- dict
       it should list the files a pattern finds there
@@ -2814,7 +2814,7 @@ the board tools
           -> FidelityGuidance.outputs
           <- dict
         <- dict
-        -> Repo.files_changed_on(branch: str)
+        -> Branch.changed_files()
         <- list[str]
       <- dict
       it should list the files a named part of the path finds there, in folders at any depth
@@ -2828,7 +2828,7 @@ the board tools
           -> FidelityGuidance.outputs
           <- dict
         <- dict
-        -> Repo.files_changed_on(branch: str)
+        -> Branch.changed_files()
         <- list[str]
       <- dict
       it should list the file with whether it exists
@@ -2841,7 +2841,7 @@ the board tools
           -> FidelityGuidance.outputs
           <- dict
         <- dict
-        -> Repo.files_changed_on(branch: str)
+        -> Branch.changed_files()
         <- list[str]
       <- dict
       it should list only the fidelities asked for
@@ -2904,7 +2904,7 @@ the board tools
         ```
         -> BacklogItem.start(scope: str, path: str)
           -> Ticket.new(title: str, scope: str, parent: str, path: str)
-            -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+            -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
             <- str
           <- Ticket
         <- Ticket
@@ -3096,7 +3096,7 @@ the board tools
         <- str
         -> Repo.switch_worktree(name: str)
         <- str
-        -> Session.switch()
+        -> Sessions.switch(name: str)
       <- Ticket
       -> Board.show()
       <- Board
@@ -3109,7 +3109,7 @@ the board tools
         <- str
         -> Repo.switch_worktree(name: str)
         <- str
-        -> Session.switch()
+        -> Sessions.switch(name: str)
       <- Ticket
       -> Ticket.branch()
       <- dict
@@ -3131,7 +3131,7 @@ the board tools
         <- str
         -> Repo.switch_worktree(name: str)
         <- str
-        -> Session.switch()
+        -> Sessions.switch(name: str)
       <- Ticket
       it should commit nothing on a ticket that has no branch
       ```
@@ -3161,7 +3161,7 @@ the board tools
         <- str
         -> Repo.switch_worktree(name: str)
         <- str
-        -> Session.switch()
+        -> Sessions.switch(name: str)
       <- Ticket
       it should commit the branch the ticket being left is on
       ```
@@ -3174,7 +3174,7 @@ the board tools
           -> FidelityGuidance.outputs
           <- dict
         <- dict
-        -> Repo.files_changed_on(branch: str)
+        -> Branch.changed_files()
         <- list[str]
       <- dict
       it should list only the files the ticket's branch changed
@@ -3188,7 +3188,7 @@ the board tools
         <- str
         -> Repo.switch_worktree(name: str)
         <- str
-        -> Session.switch()
+        -> Sessions.switch(name: str)
       <- Ticket
       it should commit nothing on a branch that is not checked out
       ```
@@ -3198,7 +3198,7 @@ the board tools
     <- Board
     -> TicketTools.new(title: str, scope: str, parent: str, path: str)
     -> Ticket.new(title: str, scope: str, parent: str, path: str)
-      -> Session.new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool)
+      -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
       <- str
     <- Ticket
     it should leave the board read out of the session log

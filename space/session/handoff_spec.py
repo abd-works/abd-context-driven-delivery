@@ -19,6 +19,7 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from space.session.session import Session, SessionNotFoundError
+from space.session.sessions import Sessions
 from space.session.throwaway_project import ThrowawayProject
 
 
@@ -32,8 +33,7 @@ def _restore_project(previous: str | None) -> None:
 def _open_session(root: Path, name: str = "my-session") -> Path:
     work = root / "work"
     work.mkdir(parents=True, exist_ok=True)
-    Session.forget_current()
-    Session.new(name, work, root)
+    Sessions(root).switch(name, work)
     return work
 
 
@@ -65,12 +65,10 @@ with description("a session writing a handoff"):
             self._prev_project = os.environ.get("CDD_PROJECT")
             os.environ["CDD_PROJECT"] = str(self.root)
             _save_current(self.root, "my-session")
-            Session.forget_current()
-            self.session = Session.current()
+            self.session = Sessions().current()
 
         with after.each:
             _restore_project(self._prev_project)
-            Session.forget_current()
             self.tmp.cleanup()
 
         with it("should write a file named handoff-{timestamp}.md in that session's folder"):
@@ -111,7 +109,7 @@ with description("a session writing a handoff"):
         with it("should ignore a session open in another checkout"):
             other = self.root / "tool-checkout"
             _open_session(other, "someone-elses-session")
-            path = Path(Session.current().write_handoff("content"))
+            path = Path(Sessions().current().write_handoff("content"))
             expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "my-session"))
 
     with context("with a project that has no named current session"):
@@ -120,20 +118,18 @@ with description("a session writing a handoff"):
             self.root = Path(self.tmp.name)
             self._prev_project = os.environ.get("CDD_PROJECT")
             os.environ["CDD_PROJECT"] = str(self.root)
-            Session.forget_current()
 
         with after.each:
             _restore_project(self._prev_project)
-            Session.forget_current()
             self.tmp.cleanup()
 
         with it("should write into the main session folder"):
-            path = Path(Session.current().write_handoff("content"))
+            path = Path(Sessions().current().write_handoff("content"))
             expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "main"))
 
         with it("should write into the main session folder when the saved current is main"):
             _save_current(self.root, "main")
-            path = Path(Session.current().write_handoff("content"))
+            path = Path(Sessions().current().write_handoff("content"))
             expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "main"))
 
     with context("with no CDD_PROJECT"):
@@ -143,16 +139,14 @@ with description("a session writing a handoff"):
             self._prev_project = os.environ.pop("CDD_PROJECT", None)
             self._prev_cwd = Path.cwd()
             os.chdir(self.root)
-            Session.forget_current()
 
         with after.each:
             os.chdir(self._prev_cwd)
             _restore_project(self._prev_project)
-            Session.forget_current()
             self.tmp.cleanup()
 
         with it("should write under the current working folder's main session"):
-            path = Path(Session.current().write_handoff("content"))
+            path = Path(Sessions().current().write_handoff("content"))
             expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "main"))
 
 
@@ -165,7 +159,6 @@ with description("a handoff asked for a board ticket's session"):
             folder.mkdir(parents=True)
             (folder / "session.json").write_text(json.dumps({"name": name}), encoding="utf-8")
         _save_current(self.root, "billing-report")
-        Session.forget_current()
         self.tool = AgentToolSet.instantiate(Session).tools["write_handoff"]
 
     with after.each:
@@ -173,21 +166,21 @@ with description("a handoff asked for a board ticket's session"):
 
     with context("that names a ticket other than the open session"):
         with it("should write into the named ticket's session folder"):
-            path = Path(self.tool.callable(session=".sessions/checkout-flow/session.json", content="content"))
+            path = Path(self.tool.invoke({"session": ".sessions/checkout-flow/session.json", "content": "content"}, project=self.root))
             expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "checkout-flow"))
 
         with it("should leave the open session's folder without a handoff"):
-            self.tool.callable(session=".sessions/checkout-flow/session.json", content="content")
+            self.tool.invoke({"session": ".sessions/checkout-flow/session.json", "content": "content"}, project=self.root)
             expect(list((self.root / ".sessions" / "billing-report").glob("handoff-*.md"))).to(equal([]))
 
     with context("that names no session"):
-        with it("should write into the open session's folder"):
-            path = Path(self.tool.callable(session="", content="content"))
-            expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "billing-report"))
+        with it("should refuse rather than write into whichever session is open"):
+            write = lambda: self.tool.invoke({"session": "", "content": "content"}, project=self.root)
+            expect(write).to(raise_error(SessionNotFoundError))
 
     with context("that names a session the project does not have"):
         with it("should refuse rather than write into another session"):
-            write = lambda: self.tool.callable(session=".sessions/no-such-ticket/session.json", content="content")
+            write = lambda: self.tool.invoke({"session": ".sessions/no-such-ticket/session.json", "content": "content"}, project=self.root)
             expect(write).to(raise_error(SessionNotFoundError))
 
     with context("through its MCP tool"):

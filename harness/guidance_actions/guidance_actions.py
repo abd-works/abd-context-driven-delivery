@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, NotRequired, TypedDict
 
 from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions, agent_toolset, tools
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from tools.prompt_notify.prompt_notify import PromptNotify, Toast
@@ -17,7 +17,8 @@ from harness.hooks.hooks import Hook
 
 if TYPE_CHECKING:
     from harness.hooks.hook_server import HookPayload
-    from space.session.session import PracticeSessionOutput, Session
+    from space.session.practice_session_output import PracticeSessionOutput
+    from space.session.session import Session
 
 
 class GuidanceRef(TypedDict):
@@ -40,21 +41,12 @@ _GUIDANCE_SLUG = re.compile(r"^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$")
 _FORMAT_WORD = "format="
 # The session a command is for, as the session board names it: `session=.sessions/<name>/session.json`.
 _SESSION_WORD = "session="
-_SKIP_PARTS = {".git", ".venv", "node_modules", "__pycache__"}
 # What an action works on before it names any guidance; None cannot stand for it, since naming None keeps what it had.
 _NOTHING_WORKED_ON = object()
 PATHS_NOTE = (
     "paths: a file, a list of files, or a folder. Pass paths on an MCP call. "
     "This action reads them locally. Leave the document body out of the call."
 )
-
-
-def load_document(content: str = "", paths: list[str] | str | None = None) -> str:
-    """The in-process text, or the files at paths. Paths win."""
-    if paths in ("", None, []):
-        return content or ""
-    entries = [paths] if isinstance(paths, str) else list(paths)
-    return "\n\n".join(_read_entry(Path(entry)) for entry in entries)
 
 
 def source_label(content: str = "", paths: list[str] | str | None = None) -> str:
@@ -64,19 +56,6 @@ def source_label(content: str = "", paths: list[str] | str | None = None) -> str
     if isinstance(paths, str):
         return paths
     return "\n".join(str(entry) for entry in paths)
-
-
-def _read_entry(path: Path) -> str:
-    if path.is_dir():
-        files = [
-            item
-            for item in sorted(path.rglob("*"))
-            if item.is_file() and not any(part in _SKIP_PARTS for part in item.parts)
-        ]
-        return "\n\n".join(
-            item.read_text(encoding="utf-8", errors="replace") for item in files
-        )
-    return path.read_text(encoding="utf-8", errors="replace")
 
 
 class ActionWorksInNoSession(Exception):
@@ -99,6 +78,8 @@ class GuidanceAction:
     started inside another (``_inside``) is made for that action's session and works on the same practices. An action
     made for no session, such as one listed for install, logs nothing and keeps no format.
     """
+
+    parameter_notes = {"guidance": GUIDANCE_PARAMETER}
 
     def __init__(self, session: Session | None = None) -> None:
         super().__init__()
@@ -139,17 +120,12 @@ class GuidanceAction:
         if not isinstance(guidance, str):
             return None
         named = next((word[len(_SESSION_WORD):] for word in guidance.split() if word.startswith(_SESSION_WORD)), "")
-        return self._session_kept_in(Path(named), project) if named else None
-
-    def _session_kept_in(self, session_file: Path, project: Path | None) -> Session:
+        if not named:
+            return None
         # WHY: space sits above the framework, so sessions are imported when an action first needs one.
-        from space.repo.repo import Repo
-        from space.session.session import Session, SessionNotFoundError
+        from space.session.session import Session
 
-        found = session_file if session_file.is_absolute() or project is None else project / session_file
-        if not found.is_file():
-            raise SessionNotFoundError(str(session_file))
-        return Session.load(found.parent, project or Repo(found.parent).checkout_folder)
+        return Session.from_file(named, project if project is not None else Path(named).resolve().parent)
 
     def _discover_operations(self) -> dict[str, AgentOperation]:
         from harness.agent_tools.agent_tools import AgentToolMark, GuidanceAgentOperation
@@ -392,9 +368,8 @@ class GuidanceAction:
         parts, labels = action._listed_inject_parts(payload)
         if not parts:
             return {}
-        echo = PromptNotify()
-        echo.toast_roots = payload.workspace_roots
-        echo.show_ide_toast(PromptNotify().inject_rules_toast(Name(type(self).__name__).kebab, labels))
+        echo = PromptNotify(toast_roots=payload.workspace_roots)
+        echo.show_ide_toast(echo.inject_rules_toast(Name(type(self).__name__).kebab, labels))
         return {"additional_context": "\n\n".join(parts)}
 
     def _listed_inject_parts(self, payload: HookPayload) -> tuple[list[str], list[str]]:

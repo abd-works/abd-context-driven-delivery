@@ -32,6 +32,6 @@ class SessionDiagnostics:
 
         Run via MCP ``session-diagnostics.session_diagnostics`` or slash ``/session-diagnostics``.
         Read ``.cursor/diagnostics.json`` → ``session`` for pass/fail and log tail."""
-        from harness.installation.installer import Installer
+        from harness.installer.installer import Installer
 
         return write_session_diagnostics(Installer())

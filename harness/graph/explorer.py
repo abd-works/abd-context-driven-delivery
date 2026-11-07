@@ -7,11 +7,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated
 
+from harness.graph.graph_rules_collection import GraphRule
 from harness.installation.destination import SourceFile, data_field
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
-    from harness.graph.graph_rules_collection import GraphRule
 
 
 class GraphLoaded:

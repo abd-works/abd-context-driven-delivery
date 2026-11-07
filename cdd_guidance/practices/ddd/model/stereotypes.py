@@ -8,7 +8,6 @@ from typing import List, Optional
 # The one reading of `<<Stereotype>>` marks in a class heading, a class name, or a doc comment.
 _STEREOTYPE = re.compile(r"<<\s*([^>]+?)\s*>>")
 _CLASS_DECL = re.compile(r"(?:export\s+)?(?:abstract\s+)?class\s+(\w+)\b")
-_AT_STEREOTYPE = re.compile(r"^\s*@(\w+)\s*(?:\(|$)")
 
 # Code-channel shorthand (tactics). Model/sketch canonical form remains <<Repository>>.
 _AT_TO_STEREOTYPE: dict[str, str] = {
@@ -39,32 +38,6 @@ def tactical_stereotypes(stereotypes: List[str]) -> List[str]:
 def decorated_name(class_name: str, stereotypes: List[str]) -> str:
     """The class name followed by its DDD stereotypes as `<<Mark>>`s, the form the tactical kind readers take."""
     return " ".join([class_name] + [f"<<{item}>>" for item in tactical_stereotypes(stereotypes)])
-
-
-def class_declaration_decorated_name(text: str, class_name: str) -> str:
-    """Class name plus tactical markers from <<tags>>, @stereotype decorators, or # comments."""
-    match = re.search(rf"(?:export\s+)?(?:abstract\s+)?class\s+{re.escape(class_name)}\b", text)
-    if match is None:
-        return class_name
-    prefix = text[max(0, match.start() - 400) : match.start()]
-    tags: list[str] = []
-    for block in re.findall(r"/\*\*([\s\S]*?)\*/", prefix):
-        tags.extend(f"<<{tag}>>" for tag in stereotypes_in(block))
-    for line in prefix.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("#"):
-            tags.extend(stereotypes_in(stripped))
-        at = _AT_STEREOTYPE.match(stripped)
-        if at:
-            mapped = _AT_TO_STEREOTYPE.get(at.group(1).lower())
-            if mapped:
-                tags.append(f"<<{mapped}>>")
-    if not tags:
-        return class_name
-    normalized = []
-    for tag in tags:
-        normalized.append(tag if tag.startswith("<<") else f"<<{tag}>>")
-    return f"{class_name} {' '.join(normalized)}"
 
 
 def stereotypes_in(text: str) -> List[str]:

@@ -10,7 +10,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.installation.bootstrap import ensure_import_path
-from harness.installation.installer import Installer
+from harness.installer.installer import Installer
 
 ensure_import_path(_REPO_ROOT)
 

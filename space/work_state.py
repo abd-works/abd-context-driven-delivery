@@ -11,11 +11,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from space.repo.repo import Branch, Repo, Worktree
+    from space.repo.repo import Branch, Repo
+    from space.repo.worktree import Worktree
 
 SESSIONS_FOLDER = ".sessions"
-# Sessions were once kept in `sessions/`; a session folder there is still found.
-LEGACY_SESSIONS_FOLDER = "sessions"
 STATE_NAME = "session.json"
 DESIGN_CANVAS_FOLDER = "design-canvas"
 E2E_RESULTS_FOLDER = "e2e-test-results"
@@ -91,7 +90,7 @@ class WorkState:
         path = self._value("worktree")
         if not path:
             return None
-        from space.repo.repo import Worktree
+        from space.repo.worktree import Worktree
 
         return Worktree.from_checkout(Path(path), self._value("branch"))
 
