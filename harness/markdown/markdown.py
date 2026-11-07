@@ -10,8 +10,9 @@ from pathlib import Path
 from typing import Any, Callable, Literal, TypeVar, get_args, get_origin, get_type_hints
 
 from harness.annotations.name import Name
-from harness.annotations.annotation import annotation_kinds
+from harness.annotations.annotation import annotation_kinds, hosted_only
 from harness.markdown.format import TEMPLATE_FOLDER_NAMES, Format
+from harness.markdown.front_matter import FrontMatter
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
@@ -69,7 +70,6 @@ def _markdown_to_html(text: str) -> str:
 
 
 LocationKind = Literal["file", "folder", "section"]
-_MISSING = object()
 
 
 def _section_heading(label: str) -> str:
@@ -229,6 +229,12 @@ class MarkdownFile:
             return None
         return MarkdownText(self._path.read_text(encoding="utf-8"))
 
+    @property
+    def front_matter(self) -> FrontMatter:
+        """The settings block at the top of the file, and the content after it; an empty one for a file that is not
+        there."""
+        return FrontMatter(self._path.read_text(encoding="utf-8") if self._path.is_file() else "")
+
     def section_exists(self) -> bool:
         if not self._heading:
             return True
@@ -381,89 +387,66 @@ class AssetLocation:
         return markdown_file.read_section()
 
 
-class AssetLocator:
-    def __init__(
-        self,
-        instance: Any,
-        label: str,
-        *,
-        group: str | None = None,
-        filter_key: str | None = None,
-        fidelity: str | None = None,
-        format: str | None = None,
-    ) -> None:
-        self._instance = instance
-        self._label = label
-        self._group = group
-        self._filter_key = filter_key
-        # A fidelity or format asked for by name wins over the instance's current one, so a caller reads another
-        # fidelity's assets without changing the instance that other threads read.
-        self._asked = {"fidelity": fidelity, "format": format}
-        self._module_dir = Path(".")
-        self._domain_slug = ""
-        self._search_root_path = Path(".")
-        self._active_format: str | None = None
+@dataclass(frozen=True)
+class MarkdownScope:
+    """Where an owner keeps its markdown and which part of it the owner reads: the folder beside its class, the slug
+    its ``{slug}.md`` is named by, the fidelity and format whose assets (templates, examples) it reads, and whether its
+    own sections are subsections of that fidelity's block in the practice document, as a fidelity's are. An owner that
+    knows these hands them over as its ``markdown_scope`` property, so nothing here asks the owner for its attributes;
+    any other class reads the markdown beside its own file, under the ``domain_slug`` its class declares."""
 
-    def class_file_directory(self) -> Path:
-        instance = self._instance
-        practice = getattr(instance, "practice_guidance", None)
-        if practice is not None:
-            instance = practice
-        stored = getattr(instance, "module_dir", None)
-        if stored is not None:
-            return Path(stored)
+    folder: Path
+    slug: str
+    fidelity: str | None = None
+    format: str | None = None
+    in_fidelity_block: bool = False
+
+    @classmethod
+    def beside(cls, owner_class: type) -> MarkdownScope:
+        """The markdown beside owner_class's file, named by the slug the class declares, else by its folder."""
         try:
-            return Path(inspect.getfile(type(instance))).resolve().parent
+            folder = Path(inspect.getfile(owner_class)).resolve().parent
         except (TypeError, OSError):
-            return Path(".")
+            folder = Path(".")
+        declared = getattr(owner_class, "domain_slug", None)
+        return cls(folder, declared if isinstance(declared, str) and declared else folder.name)
 
-    def _active_resource(self, key: str | None) -> str | None:
-        if not key:
-            return None
-        if self._asked.get(key) is not None:
-            return self._asked[key] or None
-        if key == "fidelity":
-            return self._current_fidelity()
-        value = getattr(self._instance, key, None)
-        return str(value) if value else None
+    @classmethod
+    def of(cls, owner: Any) -> MarkdownScope:
+        """The scope owner hands its markdown; the markdown beside its class when it hands none."""
+        handed = getattr(type(owner), "markdown_scope", None)
+        if isinstance(handed, property):
+            return handed.fget(owner)
+        return cls.beside(type(owner))
 
-    def _current_fidelity(self) -> str | None:
-        current = getattr(getattr(self._instance, "fidelities", None), "current", None)
-        if current is None:
-            value = getattr(self._instance, "fidelity", None)
-            return str(value) if value else None
-        value = getattr(current, "name", None)
-        return str(value) if value else None
+    def at(self, fidelity: str | None = None, format: str | None = None) -> MarkdownScope:
+        """This scope at another fidelity or format when one is named, so a caller reads another fidelity's assets
+        without changing the owner other callers read."""
+        return replace(
+            self,
+            fidelity=fidelity if fidelity is not None else self.fidelity,
+            format=format if format is not None else self.format,
+        )
 
-    def _fidelity_scope(self) -> str | None:
-        """Fidelity section name on Guidance only — not WorkSession.name or AgentToolSet.name."""
-        if getattr(self._instance, "practice_guidance", None) is not None:
-            value = getattr(self._instance, "name", None)
-            return str(value) if value else None
-        for cls in type(self._instance).__mro__:
-            scoped = self._declared_name_scope(cls)
-            if scoped is not _MISSING:
-                return scoped
-        return None
 
-    def _declared_name_scope(self, cls: type) -> str | None | object:
-        if cls is object:
-            return _MISSING
-        declared = cls.__dict__.get("name", _MISSING)
-        if declared is _MISSING:
-            return _MISSING
-        if isinstance(declared, property):
-            return None
-        value = getattr(self._instance, "name", None)
-        return str(value) if value else None
+class AssetLocator:
+    """Finds where one label of an owner's markdown lives, from the scope the owner handed over."""
+
+    def __init__(self, scope: MarkdownScope, label: str) -> None:
+        self._scope = scope
+        self._label = label
+        self._module_dir = scope.folder
+        self._domain_slug = scope.slug
+        self._search_root_path = scope.folder
+        self._active_format: str | None = None
 
     @property
     def fidelity(self) -> str | None:
-        return self._active_resource("fidelity")
+        return self._scope.fidelity or None
 
     @property
     def format(self) -> str | None:
-        return self._active_resource("format")
+        return self._scope.format or None
 
     def _stamp(self, location: AssetLocation) -> AssetLocation:
         fidelity = location.fidelity
@@ -480,17 +463,12 @@ class AssetLocator:
         return self._stamp(self._locate())
 
     def _locate(self) -> AssetLocation:
-        self._module_dir = self.class_file_directory()
-        declared = getattr(self._instance, "domain_slug", None)
-        self._domain_slug = str(declared) if declared else self._module_dir.name
-        filter_value = self._active_resource(self._filter_key) if self._filter_key else None
         if self._label == "templates":
-            return self._locate_template_or_missing(filter_value)
-        self._search_root_path = self._search_root(self._module_dir, filter_value)
+            return self._locate_template_or_missing()
         return self._locate_under()
 
-    def _locate_template_or_missing(self, filter_value: str | None) -> AssetLocation:
-        self._active_format = filter_value or self._active_resource("format")
+    def _locate_template_or_missing(self) -> AssetLocation:
+        self._active_format = self.format
         located = self._locate_templates()
         if located.path is not None and located.path.is_file():
             return located
@@ -501,19 +479,8 @@ class AssetLocator:
             path=(self._module_dir / ".no-template").resolve(),
         )
 
-    def _search_root(self, module_dir: Path, filter_value: str | None) -> Path:
-        root = module_dir
-        if self._group:
-            root = root / self._group
-        if not filter_value:
-            return root
-        as_dir = root / filter_value
-        if as_dir.is_dir():
-            return as_dir
-        return root
-
     def _locate_under(self) -> AssetLocation:
-        fidelity_name = self._fidelity_scope()
+        fidelity_name = self.fidelity if self._scope.in_fidelity_block else None
         if fidelity_name:
             return AssetLocation(
                 "section",
@@ -563,7 +530,7 @@ class AssetLocator:
         return None
 
     def _locate_templates(self) -> AssetLocation:
-        fidelity = self._active_resource("fidelity")
+        fidelity = self.fidelity
         if fidelity:
             located = self._named_template_file(fidelity, practice=False)
             if located is not None:
@@ -618,10 +585,7 @@ _YAML_FENCE = re.compile(r"```ya?ml\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
 
 
 class YamlFields:
-    """Parse YAML fences and assign matching fields onto an instance."""
-
-    def __init__(self, instance: Any | None = None) -> None:
-        self._instance = instance
+    """The fields of the ```yaml blocks in a markdown text, merged in order. The owner of the text applies them."""
 
     def mapping(self, body: str) -> dict[str, Any]:
         try:
@@ -644,96 +608,14 @@ class YamlFields:
             fields[key.strip()] = value.strip().strip("'\"")
         return fields
 
-    def _wanted_names(self, key: str) -> set[str]:
-        folded = key.casefold()
-        snake = Name(key).snake.casefold()
-        wanted = {
-            folded,
-            snake,
-            key.replace(" ", "_").replace("-", "_").casefold(),
-        }
-        if folded.endswith("s") and len(folded) > 1:
-            wanted.add(folded[:-1])
-            wanted.add(snake[:-1] if snake.endswith("s") else snake)
-            return wanted
-        wanted.add(f"{folded}s")
-        wanted.add(f"{snake}s")
-        return wanted
-
-    def matching_attr(self, key: str) -> str | None:
-        wanted = self._wanted_names(key)
-        for name in dir(self._instance):
-            if self._is_matching_value(name, wanted):
-                return name
-        return None
-
-    def _is_matching_value(self, name: str, wanted: set[str]) -> bool:
-        if name.startswith("_") or name.casefold() not in wanted:
-            return False
-        member = getattr(type(self._instance), name, None)
-        if callable(member) and not isinstance(member, property):
-            return False
-        value = getattr(self._instance, name, None)
-        if callable(value) and not isinstance(member, property):
-            return False
-        return True
-
-    def assign(self, attr: str, value: Any) -> None:
-        stored = attr
-        descriptor = getattr(type(self._instance), attr, None)
-        if isinstance(descriptor, property) and descriptor.fset is None:
-            leftovers = getattr(self._instance, "yaml", None)
-            if isinstance(leftovers, dict):
-                leftovers[Name(attr).snake] = self.as_string(value)
-            return
-        setattr(self._instance, stored, value)
-
-    def as_string(self, value: Any) -> str:
-        if isinstance(value, str):
-            return value
-        if isinstance(value, bool):
-            return "true" if value else "false"
-        if value is None:
-            return ""
-        if isinstance(value, dict):
-            return ",".join(f"{k}={self.as_string(v)}" for k, v in value.items())
-        return str(value)
-
-    def merge_map(self, leftovers: dict[str, str]) -> None:
-        if not leftovers:
-            return
-        current = getattr(self._instance, "yaml", None)
-        if isinstance(current, dict):
-            current.update(leftovers)
-
     def yaml_fields(self, text: str) -> dict[str, Any]:
         merged: dict[str, Any] = {}
         for match in _YAML_FENCE.finditer(text):
             merged.update(self.mapping(match.group(1)))
         return merged
 
-    def assign_yaml_mapping(self, fields: dict[str, Any]) -> None:
-        leftovers: dict[str, str] = {}
-        for key, value in fields.items():
-            attr = self.matching_attr(key)
-            if attr is None:
-                leftovers[Name(key).snake] = self.as_string(value)
-                continue
-            current = getattr(self._instance, attr, None)
-            if isinstance(value, dict) and self._holds_own_fields(current):
-                YamlFields(current).assign_yaml_mapping(value)
-                continue
-            self.assign(attr, value)
-        self.merge_map(leftovers)
 
-    def assign_yaml(self, text: str) -> None:
-        self.assign_yaml_mapping(self.yaml_fields(text))
-
-    def _holds_own_fields(self, current: Any) -> bool:
-        """True when current is an object a nested YAML mapping is assigned onto field by field, not a plain value."""
-        return current is not None and not isinstance(current, (str, int, float, bool, list, tuple, bytes, dict))
-
-
+@hosted_only
 class MarkdownCollection:
     """Listed or keyed extracts that keep the original markdown."""
 
@@ -745,7 +627,6 @@ class MarkdownCollection:
         self.entries: dict[str, Any] | list[Any] = entries if entries is not None else {}
         self.parent = parent
         self._markdown = ""
-        self.yaml: dict[str, str] = {}
         for child in self:
             child.parent = self
 
@@ -775,7 +656,6 @@ class MarkdownCollection:
             entry = cls.child(name, body)
             if entry is None:
                 continue
-            YamlFields(entry).assign_yaml(body)
             entries[name] = entry
         collection = cls(entries, parent=parent)
         collection.markdown = text
@@ -852,6 +732,8 @@ class MarkdownTypeUnresolved(TypeError):
 
 
 class Markdown:
+    """One labelled section of an owner's markdown, located from the scope the owner hands over and read once."""
+
     def __init__(self, instance: Any, label: str, *, fidelity: str | None = None, format: str | None = None) -> None:
         self._instance = instance
         self._label = label
@@ -868,7 +750,8 @@ class Markdown:
     def location(self) -> AssetLocation:
         """Where this section lives, located once: it depends only on the instance, label, fidelity and format this
         Markdown was made with."""
-        return AssetLocator(self._instance, self._label, fidelity=self._fidelity, format=self._format).locate()
+        scope = MarkdownScope.of(self._instance).at(fidelity=self._fidelity, format=self._format)
+        return AssetLocator(scope, self._label).locate()
 
     @functools.cached_property
     def document(self) -> MarkdownText:
@@ -876,7 +759,7 @@ class Markdown:
         return MarkdownText(self.location.extract())
 
     def extract(self) -> str:
-        YamlFields(self._instance).assign_yaml(self.document.text)
+        """The section's prose, without its ```yaml settings, which belong to the owner that reads them."""
         return self.document.without_yaml
 
     def expand_docstring(self, docstring: str | None) -> str:
@@ -910,16 +793,13 @@ class Markdown:
         return from_markdown(text)
 
     def read_into(self, return_type: Any, build: Callable[..., Any] | None = None) -> Any:
-        """This section read as return_type: its YAML fields go onto the instance it is read for, and onto the object
-        it becomes. ``build(markdown, return_type, parent)`` makes that object when given; else ``coerce`` does, from
-        the text without its YAML for HTML, a string, or a dict."""
+        """This section read as return_type. ``build(markdown, return_type, parent)`` makes that object when given;
+        else ``coerce`` does, from the text without its YAML for HTML, a string, or a dict. The section's YAML settings
+        stay in its text for the object it becomes, as a rules collection reads where it applies from them."""
         raw = self.document.text
-        YamlFields(self._instance).assign_yaml(raw)
         if build is None and self._reads_plain_text(return_type):
             return self.coerce(self.document.without_yaml, return_type)
-        result = build(self, return_type, self._instance) if build is not None else self.coerce(raw, return_type)
-        YamlFields(result).assign_yaml(raw)
-        return result
+        return build(self, return_type, self._instance) if build is not None else self.coerce(raw, return_type)
 
     def _reads_html(self, return_type: Any) -> bool:
         origin = get_origin(return_type) or return_type

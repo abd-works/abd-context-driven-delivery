@@ -57,7 +57,7 @@ class ApproachCopy:
     @property
     def board_stages(self) -> dict[str, StageCopy]:
         """The stages the catalog board has a column for, by the column's key."""
-        columns = ((STAGE_COLUMNS.of(stage.id), stage) for stage in self.stages)
+        columns = ((STAGE_COLUMNS.of(STAGES.of(stage.id)), stage) for stage in self.stages)
         return {column.key: stage for column, stage in columns if column is not None}
 
 

@@ -3,6 +3,7 @@ from expects import be_none, equal, expect
 from mamba import context, description, it
 
 from harness.catalog_generator.stage_columns import STAGE_COLUMNS, BoardLabel
+from harness.guidance.stages import STAGES
 
 
 with description("the catalog board's stage columns"):
@@ -10,10 +11,10 @@ with description("the catalog board's stage columns"):
         expect(STAGE_COLUMNS.stages).to(equal(("discovery", "specification", "implementation")))
 
     with it("should give the specification column its key in the page markup"):
-        expect(STAGE_COLUMNS.of("specification").key).to(equal("spec"))
+        expect(STAGE_COLUMNS.of(STAGES.of("specification")).key).to(equal("spec"))
 
-    with it("should have no column for a stage the approach does not walk"):
-        expect(STAGE_COLUMNS.of("validate")).to(be_none)
+    with it("should have no column for no stage"):
+        expect(STAGE_COLUMNS.of(STAGES.of("validate"))).to(be_none)
 
 
 with description("a board ticket's label"):

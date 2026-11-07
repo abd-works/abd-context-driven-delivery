@@ -12,8 +12,8 @@ from harness.agent_tools.agent_tools import (
     agent_toolset,
     instructions,
 )
+from harness.annotations.annotation import hosted_only
 from harness.annotations.name import Name
-from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import data_field
 from harness.markdown.markdown import MarkdownCollection, MarkdownText
 from harness.hooks.hooks import Hook, hook
@@ -135,6 +135,7 @@ class Rule:
         return cls(slug=slug, body=body, fidelity=fidelity)
 
 
+@hosted_only
 @agent_toolset
 class RulesCollection(MarkdownCollection):
     def __init__(
@@ -150,6 +151,12 @@ class RulesCollection(MarkdownCollection):
     def applies_to(self) -> AppliesTo:
         """Which edited files these rules apply to."""
         return self._applies_to
+
+    @property
+    def prose(self) -> str:
+        """The rules as an agent reads them and an installed rules file holds them: their markdown without its
+        ```yaml settings, which say where they apply."""
+        return MarkdownText(self.markdown or "").without_yaml
 
     @hook("postToolUse", disabled=True)
     def inject_rules(self, payload: HookPayload) -> dict[str, Any]:
@@ -171,8 +178,11 @@ class RulesCollection(MarkdownCollection):
     def _note_session_injected_rules(self, payload: HookPayload, path: str, bags: list[RulesCollection]) -> None:
         """Note bags in the log of the session open in the project the hook fired in, so that session's next log line
         names the rules the agent was given; nothing for a hook that names no project."""
-        session = ToolCall(payload.tool_input, payload.project).session
-        if session is None or self._owner_practice() is None:
+        practice = self._owner_practice()
+        if practice is None:
+            return
+        session = practice.session if practice.session is not None else payload.call.session
+        if session is None:
             return
         for bag in bags:
             session.log.injected_rules.note(bag, path)

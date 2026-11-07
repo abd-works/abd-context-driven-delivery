@@ -20,6 +20,7 @@ from typing import Any, Callable, ClassVar
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
 from harness.agent_tools.tool_call import ToolCall
+from harness.annotations.annotation import HostedOnly
 from harness.hooks.hooks import HookHandlersFile, Hooks
 from harness.installation.context_config import ContextConfig
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -110,6 +111,15 @@ class HookPayload(Mapping[str, Any]):
             return roots[0]
         folder = str(self._fields.get("cwd") or "").strip()
         return Path(folder) if folder else None
+
+    @property
+    def call(self) -> ToolCall:
+        """The tool call this event reports: the tool's input, in the project the event happened in, made once, so
+        every handler of the event reads the same call and the session it opens."""
+        made = self.__dict__.get("_call")
+        if made is None:
+            made = self.__dict__["_call"] = ToolCall(self.tool_input, self.project)
+        return made
 
     @property
     def chat_id(self) -> str:
@@ -358,7 +368,7 @@ class HandlerCatalog:
                 self.failures.append((self.ref_label(item), error))
                 continue
             self.toolsets.extend(
-                instance for instance in loaded if type(instance).__name__ not in AgentToolSet.HOSTED_ONLY_CLASS_NAMES
+                instance for instance in loaded if not HostedOnly.annotates(instance)
             )
 
     def ref_label(self, item: Any) -> str:

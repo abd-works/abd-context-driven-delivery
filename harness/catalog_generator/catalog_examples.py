@@ -277,7 +277,7 @@ class CatalogFidelity:
     @cached_property
     def column(self) -> StageColumn | None:
         """The board column the fidelity's stage sits in; none for a stage the board has no column for."""
-        return STAGE_COLUMNS.of(self.fidelity.stage)
+        return STAGE_COLUMNS.of(self.fidelity.approach_stage)
 
     @property
     def label(self) -> str:
