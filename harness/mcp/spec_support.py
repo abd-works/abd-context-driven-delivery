@@ -11,7 +11,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from harness.mcp.cdd_home import CDD_HOME_ENV, CddHome
-from harness.mcp.mcp_daemon import PROJECT_HEADER, SERVER_PORT_ENV, McpDaemon
+from harness.mcp.mcp_daemon import CONNECT_SCRIPT, PROJECT_HEADER, SERVER_PORT_ENV, McpDaemon, RunningServer
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _TOOLSET_REFS_ENV = "MCP_TOOLSET_REFS"
@@ -61,9 +61,9 @@ class SpecServer:
         os.environ[SERVER_PORT_ENV] = str(self.daemon.port)
         os.environ[_TOOLSET_REFS_ENV] = ",".join(self._toolsets)
         self.home.serve_from(_REPO_ROOT)
-        self.home.install(_REPO_ROOT, _REPO_ROOT / "harness" / "mcp" / "scripts" / "connect.py")
+        self.home.install(_REPO_ROOT, CONNECT_SCRIPT)
 
-    def start(self) -> dict:
+    def start(self) -> RunningServer:
         """Install the throwaway ``~/.cdd`` and start the server on it, as the connect script does for an IDE."""
         self.install()
         return self.daemon.ensure()

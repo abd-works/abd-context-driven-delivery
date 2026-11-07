@@ -14,6 +14,7 @@ from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.mcp.mcp_server import McpConfigUnreadable, McpInstallation
+from harness.installation.ide_layout import IdeLayout
 
 UNREADABLE = '{"mcpServers": {"notes": {"command": "notes-server"},'
 
@@ -22,7 +23,7 @@ with description("an MCP config that cdd writes its entry into") as self:
     with before.each:
         self.project = Path(tempfile.mkdtemp(prefix="cdd-mcp-config-"))
         self.config = self.project / ".mcp.json"
-        self.installation = McpInstallation("Claude", self.project / ".claude")
+        self.installation = McpInstallation(IdeLayout("Claude"), self.project / ".claude")
         self.installation.record_operation(SimpleNamespace(install_to_mcp=True))
 
     with after.each:

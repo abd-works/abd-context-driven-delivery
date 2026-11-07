@@ -19,7 +19,7 @@ from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.parameter_schema import ParameterSchema
-from harness.installer.installer import Installer
+from harness.installation.installer import Installer
 from harness.mcp._examples.parameter_types.parameter_types import ParameterTypes
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_daemon import McpDaemon
@@ -30,6 +30,7 @@ from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
 from harness.mcp._examples.illegitimate_name.illegitimate_name import (
     IllegitimateName,
 )
+from harness.installation.ide_layout import IdeLayout
 from space.repo.repo import Commit, DefaultBranchError
 from space.session import Sessions
 from space.work_state import WorkState
@@ -533,7 +534,7 @@ with description("an MCP host tool ping") as self:
 
 
 def _user_level_installation(ide: str) -> McpInstallation:
-    installation = McpInstallation(ide, _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
+    installation = McpInstallation(IdeLayout(ide), _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
     installation._is_temp_path = lambda path: False
     for tool in SampleMcpOps().tools.values():
         installation.record_operation(tool)
@@ -609,7 +610,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
         with context("that is installed again from another checkout"):
             with before.each:
                 self.written = self.config.read_text(encoding="utf-8")
-                again = McpInstallation("Claude", self.root / "other" / ".claude", repo=self.root / "other")
+                again = McpInstallation(IdeLayout("Claude"), self.root / "other" / ".claude", repo=self.root / "other")
                 again._is_temp_path = lambda path: False
                 for tool in SampleMcpOps().tools.values():
                     again.record_operation(tool)
@@ -623,7 +624,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
                 self.project = self.root / "project"
                 (self.project / ".claude").mkdir(parents=True)
                 self.project_config = self.project / ".mcp.json"
-                self.installation = McpInstallation("Claude", self.project / ".claude", repo=_REPO_ROOT)
+                self.installation = McpInstallation(IdeLayout("Claude"), self.project / ".claude", repo=_REPO_ROOT)
                 self.installation._is_temp_path = lambda path: False
                 for tool in SampleMcpOps().tools.values():
                     self.installation.record_operation(tool)
@@ -675,7 +676,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
     with context("into a temp install tree"):
         with before.each:
             self.tree = Path(tempfile.mkdtemp())
-            self.installation = McpInstallation("Cursor", self.tree, repo=_REPO_ROOT)
+            self.installation = McpInstallation(IdeLayout("Cursor"), self.tree, repo=_REPO_ROOT)
             for tool in SampleMcpOps().tools.values():
                 self.installation.record_operation(tool)
             self.installation.write_mcp_manifest()

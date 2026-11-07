@@ -10,7 +10,8 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.installation.bootstrap import ensure_import_path
-from harness.installer.installer import Installer
+from harness.installation.installer import Installer
+from harness.mcp.mcp_server import McpInstallation
 
 ensure_import_path(_REPO_ROOT)
 
@@ -32,7 +33,7 @@ with description("session diagnostics"):
     with it("should install session-diagnostics as a slash command with MCP invoke"):
         tree = Path(tempfile.mkdtemp())
         try:
-            mcp = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install([SessionDiagnostics()])
+            mcp = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install([SessionDiagnostics()]).of(McpInstallation)
             command_path = tree / "commands" / "space" / "session" / "session-diagnostics.md"
             expect(command_path.is_file()).to(equal(True))
             text = command_path.read_text(encoding="utf-8")

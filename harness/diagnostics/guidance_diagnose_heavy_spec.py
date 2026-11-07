@@ -9,7 +9,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from harness.installer.installer import Installer
+from harness.installation.installer import Installer
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(_REPO_ROOT).ensure_import_path()
@@ -19,6 +19,7 @@ from mamba import description, it
 
 from harness.diagnostics.guidance_probe import GuidanceProbe
 from harness.diagnostics.guidance_diagnostics import GuidanceDiagnostics
+from harness.mcp.mcp_server import McpInstallation
 
 
 def _installer(tree: Path, payload: dict) -> Installer:
@@ -60,7 +61,7 @@ with description("guidance diagnostics install"):
     with it("should install guidance-diagnostics as a slash command with MCP invoke"):
         tree = Path(tempfile.mkdtemp())
         try:
-            mcp = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install([GuidanceDiagnostics()])
+            mcp = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install([GuidanceDiagnostics()]).of(McpInstallation)
             command_path = tree / "commands" / "harness" / "diagnostics" / "guidance-diagnostics.md"
             expect(command_path.is_file()).to(equal(True))
             text = command_path.read_text(encoding="utf-8")

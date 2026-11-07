@@ -52,7 +52,7 @@ class McpSanity:
         )
 
     def _host(self) -> Any:
-        from harness.installer.installer import Installer
+        from harness.installation.installer import Installer
         from harness.mcp.mcp_server import McpHost
 
         installer = Installer(repo=self.repo)

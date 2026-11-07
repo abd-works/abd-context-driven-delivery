@@ -259,8 +259,8 @@ with description("the cdd server") as self:
             self.worktrees.remove()
 
         with it("should answer both chats from the one server process"):
-            projects = self.server.daemon.ping()["projects"]
-            expect(self.server.daemon.ping()["pid"]).to(equal(self.started["pid"]))
+            projects = self.server.daemon.ping().projects
+            expect(self.server.daemon.ping().pid).to(equal(self.started.pid))
             expect(projects).to(contain(str(self.worktrees.first), str(self.worktrees.second)))
 
         with it("should save each chat's session in its own worktree"):
@@ -300,7 +300,7 @@ with description("the cdd server") as self:
 
         with it("should still be the same process"):
             self.chat.run(self.chat.restart_then_ping)
-            expect(self.server.daemon.ping()["pid"]).to(equal(self.started["pid"]))
+            expect(self.server.daemon.ping().pid).to(equal(self.started.pid))
 
 
 with description("the cdd connect script") as self:

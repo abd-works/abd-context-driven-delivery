@@ -46,16 +46,19 @@ Class annotation. Turns off, or keeps out of the install, every hook on that too
 	// false keeps the toolset's hooks out of hook-handlers.json
 ----
 + annotate(toolset): toolset
-	// sets _hooks_disabled and _hooks_deploy
+	// keeps itself on the class as `_hooks`; read through disabled_on(toolset) and deploys(toolset)
 	// write `@Hooks(disabled=True)` above `@agent_toolset` so the annotation stays on the registered type
 
-## HookInstallation : Installation                                <!-- Md -->
+## HookInstallation : ServerInstallation                                <!-- Md -->
 
 Install-time writer for hook artifacts. Same walk as markdown and MCP; only the leaf writes differ.
 
-+ HookInstallation(ide: str, path: Path, *, python: str | None = None, repo: Path | None = None)
++ HookInstallation(layout: IdeLayout, path: Path, *, python: str | None = None, repo: Path | None = None)
 ------
-+ python: str
++ interpreter: PythonInterpreter
++ handlers_file: HookHandlersFile
++ manifest: HooksManifest
++ daemon: HookDaemon
 + server: HookServer | None
 + diagnosis: dict | None
 + dispatch_command: str
@@ -253,7 +256,8 @@ The hooks of one checkout, loaded once in its hook daemon. It runs the enabled h
 ----
 + show_toasts_with(show: Callable[[str, list[Path]], Any]): None
 	// the notifier registers itself when it is loaded, so a hook names its toast and never the notifier
-+ from_toolsets(repo_root: Path, toolsets: list | None = None): HookServer
++ from_repository(toolsets: RepositoryToolsets): HookServer
+	// the toolsets the installed hook-handlers.json lists, else every class the repository defines; every module is imported either way
 + from_handlers(handlers: Path, repo: Path): HookServer
 	-> notify_exceptions()
 + handle_stdin(raw: bytes): HookResult
@@ -308,9 +312,8 @@ The hook daemon of one checkout: it listens on the one port the checkout's daemo
 + spawn(): None
 	// the daemon imports from the checkout, through RepositoryToolsets.pythonpath and pycache_prefix
 + serve(server: HookServer | None = None): None
-	// with no server, imports every toolset module the repository defines first, so their registrations hold here
-	-> RepositoryToolsets.import_modules
-	-> HookServer.from_toolsets
+	// with no server, loads every toolset class the repository defines first, so their registrations hold here
+	-> HookServer.from_repository(self.toolsets)
 
 ## HookDaemonAddress                                              <!-- Md -->
 

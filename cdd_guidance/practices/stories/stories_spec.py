@@ -16,6 +16,7 @@ from mamba import after, before, context, description, it
 
 from cdd_guidance.practices.stories.stories import Stories
 from harness.agent_tools.agent_tools import AgentInstructions
+from harness.installation.ide_layout import IdeLayout
 
 _SAMPLE_MARKDOWN = """\
 (E) Manage Customer Orders
@@ -254,7 +255,7 @@ with description("Stories"):
             tool = stories.tools["instructions"]
             with tempfile.TemporaryDirectory() as tmp:
                 FileInstallation(
-                    "Cursor", tmp, "skill", mcp_mode=True, repo=_REPO_ROOT
+                    IdeLayout("Cursor"), tmp, "skill", mcp_mode=True, repo=_REPO_ROOT
                 ).write(tool)
                 text = next(Path(tmp).rglob("SKILL.md")).read_text(encoding="utf-8")
             expect(text).to(contain("storyNode:"))

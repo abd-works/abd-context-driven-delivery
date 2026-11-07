@@ -9,6 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from harness.installation.ide_layout import IdeLayout
 from harness.mcp.cdd_home import BOARD_PLUGIN, CLAUDE_MARKETPLACE, CLAUDE_PLUGIN, CddHome
 
 # Each claude plugin command clones or reads a marketplace; a slow disk or network can take this long.
@@ -28,6 +29,7 @@ class ClaudePlugins:
 
     def __init__(self, home: CddHome | None = None) -> None:
         self._home = home if home is not None else CddHome()
+        self._claude = IdeLayout("Claude")
 
     def install_board(self) -> str:
         """Install the board mod from the code the server runs. The board is a convenience on top of the install, so a
@@ -63,9 +65,7 @@ class ClaudePlugins:
     @property
     def installed(self) -> dict[str, str]:
         """Each plugin Claude Code has installed, with its version, from its own record of them."""
-        from harness.mcp.mcp_server import UserMcpConfig
-
-        record = UserMcpConfig("Claude").folder / "plugins" / "installed_plugins.json"
+        record = self._claude.user_settings_folder / "plugins" / "installed_plugins.json"
         try:
             plugins = json.loads(record.read_text(encoding="utf-8")).get("plugins", {})
         except (OSError, ValueError, AttributeError):

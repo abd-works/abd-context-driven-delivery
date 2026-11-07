@@ -7,7 +7,7 @@ from pathlib import Path
 from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.installer.install_record import InstallRecord, InstallRecordUnreadable
+from harness.installation.install_record import InstallRecord, InstallRecordUnreadable
 
 
 with description("an install record") as self:

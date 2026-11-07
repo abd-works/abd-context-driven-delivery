@@ -11,7 +11,7 @@ from harness.installation.files import command, skill
 from harness.mcp.mcp_server import long_call, mcp
 
 if TYPE_CHECKING:
-    from harness.installer.installer import Installer
+    from harness.installation.installer import Installer
 
 
 @agent_toolset
@@ -45,6 +45,6 @@ class GuidanceDiagnostics:
     def _installer(self) -> Installer:
         """The install of the project this call names, made once for the call: the probe reads what it published and
         writes its section into the install's diagnostics."""
-        from harness.installer.installer import Installer
+        from harness.installation.installer import Installer
 
         return Installer(repo=self._call.project)

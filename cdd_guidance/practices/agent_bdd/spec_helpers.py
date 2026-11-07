@@ -91,7 +91,7 @@ def invoke_request_for_path(command: str | Path, *, repo_root: Path) -> dict:
 def stage_invoke_commands(repo_root: Path) -> None:
     """Deploy the car skills into ``repo_root/.cursor``. The install also writes the user-level MCP entry and starts the
     cdd server, so both go to a throwaway home and ``~/.cdd`` that are removed afterwards."""
-    from harness.installer.installer import Installer
+    from harness.installation.installer import Installer
     from harness.agent_tools.agent_tools import AgentToolSet
     from harness.mcp.spec_support import SpecServer, UserHome
 

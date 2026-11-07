@@ -11,7 +11,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from harness.installer.installer import Installer
+from harness.installation.installer import Installer
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(_REPO_ROOT).ensure_import_path()
@@ -23,7 +23,7 @@ from space.session.throwaway_project import ThrowawayProject
 from harness.diagnostics import agent_tools_probe
 from harness.diagnostics.agent_tools_diagnostics import AgentToolsDiagnostics
 from harness.mcp._examples.call_outcomes.call_outcomes import MONTH_END_SECONDS
-from harness.mcp.mcp_server import McpHost
+from harness.mcp.mcp_server import McpHost, McpInstallation
 from harness.mcp.spec_support import SpecServer
 from harness.diagnostics.agent_tools_probe import (
     AGENT_TOOLS_PROBE_SECTION,
@@ -179,7 +179,7 @@ with description("mcp tools diagnostics"):
         try:
             mcp = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install(
                 [AgentToolsDiagnostics()]
-            )
+            ).of(McpInstallation)
             path = tree / "commands" / "harness" / "diagnostics" / "agent-tools-diagnostics.md"
             expect(path.is_file()).to(equal(True))
             text = path.read_text(encoding="utf-8")

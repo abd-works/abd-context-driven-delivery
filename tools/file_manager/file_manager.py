@@ -121,7 +121,7 @@ class FileText:
         return self._text
 
 
-@language_adapter(language="typescript")
+@language_adapter(language="typescript", shares_file_views=True)
 @agent_toolset
 class FileManager:
     """List and read the files under a session's roots, the folders its practices work in."""
