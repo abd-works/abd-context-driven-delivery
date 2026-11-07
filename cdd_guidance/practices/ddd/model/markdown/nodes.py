@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.ddd.model.markdown.class_cards import ClassCard, read_card, split_cards
 from cdd_guidance.practices.ddd.model.nodes import (
@@ -16,38 +17,34 @@ from cdd_guidance.practices.ddd.model.nodes import (
     Entity,
     Integration,
     InvariantObject,
+    Repository,
 )
 
 _EVENT_MAP = "event map"
-_ARROW_SPLIT = re.compile(r"[\u00b7\u2022]")
+_CONTEXT = "## "
+_AGGREGATE = "### "
+_NOTE = "> "
+_MODULE = "**Module:**"
+# `*Group*`: the heading a sketch grouped the following aggregates under.
+_GROUP = re.compile(r"^\*([^*].*?)\*$")
+_INTEGRATION_FIELDS = ("pattern", "direction", "crosses", "integration")
+# `integrate:` is the sketch's word for the integration field.
+_FIELD_NAMES = {"integrate": "integration", "context": "context", "aggregate": "aggregate"} | {
+    field: field for field in _INTEGRATION_FIELDS
+}
 
 
-def _parse_arrow_target(target: str) -> tuple[str, str, str]:
-    text = target.strip()
-    if text.startswith("\u2192"):
-        text = text[1:].strip()
-    elif text.startswith("->"):
-        text = text[2:].strip()
-    parts = [part.strip() for part in _ARROW_SPLIT.split(text) if part.strip()]
-    if len(parts) >= 3:
-        return parts[0], parts[1], parts[2]
-    if len(parts) == 2:
-        return parts[0], parts[1], ""
-    if len(parts) == 1:
-        return "", "", parts[0]
-    return "", "", ""
-
-
-def _blank(line: str) -> bool:
-    return not line.strip()
-
-
-def _looks_like_operation(line: str) -> bool:
+def looks_like_operation(line: str) -> bool:
+    """A single lower-case word under the root names one of its operations; anything else names a member."""
     if not line or " " in line:
         return False
     if line.endswith(":"):
         return False
     return line[0].islower()
+
+
+def _indent(raw: str) -> int:
+    return len(raw) - len(raw.lstrip())
 
 
 class MarkdownDomainNode:
@@ -62,36 +59,6 @@ class MarkdownDomainNode:
             return ""
         return heading.split("|", 1)[1].strip()
 
-    def stereotypes(self, text: str) -> list[str]:
-        found = []
-        rest = text
-        while "<<" in rest and ">>" in rest:
-            found.append(rest.split("<<", 1)[1].split(">>", 1)[0].strip())
-            rest = rest.split(">>", 1)[1]
-        return found
-
-    def building_block_type(self, text: str) -> type:
-        marks = {item.lower() for item in self.stereotypes(text)}
-        if "specification" in marks:
-            from cdd_guidance.practices.ddd.model.nodes import Specification
-            return Specification
-        if "value object" in marks:
-            from cdd_guidance.practices.ddd.model.nodes import ValueObject
-            return ValueObject
-        if "repository" in marks:
-            from cdd_guidance.practices.ddd.model.nodes import Repository
-            return Repository
-        if "domain event" in marks:
-            return DomainEvent
-        if "domain service" in marks or "service" in marks:
-            return DomainService
-        if "factory" in marks:
-            from cdd_guidance.practices.ddd.model.nodes import Factory
-            return Factory
-        if "entity" in marks or "aggregate root" in marks:
-            return Entity
-        return type(self)
-
 
 class MarkdownIntegration(Integration, MarkdownDomainNode):
     pass
@@ -102,9 +69,9 @@ class MarkdownInvariantObject(InvariantObject, MarkdownDomainNode):
 
 
 class MarkdownEntity(Entity, MarkdownDomainNode):
-    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
+    def __init__(self, name: str = "", sequential_order: int = 0, member_lines: list[str] | None = None, **kwargs) -> None:
         super().__init__(name, sequential_order, **kwargs)
-        self._member_lines: list[str] = []
+        self._member_lines = list(member_lines or [])
         self._member_index = 0
         self.invariant_object_type = MarkdownInvariantObject
 
@@ -120,235 +87,201 @@ class MarkdownEntity(Entity, MarkdownDomainNode):
 class MarkdownAggregate(Aggregate, MarkdownDomainNode):
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
         super().__init__(name, sequential_order, **kwargs)
-        self._body: list[str] = []
-        self._body_index = 0
+        # The lines under the aggregate's heading; `load_root` reads the root, its cards, and its arcs from them.
+        self.source_lines: list[str] = []
         self.cards: list[ClassCard] = []
+        # The sketch heading this aggregate was listed under, so the map keeps the sketch's grouping.
+        self.group: str | None = None
 
     def load_root(self) -> None:
-        self._read_body()
+        sections, map_lines = split_cards(self.source_lines)
+        self.cards.extend(read_card(section) for section in sections)
+        self._read_map_lines(map_lines)
+        self.take_root_card()
         super().load_root()
 
-    def has_more_integration(self) -> bool:
-        return False
-
-    def get_next_integration_from_file(self) -> Integration:
-        return MarkdownIntegration()
-
-    def _read_body(self) -> None:
-        sections, body = split_cards(self._body)
-        self.cards = [read_card(section, self.building_block_type) for section in sections]
-        self._read_map_lines(body)
-        self._take_root_card()
-
-    def _take_root_card(self) -> None:
-        # At model fidelity the root is the <<Aggregate Root>> card; its members are the other non-repository cards.
-        root = next((card for card in self.cards if card.is_root), None)
-        if root is None:
-            return
-        events = [item for item in self.root.properties if isinstance(item, DomainEvent)] if self.root else []
-        self.root = root.node
-        for event in events:
-            self.root.properties.append(event)
-        members = [card for card in self.cards if card is not root and not card.is_repository]
-        self.root.invariant_objects = [
-            MarkdownInvariantObject(card.node.name, index) for index, card in enumerate(members)
-        ]
-        for card in self.cards:
-            if card.is_repository and hasattr(card.node, "accesses"):
-                card.node.accesses = self.root
+    @property
+    def root_card(self) -> ClassCard | None:
+        return next((card for card in self.cards if card.is_root), None)
 
     @property
     def repository(self) -> ClassCard | None:
         return next((card for card in self.cards if card.is_repository), None)
 
-    def _read_map_lines(self, lines: list[str]) -> None:
-        self._body, kept = lines, self._body
-        try:
-            self._read_map_body()
-        finally:
-            self._body = kept
+    @property
+    def member_cards(self) -> list[ClassCard]:
+        """The entities and values the root composes."""
+        return [card for card in self.cards if not card.is_root and not card.is_repository]
 
-    def _read_map_body(self) -> None:
+    @property
+    def ordered_cards(self) -> list[ClassCard]:
+        """Root, then its repository, then members — the same order in every aggregate."""
+        roots = [card for card in self.cards if card.is_root]
+        repositories = [card for card in self.cards if card.is_repository]
+        return roots + repositories + self.member_cards
+
+    def take_root_card(self) -> None:
+        """At model fidelity the root is the <<Aggregate Root>> card; its members are the other non-repository cards."""
+        root = self.root_card
+        if root is None:
+            return
+        events = self.events
+        self.take_root(root.node)
+        self.root.properties.extend(event for event in events if event not in self.root.properties)
+        self.root.invariant_objects = [
+            MarkdownInvariantObject(card.node.name, index) for index, card in enumerate(self.member_cards)
+        ]
+        for card in self.cards:
+            if isinstance(card.node, Repository):
+                card.node.accesses = self.root
+
+    def _read_map_lines(self, lines: list[str]) -> None:
         root_name = self.name
         members: list[str] = []
-        operations: list[str] = []
-        emit_names: list[str] = []
+        emitted: list[str] = []
         index = 0
-        while index < len(self._body):
-            raw = self._body[index]
-            line = raw.strip()
-            if line.lower().startswith("integrations:"):
-                index = self._read_integrations(index + 1)
+        while index < len(lines):
+            raw = lines[index]
+            line = raw.strip().lower()
+            if line.startswith("integrations:"):
+                index = self._read_integrations(lines, index)
                 continue
-            if line.lower().startswith("emits events:"):
-                index += 1
-                while index < len(self._body) and self._body[index].strip().startswith("-"):
-                    emit_names.append(self.plain_name(self._body[index].strip()[1:]))
-                    index += 1
-                continue
-            if line.lower().startswith("consumes events:"):
-                index += 1
-                while index < len(self._body) and self._body[index].strip().startswith("-"):
-                    index += 1
+            if line.startswith(("emits events:", "consumes events:")):
+                names, index = self._read_event_names(lines, index + 1)
+                emitted.extend(names if line.startswith("emits") else [])
                 continue
             if " - " in line and not raw.startswith(" "):
-                root_name = self.plain_name(line.split(" - ", 1)[0])
+                root_name = self.plain_name(raw.split(" - ", 1)[0])
             elif raw.startswith("  ") and line and not line.startswith("-"):
-                member = line.split("//", 1)[0].strip()
-                if _looks_like_operation(member):
-                    operations.append(member)
-                elif member:
-                    members.append(member)
+                members.append(raw.split("//", 1)[0].strip())
             index += 1
-        self._operations = operations
-        self.root = MarkdownEntity(root_name, 1)
-        self.root._member_lines = members
-        for event_name in emit_names:
+        self._open_root(root_name, members, emitted)
+
+    def _read_event_names(self, lines: list[str], index: int) -> tuple[list[str], int]:
+        names: list[str] = []
+        while index < len(lines) and lines[index].strip().startswith("-"):
+            names.append(self.plain_name(lines[index].strip()[1:]))
+            index += 1
+        return names, index
+
+    def _open_root(self, name: str, members: list[str], emitted: list[str]) -> None:
+        operations = [member for member in members if looks_like_operation(member)]
+        self.root = MarkdownEntity(name, 1, member_lines=[member for member in members if member and member not in operations])
+        for operation in operations:
+            self.root.operations.append(Operation(operation, len(self.root.operations) + 1))
+        for event_name in emitted:
             event = DomainEvent(event_name, len(self.root.properties))
             event.producer = self
             self.root.properties.append(event)
 
-
-    def _read_integrations(self, index: int) -> int:
+    def _read_integrations(self, lines: list[str], index: int) -> int:
+        # The arcs are the lines indented under `Integrations:`; the first line back at its indent ends them.
+        heading_indent = _indent(lines[index])
         current: MarkdownIntegration | None = None
-        while index < len(self._body):
-            raw = self._body[index]
+        for index in range(index + 1, len(lines)):
+            raw = lines[index]
             line = raw.strip()
             if not line:
-                index += 1
                 continue
-            if not raw.startswith(" ") and not raw.startswith("\t"):
-                break
+            if _indent(raw) <= heading_indent:
+                return index
             if line.startswith("- "):
-                current = MarkdownIntegration()
-                target_text = self.plain_name(line[2:].split("(by", 1)[0])
-                current.target = target_text
-                context_name, aggregate_name, _entity_name = _parse_arrow_target(target_text)
-                if context_name:
-                    current.context = context_name
-                if aggregate_name:
-                    current.aggregate = aggregate_name
-                self.integrations.append(current)
+                current = self._new_integration(line[2:])
             elif current is not None and ":" in line:
-                key, value = line.split(":", 1)
-                key = key.strip().lower()
-                value = value.strip()
-                if key == "pattern":
-                    current.pattern = value
-                elif key == "direction":
-                    current.direction = value
-                elif key == "crosses":
-                    current.crosses = value
-                elif key in {"integration", "integrate"}:
-                    current.integration = value
-                elif key == "context":
-                    current.context = value
-                elif key == "aggregate":
-                    current.aggregate = value
-            index += 1
-        return index
+                key, value = (part.strip() for part in line.split(":", 1))
+                if key.lower() in _FIELD_NAMES:
+                    setattr(current, _FIELD_NAMES[key.lower()], value)
+        return len(lines)
+
+    def _new_integration(self, target: str) -> MarkdownIntegration:
+        integration = MarkdownIntegration()
+        integration.target = self.plain_name(target.split("(by", 1)[0])
+        integration.context, integration.aggregate, _entity = integration.target_parts
+        self.integrations.append(integration)
+        return integration
 
     def lines(self) -> list[str]:
+        written = [f"{_AGGREGATE}{self.name}", ""]
         if self.cards:
-            return self._model_lines()
-        written = [f"### {self.name}", ""]
-        if self.root is not None:
-            operations = getattr(self, "_operations", [])
-            if operations:
-                written.append(f"{self.root.name} — {', '.join(operations)}")
-            else:
-                written.append(self.root.name)
-            for item in self.root.invariant_objects:
-                written.append(f"  {item.name}")
-            if self.integrations:
-                written.append("")
-                written.append("Integrations:")
-                for item in self.integrations:
-                    written.append(f"  - {item.target}")
-                    if item.pattern:
-                        written.append(f"    pattern: {item.pattern}")
-                    if item.direction:
-                        written.append(f"    direction: {item.direction}")
-                    if item.crosses:
-                        written.append(f"    crosses: {item.crosses}")
-                    if item.integration:
-                        written.append(f"    integration: {item.integration}")
-            events = [item for item in self.root.properties if isinstance(item, DomainEvent)]
-            if events:
-                written.append("")
-                written.append("emits events:")
-                for event in events:
-                    written.append(f"  - {event.name}")
-        written.append("")
+            for card in self.ordered_cards:
+                written.extend(card.lines())
+        elif self.root is not None:
+            written.append(self.root.name)
+            written.extend(f"  {item.name}" for item in self.root.operations)
+            written.extend(f"  {item.name}" for item in self.root.invariant_objects)
+            written.append("")
+        written.extend(self.integration_lines())
         return written
 
-
-    def _model_lines(self) -> list[str]:
-        # Root, then its repository, then members — the same order in every aggregate.
-        written = [f"### {self.name}", ""]
-        root = [card for card in self.cards if card.is_root]
-        repositories = [card for card in self.cards if card.is_repository]
-        members = [card for card in self.cards if card not in root and card not in repositories]
-        for card in root + repositories + members:
-            written.extend(card.lines())
-        written.extend(self._integration_lines())
-        return written
-
-    def _integration_lines(self) -> list[str]:
+    def integration_lines(self, indent: str = "") -> list[str]:
+        """The aggregate's arcs and the events its root emits, under `Integrations:` and `emits events:`."""
         written: list[str] = []
         if self.integrations:
-            written.append("Integrations:")
+            written.append(f"{indent}Integrations:")
             for item in self.integrations:
-                written.append(f"  - {item.target}")
-                for key in ("pattern", "direction", "crosses", "integration"):
-                    value = getattr(item, key)
-                    if value:
-                        written.append(f"    {key}: {value}")
+                written.append(f"{indent}  - {item.target}")
+                written.extend(
+                    f"{indent}    {key}: {getattr(item, key)}" for key in _INTEGRATION_FIELDS if getattr(item, key)
+                )
             written.append("")
-        events = [item for item in self.root.properties if isinstance(item, DomainEvent)] if self.root else []
-        if events:
-            written.append("emits events:")
-            written.extend(f"  - {event.name}" for event in events)
+        if self.events:
+            written.append(f"{indent}emits events:")
+            written.extend(f"{indent}  - {event.name}" for event in self.events)
             written.append("")
         return written
 
+
 class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
+    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
+        super().__init__(name, sequential_order, **kwargs)
+        # Why the context exists and what it must not do, as the sketch noted it above its aggregates.
+        self.notes: list[str] = []
+        # The clean-engineering module the context is built as, with the seam and constraint noted on it.
+        self.module_name = ""
+        self.module_notes: list[str] = []
+        # The notes under each heading that groups aggregates, by that heading.
+        self.group_notes: dict[str, list[str]] = {}
+
     def lines(self) -> list[str]:
-        owner = self.owner or ""
-        written = [f"## {self.name} | {owner}", ""]
-        written.extend(self._sketch_note_lines(getattr(self, "_preamble", [])))
-        module_name = getattr(self, "_module_name", "")
-        if module_name:
-            written.append(f"**Module:** `{module_name}`")
-            written.extend(self._sketch_note_lines(getattr(self, "_module_body", [])))
+        written = [f"{_CONTEXT}{self.name} | {self.owner or ''}", ""]
+        written.extend(_quoted(self.notes))
+        if self.module_name:
+            written.append(f"{_MODULE} `{self.module_name}`")
+            written.extend(_quoted(self.module_notes))
             written.append("")
-        group_preambles = getattr(self, "_group_preambles", {})
-        last_group: str | None = None
         for context in self.contexts:
             if isinstance(context, MarkdownBoundedContext):
                 written.extend(context.lines())
+        last_group: str | None = None
         for aggregate in self.aggregates:
-            if isinstance(aggregate, MarkdownAggregate):
-                group = getattr(aggregate, "_group", None)
-                if group and group != last_group:
-                    last_group = group
-                    pre = group_preambles.get(group, [])
-                    if pre:
-                        written.append(f"*{group}*")
-                        written.extend(self._sketch_note_lines(pre))
-                        written.append("")
-                written.extend(aggregate.lines())
+            if not isinstance(aggregate, MarkdownAggregate):
+                continue
+            if aggregate.group and aggregate.group != last_group:
+                last_group = aggregate.group
+                written.extend(self._group_lines(aggregate.group))
+            written.extend(aggregate.lines())
         return written
 
-    def _sketch_note_lines(self, lines: list[str]) -> list[str]:
-        written: list[str] = []
-        for raw in lines:
-            text = raw.strip()
-            if text:
-                written.append(f"> {text}")
-        if written:
-            written.append("")
-        return written
+    def read_note(self, line: str, group: str | None) -> None:
+        """A `> note` line goes to the group it sits under, else the module, else the context."""
+        text = line[len(_NOTE):].strip()
+        if group is not None:
+            self.group_notes.setdefault(group, []).append(text)
+        elif self.module_name:
+            self.module_notes.append(text)
+        else:
+            self.notes.append(text)
+
+    def _group_lines(self, group: str) -> list[str]:
+        notes = self.group_notes.get(group, [])
+        if not notes:
+            return []
+        return [f"*{group}*"] + _quoted(notes) + [""]
+
+
+def _quoted(notes: list[str]) -> list[str]:
+    written = [f"{_NOTE}{text.strip()}" for text in notes if text.strip()]
+    return written + [""] if written else []
 
 
 class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
@@ -367,7 +300,7 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
     def get_next_bounded_context_from_file(self) -> BoundedContext:
         start = self._next_context_at()
         assert start is not None
-        heading = self._lines[start].strip()[3:]
+        heading = self._lines[start].strip()[len(_CONTEXT):]
         context = MarkdownBoundedContext(self.plain_name(heading), len(self.contexts) + 1)
         context.owner = self.owner_from(heading)
         context._map = self
@@ -394,21 +327,28 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         return body
 
     def save(self) -> str:
-        has_cards = any(getattr(item, "cards", None) for item in _aggregates_in(self))
+        has_cards = any(isinstance(item, MarkdownAggregate) and item.cards for item in self.every_aggregate)
         lines = ["# Domain Model" if has_cards else "# Bounded Context Map", ""]
         for context in self.contexts:
             if isinstance(context, MarkdownBoundedContext):
                 lines.extend(context.lines())
-        events = _events_in(self)
+        events = [event for aggregate in self.every_aggregate for event in aggregate.events]
         if events:
-            lines.append("## event map")
+            lines.append(f"{_CONTEXT}{_EVENT_MAP}")
             lines.append("")
             for event in events:
-                consumers = ", ".join(_consumer_name(item) for item in event.consumers)
+                consumers = ", ".join(item.name for item in event.consumers)
                 producer = event.producer.name if event.producer is not None else ""
                 lines.append(f"- {event.name}: emitted by {producer}; consumed by {consumers}")
             lines.append("")
         return "\n".join(lines)
+
+    def wire_events(self, entries: list[str]) -> None:
+        """Read each `Event: emitted by Producer; consumed by A, B` entry of an event map onto its producer's root."""
+        aggregates = {item.name: item for item in self.every_aggregate}
+        services: dict[str, DomainService] = {}
+        for entry in entries:
+            _wire_event(entry, aggregates, services)
 
     def _wrap_bounded_context_document(self, body: str, sketch: str) -> str:
         title, sources = self._sketch_metadata(sketch)
@@ -435,7 +375,7 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         title = "Product / Feature Name"
         sources = "see engagement sketch"
         sketch_suffix = re.compile(r"\s+sketch\s*$", re.IGNORECASE)
-        trailing_separator = re.compile(r"[\s\-–—\u20ac\u201d]+$")
+        trailing_separator = re.compile(r"[\s\-–—€”]+$")
         for line in text.splitlines():
             stripped = line.strip()
             if stripped.startswith("# "):
@@ -450,8 +390,8 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         index = self._index
         while index < len(self._lines):
             line = self._lines[index].strip()
-            if line.startswith("## ") and not line.startswith("### "):
-                title = line[3:].split("|", 1)[0].strip().lower()
+            if line.startswith(_CONTEXT) and not line.startswith(_AGGREGATE):
+                title = line[len(_CONTEXT):].split("|", 1)[0].strip().lower()
                 if title != _EVENT_MAP:
                     return index
             index += 1
@@ -461,119 +401,86 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         index = start + 1
         while index < len(self._lines):
             line = self._lines[index].strip()
-            if line.startswith("## ") and not line.startswith("### "):
+            if line.startswith(_CONTEXT) and not line.startswith(_AGGREGATE):
                 return index
             index += 1
         return len(self._lines)
 
     def _fill_context(self, context: MarkdownBoundedContext, start: int, end: int) -> None:
         index = start
-        body = self._lines
+        group: str | None = None
         while index < end:
-            line = body[index].strip()
-            if line.startswith("### "):
-                aggregate = MarkdownAggregate(self.plain_name(line[4:]), len(context.aggregates) + 1)
-                next_at = index + 1
-                while next_at < end and not body[next_at].strip().startswith("### "):
-                    next_at += 1
-                aggregate._body = body[index + 1:next_at]
-                context.append_aggregate(aggregate)
-                aggregate.load_root()
-                index = next_at
+            line = self._lines[index].strip()
+            if line.startswith(_AGGREGATE):
+                index = self._read_aggregate(context, index, end, group)
                 continue
+            group = self._read_context_line(context, line, group)
             index += 1
+
+    def _read_context_line(self, context: MarkdownBoundedContext, line: str, group: str | None) -> str | None:
+        """Read a line between aggregates: a note, the module, or a group heading. Returns the group in force."""
+        grouped = _GROUP.match(line)
+        if grouped:
+            return grouped.group(1)
+        if line.startswith(_MODULE):
+            context.module_name = line[len(_MODULE):].strip().strip("`")
+        elif line.startswith(_NOTE):
+            context.read_note(line, group)
+        return group
+
+    def _read_aggregate(self, context: MarkdownBoundedContext, start: int, end: int, group: str | None) -> int:
+        aggregate = MarkdownAggregate(self.plain_name(self._lines[start].strip()[len(_AGGREGATE):]), len(context.aggregates) + 1)
+        aggregate.group = group
+        after = start + 1
+        while after < end and not self._ends_aggregate(self._lines[after].strip()):
+            after += 1
+        aggregate.source_lines = self._lines[start + 1:after]
+        context.append_aggregate(aggregate)
+        aggregate.load_root()
+        return after
+
+    def _ends_aggregate(self, line: str) -> bool:
+        return line.startswith(_AGGREGATE) or _GROUP.match(line) is not None
 
     def load_bounded_contexts(self) -> None:
         super().load_bounded_contexts()
-        self._apply_event_map()
+        self.wire_events(self._event_map_entries())
 
-    def _apply_event_map(self) -> None:
-        aggregates = {item.name: item for item in _aggregates_in(self)}
-        services = {item.name: item for item in _services_in(self)}
-        index = 0
-        while index < len(self._lines):
-            line = self._lines[index].strip()
-            if line.startswith("## ") and line[3:].split("|", 1)[0].strip().lower() == _EVENT_MAP:
-                index += 1
-                while index < len(self._lines) and not self._lines[index].strip().startswith("## "):
-                    item = self._lines[index].strip()
-                    if item.startswith("- ") and ":" in item:
-                        _wire_event(item[2:], aggregates, services)
-                    index += 1
-                return
-            index += 1
-
-
-def _aggregates_in(bounded_context_map: BoundedContextMap) -> list[Aggregate]:
-    found: list[Aggregate] = []
-
-    def take(context: BoundedContext) -> None:
-        found.extend(context.aggregates)
-        for child in context.contexts:
-            take(child)
-
-    for context in bounded_context_map.contexts:
-        take(context)
-    return found
-
-
-def _services_in(bounded_context_map: BoundedContextMap) -> list[DomainService]:
-    found: list[DomainService] = []
-    for aggregate in _aggregates_in(bounded_context_map):
-        if aggregate.root is None:
-            continue
-        for item in aggregate.root.properties:
-            if isinstance(item, DomainService):
-                found.append(item)
-    return found
-
-
-def _events_in(bounded_context_map: BoundedContextMap) -> list[DomainEvent]:
-    found: list[DomainEvent] = []
-    for aggregate in _aggregates_in(bounded_context_map):
-        if aggregate.root is None:
-            continue
-        for item in aggregate.root.properties:
-            if isinstance(item, DomainEvent):
-                found.append(item)
-    return found
-
-
-def _consumer_name(consumer: Aggregate | DomainService) -> str:
-    return consumer.name
+    def _event_map_entries(self) -> list[str]:
+        entries: list[str] = []
+        in_event_map = False
+        for raw in self._lines:
+            line = raw.strip()
+            if line.startswith(_CONTEXT):
+                in_event_map = line[len(_CONTEXT):].split("|", 1)[0].strip().lower() == _EVENT_MAP
+            elif in_event_map and line.startswith("- ") and ":" in line:
+                entries.append(line[2:])
+        return entries
 
 
 def _wire_event(text: str, aggregates: dict[str, Aggregate], services: dict[str, DomainService]) -> None:
     # CartCheckedOut: emitted by ShoppingCart; consumed by Inventory, Receipt
-    if ":" not in text:
-        return
-    name, rest = text.split(":", 1)
-    emitted = ""
-    consumed = ""
-    if "consumed by" in rest:
-        emitted, consumed = rest.split("consumed by", 1)
-    else:
-        emitted = rest
-    producer_name = emitted.replace("emitted by", "").strip(" ;")
-    producer = aggregates.get(producer_name)
+    name, _, rest = text.partition(":")
+    emitted, _, consumed = rest.partition("consumed by")
+    producer = aggregates.get(emitted.replace("emitted by", "").strip(" ;"))
     if producer is None or producer.root is None:
         return
-    event = next((item for item in producer.root.properties if isinstance(item, DomainEvent) and item.name == name.strip()), None)
+    event = next((item for item in producer.events if item.name == name.strip()), None)
     if event is None:
         event = DomainEvent(name.strip(), len(producer.root.properties))
-        event.producer = producer
         producer.root.properties.append(event)
     event.producer = producer
     event.subject = Property("subject", 0, description="the state of the event")
     for part in consumed.split(","):
         consumer_name = part.strip()
-        if not consumer_name:
-            continue
-        if consumer_name in aggregates:
-            event.consumers.append(aggregates[consumer_name])
-        elif consumer_name in services:
-            event.consumers.append(services[consumer_name])
-        else:
-            service = DomainService(consumer_name, len(event.consumers) + 1)
-            services[consumer_name] = service
-            event.consumers.append(service)
+        if consumer_name:
+            event.consumers.append(_consumer(consumer_name, aggregates, services, len(event.consumers) + 1))
+
+
+def _consumer(name: str, aggregates: dict[str, Aggregate], services: dict[str, DomainService], order: int):
+    """The aggregate a consumer names, else the domain service it names, made once per map."""
+    if name in aggregates:
+        return aggregates[name]
+    if name not in services:
+        services[name] = DomainService(name, order)
+    return services[name]

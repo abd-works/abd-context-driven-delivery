@@ -36,22 +36,14 @@ with description("DrawIOBoundedContextMap"):
 
         with it("should place the most connected context in the center"):
             model = MarkdownBoundedContextMap().parse(_EXPECTED.read_text(encoding="utf-8"))
-            from cdd_guidance.practices.ddd.model.drawio.drawio_bounded_context_map import (
-                _context_height,
-                _hub_context,
-                _integration_graph,
-                _layout_context_positions,
-            )
+            from cdd_guidance.practices.ddd.model.drawio.drawio_bounded_context_map import ContextLayout, _context_height
 
-            contexts = [item for item in model.contexts if hasattr(item, "name")]
-            outgoing, links = _integration_graph(contexts)
-            hub = _hub_context(contexts, outgoing)
-            positions = _layout_context_positions(contexts, links, hub)
-            sales_x, sales_y = positions["Sales"]
-            catalog_x, catalog_y = positions["Catalog"]
+            layout = ContextLayout(list(model.contexts))
+            sales_x, sales_y = layout.positions["Sales"]
+            catalog_x, catalog_y = layout.positions["Catalog"]
             expect(catalog_x < sales_x).to(be_true)
             expect(sales_x < catalog_x + 900).to(be_true)
-            catalog = next(item for item in contexts if item.name == "Catalog")
+            catalog = next(item for item in layout.contexts if item.name == "Catalog")
             catalog_bottom = catalog_y + _context_height(catalog)
             expect(sales_y >= catalog_y).to(be_true)
             expect(sales_y <= catalog_bottom).to(be_true)

@@ -96,13 +96,9 @@ class Ddd(PracticeGuidance):
 
 
 def _has_aggregates(parsed) -> bool:
-    contexts = list(getattr(parsed, "contexts", []) or [])
-    while contexts:
-        context = contexts.pop()
-        if context.aggregates:
-            return True
-        contexts.extend(context.contexts)
-    return False
+    from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
+
+    return isinstance(parsed, BoundedContextMap) and bool(parsed.every_aggregate)
 
 
 _DOC_COMMENT = r"/\*\*((?:(?!\*/)[\s\S])*)\*/\s*(?:@\w+(?:\([^)]*\))?\s*)*(?:export\s+)?(?:abstract\s+)?class\s+{name}\b"

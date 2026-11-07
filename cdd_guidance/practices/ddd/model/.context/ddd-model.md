@@ -2,25 +2,17 @@
 
 *BoundedContextMap* reads a path into bounded contexts and aggregates, the way the class model reads files and folders. It looks for markers that stereotype a folder, a file, or a class as a DDD building block. A top-level folder with that marker is a bounded context. A nested bounded context is a bounded context whose parent is a bounded context. Each bounded context holds one or more aggregates. When the path has no bounded context folder, the map has one bounded context and there is no folder for it; the aggregates sit in that context. A bounded context is a module. An aggregate is a module. Entity, value object, repository, domain service, domain event, specification, and factory are classes. An aggregate's root is an entity in that model with `is_root` true. Each one carries its stereotype and the constraints on its operations and relationships. Markdown continues through a class block when the file has one, and stops at the class name when the file has only the name. The graph explorer continues through stereotyped classes it finds in source. Every channel uses the same walk. A channel only differs in how the next node is taken out of the path.
 
-Callers use the base nodes. `DDDModelFactory.load` takes a file or a folder, chooses the channel map, and returns a `BoundedContextMap`.
+Callers use the base nodes. The practice's formats (`Ddd(...).formats`: sketch, markdown, draw.io) each name the map class that reads and writes that format; `parse` reads text into a `BoundedContextMap` and `render` writes one back.
 
 ```
-bounded_context_map = DDDModelFactory.load(path)
+bounded_context_map = MarkdownBoundedContextMap().parse(text)
 ```
 
 # practices/ddd/model
 
 - **Purpose:** Structure the software as DDD building blocks — bounded contexts, aggregates, and the stereotyped classes — so the model answers domain logic questions.
-- **Seam (terms):** DDDModelFactory, BoundedContextMap, BoundedContext, Aggregate, Entity, InvariantObject, ValueObject, Repository, DomainService, DomainEvent, Specification, Factory
+- **Seam (terms):** BoundedContextMap, BoundedContext, Aggregate, Entity, InvariantObject, ValueObject, Repository, DomainService, DomainEvent, Specification, Factory
 - **Dependencies (one-way):** practices/clean_engineering/model — Module, OoadClass, Property, Operation, Relationship
-
-## DDDModelFactory
-
-+ load(path: str): BoundedContextMap
-	// path is a file, or a folder of files
-	// the file type, or the files in the folder, selects the channel map
-	// that map loads itself
-	// the return is a BoundedContextMap
 
 ## BoundedContextMap
 
@@ -243,13 +235,34 @@ bounded_context_map = DDDModelFactory.load(path)
 
 ## MarkdownBoundedContext : BoundedContext, MarkdownDomainNode
 
-- has_more_aggregate(): bool
-- get_next_aggregate_from_file(): MarkdownAggregate
+------
++ notes: list[str]
+	// why the context exists, as the sketch noted it above its aggregates; written as `> ` lines
++ module_name: str
++ module_notes: list[str]
+	// the clean-engineering module the context is built as, with its seam and constraint
++ group_notes: dict[str, list[str]]
+	// the notes under each heading that groups aggregates
+----
++ lines(): list[str]
 
 ## MarkdownAggregate : Aggregate, MarkdownDomainNode
 
-- has_more_integration(): bool
-- get_next_integration_from_file(): MarkdownIntegration
+------
++ source_lines: list[str]
+	// the lines under the aggregate's heading; load_root reads the root, its cards, and its arcs from them
++ cards: list[ClassCard]
++ group: str | None
+	// the sketch heading the aggregate was listed under
++ root_card: ClassCard | None
++ repository: ClassCard | None
++ member_cards: list[ClassCard]
++ ordered_cards: list[ClassCard]
+	// root, then its repository, then members — the one card order every format uses
+----
++ load_root(): None
++ take_root_card(): None
++ lines(): list[str]
 
 ## MarkdownIntegration : Integration, MarkdownDomainNode
 

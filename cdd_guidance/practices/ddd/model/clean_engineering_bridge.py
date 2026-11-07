@@ -11,12 +11,7 @@ from __future__ import annotations
 import re
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
-from cdd_guidance.practices.ddd.model.markdown.class_cards import (
-    ClassCard,
-    ordered_stereotypes,
-    plain_properties,
-    stereotypes_in,
-)
+from cdd_guidance.practices.ddd.model.markdown.class_cards import ClassCard, plain_properties
 from cdd_guidance.practices.ddd.model.markdown.nodes import (
     MarkdownAggregate,
     MarkdownBoundedContext,
@@ -24,20 +19,20 @@ from cdd_guidance.practices.ddd.model.markdown.nodes import (
     MarkdownEntity,
     MarkdownIntegration,
 )
-from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
+from cdd_guidance.practices.ddd.model.nodes import BoundedContext, BoundedContextMap
+from cdd_guidance.practices.ddd.model.stereotypes import stereotypes_in, without_stereotypes
 
 _PLACE = " · "
-_STEREOTYPE = re.compile(r"<<\s*[^>]+?\s*>>")
 _DEFAULT_CONTEXT = "Domain"
 
 
 def to_clean_engineering(bounded_context_map: BoundedContextMap) -> CleanEngineeringModel:
     """One module per aggregate; each class keeps its stereotypes and place in its intent."""
     model = CleanEngineeringModel("model", 1)
-    for context, aggregate in _placed_aggregates(bounded_context_map.contexts, []):
-        place = _PLACE.join(context + [aggregate.name])
+    for aggregate in bounded_context_map.every_aggregate:
+        place = _PLACE.join([_label(context) for context in aggregate.parent.enclosing_contexts] + [aggregate.name])
         module = Module(place, len(model.modules) + 1)
-        for card in _cards_in_order(aggregate):
+        for card in aggregate.ordered_cards:
             module.classes.append(_class_from_card(card, place, len(module.classes) + 1))
         if module.classes and aggregate.integrations:
             module.classes[0].intent += "\n" + "\n".join(_integration_text(aggregate))
@@ -69,25 +64,14 @@ def from_clean_engineering(model: CleanEngineeringModel) -> MarkdownBoundedConte
     for aggregate in aggregates.values():
         _infer_relationships(aggregate)
         _take_integrations(aggregate)
-        aggregate._take_root_card()
+        aggregate.take_root_card()
         if aggregate.root is None:
             aggregate.root = MarkdownEntity(aggregate.name, 1)
     return bounded_context_map
 
 
-def _placed_aggregates(contexts, path: list[str]):
-    for context in contexts:
-        label = f"{context.name} | {context.owner}" if context.owner else context.name
-        for aggregate in context.aggregates:
-            yield path + [label], aggregate
-        yield from _placed_aggregates(context.contexts, path + [label])
-
-
-def _cards_in_order(aggregate) -> list[ClassCard]:
-    cards = list(getattr(aggregate, "cards", []) or [])
-    roots = [card for card in cards if card.is_root]
-    repositories = [card for card in cards if card.is_repository]
-    return roots + repositories + [card for card in cards if card not in roots and card not in repositories]
+def _label(context: BoundedContext) -> str:
+    return f"{context.name} | {context.owner}" if context.owner else context.name
 
 
 def _class_from_card(card: ClassCard, place: str, order: int) -> OoadClass:
@@ -104,20 +88,17 @@ def _class_from_card(card: ClassCard, place: str, order: int) -> OoadClass:
 def _card_from_class(oclass: OoadClass) -> tuple[ClassCard, list[str]]:
     first, _, rest = (oclass.intent or "").partition("\n")
     marks = stereotypes_in(first)
-    place_text = _STEREOTYPE.sub("", first).strip() if marks else ""
+    place_text = without_stereotypes(first) if marks else ""
     place = [part.strip() for part in place_text.split("·") if part.strip()] if place_text else []
     if not marks:
         rest = oclass.intent or ""
-    stereotypes = ordered_stereotypes(marks or _stereotypes_by_name(oclass.name))
-    heading = f"{oclass.name} {' '.join(f'<<{item}>>' for item in stereotypes)}"
-    node_type = MarkdownAggregate().building_block_type(heading)
-    if not isinstance(node_type, type) or not issubclass(node_type, OoadClass):
-        node_type = OoadClass
-    node = node_type(oclass.name, oclass.sequential_order)
+    card = ClassCard.from_name(oclass.name, marks or _stereotypes_by_name(oclass.name))
+    node = card.node
+    node.sequential_order = oclass.sequential_order
     node.intent = rest.strip()
     node.properties = [item.clone() for item in oclass.properties]
     node.operations = [item.clone() for item in oclass.operations if item.name not in (oclass.name, "constructor", "__init__")]
-    return ClassCard(node, stereotypes), place
+    return card, place
 
 
 def _stereotypes_by_name(name: str) -> list[str]:
@@ -166,10 +147,9 @@ def _context(bounded_context_map, contexts, path: tuple[str, ...]) -> MarkdownBo
     name, _, owner = path[-1].partition("|")
     context = MarkdownBoundedContext(name.strip(), 1)
     context.owner = owner.strip()
-    context._map = bounded_context_map
     if len(path) == 1:
         context.sequential_order = len(bounded_context_map.contexts) + 1
-        bounded_context_map.contexts.append(context)
+        bounded_context_map.append_context(context)
     else:
         parent = _context(bounded_context_map, contexts, path[:-1])
         context.sequential_order = len(parent.contexts) + 1
@@ -217,16 +197,9 @@ def _take_integrations(aggregate: MarkdownAggregate) -> None:
             if line.startswith("- "):
                 current = MarkdownIntegration()
                 current.target = line[2:].strip()
-                context, aggregate_name, _ = _target_parts(current.target)
-                current.context, current.aggregate = context, aggregate_name
+                current.context, current.aggregate, _entity = current.target_parts
                 aggregate.integrations.append(current)
             elif current is not None and ":" in line:
                 key, value = (part.strip() for part in line.split(":", 1))
                 if key in _INTEGRATION_FIELDS:
                     setattr(current, key, value)
-
-
-def _target_parts(target: str) -> tuple[str, str, str]:
-    from cdd_guidance.practices.ddd.model.markdown.nodes import _parse_arrow_target
-
-    return _parse_arrow_target(target)

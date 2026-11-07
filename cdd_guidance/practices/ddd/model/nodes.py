@@ -30,12 +30,11 @@ _PATTERNS = (
 )
 
 
-class UnsupportedBoundedContextFile(Exception):
-    """No channel can read the given bounded-context file."""
-
-    def __init__(self, path: str) -> None:
-        super().__init__(f"No bounded-context channel reads {path}")
-        self.path = path
+# `→ Context · Aggregate · Entity`: the segments of an integration's target.
+_TARGET_SEGMENT = re.compile(r"[·•]")
+_ARROWS = ("→", "->")
+# `Product (by ProductId)`: the identity an integration holds its target by.
+_HELD_BY = "(by"
 
 
 class Integration:
@@ -57,6 +56,24 @@ class Integration:
             self.crosses = source.crosses
             self.integration = source.integration
             self.pattern = source.pattern
+
+    @property
+    def target_parts(self) -> tuple[str, str, str]:
+        """The target's context, aggregate, and entity; a target that names one class names only the entity."""
+        text = self.target.split(_HELD_BY, 1)[0].strip()
+        for arrow in _ARROWS:
+            text = text.removeprefix(arrow).strip()
+        parts = [part.strip() for part in _TARGET_SEGMENT.split(text) if part.strip()]
+        if len(parts) == 1:
+            return "", "", parts[0]
+        padded = parts + ["", "", ""]
+        return padded[0], padded[1], padded[2]
+
+    @property
+    def target_name(self) -> str:
+        """The class the arrow points at: the entity when the target names one, else the aggregate."""
+        _context, aggregate, entity = self.target_parts
+        return entity or aggregate or self.aggregate
 
 
 class InvariantObject(Property):
@@ -100,8 +117,10 @@ class TacticalBuildingBlock(OoadClass):
     )
 
     def load_tactical_facts(self, parsed: OoadClass, file_text: str) -> None:
-        """Fill the facts this building block owns, from the class its language parser read and the file around it."""
-        from cdd_guidance.practices.clean_engineering.model.rules_shared.span_helpers import method_body
+        """Fill the facts this building block owns, from the class its language parser read and the file around it.
+
+        Each operation's body is the one the parser already read; only the class declaration's stereotype marks,
+        which sit above the class, come from the file text."""
         from cdd_guidance.practices.ddd.model.stereotypes import declares_tactical_stereotype
 
         for name in OoadClass.graph_facts:
@@ -111,11 +130,11 @@ class TacticalBuildingBlock(OoadClass):
         public = [op for op in operations if op.name and not op.name.startswith("_")]
         self.peer_private_operations = [op.name for op in operations if op.peer_private_access]
         self.public_derive_operations = [op.name for op in public if _DERIVE_PREFIX.match(op.name)]
-        self.delegating_operations = [op.name for op in public if _ONLY_DELEGATES.search(method_body(file_text, op.name))]
+        self.delegating_operations = [op.name for op in public if _ONLY_DELEGATES.search(op.body.text)]
         self.identity_free_loads = [
             op.name
             for op in operations
-            if op.name.lower() in _LOAD_NAMES and not op.parameters and _AMBIENT_STATE.search(method_body(file_text, op.name))
+            if op.name.lower() in _LOAD_NAMES and not op.parameters and _AMBIENT_STATE.search(op.body.text)
         ]
         self.tactical_stereotype = declares_tactical_stereotype(
             file_text, parsed.name, self.tactical_kind(), set(parsed.peer_names)
@@ -270,6 +289,25 @@ class Factory(TacticalBuildingBlock):
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
 
+# Which building block a class card's stereotypes make it, first match first; a card with none is a plain class.
+_BLOCK_TYPES: tuple[tuple[str, type[OoadClass]], ...] = (
+    ("specification", Specification),
+    ("value object", ValueObject),
+    ("repository", Repository),
+    ("domain service", DomainService),
+    ("service", DomainService),
+    ("factory", Factory),
+    ("entity", Entity),
+    ("aggregate root", Entity),
+)
+
+
+def building_block_type(stereotypes: list[str]) -> type[OoadClass]:
+    """The class a card with these stereotypes is read into."""
+    marks = {item.lower() for item in stereotypes}
+    return next((block for mark, block in _BLOCK_TYPES if mark in marks), OoadClass)
+
+
 class Aggregate(Module):
     """Knows its root entity and its integrations. The entity loads invariant objects."""
 
@@ -302,9 +340,21 @@ class Aggregate(Module):
         # The entity records this aggregate and loads its own invariant objects.
         if self.root is None:
             return
-        self.root.is_root = True
-        self.root.aggregate = self
+        self.take_root(self.root)
         self.root.load_invariant_objects()
+
+    def take_root(self, entity: Entity) -> None:
+        """Make the entity this aggregate's root, its only way in."""
+        self.root = entity
+        entity.is_root = True
+        entity.aggregate = self
+
+    @property
+    def events(self) -> list[DomainEvent]:
+        """The domain events the root emits."""
+        if self.root is None:
+            return []
+        return [item for item in self.root.properties if isinstance(item, DomainEvent)]
 
 
 class BoundedContext(Module):
@@ -360,6 +410,21 @@ class BoundedContext(Module):
 
     def append_aggregate(self, aggregate: Aggregate) -> None:
         self.aggregates.append(aggregate)
+
+    @property
+    def every_aggregate(self) -> list[Aggregate]:
+        """This context's aggregates, then those of every context nested in it."""
+        found = list(self.aggregates)
+        for child in self.contexts:
+            found.extend(child.every_aggregate)
+        return found
+
+    @property
+    def enclosing_contexts(self) -> list["BoundedContext"]:
+        """The contexts this one is nested in, outermost first, ending with this context."""
+        parent = self.parent
+        outer = parent.enclosing_contexts if isinstance(parent, BoundedContext) else []
+        return outer + [self]
 
     def load_bounded_contexts(self) -> None:
         while self.has_more_bounded_context():
@@ -445,19 +510,11 @@ class BoundedContextMap:
     def get_next_bounded_context_from_file(self) -> BoundedContext:
         return self.bounded_context_type(sequential_order=len(self.contexts) + 1)
 
+    def append_context(self, context: BoundedContext) -> None:
+        context._map = self
+        self.contexts.append(context)
 
-class DDDModelFactory:
-    @staticmethod
-    def load(path: str) -> BoundedContextMap:
-        # The file type selects the channel. That map loads itself.
-        chosen = _channel_for(path)
-        return chosen().load(path)
-
-
-def _channel_for(path: str) -> type[BoundedContextMap]:
-    from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
-
-    location = Path(path)
-    if location.suffix.lower() in {".md", ".markdown"}:
-        return MarkdownBoundedContextMap
-    raise UnsupportedBoundedContextFile(path)
+    @property
+    def every_aggregate(self) -> list[Aggregate]:
+        """Every aggregate on the map, those in nested contexts included."""
+        return [aggregate for context in self.contexts for aggregate in context.every_aggregate]

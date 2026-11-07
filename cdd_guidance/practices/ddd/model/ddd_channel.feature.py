@@ -13,7 +13,8 @@ from expects import equal, expect
 from mamba import before, describe, included_context, it, shared_context
 
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.ddd.model.nodes import DDDModelFactory, DomainEvent, ValueObject
+from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
+from cdd_guidance.practices.ddd.model.nodes import DomainEvent, ValueObject
 
 EXPECTED = Path(__file__).resolve().parent / "_examples" / "expected" / "bounded-context-map.md"
 ACTUAL = Path(__file__).resolve().parent / "_examples" / "actual"
@@ -69,18 +70,18 @@ with describe("a domain driven design model"):
     with describe("from markdown"):
         with describe("to markdown"):
             with before.all:
-                source = DDDModelFactory.load(str(EXPECTED))
+                source = MarkdownBoundedContextMap().load(str(EXPECTED))
                 folder = ACTUAL / "from-markdown" / "to-markdown"
                 if folder.exists():
                     shutil.rmtree(folder)
                 folder.mkdir(parents=True)
                 written = folder / "bounded-context-map.md"
                 written.write_text(source.save(), encoding="utf-8")
-                self.loaded = DDDModelFactory.load(str(written))
+                self.loaded = MarkdownBoundedContextMap().load(str(written))
             with included_context("a domain driven design model saved through a channel"):
                 pass
     with it("should load the expected map"):
-        check_map(DDDModelFactory.load(str(EXPECTED)))
+        check_map(MarkdownBoundedContextMap().load(str(EXPECTED)))
 
     with it("should return a new value object from create, clone, and mix"):
         original = ValueObject("Money", 1)

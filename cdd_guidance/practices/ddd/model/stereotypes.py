@@ -5,7 +5,8 @@ from __future__ import annotations
 import re
 from typing import List, Optional
 
-_STEREOTYPE_RE = re.compile(r"<<([^>]+)>>")
+# The one reading of `<<Stereotype>>` marks in a class heading, a class name, or a doc comment.
+_STEREOTYPE = re.compile(r"<<\s*([^>]+?)\s*>>")
 _CLASS_DECL = re.compile(r"(?:export\s+)?(?:abstract\s+)?class\s+(\w+)\b")
 _AT_STEREOTYPE = re.compile(r"^\s*@(\w+)\s*(?:\(|$)")
 
@@ -34,11 +35,11 @@ def class_declaration_decorated_name(text: str, class_name: str) -> str:
     prefix = text[max(0, match.start() - 400) : match.start()]
     tags: list[str] = []
     for block in re.findall(r"/\*\*([\s\S]*?)\*/", prefix):
-        tags.extend(f"<<{t.strip()}>>" for t in _STEREOTYPE_RE.findall(block))
+        tags.extend(f"<<{tag}>>" for tag in stereotypes_in(block))
     for line in prefix.splitlines():
         stripped = line.strip()
         if stripped.startswith("#"):
-            tags.extend(_STEREOTYPE_RE.findall(stripped))
+            tags.extend(stereotypes_in(stripped))
         at = _AT_STEREOTYPE.match(stripped)
         if at:
             mapped = _AT_TO_STEREOTYPE.get(at.group(1).lower())
@@ -52,15 +53,23 @@ def class_declaration_decorated_name(text: str, class_name: str) -> str:
     return f"{class_name} {' '.join(normalized)}"
 
 
+def stereotypes_in(text: str) -> List[str]:
+    """Each `<<Stereotype>>` in the text, as written."""
+    return [item.strip() for item in _STEREOTYPE.findall(text)]
+
+
+def without_stereotypes(text: str) -> str:
+    return _STEREOTYPE.sub("", text).strip()
+
+
 def class_stereotypes(name: str) -> List[str]:
-    return [s.strip().lower() for s in _STEREOTYPE_RE.findall(name)]
+    return [item.lower() for item in stereotypes_in(name)]
 
 
 def plain_class_name(name: str) -> str:
-    n = re.sub(r"\*+", "", name)
-    n = _STEREOTYPE_RE.sub("", n).strip()
-    n = re.split(r"\s+extends\s+", n, maxsplit=1)[0].strip()
-    return n
+    """The class name alone: no bold or code marks, stereotypes, or base classes."""
+    plain = without_stereotypes(name.replace("*", "").replace("`", ""))
+    return re.split(r"\s+extends\s+", plain, maxsplit=1)[0].strip()
 
 
 def is_aggregate_root(name: str) -> bool:
