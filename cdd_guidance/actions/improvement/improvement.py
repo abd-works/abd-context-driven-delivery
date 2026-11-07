@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
-from harness.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import skill
@@ -34,6 +34,9 @@ class Improvement(GuidanceAction):
             item.templates
 
         self.run(on, action="repair")
+        "After the fix is written, call refresh with exactly the files you wrote, so the session's graph holds them as they are now; nothing watches the files."
+        if self._session is not None:
+            tools(self.graph.refresh)
         return (
             "Diagnose why the toolset's expected behavior failed for {{asset}} "
             "(run cdd_guidance.actions.diagnose.diagnose:Diagnose). State the proposed toolset change "

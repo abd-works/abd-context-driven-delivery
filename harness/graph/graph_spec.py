@@ -5,11 +5,12 @@ from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
 
-from expects import be_above, contain, equal, expect
+from expects import be, be_above, be_none, contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
 from harness.graph.graph import EdgeType, Graph, Node, PracticeGraph, Source
+from harness.graph.pattern_overlays import PatternOverlays
 
 _ROOT = _HERE
 _SAMPLE = _ROOT / "_examples" / "input"
@@ -964,39 +965,43 @@ def _node(practice: PracticeGraph, type: str, name: str, line: int) -> Node:
 with description("a node's fidelity"):
     with context("with a story node"):
         with it("should be the fidelity the stories schema gives a story"):
-            expect(_node(PracticeGraph("stories"), "Story", "Create account", 1).fidelity).to(equal("story_map"))
+            expect(_node(Graph().practice("stories"), "Story", "Create account", 1).fidelity.name).to(equal("story_map"))
+
+        with it("should be that fidelity of the practice the node belongs to"):
+            node = _node(Graph().practice("stories"), "Story", "Create account", 1)
+            expect(node.fidelity).to(be(node.practice.guidance.fidelities["story_map"]))
 
     with context("with a scenario node"):
         with it("should be the fidelity the stories schema gives a scenario"):
-            expect(_node(PracticeGraph("stories"), "Scenario", "Create account", 1).fidelity).to(equal("scenarios"))
+            expect(_node(Graph().practice("stories"), "Scenario", "Create account", 1).fidelity.name).to(equal("scenarios"))
 
     with context("with a class node"):
         with it("should match its graph type to the schema's class type"):
-            expect(_node(PracticeGraph("clean_engineering"), "OoadClass", "Order", 1).fidelity).to(equal("model"))
+            expect(_node(Graph().practice("clean_engineering"), "OoadClass", "Order", 1).fidelity.name).to(equal("model"))
 
     with context("with a node created at a low fidelity"):
         with before.each:
-            self.entity = _node(PracticeGraph("ddd"), "Entity", "Order", 1)
+            self.entity = _node(Graph().practice("ddd"), "Entity", "Order", 1)
 
         with it("should be the fidelity that first creates it"):
-            expect(self.entity.fidelity).to(equal("model"))
+            expect(self.entity.fidelity.name).to(equal("model"))
 
         with it("should also belong to every higher fidelity of its practice"):
-            expect(self.entity.fidelities).to(equal(["model", "tactics"]))
+            expect([fidelity.name for fidelity in self.entity.fidelities]).to(equal(["model", "tactics"]))
 
         with it("should reach implementation from the first fidelity of its practice"):
-            story = _node(PracticeGraph("stories"), "Story", "Create account", 1)
-            expect(story.fidelities).to(equal(["story_map", "scenarios", "acceptance_tests"]))
+            story = _node(Graph().practice("stories"), "Story", "Create account", 1)
+            expect([fidelity.name for fidelity in story.fidelities]).to(equal(["story_map", "scenarios", "acceptance_tests"]))
 
     with context("with a type the schema gives no fidelity"):
-        with it("should be empty"):
-            expect(_node(PracticeGraph("stories"), "Unmapped", "Create account", 1).fidelity).to(equal(""))
+        with it("should have none"):
+            expect(_node(Graph().practice("stories"), "Unmapped", "Create account", 1).fidelity).to(be_none)
 
 
 with description("a scenario"):
     with context("with steps recorded in query order"):
         with before.each:
-            self.practice = PracticeGraph("stories")
+            self.practice = Graph().practice("stories")
             self.scenario = _node(self.practice, "Scenario", "Create account", 139)
             self.given = _node(self.practice, "Step", "given the account exists", 10)
             self.when = _node(self.practice, "Step", "when the User creates their account", 20)
@@ -1013,7 +1018,7 @@ with description("a scenario"):
 
     with context("with an invoked operation recorded before an earlier definition"):
         with before.each:
-            self.practice = PracticeGraph("stories")
+            self.practice = Graph().practice("stories")
             self.step = _node(self.practice, "Step", "when the User creates their account", 20)
             self.later = _node(self.practice, "Operation", "register", 80)
             self.earlier = _node(self.practice, "Operation", "save", 5)
@@ -1139,42 +1144,126 @@ with description("an example a story test imports"):
             expect(self._aligned("LOCAL").file).to(equal(self.story_test))
 
 
-with description("a practice's graph"):
+with description("a graph's practice"):
+    with before.each:
+        self.graph = Graph()
+        self.practice = self.graph.practice("stories")
+        self.story = self.practice.add_named("Story", "stories:Story:Create account", "Create account", Source("story.md", 1, 1))
+
+    with it("should hold the practice's guidance"):
+        expect(self.practice.guidance.key).to(equal("stories"))
+
+    with it("should hold a guidance that knows the graph"):
+        expect(self.practice.guidance.graph).to(be(self.graph))
+
+    with it("should hold a guidance at no fidelity, since a fidelity belongs to a call"):
+        expect(self.practice.guidance.fidelities.current).to(be_none)
+
+    with it("should keep the same guidance when the graph asks for the practice again"):
+        expect(self.graph.practice("stories").guidance).to(be(self.practice.guidance))
+
+    with it("should give a node its practice by reference"):
+        expect(self.story.practice.guidance).to(be(self.practice.guidance))
+
+    with it("should give the practice its nodes through the graph it holds"):
+        expect(self.practice.guidance.graph.nodes_of(self.practice.guidance)).to(equal([self.story]))
+
+
+with description("a node's rules"):
+    with context("on a story"):
+        with before.each:
+            self.story = _node(Graph().practice("stories"), "Story", "Create account", 1)
+
+        with it("should hold the rules the stories schema gives a story"):
+            expect(self.story.rules.slugs).to(contain("story-scenarios-at-most-seven"))
+
+        with it("should run a rule whose check applies to a story"):
+            expect([rule.runs for rule in self.story.rules if rule.slug == "story-scenarios-at-most-seven"]).to(equal([True]))
+
+    with context("on a DDD entity"):
+        with before.each:
+            self.entity = _node(Graph().practice("ddd"), "Entity", "Order", 1)
+
+        with it("should carry the rules of the Clean Engineering class it is anchored to"):
+            expect(self.entity.rules.slugs).to(contain("keep-classes-single-responsibility"))
+
+    with context("on a node whose graph applies a pattern overlay"):
+        with before.each:
+            graph = Graph()
+            graph.overlays = PatternOverlays(["lern_domain_driven"]).paths
+            self.root = _node(graph.practice("ddd"), "NodeRoot", "order-node", 1)
+
+        with it("should carry the rules the pattern adds"):
+            expect(self.root.rules.slugs).to(contain("node-decides-next-page"))
+
+
+with description("a graph a session holds"):
     with before.each:
         import tempfile
 
         self.folder = Path(tempfile.mkdtemp())
-        self.source = self.folder / "src"
-        self.source.mkdir()
+        self.session_folder = self.folder / ".sessions" / "main"
+        (self.folder / "src").mkdir()
+        self.source = self.folder / "src" / "order.py"
+        self.source.write_text("class Order:\n    pass\n", encoding="utf-8")
+        self.graph = Graph.of_session(self.session_folder, self.folder)
 
     with after.each:
         import shutil
 
         shutil.rmtree(self.folder, ignore_errors=True)
 
-    with context("over a source root within the load budget"):
+    with it("should be the same graph each time the session asks"):
+        expect(Graph.of_session(self.session_folder, self.folder)).to(be(self.graph))
+
+    with it("should read no file until a call loads or refreshes it"):
+        expect(_class_names_in(self.graph)).to(equal([]))
+
+    with it("should open every practice on the session's root"):
+        expect(self.graph.practice("clean_engineering").source_root).to(equal(str(self.folder.resolve())))
+
+    with context("that is refreshed with a file an action wrote"):
         with before.each:
-            (self.source / "order.py").write_text("class Order:\n    pass\n", encoding="utf-8")
-            self.graph = Graph.of_practice(self.folder, "clean_engineering", self.source)
+            data_of(self.graph.refresh([str(self.source)]))
 
-        with it("should save its graph in the folder's .context"):
-            expect((self.folder / ".context" / "graph.json").is_file()).to(equal(True))
+        with it("should read the classes of that file"):
+            expect(_class_names_in(self.graph)).to(equal(["Order"]))
 
-        with it("should name the practice on its source root"):
-            expect(self.graph.practices["clean_engineering"].source_root).to(equal(str(self.source.resolve())))
+        with context("and refreshed again after the file changed"):
+            with before.each:
+                self.source.write_text("class Invoice:\n    pass\n", encoding="utf-8")
+                data_of(self.graph.refresh([str(self.source)]))
 
-    with context("over a source root with more source files than the load budget"):
+            with it("should hold only what the file holds now"):
+                expect(_class_names_in(self.graph)).to(equal(["Invoice"]))
+
+        with context("and a second file is written and refreshed"):
+            with before.each:
+                other = self.folder / "src" / "cart.py"
+                other.write_text("class Cart:\n    pass\n", encoding="utf-8")
+                data_of(self.graph.refresh([str(other)]))
+
+            with it("should keep the first file's classes and add the second's"):
+                expect(_class_names_in(self.graph)).to(equal(["Cart", "Order"]))
+
+        with context("and the file is deleted and refreshed"):
+            with before.each:
+                self.source.unlink()
+                data_of(self.graph.refresh([str(self.source)]))
+
+            with it("should drop its classes"):
+                expect(_class_names_in(self.graph)).to(equal([]))
+
+    with context("that is refreshed with a file in a session's folder"):
         with before.each:
-            for number in range(41):
-                (self.source / f"module_{number}.py").write_text("x = 1\n", encoding="utf-8")
-            self.graph = Graph.of_practice(self.folder, "clean_engineering", self.source)
+            report = self.session_folder / "report.md"
+            report.parent.mkdir(parents=True)
+            report.write_text("# report\n", encoding="utf-8")
+            self.message = data_of(self.graph.refresh([str(report)]))["message"]
 
-        with it("should name the practice on its source root"):
-            expect(self.graph.practices["clean_engineering"].source_root).to(equal(str(self.source)))
+        with it("should read nothing, since no practice reads a session's folder"):
+            expect(self.message).to(contain("nothing was refreshed"))
 
-        with it("should read none of the files"):
-            expect((self.folder / ".context" / "graph.json").exists()).to(equal(False))
 
-        with it("should report the folder it belongs to"):
-            expect(self.graph.folder).to(equal(str(self.folder)))
-
+def _class_names_in(graph: Graph) -> list[str]:
+    return sorted(node.name for node in graph.practice("clean_engineering").nodes.get("OoadClass", []))

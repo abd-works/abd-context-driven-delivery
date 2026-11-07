@@ -10,7 +10,7 @@ if str(_REPO) not in sys.path:
 from expects import equal, expect
 from mamba import before, context, description, it
 
-from harness.graph.graph import EdgeType, Node, PracticeGraph, Source
+from harness.graph.graph import EdgeType, Graph, Node, Source
 from harness.graph.rule_context import RuleCheckContext
 from cdd_guidance.practices.stories.model.story_model import Step, StepType
 from cdd_guidance.practices.stories.rules.scenarios import AndChaining, ScenariosShape
@@ -44,7 +44,7 @@ def _record_steps(practice, scenario: Node, steps: list[Node]) -> None:
 with description("ScenariosShape"):
     with context("with When and Then only"):
         with before.each:
-            self.practice = PracticeGraph("stories")
+            self.practice = Graph().practice("stories")
             self.scenario = _scenario(self.practice)
             when = _step(self.practice, "When", "the User proceeds", 1)
             then = _step(self.practice, "Then", "the User can enter account credentials", 2)
@@ -56,7 +56,7 @@ with description("ScenariosShape"):
 
     with context("with a second When before Then"):
         with before.each:
-            self.practice = PracticeGraph("stories")
+            self.practice = Graph().practice("stories")
             self.scenario = _scenario(self.practice)
             steps = [
                 _step(self.practice, "When", "first", 1),
@@ -72,7 +72,7 @@ with description("ScenariosShape"):
 
     with context("with When then When then"):
         with before.each:
-            self.practice = PracticeGraph("stories")
+            self.practice = Graph().practice("stories")
             self.scenario = _scenario(self.practice)
             steps = [
                 _step(self.practice, "When", "first", 1),

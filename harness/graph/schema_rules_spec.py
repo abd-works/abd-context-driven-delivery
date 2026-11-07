@@ -6,6 +6,7 @@ from mamba import before, description, it
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.graph_rules_collection import GraphRulesCollection
 from harness.graph.schema_rules import PracticeSchema
+from harness.guidance.practice_catalogue import PracticeCatalogue
 
 
 with description("schema rules on a node"):
@@ -64,46 +65,46 @@ with description("schema rules on a node"):
         expect(prose.body).not_to(equal(""))
 
     with it("should give an operation its schema's rules"):
-        expect(PracticeSchema.load("clean_engineering").slugs_for("Operation")).to(
+        expect(PracticeSchema.load(PracticeCatalogue.practice("clean_engineering")).slugs_for("Operation")).to(
             contain("limit-operation-parameters")
         )
 
 
 with description("DDD schema extends clean engineering"):
     with it("should inherit OoadClass rules on Entity"):
-        expect(PracticeSchema.load("ddd").slugs_for("Entity")).to(contain("keep-classes-single-responsibility"))
+        expect(PracticeSchema.load(PracticeCatalogue.practice("ddd")).slugs_for("Entity")).to(contain("keep-classes-single-responsibility"))
 
     with it("should inherit Module rules on BoundedContext"):
-        expect(PracticeSchema.load("ddd").slugs_for("BoundedContext")).to(contain("named-seam-and-constraint"))
+        expect(PracticeSchema.load(PracticeCatalogue.practice("ddd")).slugs_for("BoundedContext")).to(contain("named-seam-and-constraint"))
 
     with it("should resolve ce anchor for tactical class types"):
-        expect(PracticeSchema.load("ddd").anchor_type("ValueObject")).to(equal("OoadClass"))
-        expect(PracticeSchema.load("ddd").anchor_type("BoundedContext")).to(equal("Module"))
+        expect(PracticeSchema.load(PracticeCatalogue.practice("ddd")).anchor_type("ValueObject")).to(equal("OoadClass"))
+        expect(PracticeSchema.load(PracticeCatalogue.practice("ddd")).anchor_type("BoundedContext")).to(equal("Module"))
 
     with it("should not list flaccid-data-object on value objects"):
-        slugs = PracticeSchema.load("ddd").slugs_for("ValueObject")
+        slugs = PracticeSchema.load(PracticeCatalogue.practice("ddd")).slugs_for("ValueObject")
         expect("flaccid-data-object-no-behavior" in slugs).to(equal(False))
 
 
 with description("LERN overlay rules"):
     with it("should give NodeRoot the tier rules when the overlay is active"):
-        slugs = PracticeSchema.load("ddd", ("lern_domain_driven",)).slugs_for("NodeRoot")
+        slugs = PracticeSchema.load(PracticeCatalogue.practice("ddd"), ("lern_domain_driven",)).slugs_for("NodeRoot")
         expect(slugs).to(contain("node-decides-next-page"))
         expect(slugs).to(contain("node-tier-uses-node-suffix"))
 
     with it("should prefix overlay-declared tier rules in qualified labels"):
         expect(
-            PracticeSchema.load("ddd", ("lern_domain_driven",)).rule_label("NodeRoot", "node-decides-next-page")
+            PracticeSchema.load(PracticeCatalogue.practice("ddd"), ("lern_domain_driven",)).rule_label("NodeRoot", "node-decides-next-page")
         ).to(equal("lern.domain.driven.ddd.NodeRoot.node-decides-next-page"))
 
 
 with description("a rule label"):
     with it("should name the practice, the node, and the rule"):
-        expect(PracticeSchema.load("clean_engineering").rule_label("Operation", "limit-operation-parameters")).to(
+        expect(PracticeSchema.load(PracticeCatalogue.practice("clean_engineering")).rule_label("Operation", "limit-operation-parameters")).to(
             equal("clean_engineering.Operation.limit-operation-parameters")
         )
 
     with it("should prefix a pattern node"):
-        expect(PracticeSchema.load("ddd", ("lern_domain_driven",)).rule_label("Route", "keep-classes-single-responsibility")).to(
+        expect(PracticeSchema.load(PracticeCatalogue.practice("ddd"), ("lern_domain_driven",)).rule_label("Route", "keep-classes-single-responsibility")).to(
             equal("lern.domain.driven.ddd.Route.keep-classes-single-responsibility")
         )

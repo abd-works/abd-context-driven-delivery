@@ -12,7 +12,7 @@ from cdd_guidance.practices.clean_engineering.model.python.python_class_model im
 from cdd_guidance.practices.clean_engineering.model.sketch.sketch_class_model import SketchCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset, tools
-from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.guidance import PracticeGuidance, rules_in
 
 
 @agent_toolset
@@ -55,6 +55,33 @@ class CleanEngineering(PracticeGuidance):
             },
         )
         self._drawio: Drawio | None = None
+
+    # In the knowledge graph: Clean Engineering's modules, classes, and members, its rules, and the draw.io rules it
+    # checks on a diagram's nodes.
+    class_types = ("OoadClass",)
+    member_types = ("Operation", "Property")
+    class_node_type = "OoadClass"
+    anchor_types = {
+        "module": "Module",
+        "class": "OoadClass",
+        "property": "Property",
+        "operation": "Operation",
+        "parameter": "Parameter",
+        "package": "Package",
+    }
+
+    def own_graph_checks(self) -> dict:
+        return {**super().own_graph_checks(), **self.language_checks("drawio")}
+
+    def language_checks(self, language: str) -> dict:
+        return rules_in(f"{self.package}.model.drawio.rules") if language == "drawio" else {}
+
+    def read_working_copy(self, practice_graph) -> None:
+        """Read each source file with its language's class model, adding the folders, classes, properties, operations,
+        and parameters it parsed as nodes, and keep the members the model documents describe on the practice's root."""
+        from cdd_guidance.practices.clean_engineering.model.graph_reading import read_code_and_models
+
+        read_code_and_models(practice_graph)
 
     @property
     def drawio(self) -> Drawio:

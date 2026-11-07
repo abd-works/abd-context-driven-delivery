@@ -40,10 +40,12 @@ class Render(GuidanceAction):
         converted = self.each(on)
         tools(self.act_quickly)
         tools(self.place_rendered)
+        if self._session is not None:
+            tools(self.graph.refresh)
         return converted
 
     @agent_instructions
     def place_rendered(self) -> str:
-        """After render, fold the result into the module the sketch names when that module already has code. Keep the behavior that module already implements. Add the rendered operations and properties onto those types. Join behavior specs into the spec that module already has. When the sketch names no existing module, put each class in the practice model folder for that channel — `{practice}/model/{format}/`. Shared graph types stay on the harness knowledge graph. Do not replace an existing file with the rendered text. Do not re-render. Do not invent types."""
+        """After render, fold the result into the module the sketch names when that module already has code. Keep the behavior that module already implements. Add the rendered operations and properties onto those types. Join behavior specs into the spec that module already has. When the sketch names no existing module, put each class in the practice model folder for that channel — `{practice}/model/{format}/`. Shared graph types stay on the harness knowledge graph. Do not replace an existing file with the rendered text. Do not re-render. Do not invent types. Then call refresh with exactly the files you wrote, so the session's graph holds them as they are now; nothing watches the files."""
         return "Fold rendered classes into the module the sketch names, or the practice model folder when that module is new."
 

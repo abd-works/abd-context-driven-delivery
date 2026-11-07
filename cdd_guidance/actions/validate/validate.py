@@ -48,8 +48,8 @@ class Validate(GuidanceAction):
         has run on that folder), or path(s) to graph_return_nodes JSON
         or a saved graph.json. When set, append a graph-rule report for each guidance's practice and still run AI validation.
         paths: the files or folders being edited, named from the project's root or absolute (e.g. src/my-paradise/order.ts).
-        For graph-backed guidance, the graph is built from just these files as they are now and its rules run on them;
-        the saved graph is not read or rebuilt. A path that is not there, or not under the session's root, is refused.
+        For graph-backed guidance, the session's graph is refreshed with exactly these files as they are now and its rules
+        run on them; the saved graph is not read or rebuilt. A path that is not there, or not under the session's root, is refused.
         With no paths and no graph, the folders holding the fidelity's written output are checked."""
         self._work_on(guidance)
         sections: list[str] = [_VALIDATE_MARKDOWN]

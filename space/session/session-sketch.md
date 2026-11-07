@@ -319,10 +319,6 @@ Sessions, a session, and its log
 + guideline: PracticeGuidance
 	// loads on first use
 + fidelities: GuidanceCollection
-+ graph: Graph
-	// built once from its folder
-	-> Graph.of_practice
-+ root_node_name: str
 + enabled: bool
 	// data field
 + working_fidelity: str
@@ -583,9 +579,10 @@ it should leave session.log unchanged
 
 ```
 -> session.practice(name)
-it should hold that practice's guideline and graph
+it should hold that practice's guideline
   -> expect(session.practice(name).guideline).to be that practice guideline
-  -> expect(session.practice(name).graph).to be that practice graph
+it should hold a graph of its own, apart from the guideline an action works with
+  -> expect(session.graph.practices[name].guidance).not_to be session.practice(name).guideline
 it should return that same practice on the next ask
   -> expect(session.practice(name)).to be the entry from the first ask
 it should list every practice CDD has, opened or not
@@ -614,8 +611,8 @@ it should refuse a .context folder
 
 ```
 -> session.practice(name).keep_root(folder)
-it should point that practice's graph root at that folder
-  -> expect(session.practice(name).graph.practices[name].source_root).to equal folder
+it should point that practice's folder at that folder
+  -> expect(session.practice(name).folder).to equal folder
 it should keep that folder in the session's session.json and nowhere else
   -> expect(repo_path / ".context" / "practices.json").not to exist
 ```

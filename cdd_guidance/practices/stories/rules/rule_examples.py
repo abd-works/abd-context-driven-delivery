@@ -7,7 +7,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from harness.graph.graph import Node, PracticeGraph, Source
+from harness.graph.graph import Graph, Node, PracticeGraph, Source
 from harness.graph.rule_context import RuleCheckContext
 
 _EXAMPLES = Path(__file__).resolve().parents[1] / "model" / "typescript" / "_examples"
@@ -62,7 +62,7 @@ def violations_for_story_source(
     root = Path(temp.name)
     path = root / relative
     path.write_text(source.strip() + "\n", encoding="utf-8")
-    practice = PracticeGraph("stories")
+    practice = Graph().practice("stories")
     practice.source_root = str(root)
     practice._temp_dir = temp  # type: ignore[attr-defined]
     _story_nodes_from_ts(practice, source, relative)
@@ -119,7 +119,7 @@ def _practice_from_folder(folder: Path, *, relative_file: str) -> tuple[Practice
             target = root / item.relative_to(folder)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(item, target)
-    practice = PracticeGraph("stories")
+    practice = Graph().practice("stories")
     practice.source_root = str(root)
     practice._temp_dir = temp  # type: ignore[attr-defined]
     rel = relative_file.replace("\\", "/")

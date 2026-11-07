@@ -103,7 +103,7 @@ def companion_interface_name(class_name: str, known_names: Iterable[str]) -> str
 
 
 class OoadNode(ModelNode):
-    _graph_practice = "clean_engineering"
+    _practice_key = "clean_engineering"
     _semantic_type_name: str = "OoadNode"
     _belongs = {
         ("OoadClass", "Module"),

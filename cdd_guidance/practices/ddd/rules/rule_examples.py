@@ -34,7 +34,7 @@ def _node_type_for_class(clean, class_node) -> str:
 
 
 def _ddd_node(source: str, class_name: str, kind: str | None, lang: str, filename: str | None):
-    from cdd_guidance.practices.ddd.graph_practice import _tactical_block
+    from cdd_guidance.practices.ddd.model.graph_reading import tactical_block
 
     clean, root = practice_from_source(source, lang=lang, filename=filename)
     class_node = next((node for node in clean.nodes.get("OoadClass", []) if node.name == class_name), None)
@@ -43,7 +43,7 @@ def _ddd_node(source: str, class_name: str, kind: str | None, lang: str, filenam
     kind = kind or _node_type_for_class(clean, class_node)
     source = class_node.source
     ddd = clean.graph.practice("ddd")
-    node = ddd.add(_tactical_block(class_node, kind), f"ddd:{kind}:{source.file}:{class_name}", source.file, source.start_line, source.end_line)
+    node = ddd.add(tactical_block(class_node, kind), f"ddd:{kind}:{source.file}:{class_name}", source.file, source.start_line, source.end_line)
     node.set_fact("folder", class_node.get_fact("folder"))
     return node, ddd, root
 

@@ -1,4 +1,4 @@
-"""What each practice and each of its fidelities has in one session: where it writes, the files it declares, its graph."""
+"""What each practice and each of its fidelities has in one session: where it writes and the files it declares."""
 
 from __future__ import annotations
 
@@ -17,7 +17,6 @@ from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
 from tools.file_manager.file_manager import FileEntry
 
 if TYPE_CHECKING:
-    from harness.graph.graph import Graph
     from harness.guidance.guidance import FidelityGuidance, GuidanceCollection, PracticeGuidance
     from space.session.session import Session
 
@@ -41,17 +40,16 @@ class PracticeRootInContextError(ValueError):
 @language_adapter(language="typescript")
 @agent_toolset
 class PracticeSessionOutput:
-    """What one practice has in one session: its guideline, the paths it reads, its graph, whether it is on, the folder
-    it writes under, and the files each of its fidelities declares."""
+    """What one practice has in one session: its guideline, the paths it reads, whether it is on, the folder it writes
+    under, and the files each of its fidelities declares."""
 
-    # The guideline, folders, and graph load on first use: the board asks every ticket's session
+    # The guideline and folders load on first use: the board asks every ticket's session
     # which practices are enabled after every cdd call, and that question needs none of them.
 
     def __init__(self, name: str, session: Session) -> None:
         self._name = name
         self._session = session
         self._guideline: PracticeGuidance | None = None
-        self._graph: Graph | None = None
 
     @classmethod
     @tool_subject
@@ -101,22 +99,6 @@ class PracticeSessionOutput:
     def fidelities(self) -> GuidanceCollection:
         """The practice's fidelities, such as story_map, by name, each able to list its files in this session."""
         return self.guideline.fidelities
-
-    @property
-    def graph(self) -> Graph:
-        """This practice's graph, built once from its folder, with its saved graph in the session's repository."""
-        if self._graph is None:
-            from harness.graph.graph import Graph
-
-            self._graph = Graph.of_practice(self._session.repo_path, self.name, self.folder)
-        return self._graph
-
-    @property
-    def root_node_name(self) -> str:
-        """The name of the root node of this practice's graph, which an action's log line names; empty when its graph
-        holds no such practice."""
-        practice = self.graph.practices.get(self.name)
-        return practice.root_node.name if practice is not None else ""
 
     @property
     def _saved(self) -> dict:
@@ -195,7 +177,7 @@ class PracticeSessionOutput:
 
     @property
     def folder(self) -> Path:
-        """The folder this practice writes its code under and builds its graph from: the root chosen or configured,
+        """The folder this practice writes its code under: the root chosen or configured,
         else the practice's own default folder under the session's root, such as src for BDD."""
         relative = self._chosen_or_configured_root or self.guideline.default_workspace_folder
         return (self._session.root / relative).resolve()

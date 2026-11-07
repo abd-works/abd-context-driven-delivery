@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from harness.graph.graph_practice import GraphOverlay, GraphPractices
+from harness.graph.pattern_overlays import GraphOverlay
 
 
 class ClaudeModOverlay(GraphOverlay):
@@ -12,4 +12,4 @@ class ClaudeModOverlay(GraphOverlay):
         return CddClaudeMod()
 
 
-GraphPractices.register_overlay(ClaudeModOverlay("cdd_claude_mod"))
+OVERLAY = ClaudeModOverlay("cdd_claude_mod")

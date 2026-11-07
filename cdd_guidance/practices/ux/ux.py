@@ -50,6 +50,21 @@ class Ux(PracticeGuidance):
             },
         )
 
+    # In the knowledge graph: UX checks its screen rules on the UX maps put on a graph and offers the explorer the node
+    # types a UX map is made of. A working-copy load reads no UX files yet.
+    node_types = (
+        "UxMap",
+        "Screen",
+        "Region",
+        "Control",
+        "StoryDemoControl",
+        "Interaction",
+        "Transition",
+        "ContentType",
+        "NavComponent",
+        "UxContext",
+    )
+
     @agent_tool
     def ensure_javascript(self, practice: str, source_format: str, content: Any) -> dict:
         """Ensure Stories or Clean Engineering JS exists - transform via that practice if needed.

@@ -11,13 +11,13 @@ from expects import equal, expect  # noqa: E402
 from mamba import context, description, it  # noqa: E402
 
 from cdd_guidance.practices.stories.rules.acceptance_tests import DomainFixtureExampleFiles  # noqa: E402
-from harness.graph.graph import Node, PracticeGraph, Source  # noqa: E402
+from harness.graph.graph import Graph, Node, Source  # noqa: E402
 from harness.graph.rule_context import RuleCheckContext  # noqa: E402
 
 
 def _hits(file: str, *, imported_from: str | None = None) -> list[str]:
     """What the rule says about the example validCustomer, read from file or imported into file from a module."""
-    practice = PracticeGraph("stories")
+    practice = Graph().practice("stories")
     node = Node(practice, "Example", f"stories:Example:{file}:validCustomer", "validCustomer", Source(file, 1, 1))
     if imported_from is not None:
         node.set_fact("imported_modules", {"validCustomer": imported_from})

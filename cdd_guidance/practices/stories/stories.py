@@ -61,6 +61,28 @@ class Stories(PracticeGuidance):
         if stage is not None:
             self._activate(stage=stage)
 
+    # In the knowledge graph: Stories' epics, stories, scenarios, steps, and examples, linked to the Clean Engineering
+    # operations each step calls and the classes and properties each example shows.
+    source_ordered_types = frozenset({"Background", "Scenario", "Step", "Story"})
+    rule_types = {"SubEpic": ("Epic", "StoryNode"), "Epic": ("StoryNode",), "Story": ("StoryNode",)}
+
+    def align_node(self, node) -> None:
+        from cdd_guidance.practices.stories.model.graph_reading import align_story_node
+
+        align_story_node(node)
+
+    def read_working_copy(self, practice_graph) -> None:
+        """Read the story tests, or the story maps when there are none, into the Stories practice graph."""
+        from cdd_guidance.practices.stories.model.graph_reading import read_stories
+
+        read_stories(practice_graph)
+
+    def link_to_other_practices(self, graph) -> None:
+        """Link each step to the operations it calls and each example to the classes and properties it shows."""
+        from cdd_guidance.practices.stories.model.graph_reading import link_steps_and_examples
+
+        link_steps_and_examples(graph)
+
     def read_paths(self, paths: list[str] | str, source: str | None = None):
         """Story tests in code carry their epic and sub-epic only in their folders, under the story map that names them,
         so they are read as files beside that map, not as one run of text. Paths and node paths are named from the

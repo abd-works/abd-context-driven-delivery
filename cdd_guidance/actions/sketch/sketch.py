@@ -77,6 +77,7 @@ class Sketch(GuidanceAction):
         target = self._context_folder(module) / self._sketch_name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(self.document_named(content, paths), encoding="utf-8")
+        self.wrote([target])
         return str(target)
 
     @mcp

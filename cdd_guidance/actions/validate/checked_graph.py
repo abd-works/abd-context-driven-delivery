@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any
 
 from harness.graph.violation import Violation
-from harness.guidance.practice_catalogue import PracticeCatalogue
 
 from cdd_guidance.actions.validate.report_files import ReportFiles
 from cdd_guidance.actions.validate.graph_json_reader import (
@@ -65,16 +64,15 @@ class CheckedGraph:
         return [violation for violation in found if violation.location not in self.unchecked_files]
 
     def _built_from(self, edited: list[str], destination: Path) -> Path:
-        """Build the graph from just the edited files and write it at destination; the saved graph stays as it is. Each
-        call writes its own file, so calls running at once never read each other's graph.
+        """Refresh the session's graph with the edited files, read as they are now, and write the nodes read from them
+        at destination; the saved graph stays as it is. Each call writes its own file, so calls running at once never
+        read each other's report graph.
 
-        Every graph practice loads, because one builds on another (DDD building blocks come from the clean engineering
-        classes); the report keeps only the listed guidance's practice."""
-        from harness.graph.graph import Graph
-
-        graph = Graph()
-        graph.load_files(str(self.session.root), list(PracticeCatalogue.keys()), edited)
-        graph.write_json(str(destination))
+        The session's graph holds every practice, because one builds on another (DDD building blocks come from the
+        clean engineering classes); the report keeps only the listed guidance's practice."""
+        graph = self.session.graph
+        graph.refresh(edited)
+        graph.write_json(str(destination), edited)
         return destination
 
     def _from_session_root(self, paths: list[str] | None) -> list[str]:

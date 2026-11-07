@@ -1,12 +1,14 @@
-"""PracticeChecks. Run a practice's graph rules and record each violation on the node it was found on."""
+"""PracticeChecks. Run a practice's graph rules and record each violation on the node it was found on.
+
+A practice names the graph rules it checks itself (``PracticeGuidance.graph_checks``), and the part of the graph holding it
+adds the rules each applied pattern overlay gives it (``PracticeGraph.checks``). Which of them apply to one node, the node
+says itself (``Node.rules``)."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from harness.graph.graph_practice import GraphPractices
 from harness.graph.rule_context import RuleCheckContext
-from harness.graph.schema_rules import PracticeSchema
 
 
 class PracticeChecks:
@@ -14,13 +16,11 @@ class PracticeChecks:
 
     def __init__(self, practice) -> None:
         self.practice = practice
-        self.patterns = practice.graph.overlay_patterns if practice.graph is not None else ()
-        self.graph_practice = GraphPractices.named(practice.name)
         self.context = RuleCheckContext(practice, Path(practice.source_root) if practice.source_root else None)
 
     def run(self) -> None:
-        PracticeSchema.load(self.practice.name, self.patterns).apply_to(self.practice)
-        checks = list(self.graph_practice.checks(self.patterns).values())
+        self.practice.schema.apply_to(self.practice)
+        checks = list(self.practice.checks().values())
         if not checks:
             return
         for index, check in enumerate(checks, start=1):
@@ -38,12 +38,12 @@ class PracticeChecks:
         for index, node in enumerate(nodes, start=1):
             self._report(f"{self.practice.name} · rules · {index}/{len(nodes)} · {node.type} {node.name}")
             skipped = {slug for slugs, spans in covering for slug in slugs if self._inside(node, spans)}
-            for check in self.graph_practice.checks_for(node, self.patterns).values():
-                if check.slug not in node.rules.slugs or check.slug in skipped:
+            for rule in node.rules:
+                if not rule.runs or rule.slug in skipped:
                     continue
-                self._report(f"{self.practice.name} · rule {check.slug} · {index}/{len(nodes)} · {node.name}")
-                for message in check.check(node, self.context):
-                    node.rules.record_violation(check.slug, message)
+                self._report(f"{self.practice.name} · rule {rule.slug} · {index}/{len(nodes)} · {node.name}")
+                for message in rule.check(node, self.context):
+                    node.rules.record_violation(rule.slug, message)
 
     def _covering_classes(self) -> list[tuple[frozenset[str], dict[str, list[tuple[int, int]]]]]:
         """For each other loaded practice that checks whole classes: its check slugs, and its classes' line spans by file."""
@@ -52,14 +52,14 @@ class PracticeChecks:
             return []
         found = []
         for name, other in graph.practices.items():
-            class_type = GraphPractices.named(name).class_node_type
+            class_type = other.guidance.class_node_type
             if name == self.practice.name or not class_type:
                 continue
             spans: dict[str, list[tuple[int, int]]] = {}
             for node in other.nodes.get(class_type, []):
                 if node.source.file:
                     spans.setdefault(node.source.file.replace("\\", "/"), []).append((node.source.start_line, node.source.end_line))
-            found.append((frozenset(GraphPractices.named(name).checks()), spans))
+            found.append((frozenset(other.checks()), spans))
         return found
 
     def _inside(self, node, spans: dict[str, list[tuple[int, int]]]) -> bool:

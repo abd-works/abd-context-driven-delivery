@@ -8,7 +8,7 @@ from expects import contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import before, context, description, it
 
-from harness.graph.graph import EdgeType, Graph, Node, PracticeGraph, Source
+from harness.graph.graph import EdgeType, Graph, Node, Source
 from harness.graph.saved_graph import SavedPractice
 
 
@@ -79,7 +79,7 @@ with description("a graph"):
 
     with context("with a saved node that carries a stage"):
         with before.all:
-            self.practice = PracticeGraph("clean_engineering")
+            self.practice = Graph().practice("clean_engineering")
             saved = {"nodes": [_saved_node("id", "AccountCredentials", "OoadClass", "account.ts", 4, "implementation")]}
             self.practice.restore(SavedPractice.from_record("clean_engineering", saved))
             self.node = self.practice.by_id["id"]
@@ -89,7 +89,7 @@ with description("a graph"):
 
     with context("with a package between a module and a class"):
         with before.all:
-            self.practice = PracticeGraph("clean_engineering")
+            self.practice = Graph().practice("clean_engineering")
             self.practice.by_id[self.practice.root_node.node_id] = self.practice.root_node
             module, package = "clean_engineering:Module:src/domain:domain", "clean_engineering:Package:src/domain/customer:customer"
             customer = "clean_engineering:OoadClass:src/domain/customer/Customer.ts:Customer"

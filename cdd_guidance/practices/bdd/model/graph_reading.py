@@ -10,9 +10,7 @@ from pathlib import Path
 from harness.name.name import Name
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.graph import Graph, PracticeGraph
-from harness.graph.graph_practice import GraphPractice, GraphPractices
 
-_PACKAGE = "cdd_guidance.practices.bdd"
 _CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py"}
 _BEHAVIOR_EDGES = {"Description": "descriptions", "Context": "contexts", "Observation": "observations"}
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
@@ -25,25 +23,23 @@ _QUOTED = re.compile(r"""(['"`])(?:\\.|(?!\1).)*\1""")
 _SPEC_STATE = re.compile(r"\bself\.(\w+)")
 
 
-class BddGraph(GraphPractice):
-    """BDD's describe trees, linked to the Clean Engineering members each observation drives."""
+def read_specs(practice: PracticeGraph) -> None:
+    """Add the describe tree of each spec file the graph reads to the BDD practice graph."""
+    from cdd_guidance.practices.bdd.model.spec_source import is_spec_file
 
-    node_types = ("Spec", "Description", "Context", "Observation")
+    root = Path(practice.source_root)
+    specs = [file for file in practice.graph.source_files(root, _CODE_SUFFIXES) if is_spec_file(file)]
+    with schema_sync_paused():
+        for index, file in enumerate(specs, start=1):
+            relative = file.relative_to(root).as_posix()
+            practice.graph.report_progress(f"bdd · specs · {index}/{len(specs)} · {relative}")
+            _add_spec(practice, file, relative)
 
-    def read(self, practice: PracticeGraph) -> None:
-        from cdd_guidance.practices.bdd.model.spec_source import is_spec_file
 
-        root = Path(practice.source_root)
-        specs = [file for file in practice.graph.source_files(root, _CODE_SUFFIXES) if is_spec_file(file)]
-        with schema_sync_paused():
-            for index, file in enumerate(specs, start=1):
-                relative = file.relative_to(root).as_posix()
-                practice.graph.report_progress(f"bdd · specs · {index}/{len(specs)} · {relative}")
-                _add_spec(practice, file, relative)
-
-    def link(self, graph: Graph) -> None:
-        if "bdd" in graph.practices and "clean_engineering" in graph.practices:
-            _ObservationLinks(graph).link()
+def link_observations(graph: Graph) -> None:
+    """Link each observation to the Clean Engineering members it drives, when the graph holds both practices."""
+    if "bdd" in graph.practices and "clean_engineering" in graph.practices:
+        _ObservationLinks(graph).link()
 
 
 def _add_spec(practice: PracticeGraph, file: Path, relative: str) -> None:
@@ -181,6 +177,3 @@ def _enclosing_setups(nodes: list, starts: list[int], index: int, lines: list[st
         first_child = next((start for start in starts[position + 1 :] if start > parent.source.start_line), parent.source.end_line)
         setups.append("\n".join(lines[parent.source.start_line : first_child - 1]))
     return setups
-
-
-GraphPractices.register(BddGraph("bdd", _PACKAGE))
