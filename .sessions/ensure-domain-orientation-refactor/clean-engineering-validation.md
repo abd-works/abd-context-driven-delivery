@@ -2,7 +2,7 @@
 
 Branch `ensure-domain-orientation-refactor`, validated at `d6c41b23`; module cards fixed in `784b4f31` and `fd5266a7`. The full suite passes (2703 examples).
 
-Validate ran through the CDD MCP host at the modules, model, and code fidelities across `harness/`, `space/`, `tools/`, and `cdd_guidance/`. For each call, an AI judge reviewed every rule and appended its judgment to the saved report. A separate cross-file pass looked for problems that show only across files, using the mistakes the corrections logs record. The 162 reports are in `validation-reports/` beside this file: 63 from the first round, and 99 from the second round, which covered the six practice folders (§12) and the rewritten module cards.
+Validate ran through the CDD MCP host at the modules, model, and code fidelities across `harness/`, `space/`, `tools/`, and `cdd_guidance/`. For each call, an AI judge reviewed every rule and appended its judgment to the saved report. A separate cross-file pass looked for problems that show only across files, using the mistakes the corrections logs record. The 116 reports are in `validation-reports/` beside this file: 63 from the first round, and 53 from the second round, which covered the six practice folders (§12) and the rewritten module cards.
 
 **The short answer:** the refactor did what it set out to do. The six dicts on Ticket are gone, actions read their call's session, practices answer their own roots and files, and the board and stage do their own work. The repository still has more open issues than hoped for, and they cluster in a few places:
 - the MCP host itself
