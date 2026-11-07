@@ -1,6 +1,7 @@
 """Draw.io channel - IA via drawio-ux CLI (Detailed IA + Site Map).
 
-Render builds CLI state from the UxMap and invokes `drawio_ux.mjs write`.
+Render copies the UxMap into a DrawioUxMap, whose screens and regions spell their own part of the drawio-ux
+command line's state, and invokes `drawio_ux.mjs write`.
 Parse prefers the Site Map page for screens/transitions; region titles come
 from the Detailed IA page when present. The diagram carries screens, their regions, and transitions;
 layouts, story names, and controls stay in the JSON and HTML formats.
@@ -15,9 +16,7 @@ import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Optional
-
-from cdd_guidance.practices.ux.model.drawio.cli_state import ux_map_to_cli_state
+from typing import Any, Dict, Optional
 
 from cdd_guidance.practices.ux.model.nodes import Region, Screen, Transition
 from cdd_guidance.practices.ux.model.ux_map import UxMap
@@ -45,7 +44,61 @@ class UnreadableDrawio(ValueError):
     """The draw.io content is not XML, so it holds no screens to read."""
 
 
+# Layouts the CLI templates understand (alias -> CLI id).
+_CLI_LAYOUTS = {
+    "stack": "stack",
+    "list": "stack",
+    "modal": "modal",
+    "modal-dialog": "modal",
+    "form": "form",
+    "sidebar": "sidebar",
+    "split-screen": "split-screen",
+    "flyout": "flyout",
+    "flyout-panel": "flyout",
+    "holy-grail": "holy-grail",
+}
+
+
+class DrawioRegion(Region):
+    """A region on the Detailed IA page: a form, a list with its actions, or chrome, by the controls it holds."""
+
+    def cli_record(self) -> Dict[str, Any]:
+        """This region in the drawio-ux command line's state."""
+        area = self.area or "body"
+        controls = list(self.controls)
+        buttons = [control for control in controls if control.control_type == "button"]
+        fields = [control for control in controls if control.control_type in {"text", "dropdown", "checkbox"}]
+        lists = [control for control in controls if control.control_type in {"list", "tree"}]
+        if fields and not lists:
+            return {"name": self.name, "type": "form", "area": area,
+                    "fields": [control.label for control in fields] + [f"[{control.label}]" for control in buttons]}
+        if lists or buttons:
+            labels = [control.label for control in lists] or [control.label for control in controls if control.control_type != "button"]
+            return {"name": self.name, "type": "list", "area": area, "fields": labels or [self.name],
+                    "actions": [control.label for control in buttons]}
+        return {"name": self.name, "type": "chrome", "area": area, "dimmed": False}
+
+
+class DrawioScreen(Screen):
+    """A screen on the Site Map and Detailed IA pages, laid out in its column with the CLI layout its own is closest to."""
+
+    def cli_record(self, column: int) -> Dict[str, Any]:
+        """This screen in the drawio-ux command line's state, in column."""
+        return {
+            "name": self.name,
+            "layout": _CLI_LAYOUTS.get((self.layout or "").strip().lower(), "stack"),
+            "tabOf": self.chrome_of.name if self.chrome_of else None,
+            "col": column,
+            "row": 0,
+            "regions": [region.cli_record() for region in self.regions],
+            "stories": self.story_keys,
+            "terms": list(self.domain_terms or self.domain_concepts),
+        }
+
+
 class DrawioUxMap(UxMap):
+    screen_type = DrawioScreen
+    region_type = DrawioRegion
     workspace_files = (
         ".context/information-architecture.drawio",
         ".context/ia.drawio",
@@ -66,13 +119,36 @@ class DrawioUxMap(UxMap):
         return DrawioUxMapReader(type(self).create(), root_element).read()
 
     def render(self, ux_map: UxMap) -> str:
-        """Render Detailed IA + Site Map through the vendored drawio-ux CLI."""
+        """ux_map as Detailed IA + Site Map: copied into a draw.io map with this map's timeout, which draws itself."""
+        drawn = type(self).copy_of(ux_map)
+        drawn.cli_timeout_seconds = self.cli_timeout_seconds
+        return drawn.save()
+
+    def cli_state(self, target: str) -> Dict[str, Any]:
+        """This map as the state drawio_ux.mjs writes to target: its screens in columns and its transitions."""
+        return {
+            "target": target,
+            "screens": [screen.cli_record(index) for index, screen in enumerate(self.screens)],
+            "connections": [
+                {
+                    "from": transition.from_screen.name if transition.from_screen else "",
+                    "to": transition.to_screen.name if transition.to_screen else "",
+                    "label": transition.trigger or transition.name,
+                    "dashed": transition.nav_type == "tab",
+                }
+                for transition in self.transitions
+            ],
+            "scope": self.scope,
+        }
+
+    def save(self) -> str:
+        """Draw Detailed IA + Site Map through the vendored drawio-ux CLI."""
         if not _CLI.is_file():
             raise DrawioCliMissing(f"drawio-ux CLI missing: {_CLI}")
         with tempfile.TemporaryDirectory(prefix="ux-drawio-") as folder:
             out_path = Path(folder) / "information-architecture.drawio"
             state_path = Path(folder) / "state.json"
-            state_path.write_text(json.dumps(ux_map_to_cli_state(ux_map, str(out_path)), indent=2), encoding="utf-8")
+            state_path.write_text(json.dumps(self.cli_state(str(out_path)), indent=2), encoding="utf-8")
             self._run_cli(["node", str(_CLI), "write", str(out_path), str(state_path)])
             if not out_path.is_file():
                 raise DrawioCliFailed(f"drawio-ux write produced no diagram at {out_path}")
@@ -115,7 +191,7 @@ class DrawioUxMapReader:
             name = _plain_text(cell.get("value", ""))
             if not name or _is_annotation(name):
                 continue
-            screen = Screen(name, len(self.ux_map.screens), graph=self.ux_map.graph)
+            screen = self.ux_map.screen_type(name, len(self.ux_map.screens), graph=self.ux_map.graph)
             self.ux_map.append_screen(screen)
             self._screen_by_cell[cell.get("id", "")] = screen
 
@@ -130,7 +206,7 @@ class DrawioUxMapReader:
                 continue
             if any(region.name == region_name for region in screen.regions):
                 continue
-            screen.append_region(Region(region_name, len(screen.regions), graph=self.ux_map.graph))
+            screen.append_region(self.ux_map.region_type(region_name, len(screen.regions), graph=self.ux_map.graph))
 
     def _detailed_screen_cells(self, detailed: ET.Element) -> dict[str, Screen]:
         screen_by_name = {screen.name: screen for screen in self.ux_map.screens}

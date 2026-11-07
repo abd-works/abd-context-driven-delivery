@@ -17,6 +17,7 @@ _VERBS = {"Given": "given", "When": "when", "Then": "then", "But": "but_", "And"
 
 class PythonStoryModel(CodeStoryModel):
     LEAF_EXTENSION = "_story.test.py"
+    story_test_suffix = LEAF_EXTENSION
     epic_type = PythonEpic
     story_type = PythonStory
     language = PYTHON

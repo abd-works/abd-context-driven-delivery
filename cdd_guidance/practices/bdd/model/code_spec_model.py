@@ -10,7 +10,6 @@ from typing import Callable, List, Optional, Tuple, Union
 from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, TYPESCRIPT, CodeBody, CodeLanguage, WrittenBlock
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
-from cdd_guidance.practices.clean_engineering.model.call_graph import render_call_graph_block
 
 _SIGNATURE = "BDD: SIGNATURE"
 _SPEC = "spec"
@@ -164,7 +163,7 @@ class CodeBddModel(BddModel):
 
     def _realization(self, observation: Observation) -> List[str]:
         """The realization call graph for an it nobody has written: surface lines, then calls, as comments."""
-        graph = textwrap.dedent(render_call_graph_block(observation.call_graph)).splitlines()
+        graph = textwrap.dedent(observation.call_graph.block()).splitlines()
         lines = [f"-> {surface}" for surface in observation.surface_lines] + graph
         return [self.language.comment(line) for line in lines]
 

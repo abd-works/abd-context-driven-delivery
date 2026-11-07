@@ -5,7 +5,7 @@ substituting SVG canvas-composer assertions for XML/mxCell assertions.
 
 Covers two description blocks (one per fidelity, one turn each):
   1. story-map fidelity  — render / parse / sync the Epic->Epic->Story grid
-  2. thin-slice fidelity — MiroIncrement.save / MiroIncrement.load swim-lane table
+  2. thin-slice fidelity — MiroStoryModel.save_thin_slice / load_thin_slice swim-lane table
 """
 
 import sys
@@ -267,15 +267,16 @@ with description("a Miro Story Map (thin-slice fidelity)") as self:
     with context("rendering the thin-slice view for a StoryModel with 2 increments"):
         with before.each:
             self.source = fixture.story_map_with_4_epics_and_3_epics_and_1_story()
+            stories = {story.name: story for story in self.source.every_story()}
             inc_a = MiroIncrement(
                 "Increment A - first outcome",
                 1,
-                [MiroStory("Story 1.1.1", 1), MiroStory("Story 1.2.1", 2)],
+                [stories["Story 1.1.1"], stories["Story 1.2.1"]],
             )
-            inc_b = MiroIncrement("Increment B - second outcome", 2, [MiroStory("Story 1.3.1", 1)])
+            inc_b = MiroIncrement("Increment B - second outcome", 2, [stories["Story 1.3.1"]])
             self.source.append_increment(inc_a)
             self.source.append_increment(inc_b)
-            self.text = MiroIncrement.save(self.source)
+            self.text = self.source.save_thin_slice()
             self.root = ET.fromstring(
                 self.text.split("\n", 1)[1] if self.text.startswith("<?") else self.text
             )
@@ -306,16 +307,18 @@ with description("a Miro Story Map (thin-slice fidelity)") as self:
     with context("parsing the thin-slice SVG back into increment nodes"):
         with before.each:
             self.source = fixture.story_map_with_4_epics_and_3_epics_and_1_story()
-            inc_a = MiroIncrement("Increment A", 1, [MiroStory("Story 1.1.1", 1)])
+            stories = {story.name: story for story in self.source.every_story()}
+            inc_a = MiroIncrement("Increment A", 1, [stories["Story 1.1.1"]])
             inc_b = MiroIncrement(
                 "Increment B",
                 2,
-                [MiroStory("Story 1.2.1", 1), MiroStory("Story 1.3.1", 2)],
+                [stories["Story 1.2.1"], stories["Story 1.3.1"]],
             )
             self.source.append_increment(inc_a)
             self.source.append_increment(inc_b)
-            self.text = MiroIncrement.save(self.source)
-            self.increments = MiroIncrement.load(self.text)
+            self.text = self.source.save_thin_slice()
+            self.read = fixture.story_map_with_4_epics_and_3_epics_and_1_story().load_thin_slice(self.text)
+            self.increments = self.read.increments
 
         with it("should recover both increments"):
             expect(self.increments).to(have_len(2))
@@ -330,11 +333,14 @@ with description("a Miro Story Map (thin-slice fidelity)") as self:
                 equal(["Story 1.2.1", "Story 1.3.1"])
             )
 
+        with it("should deliver the map's own stories, which stay under their epics"):
+            expect(self.increments[0].stories[0].parent.name).to(equal("Epic 1.1"))
+
     with context("that is not a valid thin-slice SVG"):
         with context("the parse"):
             with it("should be rejected"):
                 expect(
-                    lambda: MiroIncrement.load("<not-svg/>")
+                    lambda: MiroStoryModel().load_thin_slice("<not-svg/>")
                 ).to(raise_error(MiroParseError))
 
 

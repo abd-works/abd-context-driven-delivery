@@ -19,6 +19,7 @@ from cdd_guidance.practices.stories.model.story_model import StoryModel
 from cdd_guidance.practices.stories.model.markdown.nodes import (
     MarkdownParseError,
     MarkdownScenario,
+    MarkdownStory,
     MarkdownStoryModel,
 )
 
@@ -466,7 +467,9 @@ cart.checkout()
         scenarios = MarkdownScenario.from_text(text, "pay/cart_story.test.md")
         when = scenarios[0].steps_in(StepType.WHEN)[0]
         expect(when.call_graph[1].text).to(equal("paymentGateway.charge(amount)"))
-        rendered = MarkdownScenario.render_scenarios(scenarios)
+        story = MarkdownStory("")
+        story.scenarios = scenarios
+        rendered = story.scenarios_text()
         expect("```realization" in rendered).to(equal(True))
         expect("paymentGateway.charge(amount)" in rendered).to(equal(True))
 

@@ -14,7 +14,7 @@ from harness.graph.graph import Graph
 
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph, CallGraphEntry
 
 
 with description("a bdd spec on a graph"):
@@ -67,7 +67,7 @@ it should complete payment
         spec = BddModel()
         cart = Description("a cart")
         empty = Observation("should start empty")
-        empty.call_graph = [CallGraphEntry(depth=0, kind="out", text="Cart.items")]
+        empty.call_graph = CallGraph([CallGraphEntry(depth=0, kind="out", text="Cart.items")])
         cart.observations.append(empty)
         with_items = Context("that has items")
         with_items.observations.append(Observation("should count them"))

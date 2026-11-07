@@ -69,8 +69,6 @@ with description("Stories"):
             with before.each:
                 import tempfile
 
-                from cdd_guidance.practices.stories.model.story_model import StoryModel
-
                 self.root = Path(tempfile.mkdtemp(prefix="cdd-story-layout-"))
                 (self.root / "story-map.md").write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
                 names = {"{epic}": "move-work-on-board", "{sub-epic}": "display-board", "{story}": "open-board", "{story_snake}": "open_board"}
@@ -80,7 +78,7 @@ with description("Stories"):
                 story_test = self.root / self.filled
                 story_test.parent.mkdir(parents=True)
                 story_test.write_text('with story("Open Board"):\n    with scenario("Open it"):\n        with given("a board"):\n            pass\n', encoding="utf-8")
-                self.model = StoryModel.load_files([str(story_test)], self.root)
+                self.model = Stories().read_files([story_test], self.root)
 
             with after.each:
                 import shutil
@@ -99,8 +97,6 @@ with description("Stories"):
             with before.each:
                 import tempfile
 
-                from cdd_guidance.practices.stories.model.story_model import StoryModel
-
                 self.root = Path(tempfile.mkdtemp(prefix="cdd-story-layout-"))
                 story_map = self.root / Stories(fidelity="story_map").fidelities.current.outputs["markdown"]
                 story_map.parent.mkdir(parents=True)
@@ -108,7 +104,7 @@ with description("Stories"):
                 story_test = self.root / "move-work-on-board" / "display-board" / "open-board" / "open_board_story.test.py"
                 story_test.parent.mkdir(parents=True)
                 story_test.write_text('with story("Open Board"):\n    with scenario("Open it"):\n        with given("a board"):\n            pass\n', encoding="utf-8")
-                self.model = StoryModel.load_files([str(story_test)], self.root)
+                self.model = Stories().read_files([story_test], self.root)
 
             with after.each:
                 import shutil

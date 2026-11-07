@@ -45,3 +45,20 @@ with description("Design canvas") as self:
         with it("names a dc-import by the file's stem, and its live flag in camel case"):
             expect(stem("screens/verify-ported-number.dc.html")).to(equal("verify-ported-number"))
             expect(Name("verify-ported-number").camel).to(equal("verifyPortedNumber"))
+
+
+with description("a design canvas made with its project folder"):
+    with before.each:
+        self.project = Path(tempfile.mkdtemp(prefix="cdd-canvas-"))
+        (self.project / "screens").mkdir()
+        (self.project / "screens" / "plan.dc.html").write_text('<link rel="stylesheet" href="../styles/app.css">', encoding="utf-8")
+        self.canvas = DesignCanvas("Story Map", self.project)
+
+    with it("should list the artboards already in a folder of the project"):
+        expect(self.canvas.artboards_in("screens")).to(equal(["screens/plan.dc.html"]))
+
+    with it("should name the stylesheets those artboards link"):
+        expect(self.canvas.stylesheets_linked_by(["screens/plan.dc.html"])).to(equal(["../styles/app.css"]))
+
+    with it("should hold no file the project does not have"):
+        expect(self.canvas.size_of("shots/missing.png")).to(equal(None))
