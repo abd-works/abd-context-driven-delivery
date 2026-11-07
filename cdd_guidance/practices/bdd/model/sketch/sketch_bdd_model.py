@@ -17,8 +17,3 @@ class SketchBddModel(BddModel):
             text = outline.body_for(SketchLens.of("bdd"))
         self.descriptions = _parse_sketch(text)
         return self
-
-    def render(self, canonical: BddModel, previous: str | None = None) -> str:
-        from cdd_guidance.practices.bdd.model.bdd_model import _render_sketch
-
-        return "\n\n".join(_render_sketch(item) for item in canonical.descriptions)

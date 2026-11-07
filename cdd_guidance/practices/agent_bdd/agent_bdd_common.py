@@ -13,6 +13,7 @@ from typing import Any, TypedDict
 
 from harness.agent_tools.name import Name
 
+from agent_bdd.cursor_cli import CursorCli
 from agent_bdd.yaml_fence import YamlFence
 
 try:
@@ -286,12 +287,6 @@ class AgentSession:
         self._log = HarnessLog("cursor_channel")
 
     @classmethod
-    def launcher(cls) -> str | None:
-        from cli_agent.cli_agent import CursorCli
-
-        return CursorCli().launcher()
-
-    @classmethod
     def load(cls, session_file: Path) -> AgentSession | None:
         if not session_file.is_file():
             return None
@@ -319,8 +314,6 @@ class AgentSession:
             if existing is not None:
                 log.write(f"session resumed: {existing.chat_id} ({session_file.name})")
                 return existing
-        from cli_agent.cli_agent import CursorCli
-
         log.write(f"creating new session for {session_file.name} in {workspace} ...")
         chat_id = CursorCli().create_chat(str(workspace.resolve()))
         session = cls(chat_id=chat_id, session_file=session_file)
@@ -329,8 +322,6 @@ class AgentSession:
         return session
 
     def run(self, prompt: str, workspace: Path, *, timeout_seconds: int = 300) -> AgentResult:
-        from cli_agent.cli_agent import CursorCli
-
         self._log.write(
             f"agent run starting (session={self.chat_id[:8]}..., timeout={timeout_seconds}s)"
         )

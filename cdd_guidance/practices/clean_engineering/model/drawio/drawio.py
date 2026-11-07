@@ -139,6 +139,6 @@ class Drawio:
         """Regression check after repair (scan before/after + judge)."""
         _ = examples_root
         return (
-            "Eval the repair with expect_scan_fails on the before file and "
-            "expect_scan_passes on the after file (cdd_guidance.practices.bdd.spec_helpers)."
+            "Check the repair with assert_files_rule_pair (harness/graph/ce_rule_eval_harness.py): "
+            "the before files must break the rule and the after files must not."
         )

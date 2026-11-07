@@ -28,6 +28,7 @@ from agent_bdd.agent_bdd_common import (
     _ShellCapture,
     yaml_from_prompt,
 )
+from agent_bdd.cursor_cli import CursorAgentNotFound, CursorCli
 from agent_bdd.yaml_fence import YamlFence
 
 _TOOLS_RUN = re.compile(
@@ -292,9 +293,9 @@ class _ToolAgentBlock:
         return f"instruct-{self._instruct_count:03d}-{label}"
 
     def assert_authenticated(self) -> None:
-        exe = AgentSession.launcher()
+        exe = CursorCli().launcher
         if exe is None:
-            raise RuntimeError("cursor-agent not found on PATH")
+            raise CursorAgentNotFound()
         completed = subprocess.run([exe, "status"], capture_output=True, text=True, timeout=30)
         if completed.returncode != 0:
             raise RuntimeError("cursor-agent not authenticated - run `cursor-agent login` first")
@@ -453,8 +454,6 @@ class _ToolAgentBlock:
         )
 
     def _build_agent_args(self, session: AgentSession, prompt: str) -> list[str]:
-        from cli_agent.cli_agent import CursorCli
-
         if len(prompt) > CMDLINE_SAFE:
             prompt_path = self._log_dir / f"prompt-{self._instruct_count + 1:03d}.txt"
             prompt_path.parent.mkdir(parents=True, exist_ok=True)
