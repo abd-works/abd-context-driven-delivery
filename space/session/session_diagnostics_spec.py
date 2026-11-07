@@ -48,7 +48,7 @@ with description("session diagnostics"):
         tree = Path(tempfile.mkdtemp())
         try:
             installer = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT)
-            report = SessionDiagnostics().write_to(installer)
+            report = SessionDiagnostics().write_to(installer.diagnostics)
             expect(report.startswith("green\n")).to(equal(True))
             data = json.loads((tree / "diagnostics.json").read_text(encoding="utf-8"))
             expect("session" in data).to(equal(True))

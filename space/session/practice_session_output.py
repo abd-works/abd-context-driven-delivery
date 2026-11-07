@@ -12,8 +12,8 @@ from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
-from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
-from tools.file_manager.file_manager import FileEntry
+from harness.installation.context_config import CONTEXT_FOLDER
+from space.session.file_manager import FileEntry
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, GuidanceCollection, PracticeGuidance
@@ -88,27 +88,28 @@ class PracticeSessionOutput:
         return self._guidance.fidelities
 
     @property
-    def _saved(self) -> dict:
+    def saved(self) -> dict:
         """What session.json's ``practices`` keeps for this practice: whether it is on, and the format each fidelity was
         last given, which each fidelity's FidelitySessionOutput reads and saves for itself."""
         return dict(self._session.fields.get("practices", {}).get(self.name, {}))
 
-    def _save(self, **values: object) -> None:
+    def save(self, **values: object) -> None:
+        """Merge values into what session.json's ``practices`` keeps for this practice."""
         saved = self._session.fields.get("practices", {})
-        self._session.save_fields(practices={**saved, self.name: {**self._saved, **values}})
+        self._session.save_fields(practices={**saved, self.name: {**self.saved, **values}})
 
     @property
     @data_field
     def enabled(self) -> bool:
         """Whether the session works on this practice: true until a person turns it off."""
-        return self._saved.get("enabled", True)
+        return self.saved.get("enabled", True)
 
     @mcp
     @agent_tool
     @noSessionLog
     def enable(self, is_enabled: bool) -> PracticeSessionOutput:
         """Turn this practice on or off for its session, saved in its session.json."""
-        self._save(enabled=is_enabled)
+        self.save(enabled=is_enabled)
         return self
 
     @property
@@ -133,7 +134,7 @@ class PracticeSessionOutput:
         self._session.log.line(f"validate {type(self._guidance).__name__} {self.working_fidelity} {detail}".rstrip())
 
     @property
-    def _chosen_outputs(self) -> dict:
+    def chosen_outputs(self) -> dict:
         """What session.json's ``outputs`` keeps for this practice: the root a person chose, and under each fidelity's
         name what that fidelity keeps for itself."""
         return dict(self._session.fields.get("outputs", {}).get(self.name, {}))
@@ -146,7 +147,7 @@ class PracticeSessionOutput:
     def _chosen_or_configured_root(self) -> str | None:
         """Where this practice writes, relative to the session's root, when someone said: the root a person chose in
         this session, else the folder the project's ``.context/config.json`` names for the practice."""
-        return self._chosen_outputs.get("root") or ContextConfig(self._session.repo_path).practice_folder(self.name)
+        return self.chosen_outputs.get("root") or self._session.context_config.practice_folder(self.name)
 
     @property
     def folder(self) -> Path:
@@ -173,7 +174,7 @@ class PracticeSessionOutput:
     @data_field
     def is_root_chosen(self) -> bool:
         """Whether a person chose this practice's root, rather than it being the default."""
-        return bool(self._chosen_outputs.get("root"))
+        return bool(self.chosen_outputs.get("root"))
 
     @mcp
     @agent_tool
@@ -190,14 +191,14 @@ class PracticeSessionOutput:
         if CONTEXT_FOLDER in Path(root).parts:
             raise PracticeRootInContextError(self.name, Path(root))
         relative = os.path.relpath(Path(root).resolve(), self._session.root)
-        self._save_chosen_outputs({**self._chosen_outputs, "root": Path(relative).as_posix()})
+        self._save_chosen_outputs({**self.chosen_outputs, "root": Path(relative).as_posix()})
 
     @mcp
     @agent_tool
     @noSessionLog
     def use_default_root(self) -> PracticeSessionOutput:
         """Write this practice's files under its default root again: the workpath plus the practice's own folder."""
-        self._save_chosen_outputs({key: value for key, value in self._chosen_outputs.items() if key != "root"})
+        self._save_chosen_outputs({key: value for key, value in self.chosen_outputs.items() if key != "root"})
         return self
 
 
@@ -222,7 +223,7 @@ class FidelitySessionOutput:
     def _chosen(self) -> dict:
         """What session.json's ``outputs`` keeps for this fidelity: its own root, and a file name per format for a
         single-file output."""
-        return dict(self._practice._chosen_outputs.get(self._fidelity.name, {}))
+        return dict(self._practice.chosen_outputs.get(self._fidelity.name, {}))
 
     @property
     def root(self) -> Path:
@@ -234,11 +235,11 @@ class FidelitySessionOutput:
     @property
     def kept_format(self) -> str:
         """The format this fidelity was last given in the session; empty when none was kept."""
-        return self._practice._saved.get("formats", {}).get(self._fidelity.name, "")
+        return self._practice.saved.get("formats", {}).get(self._fidelity.name, "")
 
     def keep_format(self, format: str) -> None:
         """Keep format as the one this fidelity works in, so the next action on it in the session works in it."""
-        self._practice._save(formats={**self._practice._saved.get("formats", {}), self._fidelity.name: format})
+        self._practice.save(formats={**self._practice.saved.get("formats", {}), self._fidelity.name: format})
 
     def output_paths(self) -> dict[str, list[str]]:
         """Where this fidelity writes each format in the session: its declared paths under its root. session.json can
@@ -272,15 +273,16 @@ class FidelitySessionOutput:
         pattern = self._as_pattern(declared)
         if "*" not in pattern:
             return [FileEntry(pattern, (repo.root / pattern).exists())]
-        found = repo.file_manager.find(pattern)
+        found = self._session.session_files.find(pattern)
         mine = worked_on() if found else None
         found = [path for path in found if mine is None or path.resolve() in mine]
         return [FileEntry(repo.path_from_top(path), True) for path in found] or [FileEntry(pattern, False)]
 
     def _exists(self, pattern: str) -> bool:
         """Whether a file the pattern, or the plain path, names is in the repository."""
-        repo = self._session.repo
-        return bool(repo.file_manager.find(pattern)) if "*" in pattern else (repo.root / pattern).exists()
+        if "*" in pattern:
+            return bool(self._session.session_files.find(pattern))
+        return (self._session.repo.root / pattern).exists()
 
     def _as_pattern(self, declared: str) -> str:
         """A declared path, as a path from the project with its named parts, such as `{module}/{module}-model.md`, as

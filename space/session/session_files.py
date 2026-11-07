@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from tools.file_manager.file_manager import FileEntry, FileManager, FileText
+from space.session.file_manager import FileEntry, FileManager, FileText
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -19,6 +19,7 @@ class SessionFiles:
     def __init__(self, session: Session) -> None:
         self._session = session
         self._file_manager: FileManager | None = None
+        self._project_files: FileManager | None = None
 
     @property
     def file_manager(self) -> FileManager:
@@ -31,6 +32,21 @@ class SessionFiles:
             self._file_manager = FileManager(self._session.root, roots)
         return self._file_manager
 
+    @property
+    def _from_project(self) -> FileManager:
+        """A file manager named from the project's top that reads the repository and the session's roots, such as its
+        ticket's worktree beside the repository; held, and a new one when the session's roots change."""
+        repo_root = self._session.repo.root
+        roots = (repo_root, *self.file_manager.roots)
+        if self._project_files is None or self._project_files.roots != tuple(Path(root).resolve() for root in roots):
+            self._project_files = FileManager(repo_root, roots)
+        return self._project_files
+
+    def find(self, pattern: str) -> list[Path]:
+        """The files pattern names, written from the top of the session's checkout, wherever they are in it: the
+        checkout's file manager, which its sessions hold, searches it."""
+        return self._session.sessions.file_manager.find(pattern)
+
     def in_folder(self) -> list[FileEntry]:
         """Every file in the session's folder, each with its path from the project."""
         repo = self._session.repo
@@ -40,8 +56,7 @@ class SessionFiles:
     def read(self, path: str) -> FileText:
         """The text of path, a file in the session's repository or under a folder its practices write to, such as its
         ticket's worktree beside the repository; no text when the file is gone."""
-        repo = self._session.repo
-        return FileManager(repo.root, (repo.root, *self.file_manager.roots)).read(path)
+        return self._from_project.read(path)
 
     def worked_on(self) -> set[Path] | None:
         """The files that are the session's work: every file when it works in a folder of its own, which holds only its

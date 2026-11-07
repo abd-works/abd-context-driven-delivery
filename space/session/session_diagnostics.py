@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
+
+if TYPE_CHECKING:
+    from harness.installation.install_diagnostics import InstallDiagnostics
 
 
 @agent_toolset
@@ -33,13 +36,13 @@ class SessionDiagnostics:
         Read ``.cursor/diagnostics.json`` → ``session`` for pass/fail and log tail."""
         from harness.installation.installer import Installer
 
-        return self.write_to(Installer(repo=self._call.project))
+        return self.write_to(Installer(repo=self._call.project).diagnostics)
 
-    def write_to(self, installer: Any) -> str:
-        """Run the session-log probe and write its result as the ``session`` section of installer's diagnostics.json;
-        the result's colour and report."""
+    def write_to(self, diagnostics: InstallDiagnostics) -> str:
+        """Run the session-log probe and write its result as the ``session`` section of diagnostics, an install's
+        diagnostics.json; the result's colour and report."""
         from space.session.session_probe import SessionProbe
 
         payload = SessionProbe().run()
-        installer.diagnostics.write_section("session", payload)
+        diagnostics.write_section("session", payload)
         return f"{payload['color']}\n{payload['report']}"
