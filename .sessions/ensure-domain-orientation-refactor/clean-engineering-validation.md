@@ -1,8 +1,8 @@
 # Clean Engineering validation after the domain-orientation refactor
 
-Branch `ensure-domain-orientation-refactor`, validated at `d6c41b23`; module cards fixed in `784b4f31`. The full suite passes (2703 examples).
+Branch `ensure-domain-orientation-refactor`, validated at `d6c41b23`; module cards fixed in `784b4f31` and `fd5266a7`. The full suite passes (2703 examples).
 
-Validate ran through the CDD MCP host at the modules, model, and code fidelities across `harness/`, `space/`, `tools/`, and `cdd_guidance/`. For each call, an AI judge reviewed every rule and appended its judgment to the saved report. A separate cross-file pass looked for problems that show only across files, using the mistakes the corrections logs record. The 63 reports are in `validation-reports/` beside this file.
+Validate ran through the CDD MCP host at the modules, model, and code fidelities across `harness/`, `space/`, `tools/`, and `cdd_guidance/`. For each call, an AI judge reviewed every rule and appended its judgment to the saved report. A separate cross-file pass looked for problems that show only across files, using the mistakes the corrections logs record. The 162 reports are in `validation-reports/` beside this file: 63 from the first round, and 99 from the second round, which covered the six practice folders (§12) and the rewritten module cards.
 
 **The short answer:** the refactor did what it set out to do. The six dicts on Ticket are gone, actions read their call's session, practices answer their own roots and files, and the board and stage do their own work. The repository still has more open issues than hoped for, and they cluster in a few places:
 - the MCP host itself
@@ -39,6 +39,22 @@ Severity: **high** means wrong behaviour or a second object model, **medium** me
 | B16 | `harness/graph/rules.py:39` | `attach_rules` records each violation, then `apply_rules` records it again. Only a de-duplication check hides the double count. | medium |
 | B17 | Swallowed failures: `installation/files.py:163`, `markdown.py:984`, `stories/model/json/nodes.py:136`, `agent_bdd_common.py:540`, `catalog_generator.py:1253`, `repo.py:2286/:2218` | A wrong slash command is installed, a corrupt story graph reads as an absent one, catalog pages silently go missing, a failed fetch returns as though it worked. | medium |
 | B18 | `agent_cli_bdd.py:329` | The `timeout_seconds` argument is silently discarded. | medium |
+| B19 | `agent_bdd/agent_bdd_common.py:290, :322, :332`, `agent_cli_bdd.py:456` | Imports `cli_agent.cli_agent.CursorCli`, which exists nowhere, live or retired. Every agent spec outside chat fails with ModuleNotFoundError at its first `instruct`. | high |
+| B20 | `bdd/spec_helpers.py:11` | Imports `clean_engineering.specifications...._scan_base`; that folder is gone. `expect_scan_fails` / `expect_scan_passes` are on the BDD card's seam and `templates/bdd.py` tells agents to use them. | high |
+| B21 | `bdd/model/sketch/sketch_bdd_model.py:22` | Imports the removed `_render_sketch` from `bdd_model`, so rendering BDD to sketch raises ImportError. No spec covers it. | high |
+| B22 | `clean_engineering/model/sketch/sketch_class_model.py:33` | `clean_engineering.py:54` lists sketch as a format, but neither the sketch model nor its base has `render`, so rendering a CE model to sketch raises AttributeError. | high |
+| B23 | `bdd/model/code_spec_model.py:191` | A `SyntaxError` in the existing spec file reads as an empty model, so a re-render replaces every hand-written test body with scaffold comments, with no warning. | high |
+| B24 | Format adapters in Stories, DDD, UX | **Round trips lose data.** Stories sketch writes each sub-epic's stories twice (`sketch_story_model.py:167`); JSON drops every scenario and background step (`json/nodes.py:179`); `story_type` is lost through miro, markdown and sketch; a top-level epic's own stories are never drawn (`drawio/nodes.py:253`). DDD `DrawIOBoundedContextMap` inherits the markdown `parse`, so a draw.io map parses to 0 contexts (`drawio_bounded_context_map.py:64`). UX markdown `parse` cannot read what `render` writes (`markdown/nodes.py:15`); HTML `parse` returns an empty map. No adapter has a round-trip spec. | high |
+| B25 | Stories `drawio/nodes.py:406`, DDD drawio render, `ddd/model/clean_engineering_bridge.py:34` | Draw.io writes markdown, parses it back, then draws, so the drawing gets whatever markdown loses: every story comes back `USER`. The DDD bridge writes stereotypes into the intent as `<<…>>` text and parses them back with a regex. | high |
+| B26 | `ux/model/nodes.py:181`, `collections.py:22`, `ux_node.py:40` | Regions, controls, interactions and transitions are built with `graph=None`, so each gets its own `Graph()`; `region.graph is map.graph` is False and graph rules never see them. | high |
+| B27 | `ux/rules/screen_rules.py:14` | `ScreenStoryBudget` counts a `stories` edge that screens never record (they keep `story_names` strings), so the rule can never fire. | high |
+| B28 | `stories/model/story_model.py:621`, `:918` | The copy constructor and `clone()` disagree: epic-level and map-level examples are dropped. In drawio and miro, `clone()` returns an XML or SVG string, not a node. | high |
+| B29 | Stories typescript/python/java/javascript `nodes.py`, `story_model.py:1012` | Four different name-cleanup rules, and scenarios merge by name, so stories are dropped silently. | high |
+| B30 | `clean_engineering/model/rules_shared/operation_checks.py:41` | `_STATIC_FACTORY_EXTRA_NAMES` exempts `current`, so `Session.current`, `Graph.current` and `Board.current` pass the rule meant to catch them (§3). | high |
+| B31 | `stories/stories.py:69` | `read_paths` names node paths from `Path.cwd()`, the MCP host's folder, not the session root. | medium |
+| B32 | `ux/model/drawio/nodes.py:45` | The `node` subprocess has no timeout; a hang blocks an MCP thread that B1 cannot stop. | medium |
+| B33 | `agent_bdd/conf.py:71` via `agent_bdd.py:5` | Importing the practice loads `.secrets` into the MCP host's environment and edits its import path. | medium |
+| B34 | `harness/catalog_generator/catalog_generator.py:1176` | `catalog.generate_catalog` writes to `_REPO_ROOT/cdd_guidance/catalog`, the checkout the MCP host runs from (the pinned `~/.cdd/runtime`), never the project's. A project or branch cannot regenerate its own catalog through MCP. | medium |
 
 ## 2. Second object models (`do-not-invent-parallel-object-models`)
 
@@ -192,12 +208,60 @@ Severity: **high** means wrong behaviour or a second object model, **medium** me
 - **Scanner gap:** the `never-swallow-exceptions` and `use-exceptions-properly` graph rules flag only the deliberately faulty `_examples`. They miss every production `except Exception` that returns or substitutes a fallback.
 - **Project folder:** the desktop app started this chat in an empty spare folder, so validate refused every repository path. The work-around set that spare session's `workpath` to the worktree.
 
-## 11. Not validated yet: the MCP host went down
+- **Scanners that pass what they should catch:**
+  - `coupling_rules.py:35, :50, :69`: one rule flags CE's own class names (`Module`, `OoadClass`), which is where the false `shape-classes-around-resources` hits come from.
+  - The parallel-model scanner compares classes in one file only, so it finds none of the copies in §2.
+  - `layer-separation` fires only on "Facade".
+  - `practice_wide_rules.py:24` `OneWayDeps` returns inside its first loop, so it reports one import pair of the 25-module cycle.
+  - `DeepModule` does not measure the 40%-public rule.
+  - Free functions escape the size and nesting rules (`bdd_model.py:147 _parse_sketch` is 63 lines, four levels deep).
+  - 11 drawio scanner operations pack real parameters into an untyped `_rest` tuple, so `limit-operation-parameters` passes them.
+- **Report names collide:** names have one-second resolution, so two calls in the same second write one report and one graph file (`…T034343.md` holds only one of two calls).
 
-- Model fidelity for the six practice folders: stories, ddd, ux, clean_engineering, bdd, agent_bdd.
-- Code fidelity for `ux/model`, `bdd/model`, and the drawio, markdown, and sketch folders of `ddd/model`.
-- Validation of the module cards rewritten and created in `784b4f31` (the space, tools, and handoff cards passed their graph rules; the rest were not run).
-- Catalog generation.
+## 11. Not validated
+
+- `ddd/model/python`, `ddd/model/typescript`, and the `*.feature.py` channel files.
+- Catalog generation: not run, because the MCP operation writes into the host's own checkout (B34).
+
+## 12. Practice folders (second round)
+
+Model fidelity on stories, ddd, ux, clean_engineering, bdd and agent_bdd; code fidelity on `ux/model`, `bdd/model`, and `ddd/model` drawio, markdown, sketch. The bugs are B19–B33 above. The design findings:
+
+- **Second object models (high):**
+  - UX screens hold links as name strings: `story_names`, `scenario_names`, `step_names`, `chrome_of`, `from_screen`/`to_screen`, `destinations` (`ux/model/nodes.py:259, :250, :365, :131`). `StoryDemoControl.story_steps` copies Stories' Step as dicts, normalised in 10 places. As a result `harness/graph/bound_node.py:206` hard-codes UX field names, and a renamed story or screen silently drops its links.
+  - `ddd/model/nodes.py:102` `TacticalBuildingBlock.load_tactical_facts` copies every `graph_facts` value onto itself with `setattr` and re-scans the source with regexes.
+  - `clean_engineering/model/model_descriptions.py:45` `model_members`, keyed by `"Class.member"`, plus `Operation.owner`, `interactions` and `described_by`: three paths to an operation's documented calls. `bdd/model/graph_bdd_model.py:29` reads the graph JSON by position.
+  - `_drawio_base.py:1350`, writer :922–1190: about 480 lines of a second drawio writer and a second markdown class-model parser, called from nowhere.
+  - `agent_bdd_common.py:772` `AgentSpecRunbook` parses mamba specs again, beside `PythonBddModel`.
+  - `module_context_files.py:137` and `responsibilities.py:21` re-implement four card rules as `{name, message, contributor}` dicts, a sixth rule-hit shape (§2). Both are dead.
+  - `diagram/class_layout.py:59, :79`: `DiagramCard` copies `DiagramClass.geometry` and `DiagramArrow` copies `Relationship`. There are three placement systems and two `Page` classes.
+  - `ddd/model/nodes.py:449` `DDDModelFactory`: a second format registry beside `formats=`, called only from specs.
+  - `bdd/model/nodes.py:37` `BehaviorNode` subclasses Stories' `StoryNode`.
+- **Hidden fields shared between adapters:** the DDD sketch adapter sets `_preamble`, `_group` and other fields on markdown objects, and the markdown adapter reads them back with `getattr` (`ddd/model/markdown/nodes.py:319`, `sketch_ddd_model.py:104`).
+- **State held for one call (medium):**
+  - `drawio_class_model.py:85` has about 30 scratch fields (`_cell_x`, `_edge_src_id`, ...).
+  - `_drawio_base.py:35` keeps a class-level `_explicit_paths` shared by every scanner in the host.
+  - The same habit appears as `_links`, `_on_node`, `_body` set and restored in `finally`, `_id_to_screen`, `_kept`, and `_lines`.
+  - `ux.py:49` `ensure_javascript(generator: str)` chooses a practice by string and builds it with no session.
+- **Rules written twice:** `stories/rules/scenarios.py:47, :90, :125, :168` check once against the graph and once against `node.model`, and the two disagree. This is 1.4 Mode B. `scenarios.py:190` finds aggregate roots by matching the words `cart|order|account`.
+- **Duplicated behaviour (medium):**
+  - Stories: 5+ tree walks and 5 verb lists.
+  - DDD: 4 tree walks, 4 stereotype parsers, 3 card orderings.
+  - UX: 4 copies of "find the model file", and each node field listed 6 times.
+  - Clean Engineering: `sync` ×5 and `class_open` ×4, brace matching ×7, `sys.path.insert` in 8 files. Java and Python `load_class` skip the `update_self` that TS and JS do.
+- **Subtypes that change meaning:** base `load(path)` against drawio/miro `load(text)`; drawio `clone()` returns `str`.
+- **Dead code:**
+  - Stories: `load_epic`/`load_story`, `story_file.py` ×4, `spec_file.py`, `dot_path.py`, `verb_noun.py`, the Miro REST client.
+  - DDD: `technical_names.py` and `vocabulary.py`; deleting the second also removes B15.
+  - Clean Engineering: the module `__getattr__` re-exports, "backward compat" `classes`, and identity `to_field`.
+- **Names:**
+  - `_hydrate_*` (code_story_model), `Region.slot`, and `rows` (ddd drawio/sketch, ux `cli_state.py:74`) use banned words.
+  - `StoryScenariosOneToFour` enforces 7.
+  - `drawio.py` says "kit".
+  - Miro writes mojibake `â€¦` into board headers.
+  - A second `Echo` class lives in `tools/prompt_notify/prompt_notify.py:32`, beside `tools/echo`.
+
+Good news: DDD and Stories nodes extend `BoundNode` and none copies the graph's own `Node`; the drawio and Miro class models share one node base.
 
 ---
 
@@ -206,8 +270,15 @@ Severity: **high** means wrong behaviour or a second object model, **medium** me
 Ordered so each step unblocks the next. **Decide** marks a choice that is yours.
 
 1. **Make the MCP host survive load:** cancel the tool when the timeout fires (B1); recover the accept loop or restart on WinError 64 (B2); keep Validate's per-call state per call (B3); write each call's graph to its own file. Then restart the host. Without this step nothing below can be validated.
-2. **Finish validation:** §11, one call at a time; then generate the catalog.
-3. **Fix the bugs B4–B18,** each with a spec: the two session-current files, the double imports, config.json, recipe exceptions, `write_tag`, `generate_output`, the session root, partition, prompt_log, `_end_process`, vocabulary, the double-recorded violations, and the swallowed failures.
+2. **Finish validation:** the folders in §11. Make `catalog.generate_catalog` write into the project (B34), then generate the catalog.
+3. **Fix the bugs B4–B33,** each with a spec. First the imports that do not exist (B19–B22) and the silent data loss (B23–B29). Then:
+   - the two session-current files, the double imports, and config.json
+   - the recipe exceptions, `write_tag`, and `generate_output`
+   - the session root, partition, prompt_log, `_end_process`, and vocabulary
+   - the double-recorded violations and the swallowed failures
+   - the `current` exemption, `Path.cwd()`, the subprocess timeout, and `.secrets`
+
+   Add a round-trip spec for every format adapter (render then parse gives the same model).
 4. **Update the chat bar (B10) to the new MCP operations:**
    - `ticket.activate`, `ticket.workspace`, `ticket.open_worktree`
    - `stage.set_wip_limit`, `board.help(slug)`
@@ -232,4 +303,5 @@ Ordered so each step unblocks the next. **Decide** marks a choice that is yours.
     - Fold handoff and record_decisions into space/session?
     - Does the board stay at the top of harness or move into space?
     - Move `output_folder.py` beside the specs that use it?
-18. **Validate improvements** (§10): at graph-backed fidelities, the reply tells the judge to judge the graph it built; extend the exception rules to production code; update the runtime after the merge.
+18. **Validate improvements** (§10): at graph-backed fidelities, the reply tells the judge to judge the graph it built; extend the exception rules to production code; fix the scanners that pass what they should catch; give each call a unique report name; update the runtime after the merge.
+19. **Practice adapters on one model** (§12): UX links become references to Stories' nodes, not name strings; draw.io renders from the model, not via markdown; each practice keeps one parser per format and deletes the second writers and dead adapters; rules check the graph only (with step 12).

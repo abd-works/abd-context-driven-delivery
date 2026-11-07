@@ -1,0 +1,368 @@
+# Validate
+
+Take the persona of a **critical judge** — do not edit the artifact.
+
+1. Read the appropriate practice and fidelity level guidlines and rules. Scope judgment to artifacts passed into context.
+2. Use each **practice** as the rubric — report Pass or Fail per named practice fidelity and named rule with brief evidence. There is no third verdict: a rule that is only partly met is a Fail, because a softer verdict lets a broken rule through review.
+3. When **paths** names the files being edited, the graph is built from just those files as they are now, and its rules run on them. Pass the files you wrote, not the whole tree. Without **paths**, when **graph** is `true`, read the workspace's saved graph (`.context/graph.json`, written by `graph_load_working_copy`); when it is a path (or list of paths), read that `graph_return_nodes` JSON or saved graph. Append a **Graph rule validation** report for each guidance's practice. Each rule is one section: heading, rule text, any graph hits (**[graph rule]**), then the AI judgment prompt for that rule.
+4. Collection validate on graph-backed practices reads the working copy and reports each rule hit. A single base Rule is instruction text only.
+5. Do not fix. Report failures for fixing, then add your judgment for each rule to the report this action saved, so the board links to the whole result. It names the report's path at the end of its reply.
+6. Append the judgment to the end of the saved report in exactly this shape. The session board parses it, lists each finding beside the graph's hits, opens the finding's file at its line, and sends a Fix back, so a finding in any other shape is lost:
+
+   ```markdown
+   ## Judgment — `harness/kanban/.context/story-map.md`
+
+   ### `rule-slug` — Fail
+   - story-map.md:86 `Archive Ticket`: what breaks the rule, and why.
+
+   ### `other-rule-slug` — Fail
+   - story-map.md:148 `Send Sketch Iterate Or Document`: what breaks the rule, and why.
+   ```
+
+   - **One `## Judgment — ` section per judged file,** with an em dash, and the file in backticks as a path from the project's root, the way the session names paths. Never an absolute path or another checkout's path, because the board opens the file in this project and cannot open one anywhere else.
+   - **One `### ` heading per rule that fails:** the rule slug in backticks, an em dash, then `Fail`. Leave passing rules out of these headings; a table or a Passes paragraph after the judgment may list them.
+   - **One bullet per finding,** opening with the judged file's name, a colon, and one line number (`story-map.md:86`), then a space and what breaks the rule. A finding that spans lines takes its first line, and a finding at two places is two bullets, because the board opens each finding at one line.
+
+
+Judge only the checked format's files (python: C:/Users/jeffa/.cdd/runtime-ensure-domain-orientatio/{module}/). The other formats mirror them, so judging those too reports every finding twice.
+
+# Graph rule validation
+
+**Generated:** 2026-11-07 03:59:45 UTC
+**Project:** runtime-ensure-domain-orientatio
+**Action:** validate (graph JSON + AI rules)
+
+**Graph sources:**
+- `C:\Users\jeffa\.claude\spares\spare-GRHl26\.sessions\ensure-domain-orientation-refactor\edited-graph.json`
+
+## Summary
+
+**Total graph violations:** 43
+**Rules with graph hits:** 8
+**AI rules in scope:** 27
+
+## Rules
+
+Each rule shows its guidance text, any graph scanner hits (`**[graph rule]**`), then the AI judgment prompt.
+
+### `vocabulary-traces-to-source`
+
+Take every term from the source. The English term and the code name are the same word: *shopping cart* is `ShoppingCart`. When the code says a different word than the domain, every reader keeps a translation in their head, and the two names drift until they mean different things.
+
+Evaluate the current context against this rule (vocabulary-traces-to-source):
+
+### `do-not-invent-terms`
+
+Do not invent a second noun or a parallel vocabulary. A second noun for the same thing becomes a second class, and then the same rule has to be written and fixed in both.
+
+Evaluate the current context against this rule (do-not-invent-terms):
+
+### `do-not-invent-parallel-object-models`
+
+Keep one object model. Follow the nouns and verbs the rest of the graph already uses for that concept. A class that joins types the rest of the graph keeps apart is a second model — a big ball of mud — and every rule then has to be written and fixed in both. When data or behavior already belongs to an object, extend that object and hand callers the object itself: `ticket.session.practices["stories"].fidelities["story_map"].files()`, not `ticket.files(["stories-story_map"])`. A second model is rarely a whole class family; more often it is a small copy beside the owner: a dict holding one field from each member (`fidelity_states`, `violation_counts`), a `*_name` copy of a reference (`column_name`), a helper class that does the owner's job (`TicketFiles`), a bag of a few of the owner's answers (`Workspace`), or a `*Model` / `*Entry` family scraped from live objects. A copy hides that the owner is missing the behavior, so the next caller builds another copy and a fix to the owner never reaches it. **Checking it:** this rule spans modules, and the copy looks fine in the file that holds it. For every property, data field, dict, and helper class the changed code adds, name the class that already owns that data and read it; the rule fails when the owner holds it or should, and the change copies it instead of returning or extending the owner. Count the members of a class that delegates: dozens of members on a class that only reads its collaborators means it is copying them.
+
+Evaluate the current context against this rule (do-not-invent-parallel-object-models):
+
+### `model-modules-follow-the-partition`
+
+Use the module names and boundaries established by the partition artifact as the model's top-level modules. Change the partition before moving a model boundary, because otherwise the two artifacts describe different designs.
+
+Evaluate the current context against this rule (model-modules-follow-the-partition):
+
+### `class-not-property-instance-or-subtype`
+
+Before you write a new class, check property, instance, then subtype. Write a class only when none of those three fit. Multi-step work inside one operation usually belongs in private fields on the class that owns the operation, not in another class. Every new class is another type to construct, pass around, and keep in step with the rest; a property or subtype reuses one that already works.
+
+Evaluate the current context against this rule (class-not-property-instance-or-subtype):
+
+### `keep-classes-single-responsibility`
+
+Give each class one reason to change.
+
+**Graph violations:** 1
+
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/spec_helpers.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\spec_helpers.py#L1): OoadClass `_module`: Class '_module' exposes 22 public operations (budget ~9). Split responsibilities.
+
+Evaluate the current context against this rule (keep-classes-single-responsibility):
+
+### `shape-classes-around-resources`
+
+Model a class around the concept that owns the state and the rule, not a doer, handler, or service that acts on a data bag. A Payment has transactions, a source, and a destination, and it moves the money; it is not a `PaymentService` that takes a `PaymentData` object. A service-plus-bag pair splits the rule from its memory, so every change has to be found in two types and the bag cannot enforce anything. Two resources may collaborate — a model that loads a Module is not a service-plus-bag split.
+
+Evaluate the current context against this rule (shape-classes-around-resources):
+
+### `put-logic-on-the-owning-resource`
+
+Put logic on the object that owns the invariant. Do not infer ownership from a route name, Story actor, or Given subject: `client.accounts[id].transactions.last.validate()`, not `client.validateLastTransactionForPrimaryAccount()`. Logic placed away from its state gives two objects authority to change the same rule.
+
+Evaluate the current context against this rule (put-logic-on-the-owning-resource):
+
+### `hide-inner-details`
+
+Expose behavior through named operations. Do not let callers see how the class stores or arranges its data — once they read the storage directly it becomes a public contract you cannot change. Private fields on the same class hide implementation; you do not need a second class for that.
+
+Evaluate the current context against this rule (hide-inner-details):
+
+### `use-property-not-accessor`
+
+Use a named property for stored or derived state. A derived property recalculates from state and collaborators the object already holds, takes no owner or state parameters, and looks like a field to callers through the language's property mechanism. Use an operation only when behavior coordinates several values, collaborators, or lifecycle steps and cannot be represented truthfully as a property. Callers should not need `getX`, `setX`, or storage knowledge. Read-only to callers can mean return a copy or immutable view from a property — it does not require a frozen class or a second type to hold build steps.
+
+Evaluate the current context against this rule (use-property-not-accessor):
+
+### `prefer-class-operations`
+
+Put factory, lifecycle, and helpers used from one class on that class. Do not export them as module-level functions — a free function holds no state, so it takes the object as a parameter and reaches into it to do the work. A file of hanging functions is the same miss: those operations belong on a type, not on the package.
+
+Evaluate the current context against this rule (prefer-class-operations):
+
+### `use-explicit-dependencies`
+
+Pass every collaborator through the constructor. Do not reach for a global or construct a collaborator inside construction. A collaborator the class fetches or builds itself cannot be swapped, so the class can only ever run against that one implementation.
+
+**Graph violations:** 4
+
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_bdd_common.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_bdd_common.py#L413): OoadClass `ToolsRunYaml`: Class 'ToolsRunYaml' constructs 'YamlFence' inside its constructor.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_chat_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_chat_bdd.py#L30): OoadClass `_ChatAgentBlock`: Class '_ChatAgentBlock' constructs 'YamlFence' inside its constructor.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_cli_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_cli_bdd.py#L39): OoadClass `_StreamBuckets`: Class '_StreamBuckets' constructs 'ToolsRunYaml' inside its constructor.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_cli_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_cli_bdd.py#L270): OoadClass `_ToolAgentBlock`: Class '_ToolAgentBlock' constructs 'YamlFence' inside its constructor.
+
+Evaluate the current context against this rule (use-explicit-dependencies):
+
+### `external-system-interface-is-one-way`
+
+Let a domain wrapper or collaborator depend on the named external-system contract. Keep the external type independent of domain wrappers and domain types, because a reverse dependency makes the external boundary depend on one caller's model.
+
+Evaluate the current context against this rule (external-system-interface-is-one-way):
+
+### `keep-operations-single-responsibility`
+
+Give each operation one job. Separate orchestration, from calculation, calculation from I/O and mutation, etc. When an operation does two things, split it or find the missing class. Two jobs mean two reasons to change, often pulling in opposite directions — every change to one can tangle with the other, so the operation breaks for twice as many reasons and stays brittle.
+
+Evaluate the current context against this rule (keep-operations-single-responsibility):
+
+### `limit-operation-parameters`
+
+Have callers pass intent, not setup. Prefer 0-3 parameters for domain operations (`self` not counted); when several values form one domain concept, promote them to an object. An external-system operation may accept the explicit record or fields required by its verified contract when combining them would hide that contract. Creation and mapping factories are exempt (`create`, `fromFields`, `fromXxx`, `from_*`, `load` / `loadXxx`, `fromRequest`) — they may take a record or the full field set needed to construct the object.
+
+**Graph violations:** 4
+
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/spec_helpers.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\spec_helpers.py#L123): Operation `build_run_request`: Operation 'build_run_request' takes 5 parameters (maximum 3, excluding self).
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/spec_helpers.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\spec_helpers.py#L146): Operation `invoke_toolset`: Operation 'invoke_toolset' takes 5 parameters (maximum 3, excluding self).
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/spec_helpers.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\spec_helpers.py#L180): Operation `run_skill`: Operation 'run_skill' takes 6 parameters (maximum 3, excluding self).
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/spec_helpers.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\spec_helpers.py#L202): Operation `run_toolset`: Operation 'run_toolset' takes 7 parameters (maximum 3, excluding self).
+
+Evaluate the current context against this rule (limit-operation-parameters):
+
+### `avoid-vague-parameter-names`
+
+Do not name parameters `data`, `options`, `info`, or other placeholders that could mean anything. A vague name hides what the caller must supply and what the operation does with it.
+
+Evaluate the current context against this rule (avoid-vague-parameter-names):
+
+### `errors-out-of-existence`
+
+For ordinary edges — empty cart, missing optional field, no matches — return an empty result or a quiet no-op. Raise an exception only when something is actually broken. Raising on an ordinary case puts a `try` at every call site to handle something that is not a failure.
+
+**Graph violations:** 9
+
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_bdd_common.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_bdd_common.py#L504): Operation `run_request`: Operation 'run_request' raises on an empty or missing value; return a quiet result instead.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_bdd_common.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_bdd_common.py#L573): Operation `create`: Operation 'create' raises on an empty or missing value; return a quiet result instead.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_bdd_common.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_bdd_common.py#L597): Operation `response`: Operation 'response' raises on an empty or missing value; return a quiet result instead.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_bdd_common.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_bdd_common.py#L622): Operation `invoked_tool`: Operation 'invoked_tool' raises on an empty or missing value; return a quiet result instead.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_chat_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_chat_bdd.py#L64): Operation `instruct_use_tool`: Operation 'instruct_use_tool' raises on an empty or missing value; return a quiet result instead.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_cli_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_cli_bdd.py#L294): Operation `assert_authenticated`: Operation 'assert_authenticated' raises on an empty or missing value; return a quiet result instead.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_cli_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_cli_bdd.py#L322): Operation `instruct_use_tool`: Operation 'instruct_use_tool' raises on an empty or missing value; return a quiet result instead.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/yaml_fence.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\yaml_fence.py#L30): Operation `load_fenced`: Operation 'load_fenced' raises on an empty or missing value; return a quiet result instead.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/yaml_fence.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\yaml_fence.py#L44): Operation `dump_manifest`: Operation 'dump_manifest' raises on an empty or missing value; return a quiet result instead.
+
+Evaluate the current context against this rule (errors-out-of-existence):
+
+### `state-change-returns-record-or-named-failure`
+
+When an operation coordinates a state change that cannot be one property assignment, return the resulting record or a failure named after the rejected rule. Decide at code fidelity whether that failure is a result type or domain exception, because callers need one explicit outcome contract.
+
+Evaluate the current context against this rule (state-change-returns-record-or-named-failure):
+
+### `domain-exception-carries-context`
+
+Use a typed exception for a broken aggregate or repository operation. One exception type may cover that aggregate's operations when it carries the failed operation, the domain object or input already in hand, the user-facing message, and the underlying cause; do not return bare strings or untyped error objects because callers cannot handle them safely..
+
+Evaluate the current context against this rule (domain-exception-carries-context):
+
+### `limit-comments`
+
+write comment in operations and properties only when the signature cannot say a constraint or explain why the code behaves the way it does. Do not narrate a line that already names what it does.
+
+Evaluate the current context against this rule (limit-comments):
+
+### `write-invariants`
+
+Name a rule the object itself must keep true whenever it acts — a must, never, always, before, or after about its own state. Write one a caller can break by using the object wrong. Do not restate a type, a name, or a single operation’s happy path.
+
+Evaluate the current context against this rule (write-invariants):
+
+### `write-interactions`
+
+Collaborate when this object cannot finish its job from its own state — another object owns the data or the next act. Ask that object to do the work so each keeps its own invariants; do not reach into its internals or steal its job. Ask through a named public operation on a collaborator you hold or are given. Do not point at a type, and do not invent a third object to mediate a conversation two objects can have.
+
+Evaluate the current context against this rule (write-interactions):
+
+### `no-redundant-relationship-paths`
+
+Before you add an association, walk the paths already in the cluster. Each real participant gets one canonical link — not parallel wires through types that collapse to the same thing (`Client` and `ClientIdentity`, or `OfferChannel` on **Offer** and again on an event the offer just emitted). In-process payloads reach a participant through the aggregate that owns the act; outbound events carry the identity or routing fact downstream systems need, not a duplicate of context the publisher already holds.
+
+Evaluate the current context against this rule (no-redundant-relationship-paths):
+
+### `use-intention-revealing-names`
+
+Name each class, property, operation, and parameter so it answers why it exists. Do not abbreviate.
+
+Evaluate the current context against this rule (use-intention-revealing-names):
+
+### `use-consistent-naming`
+
+Use one word per concept. Pick one verb and use it everywhere (`fetch_`, not a mix of `fetch_`, `get_`, and `retrieve_`). Two words for one concept is how the same logic gets written twice — nobody searching for `fetch_` finds the `retrieve_` that already does the job.
+
+Evaluate the current context against this rule (use-consistent-naming):
+
+### `eliminate-duplication`
+
+Give repeated logic one canonical function. Every copy is another place the fix has to be repeated, and the copy you miss is the bug.
+
+Evaluate the current context against this rule (eliminate-duplication):
+
+### `one-canonical-model-document`
+
+Keep all modules for one model artifact in one canonical model document. Link diagrams and code to it rather than restating its classes in another design document, because parallel models become inconsistent.
+
+Evaluate the current context against this rule (one-canonical-model-document):
+
+### `keep-operations-small-focused`
+
+Keep each operation short enough to read as one thought — under 20 statements. A multi-line call, list, or string initializer is one statement. When it grows, extract a private helper whose name says why that slice exists.
+
+**Graph violations:** 6
+
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_bdd_common.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_bdd_common.py#L331): Operation `run`: Operation 'run' is 24 lines (max 20).
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_bdd_common.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_bdd_common.py#L573): Operation `create`: Operation 'create' is 23 lines (max 20).
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_chat_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_chat_bdd.py#L85): Operation `ai_judge`: Operation 'ai_judge' is 25 lines (max 20).
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_cli_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_cli_bdd.py#L374): Operation `ai_judge`: Operation 'ai_judge' is 45 lines (max 20).
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/spec_helpers.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\spec_helpers.py#L51): Operation `invoke_request_for_path`: Operation 'invoke_request_for_path' is 38 lines (max 20).
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/spec_helpers.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\spec_helpers.py#L123): Operation `build_run_request`: Operation 'build_run_request' is 21 lines (max 20).
+
+Evaluate the current context against this rule (keep-operations-small-focused):
+
+### `prefer-instance-operations`
+
+Keep operations on the instance. Do not mark them `@staticmethod` or `@classmethod`. Creation and mapping factories may stay static: `instance`, `create`, `from_*`, camelCase `fromXxx` (e.g. `fromRequest`), `load` / `loadXxx`, plus names in `_STATIC_FACTORY_EXTRA_NAMES` in `operation_checks.py`.
+
+**Graph violations:** 3
+
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_bdd_common.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_bdd_common.py#L289): Operation `launcher`: Operation 'launcher' is a classmethod; prefer an instance operation.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_chat_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_chat_bdd.py#L173): Operation `opened`: Operation 'opened' is a classmethod; prefer an instance operation.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_cli_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_cli_bdd.py#L470): Operation `opened`: Operation 'opened' is a classmethod; prefer an instance operation.
+
+Evaluate the current context against this rule (prefer-instance-operations):
+
+### `provide-meaningful-context`
+
+Give a number or literal a name that says why it is there (`SECONDS_PER_DAY`, not `86400`). Do not number variables (`item1`).
+
+**Graph violations:** 15
+
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_bdd_common.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_bdd_common.py#L331): Operation `run`: Operation 'run' uses the unnamed number 300.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_chat_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_chat_bdd.py#L56): Operation `instruct`: Operation 'instruct' uses the unnamed number 300.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_chat_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_chat_bdd.py#L64): Operation `instruct_use_tool`: Operation 'instruct_use_tool' uses the unnamed number 300.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_chat_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_chat_bdd.py#L81): Operation `instruct_run`: Operation 'instruct_run' uses the unnamed number 300.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_chat_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_chat_bdd.py#L85): Operation `ai_judge`: Operation 'ai_judge' uses the unnamed number 180.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_cli_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_cli_bdd.py#L294): Operation `assert_authenticated`: Operation 'assert_authenticated' uses the unnamed number 30.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_cli_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_cli_bdd.py#L302): Operation `instruct`: Operation 'instruct' uses the unnamed number 300.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_cli_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_cli_bdd.py#L322): Operation `instruct_use_tool`: Operation 'instruct_use_tool' uses the unnamed number 300.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_cli_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_cli_bdd.py#L341): Operation `instruct_run`: Operation 'instruct_run' uses the unnamed number 300.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/agent_cli_bdd.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\agent_cli_bdd.py#L374): Operation `ai_judge`: Operation 'ai_judge' uses the unnamed number 180.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/spec_helpers.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\spec_helpers.py#L180): Operation `run_skill`: Operation 'run_skill' uses the unnamed number 180.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/spec_helpers.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\spec_helpers.py#L202): Operation `run_toolset`: Operation 'run_toolset' uses the unnamed number 180.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/spec_helpers.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\spec_helpers.py#L223): Operation `read_workspace`: Operation 'read_workspace' uses the unnamed number 120.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/spec_helpers.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\spec_helpers.py#L230): Operation `follow_instructions`: Operation 'follow_instructions' uses the unnamed number 300.
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/spec_helpers.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\spec_helpers.py#L321): Operation `generate_and_judge`: Operation 'generate_and_judge' uses the unnamed number 300.
+
+Evaluate the current context against this rule (provide-meaningful-context):
+
+### `use-typed-signatures`
+
+Use typed public signatures. Do not put vanilla `dict`, `Any`, or untyped lists on them — an untyped bag moves every shape error to runtime and leaves the caller guessing which keys are required.
+
+**Graph violations:** 1
+
+- [X] **ERROR** **[graph rule]** - [cdd_guidance/practices/agent_bdd/yaml_fence.py](C:\Users\jeffa\.cdd\runtime-ensure-domain-orientatio\cdd_guidance\practices\agent_bdd\yaml_fence.py#L35): Parameter `raw_value`: Parameter 'raw_value' needs a domain-specific type, not a generic container.
+
+Evaluate the current context against this rule (use-typed-signatures):
+
+---
+
+# Judgment (model fidelity, `cdd_guidance/practices/agent_bdd` production files)
+
+Files: `agent_bdd.py`, `agent_bdd_common.py`, `agent_cli_bdd.py`, `agent_chat_bdd.py`, `spec_helpers.py`, `conf.py`, `yaml_fence.py`. The practice card `cdd_guidance/practices/agent_bdd/.context/module-context.md` exists.
+
+**Graph hits dismissed:**
+- `errors-out-of-existence` (9): `run_request`, `ToolsetInvoke.create` / `response` / `invoked_tool`, both `instruct_use_tool`, `assert_authenticated`, and the two `YamlFence` operations raise when a spec's request is malformed, the agent is not signed in, or PyYAML is missing. In a test harness those are broken runs, and raising is how the spec fails.
+- `use-explicit-dependencies` (4): `YamlFence` and `ToolsRunYaml` are small owned helpers holding only a fence language or prefix.
+- `prefer-instance-operations` on the two `opened` classmethods: context-manager factories.
+
+**Graph hits confirmed:** `keep-classes-single-responsibility` on `spec_helpers.py` (22 public free functions); `limit-operation-parameters` on `build_run_request` (5), `invoke_toolset` (5), `run_skill` (6), `run_toolset` (7); `keep-operations-small-focused` on `AgentSession.run`, `ToolsetInvoke.create`, both `ai_judge` (25 and 45 lines), `invoke_request_for_path` (38); `provide-meaningful-context` (15): the default timeouts 300, 180, and 120 are written as literals in about a dozen signatures across four files, so changing the default instruct timeout means finding every copy; `prefer-instance-operations` on `AgentSession.launcher`; `use-typed-signatures` on `YamlFence.serialize_value(raw_value)` (low).
+
+## Judgment — `cdd_guidance/practices/agent_bdd/agent_bdd_common.py`
+
+### `vocabulary-traces-to-source` — Fail
+- agent_bdd_common.py:290 `AgentSession.launcher` imports `cli_agent.cli_agent.CursorCli`, and so do `AgentSession.from_workspace` (:322), `AgentSession.run` (:332), and `agent_cli_bdd.py:456` `_build_agent_args`. No `cli_agent` module and no `CursorCli` class exists in the repository (live or retired), so every CLI-mode agent spec (`with agent(...)` outside chat) fails with ModuleNotFoundError at its first `instruct`. Only the chat path can run.
+
+### `do-not-invent-parallel-object-models` — Fail
+- agent_bdd_common.py:772 `AgentSpecRunbook` with `_RunbookScenario`, `_RunbookStep`, `_RunbookAssertion`, and `_RunbookJudge` (agent_bdd_common.py:732-760) parses mamba spec files with `ast` (`_with_context_name`, `_it_description`, `_context_call_name` at :1010-1036) into its own scenario tree, beside the BDD practice's `PythonBddModel` (`bdd/model/code_spec_model.py:183`), which already reads the same `with description/context/it` blocks into `Description` / `Context` / `Observation`. Two readers of one spec format; its only callers are `agent_bdd_spec.py` and the package re-export.
+
+### `use-consistent-naming` — Fail
+- agent_bdd_common.py:23 `_TOOLS_RUN` matches tool-run output (`toolset:`, `action:`, `tool:`), while `agent_cli_bdd.py:33` defines another `_TOOLS_RUN` that matches the `tools run` command line; one name for two patterns in the same package.
+
+### `prefer-class-operations` — Fail
+- agent_bdd_common.py:525 `looks_like_tools_run_output`, `yaml_from_prompt` (:530), `invoke_run_request` (:648), `response_to_dict` (:653), `read_manifest` (:706), and `build_runbook` (:1171) are module functions that construct a class and forward one call (`ToolsRunYaml().looks_like_tools_run_output`, `AgentSpecRunbook.from_spec`, ...), so each operation has two public entry points.
+
+### `no-legacy-api-after-refactor` — Fail
+- agent_bdd_common.py:102 `AgentResult.stdout` is documented as an alias for `text`; two names for the agent's captured output (`RunResponse.stdout` is listed in the integrated report §7).
+
+## Judgment — `cdd_guidance/practices/agent_bdd/agent_cli_bdd.py`
+
+### `eliminate-duplication` — Fail
+- agent_cli_bdd.py:270 `_ToolAgentBlock` and `agent_chat_bdd.py:30` `_ChatAgentBlock` repeat `_write_artifact`, `_next_instruct_prefix`, `instruct`, `instruct_use_tool`, `instruct_run`, `ai_judge`, `_finalize_run_response`, and `opened` with no shared base (integrated report §4).
+
+## Judgment — `cdd_guidance/practices/agent_bdd/agent_bdd.py`
+
+### `use-explicit-dependencies` — Fail
+- agent_bdd.py:5 `import agent_bdd.conf` runs `AgentBddConf().configure()` at import time (conf.py:71), which copies the `.secrets` file into `os.environ` and calls `Installer.ensure_import_path()` (conf.py:40). Loading the practice inside the MCP host therefore puts test secrets into the host's environment and edits its import path; nothing in `AgentBdd`'s constructor shows either dependency.
+- agent_bdd.py:26 `from generate.generate import Generate` imports the Generate action by its bare folder name, the double-import pattern of bug B5.
+
+### `hold-state-on-the-object-not-in-parameters` — Fail
+- agent_bdd.py:21 `_bdd()` builds a new `Bdd` on every call from `self.format`, `self.path`, and `self.session` (a session name string), instead of holding the Bdd practice it composes; the session travels as a name and is looked up again inside Bdd.
+
+### `limit-comments` — Fail
+- agent_bdd.py:25 `generate_output` has an empty docstring and returns `""`, yet it is an `@agent_instructions` operation whose docstring and return are the instructions the agent reads.
+
+## Judgment — `cdd_guidance/practices/agent_bdd/conf.py`
+
+### `no-legacy-api-after-refactor` — Fail
+- conf.py:44 `ensure_hyphenated_import` and `_ensure_package_parents` have no caller; they register modules for hyphenated folders that no longer exist.
+
+## Judgment — `cdd_guidance/practices/agent_bdd/spec_helpers.py`
+
+### `vocabulary-traces-to-source` — Fail
+- spec_helpers.py:39 `CAR_SKILL`, `CAR_ROAD_STORY`, `TRAVEL_TO`, `CAR_START`, and `CAR_INSPECT` point at `.cursor/skills/...` files, which only exist after a Cursor install; a helper the practice ships depends on one IDE's generated output, so the same specs cannot run in a Claude install.
+
+## Judgment — `cdd_guidance/practices/agent_bdd/__init__.py`
+
+### `hold-state-on-the-object-not-in-parameters` — Fail
+- __init__.py:88 `_agent_blocks = AgentBlockLocal()` is a module-level "current block", and the free functions `instruct`, `instruct_use_tool`, and `ai_judge` (__init__.py:119-140) act on whichever block is current; the same global "current" pattern as `Session.current` (integrated report §3), so a helper called outside its `with agent(...)` raises instead of being handed the block.
+
+## Judgment — `cdd_guidance/practices/agent_bdd/yaml_fence.py`
+
+### `prefer-class-operations` — Fail
+- yaml_fence.py:55 `load_fenced` is a module function that builds `YamlFence()` and forwards one call.
+
+**Passes:** `do-not-invent-terms`, `model-modules-follow-the-partition`, `class-not-property-instance-or-subtype`, `shape-classes-around-resources`, `put-logic-on-the-owning-resource`, `hide-inner-details`, `use-property-not-accessor`, `external-system-interface-is-one-way`, `keep-operations-single-responsibility`, `avoid-vague-parameter-names`, `errors-out-of-existence`, `state-change-returns-record-or-named-failure`, `domain-exception-carries-context`, `write-invariants`, `write-interactions`, `no-redundant-relationship-paths`, `use-intention-revealing-names`, `one-canonical-model-document`.
