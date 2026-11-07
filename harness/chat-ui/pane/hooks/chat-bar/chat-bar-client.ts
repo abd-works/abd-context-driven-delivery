@@ -197,5 +197,5 @@ export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Prom
 }
 
 export async function runHandoff($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
-  await $.prompt.fill({ text: `Write a handoff for ticket ${chatBar.sessionName} with /space-session-handoff-session.`, mode: 'append' })
+  await $.prompt.fill({ text: `Write a handoff for ticket ${chatBar.sessionName} with /space-session-handoff-session session=${chatBar.sessionFile}`, mode: 'append' })
 }
