@@ -37,9 +37,9 @@ Five agents read the code behind every runtime relationship and every production
 - Two example toolsets in `tools/sub_agent/fixtures.py` are installed as real toolsets (the installer skips `fixtures/` folders, not files).
 - `cdd_guidance/patterns/source_text.py` duplicates `SourceText` in `clean_engineering/model/operation_metrics.py`.
 
-## Progress (updated 2026-11-07, branch and main at eefdd11e)
+## Progress (updated 2026-11-07, branch and main at 4c6ebb8d)
 
-Every pass below ran the quick suite (3,311 examples at the last pass, no failures) and the 40 story tests before it was pushed. The heavy specs run once, together, at the end (rule `cdd_guidance/rules/test-timing.md`); the last full heavy run, on the guidance merge, passed.
+Every pass below ran the quick suite (3,328 examples at the last pass, no failures) and the 40 story tests before it was pushed. The heavy specs run once, together, at the end (rule `cdd_guidance/rules/test-timing.md`); the last full heavy run, on the guidance merge, passed.
 
 | Area | Status |
 |---|---|
@@ -55,7 +55,7 @@ Every pass below ran the quick suite (3,311 examples at the last pass, no failur
 | actions, patterns, context setup, builders | Done |
 | Practices round 1 (formats on one domain model) | Done |
 | Practices round 2: Clean Engineering + BDD, DDD + agent BDD + overlays | Done |
-| Practices round 2: Stories + UX | Agent in its final tests |
+| Practices round 2: Stories + UX | Done |
 | DDD draw.io on Clean Engineering's diagram classes | Agent running |
 | space/kanban | Agent running, on top of the chat-defects branch |
 | Follow-up fixes (recipes read their held fidelity, one format lookup, sketch lenses held, toolset probes, clean-ups) | Agent running |
