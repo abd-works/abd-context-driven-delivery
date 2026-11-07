@@ -11,7 +11,8 @@ if str(_REPO) not in sys.path:
 from expects import be_true, equal, expect
 from mamba import before, context, description, it
 
-from harness.graph.graph import Graph, Node, PracticeGraph, Source
+from harness.graph.graph import Graph, Node, Source
+from harness.guidance.guidance import PracticeGuidance
 from harness.graph.rule_context import RuleCheckContext
 from cdd_guidance.practices.clean_engineering.model.drawio.rules import BY_SLUG
 
@@ -48,7 +49,7 @@ _CLEAN = """\
 """
 
 
-def _drawio_node(practice: PracticeGraph, root: Path, xml: str) -> Node:
+def _drawio_node(practice: PracticeGuidance, root: Path, xml: str) -> Node:
     path = root / "model.drawio"
     path.write_text(xml, encoding="utf-8")
     node = Node(
@@ -58,9 +59,8 @@ def _drawio_node(practice: PracticeGraph, root: Path, xml: str) -> Node:
         "Prospect",
         Source("model.drawio", 1, 10),
     )
-    practice.by_id[node.node_id] = node
-    practice.nodes.setdefault("OoadClass", []).append(node)
-    practice.source_root = str(root)
+    practice.graph.open(root)
+    practice.graph.hold(node)
     return node
 
 

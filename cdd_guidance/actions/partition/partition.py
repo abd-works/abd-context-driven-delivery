@@ -64,11 +64,10 @@ class Partition(GuidanceAction):
         """partition_guidance.md for one listed practice, naming that practice's own file and the Scaffold subsection
         of the fidelity it works at, which says what the index lists. Text guidance, and a practice with no current
         fidelity, have none."""
-        if isinstance(item, str) or getattr(item.fidelities, "current", None) is None:
+        fidelity = None if isinstance(item, str) else self.fidelity_of(item)
+        if fidelity is None:
             return ""
-        return self.partition_guidance.replace("{{slug}}", item.key).replace(
-            "{{scaffold}}", item.fidelities.current.scaffold
-        )
+        return self.partition_guidance.replace("{{slug}}", item.key).replace("{{scaffold}}", fidelity.scaffold)
 
     def _folder(self, out_root: str | None) -> Path:
         """The folder the index and segments go under: out_root when the call names one, else the session's root."""

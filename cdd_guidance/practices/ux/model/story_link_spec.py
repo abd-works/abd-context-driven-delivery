@@ -17,7 +17,7 @@ from cdd_guidance.practices.ux.model.nodes import Screen
 
 
 def edge_pairs(graph, practice, kind):
-    return [(edge.parent.name, edge.child.name) for edge in graph.practice(practice).edges.get(kind, [])]
+    return [(edge.parent.name, edge.child.name) for edge in graph.edges_of(graph.practice(practice), kind)]
 
 
 def story_map_on(graph):

@@ -107,13 +107,13 @@ with description("Ux ensure_javascript tool"):
             (self.project / ".git").mkdir()
             sessions = Sessions(self.project)
             self.session = sessions.open(sessions.create("alpha", self.project))
-            self.ux = self.session.practices["ux"].guideline
+            self.ux = self.session.practices["ux"].guidance
 
         with after.each:
             shutil.rmtree(self.project, ignore_errors=True)
 
         with it("should get the JavaScript from that session's own Stories practice"):
-            expect(self.ux.javascript_practice("stories")).to(be(self.session.practices["stories"].guideline))
+            expect(self.ux.javascript_practice("stories")).to(be(self.session.practices["stories"].guidance))
 
 
 with description("Ux contexts instruction"):

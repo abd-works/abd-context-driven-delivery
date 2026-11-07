@@ -188,7 +188,20 @@ with description("a guidance action"):
             scenarios = served.for_call(_call("stories-scenarios", self.project))
             scenarios.listed()
             served.for_call(_call("stories-story-map", self.project)).listed()
-            expect(scenarios.session.practices["stories"].guideline.fidelities.current.name).to(equal("scenarios"))
+            expect(scenarios.fidelity_of(scenarios.listed()[0]).name).to(equal("scenarios"))
+
+        with it("should work on the one practice the session holds, the same object a later call works on"):
+            from harness.guidance_actions import GuidanceAction
+
+            served = GuidanceAction()
+            first = served.for_call(_call("stories-scenarios", self.project)).listed()[0]
+            expect(served.for_call(_call("stories-story-map", self.project)).listed()[0]).to(be(first))
+
+        with it("should work on the practice the session's graph holds"):
+            from harness.guidance_actions import GuidanceAction
+
+            action = GuidanceAction().for_call(_call("stories-scenarios", self.project))
+            expect(action.listed()[0].graph).to(be(action.session.graph))
 
         with context("with a call on another project"):
             with before.each:
@@ -233,7 +246,19 @@ with description("a guidance action"):
             from harness.guidance_actions import GuidanceAction
 
             action = GuidanceAction().for_call(_call(f"stories-story-map {self.session_word}", self.project))
-            expect(action.listed()[0]).to(be(action.session.practices["stories"].guideline))
+            expect(action.listed()[0]).to(be(action.session.practices["stories"].guidance))
+
+        with it("should give the format it names to the fidelity it names, which keeps it"):
+            from harness.guidance_actions import GuidanceAction
+
+            action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio {self.session_word}", self.project))
+            expect(action.listed()[0].fidelities["story_map"].format).to(equal("drawio"))
+
+        with it("should leave the format of the practice's other fidelities as it was"):
+            from harness.guidance_actions import GuidanceAction
+
+            action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio {self.session_word}", self.project))
+            expect(action.listed()[0].fidelities["scenarios"].format).not_to(equal("drawio"))
 
         with it("should keep the format a generate names on that session's fidelity"):
             from harness.guidance_actions import GuidanceAction
@@ -287,7 +312,7 @@ with description("a guidance action"):
             generate = Generate().for_call(_call(f"stories-story-map {self.session_word}", self.project))
             listed = generate.listed()[0]
             generate._rules()
-            expect(generate.session.practices["stories"].guideline).to(be(listed))
+            expect(generate.session.practices["stories"].guidance).to(be(listed))
 
         with it("should make an action started inside another work in that action's session"):
             from cdd_guidance.actions.generate.generate import Generate
@@ -380,7 +405,8 @@ with description("a guidance action that wrote files"):
         GuidanceAction(session=self.session).wrote([self.written])
 
     with it("should refresh its session's graph with those files"):
-        classes = self.session.graph.practices["clean_engineering"].nodes.get("OoadClass", [])
+        graph = self.session.graph
+        classes = graph.nodes_of(graph.practice("clean_engineering"), "OoadClass")
         expect([node.name for node in classes]).to(equal(["Order"]))
 
     with it("should work on the graph its session holds"):

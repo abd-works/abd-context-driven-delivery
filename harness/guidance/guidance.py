@@ -249,10 +249,34 @@ class PracticeGuidance(Guidance):
         default_workspace_folder: str = ".",
         formats: dict[str, Any] | None = None,
     ) -> None:
+        self._own_format: str | None = None
         super().__init__(format=format)
         self.default_workspace_folder = default_workspace_folder
         self._formats = dict(formats or {})
         self._activate(fidelity=fidelity)
+
+    @property
+    def format(self) -> str | None:
+        """The format this practice works in: the format its current fidelity works in, which that fidelity holds; the
+        practice's own while it has no current fidelity."""
+        current = self._current_fidelity
+        return current.format if current is not None else self._own_format
+
+    @format.setter
+    def format(self, value: str | None) -> None:
+        """Work in value: its current fidelity keeps it, or the practice itself while it has none."""
+        current = self._current_fidelity
+        if current is not None:
+            current.format = value
+        else:
+            self._own_format = value
+
+    @property
+    def _current_fidelity(self) -> FidelityGuidance | None:
+        """The current fidelity, read without reading the fidelities from the practice's document when nothing has
+        read them yet, since none can be current then."""
+        fidelities = vars(self).get("fidelities")
+        return getattr(fidelities, "current", None)
 
     @markdownCollection("shared rules")
     @rules
@@ -280,8 +304,13 @@ class PracticeGuidance(Guidance):
     # names the graph rules it checks. The graph names no practice, so these words live here, on the practice.
 
     graph: Any = None
-    """The graph that holds this practice (harness/graph's *Graph*); none for a practice no graph holds, such as the one
-    an action works with at a fidelity and format of its own."""
+    """The graph that holds this practice (harness/graph's *Graph*), which keeps the practice's nodes and edges; none for
+    a practice no graph holds. A session's practices are held by the session's graph, so the practice an action works
+    with is the one the graph reads."""
+
+    extended: PracticeGuidance | None = None
+    """The practice whose types this practice's schema builds on, which ``extends`` names, held by reference: the one of
+    the same set of practices, such as the session's Clean Engineering for its DDD."""
 
     reads_after: tuple[str, ...] = ()
     """The practices whose nodes this one reads while it reads its own; the graph reads them first."""
@@ -322,11 +351,12 @@ class PracticeGuidance(Guidance):
     def align_node(self, node: Any) -> None:
         """Move node's source onto the lines that declare it, when this practice's reader found it by a nearby line."""
 
-    def read_working_copy(self, practice_graph: Any) -> None:
-        """Read this practice's nodes and edges into practice_graph from the working copy its graph is loading."""
+    def read_working_copy(self) -> None:
+        """Read this practice's nodes and edges into its graph from the working copy that graph is loading."""
 
-    def link_to_other_practices(self, graph: Any) -> None:
-        """Record the edges between this practice's nodes and other practices' nodes, once every practice is read."""
+    def link_to_other_practices(self) -> None:
+        """Record the edges between this practice's nodes and other practices' nodes in its graph, once every practice
+        is read."""
 
     def graph_checks(self) -> dict[str, Any]:
         """Every graph rule (a *PracticeGraphRule*) this practice checks, by slug; read once."""
@@ -338,6 +368,13 @@ class PracticeGuidance(Guidance):
     def own_graph_checks(self) -> dict[str, Any]:
         """The graph rules this practice's ``rules`` package lists; a practice that checks more overrides this."""
         return rules_in(f"{self.package}.rules") if self.package else {}
+
+    def checks(self) -> dict[str, Any]:
+        """The graph rules this practice checks, with those the pattern overlays its graph applies add to it, by slug."""
+        merged = dict(self.graph_checks())
+        if self.graph is not None:
+            merged.update(self.graph.overlay_checks_of(self))
+        return merged
 
     def language_checks(self, language: str) -> dict[str, Any]:
         """The graph rules this practice checks only on nodes read from a file in ``language``, such as ``drawio``."""
@@ -445,15 +482,22 @@ class PracticeGuidance(Guidance):
         self._check_format()
 
     def _make_current(self, fidelity: str) -> None:
-        """Make fidelity current; the practice takes its default format when it works in none yet."""
+        """Make fidelity current. A format the practice was made with, before it had a current fidelity, is the one that
+        fidelity works in; otherwise the fidelity keeps its own."""
         entries = self.fidelities.entries
         if entries and fidelity not in entries:
             raise ValueError(f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(entries)}")
         if fidelity not in entries:
             return
-        if not self.format and entries[fidelity].default_format:
-            self.format = entries[fidelity].default_format
+        if self._own_format:
+            entries[fidelity].format = self._own_format
         self.fidelities.current = entries[fidelity]
+
+    def work_at(self, fidelity: str) -> FidelityGuidance:
+        """Work at fidelity, one of this practice's by name, from now on: it is the practice's current fidelity until
+        another is worked at. The practice keeps it; nothing sets it back."""
+        self._make_current(fidelity)
+        return self.fidelities.current
 
     def _check_format(self) -> None:
         """Raise ValueError for a format the practice does not write: one its adapters do not read, or, for a practice
@@ -874,17 +918,22 @@ class FidelityGuidance(Guidance):
 
     @property
     def format(self) -> str | None:
-        """The format this fidelity works in. A Clean Engineering companion writes the code of the fidelity it is the
-        companion of, so while that fidelity's practice works in a code format the companion works in it too, read when
-        asked so it follows that practice."""
-        served = self.companion_of.practice_guidance if self.companion_of is not None else None
-        if served is not None and Format(served.format).is_code:
-            return served.format
-        return getattr(self, "_format", None)
+        """The format this fidelity works in: the one it last used, which it keeps in the session its practice works
+        in, else its default. A Clean Engineering companion writes the code of the fidelity it is the companion of, so
+        while that fidelity works in a code format the companion works in it too, read when asked so it follows it."""
+        served = self.companion_of.format if self.companion_of is not None else None
+        if served is not None and Format(served).is_code:
+            return served
+        kept = self.session_output.kept_format if self.session_output is not None else ""
+        return kept or getattr(self, "_format", None)
 
     @format.setter
     def format(self, value: str | None) -> None:
+        """Work in value from now on; in a session, the fidelity keeps it there, so the next action on it works in it
+        without being told."""
         self._format = value
+        if value and self.session_output is not None:
+            self.session_output.keep_format(value)
 
     @property
     @data_field
@@ -895,8 +944,9 @@ class FidelityGuidance(Guidance):
     def default_format(self, value: str) -> None:
         """value as a practice document writes it, such as ``markdown (md)``: its first word, as the format's name."""
         self._default_format = Format(self._first_word(value)).name if value else ""
-        if self._default_format:
-            self.format = self._default_format
+        # Each read of the fidelity's document names its default again; a format already chosen stays.
+        if self._default_format and not getattr(self, "_format", None):
+            self._format = self._default_format
 
     def _first_word(self, value: str) -> str:
         return value.split()[0].strip("()`") if value.strip() else ""

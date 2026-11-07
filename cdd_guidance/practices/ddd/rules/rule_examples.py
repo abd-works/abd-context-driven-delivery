@@ -24,7 +24,7 @@ def ddd_rule_by_slug(slug: str):
 
 def _node_type_for_class(clean, class_node) -> str:
     """The building block the DDD practice's graph reader names the class: its stereotypes first, then its name."""
-    names = {node.name for node in clean.nodes.get("OoadClass", [])}
+    names = {node.name for node in clean.graph.nodes_of(clean, "OoadClass")}
     kind = TacticalClass(class_node.name, class_node.get_fact("stereotypes") or []).inferred_kind(names)
     if kind is None and class_node.name.endswith("Repository"):
         return "Repository"
@@ -37,13 +37,13 @@ def _ddd_node(source: str, class_name: str, kind: str | None, lang: str, filenam
     from cdd_guidance.practices.ddd.model.graph_reading import tactical_block
 
     clean, root = practice_from_source(source, lang=lang, filename=filename)
-    class_node = next((node for node in clean.nodes.get("OoadClass", []) if node.name == class_name), None)
+    class_node = next((node for node in clean.graph.nodes_of(clean, "OoadClass") if node.name == class_name), None)
     if class_node is None:
         raise ValueError(f"class {class_name!r} not found in parsed source")
     kind = kind or _node_type_for_class(clean, class_node)
     source = class_node.source
     ddd = clean.graph.practice("ddd")
-    node = ddd.add(tactical_block(class_node, kind), f"ddd:{kind}:{source.file}:{class_name}", source.file, source.start_line, source.end_line)
+    node = clean.graph.add(ddd, tactical_block(class_node, kind), f"ddd:{kind}:{source.file}:{class_name}", source.file, source.start_line, source.end_line)
     node.set_fact("folder", class_node.get_fact("folder"))
     return node, ddd, root
 

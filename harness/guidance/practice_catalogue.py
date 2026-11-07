@@ -22,10 +22,12 @@ class PracticeCatalogue:
 
     Callers that only need the practice keys read ``keys()``, which imports no practice code, so the graph and schema
     modules the practices themselves import can use it. Callers that need a practice's fidelities, rules, folder, or
-    schema read the catalogue's own instance from ``practices()`` or ``practice(key)``; a caller that changes a
-    practice's current fidelity or format makes its own with ``create(key)``, so it does not change what other callers
-    see. The catalogue keeps its instances because a practice's fidelities and rules are read from its markdown, which
-    does not change while the process runs, and every hook and tool call reads them; nothing that reads one sets it.
+    schema read the catalogue's own instances from ``practices()`` or ``practice(key)``. A session makes a set of its own
+    with ``create_all()``, which its graph and its actions share, and a caller that works at a fidelity or format of its
+    own outside any session makes its own with ``create(key)``. A practice that extends another holds that practice:
+    one of the same set, or one made with it. The catalogue keeps its instances because a practice's fidelities and
+    rules are read from its markdown, which does not change while the process runs, and every hook and tool call reads
+    them; nothing that reads one sets it.
     """
 
     _REFS = {
@@ -49,20 +51,38 @@ class PracticeCatalogue:
     @classmethod
     def practices(cls) -> tuple[PracticeGuidance, ...]:
         """The shared instance of every practice. Built once per process: building them takes about 30 ms."""
-        return tuple(cls.practice(key) for key in cls._REFS)
+        if len(cls._shared) < len(cls._REFS):
+            cls._shared = {practice.key: practice for practice in cls.create_all()}
+        return tuple(cls._shared.values())
 
     @classmethod
     def practice(cls, key: str) -> PracticeGuidance:
         """The shared instance of the practice ``key``; read it, do not change its current fidelity or format."""
-        if key not in cls._shared:
-            cls._shared[key] = cls.create(key)
+        if key not in cls._REFS:
+            raise UnknownPractice(key, cls.keys())
+        cls.practices()
         return cls._shared[key]
 
     @classmethod
     def create(cls, key: str, **arguments: object) -> PracticeGuidance:
-        """A new instance of the practice ``key``, for a caller that sets its fidelity, format, or workspace; arguments
-        go to the practice's constructor, such as ``fidelity=None`` for a practice at no fidelity."""
-        return cls.practice_class(key)(**arguments)
+        """A new instance of the practice ``key``, for a caller that sets its fidelity, format, or workspace outside any
+        session; arguments go to the practice's constructor, such as ``fidelity=None`` for a practice at no fidelity. A
+        practice that extends another holds a new instance of that one, made with it."""
+        practice = cls.practice_class(key)(**arguments)
+        if practice.extends:
+            practice.extended = cls.create(practice.extends, fidelity=None)
+        return practice
+
+    @classmethod
+    def create_all(cls, **arguments: object) -> list[PracticeGuidance]:
+        """A new instance of every practice, in catalogue order, made with arguments, such as ``fidelity=None``; each
+        practice that extends another holds that one of the same set. A session makes its practices this way, so its
+        graph and its actions work with the same objects."""
+        made = {key: cls.practice_class(key)(**arguments) for key in cls._REFS}
+        for practice in made.values():
+            if practice.extends:
+                practice.extended = made[practice.extends]
+        return list(made.values())
 
     @classmethod
     def practice_class(cls, key: str) -> type[PracticeGuidance]:
@@ -71,6 +91,12 @@ class PracticeCatalogue:
             raise UnknownPractice(key, cls.keys())
         module, name = ref.split(":")
         return getattr(importlib.import_module(module), name)
+
+    @classmethod
+    def key_of(cls, toolset_ref: str) -> str | None:
+        """The key of the practice whose toolset ref is toolset_ref, such as ``stories`` for its ``module:Class``; none
+        for a ref that is no practice CDD has."""
+        return next((key for key, ref in cls._REFS.items() if ref == toolset_ref), None)
 
     @classmethod
     def module_of(cls, key: str) -> str:

@@ -84,23 +84,20 @@ class ModelNode(Node):
         if not type(self)._practice_key:
             raise ModelWithoutPractice(type(self))
         graph = graph or Graph()
+        # A model class names its practice by key; the graph holds that practice, so this finds it, never makes one.
         practice = graph.practice(type(self)._practice_key)
-        if practice.root_node.node_id not in practice.by_id:
-            practice.by_id[practice.root_node.node_id] = practice.root_node
         semantic = type(self)._semantic_type_name
         self._child_lists: list[ModelChildren] = []
         Node.__init__(
             self,
             practice,
             semantic,
-            practice.unused_node_id(semantic, name),
+            graph.unused_node_id(practice, semantic, name),
             name,
             Source(NO_SOURCE_FILE, sequential_order or 1, sequential_order or 1),
         )
         self.sequential_order = sequential_order
-        practice.node_types.add(semantic)
-        practice.nodes.setdefault(semantic, []).append(self)
-        practice.by_id[self.node_id] = self
+        graph.hold(self)
         self._ready = False
 
     @property
@@ -113,10 +110,6 @@ class ModelNode(Node):
         """This object is its graph node."""
         return self
 
-    @property
-    def graph(self) -> Graph:
-        return self.practice.graph
-
     def semantic_type(self) -> str:
         return self._semantic_type_name
 
@@ -125,24 +118,19 @@ class ModelNode(Node):
             return
         self._adopt(child)
         child.parent = self
-        self.practice.record(EdgeType.from_kind(kind), self, child)
+        self.graph.record(EdgeType.from_kind(kind), self, child)
         if (child.semantic_type(), self.semantic_type()) in type(self)._belongs:
-            self.practice.record(EdgeType.from_kind("belongsTo", "relationship"), child, self)
+            self.graph.record(EdgeType.from_kind("belongsTo", "relationship"), child, self)
         self._sync_schema_edges()
 
     def _unlink(self, child, kind: str) -> None:
         if not isinstance(child, ModelNode):
             return
-        practice = self.practice
-        for edge_kind, listed in list(practice.edges.items()):
-            practice.edges[edge_kind] = [
-                edge
-                for edge in listed
-                if not (
-                    (edge.parent is self and edge.child is child and edge.kind == kind)
-                    or (edge.parent is child and edge.child is self and edge.kind == "belongsTo")
-                )
-            ]
+        self.graph.drop_edges(
+            self.practice,
+            lambda edge: (edge.parent is self and edge.child is child and edge.kind == kind)
+            or (edge.parent is child and edge.child is self and edge.kind == "belongsTo"),
+        )
 
     def _refill(self, children: ModelChildren, incoming: Iterable) -> None:
         for child in list(children):
@@ -155,30 +143,22 @@ class ModelNode(Node):
         if child.practice is self.practice:
             return
         subtree = child._subtree()
-        members = set(subtree)
-        old = child.practice
-        carried = []
-        for kind, listed in list(old.edges.items()):
-            kept = []
-            for edge in listed:
-                if edge.parent in members and edge.child in members:
-                    carried.append(edge)
-                else:
-                    kept.append(edge)
-            old.edges[kind] = kept
+        members = {id(node) for node in subtree}
+        carried = child.graph.drop_edges(child.practice, lambda edge: id(edge.parent) in members and id(edge.child) in members)
         with schema_sync_paused():
             for node in subtree:
                 node._move_to(self.practice)
         for edge in carried:
-            self.practice.record(EdgeType(edge.kind, edge.order, edge.display), edge.parent, edge.child)
+            self.graph.record(EdgeType(edge.kind, edge.order, edge.display), edge.parent, edge.child)
 
     def _move_to(self, practice) -> None:
         if self.practice is practice:
             return
-        node_id = practice.unused_node_id(self.type, self.name) if self.node_id in practice.by_id else self.node_id
+        graph = practice.graph
+        node_id = graph.unused_node_id(practice, self.type, self.name) if graph.holds(practice, self.node_id) else self.node_id
         # add places a parsed node at its lines; a bound object keeps the source it already has, whatever its kind.
         source = self.source
-        practice.add(self, node_id, NO_SOURCE_FILE, 1, 1)
+        graph.add(practice, self, node_id, NO_SOURCE_FILE, 1, 1)
         self.source = source
 
     def _subtree(self) -> list["ModelNode"]:
@@ -213,11 +193,7 @@ class ModelNode(Node):
             graph.sync_schema_edges()
 
     def _copies_on_graph(self, semantic: str) -> list:
-        return [
-            node
-            for node in self.practice.nodes.get(semantic, [])
-            if node is not self and isinstance(node, ModelNode)
-        ]
+        return [node for node in self.graph.nodes_of(self.practice, semantic) if node is not self and isinstance(node, ModelNode)]
 
 
 # How many schema_sync_paused blocks are open; rebuilds resume when the outermost one closes.

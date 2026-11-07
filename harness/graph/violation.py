@@ -68,7 +68,7 @@ class Violation:
         return cls(
             rule,
             message,
-            practice=node.practice.name,
+            practice=node.practice.key,
             node_id=node.node_id,
             subject=f"{node.type} `{node.name}`",
             location=source.file or "",

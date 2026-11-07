@@ -8,7 +8,7 @@ Markdown channel for `harness/guidance`. The module's purpose, seam, and depende
 
 ## Language companion
 
-A *PracticeGuidance* reads its *FidelityGuidance* children from the Fidelities section of `{practice}/{practice}.md`; each fidelity's `stage`, `default_format`, `outputs`, and optional `clean_engineering` companion come from the YAML fields in its block, which *YamlFields* assigns. The practice keeps its current fidelity on `fidelities.current` and its format on `format`. Callers convert artifacts through *Render*, which asks *PracticeGuidance.render*. A practice that owns an artifact keeps one adapter per format under `{practice}/model/{format}/` and passes them as `formats`; every practice CDD ships passes formats today; a practice with none renders through its current fidelity's Clean Engineering companion.
+A *PracticeGuidance* reads its *FidelityGuidance* children from the Fidelities section of `{practice}/{practice}.md`; each fidelity's `stage`, `default_format`, `outputs`, and optional `clean_engineering` companion come from the YAML fields in its block, which *YamlFields* assigns. The practice keeps its current fidelity on `fidelities.current` (`work_at` makes one current), and each fidelity keeps the format it last used, so the practice's `format` is its current fidelity's. Callers convert artifacts through *Render*, which asks *PracticeGuidance.render*. A practice that owns an artifact keeps one adapter per format under `{practice}/model/{format}/` and passes them as `formats`; every practice CDD ships passes formats today; a practice with none renders through its current fidelity's Clean Engineering companion.
 
 ---
 
@@ -59,8 +59,13 @@ PracticeGuidance(format, fidelity, default_workspace_folder, formats)
 fidelities: GuidanceCollection
 	// the Fidelities section; fidelities.current is the active fidelity
 format: str
-	Invariant: a constructor format wins; otherwise the active fidelity's default_format
+	Invariant: the current fidelity's format; the practice's own only while it has no current fidelity
+	Invariant: a constructor format is the format the fidelity made current at construction works in
 	Invariant: an unsupported fidelity or format raises ValueError at construction
+graph: Graph | None
+	// the graph that holds this practice; a session's practices are held by the session's graph
+extended: PracticeGuidance | None
+	// the practice extends names, held by reference from the same set of practices
 formats: dict[str, Any]
 	Invariant: keys are format names; values are adapters in {practice}/model/{format}/
 supported_formats: frozenset
@@ -129,12 +134,13 @@ FidelityGuidance(name, stage, default_format, clean_engineering)
 name: str
 stage: str
 default_format: str
-	// setting it also sets format
+	// setting it sets format when no format has been chosen yet
 outputs: dict[str, str | list[str]]
 	// each format this fidelity writes, with its file, pattern, or folder
 default_output: str | list[str]
 format: str | None
-	Invariant: a Clean Engineering companion writes in the format of the practice it serves while that format is code
+	Invariant: the format this fidelity last used, kept in the session its practice works in, else its default
+	Invariant: a Clean Engineering companion writes in the format of the fidelity it serves while that format is code
 practice_guidance: PracticeGuidance | None
 	// the nearest PracticeGuidance parent
 clean_engineering: FidelityGuidance | None
@@ -245,7 +251,7 @@ practices(): tuple[PracticeGuidance, ...]
 	// the shared instances
 practice(key: str): PracticeGuidance
 create(key: str): PracticeGuidance
-	Invariant: a caller that changes a practice's fidelity or format makes its own instance here
+	Invariant: outside a session, a caller that changes a practice's fidelity or format makes its own instance here; a session makes its set once with create_all
 practice_class(key: str): type[PracticeGuidance]
 module_of(key: str): str
 practice_named(slug: str): PracticeGuidance | None

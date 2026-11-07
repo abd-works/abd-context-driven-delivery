@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 import shutil
+import threading
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
@@ -62,6 +63,12 @@ class Session:
     """One named piece of work in a project, kept in ``.sessions/{name}/``. It holds where it works, the practices it
     uses, and its title; its log, files, handoffs, and decision records are objects of their own. Every tool on it acts
     on the session whose ``session.json`` its ``session`` argument names."""
+
+    # The graph of each session the cdd server works in, by the session's folder, with the root it was opened on. The
+    # graph holds the session's one instance of each practice, which its actions work with too. A Session is read from
+    # its folder again on every call, so these are kept here for as long as the server runs.
+    _held: ClassVar[dict[Path, tuple[Path, Graph]]] = {}
+    _held_lock: ClassVar[threading.Lock] = threading.Lock()
 
     def __init__(self, repo_root: Path | str) -> None:
         self._session_name = ""
@@ -137,10 +144,37 @@ class Session:
 
     @property
     def graph(self) -> Graph:
-        """The knowledge graph this session works with, opened on its root. The cdd server holds it in memory from the
-        session's first call on, so every call in the session works on the same graph and none rebuilds it from disk;
-        an action that writes files refreshes it with exactly those files."""
-        return Graph.of_session(self.session_path or self.root, self.root)
+        """The knowledge graph this session works with, opened on its root, holding the session's one instance of each
+        practice. The cdd server holds it in memory from the session's first call on, so every call in the session works
+        on the same graph and the same practices, and none rebuilds them; an action that writes files refreshes the graph
+        with exactly those files. A session whose root has moved gets a new graph, with new practices, on the new root."""
+        key = Path(self.session_path or self.root).resolve()
+        root = self.root
+        with Session._held_lock:
+            held = Session._held.get(key)
+            if held is None or held[0] != root:
+                held = (root, self._new_graph())
+                Session._held[key] = held
+            return held[1]
+
+    def _new_graph(self) -> Graph:
+        """A graph on this session's root holding a new instance of every practice, each working in this session."""
+        practices = PracticeCatalogue.create_all()
+        kept = self._unopened()
+        for practice in practices:
+            practice.work_in(PracticeSessionOutput(practice, kept))
+        graph = Graph(practices)
+        graph.open(self.root)
+        return graph
+
+    def _unopened(self) -> Session:
+        """This session as no call opened it, which the practices it keeps between calls work in, so they never point
+        at the chat of the call that first asked for them."""
+        kept = type(self)(self.repo_path)
+        kept.session_path = self.session_path
+        kept.name = self.name
+        kept.workpath = self.workpath
+        return kept
 
     def path_named(self, named: str | Path) -> Path:
         """named as a path in this session's project, the way its agent writes one: from the project's root, or
@@ -268,9 +302,10 @@ class Session:
     @property
     @data_field
     def practices(self) -> dict[str, PracticeSessionOutput]:
-        """Every practice CDD has, by practice key, opened or not."""
-        for name in PracticeCatalogue.keys():
-            self._known.setdefault(name, PracticeSessionOutput(name, self))
+        """Every practice CDD has, by practice key, opened or not, each the session's one instance of it."""
+        if len(self._known) < len(PracticeCatalogue.keys()):
+            for key, guidance in self.graph.every_practice.items():
+                self._known.setdefault(key, PracticeSessionOutput(guidance, self))
         return dict(self._known)
 
     @property

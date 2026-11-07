@@ -129,7 +129,7 @@ with description("Stories"):
                 story_map = self.root / "tests" / "story-map.md"
                 story_map.parent.mkdir(parents=True)
                 story_map.write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
-                Session(self.root).practice("stories").guideline = self.stories
+                self.stories.work_in(Session(self.root).practice("stories"))
                 self.model = self.stories.read_paths("tests", "python")
 
             with after.each:
@@ -290,7 +290,7 @@ with description("Stories"):
             from space.session.session import Session
 
             self.stories = Stories(fidelity="scenarios")
-            Session(self.tempdir.name).practice("stories").guideline = self.stories
+            self.stories.work_in(Session(self.tempdir.name).practice("stories"))
             self.result = self.stories.render(
                 format="typescript",
                 content=_SAMPLE_MARKDOWN,

@@ -54,7 +54,7 @@ def _(s):
         world.project.seed_session(PET_VISITS.with_log(generated("stories", "story_map")))
         world.session = world.Session.load(world.project.sessions / PET_VISITS.name, world.project.root)
         world.stories = world.session.practice("stories")
-        world.stories.guideline = Stories(fidelity="story_map")
+        world.stories.guidance.work_at("story_map")
         world.ticket = world.Ticket.load(PET_VISITS.name)
 
     @s.when("Claude Code validates the story map and finds no graph-rule violation")

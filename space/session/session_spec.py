@@ -79,11 +79,11 @@ with description("a session"):
             with it("should be that session"):
                 expect(self.server.session.name).to(equal("alpha"))
 
-            with it("should open that practice's guideline"):
-                expect(self.server.session.practice("stories").guideline).to(be_a(PracticeGuidance))
+            with it("should open that practice's guidance"):
+                expect(self.server.session.practice("stories").guidance).to(be_a(PracticeGuidance))
 
             with it("should open the session's graph, which holds that practice"):
-                expect(self.server.session.graph.practices["stories"].name).to(equal("stories"))
+                expect(self.server.session.graph.every_practice["stories"]).to(be(self.server.session.practice("stories").guidance))
 
             with it("should open the same graph on the next call in that session"):
                 expect(self.server.session.graph).to(be(self.server.session.graph))
@@ -754,14 +754,26 @@ with description("a practice"):
             self.session = Sessions(self.called).current()
             self.opened = self.session.practice("bdd")
 
-        with it("should hold that practice's guideline in memory"):
-            expect(isinstance(self.opened.guideline, PracticeGuidance)).to(equal(True))
+        with it("should hold that practice's guidance in memory"):
+            expect(isinstance(self.opened.guidance, PracticeGuidance)).to(equal(True))
 
-        with it("should hold a graph of its own, apart from the guideline an action works with"):
-            expect(self.session.graph.practices["bdd"].guidance is self.opened.guideline).to(equal(False))
+        with it("should be the one practice the session's graph holds"):
+            expect(self.session.graph.every_practice["bdd"]).to(be(self.opened.guidance))
+
+        with it("should know the session's graph"):
+            expect(self.opened.guidance.graph).to(be(self.session.graph))
+
+        with it("should be the same practice the next call in the session works with"):
+            expect(Sessions(self.called).current().practice("bdd").guidance).to(be(self.opened.guidance))
+
+        with it("should hold the practice it extends from the same session"):
+            expect(self.session.practice("ddd").guidance.extended).to(be(self.session.practice("clean_engineering").guidance))
 
         with it("should open its graph on its workpath"):
-            expect(self.session.graph.practices["bdd"].source_root).to(equal(str(self.work.resolve())))
+            expect(self.session.graph.source_root_of(self.opened.guidance)).to(equal(str(self.work.resolve())))
+
+        with it("should be the same graph on the next call in the session"):
+            expect(Sessions(self.called).current().graph).to(be(self.session.graph))
 
         with it("should return that same practice on the next ask"):
             expect(self.session.practice("bdd") is self.opened).to(equal(True))
@@ -960,7 +972,7 @@ with description("a session with no folder of its own, on a project inside its c
 
     with it("should keep each practice's folder under its root"):
         stories = self.session.practice("stories")
-        expect(stories.folder).to(equal(self.session.root / stories.guideline.default_workspace_folder))
+        expect(stories.folder).to(equal(self.session.root / stories.guidance.default_workspace_folder))
 
 
 # (E) Open Work Session

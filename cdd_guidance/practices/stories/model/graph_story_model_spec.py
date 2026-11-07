@@ -45,25 +45,25 @@ with description("GraphStoryModel rule data"):
         epic.append_story(story)
         model.append_epic(epic)
         graph = Graph()
+        graph.open(Path(str(self.root)))
         practice = graph.practice("stories")
-        practice.source_root = str(self.root)
         GraphStoryModel(model).record(practice)
         self.practice = practice
 
     with it("should emit Given, When, and Then node types"):
-        expect(set(self.practice.nodes.keys())).to(contain("Given", "When", "Then"))
+        expect(self.practice.graph.node_types_of(self.practice)).to(contain("Given", "When", "Then"))
 
     with it("should attach step payload with phase and concepts"):
-        when_nodes = self.practice.nodes.get("When", [])
+        when_nodes = self.practice.graph.nodes_of(self.practice, "When")
         expect(len(when_nodes)).to(equal(1))
         expect(when_nodes[0].get_fact("phase")).to(equal("when"))
         expect(when_nodes[0].get_fact("concepts")).to(contain("Cart"))
 
     with it("should wire scenario steps edges"):
-        scenario = self.practice.nodes["Scenario"][0]
+        scenario = self.practice.graph.nodes_of(self.practice, "Scenario")[0]
         steps = [
             edge.child
-            for edge in self.practice.edges.get("steps", [])
+            for edge in self.practice.graph.edges_of(self.practice, "steps")
             if edge.parent is scenario
         ]
         expect(len(steps)).to(equal(3))
@@ -79,10 +79,11 @@ def _imports_of(root: Path, file: str, text: str) -> dict:
     epic.append_story(story)
     model = StoryModel()
     model.append_epic(epic)
-    practice = Graph().practice("stories")
-    practice.source_root = str(root)
+    graph = Graph()
+    graph.open(Path(str(root)))
+    practice = graph.practice("stories")
     GraphStoryModel(model).record(practice)
-    return practice.nodes["Story"][0].get_fact("imported_modules")
+    return practice.graph.nodes_of(practice, "Story")[0].get_fact("imported_modules")
 
 
 with description("a story read from a story test that imports its examples"):

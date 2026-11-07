@@ -53,7 +53,7 @@ class StoryLink:
     def _candidates(self, graph: Graph) -> Iterator[Node]:
         for practice in list(graph.practices.values()):
             for node_type in _NODE_TYPES[self.kind]:
-                yield from list(practice.nodes.get(node_type, []))
+                yield from graph.nodes_of(practice, node_type)
 
 
 def key_of(node: Node) -> str:

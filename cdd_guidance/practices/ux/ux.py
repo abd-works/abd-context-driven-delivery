@@ -75,7 +75,7 @@ class Ux(PracticeGuidance):
     def javascript_practice(self, key: str) -> PracticeGuidance:
         """The practice key, which writes the JavaScript a mockup imports: this session's own copy of it, made for the
         session, or a new copy while Ux works in no session."""
-        practice = self.session.practices[key].guideline if self.session is not None else PracticeCatalogue.create(key)
+        practice = self.session.practices[key].guidance if self.session is not None else PracticeCatalogue.create(key)
         if "javascript" not in practice.formats:
             raise NoJavascriptPractice(f"Practice {key!r} writes no JavaScript; Stories and Clean Engineering do.")
         return practice

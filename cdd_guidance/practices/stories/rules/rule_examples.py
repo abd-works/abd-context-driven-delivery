@@ -7,7 +7,8 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from harness.graph.graph import Graph, Node, PracticeGraph, Source
+from harness.graph.graph import Graph, Node, Source
+from harness.guidance.guidance import PracticeGuidance
 from harness.graph.rule_context import RuleCheckContext
 
 _EXAMPLES = Path(__file__).resolve().parents[1] / "model" / "typescript" / "_examples"
@@ -22,7 +23,7 @@ def stories_rule_by_slug(slug: str):
     return rule
 
 
-def _record_stories(practice: PracticeGraph, names: list[str], relative: str) -> list[Node]:
+def _record_stories(practice: PracticeGuidance, names: list[str], relative: str) -> list[Node]:
     """Record the stories through the story model, so each Story node carries the facts a live build loads."""
     from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
     from cdd_guidance.practices.stories.model.source_location import SourceLocation
@@ -38,11 +39,11 @@ def _record_stories(practice: PracticeGraph, names: list[str], relative: str) ->
         epic.append_story(story)
     model.append_epic(epic)
     GraphStoryModel(model).record(practice)
-    return list(practice.nodes.get("Story", []))
+    return practice.graph.nodes_of(practice, "Story")
 
 
 def _story_nodes_from_ts(
-    practice: PracticeGraph, source: str, relative: str, *, node_type: str | None = None
+    practice: PracticeGuidance, source: str, relative: str, *, node_type: str | None = None
 ) -> list[Node]:
     from cdd_guidance.practices.stories.model.story_model import Step, StepType
 
@@ -51,7 +52,7 @@ def _story_nodes_from_ts(
     for index, name in enumerate(re.findall(r"""given\s*\(\s*['"]([^'"]+)['"]""", source)):
         step = Step(name, StepType.GIVEN, index + 1, keyword="Given")
         step.type = "Given"
-        nodes.append(practice.add(step, f"stories:Step:map.given.{index}", relative, 1, 1))
+        nodes.append(practice.graph.add(practice, step, f"stories:Step:map.given.{index}", relative, 1, 1))
     return nodes
 
 
@@ -62,25 +63,25 @@ def violations_for_story_source(
     root = Path(temp.name)
     path = root / relative
     path.write_text(source.strip() + "\n", encoding="utf-8")
-    practice = Graph().practice("stories")
-    practice.source_root = str(root)
+    graph = Graph()
+    graph.open(root)
+    practice = graph.practice("stories")
     practice._temp_dir = temp  # type: ignore[attr-defined]
     _story_nodes_from_ts(practice, source, relative)
     if node_type:
-        for nodes in practice.nodes.values():
-            for node in nodes:
-                node.type = node_type
+        for node in graph.nodes_of(practice):
+            node.type = node_type
     context = RuleCheckContext(practice, root)
     messages: list[str] = []
     for _node_id, message in rule.check_practice(context):
         messages.append(message)
     for nt in rule.node_types:
-        for node in practice.nodes.get(nt, []):
+        for node in context.nodes(nt):
             messages.extend(rule.check(node, context))
     # Story rules often register as Step; match Given/When/Then nodes too.
     if "Step" in rule.node_types:
         for phase in ("Given", "When", "Then"):
-            for node in practice.nodes.get(phase, []):
+            for node in context.nodes(phase):
                 messages.extend(rule.check(node, context))
     return messages
 
@@ -111,7 +112,7 @@ def assert_stories_example_pair(slug: str) -> None:
     assert_stories_ts_pair(slug, fault, clean)
 
 
-def _practice_from_folder(folder: Path, *, relative_file: str) -> tuple[PracticeGraph, Path, Node]:
+def _practice_from_folder(folder: Path, *, relative_file: str) -> tuple[PracticeGuidance, Path, Node]:
     temp = tempfile.TemporaryDirectory()
     root = Path(temp.name)
     for item in folder.rglob("*"):
@@ -119,8 +120,9 @@ def _practice_from_folder(folder: Path, *, relative_file: str) -> tuple[Practice
             target = root / item.relative_to(folder)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(item, target)
-    practice = Graph().practice("stories")
-    practice.source_root = str(root)
+    graph = Graph()
+    graph.open(root)
+    practice = graph.practice("stories")
     practice._temp_dir = temp  # type: ignore[attr-defined]
     rel = relative_file.replace("\\", "/")
     text = (root / rel).read_text(encoding="utf-8") if (root / rel).is_file() else ""
@@ -131,8 +133,7 @@ def _practice_from_folder(folder: Path, *, relative_file: str) -> tuple[Practice
         Path(rel).stem,
         Source(rel, 1, max(1, text.count("\n"))),
     )
-    practice.by_id[node.node_id] = node
-    practice.nodes.setdefault("Example", []).append(node)
+    graph.hold(node)
     _load_file_facts(node, root, rel)
     return practice, root, node
 

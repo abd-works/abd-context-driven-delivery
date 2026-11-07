@@ -27,10 +27,10 @@ with description("a model object built on its own graph"):
 
     with context("that is appended to an owner on another graph"):
         with it("should be a node of the owner's practice"):
-            expect(self.graph.practice("ux").by_id[self.region.node_id]).to(be(self.region))
+            expect(self.graph.node(self.region.node_id)).to(be(self.region))
 
         with it("should leave the practice it was built in"):
-            expect(self.own_practice.by_id.get(self.region.node_id)).to(be_none)
+            expect(self.own_practice.graph.holds(self.own_practice, self.region.node_id)).to(equal(False))
 
         with it("should keep the source it already had"):
             expect(self.region.has_source_file).to(equal(False))

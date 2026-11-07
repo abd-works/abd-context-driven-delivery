@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Callable
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
-from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
@@ -40,16 +39,13 @@ class PracticeRootInContextError(ValueError):
 @language_adapter(language="typescript")
 @agent_toolset
 class PracticeSessionOutput:
-    """What one practice has in one session: its guideline, the paths it reads, whether it is on, the folder it writes
-    under, and the files each of its fidelities declares."""
+    """What one practice has in one session: the session's own instance of the practice, which the session's graph
+    holds too, whether it is on, the folder it writes under, and the files each of its fidelities declares."""
 
-    # The guideline and folders load on first use: the board asks every ticket's session
-    # which practices are enabled after every cdd call, and that question needs none of them.
-
-    def __init__(self, name: str, session: Session) -> None:
-        self._name = name
+    def __init__(self, guidance: PracticeGuidance, session: Session) -> None:
+        self._guidance = guidance
+        self._name = guidance.key
         self._session = session
-        self._guideline: PracticeGuidance | None = None
 
     @classmethod
     @tool_subject
@@ -77,19 +73,10 @@ class PracticeSessionOutput:
         return self._session.session_file_from_project
 
     @property
-    def guideline(self) -> PracticeGuidance:
-        """This session's own copy of the practice's guidance, which knows the session, so each of its fidelities can
-        find the files it declares in this session."""
-        if self._guideline is None:
-            self.guideline = PracticeCatalogue.create(self.name)
-        return self._guideline
-
-    @guideline.setter
-    def guideline(self, guidance: PracticeGuidance) -> None:
-        """Work with guidance, the practice an action was given, at its fidelity; it now works in this session, and
-        each of its fidelities holds what it has in this session, so it answers its outputs and files itself."""
-        guidance.work_in(self)
-        self._guideline = guidance
+    def guidance(self) -> PracticeGuidance:
+        """The session's one instance of the practice: the one its graph holds and its actions work with. It works in
+        this session, so each of its fidelities finds the files it declares here."""
+        return self._guidance
 
     def of_fidelity(self, fidelity: FidelityGuidance) -> FidelitySessionOutput:
         """What fidelity, one of this practice's, has in this session."""
@@ -98,7 +85,7 @@ class PracticeSessionOutput:
     @property
     def fidelities(self) -> GuidanceCollection:
         """The practice's fidelities, such as story_map, by name, each able to list its files in this session."""
-        return self.guideline.fidelities
+        return self._guidance.fidelities
 
     @property
     def _saved(self) -> dict:
@@ -126,7 +113,7 @@ class PracticeSessionOutput:
 
     @property
     def _current_fidelity(self) -> FidelityGuidance | None:
-        return self.guideline.fidelities.current
+        return self._guidance.fidelities.current
 
     @property
     def working_fidelity(self) -> str:
@@ -136,28 +123,14 @@ class PracticeSessionOutput:
 
     @property
     def working_format(self) -> str:
-        """The format this practice works in, such as drawio; empty when it has none."""
-        return self.guideline.format or ""
-
-    def keep_format(self) -> None:
-        """Save the format this practice works in as its current fidelity's, so the next action on that fidelity in
-        this session works in it without being told."""
-        current = self._current_fidelity
-        if current is not None and self.guideline.format:
-            current.session_output.keep_format(self.guideline.format)
-
-    def use_kept_format(self) -> None:
-        """Work in the format last kept for the current fidelity; the fidelity's own format when none was kept."""
-        current = self._current_fidelity
-        kept = current.session_output.kept_format if current is not None else ""
-        if kept:
-            self.guideline.format = kept
+        """The format this practice works in, such as drawio: its current fidelity's; empty when it has none."""
+        return self._guidance.format or ""
 
     def log_validation(self, violations: list[str]) -> None:
         """Log a validate of this practice at its working fidelity in its session's log, with each violation's
         synopsis; no violations is a validate that passed."""
         detail = " ".join(violations)
-        self._session.log.line(f"validate {type(self.guideline).__name__} {self.working_fidelity} {detail}".rstrip())
+        self._session.log.line(f"validate {type(self._guidance).__name__} {self.working_fidelity} {detail}".rstrip())
 
     @property
     def _chosen_outputs(self) -> dict:
@@ -179,7 +152,7 @@ class PracticeSessionOutput:
     def folder(self) -> Path:
         """The folder this practice writes its code under: the root chosen or configured,
         else the practice's own default folder under the session's root, such as src for BDD."""
-        relative = self._chosen_or_configured_root or self.guideline.default_workspace_folder
+        relative = self._chosen_or_configured_root or self._guidance.default_workspace_folder
         return (self._session.root / relative).resolve()
 
     @property

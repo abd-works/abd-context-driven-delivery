@@ -1,5 +1,5 @@
 """How Clean Engineering takes part in the graph: it reads each source file with its language's class model and adds
-the folders, classes, properties, operations, and parameters it parsed to its practice graph as nodes, and keeps the
+the folders, classes, properties, operations, and parameters it parsed to its graph as nodes, and keeps the
 members its model documents describe on the practice's root."""
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 
 from harness.graph.model_node import schema_sync_paused
-from harness.graph.graph import Graph, Node, PracticeGraph, Source
+from harness.graph.graph import Graph, Node, Source
 from harness.graph.skipped_folders import scanned_files, skips_folder
 
 CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py"}
@@ -24,21 +24,21 @@ _STATIC_LINE = re.compile(r"^\s*(?:(?:public|private|protected|readonly|declare|
 _GETTER_MEASURES = ("line_count", "max_control_flow_depth", "has_bare_catch", "swallows_exceptions")
 
 
-def read_code_and_models(practice: PracticeGraph) -> None:
+def read_code_and_models(practice: CleanEngineering) -> None:
     """Add the folders, classes, properties, operations, and parameters the graph's source files hold to the Clean
-    Engineering practice graph, then the members the model documents in scope describe, on its root."""
+    Engineering graph, then the members the model documents in scope describe, on its root."""
     with schema_sync_paused():
         _CodeReading(practice).read()
         _ModelReading(practice).read()
 
 
 class _CodeReading:
-    """One read of a working copy's code into the Clean Engineering practice graph."""
+    """One read of a working copy's code into the graph that holds Clean Engineering."""
 
-    def __init__(self, practice: PracticeGraph) -> None:
+    def __init__(self, practice: CleanEngineering) -> None:
         self.practice = practice
         self.graph: Graph = practice.graph
-        self.root = Path(practice.source_root)
+        self.root = Path(self.graph.source_root_of(practice))
         self.class_names: set[str] = set()
         # Each source file its language could not read, with the reason; the source-parses rule reports them.
         self.unreadable: dict[Path, str] = {}
@@ -59,7 +59,7 @@ class _CodeReading:
             if owner:
                 imports[owner].extend(module.dependencies)
             for cls in module.classes:
-                self._class(text, relative, folders.get(owner) or self.practice.root_node, cls)
+                self._class(text, relative, folders.get(owner) or self.graph.root_of(self.practice), cls)
         self._record_unreadable(roles, folders)
         self._link_folders(roles, folders, imports)
 
@@ -69,7 +69,7 @@ class _CodeReading:
         modules = {rel: role for rel, role in roles.items() if role == "Module"}
         for file, reason in self.unreadable.items():
             relative = file.relative_to(self.root).as_posix()
-            owner = folders.get(_nearest(str(Path(relative).parent).replace("\\", "/"), modules)) or self.practice.root_node
+            owner = folders.get(_nearest(str(Path(relative).parent).replace("\\", "/"), modules)) or self.graph.root_of(self.practice)
             kept = owner.get_fact("unreadable_sources") or []
             owner.set_fact("unreadable_sources", list(dict.fromkeys([*kept, f"{relative}: {reason}"])))
 
@@ -79,14 +79,14 @@ class _CodeReading:
         module = Module(name=Path(rel).name, sequential_order=1)
         module.load_folder_facts(self.root / rel)
         module.type = kind
-        return self.practice.add(module, f"clean_engineering:{kind}:{rel}", rel, 1, 1)
+        return self.graph.add(self.practice, module, f"clean_engineering:{kind}:{rel}", rel, 1, 1)
 
     def _link_folders(self, roles: dict[str, str], folders: dict, imports: dict[str, list[str]]) -> None:
-        held = [*self.practice.nodes.get("Module", []), *self.practice.nodes.get("Package", [])]
+        held = [*self.graph.nodes_of(self.practice, "Module"), *self.graph.nodes_of(self.practice, "Package")]
         ids = {node.source.file: node.node_id for node in held}
         ids.update({rel: folder.node_id for rel, folder in folders.items()})
         for rel in sorted(roles, key=lambda item: (item.count("/"), item)):
-            parent = _enclosing(rel, roles, folders) or self.practice.root_node
+            parent = _enclosing(rel, roles, folders) or self.graph.root_of(self.practice)
             folder = folders[rel]
             # A folder read back from a saved graph is a plain node, whose dependencies are a saved fact.
             kept = getattr(folder, "dependencies", None) or folder.get_fact("dependencies") or []
@@ -95,9 +95,9 @@ class _CodeReading:
                 folder.dependencies = resolved
             else:
                 folder.set_fact("dependencies", resolved)
-            self.practice.link("owns", parent, folder)
+            self.graph.link("owns", parent, folder)
             if roles[rel] == "Package":
-                self.practice.link("belongsTo", folder, parent, "relationship")
+                self.graph.link("belongsTo", folder, parent, "relationship")
 
     def _parsed_modules(self, files: list[Path]) -> dict[Path, tuple]:
         """Each source file's parsed module and text. A file that does not parse is kept in ``unreadable``."""
@@ -141,10 +141,10 @@ class _CodeReading:
             start, end = _class_extent(text, cls.name, getattr(cls, "line", None) or 1)
         lines = text.splitlines()
         cls.load_source_facts("\n".join(lines[start - 1 : end]))
-        node = self.practice.add(cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", relative, start, end)
+        node = self.graph.add(self.practice, cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", relative, start, end)
         node.set_fact("folder", folder.node_id)
-        self.practice.link("owns", folder, node)
-        self.practice.link("belongsTo", node, folder, "relationship")
+        self.graph.link("owns", folder, node)
+        self.graph.link("belongsTo", node, folder, "relationship")
         for prop in _properties_of(cls, text):
             self._property(relative, node, prop)
         for operation in cls.operations:
@@ -155,23 +155,23 @@ class _CodeReading:
         prop_id = f"clean_engineering:Property:{relative}:{prop['name']}:{cls.name}"
         parsed = prop["parsed"]
         node = (
-            self.practice.add(parsed, prop_id, relative, prop["line"], prop["line"])
+            self.graph.add(self.practice, parsed, prop_id, relative, prop["line"], prop["line"])
             if parsed is not None
-            else self.practice.add_named("Property", prop_id, prop["name"], Source(relative, prop["line"], prop["line"], self.practice.source_root))
+            else self.graph.add_named(self.practice, "Property", prop_id, prop["name"], Source(relative, prop["line"], prop["line"], str(self.root)))
         )
         # A property found only by a getter or field has no parsed object to name its class, so the node does.
         node.set_fact("owner", cls.name)
         if prop.get("getter") is not None:
             self._measure_getter(node, prop["getter"])
-        self.practice.link("properties", cls, node, "grouped")
+        self.graph.link("properties", cls, node, "grouped")
         if not _names_class(prop["hint"], self.class_names):
             return
-        self.practice.link("relative", cls, node)
+        self.graph.link("relative", cls, node)
         for other in self.class_names:
             other_node = self._class_named(other) if other != cls.name and other in prop["hint"] else None
             if other_node is not None:
-                self.practice.link("hasType", node, other_node, "relationship")
-                self.practice.link("dependsOn", cls, other_node, "relationship")
+                self.graph.link("hasType", node, other_node, "relationship")
+                self.graph.link("dependsOn", cls, other_node, "relationship")
 
     def _measure_getter(self, node: Node, getter) -> None:
         """A getter's body is an operation's body, so its Property node records what the operation rules measure."""
@@ -183,22 +183,22 @@ class _CodeReading:
 
         start, end = operation_source_span(operation) or _scanned_span("\n".join(lines), operation)
         operation.load_span_facts("\n".join(lines[start - 1 : end]))
-        node = self.practice.add(operation, f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}", relative, start, end)
+        node = self.graph.add(self.practice, operation, f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}", relative, start, end)
         node.set_fact("parameters", [[p.name, (p.type_hint or "").strip()] for p in operation.parameters])
-        self.practice.link("owns", cls, node)
+        self.graph.link("owns", cls, node)
         for parameter in operation.parameters:
             parameter.load_operation_facts(operation)
             param_id = f"clean_engineering:Parameter:{relative}:{parameter.name}:{cls.name}.{operation.name}"
-            self.practice.link("hasParameter", node, self.practice.add(parameter, param_id, relative, start, start), "relationship")
+            self.graph.link("hasParameter", node, self.graph.add(self.practice, parameter, param_id, relative, start, start), "relationship")
         returned = getattr(operation, "return_type", "") or ""
         if _names_class(returned, self.class_names):
             for other in self.class_names:
                 other_node = self._class_named(other) if other in returned else None
                 if other_node is not None:
-                    self.practice.link("returns", node, other_node, "relationship")
+                    self.graph.link("returns", node, other_node, "relationship")
 
     def _class_named(self, name: str) -> Node | None:
-        return next((node for node in self.practice.nodes.get("OoadClass", []) if node.name == name), None)
+        return next((node for node in self.graph.nodes_of(self.practice, "OoadClass") if node.name == name), None)
 
 
 class _ModelReading:
@@ -206,10 +206,10 @@ class _ModelReading:
     root holds every member they describe, by ``Class.member``, so a realization can follow an interaction into a class
     the load left out without a second copy of the class among the code's nodes."""
 
-    def __init__(self, practice: PracticeGraph) -> None:
+    def __init__(self, practice: CleanEngineering) -> None:
         self.practice = practice
         self.graph: Graph = practice.graph
-        self.root = Path(practice.source_root)
+        self.root = Path(self.graph.source_root_of(practice))
 
     def read(self) -> None:
         from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
@@ -222,8 +222,8 @@ class _ModelReading:
             descriptions.read(MarkdownCleanEngineeringModel(name="", sequential_order=1).parse(file.read_text(encoding="utf-8")), relative)
         if not descriptions.is_empty:
             # A refresh reads only some model documents, so the members the others describe stay.
-            kept = self.practice.root_node.get_fact("model_members") or {}
-            self.practice.root_node.set_fact("model_members", {**kept, **descriptions.model_members})
+            kept = self.graph.root_of(self.practice).get_fact("model_members") or {}
+            self.graph.root_of(self.practice).set_fact("model_members", {**kept, **descriptions.model_members})
 
     def _model_files(self) -> list[Path]:
         """Each scoped folder's and each of its parents' ``.context/*-model.md``, up to the root. ``.context`` is a

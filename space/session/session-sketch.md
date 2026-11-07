@@ -309,15 +309,15 @@ Sessions, a session, and its log
 
 ### **PracticeSessionOutput**
 
-+ PracticeSessionOutput(name: str, session: Session)
++ PracticeSessionOutput(guidance: PracticeGuidance, session: Session)
 ------
 + name: str
 	// data field
 + session: Session
 + session_file: str
 	// data field
-+ guideline: PracticeGuidance
-	// loads on first use
++ guidance: PracticeGuidance
+	// the session's one instance of the practice, which its graph holds
 + fidelities: GuidanceCollection
 + enabled: bool
 	// data field
@@ -345,10 +345,6 @@ Sessions, a session, and its log
 + keep_root(root: Path): None
 + of_fidelity(fidelity: FidelityGuidance): FidelitySessionOutput
 	// what PracticeGuidance.work_in gives each fidelity
-+ keep_format(): None
-	-> FidelitySessionOutput.keep_format
-+ use_kept_format(): None
-	-> FidelitySessionOutput.kept_format
 + log_validation(violations: list[str]): None
 	// Validate logs each run this way
 	-> SessionLog.line
@@ -579,10 +575,12 @@ it should leave session.log unchanged
 
 ```
 -> session.practice(name)
-it should hold that practice's guideline
-  -> expect(session.practice(name).guideline).to be that practice guideline
-it should hold a graph of its own, apart from the guideline an action works with
-  -> expect(session.graph.practices[name].guidance).not_to be session.practice(name).guideline
+it should hold that practice's guidance in memory
+  -> expect(session.practice(name).guidance).to be a PracticeGuidance
+it should be the one practice the session's graph holds
+  -> expect(session.graph.every_practice[name]).to be session.practice(name).guidance
+it should be the same practice the next call in the session works with
+  -> expect(next call's session.practice(name).guidance).to be session.practice(name).guidance
 it should return that same practice on the next ask
   -> expect(session.practice(name)).to be the entry from the first ask
 it should list every practice CDD has, opened or not

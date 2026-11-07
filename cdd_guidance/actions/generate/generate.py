@@ -57,8 +57,8 @@ class Generate(GuidanceAction):
         return "\n\n".join(render for render in renders if render)
 
     def _earlier_render(self, practice: PracticeGuidance) -> str:
-        current = practice.fidelities.current
-        wanted = Format(practice.format).name
+        current = self.fidelity_of(practice)
+        wanted = Format(current.format if current is not None else practice.format).name
         earlier = self._fidelity_before(practice, current) if current is not None else None
         if earlier is None or not wanted or wanted not in {Format(label).name for label in earlier.outputs}:
             return ""
@@ -93,7 +93,8 @@ class Generate(GuidanceAction):
         self.add_generate_header_to_generated()
 
     def _where_outputs_go(self) -> str:
-        outputs = [item.output_paths() for item in self.listed() if isinstance(item, PracticeGuidance)]
+        worked = [self.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
+        outputs = [fidelity.output_paths() for fidelity in worked if fidelity is not None]
         places = [f"{label}: {', '.join(paths)}" for listed in outputs for label, paths in listed.items()]
         if not places:
             return ""

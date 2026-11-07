@@ -192,16 +192,16 @@ class GivenNamesComplexStateRootFirst(PracticeGraphRule):
 
 def _owned_parts(context: RuleCheckContext) -> dict[str, str]:
     """Each entity and value object an aggregate in the DDD model owns, mapped to the name of that aggregate's root."""
-    graph = context.practice.graph
+    graph = context.graph
     ddd = graph.practices.get("ddd") if graph is not None else None
     if ddd is None:
         return {}
     owned: dict[str, str] = {}
-    for aggregate in ddd.nodes.get("Aggregate", []):
-        roots = [edge.child.name for edge in ddd.edges_from("root", aggregate)]
+    for aggregate in graph.nodes_of(ddd, "Aggregate"):
+        roots = [edge.child.name for edge in graph.edges_from("root", aggregate)]
         if not roots:
             continue
-        for edge in ddd.edges_from("owns", aggregate):
+        for edge in graph.edges_from("owns", aggregate):
             if edge.child.type in _OWNED_PART_TYPES:
                 owned[edge.child.name] = roots[0]
     return owned
@@ -275,7 +275,7 @@ def _parent_story(node: Node, context: RuleCheckContext) -> Node | None:
         if parent.type == "Story":
             return parent
         parent = getattr(parent, "parent", None)
-    for edge in context.practice.edges.get("scenarios", []):
+    for edge in context.edges("scenarios"):
         if edge.child is node:
             return edge.parent
     return None

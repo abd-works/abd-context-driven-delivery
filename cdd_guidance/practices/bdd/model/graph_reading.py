@@ -1,5 +1,5 @@
 """How BDD takes part in the graph: each spec file's language model reads its describe tree, whose spec, descriptions,
-contexts, and observations are added to the BDD practice graph as they are; then each observation is linked to the
+contexts, and observations are added to the graph that holds BDD as they are; then each observation is linked to the
 operations and properties of the code it drives."""
 
 from __future__ import annotations
@@ -9,7 +9,12 @@ from pathlib import Path
 
 from harness.name.name import Name
 from harness.graph.model_node import schema_sync_paused
-from harness.graph.graph import Graph, PracticeGraph
+from typing import TYPE_CHECKING
+
+from harness.graph.graph import Graph
+
+if TYPE_CHECKING:
+    from cdd_guidance.practices.bdd.bdd import Bdd
 
 _CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py"}
 _BEHAVIOR_EDGES = {"Description": "descriptions", "Context": "contexts", "Observation": "observations"}
@@ -23,11 +28,11 @@ _QUOTED = re.compile(r"""(['"`])(?:\\.|(?!\1).)*\1""")
 _SPEC_STATE = re.compile(r"\bself\.(\w+)")
 
 
-def read_specs(practice: PracticeGraph) -> None:
-    """Add the describe tree of each spec file the graph reads to the BDD practice graph."""
+def read_specs(practice: Bdd) -> None:
+    """Add the describe tree of each spec file the graph reads to the graph that holds BDD."""
     from cdd_guidance.practices.bdd.model.spec_source import is_spec_file
 
-    root = Path(practice.source_root)
+    root = Path(practice.graph.source_root_of(practice))
     specs = [file for file in practice.graph.source_files(root, _CODE_SUFFIXES) if is_spec_file(file)]
     with schema_sync_paused():
         for index, file in enumerate(specs, start=1):
@@ -42,7 +47,7 @@ def link_observations(graph: Graph) -> None:
         _ObservationLinks(graph).link()
 
 
-def _add_spec(practice: PracticeGraph, file: Path, relative: str) -> None:
+def _add_spec(practice: Bdd, file: Path, relative: str) -> None:
     """The spec file's describe tree, each node at its own lines with the facts its span holds."""
     from cdd_guidance.practices.bdd.model.code_spec_model import PythonBddModel, TypeScriptBddModel
 
@@ -57,14 +62,15 @@ def _add_spec(practice: PracticeGraph, file: Path, relative: str) -> None:
     parents = {id(node): node.parent for node in behavior}
     spec.name = file.stem
     spec.type = "Spec"
-    added = {id(spec): practice.add(spec, f"bdd:Spec:{relative}", relative, 1, max(1, len(lines)))}
-    practice.link("owns", practice.root_node, added[id(spec)])
+    graph = practice.graph
+    added = {id(spec): graph.add(practice, spec, f"bdd:Spec:{relative}", relative, 1, max(1, len(lines)))}
+    graph.link("owns", graph.root_of(practice), added[id(spec)])
     for node in behavior:
         node.load_span_facts("\n".join(lines[node.line - 1 : node.end_line]))
         node_id = f"bdd:{node.type}:{relative}:{node.line}:{node.name}"
-        added[id(node)] = practice.add(node, node_id, relative, node.line, node.end_line)
+        added[id(node)] = graph.add(practice, node, node_id, relative, node.line, node.end_line)
         parent = added.get(id(parents[id(node)]), added[id(spec)])
-        practice.link(_BEHAVIOR_EDGES[node.type], parent, added[id(node)])
+        graph.link(_BEHAVIOR_EDGES[node.type], parent, added[id(node)])
 
 
 def _is_test_support(path: str) -> bool:
@@ -84,13 +90,13 @@ class _ObservationLinks:
         self.bdd = graph.practice("bdd")
         self.clean = graph.practice("clean_engineering")
         self.members: dict[tuple[bool, str], list] = {}
-        for node in [*self.clean.nodes.get("Operation", []), *self.clean.nodes.get("Property", [])]:
+        for node in [*graph.nodes_of(self.clean, "Operation"), *graph.nodes_of(self.clean, "Property")]:
             if node.source.file and not _is_test_support(node.source.file):
                 self.members.setdefault((node.source.file.endswith(".py"), node.name), []).append(node)
 
     def link(self) -> None:
         by_file: dict[str, list] = {}
-        for node in self.bdd.by_id.values():
+        for node in self.graph.nodes_of(self.bdd):
             if node.type in _BEHAVIOR_EDGES and node.source.file:
                 by_file.setdefault(node.source.file, []).append(node)
         for file, nodes in by_file.items():
@@ -111,8 +117,8 @@ class _ObservationLinks:
                     invoked = found + [member for member in invoked if member not in found]
                     break
             for member in invoked:
-                self.bdd.link("invokes", node, member, "relationship")
-                self.clean.link("invokedBy", member, node, "relationship")
+                self.graph.link("invokes", node, member, "relationship")
+                self.graph.link("invokedBy", member, node, "relationship")
 
     def _invoked_in(self, text: str, is_python: bool) -> list:
         """The members text reaches, in the order it names them, one per class and name; a tool it calls by name

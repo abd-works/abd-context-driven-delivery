@@ -391,7 +391,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
 def shown_on(node, screens: Iterable) -> List:
     """The screens a step, scenario or story is shown on: its ``shownOn`` edges, else the screens that list it, which
     is how a story map drawn on its own graph finds the screens on the UX map's graph."""
-    edged = [edge.child for edge in node.practice.edges_from(_SHOWN_ON, node)]
+    edged = [edge.child for edge in node.graph.edges_from(_SHOWN_ON, node)]
     if edged:
         return edged
     return [screen for screen in screens if screen.lists(node)]

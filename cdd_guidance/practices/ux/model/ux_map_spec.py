@@ -17,7 +17,7 @@ from cdd_guidance.practices.ux.model.ux_map import ScreenNotOnMap, UxMap
 
 
 def edge_pairs(graph, kind):
-    return [(edge.parent.name, edge.child.name) for edge in graph.practice("ux").edges.get(kind, [])]
+    return [(edge.parent.name, edge.child.name) for edge in graph.edges_of(graph.practice("ux"), kind)]
 
 
 with description("a UxMap"):
@@ -72,8 +72,8 @@ with description("a ux map on a graph"):
 
     with it("should record screens and belongsTo"):
         practice = self.graph.practice("ux")
-        screens = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("screens", [])]
-        belongs = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("belongsTo", [])]
+        screens = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "screens")]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "belongsTo")]
         expect(screens).to(contain(("UxMap", "Catalog")))
         expect(belongs).to(contain(("Catalog", "UxMap")))
 
