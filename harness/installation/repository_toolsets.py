@@ -2,17 +2,25 @@
 from __future__ import annotations
 
 import ast
-import importlib
 import logging
 import os
 import sys
 from pathlib import Path
 from typing import Iterable
 
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from harness.name.name import Name
 
 logger = logging.getLogger(__name__)
+
+
+class ToolsetUnloadable(Exception):
+    """A toolset the repository's source defines whose module cannot be imported, or does not define it."""
+
+    def __init__(self, reference: str, cause: Exception) -> None:
+        super().__init__(f"{reference}: {type(cause).__name__}: {cause}")
+        self.reference = reference
+        self.cause = cause
 
 
 class RepositoryToolsets:
@@ -60,6 +68,7 @@ class RepositoryToolsets:
 
     def __init__(self, root: Path | str) -> None:
         self.root = Path(root).resolve()
+        self.unloadable: list[ToolsetUnloadable] = []
 
     def import_path_entries(self) -> list[str]:
         """The repository root, then tools and the guidance packages under ``cdd_guidance``. Never ``harness/``, which
@@ -93,19 +102,22 @@ class RepositoryToolsets:
             if entry not in sys.path:
                 sys.path.insert(0, entry)
 
-    def import_modules(self) -> list[str]:
-        """Import the module of every toolset the repository defines, without making a toolset, and answer the modules
-        that failed. A module that keeps something the framework declares a seam for, such as the sessions a tool call
-        opens, registers it when it is imported; a process that serves only some toolsets, as the hook server does,
-        imports them all so those registrations hold there as they do in the MCP host."""
-        failed: list[str] = []
-        for module in dict.fromkeys(ref.split(":", 1)[0] for ref in self.collect()):
+    def classes(self) -> list[type]:
+        """The class of every toolset the repository defines, each module imported, in folder order. A toolset that
+        cannot be loaded is left out and kept in ``unloadable`` with its cause, so each reader decides whether it stops
+        or serves the rest. A module that keeps something the framework declares a seam for, such as the sessions a
+        tool call opens, registers it when it is imported, so a process that loads these classes has every
+        registration the repository makes."""
+        self.unloadable = []
+        found: list[type] = []
+        for reference in self.collect():
             try:
-                importlib.import_module(module)
-            except Exception:
-                logger.exception("could not import toolset module %s", module)
-                failed.append(module)
-        return failed
+                found.append(ToolsetReference(reference).toolset_class)
+            # A toolset's module is the repository's own code; any failure importing it is that toolset's failure.
+            except Exception as error:  # noqa: BLE001
+                logger.exception("could not load toolset %s", reference)
+                self.unloadable.append(ToolsetUnloadable(reference, error))
+        return found
 
     def collect(self) -> list[str]:
         """The ``module:Class`` reference of every toolset class in the repository, each once, in folder order."""

@@ -22,7 +22,7 @@ def main() -> int:
     parser.add_argument("--guidance", action="append", default=None)
     args = parser.parse_args()
     from harness.diagnostics.agent_tools_probe import AgentToolsProbe
-    from harness.installer.installer import Installer
+    from harness.installation.installer import Installer
 
     installer = Installer(path=args.path, repo=_REPO)
     installer.toolsets.ensure_import_path()

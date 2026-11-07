@@ -21,7 +21,7 @@ from typing import Any, Callable, ClassVar
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
 from harness.agent_tools.tool_call import ToolCall
-from harness.hooks.hooks import HookHandlersFile
+from harness.hooks.hooks import HookHandlersFile, Hooks
 from harness.installation.context_config import ContextConfig
 from harness.installation.repository_toolsets import RepositoryToolsets
 
@@ -254,7 +254,7 @@ class HookHandler:
         return f"{type(self.tool.toolset).__name__}.{self.tool.name}"
 
     def is_enabled(self, payload: HookPayload | None = None) -> bool:
-        if bool(getattr(type(self.tool.toolset), "_hooks_disabled", False)):
+        if Hooks.disabled_on(self.tool.toolset):
             return False
         pattern = self._pattern_name()
         if not pattern:
@@ -318,28 +318,16 @@ class HookHandler:
 
 
 class HandlerCatalog:
-    """The toolsets whose hook operations may run, loaded from a list of toolsets, from the references a
-    ``hook-handlers.json`` lists, or from every toolset the repository defines."""
+    """The toolsets whose hook operations may run, and the handlers of each event they serve, made once when the
+    toolsets load. Each toolset is named by its class, its instance, or, as ``hook-handlers.json`` lists it, its
+    ``module:Class`` reference; one that cannot be loaded is kept in ``failures`` and the rest still serve."""
 
-    def __init__(
-        self,
-        toolsets: list[Any] | None = None,
-        repo_root: Path | None = None,
-        *,
-        handlers: Path | str | None = None,
-    ) -> None:
+    def __init__(self, toolsets: list[Any], repo_root: Path | None = None) -> None:
         self.repo_root = repo_root
         self.failures: list[tuple[str, BaseException]] = []
         self.toolsets: list[Any] = []
-        self._load_items(self._source_items(toolsets, handlers))
-
-    def _source_items(self, toolsets: list[Any] | None, handlers: Path | str | None) -> list[Any]:
-        if handlers is not None:
-            return list(HookHandlersFile(handlers).refs)
-        if toolsets is not None:
-            return list(toolsets)
-        installed = HookHandlersFile((self.repo_root or Path()) / ".cursor" / HookHandlersFile.NAME).refs
-        return list(installed) or list(RepositoryToolsets(self.repo_root).collect())
+        self._load_items(toolsets)
+        self._handlers = self._handlers_by_event()
 
     def _load_items(self, items: list[Any]) -> None:
         for item in items:
@@ -369,22 +357,28 @@ class HandlerCatalog:
         return list(dict.fromkeys(tool.hook_event for tool in self._hook_tools() if tool.hook_event))
 
     def for_event(self, event_name: str) -> list[HookHandler]:
-        handlers: dict[tuple[str, str], HookHandler] = {}
+        """The handlers of the hook operations that serve event_name, one for each operation."""
+        return list(self._handlers.get(event_name, ()))
+
+    def _handlers_by_event(self) -> dict[str, list[HookHandler]]:
+        by_event: dict[str, dict[tuple[str, str], HookHandler]] = {}
         for tool in self._hook_tools():
-            key = (type(tool.toolset).__name__, tool.name)
-            if self._serves_event(tool, event_name) and key not in handlers:
-                handlers[key] = HookHandler(tool, self.repo_root or Path())
-        return list(handlers.values())
+            for event in self._events_served(tool):
+                handlers = by_event.setdefault(event, {})
+                key = (type(tool.toolset).__name__, tool.name)
+                if key not in handlers:
+                    handlers[key] = HookHandler(tool, self.repo_root or Path())
+        return {event: list(handlers.values()) for event, handlers in by_event.items()}
 
     def _hook_tools(self) -> list[AgentTool]:
         return [tool for toolset in self.toolsets for tool in toolset.tools_for(InstallDestination.HOOK)]
 
-    def _serves_event(self, tool: AgentTool, event_name: str) -> bool:
+    def _events_served(self, tool: AgentTool) -> list[str]:
         """A tool serves the event its annotation names. Rule injection annotated for ``postToolUse`` also serves
         ``afterFileEdit``, because Cursor reports a file edit under that event as well as ``postToolUse``."""
-        if tool.hook_event == event_name:
-            return True
-        return event_name == "afterFileEdit" and tool.hook_event == "postToolUse" and tool.name == "inject_rules"
+        if tool.hook_event == "postToolUse" and tool.name == "inject_rules":
+            return [tool.hook_event, "afterFileEdit"]
+        return [tool.hook_event]
 
 
 class HookIllegitimateHandler(Exception):
@@ -501,14 +495,22 @@ class HookServer:
         self._absorb_catalog_failures()
 
     @classmethod
-    def from_toolsets(cls, repo_root: Path, toolsets: list[Any] | None = None) -> HookServer:
-        return cls(repo_root, HandlerCatalog(toolsets, repo_root))
+    def from_repository(cls, toolsets: RepositoryToolsets) -> HookServer:
+        """The hook server of a checkout: the toolsets its installed ``.cursor/hook-handlers.json`` lists, else every
+        toolset it defines. Every toolset module is imported either way, so the registrations those modules make,
+        such as how a call opens its session, hold in the hook process."""
+        classes = toolsets.classes()
+        installed = HookHandlersFile(toolsets.root / ".cursor" / HookHandlersFile.NAME).refs
+        server = cls(toolsets.root, HandlerCatalog(list(installed) or classes, toolsets.root))
+        for unloadable in toolsets.unloadable:
+            server.skip(unloadable.reference, unloadable.cause)
+        return server
 
     @classmethod
     def from_handlers(cls, handlers: Path | str, *, repo: Path | str) -> HookServer:
         """The hook server of the toolsets a ``hook-handlers.json`` lists, for the checkout at repo."""
         resolved = Path(repo).resolve()
-        server = cls(resolved, HandlerCatalog(repo_root=resolved, handlers=handlers))
+        server = cls(resolved, HandlerCatalog(list(HookHandlersFile(handlers).refs), resolved))
         server.notify_exceptions()
         return server
 
@@ -636,13 +638,14 @@ def main() -> None:
     from harness.hooks.hook_daemon import HookDaemon
 
     checkout = Path(__file__).resolve().parents[2]
-    RepositoryToolsets(checkout).use_for_this_process()
+    daemon = HookDaemon(checkout)
+    daemon.toolsets.use_for_this_process()
     os.chdir(checkout)
     raw = sys.stdin.buffer.read()
     if not raw.strip():
         print(json.dumps(HookResult().as_dict()))
         return
-    answer = HookDaemon(checkout).ensure().handle_stdin(raw)
+    answer = daemon.ensure().handle_stdin(raw)
     print(json.dumps(HookResult.from_handler(answer).as_dict()))
 
 

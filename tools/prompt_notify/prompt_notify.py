@@ -202,7 +202,7 @@ class PromptNotify:
         return "action", Name(str(getattr(toolset, "slug", match.name))).kebab
 
     def _load_echo_toolsets(self) -> list:
-        from harness.installer.installer import Installer
+        from harness.installation.installer import Installer
         from harness.agent_tools.agent_tools import AgentToolSet
 
         return AgentToolSet.from_items(Installer(repo=_CDD_CHECKOUT).toolsets.collect())

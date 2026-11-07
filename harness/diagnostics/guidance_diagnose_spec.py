@@ -8,7 +8,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from harness.installer.installer import Installer
+from harness.installation.installer import Installer
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(_REPO_ROOT).ensure_import_path()

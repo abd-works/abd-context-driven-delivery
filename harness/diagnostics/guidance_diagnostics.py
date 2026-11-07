@@ -31,7 +31,7 @@ class GuidanceDiagnostics:
 
         Run via MCP ``guidance-diagnostics.guidance_diagnostics`` or slash ``/guidance-diagnostics``. Read ``.cursor/diagnostics.json`` → ``guidance`` for pass/fail per MCP name. Session logging uses ``/session-diagnostics``."""
         from harness.diagnostics.guidance_probe import GuidanceProbe
-        from harness.installer.installer import Installer
+        from harness.installation.installer import Installer
 
         probe = GuidanceProbe.from_filter(Installer(repo=self._call.project), guidance)
         return "\n\n".join((probe.instructions(), probe.actions()))

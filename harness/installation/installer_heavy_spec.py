@@ -10,8 +10,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from harness.installer.claude_plugins import ClaudePlugins
-from harness.installer.installer import Installer, ToolsetInstallFailed
+from harness.mcp.claude_plugins import ClaudePlugins
+from harness.installation.installer import Installer, ToolsetInstallFailed
 
 
 class _ScriptedClaude(ClaudePlugins):
@@ -55,11 +55,12 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
     SamplePracticeWithFidelities,
 )
-from harness.hooks.hooks import Hook, hook
+from harness.hooks.hooks import Hook, HookInstallation, hook
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_server import McpInstallation, McpServer
 from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.spec_support import SpecServer, ThrowawayMachine, UserHome
+from harness.installation.ide_layout import IdeLayout
 
 
 
@@ -228,7 +229,7 @@ with description("an agent toolset") as self:
                     self._branch_tmp = tempfile.mkdtemp()
                     self.tree = Path(self._branch_tmp)
                     self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
-                    self.mcp = self.installer.install([SampleMcpOps()])
+                    self.mcp = self.installer.install([SampleMcpOps()]).of(McpInstallation)
 
                 with after.each:
                     shutil.rmtree(self._branch_tmp, ignore_errors=True)
@@ -301,7 +302,7 @@ with description("an agent toolset") as self:
                     self._branch_tmp = tempfile.mkdtemp()
                     self.tree = Path(self._branch_tmp)
                     self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
-                    self.mcp = self.installer.install([SampleHookOps()])
+                    self.run = self.installer.install([SampleHookOps()])
 
                 with after.each:
                     shutil.rmtree(self._branch_tmp, ignore_errors=True)
@@ -329,10 +330,10 @@ with description("an agent toolset") as self:
 
                 with context("with the hook host stood up"):
                     with it("should diagnose that the hook server answers ping"):
-                        expect(self.installer._channels_of_run().hook.diagnosis["ping"]).to(equal("pong"))
+                        expect(self.run.of(HookInstallation).diagnosis["ping"]).to(equal("pong"))
 
                     with it("should list the installed hook event"):
-                        expect(self.installer._channels_of_run().hook.diagnosis["events"]).to(contain("stop"))
+                        expect(self.run.of(HookInstallation).diagnosis["events"]).to(contain("stop"))
 
             with context("that are not annotated as Cursor hooks and a hooks manifest is already on the IDE path"):
                 with before.each:
@@ -359,7 +360,7 @@ with description("an agent toolset") as self:
             self.tree = Path(self._tmp)
             self.tool = SampleGuidance(format="markdown")
             self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
-            self.mcp = self.installer.install([self.tool])
+            self.mcp = self.installer.install([self.tool]).of(McpInstallation)
 
         with after.each:
             shutil.rmtree(self._tmp, ignore_errors=True)
@@ -553,7 +554,7 @@ with description("an agent toolset") as self:
                     self.tree = Path(self._tmp)
                     self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                         [Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)]
-                    )
+                    ).of(McpInstallation)
 
                 with after.each:
                     shutil.rmtree(self._tmp, ignore_errors=True)
@@ -779,7 +780,7 @@ with description("a practice guidance class") as self:
             self.tree = Path(self._tmp)
             self.tool = SamplePracticeGuidance(format="markdown")
             self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
-            self.mcp = self.installer.install([self.tool])
+            self.mcp = self.installer.install([self.tool]).of(McpInstallation)
 
         with after.each:
             shutil.rmtree(self._tmp, ignore_errors=True)
@@ -800,7 +801,7 @@ with description("a practice guidance class") as self:
             from harness.installation.files import FileInstallation
 
             overview = "sample preamble"
-            writer = FileInstallation("Cursor", self.tree, "skill")
+            writer = FileInstallation(IdeLayout("Cursor"), self.tree, "skill")
             text = writer._skill_front_matter(
                 "sample-tool",
                 writer._skill_overview(
@@ -816,7 +817,7 @@ with description("a practice guidance class") as self:
                 from harness.installation.files import FileInstallation
 
                 overview = "## Overview\n\nsample preamble\n\nsecond paragraph\n\n---"
-                writer = FileInstallation("Cursor", self.tree, "skill")
+                writer = FileInstallation(IdeLayout("Cursor"), self.tree, "skill")
                 self.description = writer._skill_overview(type("Host", (), {"overview": overview})(), [overview])
 
             with it("should describe the skill with the opening paragraph alone"):
@@ -828,7 +829,7 @@ with description("a practice guidance class") as self:
 
                 self.text = "See [tools](../../references/language-tools.md); follow `practices/ddd/ddd-model.mdc`."
                 self.dest = self.tree / "rules" / "practices" / "ddd" / "ddd-model.md"
-                self.writer = FileInstallation("Claude", self.tree, "rules", repo=_REPO_ROOT)
+                self.writer = FileInstallation(IdeLayout("Claude"), self.tree, "rules", repo=_REPO_ROOT)
 
             with it("should copy the shared file into the IDE references folder"):
                 self.writer._with_installed_references(self.text, self.dest)
@@ -855,7 +856,7 @@ with description("a practice guidance class") as self:
                 with before.each:
                     from harness.installation.files import FileInstallation
 
-                    FileInstallation("Claude", self.tree, "rules", repo=_REPO_ROOT).write_standing_rule(self.source)
+                    FileInstallation(IdeLayout("Claude"), self.tree, "rules", repo=_REPO_ROOT).write_standing_rule(self.source)
                     self.text = (self.tree / "rules" / "coding.md").read_text(encoding="utf-8")
 
                 with it("should load in every session, with no paths"):
@@ -868,7 +869,7 @@ with description("a practice guidance class") as self:
                 with it("should keep the source front matter as an .mdc rule"):
                     from harness.installation.files import FileInstallation
 
-                    FileInstallation("Cursor", self.tree, "rules", repo=_REPO_ROOT).write_standing_rule(self.source)
+                    FileInstallation(IdeLayout("Cursor"), self.tree, "rules", repo=_REPO_ROOT).write_standing_rule(self.source)
                     text = (self.tree / "rules" / "coding.mdc").read_text(encoding="utf-8")
                     expect(text).to(equal(self.source.read_text(encoding="utf-8")))
 
@@ -876,7 +877,7 @@ with description("a practice guidance class") as self:
             with it("should leave that section name out of the skill body"):
                 from harness.installation.files import FileInstallation
 
-                writer = FileInstallation("Cursor", self.tree, "skill", mcp_mode=True)
+                writer = FileInstallation(IdeLayout("Cursor"), self.tree, "skill", mcp_mode=True)
                 tool = type("Tool", (), {"docstring": "overview"})()
                 expect(writer._body_for(tool)).to(equal(""))
 
@@ -894,7 +895,7 @@ with description("a practice guidance class") as self:
             with it("should kebab-case the practice folder to match fidelity skill names"):
                 from harness.installation.files import FileInstallation
 
-                writer = FileInstallation("Cursor", Path("."), "skill")
+                writer = FileInstallation(IdeLayout("Cursor"), Path("."), "skill")
                 tools = {"instructions": _skill_tool("instructions")}
                 toolset = type(
                     "Practice",
@@ -912,7 +913,7 @@ with description("a practice guidance class") as self:
             self.tree = Path(self._tmp)
             self.tool = SamplePracticeGuidance(format="markdown")
             self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
-            self.mcp = self.installer.install([self.tool])
+            self.mcp = self.installer.install([self.tool]).of(McpInstallation)
 
         with after.each:
             tmp = getattr(self, "_tmp", None)
@@ -1010,7 +1011,7 @@ with description("a practice guidance class") as self:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
             self.tool = SamplePracticeWithFidelities(format="markdown")
-            self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([self.tool])
+            self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([self.tool]).of(McpInstallation)
 
         with after.each:
             shutil.rmtree(self._tmp, ignore_errors=True)
@@ -1033,7 +1034,7 @@ with description("a practice guidance class") as self:
             with it("should keep the practice folder and name the leaf practice-fidelity"):
                 from harness.installation.files import FileInstallation
 
-                writer = FileInstallation("Cursor", Path("."), "skill")
+                writer = FileInstallation(IdeLayout("Cursor"), Path("."), "skill")
                 tools = {"instructions": _skill_tool("instructions")}
                 practice = type("Practice", (), {"slug": "sample-tool"})()
                 toolset = type(
@@ -1053,7 +1054,7 @@ with description("a practice guidance class") as self:
             with it("should kebab-case the practice parent so it matches the fidelity leaf"):
                 from harness.installation.files import FileInstallation
 
-                writer = FileInstallation("Cursor", Path("."), "skill")
+                writer = FileInstallation(IdeLayout("Cursor"), Path("."), "skill")
                 tools = {"instructions": _skill_tool("instructions")}
                 practice = type("Practice", (), {"slug": "sample-tool"})()
                 toolset = type(
@@ -1103,7 +1104,7 @@ with description("a practice guidance class") as self:
                     self.tool = Stories()
                     self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                         [self.tool]
-                    )
+                    ).of(McpInstallation)
                     self.server = _server_publishing(self.mcp)
 
                 with after.each:
@@ -1180,7 +1181,7 @@ with description("lifecycle actions annotated for installation") as self:
                             Satisfy(),
                             Sketch(),
                         ]
-                    )
+                    ).of(McpInstallation)
 
                 with after.each:
                     tmp = getattr(self, "_tmp", None)
@@ -1224,7 +1225,7 @@ with description("lifecycle actions annotated for installation") as self:
                     self.tree = Path(self._tmp)
                     self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                         [Improvement()]
-                    )
+                    ).of(McpInstallation)
 
                 with after.each:
                     tmp = getattr(self, "_tmp", None)
@@ -1246,7 +1247,7 @@ with description("lifecycle actions annotated for installation") as self:
                     self.tree = Path(self._tmp)
                     self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                         [Generate()]
-                    )
+                    ).of(McpInstallation)
 
                 with after.each:
                     tmp = getattr(self, "_tmp", None)
@@ -1273,7 +1274,7 @@ with description("lifecycle actions annotated for installation") as self:
                     self.tree = Path(self._tmp)
                     self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                         [Improvement(), Validate()]
-                    )
+                    ).of(McpInstallation)
 
                 with after.each:
                     tmp = getattr(self, "_tmp", None)
@@ -1486,7 +1487,7 @@ with description("toolsets installed for Claude Code") as self:
         with it("should list each glob under paths"):
             from harness.installation.files import FileInstallation
 
-            text = FileInstallation("Claude", Path("."), "rules")._claude_rules_front_matter(
+            text = FileInstallation(IdeLayout("Claude"), Path("."), "rules")._claude_rules_front_matter(
                 "d", "**/*.py, **/*.ts"
             )
             expect(text).to(equal('---\ndescription: "d"\npaths:\n  - "**/*.py"\n  - "**/*.ts"\n---\n\n'))
@@ -1505,7 +1506,7 @@ with description("Repo branch commands installed into Cursor") as self:
         self.tree = Path(self._tmp)
         self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
             ["space.repo.repo:Repo"]
-        )
+        ).of(McpInstallation)
 
     with after.each:
         shutil.rmtree(self._tmp, ignore_errors=True)

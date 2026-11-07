@@ -22,7 +22,7 @@ def main() -> int:
     )
     args = parser.parse_args()
     from harness.diagnostics.guidance_probe import GuidanceProbe
-    from harness.installer.installer import Installer
+    from harness.installation.installer import Installer
 
     probe = GuidanceProbe.from_filter(Installer(repo=_REPO), args.guidance)
     report = "\n\n".join((probe.instructions(), probe.actions()))

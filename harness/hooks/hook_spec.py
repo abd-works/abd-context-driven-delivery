@@ -31,6 +31,7 @@ from harness.hooks.hook_server import (
     HookServer,
 )
 from harness.hooks.hooks import Hook, Hooks, hook
+from harness.installation.ide_layout import IdeLayout
 from space.session.sessions import Sessions
 from space.work_state import WorkState
 
@@ -847,7 +848,7 @@ with description("hook process helpers"):
         from harness.hooks.hooks import HookInstallation
         from harness.process.process import PythonInterpreter
 
-        install = HookInstallation("Cursor", _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
+        install = HookInstallation(IdeLayout("Cursor"), _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
         command = install.dispatch_command.replace("\\", "/")
         python = PythonInterpreter(sys.executable).console.replace("\\", "/")
         expect(command).to(contain(python))
@@ -947,7 +948,7 @@ with description("a hook install"):
                 return {}
 
         self.folder = Path(tempfile.mkdtemp())
-        self.install = HookInstallation("Cursor", self.folder, repo=_REPO_ROOT)
+        self.install = HookInstallation(IdeLayout("Cursor"), self.folder, repo=_REPO_ROOT)
         self.tool = _StopHook().tools["on_stop"]
 
     with after.each:

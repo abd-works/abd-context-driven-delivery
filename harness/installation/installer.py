@@ -5,30 +5,32 @@ import re
 import sys
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import Any, ClassVar, Iterable, TypeVar
 
-from harness.agent_tools.agent_tools import AgentTool, InstallDestination, agent_instructions, agent_tool, agent_toolset, tool_subject
-from harness.hooks.hooks import HookInstallation, hook
-from harness.installation.destination import Installation, noCatalog
+from harness.agent_tools.agent_tools import (
+    AgentTool,
+    AgentToolSet,
+    InstallDestination,
+    agent_instructions,
+    agent_tool,
+    agent_toolset,
+    tool_subject,
+)
+from harness.installation.destination import Installation, ServerInstallation, noCatalog
 from harness.installation.files import FileInstallation, command
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.install_diagnostics import InstallDiagnostics
+from harness.installation.install_record import InstallRecord
 from harness.installation.language_adapter import LanguageAdapterInstallation
 from harness.installation.repository_toolsets import RepositoryToolsets
-from harness.installer.claude_plugins import ClaudePlugins
-from harness.installer.install_diagnostics import InstallDiagnostics
-from harness.installer.install_record import InstallRecord
 from harness.markdown import markdown
+from harness.markdown.front_matter import FrontMatter
 
-if TYPE_CHECKING:
-    from harness.hooks.hook_server import HookPayload
-    from harness.mcp.mcp_server import McpInstallation
-
-# The checkout this installer's code runs from. The cdd server is installed into ``~/.cdd`` from it, whichever
-# project's hook asks for the server.
-_CDD_CHECKOUT = Path(__file__).resolve().parents[2]
 # The record of the last install into a project's own IDE folder; an install into a temporary folder keeps its record
 # in that folder, so a spec's install never replaces the person's.
 _SHARED_RECORD = Path(__file__).resolve().parent / InstallRecord.NAME
+
+_Server = TypeVar("_Server", bound=ServerInstallation)
 
 
 class ToolsetInstallFailed(Exception):
@@ -40,36 +42,80 @@ class ToolsetInstallFailed(Exception):
         self.cause = cause
 
 
-class HookServerNotRunning(Exception):
-    """The install finished but the checkout's hook daemon does not answer, so hooks would not run."""
+class ServersNotRegistered(LookupError):
+    """An install ran in a process where no server installation registered with the Installer, so it would write no
+    MCP entry and no hooks. harness/mcp and harness/hooks register theirs when they are imported."""
 
-    def __init__(self, repo: Path) -> None:
-        super().__init__(f"install failed: the hook server of {repo} is not running")
-        self.repo = repo
+    def __init__(self) -> None:
+        super().__init__(
+            "no server installation is registered with the Installer in this process: import harness.mcp.mcp_server "
+            "and harness.hooks.hooks before installing"
+        )
 
 
-class _InstallChannels:
-    """The MCP, hook, and language adapter installations of one install run, each tracking the files it writes in
-    the install record."""
+class InstallChannels:
+    """The installations of one install run, made once and used for every member of every toolset: a file installation
+    for each file channel, with and without MCP, the writer of the standing rules, the language adapters, and one
+    installation of each server channel registered with the Installer. Each tracks the files it writes in the install
+    record."""
 
-    def __init__(self, installer: Installer) -> None:
-        from harness.mcp.mcp_server import McpInstallation
-
-        self.mcp: McpInstallation = McpInstallation(installer.ide, installer.path, repo=installer.repo)
-        self.hook = HookInstallation(installer.ide, installer.path, repo=installer.repo)
-        self.language_adapters = LanguageAdapterInstallation(installer.ide, installer.path, repo=installer.repo)
-        for installation in (self.mcp, self.hook, self.language_adapters):
+    def __init__(self, installer: Installer, servers: Iterable[type[ServerInstallation]]) -> None:
+        layout, path, repo = installer.layout, installer.path, installer.repo
+        self.servers = [kind(layout, path, repo=repo) for kind in servers]
+        self.language_adapters = LanguageAdapterInstallation(layout, path, repo=repo)
+        self._files = {
+            (destination, mcp_mode): FileInstallation(layout, path, destination, mcp_mode=mcp_mode, repo=repo)
+            for destination in FileInstallation.CHANNELS
+            for mcp_mode in (False, True)
+        }
+        self.standing_rules = FileInstallation(layout, path, InstallDestination.RULE, repo=repo)
+        for installation in (*self.servers, self.language_adapters, *self._files.values(), self.standing_rules):
             installer.track(installation)
+
+    def of(self, kind: type[_Server]) -> _Server:
+        """The run's installation of kind, such as its *McpInstallation*."""
+        for installation in self.servers:
+            if isinstance(installation, kind):
+                return installation
+        raise LookupError(f"no {kind.__name__} is registered with the Installer in this process")
+
+    def for_tool(self, tool: AgentTool) -> list[Installation]:
+        """Every installation tool is written through: each server channel that takes it, then each file channel its
+        annotations name, written for MCP when the tool is also published there."""
+        destinations = tool.destinations
+        mcp_mode = InstallDestination.MCP in destinations
+        files = [self._files[(destination, mcp_mode)] for destination in FileInstallation.CHANNELS if destination in destinations]
+        return [*(server for server in self.servers if server.accepts(tool)), *files]
+
+    @property
+    def toolsets(self) -> list[Any]:
+        """The toolsets the server channels publish into every install, such as the hooks that start the cdd server."""
+        return [AgentToolSet.instantiate(toolset) for server in self.servers for toolset in server.toolsets]
+
+    @property
+    def published(self) -> dict[str, list[str]]:
+        """What each server channel published in this run, by its channel, such as the MCP operations it enrolled."""
+        return {server.channel: server.published for server in self.servers}
 
 
 @noCatalog
 @agent_toolset
 class Installer:
     """Publish every annotated member of the toolsets a repository defines into one IDE folder, through the installation
-    of each channel its annotations name, then start the hook server and the cdd server the install points at."""
+    of each channel its annotations name, then start the servers the installed files point at.
 
-    TOOLSET_REF = "harness.installer.installer:Installer"
+    The files of skills, commands, rules, and language adapters are written here. The MCP and hook channels each point
+    the IDE at a server, and harness/mcp and harness/hooks register their installation with ``installs_through`` when
+    they are imported, so this module never imports them."""
+
     _SKILL_MCP_NAME = re.compile(r"Use MCP tool:\s*`([A-Za-z0-9_.-]+)")
+    _servers: ClassVar[list[type[ServerInstallation]]] = []
+
+    @classmethod
+    def installs_through(cls, kind: type[ServerInstallation]) -> None:
+        """Have every install publish through an installation of kind too, and start the server it points at."""
+        if kind not in Installer._servers:
+            Installer._servers.append(kind)
 
     def __init__(self, ide: str | None = None, path: str | Path | None = None, *, repo: str | Path) -> None:
         self.repo = Path(repo).resolve()
@@ -79,9 +125,9 @@ class Installer:
         self.path = Path(path) if path is not None else self._last_or_default_folder(last.get("path"))
         self.record = InstallRecord(self.path / InstallRecord.NAME if self._is_temporary(self.path) else _SHARED_RECORD)
         self.diagnostics = InstallDiagnostics(self.path, self.layout)
-        self.claude_plugins = ClaudePlugins()
         self.toolsets = RepositoryToolsets(self.repo)
-        self._channels: _InstallChannels | None = None
+        self._channels: InstallChannels | None = None
+        self._installing = False
         self._deployed_toolsets: list[str] = []
         self.diagnosis: list[str] = []
 
@@ -94,20 +140,6 @@ class Installer:
     def track(self, installation: Installation) -> None:
         """Have installation add each file it writes to the install record."""
         installation.track_writes_with(lambda written: self.record.track(written, self.path))
-
-    def installations_for(self, tool: AgentTool) -> list[Installation]:
-        channels = self._channels_of_run()
-        destinations = tool.destinations
-        mcp_mode = InstallDestination.MCP in destinations
-        installations: list[Installation] = [channels.mcp] if mcp_mode else []
-        for destination in (InstallDestination.SKILL, InstallDestination.COMMAND, InstallDestination.RULE):
-            if destination in destinations:
-                files = FileInstallation(self.ide, self.path, destination, mcp_mode=mcp_mode, repo=self.repo)
-                self.track(files)
-                installations.append(files)
-        if InstallDestination.HOOK in destinations and self.layout.runs_hooks:
-            installations.append(channels.hook)
-        return installations
 
     @command(name="clean")
     @agent_tool
@@ -131,20 +163,26 @@ class Installer:
         When install finishes, read ``.cursor/diagnostics.json`` (latest ``diagnose_install`` report) and paste the full summary: color, channel deltas, cdd server, hook server, hooks registered."""
         return self._install_run(toolsets, replace)
 
-    def install_self(self, *, replace: bool = False) -> Any:
-        """Deploy only this Installer toolset — ``/install``, ``/clean``, and MCP-host hooks."""
+    def install_self(self, *, replace: bool = False) -> InstallChannels:
+        """Deploy only this Installer toolset — ``/install``, ``/clean`` — and the toolsets the server channels publish
+        into every install, such as the hooks that start the cdd server."""
         return self._install_run([], replace=replace)
 
-    def _install_run(self, toolsets: Iterable[Any] | None, replace: bool) -> McpInstallation:
+    def _install_run(self, toolsets: Iterable[Any] | None, replace: bool) -> InstallChannels:
         if replace:
             self.clean()
         else:
             self.record.keep_existing(self.path)
         self.toolsets.ensure_import_path()
-        self._channels = _InstallChannels(self)
-        self._install_all(self.toolsets.collect() if toolsets is None else toolsets)
-        self._install_toolset(self.TOOLSET_REF, self)
-        self._channels.language_adapters.write_all()
+        items = self._repository_toolsets() if toolsets is None else list(toolsets)
+        if not Installer._servers:
+            raise ServersNotRegistered()
+        channels = self._channels = InstallChannels(self, Installer._servers)
+        self._installing = True
+        self._install_all(items)
+        for toolset in (self, *channels.toolsets):
+            self._install_toolset(toolset)
+        channels.language_adapters.write_all()
         self._install_agents()
         self._install_standing_rules()
         if replace:
@@ -158,69 +196,62 @@ class Installer:
         for report in self.diagnosis:
             if report.startswith("!"):
                 print(report, file=sys.stderr)
-        return self._channels.mcp
+        return channels
+
+    def _repository_toolsets(self) -> list[type]:
+        """The class of every toolset the repository defines; one whose module cannot be imported stops the install,
+        named after the toolset, with its cause."""
+        classes = self.toolsets.classes()
+        for unloadable in self.toolsets.unloadable:
+            raise ToolsetInstallFailed(unloadable.reference, unloadable.cause) from unloadable.cause
+        return classes
 
     def _install_all(self, toolsets: Iterable[Any]) -> None:
-        from harness.agent_tools.agent_tools import AgentToolSet
-
         for item in toolsets:
             try:
                 toolset = AgentToolSet.instantiate(item)
-                self._install_toolset(item, toolset)
+                self._install_toolset(toolset)
                 for child in toolset.child_toolsets():
-                    self._install_toolset(item, child)
+                    self._install_toolset(child)
             except ToolsetInstallFailed:
                 raise
             # Any failure while publishing a toolset stops the install, named after the toolset, with its cause.
             except Exception as error:  # noqa: BLE001
                 raise ToolsetInstallFailed(item, error) from error
 
-    def _install_toolset(self, item: Any, toolset: Any) -> None:
-        self._remember_toolset(item, toolset)
+    def _install_toolset(self, toolset: Any) -> None:
+        if toolset.registration_name not in self._deployed_toolsets:
+            self._deployed_toolsets.append(toolset.registration_name)
+        channels = self._channels_of_run()
         for tool in toolset.tools.values():
-            for installation in self.installations_for(tool):
+            for installation in channels.for_tool(tool):
                 installation.install(tool)
-        self._channels_of_run().language_adapters.record(toolset)
+        channels.language_adapters.record(toolset)
 
-    def _remember_toolset(self, item: Any, toolset: Any) -> None:
-        ref = item if isinstance(item, str) else f"{type(toolset).__module__}:{type(toolset).__name__}"
-        if ref not in self._deployed_toolsets:
-            self._deployed_toolsets.append(ref)
-
-    def _channels_of_run(self) -> _InstallChannels:
+    def _channels_of_run(self) -> InstallChannels:
         if self._channels is None:
-            self._channels = _InstallChannels(self)
+            self._channels = InstallChannels(self, Installer._servers)
         return self._channels
 
     def _install_agents(self) -> None:
-        """Copy cdd_guidance/agents into the IDE agents folder. The source stays on cdd_guidance."""
+        """Copy cdd_guidance/agents into the IDE agents folder, each named as its front matter names it. The source
+        stays on cdd_guidance."""
         source = self.repo / "cdd_guidance" / "agents"
         if not source.is_dir():
             return
         for path in sorted(source.glob("*.md")):
-            dest = self.path / "agents" / f"{self._agent_name(path)}.md"
+            text = path.read_text(encoding="utf-8")
+            dest = self.path / "agents" / f"{FrontMatter(text).fields.get('name') or path.stem}.md"
             dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+            dest.write_text(text, encoding="utf-8")
             self.record.track(dest, self.path)
-
-    def _agent_name(self, path: Path) -> str:
-        text = path.read_text(encoding="utf-8")
-        if not text.startswith("---"):
-            return path.stem
-        for line in text.splitlines()[1:]:
-            if line.strip() == "---":
-                break
-            if line.startswith("name:") and line.split(":", 1)[1].strip():
-                return line.split(":", 1)[1].strip()
-        return path.stem
 
     def _install_standing_rules(self) -> None:
         """Install cdd_guidance/rules as always-on rules in the IDE rules folder."""
         source = self.repo / "cdd_guidance" / "rules"
         if not source.is_dir():
             return
-        rules = FileInstallation(self.ide, self.path, "rules", repo=self.repo)
-        self.track(rules)
+        rules = self._channels_of_run().standing_rules
         for path in sorted([*source.glob("*.md"), *source.glob("*.mdc")]):
             rules.write_standing_rule(path)
 
@@ -235,7 +266,7 @@ class Installer:
         skills = self.path / "skills"
         if not skills.is_dir():
             return []
-        enrolled = set(self._mcp_names())
+        enrolled = set(self._published().get(InstallDestination.MCP, []))
         removed: list[str] = []
         for path in skills.rglob("SKILL.md"):
             names = self._SKILL_MCP_NAME.findall(path.read_text(encoding="utf-8"))
@@ -249,45 +280,26 @@ class Installer:
         return removed
 
     def _standup_channels(self) -> None:
-        # Installing via MCP runs inside the cdd server itself. A second McpHost.from_repo() reloads every toolset
-        # mid-request, and the server is already running, so neither runs then.
+        """Stand up each server over what was installed, to check it loads, then start the servers. An install that
+        runs inside one of those servers, as an install through MCP runs inside the cdd server, starts none: they are
+        already running, and starting them again would reload every toolset in the middle of a request."""
         channels = self._channels_of_run()
-        in_mcp_host = self._mcp_host_is_this_process()
-        if not in_mcp_host:
-            channels.mcp.standup()
-            self._print_channel_notice(channels.mcp.diagnose())
-        channels.hook.standup()
-        self._print_channel_notice(channels.hook.diagnose())
-        if not self._is_temporary(self.path) and not in_mcp_host:
+        for server in channels.servers:
+            server.standup()
+            self._print_channel_notice(server.diagnose())
+        if not self._is_temporary(self.path) and not self._runs_inside_a_server():
             self.ensure_runtimes()
 
-    def ensure_runtimes(self) -> dict[str, Any]:
-        """Start the hook daemon and the cdd server; fail if either stays down."""
-        if not self.layout.runs_hooks:
-            return {
-                "hook": "not installed",
-                "mcp": self.ensure_mcp_server(),
-                "cdd plugin": self.claude_plugins.install_cdd(),
-                "board": self.claude_plugins.install_board(),
-            }
-        hook_pid = self._ensure_hook_server()
-        mcp = self.ensure_mcp_server()
-        print(f"hook server pid={hook_pid} cdd server={mcp}", file=sys.stderr)
-        return {"hook": "running", "mcp": mcp}
+    def ensure_runtimes(self) -> dict[str, str]:
+        """Start the server behind every channel the install wrote; fail if one stays down."""
+        status: dict[str, str] = {}
+        for server in self._channels_of_run().servers:
+            status.update(server.ensure_running())
+        print(", ".join(f"{name}: {value}" for name, value in status.items()), file=sys.stderr)
+        return status
 
-    def ensure_mcp_server(self) -> str:
-        """Start the one cdd server when none answers. Cursor and VS Code connect to its URL and cannot start it."""
-        return self._channels_of_run().mcp.ensure_server()
-
-    def _ensure_hook_server(self) -> int | None:
-        from harness.hooks.hook_daemon import HookDaemon
-
-        daemon = HookDaemon(self.repo)
-        daemon.ensure()
-        address = daemon.live_address()
-        if address is None:
-            raise HookServerNotRunning(self.repo)
-        return address.pid
+    def _runs_inside_a_server(self) -> bool:
+        return any(server.serves_this_process() for server in self._channels_of_run().servers)
 
     def _print_channel_notice(self, diagnosis: dict[str, Any]) -> None:
         notice = diagnosis.get("notice") or ""
@@ -311,33 +323,18 @@ class Installer:
         return f"!\n{color}\n{body}\n{self.diagnose_instructions()}"
 
     def _deployed_channels(self) -> dict[str, list[str]]:
-        return self.diagnostics.channels_in_folder(self._deployed_toolsets, self._mcp_names())
+        return self.diagnostics.channels_in_folder(self._deployed_toolsets, self._published())
 
-    def _mcp_names(self) -> list[str]:
-        """The MCP operations this run enrolled; outside a run, the ones the last install recorded."""
-        if self._channels is None:
-            return self.diagnostics.installed_items("mcp")
-        return sorted(str(tool.mcp_name) for tool in self._channels.mcp.mcp_operations)
-
-    def _mcp_host_is_this_process(self) -> bool:
-        return self._channels_of_run().mcp.server_runs_this_process()
+    def _published(self) -> dict[str, list[str]]:
+        """What each server channel published: in an install, what this run enrolled; outside one, what the folder holds,
+        or, for a channel whose names live outside the folder, such as MCP, what the last install recorded."""
+        published = self._channels_of_run().published
+        if self._installing:
+            return published
+        return {channel: names or self.diagnostics.installed_items(channel) for channel, names in published.items()}
 
     def _runtime_status_report(self) -> str:
-        from harness.hooks.hook_daemon import HookDaemon
-
-        mcp = "running" if self._channels_of_run().mcp.server_is_running() else "not running"
-        address = HookDaemon(self.repo).live_address()
-        hook = f"running (pid {address.pid})" if address is not None else "not running"
-        hooks = HookInstallation(self.ide, self.path)
-        events, operations = hooks.registered_events, hooks.registered_operations
-        return "\n".join(
-            [
-                f"cdd server: {mcp}",
-                f"hook server: {hook}",
-                f"hooks registered (events): {', '.join(events) or 'none'}",
-                f"hook handlers (operations): {', '.join(operations) or 'none'}",
-            ]
-        )
+        return "\n".join(line for server in self._channels_of_run().servers for line in server.status())
 
     def _last_or_default_folder(self, last: str | None) -> Path:
         if last and Path(last).exists() and not self._is_temporary(Path(last)):
@@ -369,16 +366,6 @@ class Installer:
     def diagnose_instructions(self) -> str:
         """How to diagnose an install whose deployed counts do not match."""
         return str(self.diagnose_install_instructions).strip()
-
-    @hook("sessionStart")
-    def ensure_mcp_server_on_session_start(self, payload: HookPayload) -> str:
-        """Start the cdd server when a chat starts; the hook server's toolset holds no project, so this builds the
-        installer of the checkout the server is installed from."""
-        return Installer(repo=_CDD_CHECKOUT).ensure_mcp_server()
-
-    @hook("afterAgentResponse")
-    def ensure_mcp_server_after_agent_response(self, payload: HookPayload) -> str:
-        return Installer(repo=_CDD_CHECKOUT).ensure_mcp_server()
 
 
 __all__ = ["Installer"]

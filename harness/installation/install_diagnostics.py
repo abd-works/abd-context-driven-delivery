@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-from harness.hooks.hooks import HookInstallation
 from harness.installation.ide_layout import IdeLayout
 
 _COLORS = ("green", "yellow", "red")
@@ -26,15 +25,16 @@ class InstallDiagnostics:
         self.path = folder / self.NAME
         self._layout = layout
 
-    def channels_in_folder(self, toolsets: list[str], mcp_names: list[str]) -> dict[str, list[str]]:
-        """What the folder holds on each channel, with the toolsets and MCP operations the install deployed."""
+    def channels_in_folder(self, toolsets: list[str], published: dict[str, list[str]]) -> dict[str, list[str]]:
+        """What the folder holds on each channel, with the toolsets the install deployed and what each server channel
+        published, such as the MCP operations and the hook operations."""
         return {
             "toolset": list(toolsets),
             "skill": sorted({path.parent.name for path in self._files("skills", "SKILL.md")}),
             "command": sorted({path.stem for path in [*self._files("commands", "*.md"), *self._files("prompts", "*.md")]}),
             "rules": sorted(path.stem for path in self._files("rules", f"*{self._layout.rule_suffix}")),
-            "mcp": sorted(mcp_names),
-            "hook": HookInstallation(self._layout.ide, self.folder).registered_operations,
+            "mcp": sorted(published.get("mcp", [])),
+            "hook": sorted(published.get("hook", [])),
             "agent": sorted({path.stem for path in self._files("agents", "*.md")}),
             "language-adapter": sorted(
                 path.relative_to(self.folder / "language-adapters").as_posix() for path in self._files("language-adapters", "*.ts")

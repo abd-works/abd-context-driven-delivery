@@ -14,7 +14,7 @@ if _tools not in sys.path:
 
 from expects import contain, equal, expect, have_key
 from mamba import after, before, context, description, it
-from harness.installer.installer import Installer
+from harness.installation.installer import Installer
 from harness.hooks.hook_server import HookPayload
 from space.session.throwaway_project import ThrowawayProject
 

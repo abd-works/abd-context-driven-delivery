@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from harness.annotations.annotation import Annotation, OmissionAnnotation
+from harness.installation.ide_layout import IdeLayout
 
 InstallTracker = Callable[[Path], None]
 
@@ -39,16 +40,21 @@ noDeploy = NoDeploy
 class LanguageAdapter:
     """Deploy typed code in language for this toolset's MCP operations, so an application outside Python reaches them.
 
-    The adapter names the object its operations act on by the class's `@identity` fields.
+    The adapter names the object its operations act on by the class's `@identity` fields. `shares_file_views=True`
+    marks the toolset whose generated client the shared file views import to read files, the file manager's.
     """
 
     flag = "_language_adapters"
+    file_views_flag = "_language_adapter_file_views"
 
-    def __init__(self, *, language: str) -> None:
+    def __init__(self, *, language: str, shares_file_views: bool = False) -> None:
         self.language = language
+        self.shares_file_views = shares_file_views
 
     def __call__(self, toolset: Any) -> Any:
         setattr(toolset, self.flag, (*getattr(toolset, self.flag, ()), self.language))
+        if self.shares_file_views:
+            setattr(toolset, self.file_views_flag, True)
         return toolset
 
 
@@ -163,6 +169,11 @@ class DataClass:
         """The languages the class's language adapters are written in."""
         return tuple(getattr(self.data_class, LanguageAdapter.flag, ()))
 
+    @property
+    def shares_file_views(self) -> bool:
+        """Whether the shared file views read files through this class's generated client."""
+        return bool(vars(self.data_class).get(LanguageAdapter.file_views_flag, False))
+
     def edited_by(self, operation: Any) -> tuple[str, ...]:
         """The fields of this class's data that operation's `@edits` annotation names, or none."""
         return tuple(getattr(operation, Edits.flag, ()))
@@ -223,20 +234,14 @@ class SourceFile:
 
 
 class Installation:
-    """``install(tool)`` writes the channel; subclass ``write``."""
+    """Writes one channel's files into one IDE folder: ``install(tool)`` writes what tool publishes there; a subclass
+    defines ``write``. It is made with the install's *IdeLayout*, so every channel of one install reads one layout."""
 
     channel = ""
 
-    def __init__(
-        self,
-        ide: str,
-        path: Path | str,
-        toolset_ref: str = "",
-        repo: Path | str | None = None,
-    ) -> None:
-        self.ide = ide
+    def __init__(self, layout: IdeLayout, path: Path | str, repo: Path | str | None = None) -> None:
+        self.layout = layout
         self.path = Path(path)
-        self.toolset_ref = toolset_ref
         self.repo = Path(repo).resolve() if repo is not None else None
         self._install_tracker: InstallTracker | None = None
 
@@ -275,3 +280,44 @@ class Installation:
 
     def write(self, tool: Any) -> None:
         raise NotImplementedError
+
+
+class ServerInstallation(Installation):
+    """An installation whose files point the IDE at a server process: the MCP entry at the cdd server, the hook entries
+    at the hook server. Beside writing its files it stands that server up over what was installed to check it loads,
+    starts it, and reports it. harness/mcp and harness/hooks each define one and register it with
+    ``Installer.installs_through`` when they are imported, so the Installer runs every server channel without
+    importing them."""
+
+    # Toolset classes every install publishes through this channel beside the repository's own, such as the hooks
+    # that start the cdd server.
+    toolsets: tuple[type, ...] = ()
+
+    def accepts(self, tool: Any) -> bool:
+        """Whether tool is written through this installation: it is annotated for this channel."""
+        return self.channel in tool.destinations
+
+    @property
+    def published(self) -> list[str]:
+        """The names this installation published, such as the MCP operations it enrolled, sorted."""
+        raise NotImplementedError
+
+    def standup(self) -> Any:
+        """Stand the server up over what was installed, in this process, to check it loads."""
+        raise NotImplementedError
+
+    def diagnose(self) -> dict[str, Any]:
+        """What the stood-up server answers about itself, with a ``notice`` naming anything it skipped."""
+        raise NotImplementedError
+
+    def ensure_running(self) -> dict[str, str]:
+        """Start the server when none answers, and say how it runs, keyed by what it is."""
+        raise NotImplementedError
+
+    def status(self) -> list[str]:
+        """One line for each fact the install report gives about the server, such as whether it is running."""
+        raise NotImplementedError
+
+    def serves_this_process(self) -> bool:
+        """Whether this process is the server, as it is when an install runs as one of the cdd server's tool calls."""
+        return False

@@ -31,7 +31,7 @@ class AgentToolsDiagnostics:
 
         All probes use the live CDD MCP host already loaded in the IDE. Diagnostics do not run git clean/switch on the repo (avoids lock hangs). Light invoke uses ``_cdd-diagnostic-probe`` args where needed; only ``repo.push_commit`` and ``repo.close_*`` are skipped. Heavy session/graph uses ``cdd-diagnostic``. Progress on stderr: ``[agent-tools] phase tool: detail``. Slash or MCP ``agent-tools-diagnostics.agent_tools_diagnostics``. Read ``.cursor/diagnostics.json`` → ``agent_tools``."""
         from harness.diagnostics.agent_tools_probe import AgentToolsProbe
-        from harness.installer.installer import Installer
+        from harness.installation.installer import Installer
 
         installer = Installer(repo=self._call.project)
         return AgentToolsProbe(installer, guidance, mcp_host=self._call.mcp_host, project=self._call.project).run()

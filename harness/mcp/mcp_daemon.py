@@ -11,7 +11,7 @@ import urllib.request
 from pathlib import Path
 
 from harness.mcp.cdd_home import CddHome
-from harness.process.process import BackgroundStart, PythonInterpreter
+from harness.process.process import BackgroundStart
 from harness.process.stoppable_process import StoppableProcess
 
 SERVER_PORT_ENV = "CDD_SERVER_PORT"
@@ -23,6 +23,8 @@ _PING_SECONDS = 2
 _START_SECONDS = 60
 _STOP_SECONDS = 10
 _LOG_LINES_SHOWN = 20
+# The command an IDE runs before it connects; an install copies it into ``~/.cdd``.
+CONNECT_SCRIPT = Path(__file__).resolve().parent / "scripts" / "connect.py"
 # How often a start looks again for the server's answer while it waits for the server to come up.
 _PING_RETRY_SECONDS = 0.25
 
@@ -44,6 +46,17 @@ class ServerStateUnreadable(Exception):
         self.cause = cause
 
 
+class RunningServer:
+    """The cdd server answering on the port, as its ping describes it: its process, the checkout it serves code from,
+    and the projects its chats have worked on."""
+
+    def __init__(self, answer: dict) -> None:
+        self.pid = int(answer.get("pid") or 0)
+        self.source = str(answer.get("source") or "")
+        self.projects = [str(project) for project in answer.get("projects") or []]
+        self.process = StoppableProcess(self.pid)
+
+
 class McpDaemon:
     """Start, find, and stop the one cdd server. Every IDE connects to its URL, so no chat starts a copy of its own.
 
@@ -59,36 +72,57 @@ class McpDaemon:
     def url(self) -> str:
         return f"http://{self.HOST}:{self.port}{MCP_PATH}"
 
-    def ping(self) -> dict | None:
-        """Ask the running server about itself over HTTP: its answer, or ``None`` when nothing answers on the port."""
+    def ping(self) -> RunningServer | None:
+        """Ask the running server about itself over HTTP: the server it describes, or ``None`` when nothing answers on
+        the port."""
         try:
             with urllib.request.urlopen(f"http://{self.HOST}:{self.port}{PING_PATH}", timeout=_PING_SECONDS) as reply:
                 answer = json.loads(reply.read().decode("utf-8"))
         except (OSError, urllib.error.URLError, json.JSONDecodeError):
             return None
-        return answer if isinstance(answer, dict) and answer.get("ok") else None
+        return RunningServer(answer) if isinstance(answer, dict) and answer.get("ok") else None
 
     def is_running(self) -> bool:
         return self.ping() is not None
 
-    def ensure(self) -> dict:
-        """The running server's ping, starting it first when none answers."""
+    def ensure(self) -> RunningServer:
+        """The running server, starting it first when none answers."""
         answer = self.ping()
         if answer is not None:
             return answer
         self.spawn()
         return self._wait_for_ping()
 
-    def restart(self) -> dict:
+    def restart(self) -> RunningServer:
         """Stop the running server and start it again on the code ``~/.cdd/runtime.json`` names now."""
         self.stop()
         return self.ensure()
 
     def stop(self) -> None:
-        answer = self.ping()
-        if answer is None:
-            return
-        StoppableProcess(int(answer.get("pid") or 0)).stop(_STOP_SECONDS)
+        running = self.ping()
+        if running is not None:
+            running.process.stop(_STOP_SECONDS)
+
+    def ensure_from(self, checkout: Path) -> str:
+        """Install ``~/.cdd/`` from checkout on first use and start the server when none answers. A server already
+        running is left, with the code it serves, alone."""
+        self.home.install(checkout, CONNECT_SCRIPT)
+        return self._status(self.ensure())
+
+    def pin_from(self, checkout: Path) -> str:
+        """Serve checkout's current commit from ``~/.cdd/runtime``, restarting the server onto it."""
+        self.home.install(checkout, CONNECT_SCRIPT)
+        self.home.pin(checkout)
+        return self._status(self.restart())
+
+    def serve_checkout(self, checkout: Path) -> str:
+        """Serve checkout as it is on disk, for working on CDD itself, restarting the server onto it."""
+        self.home.install(checkout, CONNECT_SCRIPT)
+        self.home.serve_from(checkout)
+        return self._status(self.restart())
+
+    def _status(self, running: RunningServer) -> str:
+        return f"running (pid {running.pid}, {self.home.mode} {running.source})"
 
     def spawn(self) -> None:
         self.home.folder.mkdir(parents=True, exist_ok=True)
@@ -103,7 +137,7 @@ class McpDaemon:
                 self._start_process(log, BackgroundStart().inside_starters_job())
 
     def _start_process(self, log, start: BackgroundStart) -> None:
-        command = [PythonInterpreter(self.home.python).windowless, "-m", "harness.mcp", "--port", str(self.port)]
+        command = [self.home.interpreter.windowless, "-m", "harness.mcp", "--port", str(self.port)]
         start.run(command, cwd=self.home.source, env={**os.environ, **self.home.server_environment}, log=log)
 
     def claim_port(self) -> socket.socket | None:
@@ -139,7 +173,7 @@ class McpDaemon:
             raise ServerStateUnreadable(self.home.state_path, unreadable) from unreadable
         return isinstance(state, dict) and state.get("pid") == os.getpid()
 
-    def _wait_for_ping(self) -> dict:
+    def _wait_for_ping(self) -> RunningServer:
         deadline = time.time() + _START_SECONDS
         while time.time() < deadline:
             answer = self.ping()

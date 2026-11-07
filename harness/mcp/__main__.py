@@ -29,9 +29,8 @@ def main() -> None:
     if listener is None:
         return
     refs = tuple(ref.strip() for ref in arguments.toolsets.split(",") if ref.strip())
-    if not refs:
-        refs = tuple(toolsets.collect())
-    McpHost.from_refs(refs, repo=str(source)).serve(daemon, listener)
+    host = McpHost.from_refs(refs, repo=str(source)) if refs else McpHost.from_repo(source)
+    host.serve(daemon, listener)
 
 
 if __name__ == "__main__":

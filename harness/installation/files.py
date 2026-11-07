@@ -35,10 +35,6 @@ command = Command
 rules = Rules
 
 
-# The channels a file installation writes an ``@agent_tool`` to; its other channels take only instructions.
-_FILE_CHANNELS = frozenset({InstallDestination.SKILL, InstallDestination.COMMAND, InstallDestination.RULE})
-
-
 class InstructionsUnreadableAtInstall(Exception):
     """Reading an operation's instructions from its toolset failed while its slash command was being written.
 
@@ -63,18 +59,20 @@ class FileInstallation(Installation):
     _REFERENCE_LINK = re.compile(r"\]\((?:\.\./)+references/([\w.-]+\.md)\)")
     _RULE_FILE_NAME = re.compile(r"`(practices/[\w/.-]+)\.mdc`")
 
+    # The channels a file installation writes, in the order a tool's files are written.
+    CHANNELS = (InstallDestination.SKILL, InstallDestination.COMMAND, InstallDestination.RULE)
+
     def __init__(
         self,
-        ide: str,
+        layout: IdeLayout,
         path: Path | str,
         destination: str = "",
         mcp_mode: bool = False,
         repo: Path | str | None = None,
     ) -> None:
-        super().__init__(ide, path, repo=repo)
+        super().__init__(layout, path, repo=repo)
         self.destination = destination
         self.mcp_mode = mcp_mode
-        self.layout = IdeLayout(ide)
 
     def relative_path(self, toolset: Any, name: str) -> Path:
         """Where the file for toolset's operation name goes, from the IDE folder."""
@@ -91,7 +89,7 @@ class FileInstallation(Installation):
         return self.folder_for(toolset) / name
 
     def write(self, tool: AgentTool) -> None:
-        if not self.destination or (tool.kind == "tool" and self.destination not in _FILE_CHANNELS):
+        if not self.destination or (tool.kind == "tool" and self.destination not in self.CHANNELS):
             return
         parts = self._parts(tool)
         relative = self.relative_path(tool.toolset, tool.deploy_name)
