@@ -6,7 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from harness.graph.graph import Graph, Source
-from harness.graph.graph_practice import GraphOverlay, GraphPractices
+from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.skipped_folders import scanned_files
 
 
@@ -46,4 +46,4 @@ def _access_tier(file: Path, text: str) -> tuple[str, dict] | None:
     return None
 
 
-GraphPractices.register_overlay(WebDomainAccessOverlay("cdd_web_domain_access"))
+OVERLAY = WebDomainAccessOverlay("cdd_web_domain_access")

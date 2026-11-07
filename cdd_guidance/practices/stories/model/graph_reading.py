@@ -8,72 +8,72 @@ import re
 from pathlib import Path
 
 from harness.graph.graph import Graph, PracticeGraph
-from harness.graph.graph_practice import GraphPractice, GraphPractices
 from harness.graph.skipped_folders import scanned_files
 
-_PACKAGE = "cdd_guidance.practices.stories"
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 _FUNCTION_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b")
 # A step's own lines and the calls just after it: the lines a step's operations are read from.
 _STEP_LINES = 40
 
 
-class StoriesGraph(GraphPractice):
-    """The Stories practice's nodes and its rules."""
+def align_story_node(node) -> None:
+    """A step sits on its label's line; a scenario, story, or background runs to the close of its call; an example
+    sits on its export."""
+    if node.type in {"Step", "Given", "When", "Then"}:
+        node.source.align_to_label(node.name)
+    elif node.type in {"Scenario", "Story", "Background"}:
+        node.source.widen_to_call_close()
+    elif node.type == "Example":
+        node.source.align_to_example_export(node.practice.source_root, node.name)
 
-    source_ordered_types = frozenset({"Background", "Scenario", "Step", "Story"})
-    rule_types = {"SubEpic": ("Epic", "StoryNode"), "Epic": ("StoryNode",), "Story": ("StoryNode",)}
 
-    def align(self, node) -> None:
-        """A step sits on its label's line; a scenario, story, or background runs to the close of its call; an example
-        sits on its export."""
-        if node.type in {"Step", "Given", "When", "Then"}:
-            node.source.align_to_label(node.name)
-        elif node.type in {"Scenario", "Story", "Background"}:
-            node.source.widen_to_call_close()
-        elif node.type == "Example":
-            node.source.align_to_example_export(node.practice.source_root, node.name)
+def read_stories(practice: PracticeGraph) -> None:
+    """Read the story tests (or, when there are none, the story maps) into a story model and add its epics, stories,
+    scenarios, steps, and examples to the Stories practice graph."""
+    from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
 
-    def read(self, practice: PracticeGraph) -> None:
-        from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
+    graph = practice.graph
+    model = _typescript_model(practice)
+    if not model.epics:
+        graph.report_progress("stories · markdown")
+        model = _story_map_model(practice)
+    graph.report_progress("stories · record")
+    GraphStoryModel(model).record(practice, on_node=lambda detail: graph.report_progress(f"stories · record · {detail}"))
 
-        graph = practice.graph
-        model = self._typescript_model(practice)
-        if not model.epics:
-            graph.report_progress("stories · markdown")
-            model = self._story_map_model(practice)
-        graph.report_progress("stories · record")
-        GraphStoryModel(model).record(practice, on_node=lambda detail: graph.report_progress(f"stories · record · {detail}"))
 
-    def link(self, graph: Graph) -> None:
-        if "stories" in graph.practices and "clean_engineering" in graph.practices:
-            _StoryLinks(graph).link()
+def link_steps_and_examples(graph: Graph) -> None:
+    """Link each step to the operations it calls and each example to the classes and properties it shows, when the
+    graph holds both Stories and Clean Engineering."""
+    if "stories" in graph.practices and "clean_engineering" in graph.practices:
+        _StoryLinks(graph).link()
 
-    def _typescript_model(self, practice: PracticeGraph):
-        from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
-        graph = practice.graph
-        root = Path(practice.source_root)
-        sources = _typescript_files(graph, root)
-        files: dict[str, str] = {}
-        for index, path in enumerate(sources, start=1):
-            relative = path.relative_to(root).as_posix()
-            graph.report_progress(f"stories · {index}/{len(sources)} · {relative}")
-            files[relative] = path.read_text(encoding="utf-8")
-        graph.report_progress("stories · parse")
-        return TypeScriptStoryModel("tests").load(files, on_file=lambda detail: graph.report_progress(f"stories · parse · {detail}"))
+def _typescript_model(practice: PracticeGraph):
+    from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
-    def _story_map_model(self, practice: PracticeGraph):
-        """The story maps under the practice's root; with edited files, only the story maps among them."""
-        from cdd_guidance.practices.stories.model.story_model import StoryModel
+    graph = practice.graph
+    root = Path(practice.source_root)
+    sources = _typescript_files(graph, root)
+    files: dict[str, str] = {}
+    for index, path in enumerate(sources, start=1):
+        relative = path.relative_to(root).as_posix()
+        graph.report_progress(f"stories · {index}/{len(sources)} · {relative}")
+        files[relative] = path.read_text(encoding="utf-8")
+    graph.report_progress("stories · parse")
+    return TypeScriptStoryModel("tests").load(files, on_file=lambda detail: graph.report_progress(f"stories · parse · {detail}"))
 
-        graph = practice.graph
-        root = Path(practice.source_root)
-        on_file = lambda detail: graph.report_progress(f"stories · markdown · {detail}")  # noqa: E731
-        edited = graph.edited_files()
-        if edited is None:
-            return StoryModel.load(root, on_file=on_file)
-        return StoryModel.load_files(edited, root, on_file=on_file)
+
+def _story_map_model(practice: PracticeGraph):
+    """The story maps under the practice's root; with edited files, only the story maps among them."""
+    from cdd_guidance.practices.stories.model.story_model import StoryModel
+
+    graph = practice.graph
+    root = Path(practice.source_root)
+    on_file = lambda detail: graph.report_progress(f"stories · markdown · {detail}")  # noqa: E731
+    edited = graph.edited_files()
+    if edited is None:
+        return StoryModel.load(root, on_file=on_file)
+    return StoryModel.load_files(edited, root, on_file=on_file)
 
 
 def _typescript_files(graph: Graph, folder: Path) -> list[Path]:
@@ -81,8 +81,10 @@ def _typescript_files(graph: Graph, folder: Path) -> list[Path]:
     and steps from sibling files, so one edited file needs its story's other files."""
     from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
-    found = scanned_files(folder, {".ts", ".tsx"})
     edited = graph.edited_files()
+    if edited is not None and not any(path.suffix.lower() in {".ts", ".tsx"} for path in edited):
+        return []
+    found = scanned_files(folder, {".ts", ".tsx"})
     if edited is None:
         return found
     model = TypeScriptStoryModel("tests")
@@ -179,6 +181,3 @@ class _StoryLinks:
         while node is not None and not (isinstance(node, Epic) and not isinstance(node.parent, Epic)):
             node = node.parent
         return node
-
-
-GraphPractices.register(StoriesGraph("stories", _PACKAGE))

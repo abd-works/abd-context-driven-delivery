@@ -73,28 +73,21 @@ with description("a graph"):
                 data_of(fresh.load_working_copy(str(self.root), {"clean_engineering": str(self.root)}))
                 expect(_names(fresh)).to(contain("SavedCart"))
 
-        with context("with a file newer than the saved graph"):
+        with context("with a file changed after the saved graph was written"):
             with before.each:
                 ahead = time.time() + 3600
                 _stamp_saved(self.root, "SavedCart", ahead)
                 os.utime(self.source_file, (ahead + 60, ahead + 60))
 
-            with it("should reload the folder"):
+            with it("should load the saved json, since nothing watches the files"):
                 fresh = Graph()
                 data_of(fresh.load_working_copy(str(self.root), {"clean_engineering": str(self.root)}))
-                expect(_names(fresh)).to(contain("Cart"))
+                expect(_names(fresh)).to(contain("SavedCart"))
 
-        with context("with a rule file newer than the saved graph"):
-            with before.each:
-                old = 1_000_000_000
-                _stamp_saved(self.root, "SavedCart", old + 5)
-                os.utime(self.source_file, (old, old))
-                os.utime(self.root / "src", (old, old))
-                os.utime(self.root, (old, old))
-
-            with it("should reload"):
+            with it("should read the changed file once it is refreshed"):
                 fresh = Graph()
                 data_of(fresh.load_working_copy(str(self.root), {"clean_engineering": str(self.root)}))
+                data_of(fresh.refresh([str(self.source_file)]))
                 expect(_names(fresh)).to(contain("Cart"))
 
         with context("that is forced to reload"):

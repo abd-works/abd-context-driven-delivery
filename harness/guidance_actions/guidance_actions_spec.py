@@ -365,3 +365,25 @@ with description("a guidance action"):
         expect(seen).to(contain("Render.render"))
         expect(seen).to(contain("Validate.validate"))
         expect(seen).to(contain("Validate.create_rule"))
+
+
+with description("a guidance action that wrote files"):
+    with before.each:
+        from space.session import Sessions
+        from harness.guidance_actions import GuidanceAction
+
+        self.project = _project()
+        _open_session(self.project, "alpha")
+        self.session = Sessions(self.project).current()
+        self.written = self.project / "order.py"
+        self.written.write_text("class Order:\n    pass\n", encoding="utf-8")
+        GuidanceAction(session=self.session).wrote([self.written])
+
+    with it("should refresh its session's graph with those files"):
+        classes = self.session.graph.practices["clean_engineering"].nodes.get("OoadClass", [])
+        expect([node.name for node in classes]).to(equal(["Order"]))
+
+    with it("should work on the graph its session holds"):
+        from harness.guidance_actions import GuidanceAction
+
+        expect(GuidanceAction(session=self.session).graph).to(be(self.session.graph))

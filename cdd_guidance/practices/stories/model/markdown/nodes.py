@@ -23,7 +23,7 @@ from cdd_guidance.practices.clean_engineering.model.call_graph import (
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType
 from cdd_guidance.practices.stories.model.story_model import Background, StepType, Scenario, Step
 from cdd_guidance.practices.stories.model.source_location import SourceLocation, path_from
-from cdd_guidance.practices.stories.model.markdown.links import DomainModelLinks, StoryMapLinks, unlink
+from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks, unlink
 from cdd_guidance.practices.stories.model.story_model import StoryModel
 from cdd_guidance.practices.stories.model.story_model import Increment
 _HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$")
@@ -597,40 +597,9 @@ class MarkdownScenario(Scenario):
         *,
         story_name: str = "",
         story_backgrounds=None,
-        domain_links: Optional[DomainModelLinks] = None,
     ) -> str:
-        """Emit markdown matching scenario templates (GWT + examples tables).
-
-        With *domain_links*, each domain term in a step or example cell links to the
-        model heading that defines it; with no model file, the text stays plain.
-        """
-        text = cls._render_scenario_lines(scenarios, story_name, story_backgrounds)
-        if domain_links is None:
-            return text
-        lines = text.splitlines()
-        linked = [
-            cls._link_terms(line, lines[i + 1] if i + 1 < len(lines) else "", domain_links)
-            for i, line in enumerate(lines)
-        ]
-        return "\n".join(linked) + "\n"
-
-    @classmethod
-    def _link_terms(cls, line: str, following: str, domain_links: DomainModelLinks) -> str:
-        """Link terms in a step or an example table line. Headers and separators stay as written."""
-        step = _ITALIC_STEP.match(line)
-        if step is not None:
-            keyword = line[: line.index(step.group(2))]
-            return keyword + domain_links.link(step.group(2))
-        table_line = _TABLE_LINE.match(line)
-        if table_line is None or cls._is_separator(line) or cls._is_separator(following):
-            return line
-        cells = table_line.group(1).split("|")
-        return "|" + "|".join(domain_links.link(cell) for cell in cells) + "|"
-
-    @staticmethod
-    def _is_separator(line: str) -> bool:
-        table_line = _TABLE_LINE.match(line)
-        return table_line is not None and set(table_line.group(1).replace("|", "")) <= {"-", " ", ":"}
+        """Emit markdown matching scenario templates (GWT + examples tables)."""
+        return cls._render_scenario_lines(scenarios, story_name, story_backgrounds)
 
     @classmethod
     def _render_scenario_lines(cls, scenarios, story_name, story_backgrounds) -> str:

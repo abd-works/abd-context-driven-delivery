@@ -27,7 +27,7 @@ Relationships:
   - Operation return types and PascalCase parameter types also become edges
     (default association). An optional stereotype on the op line applies to
     the return type (e.g. ``+ << composition >> continueToForm(): PortabilityForm``).
-  - A line ``---<<stops>>--> RunningProcess`` after the operations is a dependency: what the class does to
+  - A line ``---<<runs>>--> Git`` after the operations of ``Repo`` is a dependency: what the class does to
     another class at run time, labelled by that interaction.
 """
 from __future__ import annotations
@@ -287,11 +287,6 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         loaded.update_self(source)
         return loaded
 
-    def load_class(self, source: OoadClass) -> MarkdownOoadClass:
-        loaded = MarkdownOoadClass(name=source.name, sequential_order=source.sequential_order)
-        loaded.update_self(source)
-        return loaded
-
     module_type = None
 
     def load_content(self) -> None:
@@ -500,14 +495,6 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         if getattr(self, "_card_parts", None) is not None:
             return self._render_cards()
         return "\n".join(module.render() for module in self.modules)
-
-    @classmethod
-    def from_workspace(cls, root: Path) -> Optional["MarkdownCleanEngineeringModel"]:
-        for path in sorted(root.glob("**/*.md")):
-            text = path.read_text(encoding="utf-8", errors="ignore")
-            if "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering" in text and "@toolset-manifest" in text:
-                return cls().parse(text)
-        return None
 
     _MODULE_META_HEADINGS = frozenset({
         "seam",

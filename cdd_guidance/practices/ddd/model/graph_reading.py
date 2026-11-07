@@ -10,28 +10,18 @@ from pathlib import Path
 
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.graph import Node, PracticeGraph
-from harness.graph.graph_practice import GraphPractice, GraphPractices
 from harness.graph.skipped_folders import skips_folder
 
-_PACKAGE = "cdd_guidance.practices.ddd"
 # A helper class in a test folder is never a domain aggregate, whatever its name suggests.
 _TEST_FOLDERS = ("tests/", "test-utils/")
 _FOREIGN_KEY = "//\\s*foreign\\s+(\\w+)"
 
 
-class DddGraph(GraphPractice):
-    """DDD's nodes, read after Clean Engineering's classes, and its rules with Clean Engineering's."""
-
-    reads_after = ("clean_engineering",)
-    extends = "clean_engineering"
-    class_types = ("Entity", "EntityRoot", "ValueObject", "Aggregate", "Repository", "DomainEvent", "DomainService", "Specification")
-
-    def own_rules(self) -> dict:
-        return {**super().own_rules(), **GraphPractices.named("clean_engineering").rules()}
-
-    def read(self, practice: PracticeGraph) -> None:
-        with schema_sync_paused():
-            _DddReading(practice).read()
+def read_contexts_and_blocks(practice: PracticeGraph) -> None:
+    """Add the bounded contexts, aggregates, and building blocks of the folder the DDD practice graph reads; the
+    building blocks are the classes Clean Engineering already read."""
+    with schema_sync_paused():
+        _DddReading(practice).read()
 
 
 class _DddReading:
@@ -108,7 +98,7 @@ class _DddReading:
     def _block_node(self, cls: Node, kind: str) -> Node:
         """The building block the class is, at the class's lines."""
         node_id = f"ddd:{kind}:{cls.source.file}:{cls.name}"
-        return self.practice.add(_tactical_block(cls, kind), node_id, cls.source.file, cls.source.start_line, cls.source.end_line)
+        return self.practice.add(tactical_block(cls, kind), node_id, cls.source.file, cls.source.start_line, cls.source.end_line)
 
     def _associate(self, cls: Node) -> None:
         """An entity root names each other root it holds a reference to with a ``// foreign Name`` comment."""
@@ -124,7 +114,7 @@ class _DddReading:
         return self._texts[file]
 
 
-def _tactical_block(cls, kind: str) -> Node:
+def tactical_block(cls, kind: str) -> Node:
     """The building block node of kind for a parsed class: the class's own facts, then the tactical facts DDD reads
     from it. The class stays Clean Engineering's node; this node is how DDD sees it."""
     from cdd_guidance.practices.ddd.model.nodes import tactical_facts
@@ -170,6 +160,3 @@ def _context_for(folder: str, contexts: dict[str, Node]) -> Node | None:
             if candidate == "." or len(candidate) > len(best):
                 best = candidate
     return contexts.get(best) or contexts.get(".")
-
-
-GraphPractices.register(DddGraph("ddd", _PACKAGE))

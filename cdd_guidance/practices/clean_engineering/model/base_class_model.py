@@ -12,7 +12,7 @@ from harness.graph.graph import Graph
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
-from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair, TranslationError, UpdateReport
+from cdd_guidance.practices.clean_engineering.model.translation import ChildCollectionPair, TranslationError
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.clean_engineering.model.operation import Operation
@@ -103,7 +103,7 @@ def companion_interface_name(class_name: str, known_names: Iterable[str]) -> str
 
 
 class OoadNode(ModelNode):
-    _graph_practice = "clean_engineering"
+    _practice_key = "clean_engineering"
     _semantic_type_name: str = "OoadNode"
     _belongs = {
         ("OoadClass", "Module"),
@@ -120,16 +120,14 @@ class OoadNode(ModelNode):
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
 
-    def translate_from(self, source: "OoadNode") -> UpdateReport:
+    def translate_from(self, source: "OoadNode") -> None:
         if self.semantic_type() != source.semantic_type():
             raise TranslationError(
                 f"Cannot translate from {source.semantic_type()} into {self.semantic_type()}"
             )
-        report = UpdateReport()
         self.update_self(source)
         for pair in self.child_collections(source):
-            self._reconcile_collection(pair, report)
-        return report
+            self._reconcile_collection(pair)
 
     def update_self(self, source: "OoadNode") -> None:
         raise NotImplementedError(f"{type(self).__name__} must implement update_self")
@@ -137,7 +135,7 @@ class OoadNode(ModelNode):
     def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:
         raise NotImplementedError(f"{type(self).__name__} must implement child_collections")
 
-    def _reconcile_collection(self, pair: ChildCollectionPair, report: UpdateReport) -> None:
+    def _reconcile_collection(self, pair: ChildCollectionPair) -> None:
         consumed_ids: set = set()
         reconciled: List[OoadNode] = []
 
@@ -147,16 +145,10 @@ class OoadNode(ModelNode):
                 consumed_ids.add(id(match))
                 match.translate_from(source_child)
                 reconciled.append(match)
-                report.add_exact_match(match.name)
             else:
                 new_child = pair.load(source_child)
                 new_child.translate_from(source_child)
                 reconciled.append(new_child)
-                report.add_new(new_child, parent_name=self.name)
-
-        for existing in pair.self_children:
-            if id(existing) not in consumed_ids:
-                report.add_removed(existing, parent_name=self.name)
 
         pair.self_children[:] = reconciled
 
@@ -216,7 +208,7 @@ class OoadClass(OoadNode):
         self.peer_names: List[str] = []
         self.module_helpers: List[list] = []
         self.collaborators: List[str] = collaborators if collaborators is not None else []
-        # What this class does to another class at run time, each named by its interaction: `---<<stops>>--> RunningProcess`.
+        # What this class does to another class at run time, each named by its interaction: `Repo ---<<runs>>--> Git`.
         self.dependencies: List[Relationship] = []
         self._properties = ModelChildren(self, "participants")
         self._operations = ModelChildren(self, "participants")
@@ -411,24 +403,6 @@ class OoadClass(OoadNode):
 
     def get_next_relationship_from_file(self) -> Relationship:
         raise NotImplementedError(f"{type(self).__name__} must implement get_next_relationship_from_file")
-
-
-class File(OoadNode):
-    """A source file inside a module. Holds the properties and operations that sit
-    at file scope rather than on a class."""
-
-    _semantic_type_name = "File"
-
-    def __init__(self, name: str, sequential_order: int) -> None:
-        super().__init__(name, sequential_order)
-        self.properties: List = []
-        self.operations: List = []
-
-    def update_self(self, source: OoadNode) -> None:
-        self.name = source.name
-
-    def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
-        return []
 
 
 class Module(OoadNode):
@@ -704,10 +678,6 @@ class CleanEngineeringModel(OoadNode):
 
     def parse(self, text: str) -> "CleanEngineeringModel":
         raise NotImplementedError(f"{type(self).__name__} must implement parse")
-
-    def sync(self, text: str, canonical: "CleanEngineeringModel") -> UpdateReport:
-        """Bring canonical up to date with the model this channel reads from text."""
-        return canonical.translate_from(self.parse(text))
 
     def load_content(self) -> None:
         return None

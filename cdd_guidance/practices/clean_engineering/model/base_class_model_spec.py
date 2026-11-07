@@ -307,14 +307,11 @@ with description("CleanEngineeringModel"):
             module = Module(name="checkout", sequential_order=1)
             module.classes.append(OoadClass(name="Cart", sequential_order=1))
             source.modules.append(module)
-            self.report = self.model.translate_from(source)
+            self.model.translate_from(source)
 
         with it("should add the new class to model.every_class()"):
             expect(self.model.every_class()).to(have_len(1))
             expect(self.model.every_class()[0].name).to(equal("Cart"))
-
-        with it("should record an ADD in the report"):
-            expect(len(self.report.adds())).to(equal(1))
 
     with context("translate_from with a class removed from source"):
         with before.each:
@@ -323,13 +320,10 @@ with description("CleanEngineeringModel"):
             module.classes.append(OoadClass(name="Cart", sequential_order=1))
             self.model.modules.append(module)
             source = CleanEngineeringModel(name="checkout", sequential_order=1)
-            self.report = self.model.translate_from(source)
+            self.model.translate_from(source)
 
         with it("should remove the class from model.every_class()"):
             expect(self.model.every_class()).to(equal([]))
-
-        with it("should record a REMOVE in the report"):
-            expect(len(self.report.removes())).to(equal(1))
 
     with context("translate_from matching an existing class by name"):
         with before.each:

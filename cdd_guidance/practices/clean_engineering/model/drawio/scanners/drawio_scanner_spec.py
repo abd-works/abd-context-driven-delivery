@@ -33,6 +33,45 @@ _FAR_APART = """\
 """
 
 
+_TWO_EDGES_TO_ONE_POINT = """\
+<mxfile host="test">
+  <diagram name="Page">
+    <mxGraphModel>
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="2" vertex="1" parent="1" value="&lt;b&gt;Payment&lt;/b&gt;">
+          <mxGeometry x="300" y="60" width="200" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="3" vertex="1" parent="1" value="&lt;b&gt;CardPayment&lt;/b&gt;">
+          <mxGeometry x="60" y="260" width="200" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="4" vertex="1" parent="1" value="&lt;b&gt;CashPayment&lt;/b&gt;">
+          <mxGeometry x="540" y="260" width="200" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="5" edge="1" parent="1" source="3" target="2" style="edgeStyle=orthogonalEdgeStyle;{head}exitX=0.5;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="160" y="210"/><mxPoint x="400" y="210"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="6" edge="1" parent="1" source="4" target="2" style="edgeStyle=orthogonalEdgeStyle;{head}exitX=0.5;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="640" y="210"/><mxPoint x="400" y="210"/></Array></mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+"""
+
+_INHERITANCE_HEAD = "endArrow=block;endSize=16;endFill=0;"
+_ASSOCIATION_HEAD = "endArrow=open;endSize=12;"
+
+
+def _rules_reported(head: str) -> list:
+    path = Path(tempfile.mkdtemp()) / "payments.drawio"
+    path.write_text(_TWO_EDGES_TO_ONE_POINT.replace("{head}", head), encoding="utf-8")
+    report = DrawioScanner(scan_root=path.parent).run_report([str(path)])
+    return [item["rule"] for item in report["violations"] if item["rule"] in ("distinct-anchor-points", "edges-do-not-overlap-edges")]
+
+
 def _diagram_in_examples() -> Path:
     folder = Path(tempfile.mkdtemp()) / "examples"
     folder.mkdir()
@@ -75,6 +114,14 @@ with description("a Draw.io layout scanner"):
 
         with it("should not call the diagram clean"):
             expect(self.report["ok"]).to(equal(False))
+
+    with context("with two subclasses joined into one shared line to their base"):
+        with it("should report neither a shared anchor nor an overlap"):
+            expect(_rules_reported(_INHERITANCE_HEAD)).to(equal([]))
+
+    with context("with two associations that end at one point and share the last line"):
+        with it("should report the shared anchor and the overlap"):
+            expect(sorted(_rules_reported(_ASSOCIATION_HEAD))).to(equal(["distinct-anchor-points", "edges-do-not-overlap-edges"]))
 
     with context("that reports on named paths with no scan root"):
         with before.each:

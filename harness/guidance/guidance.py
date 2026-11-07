@@ -1,6 +1,7 @@
 """Assemble agent instructions from @markdown properties."""
 from __future__ import annotations
 
+import importlib
 import inspect
 import json
 from dataclasses import dataclass, replace
@@ -50,6 +51,21 @@ class RenderRequest:
     source: str | None = None
     previous: str = ""
     folder: str = ""
+
+
+def rules_in(module_path: str) -> dict[str, Any]:
+    """The graph rules a rules module lists, by slug: its ``BY_SLUG``, else each of its ``RULES``. A module that is not
+    there has none."""
+    try:
+        module = importlib.import_module(module_path)
+    except ModuleNotFoundError as missing:
+        if missing.name and module_path.startswith(missing.name):
+            return {}
+        raise
+    by_slug = getattr(module, "BY_SLUG", None)
+    if isinstance(by_slug, dict):
+        return dict(by_slug)
+    return {rule.slug: rule for rule in getattr(module, "RULES", ()) if getattr(rule, "slug", "")}
 
 
 class FidelityWithoutSessionError(ValueError):
@@ -257,6 +273,75 @@ class PracticeGuidance(Guidance):
         is there to show beside it."""
         collections = (self.rules, *(fidelity.rules for fidelity in self.fidelities))
         return [rule for collection in collections if collection is not None for rule in collection]
+
+    ## the knowledge graph
+    # A practice takes part in the knowledge graph itself: it says which of its node types the graph treats as
+    # classes, members, or source-ordered, reads its files into the graph, links its nodes to other practices', and
+    # names the graph rules it checks. The graph names no practice, so these words live here, on the practice.
+
+    graph: Any = None
+    """The graph that holds this practice (harness/graph's *Graph*); none for a practice no graph holds, such as the one
+    an action works with at a fidelity and format of its own."""
+
+    reads_after: tuple[str, ...] = ()
+    """The practices whose nodes this one reads while it reads its own; the graph reads them first."""
+
+    node_types: tuple[str, ...] = ()
+    """Node types the graph explorer offers for this practice even before any node of them is read."""
+
+    class_types: tuple[str, ...] = ()
+    """Node types that are classes, which the source view opens a call into and folds in place."""
+
+    member_types: tuple[str, ...] = ()
+    """Node types that are a class's operations and properties, which the source view can open a call to."""
+
+    class_node_type: str = ""
+    """The node type this practice's checks run on as a whole class. Another practice's node that lies inside one of
+    these classes skips this practice's checks, since they already ran on the class."""
+
+    source_ordered_types: frozenset[str] = frozenset()
+    """Node types the explorer lists in the order they appear in their files, not the order they were read."""
+
+    extends: str = ""
+    """The practice whose types this practice's schema builds on with ``is:``, such as a DDD entity that is a Clean
+    Engineering class; its types also carry that practice's rules."""
+
+    anchor_types: dict[str, str] = {}
+    """The ``is:`` words another practice's schema uses to say one of its types is a type of this practice
+    (``class`` for a Clean Engineering class), each with the node type it names."""
+
+    rule_types: dict[str, tuple[str, ...]] = {}
+    """Node types that also carry the rules the schema gives other types, such as every story node's rules on a story."""
+
+    @property
+    def package(self) -> str:
+        """The Python package that holds this practice, such as ``cdd_guidance.practices.stories``; empty for a practice
+        the catalogue does not hold."""
+        return PracticeCatalogue.module_of(self.key) if PracticeCatalogue.has(self.key) else ""
+
+    def align_node(self, node: Any) -> None:
+        """Move node's source onto the lines that declare it, when this practice's reader found it by a nearby line."""
+
+    def read_working_copy(self, practice_graph: Any) -> None:
+        """Read this practice's nodes and edges into practice_graph from the working copy its graph is loading."""
+
+    def link_to_other_practices(self, graph: Any) -> None:
+        """Record the edges between this practice's nodes and other practices' nodes, once every practice is read."""
+
+    def graph_checks(self) -> dict[str, Any]:
+        """Every graph rule (a *PracticeGraphRule*) this practice checks, by slug; read once."""
+        found = getattr(self, "_graph_checks", None)
+        if found is None:
+            found = self._graph_checks = self.own_graph_checks()
+        return found
+
+    def own_graph_checks(self) -> dict[str, Any]:
+        """The graph rules this practice's ``rules`` package lists; a practice that checks more overrides this."""
+        return rules_in(f"{self.package}.rules") if self.package else {}
+
+    def language_checks(self, language: str) -> dict[str, Any]:
+        """The graph rules this practice checks only on nodes read from a file in ``language``, such as ``drawio``."""
+        return {}
 
     @property
     @data_field
@@ -513,8 +598,6 @@ class PracticeGuidance(Guidance):
         entry = adapters[resolved]
         if isinstance(entry, tuple):
             module_path, attr = entry
-            import importlib
-
             return getattr(importlib.import_module(module_path), attr)
         return entry
 

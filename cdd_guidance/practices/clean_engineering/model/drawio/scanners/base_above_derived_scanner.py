@@ -6,7 +6,7 @@ from harness.graph.violation import Violation
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
     DrawioPage,
     DrawioScanner,
-    edge_kind,
+    is_inheritance,
 )
 
 
@@ -16,7 +16,7 @@ class BaseAboveDerivedScanner(DrawioScanner):
     def scan_page(self, page: DrawioPage) -> list[Violation]:
         violations = []
         for edge in page.edges:
-            if edge_kind(edge.get("style", "")) not in ("inheritance", "inheritance-orthogonal"):
+            if not is_inheritance(edge):
                 continue
             child_id, parent_id = edge.get("source", ""), edge.get("target", "")
             if child_id not in page.boxes or parent_id not in page.boxes:

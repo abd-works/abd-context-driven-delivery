@@ -59,9 +59,10 @@ class PracticeCatalogue:
         return cls._shared[key]
 
     @classmethod
-    def create(cls, key: str) -> PracticeGuidance:
-        """A new instance of the practice ``key``, for a caller that sets its fidelity, format, or workspace."""
-        return cls.practice_class(key)()
+    def create(cls, key: str, **arguments: object) -> PracticeGuidance:
+        """A new instance of the practice ``key``, for a caller that sets its fidelity, format, or workspace; arguments
+        go to the practice's constructor, such as ``fidelity=None`` for a practice at no fidelity."""
+        return cls.practice_class(key)(**arguments)
 
     @classmethod
     def practice_class(cls, key: str) -> type[PracticeGuidance]:

@@ -4,16 +4,19 @@ applied pattern's schema adds.
 A type also carries the rules of each type its schema says it is (``is:``). A practice that extends another, such as
 DDD building on Clean Engineering, anchors its types to that practice's types with the ``is:`` words the other practice
 declares (``class`` is a Clean Engineering class), and its types carry the anchored type's rules too. Each practice
-declares what it extends and its anchor words on its *GraphPractice*, so the schema reader names no practice.
+declares what it extends and its anchor words on its *PracticeGuidance* class, so the schema reader names no practice.
 """
 
 from __future__ import annotations
 
-from functools import cached_property, lru_cache
+from functools import cached_property
 from pathlib import Path
+from typing import ClassVar
 
-from harness.graph.graph_practice import GraphPractices
+from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.schema_edges import SchemaKey
+from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.schema import Schema
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -23,20 +26,32 @@ _PATTERNS_ROOT = _ROOT / "cdd_guidance" / "patterns"
 _TYPE_FIELDS = frozenset({"is", "fidelity", "name", "path"})
 
 
+def _extended_by(practice: PracticeGuidance) -> PracticeGuidance:
+    """The practice whose types practice's schema builds on, which its ``extends`` names. A schema is the same in every
+    graph, so it reads the catalogue's own instance of that practice."""
+    return PracticeCatalogue.practice(practice.extends)
+
+
 class PracticeSchema:
     """One practice's schema with the applied patterns' schemas on top: which rules each node type carries, which type
     of the extended practice it is, and the fidelities that create it."""
 
-    def __init__(self, practice: str, patterns: tuple[str, ...] = ()) -> None:
-        self.practice = practice
+    # One schema per practice class and patterns: a practice's schema is the same whichever graph holds it.
+    _loaded: ClassVar[dict[tuple[type, tuple[str, ...]], PracticeSchema]] = {}
+
+    def __init__(self, practice: PracticeGuidance, patterns: tuple[str, ...] = ()) -> None:
+        self.guidance = practice
+        self.practice = practice.key
         self.patterns = tuple(patterns)
-        self._graph_practice = GraphPractices.named(practice)
+        self._declared = practice
 
     @classmethod
-    @lru_cache(maxsize=None)
-    def load(cls, practice: str, patterns: tuple[str, ...] = ()) -> PracticeSchema:
+    def load(cls, practice: PracticeGuidance, patterns: tuple[str, ...] = ()) -> PracticeSchema:
         """The schema of practice with patterns applied; each is read once per process."""
-        return cls(practice, tuple(patterns))
+        key = (type(practice), tuple(patterns))
+        if key not in cls._loaded:
+            cls._loaded[key] = cls(practice, tuple(patterns))
+        return cls._loaded[key]
 
     @cached_property
     def types(self) -> frozenset[str]:
@@ -51,28 +66,28 @@ class PracticeSchema:
     @cached_property
     def rules(self) -> dict[str, tuple[str, ...]]:
         """Each node type with the rule slugs it carries: its own, its supertypes', and its anchored type's."""
-        extended = self._graph_practice.extends
+        extended = self._declared.extends
         if not extended:
             return dict(self._direct_rules)
-        anchored_rules = PracticeSchema.load(extended, self.patterns)._direct_rules
+        anchored_rules = PracticeSchema.load(_extended_by(self.guidance), self.patterns)._direct_rules
         return {node_type: self._carried_rules(node_type, anchored_rules) for node_type in sorted(self.types)}
 
     def slugs_for(self, node_type: str) -> tuple[str, ...]:
         """The rule slugs a node of this type carries, with those of each type its practice says it also carries."""
         table = self.rules
-        listed = self._graph_practice.rule_types.get(node_type, ())
+        listed = self._declared.rule_types.get(node_type, ())
         return self._merged(table.get(node_type, ()), *(table.get(other, ()) for other in listed))
 
     def anchor_type(self, node_type: str) -> str | None:
         """The extended practice's type this node type is, such as ``OoadClass`` for a DDD entity; a practice's own
         anchor type is itself."""
-        own = self._graph_practice.anchor_types
+        own = self._declared.anchor_types
         if own:
             return node_type if node_type in own.values() else None
-        extended = self._graph_practice.extends
+        extended = self._declared.extends
         if not extended:
             return None
-        anchors = GraphPractices.named(extended).anchor_types
+        anchors = _extended_by(self.guidance).anchor_types
         last = self._supertype_chain(node_type)[-1]
         return anchors.get(self._supertypes.get(last, ""))
 
@@ -85,7 +100,7 @@ class PracticeSchema:
         for node_type, slugs in self.rules.items():
             for slug in slugs:
                 practice_graph.apply_rule(slug, [node_type])
-        for node_type in self._graph_practice.rule_types:
+        for node_type in self._declared.rule_types:
             for slug in self.slugs_for(node_type):
                 practice_graph.apply_rule(slug, [node_type])
 
@@ -108,10 +123,8 @@ class PracticeSchema:
     @cached_property
     def rule_prose(self) -> dict[str, str]:
         """Each rule slug with its prose from the practice's guidance (shared and per fidelity) and the patterns'."""
-        from harness.guidance.practice_catalogue import PracticeCatalogue
-
-        guidances = [PracticeCatalogue.practice(self.practice)] if PracticeCatalogue.has(self.practice) else []
-        guidances.extend(guidance for guidance in (GraphPractices.overlay(pattern).guidance() for pattern in self.patterns) if guidance is not None)
+        guidances = [self.guidance]
+        guidances.extend(guidance for guidance in (GraphOverlay.of(pattern).guidance() for pattern in self.patterns) if guidance is not None)
         merged: dict[str, str] = {}
         for guidance in guidances:
             fidelities = getattr(getattr(guidance, "fidelities", None), "entries", None) or {}
@@ -156,11 +169,7 @@ class PracticeSchema:
 
     @cached_property
     def _fidelities(self) -> dict[str, list[str]]:
-        from harness.guidance.practice_catalogue import PracticeCatalogue
-
-        if not PracticeCatalogue.has(self.practice):
-            return {}
-        return PracticeCatalogue.practice(self.practice).schema_node_fidelities()
+        return self.guidance.schema_node_fidelities()
 
     def _carried_rules(self, node_type: str, anchored_rules: dict[str, tuple[str, ...]]) -> tuple[str, ...]:
         inherited = [self._direct_rules.get(step, ()) for step in self._supertype_chain(node_type)]
@@ -171,7 +180,7 @@ class PracticeSchema:
 
     def _supertype_chain(self, node_type: str) -> tuple[str, ...]:
         """node_type, then each local supertype its ``is:`` names, up to the first anchor word."""
-        anchors = GraphPractices.named(self._graph_practice.extends).anchor_types if self._graph_practice.extends else {}
+        anchors = _extended_by(self.guidance).anchor_types if self._declared.extends else {}
         chain: list[str] = []
         current = node_type
         while current and current not in chain:
@@ -188,9 +197,9 @@ class PracticeSchema:
 
     def _pattern_owning_rule(self, node_type: str, slug: str) -> str | None:
         """The applied pattern whose schema declares the rule on this type, or declares a type the practice lacks."""
-        base_types = PracticeSchema.load(self.practice).types
+        base_types = PracticeSchema.load(self.guidance).types
         for pattern in self.patterns:
-            declared = PracticeSchema.load(self.practice, (pattern,))
+            declared = PracticeSchema.load(self.guidance, (pattern,))
             if slug in declared._overlay_rules.get(node_type, ()):
                 return pattern
             if node_type in declared._overlay_types and node_type not in base_types:

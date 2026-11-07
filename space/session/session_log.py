@@ -387,7 +387,6 @@ class SessionLog:
             ", ".join(entry.name for entry in opened),
             ", ".join(entry.working_fidelity for entry in opened if entry.working_fidelity),
             ", ".join(entry.working_format for entry in opened if entry.working_format),
-            " ".join(entry.root_node_name for entry in opened if entry.root_node_name),
             self.injected_rules.text,
             str(self._line_chat()),
         )

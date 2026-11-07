@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
 from harness.agent_tools.chat_pointer import ChatPointer
+from harness.graph.graph import Graph
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.documents import load_document
 from harness.installation.destination import data_field, identity, language_adapter
@@ -133,6 +134,13 @@ class Session:
         their sketches, grill answers, and partitions under it, each practice's folder is kept relative to it, and the
         file manager reads under it."""
         return Path(self.workpath or self.repo_path).resolve()
+
+    @property
+    def graph(self) -> Graph:
+        """The knowledge graph this session works with, opened on its root. The cdd server holds it in memory from the
+        session's first call on, so every call in the session works on the same graph and none rebuilds it from disk;
+        an action that writes files refreshes it with exactly those files."""
+        return Graph.of_session(self.session_path or self.root, self.root)
 
     def path_named(self, named: str | Path) -> Path:
         """named as a path in this session's project, the way its agent writes one: from the project's root, or

@@ -13,11 +13,6 @@ from harness.guidance_actions import ActionWorksInNoSession
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 from cdd_guidance.actions.partition.partition import Partition
-
-from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-from cdd_guidance.practices.ddd.ddd import Ddd
-from cdd_guidance.practices.stories.stories import Stories
-from cdd_guidance.practices.ux.ux import Ux
 from cdd_guidance.context_setup.context_index import ContextIndex
 from cdd_guidance.context_setup.live_app_capture import (
     CaptureResult,
@@ -58,10 +53,6 @@ class ContextSetup:
 
     def __init__(
         self,
-        stories: Optional[Stories] = None,
-        clean_engineering: Optional[CleanEngineering] = None,
-        ddd: Optional[Ddd] = None,
-        ux: Optional[Ux] = None,
         partition: Optional[Partition] = None,
         context_index: Optional[ContextIndex] = None,
         session: Any = None,
@@ -69,19 +60,14 @@ class ContextSetup:
         """A collaborator left out is made here, so the toolset the cdd server builds with no arguments can run every
         step of its recipes."""
         self._session = session
-        self.stories = stories if stories is not None else Stories()
-        self.clean_engineering = clean_engineering if clean_engineering is not None else CleanEngineering()
-        self.ddd = ddd if ddd is not None else Ddd()
-        self.ux = ux if ux is not None else Ux()
         self.partition = partition if partition is not None else Partition()
         self.context_index = context_index if context_index is not None else ContextIndex()
-        self._apply_tool_modes()
 
     def for_call(self, call: ToolCall) -> ContextSetup:
         """A ContextSetup made for call. Its partition is made for the session the call works in, so the index and
         segments it asks for land in that session's folder."""
         partition = self.partition.for_call(call)
-        return type(self)(self.stories, self.clean_engineering, self.ddd, self.ux, partition, self.context_index, call.session)
+        return type(self)(partition, self.context_index, call.session)
 
     @property
     def session(self) -> Any:
@@ -96,10 +82,6 @@ class ContextSetup:
         repository = str(self.partition.path_named(repo_path))
         written_to = str(self.partition.path_named(capture_repo)) if capture_repo else ""
         return LiveAppCapture(repository, written_to, surface, base_url, entry_paths)
-
-    def _apply_tool_modes(self) -> None:
-        for practice in (self.stories, self.clean_engineering, self.ddd, self.ux):
-            practice.mode = "tool"
 
     # ── @tools — deterministic Python ────────────────────────────────────────
 

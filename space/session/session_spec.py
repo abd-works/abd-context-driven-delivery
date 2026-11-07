@@ -17,7 +17,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 
 import time
 
-from expects import be_a, contain, equal, expect, raise_error
+from expects import be, be_a, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.guidance.guidance import PracticeGuidance
@@ -82,9 +82,11 @@ with description("a session"):
             with it("should open that practice's guideline"):
                 expect(self.server.session.practice("stories").guideline).to(be_a(PracticeGuidance))
 
-            with it("should open that practice's graph with the guideline"):
-                opened = self.server.session.practice("stories")
-                expect(opened.graph.practices["stories"].name).to(equal("stories"))
+            with it("should open the session's graph, which holds that practice"):
+                expect(self.server.session.graph.practices["stories"].name).to(equal("stories"))
+
+            with it("should open the same graph on the next call in that session"):
+                expect(self.server.session.graph).to(be(self.server.session.graph))
 
             with context("that has closed"):
                 with it("should be the main session again"):
@@ -752,11 +754,14 @@ with description("a practice"):
             self.session = Sessions(self.called).current()
             self.opened = self.session.practice("bdd")
 
-        with it("should hold that practice's guideline and graph in memory"):
+        with it("should hold that practice's guideline in memory"):
             expect(isinstance(self.opened.guideline, PracticeGuidance)).to(equal(True))
 
-        with it("should hold that practice's graph with the guideline"):
-            expect(self.opened.graph.practices["bdd"].name).to(equal("bdd"))
+        with it("should hold a graph of its own, apart from the guideline an action works with"):
+            expect(self.session.graph.practices["bdd"].guidance is self.opened.guideline).to(equal(False))
+
+        with it("should open its graph on its workpath"):
+            expect(self.session.graph.practices["bdd"].source_root).to(equal(str(self.work.resolve())))
 
         with it("should return that same practice on the next ask"):
             expect(self.session.practice("bdd") is self.opened).to(equal(True))
@@ -789,10 +794,8 @@ with description("a practice"):
             expect([item.name for item in self.session.opened_practices]).to(equal(["bdd"]))
 
         with context("with the practice default folders"):
-            with it("should point that practice's graph root at its default workspace folder under workpath"):
-                expect(self.opened.graph.practices["bdd"].source_root).to(
-                    equal(str((self.work / "src").resolve()))
-                )
+            with it("should point that practice's folder at its default workspace folder under workpath"):
+                expect(Path(self.opened.folder).resolve()).to(equal((self.work / "src").resolve()))
 
         with context("with a fidelity's outputs resolved for the session"):
             with before.each:
@@ -891,10 +894,8 @@ with description("a practice"):
                 self.session = Sessions(self.called).current()
                 self.opened = self.session.practice("bdd")
 
-            with it("should point that practice's graph root at the workpath"):
-                expect(self.opened.graph.practices["bdd"].source_root).to(
-                    equal(str(self.work.resolve()))
-                )
+            with it("should point that practice's folder at the workpath"):
+                expect(Path(self.opened.folder).resolve()).to(equal(self.work.resolve()))
 
         with context("with a root a person chose for the practice"):
             with before.each:
@@ -905,8 +906,8 @@ with description("a practice"):
                 self.session = Sessions(self.called).current()
                 self.opened = self.session.practice("bdd")
 
-            with it("should point that practice's graph root at that folder"):
-                expect(self.opened.graph.practices["bdd"].source_root).to(equal(str(self.custom.resolve())))
+            with it("should point that practice's folder at that folder"):
+                expect(Path(self.opened.folder).resolve()).to(equal(self.custom.resolve()))
 
             with it("should keep that folder in the session's session.json and nowhere else"):
                 expect((self.repo / ".context" / "practices.json").exists()).to(equal(False))
@@ -935,11 +936,11 @@ with description("a practice"):
             self.opened = [self.session.practice(name) for name in ("clean_engineering", "stories", "bdd")]
             self.elapsed = time.perf_counter() - started
 
-        with it("should load those graphs from harness/guidance"):
-            roots = [item.graph.practices[item.name].source_root for item in self.opened]
-            expect(all(root == str(self.tree.resolve()) for root in roots)).to(equal(True))
+        with it("should point those practices' folders at harness/guidance"):
+            roots = [Path(item.folder).resolve() for item in self.opened]
+            expect(all(root == self.tree.resolve() for root in roots)).to(equal(True))
 
-        with it("should finish that load within 5 seconds"):
+        with it("should open them within 5 seconds"):
             expect(self.elapsed < 5).to(equal(True))
 
 

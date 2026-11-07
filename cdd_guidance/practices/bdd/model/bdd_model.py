@@ -17,7 +17,7 @@ from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 
 
 class BddModel(ModelNode):
-    _graph_practice = "bdd"
+    _practice_key = "bdd"
     _semantic_type_name = "Spec"
     graph_facts = ("patches_infrastructure", "signature_marker", "top_level_describes", "code_like_describe_lines", "private_probe")
     _belongs = {("Description", "Spec")}

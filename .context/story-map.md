@@ -189,7 +189,7 @@ section: body
                 with context("whose transform tool is called")
                     with it("should delegate to CleanEngineering and return a dict")
 
-                NA — no spec writes `.context/bounded-context.md` today; DDD reads it (`practices/ddd/graph_practice.py`)
+                NA — no spec writes `.context/bounded-context.md` today; DDD reads it (`practices/ddd/model/graph_reading.py`)
 ###     (S) Stories --> Run Story Tests
 ####        Tests
                 NA — practices/bdd

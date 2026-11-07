@@ -40,7 +40,7 @@ class BehaviorNode(ModelNode):
     `written` is how the block was spelled in the language it was read from, and `setup` the code above its first
     child, so a render into the same language can write both back."""
 
-    _graph_practice = "bdd"
+    _practice_key = "bdd"
     graph_facts = ("expect_count", "has_implementation", "private_probe")
 
     def __init__(self, name: str, sequential_order: int = 1, graph: Optional[Graph] = None) -> None:
@@ -81,9 +81,6 @@ class Description(BehaviorNode):
             cloned.observations.append(observation.clone())
         return cloned
 
-    def load_context(self, source: "Context") -> "Context":
-        return source.clone()
-
 
 class Context(BehaviorNode):
     _semantic_type_name = "Context"
@@ -102,12 +99,6 @@ class Context(BehaviorNode):
         for context in self.contexts:
             cloned.contexts.append(context.clone())
         return cloned
-
-    def load_observation(self, source: "Observation") -> "Observation":
-        return source.clone()
-
-    def load_context(self, source: "Context") -> "Context":
-        return source.clone()
 
 
 class Observation(BehaviorNode):

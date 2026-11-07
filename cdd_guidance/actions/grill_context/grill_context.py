@@ -100,6 +100,7 @@ class GrillContext(GuidanceAction):
         answers_path.parent.mkdir(parents=True, exist_ok=True)
         existing = answers_path.read_text(encoding="utf-8") if answers_path.exists() else None
         answers_path.write_text(self._appended_answers_content(existing, heading, body), encoding="utf-8")
+        self.wrote([answers_path])
         return str(answers_path)
 
     @mcp

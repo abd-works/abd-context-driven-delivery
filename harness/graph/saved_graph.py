@@ -8,11 +8,9 @@ saved violation is the same Violation data a returned node's rule lists, so a re
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
-from harness.graph.skipped_folders import SKIPPED_FOLDERS, skips_folder
 from harness.graph.violation import Violation
 from harness.installation.destination import data_of
 
@@ -22,23 +20,6 @@ if TYPE_CHECKING:
 GRAPH_FILE_NAME = "graph.json"
 # The shape this code writes. A saved graph of any other shape is read as no saved graph, so the next load replaces it.
 SAVED_SHAPE_VERSION = 2
-
-_REPO = Path(__file__).resolve().parents[2]
-_GRAPH_FOLDER = Path(__file__).resolve().parent
-# Files whose change can change what a load finds, so a saved graph older than any of them is rebuilt.
-_GRAPH_RULE_MODULES = (
-    "rules.py",
-    "schema_rules.py",
-    "schema_edges.py",
-    "practice_rule.py",
-    "graph_practice.py",
-    "rule_context.py",
-    "graph_rules_collection.py",
-)
-_RULE_FILE_NAMES = ("rules.py", "schema.yaml", "rules.yaml")
-_SOURCE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py", ".md"}
-# How many files a freshness check reads between two progress reports.
-_FILES_PER_PROGRESS_REPORT = 400
 
 
 class SavedGraphOutdated(Exception):
@@ -134,14 +115,17 @@ class SavedPractice:
         self.violations = violations
 
     @classmethod
-    def from_practice(cls, practice: PracticeGraph) -> SavedPractice:
-        nodes = [node for group in practice.nodes.values() for node in group]
+    def from_practice(cls, practice: PracticeGraph, files: list[str] | None = None) -> SavedPractice:
+        """The practice as it is now; with files, only its nodes read from them (each a file or folder from its source
+        root) and the edges that join two of them or one of them to the practice's root."""
+        nodes = [node for group in practice.nodes.values() for node in group if _read_from(node, files)]
+        edges = [edge for group in practice.edges.values() for edge in group if _joins_kept(edge, files)]
         return cls(
             practice.name,
             practice.source_root,
             practice.root_node.facts,
             [SavedNode.from_node(node) for node in nodes],
-            [SavedEdge.from_edge(edge) for group in practice.edges.values() for edge in group],
+            [SavedEdge.from_edge(edge) for edge in edges],
             [violation for node in nodes for violation in node.rules.violations],
         )
 
@@ -175,8 +159,9 @@ class SavedGraph:
         self.practices = dict(practices)
 
     @classmethod
-    def from_graph(cls, graph: Graph) -> SavedGraph:
-        return cls(graph.overlays, {name: SavedPractice.from_practice(practice) for name, practice in graph.practices.items()})
+    def from_graph(cls, graph: Graph, files: list[str] | None = None) -> SavedGraph:
+        """The graph as it is now; with files, only the nodes read from them."""
+        return cls(graph.overlays, {name: SavedPractice.from_practice(practice, files) for name, practice in graph.practices.items()})
 
     @classmethod
     def from_document(cls, document: dict, source: str = "") -> SavedGraph:
@@ -228,6 +213,7 @@ class SavedGraph:
         from harness.graph.graph import Graph
 
         graph = Graph()
+        graph.overlays = list(self.overlays)
         for name, saved in self.practices.items():
             graph.practice(name).restore(saved)
         for name, saved in self.practices.items():
@@ -236,8 +222,7 @@ class SavedGraph:
 
 
 class SavedGraphFile:
-    """The ``.context/graph.json`` a folder's graph is saved in, and whether it is still current: it holds the practices
-    asked for, and neither their source nor any rule file has changed since it was written."""
+    """The ``.context/graph.json`` a folder's graph is saved in, and whether it holds the practices a load asks for."""
 
     def __init__(self, folder: Path, report_progress: Callable[[str], None]) -> None:
         self.path = folder / ".context" / GRAPH_FILE_NAME
@@ -260,51 +245,26 @@ class SavedGraphFile:
         self.path.write_text(saved.text, encoding="utf-8")
         return self.path
 
-    def current_for(self, practice_roots: dict[str, Path], overlays: list[str]) -> SavedGraph | None:
-        """The saved graph, when it holds these practices and overlays and nothing it was read from has changed since."""
+    def holding(self, practice_roots: dict[str, Path], overlays: list[str]) -> SavedGraph | None:
+        """The saved graph, when it holds these practices, each on the same root, and these overlays. It is not checked
+        against the files' dates: a file changed since reaches the graph only when an action refreshes it."""
         saved = self.read()
         if saved is None or not saved.holds(practice_roots, overlays):
             return None
-        stamp = self.path.stat().st_mtime
-        if self._rules_changed_since(stamp) or any(self._is_dirty(Path(root), stamp) for root in practice_roots.values()):
-            return None
         return saved
 
-    def _rules_changed_since(self, stamp: float) -> bool:
-        folders = (_REPO / "cdd_guidance" / "practices", _REPO / "cdd_guidance" / "patterns")
-        if any(folder.is_dir() and self._rule_file_newer_than(folder, stamp) for folder in folders):
-            return True
-        return any(self._file_newer_than(_GRAPH_FOLDER / name, stamp) for name in _GRAPH_RULE_MODULES)
 
-    def _rule_file_newer_than(self, folder: Path, stamp: float) -> bool:
-        for dirpath, dirnames, filenames in os.walk(folder):
-            dirnames[:] = [name for name in dirnames if name not in SKIPPED_FOLDERS]
-            paths = (Path(dirpath, filename) for filename in filenames)
-            if any(self._is_rule_file(path) and path.stat().st_mtime > stamp for path in paths):
-                return True
-        return False
+def _read_from(node: Node, files: list[str] | None) -> bool:
+    """Whether node was read from one of files, each a file or folder from its practice's source root; every node is
+    when no files are named."""
+    if files is None:
+        return True
+    file = (node.source.file or "").replace("\\", "/")
+    named = [entry.replace("\\", "/").rstrip("/") for entry in files]
+    return any(file == item or file.startswith(f"{item}/") for item in named)
 
-    def _is_rule_file(self, path: Path) -> bool:
-        return path.name in _RULE_FILE_NAMES or (path.suffix == ".py" and "rules" in path.parts)
 
-    def _is_dirty(self, path: Path, stamp: float) -> bool:
-        if not path.exists():
-            return True
-        if path.is_file():
-            return path.stat().st_mtime > stamp
-        return self._contents_newer_than(path, stamp)
-
-    def _contents_newer_than(self, folder: Path, stamp: float) -> bool:
-        seen = 0
-        for dirpath, dirnames, filenames in os.walk(folder):
-            dirnames[:] = [name for name in dirnames if not skips_folder(name)]
-            for path in (Path(dirpath, filename) for filename in filenames if Path(filename).suffix.lower() in _SOURCE_SUFFIXES):
-                seen += 1
-                if seen == 1 or seen % _FILES_PER_PROGRESS_REPORT == 0:
-                    self._report_progress(f"Checking folder dates · {seen}")
-                if path.stat().st_mtime > stamp:
-                    return True
-        return False
-
-    def _file_newer_than(self, path: Path, stamp: float) -> bool:
-        return path.is_file() and path.stat().st_mtime > stamp
+def _joins_kept(edge: Edge, files: list[str] | None) -> bool:
+    """Whether edge joins two nodes read from files, or one of them to its practice's root."""
+    ends = (edge.parent, edge.child)
+    return all(_read_from(end, files) or end.type == "Practice" for end in ends) and any(_read_from(end, files) for end in ends)

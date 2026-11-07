@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
-from harness.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 
@@ -25,10 +25,10 @@ class Document(GuidanceAction):
             if isinstance(item, str):
                 return
             item.templates
-            scanner = getattr(item, "scanner", None)
-            if scanner is not None:
-                scanner.scan(paths)
             item.generate_output()
 
         self.run(on, action="document")
+        "After writing, call refresh with exactly the files you wrote, so the session's graph holds them as they are now; nothing watches the files."
+        if self._session is not None:
+            tools(self.graph.refresh)
         return "Document existing state under {session.path}/ - violations flagged, none corrected."

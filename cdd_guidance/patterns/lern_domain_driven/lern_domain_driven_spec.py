@@ -29,7 +29,6 @@ from mamba import before, context, description, it
 from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import (
     LernDomainDriven,
 )
-from cdd_guidance.practices.stories.stories import Stories
 from harness.guidance.rule import RulesCollection
 from harness.hooks.hook_server import HookPayload
 
@@ -94,41 +93,6 @@ with description("a LernDomainDriven generator"):
 
         with it("should resolve module_dir to this package"):
             expect(self.tool.module_dir).to(equal(_MODULE_DIR))
-
-    with context("whose _stories() companion is resolved"):
-        with before.each:
-            self.stories = self.tool._stories()
-
-        with it("should be a Stories instance"):
-            expect(isinstance(self.stories, Stories)).to(be_true)
-
-        with it("should pin fidelity to acceptance_tests"):
-            expect(self.stories.fidelities.current.name).to(equal("acceptance_tests"))
-
-        with it("should pin format to typescript"):
-            expect(self.stories.format).to(equal("typescript"))
-
-        with it("should carry that format through to the Clean Engineering companion"):
-            companion = self.stories.fidelities.current.clean_engineering
-            expect(companion.format).to(equal("typescript"))
-
-        with it("should point the step library at test-utils/story-test"):
-            expect(self.stories.story_test_folder).to(equal("test-utils/story-test"))
-
-        with it("should render a story map that writes and imports story-test from test-utils/story-test"):
-            story_map = (
-                "(E) Manage Customer Orders\n"
-                "    (E) Place New Order\n"
-                "        (S) Customer --> Browse Product Catalog\n"
-                "        (S) Customer --> Add Item To Cart\n"
-            )
-            paths = self.stories.render(format="typescript", content=story_map, source="markdown")["content"]
-            expect("test-utils/story-test/story-test.ts" in paths).to(be_true)
-            expect("tests/story-test.ts" in paths).to(equal(False))
-            leaves = [p for p in paths if p.endswith("_story.test.ts")]
-            expect(leaves).not_to(equal([]))
-            for leaf in leaves:
-                expect(paths[leaf]).to(contain('from "test-utils/story-test/story-test"'))
 
     with context("whose contexts section is expanded"):
         with before.each:

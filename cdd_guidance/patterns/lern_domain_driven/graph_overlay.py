@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 
 from harness.graph.graph import Graph, Node, PracticeGraph, Source
-from harness.graph.graph_practice import GraphOverlay, GraphPractices
+from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.skipped_folders import scanned_files
 
 _VIEW_EXPORT = re.compile(r"export\s+function\s+(\w+View)\s*\(")
@@ -257,4 +257,4 @@ def _parent_story_scope(stories: PracticeGraph, relative: str) -> Node | None:
     return next((node for node in epics if node.name.replace("_", "-") == parent_name), None)
 
 
-GraphPractices.register_overlay(LernOverlay("lern_domain_driven"))
+OVERLAY = LernOverlay("lern_domain_driven")

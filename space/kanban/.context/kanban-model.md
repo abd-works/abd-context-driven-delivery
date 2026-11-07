@@ -524,7 +524,8 @@ A validation report of one fidelity saved in a session folder, with the graph th
 	-> ReportFile.from_fidelity
 	-> violations_from_graph_json_files
 	-> violations_by_rule
-	-> GraphPractices.named
+	-> SavedGraph.restored_graph
+	-> PracticeGraph.checks
 	-> Judgment.from_report
 	-> Violation.in_file
 	-> Repo.path_from_top
@@ -589,6 +590,6 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## Violation
 
-`harness/graph/violation.py`: one place a rule is broken, the one shape for graph hits and judged findings. `rule`, `practice`, `location`, `line`, `message`, and `source` (the numbered `SourceLine`s around the line, once `in_file(location, file, lines_before, lines_after)` has read them) are data fields. A judged finding is `Violation(rule, message, location=..., line=...)`. A report reads a saved graph's hits through `violations_from_graph_json_files` and `violations_by_rule` (`cdd_guidance/actions/validate/graph_json_reader.py`), and the rules a scanner checks now through `GraphPractices.named(practice).checks(patterns)` (`harness/graph/graph_practice.py`).
+`harness/graph/violation.py`: one place a rule is broken, the one shape for graph hits and judged findings. `rule`, `practice`, `location`, `line`, `message`, and `source` (the numbered `SourceLine`s around the line, once `in_file(location, file, lines_before, lines_after)` has read them) are data fields. A judged finding is `Violation(rule, message, location=..., line=...)`. A report reads a saved graph's hits through `violations_from_graph_json_files` and `violations_by_rule` (`cdd_guidance/actions/validate/graph_json_reader.py`), and the rules a scanner checks now through the saved graph's practice, `SavedGraph.restored_graph().practice(key).checks()` (`harness/graph/graph.py`).
 
 `FileManager` and `FileEntry` (`tools/file_manager/file_manager.py`) list folders for `board.folders` and are the entries `fidelity-progress.files` sends.

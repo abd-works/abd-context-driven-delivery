@@ -11,7 +11,7 @@ if str(_REPO) not in sys.path:
 from expects import be_true, equal, expect
 from mamba import before, context, description, it
 
-from harness.graph.graph import Node, PracticeGraph, Source
+from harness.graph.graph import Graph, Node, PracticeGraph, Source
 from harness.graph.rule_context import RuleCheckContext
 from cdd_guidance.practices.clean_engineering.model.drawio.rules import BY_SLUG
 
@@ -68,7 +68,7 @@ with description("class-title-no-markdown-bold drawio graph rule"):
     with before.each:
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        self.practice = PracticeGraph("clean_engineering")
+        self.practice = Graph().practice("clean_engineering")
         self.rule = BY_SLUG["class-title-no-markdown-bold"]
         self.context = RuleCheckContext(self.practice, self.root)
 

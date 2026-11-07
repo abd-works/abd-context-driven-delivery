@@ -113,26 +113,6 @@ class Partition(GuidanceAction):
             "Named-entry completeness verified (length-only is a false PASS)."
         )
 
-    @agent_instructions
-    def partition_corpus(self,
-        context: str = "",
-        mode: str = "one_go",
-        paths: list[str] | str | None = None,
-        out_root: str | None = None,
-    ) -> str:
-        """Build the index and segment files for one corpus. Fail if any new chunk misses a named entry the index required.
-        paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context.
-        out_root: folder for the index and segments. Omit it to use the session's root."""
-        source = self.source_label(context, paths)
-        tools(self.index)
-        tools(self.segment)
-        tools(self.verify_segment_completeness)
-        return (
-            f"Partition of {source} finished (mode {mode}). "
-            "Read those files locally. "
-            "Hard fail if any new chunk fails named-entry completeness."
-        )
-
     def _corpus_steps(self, item, context: str, out_root: str | None, paths: list[str] | str | None) -> str:
         """What partitioning the corpus asks for one listed guidance: what its index lists, then the index and the
         segments, both in the folder the call names."""
@@ -161,6 +141,9 @@ class Partition(GuidanceAction):
             return self._corpus_steps(item, context, out_root, paths)
 
         self.run(on, action="partition")
+        "After writing the index and segments, call refresh with exactly the files you wrote, so the session's graph holds them as they are now; nothing watches the files."
+        if self._session is not None:
+            tools(self.graph.refresh)
         return (
             f"Partition of {source} finished (mode {mode}); "
             f"docs under {self._folder(out_root).as_posix()}/.context/. "
