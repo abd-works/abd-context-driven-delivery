@@ -46,7 +46,7 @@ Every node of the map. Each child belongs to its owner on the graph: a screen, t
 	// class field: where this format's map sits in a folder, as glob patterns tried in order
 ----
 + create(name: str | Graph = "UxMap", sequential_order: int = 0, graph: Graph | None = None): UxMap
-	// class operation: a new map, or, given a graph, the map already on that graph
+	// class operation: a new map; given a graph in place of a name, a map whose nodes live on that graph
 + from_workspace(root: Path): UxMap | None
 	// class operation: the map this format reads from its file in root; none when the folder has no such file
 	-> workspace_file(root)
@@ -258,7 +258,9 @@ The `json` format: the whole map as one JSON document; every other format can ro
 + parse(content: str | dict): UxMap
 	-> JsonUxMapReader.read
 + render(ux_map: UxMap): str
-	-> JsonUxMapWriter.map_record
+	-> map_record
++ map_record(ux_map: UxMap): dict
+	// a link to a screen is written as that screen's name
 
 ## JsonUxMapReader
 
@@ -267,14 +269,9 @@ The `json` format: the whole map as one JSON document; every other format can ro
 + read(): UxMap
 	Invariant: every screen is on the map before any link to a screen is read, so a transition, a tab, or a destination names a screen that is already there
 
-## JsonUxMapWriter
+## HtmlUxMap : JsonUxMap
 
-+ map_record(ux_map: UxMap): dict
-	// a link to a screen is written as that screen's name
-
-## HtmlUxMap : UxMap
-
-The `html` format: the mockup review page, product screens on the left and the story explorer on the right, with the JSON map embedded in a `ux-map-json` comment. Files: `{folder}.html`, `index.html`, `mockup.html`, `ux.html`.
+The `html` format: the mockup review page, product screens on the left and the story explorer on the right, with the JSON map embedded in a `ux-map-json` comment. It is the JSON format inside a page: parse and render ask the JSON format for the document the page carries. Files: `{folder}.html`, `index.html`, `mockup.html`, `ux.html`.
 
 ----
 + parse(content: str): UxMap
@@ -282,6 +279,7 @@ The `html` format: the mockup review page, product screens on the left and the s
 	-> JsonUxMap.parse
 + render(ux_map: UxMap): str
 	// fills templates/html/mockup_shell.html; each control carries the data attributes the Story Demo runner reads
+	-> JsonUxMap.render
 
 ## UxMapNotEmbedded : ValueError
 
@@ -293,7 +291,7 @@ The `drawio` format: a Site Map page and a Detailed IA page, written through the
 + cli_timeout_seconds: float
 ----
 + parse(content: str): UxMap
-	// JSON content reads through JsonUxMap; otherwise raises UnreadableDrawio when content is not XML
+	// raises UnreadableDrawio when content is not XML; JSON content is read with source json
 	-> DrawioUxMapReader.read
 + render(ux_map: UxMap): str
 	// raises DrawioCliMissing, DrawioCliFailed, or DrawioCliTimedOut

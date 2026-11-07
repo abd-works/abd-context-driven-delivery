@@ -2,8 +2,7 @@
 
 Render builds CLI state from the UxMap and invokes `drawio_ux.mjs write`.
 Parse prefers the Site Map page for screens/transitions; region titles come
-from the Detailed IA page when present. JSON is still accepted for sideways
-transform tests. The diagram carries screens, their regions, and transitions;
+from the Detailed IA page when present. The diagram carries screens, their regions, and transitions;
 layouts, story names, and controls stay in the JSON and HTML formats.
 """
 
@@ -19,7 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 from cdd_guidance.practices.ux.model.drawio.cli_state import ux_map_to_cli_state
-from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
+
 from cdd_guidance.practices.ux.model.nodes import Region, Screen, Transition
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
@@ -60,8 +59,6 @@ class DrawioUxMap(UxMap):
 
     def parse(self, content: str) -> UxMap:
         stripped = content.strip()
-        if stripped.startswith("{"):
-            return JsonUxMap.create().parse(stripped)
         try:
             root_element = ET.fromstring(stripped)
         except ET.ParseError as error:

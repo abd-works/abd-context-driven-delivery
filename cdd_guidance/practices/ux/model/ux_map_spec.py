@@ -77,10 +77,6 @@ with description("a ux map on a graph"):
         expect(screens).to(contain(("UxMap", "Catalog")))
         expect(belongs).to(contain(("Catalog", "UxMap")))
 
-    with it("should open the same map from the graph"):
-        restored = UxMap.create(self.graph)
-        expect(restored.screens[0].name).to(equal("Catalog"))
-
     with context("with a screen that holds regions, controls, and interactions"):
         with before.each:
             self.list_region = Region("product list", 0, "body")

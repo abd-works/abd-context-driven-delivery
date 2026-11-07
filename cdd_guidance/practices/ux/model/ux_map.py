@@ -64,12 +64,10 @@ class UxMap(UxNode):
 
     @classmethod
     def create(cls, name: str | Graph = "UxMap", sequential_order: int = 0, graph: Graph | None = None) -> "UxMap":
-        """A new map, or, given a graph, the map already on that graph."""
+        """A new map; given a graph in place of a name, a map named `UxMap` whose nodes live on that graph."""
         if not isinstance(name, Graph):
             return cls(name, sequential_order, graph)
-        opened = cls("UxMap", sequential_order, name)
-        opened._copy_screens_on_graph()
-        return opened
+        return cls("UxMap", sequential_order, name)
 
     @classmethod
     def from_workspace(cls, root: Path) -> Optional["UxMap"]:
@@ -84,13 +82,6 @@ class UxMap(UxNode):
             if matches:
                 return matches[0]
         return None
-
-    def _copy_screens_on_graph(self) -> None:
-        others = [node for node in self._copies_on_graph("UxMap") if node.screens]
-        if not others:
-            return
-        for screen in others[0].screens:
-            self.append_screen(Screen(screen.name, screen.sequential_order))
 
     @property
     def story_references(self) -> ReferencePaths:
