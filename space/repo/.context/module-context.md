@@ -1,7 +1,7 @@
 # space/repo
 *Repo* is the local git clone of the project being worked on, together with its GitHub project, so callers open, switch, commit, push, merge, and close work without running `git` or `gh` themselves. `Repo.current()` is the clone of the project the running call names, so one cdd server answers chats on several projects and no repo tool takes a repository path.
 
-*Branch* is a line of development on a *Repo*: it is saved, opened in a *Worktree*, merged, and closed. *Worktree* is a second checkout of the same clone where one branch is worked on while the main clone stays on another. *Commit* is a recorded snapshot whose message carries trailers such as `GitHub-Issue:` and `Workflow-State:`; git commit trailers and git notes are the record of why a change was made, so there is no second index of tickets to keep in step.
+*Branch* is a line of development on a *Repo*: it is saved, opened in a *Worktree*, merged, and closed. *Worktree* is a second checkout of the same clone where one branch is worked on while the main clone stays on another. *Commit* is a recorded snapshot whose message carries trailers such as `GitHub-Issue:` and `Workflow-State:`; git commit trailers are the record of why a change was made, so there is no second index of tickets to keep in step.
 
 *Project* is the repository's GitHub project board; *ProjectTicket* is a GitHub issue on that board, and *ProjectTicketState* is the board column it sits in (Backlog, In Progress, Done). A ticket's identity is its GitHub issue number.
 

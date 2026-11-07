@@ -25,9 +25,9 @@ story('Choose Fidelity Action', CHAT_BAR, () => {
     when('the Person chooses iterate', async ($, on, scene) => {
       await scene.ui.press({ key: 'pick-iterate' })
     })
-    // picker press -> chooseAction($, fidelity, 'iterate') -> runAction($, fidelity, 'iterate') -> $.command.run({ command: 'actions-iterate', args: 'ux-mockup' })
-    then('the chat runs /actions-iterate ux-mockup', async ($, on, scene) => {
-      expect(scene.world.sent).toContain('/actions-iterate ux-mockup')
+    // picker press -> chooseAction($, fidelity, 'iterate') -> runAction($, fidelity, 'iterate') -> $.command.run({ command: 'actions-iterate', args: 'ux-mockup session=...' })
+    then("the chat runs /actions-iterate ux-mockup in checkout-flow's session", async ($, on, scene) => {
+      expect(scene.world.sent).toContain('/actions-iterate ux-mockup session=.sessions/checkout-flow/session.json')
       expect(await drawn(scene.ui, 'picker')).toBeUndefined()
     })
   })

@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
+from cdd_guidance.practices.clean_engineering.model.rules_shared.measured_operation import (
+    MeasuredOperation,
+    OperationMeasureRule,
+)
 from cdd_guidance.practices.clean_engineering.model.rules_shared.operation_semantics import SEMANTIC_RULES
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
 
 VAGUE_NAMES = {
     "thing",
@@ -37,13 +46,9 @@ _SKIP_OP_NAMES = frozenset(
     }
 )
 _STATIC_FACTORY_NAMES = frozenset({"instance", "create"})
-# Static factories beyond name patterns (creation / mapping helpers).
-_STATIC_FACTORY_EXTRA_NAMES = frozenset(
-    {
-        "fromRequest",
-        "current",
-    }
-)
+# Static factories beyond name patterns (creation / mapping helpers). A global accessor such as `current` is not one:
+# it is the ambient state `hold-state-on-the-object-not-in-parameters` replaces with an object the caller holds.
+_STATIC_FACTORY_EXTRA_NAMES = frozenset({"fromRequest"})
 _CAMEL_FROM_FACTORY = re.compile(r"^from[A-Z]")
 _LOAD_FACTORY = re.compile(r"^load(?:[A-Z].*)?$")
 
@@ -77,7 +82,7 @@ GENERIC_NAMES = {
 }
 
 
-def _parameter_names(node) -> list[str]:
+def _parameter_names(node: "Node") -> list[str]:
     return [name for name, _hint in node.get_fact("parameters", [])]
 
 
@@ -86,7 +91,7 @@ def _setter_parameter(name: str, property_setter: bool) -> bool:
     return name == "value" and property_setter
 
 
-def _operation_is_setter(node) -> bool:
+def _operation_is_setter(node: "Node") -> bool:
     return bool(node.get_fact("is_property")) and len(node.get_fact("parameters", [])) == 1
 
 
@@ -94,7 +99,7 @@ class UseExplicitDependencies(PracticeGraphRule):
     slug = "use-explicit-dependencies"
     node_types = ("OoadClass",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         for type_name in node.get_fact("constructs", []):
             if type_name == node.name:
                 continue
@@ -105,59 +110,55 @@ class UseExplicitDependencies(PracticeGraphRule):
         return []
 
 
-class KeepOperationsSmall(PracticeGraphRule):
+class KeepOperationsSmall(OperationMeasureRule):
     slug = "keep-operations-small-focused"
-    node_types = ("Operation",)
     limit = 20
 
-    def check(self, node, context) -> list[str]:
-        size = node.get_fact("line_count") or _line_span(node)
+    def measure(self, operation: MeasuredOperation) -> list[str]:
+        size = operation.line_count
         if size <= self.limit:
             return []
-        return [f"Operation '{node.name}' is {size} lines (max {self.limit})."]
+        return [f"{operation.label} is {size} lines (max {self.limit})."]
 
 
-class SimplifyControlFlow(PracticeGraphRule):
+class SimplifyControlFlow(OperationMeasureRule):
     slug = "simplify-control-flow"
-    node_types = ("Operation",)
     limit = 3
 
-    def check(self, node, context) -> list[str]:
-        if node.name.startswith("register") and node.name.endswith("Route"):
+    def measure(self, operation: MeasuredOperation) -> list[str]:
+        if operation.name.startswith("register") and operation.name.endswith("Route"):
             return []
-        if node.name.startswith("create") and node.name.endswith("Routes"):
+        if operation.name.startswith("create") and operation.name.endswith("Routes"):
             return []
-        depth = node.get_fact("max_control_flow_depth", 0)
+        depth = operation.fact("max_control_flow_depth", 0) or 0
         if depth <= self.limit:
             return []
-        return [f"Operation '{node.name}' nests control flow {depth} levels deep (max {self.limit})."]
+        return [f"{operation.label} nests control flow {depth} levels deep (max {self.limit})."]
 
 
-class UseExceptionsProperly(PracticeGraphRule):
+class UseExceptionsProperly(OperationMeasureRule):
     slug = "use-exceptions-properly"
-    node_types = ("Operation",)
 
-    def check(self, node, context) -> list[str]:
-        if not node.get_fact("has_bare_catch"):
+    def measure(self, operation: MeasuredOperation) -> list[str]:
+        if not operation.fact("has_bare_catch"):
             return []
-        return [f"Operation '{node.name}' has a bare catch."]
+        return [f"{operation.label} catches every exception (a bare except, or except Exception that never re-raises)."]
 
 
-class NeverSwallowExceptions(PracticeGraphRule):
+class NeverSwallowExceptions(OperationMeasureRule):
     slug = "never-swallow-exceptions"
-    node_types = ("Operation",)
 
-    def check(self, node, context) -> list[str]:
-        if not node.get_fact("swallows_exceptions"):
+    def measure(self, operation: MeasuredOperation) -> list[str]:
+        if not operation.fact("swallows_exceptions"):
             return []
-        return [f"Operation '{node.name}' swallows a caught failure."]
+        return [f"{operation.label} swallows a caught failure or hands back a fallback in its place."]
 
 
 class ProvideMeaningfulContext(PracticeGraphRule):
     slug = "provide-meaningful-context"
     node_types = ("Operation",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         for raw in node.get_fact("unnamed_literal_numbers", []):
             return [f"Operation '{node.name}' uses the unnamed number {raw}."]
         return []
@@ -167,7 +168,7 @@ class AvoidVagueParameterNames(PracticeGraphRule):
     slug = "avoid-vague-parameter-names"
     node_types = ("Parameter", "Operation")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if node.type == "Parameter":
             if node.name.lower() in VAGUE_NAMES:
                 return [f"Parameter '{node.name}' is vague. Use a domain-specific name."]
@@ -187,7 +188,7 @@ class UseIntentionRevealingNames(PracticeGraphRule):
     slug = "use-intention-revealing-names"
     node_types = ("Parameter", "Operation")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if node.type == "Parameter":
             return self._parameter_hits(node)
         for name in _parameter_names(node):
@@ -197,7 +198,7 @@ class UseIntentionRevealingNames(PracticeGraphRule):
                 return [f"Parameter '{name}' in '{node.name}' does not reveal intent."]
         return []
 
-    def _parameter_hits(self, node) -> list[str]:
+    def _parameter_hits(self, node: "Node") -> list[str]:
         if not re.match(r"^[\w$]+$", node.name) or node.name in _CONVENTIONAL_PARAMETER_NAMES:
             return []
         operation = node.get_fact("operation_name", "")
@@ -216,7 +217,7 @@ class UseConsistentNaming(PracticeGraphRule):
     slug = "use-consistent-naming"
     node_types = ("OoadClass",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         snake_names: list[str] = []
         camel_names: list[str] = []
         for shape in node.get_fact("operation_shapes", []):
@@ -241,7 +242,7 @@ class PreferInstanceOperations(PracticeGraphRule):
     slug = "prefer-instance-operations"
     node_types = ("Operation",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         is_static = bool(node.get_fact("is_static"))
         is_classmethod = bool(node.get_fact("is_classmethod"))
         if not is_static and not is_classmethod:
@@ -258,7 +259,7 @@ class UsePropertyNotAccessor(PracticeGraphRule):
 
     _PREFIXES = ("calculate_", "compute_", "get_")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if node.get_fact("is_property") or not node.has_fact("parameters"):
             return []
         if not any(node.name.startswith(prefix) for prefix in self._PREFIXES):
@@ -273,10 +274,10 @@ class EliminateDuplication(PracticeGraphRule):
     slug = "eliminate-duplication"
     node_types = ("Operation",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         return []
 
-    def check_practice(self, context) -> list[tuple[str, str]]:
+    def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
         seen: dict[str, str] = {}
         hits: list[tuple[str, str]] = []
         for op_node in context.practice.nodes.get("Operation", []):
@@ -288,14 +289,6 @@ class EliminateDuplication(PracticeGraphRule):
             else:
                 seen[fingerprint] = op_node.name
         return hits
-
-
-def _line_span(node) -> int:
-    start = node.source.start_line
-    end = node.source.end_line
-    if end <= start:
-        return 0
-    return end - start + 1
 
 
 CODE_RULES: tuple[PracticeGraphRule, ...] = (

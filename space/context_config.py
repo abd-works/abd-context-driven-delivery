@@ -10,6 +10,15 @@ _LEGACY_GUIDELINES = "guidelines.config"
 _LEGACY_PRACTICE_FOLDERS = "practice-folders.config"
 
 
+class MalformedContextConfigError(ValueError):
+    """Raised when ``.context/config.json`` cannot be read as a JSON object. Nothing is written over it, so the
+    project's guidelines and practice folders stay in the file until someone repairs it."""
+
+    def __init__(self, path: Path, reason: str) -> None:
+        self.path = path
+        super().__init__(f"{path} is not a readable JSON object ({reason}); repair it before CDD changes it")
+
+
 class ContextConfig:
     """One project's ``.context/config.json``."""
 
@@ -29,12 +38,10 @@ class ContextConfig:
         )
 
     def load(self) -> dict[str, Any]:
+        """The whole configuration. Raises ``MalformedContextConfigError`` when ``config.json`` is unreadable, so
+        ``update`` never saves a partial configuration over the project's file."""
         if self.path.is_file():
-            try:
-                data = json.loads(self.path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-                return {}
-            return data if isinstance(data, dict) else {}
+            return self._read_config_file()
         return {
             "guidelines": _parse_text_map(
                 _read_text(self.root / ".context" / _LEGACY_GUIDELINES)
@@ -43,6 +50,15 @@ class ContextConfig:
                 _read_text(self.root / ".context" / _LEGACY_PRACTICE_FOLDERS)
             ),
         }
+
+    def _read_config_file(self) -> dict[str, Any]:
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise MalformedContextConfigError(self.path, str(exc)) from exc
+        if not isinstance(data, dict):
+            raise MalformedContextConfigError(self.path, f"the top level is a {type(data).__name__}")
+        return data
 
     def save(self, data: Mapping[str, Any]) -> Path:
         folder = self.path.parent

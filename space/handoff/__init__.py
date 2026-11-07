@@ -1,8 +1,1 @@
-"""Handoff - session handoff toolset for generator / grill / CDD work.
-
-Public exports:
-    Handoff - standalone handoff toolset (tools + handoff_session action)
-"""
-from space.handoff.handoff import Handoff
-
-__all__ = ["Handoff"]
+"""Handoff: write a compact session handoff for the next agent (handoff.py)."""

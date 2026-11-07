@@ -6,7 +6,7 @@ import type { ActionStatesData, FidelityProgressData } from '@cdd/harness/kanban
 import { commandOf } from '../chat-command'
 import { reasonOf } from '../failure'
 import { closeActionPicker } from './action-picker-client'
-import { callTool, currentChatBar, refreshChatBar } from './chat-bar-client'
+import { callTool, currentChatBar, refreshChatBar, type ChatBarClient } from './chat-bar-client'
 
 const selectedFidelity = atom({ plugin: 'cdd-board', key: 'selectedFidelity' } as const, null as string | null)
 
@@ -49,7 +49,7 @@ export class FidelityClient {
 
   // The fidelity's own name as the session card shows it, such as Scenarios or Front end code.
   get name(): string {
-    const words = this.json.name.replace(/_/g, ' ')
+    const words = this.json.name.replace(/-/g, ' ')
     return words.charAt(0).toUpperCase() + words.slice(1)
   }
 
@@ -140,17 +140,16 @@ async function runCommand($: EngineInterface, text: string): Promise<void> {
   }
 }
 
-// Generate can take two commands, a render and then the generate, so ticket.generate_commands names them.
+// The one place a chat bar command names its session: every action command names the ticket's session.json, because
+// the chat that runs it can have another session open. Generate writes in the stage's default format.
+function actionCommand(chatBar: ChatBarClient, fidelity: FidelityClient, action: string): string {
+  const format = action === 'generate' && fidelity.defaultFormat ? ` format=${fidelity.defaultFormat}` : ''
+  return `/actions-${action} ${fidelity.guidance}${format} session=${chatBar.sessionFile}`
+}
+
+// Generate renders the earlier fidelity first itself when that fidelity has no file in the format.
 export async function runAction($: EngineInterface, fidelity: FidelityClient, action: string): Promise<void> {
-  if (action !== 'generate') return runCommand($, `/actions-${action} ${fidelity.guidance}`)
-  const chatBar = await currentChatBar($)
-  const formats = fidelity.defaultFormat ? [fidelity.defaultFormat] : []
-  try {
-    const commands = await callTool<string[]>($, 'ticket.generate_commands', { ticket: chatBar.sessionName, fidelities: [fidelity.fidelity], formats })
-    for (const command of commands) await runCommand($, command)
-  } catch (failure) {
-    $.ui.toast(`${fidelity.guidance} cannot generate: ${reasonOf(failure)}`)
-  }
+  await runCommand($, actionCommand(await currentChatBar($), fidelity, action))
 }
 
 // Review is the person's own approval, recorded by the Python Ticket, which refuses it until the latest Validate passed.

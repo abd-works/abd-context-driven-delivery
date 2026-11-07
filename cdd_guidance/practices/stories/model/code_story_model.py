@@ -21,7 +21,7 @@ Every story, background, scenario, and step read from a file keeps the code it w
 is written exactly as read; otherwise it is spelled again with its bodies kept.
 
 load fills this map from the files. save writes this map's epics and stories.
-render and parse call those so existing callers keep working.
+render writes another map in this language and parse reads a tree into a new map, through save and load.
 """
 
 from __future__ import annotations
@@ -229,6 +229,16 @@ class CodeScenario(Scenario, CodeStoryNode):
 class CodeStory(Story, CodeStoryNode):
     scenario_type = CodeScenario
 
+    # A story test names its tier after the story; the tier is not part of the story's name.
+    _TIER_NEUTRAL = re.compile(r"\s*\(tier-neutral\)\.?\s*$")
+
+    @classmethod
+    def name_read(cls, found: Optional[str], story_slug: str) -> str:
+        """The story's name as its story test wrote it, else its file's slug as words. Every language reads a name
+        this one way, so a story test's scenarios find the story of the same name on the map."""
+        name = found.strip() if found else cls.name_from_slug(story_slug)
+        return cls._TIER_NEUTRAL.sub("", name).strip()
+
     @classmethod
     def load_all(cls, content: str) -> List["CodeStory"]:
         """Every story in one sub-epic file. A language splits the file."""
@@ -295,10 +305,6 @@ class CodeStory(Story, CodeStoryNode):
     def create(cls, story: Story, **kwargs) -> str:
         """Write this story in the language file. Each language overrides it."""
         raise NotImplementedError
-
-    @classmethod
-    def from_source(cls, content: str, story_slug: str) -> "CodeStory":
-        return cls.load(content, story_slug)
 
 
 class CodeIncrement(Increment, CodeStoryNode):
@@ -403,7 +409,7 @@ class CodeStoryModel(StoryModel):
 
     def read_from_code(self) -> bool:
         """Some sub-epic or story in this tree was read from a file in this language."""
-        nodes = [node for epic in self.all_epics() for node in (epic, *epic.stories)]
+        nodes = [node for epic in self.every_epic() for node in (epic, *epic.stories)]
         return any(node.written is not None and node.written.language is self.language for node in nodes)
 
     def story_text(self, story: Story) -> str:
@@ -572,20 +578,12 @@ class CodeStoryModel(StoryModel):
         for the node with the same name."""
         if self.language is None:
             return
-        epics = {epic.name: epic for epic in kept.all_epics()}
+        epics = {epic.name: epic for epic in kept.every_epic()}
         stories = {story.name: story for epic in epics.values() for story in epic.stories}
-        for epic in self.all_epics():
+        for epic in self.every_epic():
             self._take_code(epic, epics.get(epic.name))
             for story in epic.stories:
                 self._take_story_code(story, stories.get(story.name))
-
-    def all_epics(self) -> List[Epic]:
-        found, pending = [], list(self.epics)
-        while pending:
-            epic = pending.pop(0)
-            found.append(epic)
-            pending.extend(epic.epics)
-        return found
 
     def _take_story_code(self, story: Story, kept: Optional[Story]) -> None:
         """A story, its backgrounds, its scenarios, and theirs take kept's code for the nodes with the same name."""
@@ -643,11 +641,7 @@ class CodeStoryModel(StoryModel):
             if len(rest) < 2:
                 continue
             *sub_epic_slugs, _file_name = rest
-            current_sub_epic = self.sub_epic_for(epic, sub_epic_slugs)
-            if current_sub_epic is not None:
-                self._leaf_file_name = _file_name
-                self._leaf_content = external[path]
-                self._hydrate_leaf_sub_epic_from_content(current_sub_epic)
+            self.sub_epic_for(epic, sub_epic_slugs)
         if not self.epics and external:
             raise CodeStoryModelError(
                 "Tree contains no recognisable Epic folders under the tests root"
@@ -752,11 +746,6 @@ class CodeStoryModel(StoryModel):
         if current is None:
             raise CodeStoryModelError("A story file needs a sub-epic folder")
         return current
-
-    def _hydrate_leaf_sub_epic_from_content(self, current_sub_epic: Epic) -> None:
-        # WHY: language backends override this to reconstruct story and scenario
-        # structure when parsing generated source trees back into StoryModel.
-        return None
 
     def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
         return sorted(

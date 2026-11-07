@@ -87,7 +87,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
     ):
         with before.each:
             self.source = fixture.story_map_with_4_epics_and_3_epics_and_1_story()
-            self.text = self.source.clone()
+            self.text = self.source.save()
 
         with it("should serialize as a valid SVG document"):
             root = ET.fromstring(
@@ -104,7 +104,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
         with context("with an Epic appended and the SVG re-rendered"):
             with before.each:
                 self.source.append_epic(MiroEpic("Epic 5", 5))
-                self.new_text = self.source.clone()
+                self.new_text = self.source.save()
 
             with context("the document"):
                 with it(
@@ -117,7 +117,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
         with context("with the first Epic renamed and the SVG re-rendered"):
             with before.each:
                 self.source.epics[0].name = "Epic 1 (renamed)"
-                self.new_text = self.source.clone()
+                self.new_text = self.source.save()
 
             with context("the rect for the first Epic"):
                 with it("should carry the new name as its data-content"):
@@ -126,7 +126,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
         with context("with a Epic deleted and the SVG re-rendered"):
             with before.each:
                 self.source.epics[0].epics.pop(0)
-                self.new_text = self.source.clone()
+                self.new_text = self.source.save()
 
             with context("the document"):
                 with it(
@@ -138,7 +138,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
     with context("that has been rendered and parsed back without edits"):
         with before.each:
             self.original = fixture.story_map_with_4_epics_and_3_epics_and_1_story()
-            self.parsed = self.miro.load(self.original.clone())
+            self.parsed = self.miro.load(self.original.save())
 
         with it("should preserve Story structure - scenarios are NOT embedded in the story-map view"):
             first_story = self.parsed.epics[0].epics[0].stories[0]
@@ -167,7 +167,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
             compose.append_epic(extras)
             epic.append_epic(compose)
             self.source.append_epic(epic)
-            self.text = self.source.clone()
+            self.text = self.source.save()
             self.root = ET.fromstring(
                 self.text.split("\n", 1)[1] if self.text.startswith("<?") else self.text
             )
@@ -213,7 +213,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
             capability.append_story(third)
             epic.append_epic(capability)
             self.source.append_epic(epic)
-            self.text = self.source.clone()
+            self.text = self.source.save()
             self.rects = fixture.svg_rects_with_role(self.text)
 
         with it("should place story cards in distinct left-to-right columns"):

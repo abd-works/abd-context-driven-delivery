@@ -590,7 +590,8 @@
             }
           ]
         }
-      ]
+      ],
+      "stories": []
     },
     {
       "name": "Self-Serve Subscription",
@@ -701,7 +702,8 @@
             }
           ]
         }
-      ]
+      ],
+      "stories": []
     }
   ]
 }

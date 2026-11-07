@@ -1,7 +1,8 @@
 // The engine and the cdd server beneath the chat bar, for the story tests. board.show answers `board`, the Seed a Given
 // sets. The ticket tools a press reaches change that board as the Python Ticket does, so a test reads the server's state
 // after the press rather than setting it by hand. Every other tool answers from `answers`, and any tool fails with the
-// server's own text from `refusals`.
+// server's own text from `refusals`. An operation Python does not have, or an argument it does not take, is refused and
+// kept in `unknown`, which every story expects empty, so a test fails when the chat bar calls a name Python dropped.
 import type { BoardData } from '@cdd/harness/kanban/board'
 import type { FidelityProgressData } from '@cdd/harness/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/harness/kanban/ticket'
@@ -13,6 +14,7 @@ type Call = { tool: string; args: any }
 export type World = {
   board: BoardData
   calls: Call[]
+  unknown: string[]
   sent: string[]
   fills: string[]
   toasts: string[]
@@ -73,7 +75,7 @@ function close(world: World, { ticket }: { ticket: string }): TicketData {
   return changed(world, { ...named(world, ticket), column: 'Complete' }, world.board.active === ticket ? null : world.board.active)
 }
 
-// Board.activate: the ticket becomes the board's active session.
+// Ticket.activate: the ticket becomes the board's active session.
 function activate(world: World, { ticket }: { ticket: string }): TicketData {
   return changed(world, named(world, ticket), ticket)
 }
@@ -90,13 +92,41 @@ const TICKET_TOOLS: Record<string, (world: World, args: any) => TicketData | Fid
   'ticket.move_next': moveNext,
   'fidelity-progress.finish_review': finishReview,
   'ticket.close': close,
-  'board.activate': activate,
+  'ticket.activate': activate,
   'ticket.create': create,
+}
+
+// Each cdd operation the chat bar calls, with the arguments its Python signature takes: the tool subject's, such as
+// ticket for Ticket.load, then the operation's own.
+export const OPERATIONS: Record<string, string[]> = {
+  'server-health.report': [],
+  'board.show': [],
+  'ticket.create': ['title', 'scope', 'parent', 'path'],
+  'ticket.activate': ['ticket', 'leaving', 'opening'],
+  'ticket.workspace': ['ticket'],
+  'ticket.close': ['ticket', 'leaving'],
+  'ticket.move_next': ['ticket'],
+  'fidelity-progress.finish_review': ['ticket', 'fidelity'],
+  'fidelity-progress.files': ['ticket', 'fidelity'],
+  'session.read_file': ['session', 'path'],
+}
+
+// What is wrong with calling tool with args, as the server words it; empty when Python has that operation and takes them.
+function mismatchOf(tool: string, args: unknown): string {
+  const taken = OPERATIONS[tool]
+  if (!taken) return `${tool} is not a cdd operation`
+  const extra = Object.keys(args ?? {}).filter(name => !taken.includes(name))
+  return extra.length ? `${tool} takes no argument ${extra.join(', ')}` : ''
 }
 
 function answerTool(world: World, tool: string, args: unknown) {
   world.calls.push({ tool, args })
   if (world.serverLost) throw new Error('no connected MCP tool on a server named "plugin:cdd:cdd"')
+  const mismatch = mismatchOf(tool, args)
+  if (mismatch) {
+    world.unknown.push(mismatch)
+    return toolText(mismatch, true)
+  }
   if (tool === 'server-health.report') return world.healthText !== null ? toolText(world.healthText, false) : toolAnswer(world.health)
   if (world.refusals[tool]) return toolText(world.refusals[tool], true)
   if (tool === 'board.show') return toolAnswer(world.board)
@@ -114,6 +144,7 @@ export function cdd(on: any, board: BoardData = boardOf('checkout-flow', checkou
   const world: World = {
     board,
     calls: [],
+    unknown: [],
     sent: [],
     fills: [],
     toasts: [],

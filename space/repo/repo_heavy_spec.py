@@ -22,12 +22,11 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.mcp.mcp_server import McpHost
-from space.repo import ProjectTicketNotFoundError
 from space.repo.repo import (
     Branch,
     BranchInWorktreeError,
     BranchNameRequiredError,
-    CliAgentBinding,
+    CliAgents,
     Commit,
     DefaultBranchError,
     GH_PROJECT_SCOPES_HINT,
@@ -36,6 +35,7 @@ from space.repo.repo import (
     Project,
     Repo,
     ProjectTicket,
+    ProjectTicketNotFoundError,
     ProjectTicketState,
     issue_theme_label,
 )
@@ -82,33 +82,21 @@ with description("a Repo"):
             expect(commit.message).to(equal("demo turn"))
             expect(self.repo.current_branch).to(equal("session/demo"))
 
-        with it("should persist a cli-agent binding on the branch tag"):
-            import os
-
-            binding = CliAgentBinding(
-                status="open",
-                doer="doer-chat",
-                doer_pid=os.getpid(),
-                judge="judge-chat",
-                judge_pid=0,
+        with it("should keep a branch's CLI agents on the branch tag"):
+            branch = self.repo.branch_named("session/demo")
+            branch.write_cli_agents(
+                CliAgents(
+                    status="open",
+                    doer="doer-chat",
+                    doer_pid=os.getpid(),
+                    judge="judge-chat",
+                    judge_pid=0,
+                )
             )
-            binding.write_tag(self.repo, "session/demo")
-            loaded = self.repo.branch_named("session/demo").cli_agent()
+            loaded = branch.cli_agents()
             expect(loaded.doer).to(equal("doer-chat"))
             expect(loaded.judge).to(equal("judge-chat"))
             expect(loaded.open).to(be_true)
-
-        with it("should store commit trailer data on the commit object"):
-            message = self.repo.workflow_commit_message(
-                "finish demo",
-                87,
-                "done",
-                reviewed_by="human",
-            )
-            sha = self.repo.commit(["README.md"], message)
-            commit = Commit.from_message(sha, message)
-            expect(commit.data["GitHub-Issue"]).to(equal("demo-org/demo-repo#87"))
-            expect(commit.data["Workflow-State"]).to(equal("done"))
 
         with it("should attach a project with ticket states"):
             project = self.repo.attach_project("demo-org", 3)

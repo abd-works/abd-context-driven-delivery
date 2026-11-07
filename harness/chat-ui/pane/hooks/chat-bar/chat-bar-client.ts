@@ -95,7 +95,7 @@ export class ChatBarClient {
           new FidelityClient({
             slug,
             practice: ticket.progress[slug]?.practice ?? '',
-            name: column.fidelities?.[slug] ?? '',
+            name: this.fidelityNameOf(slug, ticket.progress[slug]?.practice ?? ''),
             progress: ticket.progress[slug]?.state ?? 'not_started',
             violationCount: ticket.progress[slug]?.violation_count ?? 0,
             actions: ticket.progress[slug]?.actions ?? { generate: 'to_do', validate: 'to_do', review: 'to_do' },
@@ -136,6 +136,12 @@ export class ChatBarClient {
       (ticket.next ? `Its next guidance is ${ticket.next}. ` : 'Its stage is done and waits for a person to move it. ') +
       'Each fidelity goes through generate, validate, then review, which a person records on the board.'
     )
+  }
+
+  // A fidelity's slug begins with its practice's slug, such as ux- in ux-front-end-code; what follows is its own name.
+  private fidelityNameOf(slug: string, practiceKey: string): string {
+    const practiceSlug = this.board?.practices.find(practice => practice.key === practiceKey)?.slug ?? ''
+    return practiceSlug && slug.startsWith(`${practiceSlug}-`) ? slug.slice(practiceSlug.length + 1) : slug
   }
 
   private get ticket(): TicketData | null {

@@ -84,8 +84,6 @@ def kept(rows: list, channel: str) -> list:
     """The nodes this channel writes into its files."""
     if channel in _DIAGRAM:
         return [row for row in rows if row[0] in ("epic", "story", "increment")]
-    if channel == "json":
-        return [row for row in rows if row[0] not in ("step", "and", "background")]
     if channel in _CODE:
         return _stored_code(_code_rows(rows))
     return rows
@@ -288,7 +286,7 @@ with shared_context("a story map saved through a channel"):
         expected = self.source
         actual = self.loaded
         stores_scenarios = self.channel not in ("drawio", "miro")
-        stores_steps = self.channel not in ("drawio", "miro", "json")
+        stores_steps = stores_scenarios
 
         def node_name(name):
             if self.channel in _CODE:
@@ -385,10 +383,9 @@ with describe("a story map"):
                 _open(self, "markdown", "json")
             with included_context("a story map saved through a channel"):
                 pass
-            with context("with steps left out of the file"):
-                with it("should bring the scenarios back and leave the steps out"):
-                    kinds = {row[0] for row in walk(self.loaded)}
-                    expect("scenario" in kinds and "step" not in kinds).to(equal(True))
+            with it("should bring the scenarios back with their steps"):
+                kinds = {row[0] for row in walk(self.loaded)}
+                expect(kinds.issuperset({"scenario", "step"})).to(equal(True))
         with describe("to drawio"):
             with before.all:
                 _open(self, "markdown", "drawio")

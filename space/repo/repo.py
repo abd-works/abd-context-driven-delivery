@@ -12,13 +12,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
+from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
+from harness.hooks.running_process import RunningProcess
 from harness.installation.destination import data_field, language_adapter
-from harness.installation.files import command, skill
+from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
 from space.repo.latest_release import LatestRelease
-from space.work_state import LEGACY_SESSIONS_FOLDER, WorkState, project_checkout
+from space.work_state import WorkState, project_checkout
 
 BACKLOG_FOLDER = "_backlog"
 BOARD_FILE = "_board.json"
@@ -223,37 +224,28 @@ class ProjectTicket:
     state: ProjectTicketState | None = None
     issue_type: str = ""
     labels: list[str] = field(default_factory=list)
-    data: dict[str, str] = field(default_factory=dict)
+    closed: bool = False
     parent_number: int | None = None
     sub_issue_numbers: list[int] = field(default_factory=list)
     comments: list[str] = field(default_factory=list)
     project_theme: str = ""
-    project_fields: dict[str, str] = field(default_factory=dict)
     archived: bool = False
     _repo: Repo | None = field(default=None, repr=False, compare=False)
-
-    def bind_repo(self, repo: Repo) -> ProjectTicket:
-        self._repo = repo
-        return self
 
     def _require_repo(self, operation: str) -> Repo:
         if self._repo is None:
             raise RuntimeError(f"ProjectTicket.{operation} requires a repo")
         return self._repo
 
-    @property
-    def closed(self) -> bool:
-        return self.data.get("closed") == "true"
-
     def close(self) -> None:
         repo = self._require_repo("close")
         if repo.in_memory:
             if not repo.has_ticket(self.number):
                 raise ProjectTicketNotFoundError(f"GitHub issue not found: {self.number}")
-            self.data["closed"] = "true"
+            self.closed = True
             return
         repo.run_gh("issue", "close", str(self.number))
-        self.data["closed"] = "true"
+        self.closed = True
 
     def update(self, *, title: str | None = None, body: str | None = None) -> ProjectTicket:
         """Update supplied issue fields while leaving omitted fields unchanged."""
@@ -406,8 +398,9 @@ class ProjectTicket:
 
 
 @dataclass
-class CliAgentBinding:
-    """Doer/judge CLI on a session branch — status and pids live on a git tag."""
+class CliAgents:
+    """The doer and judge CLI agents working on a branch. Their status and process ids are kept on the branch's
+    ``cli-agent/{branch}`` annotated tag."""
 
     status: str = "closed"
     doer: str = ""
@@ -417,7 +410,7 @@ class CliAgentBinding:
 
     @property
     def open(self) -> bool:
-        return self.status == "open" and self.pid_is_alive(self.doer_pid)
+        return self.status == "open" and RunningProcess(self.doer_pid).alive
 
     def message(self) -> str:
         return Commit.note_text(
@@ -431,62 +424,32 @@ class CliAgentBinding:
         )
 
     @classmethod
-    def from_message(cls, text: str) -> CliAgentBinding:
+    def from_message(cls, text: str) -> CliAgents:
         data = Commit(sha="", message=text).note_payload()
-        binding = cls()
         return cls(
             status=(data.get("status") or "closed").strip() or "closed",
             doer=(data.get("doer") or "").strip(),
-            doer_pid=binding._as_pid(data.get("doer_pid")),
+            doer_pid=_process_id(data.get("doer_pid")),
             judge=(data.get("judge") or "").strip(),
-            judge_pid=binding._as_pid(data.get("judge_pid")),
+            judge_pid=_process_id(data.get("judge_pid")),
         )
 
-    def pid_is_alive(self, pid: int) -> bool:
-        if pid <= 0:
-            return False
-        if os.name == "nt":
-            return self._windows_pid_is_alive(pid)
-        try:
-            os.kill(pid, 0)
-        except OSError:
-            return False
-        return True
 
-    def _windows_pid_is_alive(self, pid: int) -> bool:
-        import ctypes
-
-        handle = ctypes.windll.kernel32.OpenProcess(0x1000, 0, int(pid))
-        if not handle:
-            return False
-        ctypes.windll.kernel32.CloseHandle(handle)
-        return True
-
-    def _as_pid(self, raw: str | None) -> int:
-        text = (raw or "").strip()
-        if not text.isdigit():
-            return 0
-        return int(text)
-
-    def write_tag(self, repo: Repo, branch_name: str) -> None:
-        repo._annotated_tag_target = branch_name
-        repo.write_annotated_tag(
-            repo.cli_agent_tag_name(branch_name),
-            self.message(),
-        )
+def _process_id(raw: str | None) -> int:
+    text = (raw or "").strip()
+    return int(text) if text.isdigit() else 0
 
 
 class Project:
     """GitHub Project board on a repo — owns ticket states."""
 
-    __slots__ = ("_repo", "owner", "number", "states", "text_field_name")
+    __slots__ = ("_repo", "owner", "number", "states")
 
     def __init__(self, repo: Repo, owner: str, number: int) -> None:
         self._repo = repo
         self.owner = owner
         self.number = number
         self.states = [ProjectTicketState(name) for name in DEFAULT_PROJECT_STATES]
-        self.text_field_name = "Ultimate Parent"
 
     def refresh_states(self) -> list[str]:
         """Load Status column names from GitHub and replace the in-memory state list."""
@@ -515,24 +478,6 @@ class Project:
         except GhConnectError as exc:
             raise self._project_scope_error(exc) from exc
         return self._option_names_for_field("Status", payload)
-
-    def ticket_rows(self) -> list[dict[str, str | int]]:
-        """Return project issues with their board status."""
-        if self._repo.in_memory:
-            return self._memory_ticket_rows()
-        raw = self._repo.run_gh(
-            "project",
-            "item-list",
-            str(self.number),
-            "--owner",
-            self.owner,
-            "--limit",
-            "1000",
-            "--format",
-            "json",
-        )
-        payload = json.loads(raw or "{}")
-        return self._ticket_rows_from_items(payload.get("items") or [])
 
     def write_status(self, item_id: str, state_name: str) -> str:
         """Write the Status column for one item; returns the GitHub option name sent."""
@@ -583,27 +528,6 @@ class Project:
             if name.lower() == lower:
                 return name
         return wanted
-
-    def write_text_field(self, ticket: ProjectTicket, value: str) -> None:
-        """Write this project's text field on the ticket's project item."""
-        if self._repo.in_memory:
-            ticket.project_fields[self.text_field_name] = value
-            return
-        field_id = self._ensure_text_field(self.text_field_name)
-        item_id = self.item_id_for(ticket.number)
-        project_id = self._project_id()
-        self._repo.run_gh(
-            "project",
-            "item-edit",
-            "--id",
-            item_id,
-            "--project-id",
-            project_id,
-            "--field-id",
-            field_id,
-            "--text",
-            value,
-        )
 
     def _edit_single_select(self, item_id: str, field_option: tuple[str, str]) -> None:
         field_id, option_id = field_option
@@ -705,28 +629,6 @@ class Project:
         item = json.loads(item_raw or "{}")
         return str(item.get("id") or "")
 
-    def _ensure_text_field(self, field_name: str) -> str:
-        for field in self._field_rows():
-            if str(field.get("name") or "") == field_name:
-                return str(field.get("id") or "")
-        raw = self._repo.run_gh(
-            "project",
-            "field-create",
-            str(self.number),
-            "--owner",
-            self.owner,
-            "--name",
-            field_name,
-            "--data-type",
-            "TEXT",
-            "--format",
-            "json",
-        )
-        field_id = str(json.loads(raw or "{}").get("id") or "")
-        if not field_id:
-            raise ValueError(f"project field was not created: {field_name}")
-        return field_id
-
     def item_id_for(self, number: int) -> str:
         raw = self._repo.run_gh(
             "project",
@@ -744,39 +646,6 @@ class Project:
             if isinstance(content, dict) and content.get("number") == number:
                 return str(item.get("id") or "")
         raise ValueError(f"ticket {number} is not on the project board")
-
-    def _memory_ticket_rows(self) -> list[dict[str, str | int]]:
-        rows: list[dict[str, str | int]] = []
-        for ticket in self._repo.tickets.values():
-            if ticket.state is None:
-                continue
-            rows.append(
-                {
-                    "number": ticket.number,
-                    "title": ticket.title,
-                    "url": ticket.url,
-                    "status": ticket.state.name,
-                }
-            )
-        return rows
-
-    def _ticket_rows_from_items(
-        self, items: list[dict[str, object]]
-    ) -> list[dict[str, str | int]]:
-        rows: list[dict[str, str | int]] = []
-        for item in items:
-            content = item.get("content")
-            if not isinstance(content, dict) or content.get("type") != "Issue":
-                continue
-            rows.append(
-                {
-                    "number": int(content.get("number") or 0),
-                    "title": str(content.get("title") or item.get("title") or ""),
-                    "url": str(content.get("url") or ""),
-                    "status": str(item.get("status") or ""),
-                }
-            )
-        return rows
 
     def theme_option_names(self) -> list[str]:
         """Live GitHub Theme field option names, or empty when listing fails."""
@@ -853,8 +722,6 @@ class Project:
 class Repo:
     """Local git clone with optional GitHub project + tickets."""
 
-    NOTES_REF = "refs/notes/eval-mistakes"
-
     def __init__(
         self,
         root: str | Path = ".",
@@ -870,7 +737,6 @@ class Repo:
         self._repo_name = repo_name
         self._project: Project | None = None
         self._tickets: dict[int, ProjectTicket] = {}
-        self._annotated_tag_target = "HEAD"
         if memory:
             self._init_memory_state()
 
@@ -884,10 +750,6 @@ class Repo:
     @property
     def in_memory(self) -> bool:
         return self._memory
-
-    @property
-    def tickets(self) -> dict[int, ProjectTicket]:
-        return dict(self._tickets)
 
     def has_ticket(self, number: int) -> bool:
         return number in self._tickets
@@ -1046,9 +908,6 @@ class Repo:
     def _git(self, *args: str) -> str:
         return type(self).git(self.root, *args)
 
-    def _gh(self, *args: str, stdin: str | None = None) -> str:
-        return self.run_gh(*args, stdin=stdin)
-
     def _init_memory_state(self) -> None:
         self._branch_names: set[str] = {"main"}
         self._branch = "main"
@@ -1057,7 +916,6 @@ class Repo:
         self._pushes: list[str] = []
         self._deleted: list[str] = []
         self._dirty = False
-        self._notes: dict[str, dict[str, str]] = {}
         self._project_links: list[tuple[str, int, str]] = []
         self._org_issue_types: list[dict[str, str]] = []
         self._worktrees: list[Worktree] = [Worktree(self.root, self.branch_named("main"))]
@@ -1065,7 +923,6 @@ class Repo:
         self._pulls: list[str] = []
         self._stash = False
         self._annotated_tags: dict[str, str] = {}
-        self._notes_by_ref: dict[tuple[str, str], dict[str, str]] = {}
 
     @property
     def project(self) -> Project | None:
@@ -1144,7 +1001,7 @@ class Repo:
         from space.session.session import MAIN_SESSION_NAME
 
         preferred = self.sessions_folder / name
-        candidates = [preferred, self.root / LEGACY_SESSIONS_FOLDER / name]
+        candidates = [preferred]
         if name != MAIN_SESSION_NAME:
             candidates.insert(0, Repo(self.primary_root()).sessions_folder / name)
         return next((folder for folder in candidates if (folder / "session.json").is_file()), preferred)
@@ -1192,19 +1049,21 @@ class Repo:
         slug = (branch or "").strip() or "HEAD"
         return f"cli-agent/{slug}"
 
-    def read_cli_agent_tag(self, branch: str) -> CliAgentBinding:
-        return CliAgentBinding.from_message(
+    def read_cli_agent_tag(self, branch: str) -> CliAgents:
+        return CliAgents.from_message(
             self.read_annotated_tag(self.cli_agent_tag_name(branch))
         )
 
-    def write_annotated_tag(self, name: str, message: str) -> None:
+    def write_annotated_tag(self, name: str, message: str, target: str = "HEAD") -> None:
+        """Tag ``target`` (a branch, commit, or ``HEAD``) as ``name`` with ``message``, replacing an earlier tag of
+        that name."""
         name = (name or "").strip()
         if not name:
             raise ValueError("annotated tag requires a name")
         if self._memory:
             self._annotated_tags[name] = message
             return
-        self._git("tag", "-f", "-a", name, "-m", message, self._annotated_tag_target)
+        self._git("tag", "-f", "-a", name, "-m", message, target)
 
     def read_annotated_tag(self, name: str) -> str:
         name = (name or "").strip()
@@ -1262,7 +1121,7 @@ class Repo:
         if self._memory:
             return [dict(item) for item in getattr(self, "_org_issue_types", [])]
         owner, _ = self.owner_repo()
-        raw = self._gh("api", f"orgs/{owner}/issue-types")
+        raw = self.run_gh("api", f"orgs/{owner}/issue-types")
         payload = json.loads(raw or "[]")
         return [dict(item) for item in payload] if isinstance(payload, list) else []
 
@@ -1294,7 +1153,7 @@ class Repo:
             types.append(record)
             return wanted
         owner, _ = self.owner_repo()
-        self._gh(
+        self.run_gh(
             "api",
             "--method",
             "POST",
@@ -1315,7 +1174,7 @@ class Repo:
     def owner_repo(self) -> tuple[str, str]:
         if self._memory:
             return self._owner, self._repo_name
-        raw = self._gh("repo", "view", "--json", "nameWithOwner")
+        raw = self.run_gh("repo", "view", "--json", "nameWithOwner")
         payload = json.loads(raw or "{}")
         name = payload.get("nameWithOwner", "")
         if "/" not in name:
@@ -1718,89 +1577,10 @@ class Repo:
             merge_git.git(merge_root, "merge", source, "--no-edit")
         return merge_git.git(merge_root, "rev-parse", "HEAD")
 
-    def note(
-        self,
-        sha: str,
-        payload: dict[str, str],
-        *,
-        ref: str | None = None,
-    ) -> None:
-        note_ref = ref or self.NOTES_REF
-        if self._memory:
-            self._notes[sha] = dict(payload)
-            self._notes_by_ref[(note_ref, sha)] = dict(payload)
-            return
-        text = Commit.note_text(payload)
-        self._git(
-            "notes",
-            f"--ref={note_ref}",
-            "add",
-            "-f",
-            "-m",
-            text,
-            sha,
-        )
-
-    def read_notes(self, sha: str, *, ref: str | None = None) -> dict[str, str]:
-        note_ref = ref or self.NOTES_REF
-        if self._memory:
-            keyed = self._notes_by_ref.get((note_ref, sha))
-            if keyed is not None:
-                return dict(keyed)
-            if note_ref == self.NOTES_REF:
-                return dict(self._notes.get(sha, {}))
-            return {}
-        try:
-            raw = self._git("notes", f"--ref={note_ref}", "show", sha)
-        except RepoConnectError:
-            return {}
-        return Commit(sha="", message=raw).note_payload()
-
-    def find_mistakes(
-        self, entry_ids: list[str], *, ref: str | None = None
-    ) -> list[dict[str, str]]:
-        note_ref = ref or self.NOTES_REF
-        wanted = set(entry_ids)
-        if self._memory:
-            return self._memory_mistakes(wanted)
-        return self._listed_mistakes(note_ref, wanted)
-
-    def _memory_mistakes(self, wanted: set[str]) -> list[dict[str, str]]:
-        found: list[dict[str, str]] = []
-        for sha, payload in self._notes.items():
-            if payload.get("entry_id") in wanted:
-                row = dict(payload)
-                row.setdefault("introducing_commit", sha)
-                found.append(row)
-        return found
-
-    def _listed_mistakes(
-        self, note_ref: str, wanted: set[str]
-    ) -> list[dict[str, str]]:
-        found: list[dict[str, str]] = []
-        listing = self._git("notes", f"--ref={note_ref}", "list")
-        for line in listing.splitlines():
-            parts = line.split()
-            if len(parts) < 2:
-                continue
-            sha = parts[1]
-            payload = self.read_notes(sha, ref=note_ref)
-            if payload.get("entry_id") in wanted:
-                payload.setdefault("introducing_commit", sha)
-                found.append(payload)
-        return found
-
     def ticket(self, ref: str) -> ProjectTicket | None:
         if self.in_memory:
-            return self._memory_ticket(ref)
+            return self._tickets.get(ProjectTicket.from_number(ref))
         return self._github_ticket(ref)
-
-    def _memory_ticket(self, ref: str) -> ProjectTicket | None:
-        number = ProjectTicket.from_number(ref)
-        ticket = self._tickets.get(number)
-        if ticket is None:
-            return None
-        return ticket.bind_repo(self)
 
     def _github_ticket(self, ref: str) -> ProjectTicket | None:
         number = ProjectTicket.from_number(ref)
@@ -1831,9 +1611,8 @@ class Repo:
                 title=title,
                 body=body,
                 url=f"https://github.com/{owner}/{repo_name}/issues/{number}",
-                data={"closed": "false"},
+                _repo=self,
             )
-            ticket.bind_repo(self)
             self._tickets[number] = ticket
             return ticket
         raw = self.run_gh(
@@ -1858,23 +1637,6 @@ class Repo:
         ticket.title = title
         return ticket
 
-    def workflow_commit_message(
-        self,
-        subject: str,
-        issue_number: int,
-        workflow_state: str,
-        *,
-        reviewed_by: str = "",
-    ) -> str:
-        owner, repo = self.owner_repo()
-        trailers = {
-            "GitHub-Issue": ProjectTicket.github_ref(owner, repo, issue_number),
-            "Workflow-State": workflow_state,
-        }
-        if reviewed_by.strip():
-            trailers["Reviewed-By"] = reviewed_by.strip()
-        return Commit.format(subject, trailers)
-
     def _ticket_from_payload(self, payload: dict[str, Any]) -> ProjectTicket:
         number = int(payload["number"])
         parent_data = payload.get("parent")
@@ -1896,10 +1658,11 @@ class Repo:
             title=str(payload.get("title") or ""),
             body=str(payload.get("body") or ""),
             url=str(payload.get("url") or ""),
+            closed=str(payload.get("state") or "").upper() == "CLOSED",
             parent_number=parent_number,
             sub_issue_numbers=sub_numbers,
+            _repo=self,
         )
-        ticket.bind_repo(self)
         self._tickets[number] = ticket
         return ticket
 
@@ -2024,6 +1787,7 @@ class Repo:
         branch. When the main clone has ``name`` checked out, it is committed, pushed, and the main
         clone goes back to the default branch so the worktree can take it. Saves ``branch`` and the
         worktree path as ``worktree`` in ``.sessions/session.json``; later repo tools act in it.
+        When the worktree cannot be brought up to date with origin, the reply says so and why.
         """
         wanted = self._branch_name(name)
         primary = self._primary_repo()
@@ -2037,7 +1801,8 @@ class Repo:
         state = WorkState(primary.root)
         state.branch = branch
         state.worktree = opened
-        return f"worktree for {wanted!r} at {opened.path}"
+        behind = f"; not updated from origin: {opened.sync_failure}" if opened.sync_failure else ""
+        return f"worktree for {wanted!r} at {opened.path}{behind}"
 
     @agent_tool
     @mcp
@@ -2138,12 +1903,14 @@ class Repo:
 class Worktree:
     """One checkout of the repository: its folder and the branch checked out there."""
 
-    __slots__ = ("path", "branch", "_repository")
+    __slots__ = ("path", "branch", "_repository", "sync_failure")
 
     def __init__(self, path: Path | str, branch: Branch | None, *, repository: Repo | None = None) -> None:
         self.path = Path(path)
         self.branch = branch
         self._repository = repository
+        # Why the last fetch or pull from origin failed; empty while this checkout is up to date with origin.
+        self.sync_failure = ""
 
     @classmethod
     def from_repo(cls, repository: Repo) -> Worktree:
@@ -2185,14 +1952,6 @@ class Worktree:
         return cls.from_repo(Repo(found))
 
     @staticmethod
-    def cursor_path(worktree_id: str) -> Path:
-        """Detached checkout under ``~/.cursor/worktrees/{worktree_id}``."""
-        slug = (worktree_id or "").strip()
-        if not slug:
-            raise ValueError("worktree id is required")
-        return Path.home() / ".cursor" / "worktrees" / slug
-
-    @staticmethod
     def abbrev_repo_name(folder: str) -> str:
         tokens = [part for part in re.split(r"[-_]+", folder or "") if part]
         if not tokens:
@@ -2212,15 +1971,18 @@ class Worktree:
         return f"{Worktree.abbrev_repo_name(repo_folder)}-{short}"
 
     def fetch_pull(self) -> None:
+        """Bring this checkout up to date with origin. A checkout that cannot reach origin, or whose branch has moved
+        apart from origin's, still opens as it is; ``sync_failure`` then says why, so the caller can tell the user the
+        work may be behind origin."""
         repository = self.repository
         try:
             repository.fetch()
-        except RepoConnectError:
-            return
-        try:
             repository.pull()
-        except RepoConnectError:
+        except RepoConnectError as exc:
+            self.sync_failure = str(exc)
+            logger.warning("worktree %s is not up to date with origin: %s", self.path, exc)
             return
+        self.sync_failure = ""
 
 
 class Branch:
@@ -2282,34 +2044,35 @@ class Branch:
             opened.fetch_pull()
             return opened
         try:
+            # Fetched first so a branch pushed from elsewhere starts from origin's copy.
             repository.fetch()
-        except RepoConnectError:
-            pass
+        except RepoConnectError as exc:
+            logger.warning("opening %s from local refs; fetch from origin failed: %s", self.name, exc)
         primary = repository.primary_root()
         opened = repository.add_worktree(primary.parent / Worktree.dirname(primary.name, self), self)
         opened.fetch_pull()
         return opened
 
-    def cli_agent(self) -> CliAgentBinding:
+    def cli_agents(self) -> CliAgents:
+        """The doer and judge CLI agents working on this branch."""
         return self._repo.read_cli_agent_tag(self.name)
+
+    def write_cli_agents(self, agents: CliAgents) -> None:
+        """Keep ``agents`` on this branch's ``cli-agent`` tag, which points at this branch."""
+        self._repo.write_annotated_tag(self._repo.cli_agent_tag_name(self.name), agents.message(), target=self.name)
 
     @property
     def head(self) -> Commit:
-        from space.repo.repo import Commit
-
         return Commit.from_message(
             self._repo.current_commit,
             self._repo._last_commit_message(),
         )
 
     def commit(self, paths: list[str], message: str) -> Commit:
-        from space.repo.repo import Commit
-
         sha = self._repo.commit(paths, message)
         return Commit.from_message(sha, message)
 
     def merge(self, other: Branch, *, message: str = "") -> Commit:
-        from space.repo.repo import Commit
 
         sha = self._repo.merge_branch(other.name, self.name, message=message)
         return Commit.from_message(sha, message or f"merge {other.name} into {self.name}")

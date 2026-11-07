@@ -44,16 +44,9 @@ class TypeScriptStory(CodeStory):
     @classmethod
     def load(cls, content: str, story_slug: str) -> "TypeScriptStory":
         name_match = re.search(r"\*\s*Story:\s*(.+)", content)
-        story_name = name_match.group(1).strip() if name_match else story_slug.replace("-", " ").title()
-        if name_match is None:
-            call = re.search(
-                r"(?i)(?:shareStory|story)\(\s*(['\"])((?:\\.|(?!\1).)*)\1",
-                content,
-            )
-            if call:
-                story_name = call.group(2)
-        story_name = re.sub(r"\s*\([^)]*\)\.?\s*$", "", story_name).strip()
-        story = cls(story_name, 1)
+        call = re.search(r"(?i)(?:shareStory|story)\(\s*(['\"])((?:\\.|(?!\1).)*)\1", content)
+        found = name_match.group(1) if name_match else call.group(2) if call else None
+        story = cls(cls.name_read(found, story_slug), 1)
         actor_match = re.search(r"\*\s*Actor:\s*(.+)", content)
         if actor_match:
             story.actors = [actor_match.group(1).strip()]
@@ -81,14 +74,11 @@ class TypeScriptEpic(CodeEpic):
         return f"{CodeEpic(noun).slug()}.examples.ts", self._examples_file(noun)
 
     def _aggregate_noun(self) -> str:
-        pascal = self.pascal()
-        for verb in (
-            "Create", "Get", "Manage", "Settle", "Enter", "Know", "Complete",
-            "Query", "Submit", "View", "Store", "Update", "Delete", "Place",
-        ):
-            if pascal.startswith(verb) and len(pascal) > len(verb):
-                return pascal[len(verb):]
-        return pascal
+        """The epic's name without its opening verb: Create Customer names a Customer."""
+        words = self.name.split()
+        if len(words) > 1 and self.opens_with_verb():
+            return CodeEpic(" ".join(words[1:])).pascal()
+        return self.pascal()
 
     def _examples_file(self, noun: str) -> str:
         return (

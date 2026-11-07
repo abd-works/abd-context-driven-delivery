@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
 
 _VAGUE_TYPES = frozenset({"any", "object", "dict", "Dict", "Any", "Mapping", "mapping"})
 # A client's `withEmail(email)` answers a copy with one field changed: a property setter, not an operation.
@@ -17,8 +22,8 @@ class UseTypedSignatures(PracticeGraphRule):
     slug = "use-typed-signatures"
     node_types = ("Operation", "Parameter")
 
-    def check(self, node, context) -> list[str]:
-        if _is_test_code(node.source.file) or _FIELD_CHANGE.match(_operation_name(node)):
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+        if is_test_code(node.source.file) or _FIELD_CHANGE.match(_operation_name(node)):
             return []
         if node.type == "Parameter":
             if not node.has_fact("type_hint"):
@@ -35,7 +40,7 @@ class LimitComments(PracticeGraphRule):
     slug = "limit-comments"
     node_types = ("Operation", "OoadClass")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if not node.get_fact("prose_comment"):
             return []
         if node.type == "OoadClass":
@@ -46,12 +51,12 @@ class LimitComments(PracticeGraphRule):
 _INVALID_PARAM_NAME = re.compile(r"^[\w$]+$")
 
 
-def _is_test_code(file: str) -> bool:
+def is_test_code(file: str) -> bool:
     parts = str(file or "").replace("\\", "/").split("/")
     return bool(_TEST_FOLDERS.intersection(parts[:-1])) or _TEST_FILE.search(parts[-1]) is not None
 
 
-def _operation_name(node) -> str:
+def _operation_name(node: "Node") -> str:
     if node.type == "Operation":
         return node.name
     return str(node.get_fact("operation_name") or "")

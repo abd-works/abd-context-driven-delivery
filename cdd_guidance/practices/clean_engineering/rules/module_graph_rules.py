@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from harness.graph.practice_rule import PracticeGraphRule
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
 
 
 class NamedSeamAndConstraint(PracticeGraphRule):
     slug = "named-seam-and-constraint"
     node_types = ("Module",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if not node.has_fact("has_module_context"):
             return []
         if node.get_fact("has_module_context") or node.get_fact("has_bounded_context"):
@@ -24,7 +30,7 @@ class PublicSeamOnly(PracticeGraphRule):
     slug = "public-seam-only"
     node_types = ("Module", "Package")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         found = node.get_fact("public_source_internal", "")
         if found == "heading":
             return [f"Module '{node.name}' exposes internal design in a public source file."]
@@ -33,7 +39,7 @@ class PublicSeamOnly(PracticeGraphRule):
         return []
 
 
-def _python_class_folder(node, context):
+def _python_class_folder(node: "Node", context: "RuleCheckContext") -> "Node | None":
     """The folder node a Python class sits in; module-context rules only cover Python sources."""
     if not (node.source.file or "").endswith(".py"):
         return None
@@ -44,7 +50,7 @@ class MissingModuleContext(PracticeGraphRule):
     slug = "missing-module-context"
     node_types = ("OoadClass",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         folder = _python_class_folder(node, context)
         if folder is None or folder.get_fact("has_module_context", True):
             return []
@@ -58,7 +64,7 @@ class LanguageModulesOneSection(PracticeGraphRule):
     slug = "language-modules-one-section"
     node_types = ("OoadClass",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         folder = _python_class_folder(node, context)
         if folder is None or not folder.get_fact("modules_heading"):
             return []
@@ -72,7 +78,7 @@ class ModulesNotModelBlocks(PracticeGraphRule):
     slug = "modules-not-model-blocks"
     node_types = ("OoadClass",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         folder = _python_class_folder(node, context)
         if folder is None:
             return []

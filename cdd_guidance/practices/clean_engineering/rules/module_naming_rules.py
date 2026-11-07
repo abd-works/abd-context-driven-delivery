@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
 
 _VERB_MODULE = re.compile(
     r"(^|/)(manage|process|handle|run|execute|build|create|update|delete|get|set)[-_]",
@@ -17,7 +22,7 @@ class DomainNounsOnly(PracticeGraphRule):
     slug = "domain-nouns-only"
     node_types = ("Module",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         name = (node.name or "").strip()
         if not name:
             return []
@@ -33,7 +38,7 @@ class NoModulePerClass(PracticeGraphRule):
     slug = "no-module-per-class"
     node_types = ("Module",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if node.get_fact("is_a_in_context"):
             return [
                 f"Module {node.name!r} module-context uses '*is a type of*'; "
@@ -52,7 +57,7 @@ class NoModulePerClass(PracticeGraphRule):
         return []
 
 
-def _public_classes_in(folder_node, context) -> int:
+def _public_classes_in(folder_node: "Node", context: "RuleCheckContext") -> int:
     count = 0
     for class_node in context.practice.nodes.get("OoadClass", []):
         file_name = (class_node.source.file or "").rsplit("/", 1)[-1]

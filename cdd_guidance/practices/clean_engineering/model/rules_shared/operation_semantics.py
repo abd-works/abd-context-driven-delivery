@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
 
 _LIFECYCLE_WITH_VALIDATION = frozenset(
     {
@@ -29,7 +34,7 @@ class KeepOperationsSingleResponsibility(PracticeGraphRule):
     slug = "keep-operations-single-responsibility"
     node_types = ("Operation",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if node.name.endswith("Routes") and node.name.startswith("create"):
             return []
         if _ROUTE_REGISTRAR.match(node.name) or node.name in _LIFECYCLE_WITH_VALIDATION:
@@ -49,7 +54,7 @@ class ErrorsOutOfExistence(PracticeGraphRule):
     slug = "errors-out-of-existence"
     node_types = ("Operation",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if not node.get_fact("raises_on_empty"):
             return []
         return [f"Operation '{node.name}' raises on an empty or missing value; return a quiet result instead."]
@@ -61,7 +66,7 @@ class StateChangeReturnsRecordOrNamedFailure(PracticeGraphRule):
     slug = "state-change-returns-record-or-named-failure"
     node_types = ("Operation",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if not node.get_fact("mutates_without_record"):
             return []
         return [f"Operation '{node.name}' mutates state but does not return the record or a named failure."]
@@ -71,7 +76,7 @@ class DomainExceptionCarriesContext(PracticeGraphRule):
     slug = "domain-exception-carries-context"
     node_types = ("Operation",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         exception = node.get_fact("exception_without_message", "")
         if exception:
             return [f"Operation '{node.name}' raises {exception} without context; name the rejected rule."]

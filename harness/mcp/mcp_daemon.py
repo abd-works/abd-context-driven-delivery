@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import os
-import signal
 import socket
 import subprocess
 import sys
@@ -12,6 +11,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from harness.hooks.stoppable_process import StoppableProcess
 from harness.mcp.cdd_home import CddHome
 
 SERVER_PORT_ENV = "CDD_SERVER_PORT"
@@ -80,7 +80,7 @@ class McpDaemon:
         answer = self.ping
         if answer is None:
             return
-        self._end_process(int(answer.get("pid") or 0))
+        StoppableProcess(int(answer.get("pid") or 0)).stop(_STOP_SECONDS)
 
     def spawn(self) -> None:
         from harness.hooks.process import detached_creationflags
@@ -146,17 +146,6 @@ class McpDaemon:
                 return answer
             time.sleep(0.25)
         raise ServerDidNotStart(self.url, self._log_tail())
-
-    def _end_process(self, pid: int) -> None:
-        if pid <= 0 or pid == os.getpid():
-            return
-        try:
-            os.kill(pid, signal.SIGTERM)
-        except OSError:
-            return
-        deadline = time.time() + _STOP_SECONDS
-        while time.time() < deadline and self.is_running:
-            time.sleep(0.1)
 
     def _log_tail(self) -> str:
         if not self.home.log_path.is_file():

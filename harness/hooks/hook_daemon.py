@@ -3,13 +3,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
-import signal
 import socket
 import subprocess
 import sys
 import threading
-import time
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
@@ -20,14 +19,19 @@ for _entry in (_REPO, _REPO / "tools", _REPO / "cdd_guidance" / "practices", _RE
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
-from harness.hooks.running_process import RunningProcess  # noqa: E402
+from harness.hooks.stoppable_process import ProcessNotStopped, StoppableProcess  # noqa: E402
+
+logger = logging.getLogger(__name__)
 
 _PORT_RANGE_START = 20000
 _PORT_RANGE_SIZE = 10000
+# How long a daemon that loaded older hook code gets to exit before the replacement gives up on it.
+_STOP_SECONDS = 3
 _SOURCE_STAMP_FILES = (
     Path("harness/hooks/hook_daemon.py"),
     Path("harness/hooks/hook_server.py"),
     Path("harness/hooks/running_process.py"),
+    Path("harness/hooks/stoppable_process.py"),
     Path("harness/guidance/rule.py"),
     Path("harness/guidance_actions/guidance_actions.py"),
 )
@@ -161,24 +165,16 @@ class HookDaemon:
             return
         if state.get("stamp") == self.source_stamp(repo):
             return
-        pid = int(state.get("pid") or 0)
-        if pid and pid != os.getpid():
-            self._end_process(pid)
+        try:
+            StoppableProcess(int(state.get("pid") or 0)).stop(_STOP_SECONDS)
+        except ProcessNotStopped as still_running:
+            # Its address file stays, so hooks keep reaching the older daemon rather than none.
+            logger.warning("the hook daemon on older code keeps running: %s", still_running)
+            return
         try:
             path.unlink()
         except OSError:
             return
-
-    def _end_process(self, pid: int) -> None:
-        try:
-            os.kill(pid, signal.SIGTERM)
-        except OSError:
-            return
-        deadline = time.time() + 3
-        while time.time() < deadline:
-            if not RunningProcess(pid).alive:
-                return
-            time.sleep(0.05)
 
     def _publish_address(self, path: Path, port: int, repo: Path | None = None) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)

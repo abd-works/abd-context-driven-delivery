@@ -126,7 +126,8 @@ class StoryMapLinks:
         """``id(node)`` to its ``story-map.md#anchor`` link, for every epic, sub-epic, and story.
 
         Anchors follow the outline headings the markdown story map renders:
-        ``(E) {name}`` for an epic or sub-epic, ``(S) {actor} --> {name}`` for a story.
+        ``(E) {name}`` for an epic or sub-epic, ``(S) {actor} --> {name}`` for a story, its mark naming the kind
+        when it is not a user story (``(S:system)``).
         Empty when there is no ``story-map.md``.
         """
         if self.map_file is None or not self.map_file.is_file():
@@ -137,8 +138,8 @@ class StoryMapLinks:
 
         def story_entries(epic) -> None:
             for story in epic.stories:
-                actor = unlink(story.actors[0]).strip() if story.actors else ""
-                heading = f"(S) {actor} --> {story.name}" if actor else f"(S) --> {story.name}"
+                actor = f"{unlink(story.actors[0]).strip()} " if story.actors else ""
+                heading = f"{story.story_type.outline_mark} {actor}--> {story.name}"
                 links[id(story)] = f"{target}#{anchors.next(heading)}"
 
         def sub_epic_entries(epics) -> None:

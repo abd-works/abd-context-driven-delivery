@@ -1,45 +1,56 @@
 """JSON format story nodes - all seven StoryNode subtypes plus I/O.
 
-Schema (camelCase, mirrors the legacy `story-graph.json` conventions):
+Schema of ``story-graph.json`` (camelCase). Every epic, top-level or nested, has the same shape; nested epics sit
+under ``subEpics``:
 
     {
+      "exampleRows": [{"exampleName": "...", "<cell>": "...", ...}],
       "epics": [
         {
           "name": "...",
           "sequentialOrder": 1,
-          "subEpics": [
+          "estimate": "...",
+          "exampleRows": [...],
+          "stories": [
             {
-              "name": "...",
-              "sequentialOrder": 1,
-              "stories": [...],
-              "subEpics": []
+              "name": "...", "sequentialOrder": 1, "storyType": "user", "actors": ["..."],
+              "backgrounds": [{"name": "background", "steps": [...], "exampleRows": [...]}],
+              "scenarios": [
+                {"name": "...", "sequentialOrder": 1, "isOutline": false, "steps": [...], "exampleRows": [...]}
+              ]
             }
-          ]
+          ],
+          "subEpics": [...]
         }
       ],
       "increments": [
-        {
-          "name": "...",
-          "sequentialOrder": 1,
-          "outcome": "...",
-          "stories": ["Story name", ...],
-          "decisionPrompt": "...",
-          "slicingNotes": "..."
-        }
+        {"name": "...", "sequentialOrder": 1, "outcome": "...", "stories": ["Story name", ...],
+         "decisionPrompt": "...", "slicingNotes": "..."}
       ]
     }
+
+A step is ``{"keyword": "Given", "text": "...", "stepType": "given", "ands": [...]}``.
 """
 
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
-from cdd_guidance.practices.stories.model.story_model import Scenario
 from cdd_guidance.practices.stories.model.source_location import SourceLocation
-from cdd_guidance.practices.stories.model.story_model import StoryModel
-from cdd_guidance.practices.stories.model.story_model import Increment
+from cdd_guidance.practices.stories.model.story_model import (
+    Background,
+    Epic,
+    Examples,
+    Increment,
+    Scenario,
+    Step,
+    StepType,
+    Story,
+    StoryModel,
+    StoryType,
+)
 
 # -- Leaf node types -----------------------------------------------------------
 
@@ -48,21 +59,15 @@ class JsonIncrement(Increment):
 
 
 class JsonScenario(Scenario):
-    def load_scenario(self, source: Scenario) -> "JsonScenario":
-        return JsonScenario(source.name, source.sequential_order, source.story_name)
+    pass
 
 
 class JsonStory(Story):
-    def load_scenario(self, source: Scenario) -> JsonScenario:
-        return JsonScenario(source.name, source.sequential_order, source.story_name)
+    scenario_type = JsonScenario
 
 
 class JsonEpic(Epic):
-    def load_epic(self, source: Epic) -> "JsonEpic":
-        return JsonEpic(source.name, source.sequential_order)
-
-    def load_story(self, source: Story) -> JsonStory:
-        return JsonStory(source.name, source.sequential_order, source.story_type)
+    pass
 
 
 # -- Root node + I/O -----------------------------------------------------------
@@ -72,30 +77,22 @@ class JsonParseError(Exception):
 
 
 class JsonStoryModel(StoryModel):
+    """JSON story-map I/O. render writes a story map as story-graph.json text; parse reads that text into a new map."""
+
     epic_type = JsonEpic
     story_type = JsonStory
     increment_type = JsonIncrement
-    """JSON story-map I/O. IS the format-typed tree root.
 
-    parse / render / sync implement the Uniform Callable Surface.
-    Factory overrides ensure every child is Json-typed throughout the tree.
-    """
-
-    def load_epic(self, source: JsonEpic) -> JsonEpic:
-        return JsonEpic(source.name, source.sequential_order)
-
-    def load_increment(self, source: Increment) -> JsonIncrement:
-        return JsonIncrement(source.name, source.sequential_order)
-
-    # -- Uniform Callable Surface ----------------------------------------------
-
-    def render(self, story_map: "JsonStoryModel", previous: Optional[str] = None) -> str:
+    def render(self, story_map: StoryModel, previous: Optional[str] = None) -> str:
         payload: Dict[str, Any] = {
-            "epics": [self._epic_to_dict(e) for e in story_map.epics],
+            "epics": [self._epic_to_dict(epic) for epic in story_map.epics],
         }
+        rows = self._example_rows(story_map.examples)
+        if rows:
+            payload["exampleRows"] = rows
         if story_map.increments:
             payload["increments"] = [
-                self._increment_to_dict(i) for i in story_map.increments
+                self._increment_to_dict(increment) for increment in story_map.increments
             ]
         return json.dumps(payload, indent=2)
 
@@ -106,10 +103,11 @@ class JsonStoryModel(StoryModel):
             raise JsonParseError(f"Not valid JSON: {err}") from err
         self._guard_schema(payload)
         story_map = JsonStoryModel()
-        for epic_dict in payload.get("epics", []):
-            story_map.epics.append(self._epic_from_dict(epic_dict))
-        for inc_dict in payload.get("increments", []):
-            story_map.increments.append(self._increment_from_dict(inc_dict))
+        for epic_record in payload.get("epics", []):
+            story_map.epics.append(self._epic_from_dict(epic_record))
+        self._take_examples(story_map.examples, payload)
+        for increment_record in payload.get("increments", []):
+            story_map.increments.append(self._increment_from_dict(increment_record))
         return story_map
 
     def attach_source_locations(self, file_name: str) -> None:
@@ -120,67 +118,61 @@ class JsonStoryModel(StoryModel):
             epic._stamp_source(loc)
 
     @classmethod
-    def from_workspace(cls, root: "Path") -> Optional["JsonStoryModel"]:
-        """Find story-graph.json in *root* and parse it; return None if absent."""
-        from pathlib import Path as _Path
-        root = _Path(root).resolve()
-        json_path = root / "story-graph.json"
+    def from_workspace(cls, root: Path) -> Optional["JsonStoryModel"]:
+        """Find story-graph.json in *root* and parse it; None when the folder has none. A file that is there but does
+        not read is a JsonParseError naming the file, not a missing story map."""
+        json_path = Path(root).resolve() / "story-graph.json"
         if not json_path.exists():
             return None
         try:
-            text = json_path.read_text(encoding="utf-8")
-            sm = cls().parse(text)
-            sm.attach_source_locations(json_path.name)
-            sm.source = SourceLocation(json_path.name, 1)
-            return sm
-        except Exception:
-            return None
+            story_map = cls().parse(json_path.read_text(encoding="utf-8"))
+        except JsonParseError as err:
+            raise JsonParseError(f"{json_path}: {err}") from err
+        story_map.attach_source_locations(json_path.name)
+        story_map.source = SourceLocation(json_path.name, 1)
+        return story_map
 
     # -- render helpers --------------------------------------------------------
 
-    def _epic_to_dict(self, epic: JsonEpic) -> Dict[str, Any]:
+    def _epic_to_dict(self, epic: Epic) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
             "name": epic.name,
             "sequentialOrder": epic.sequential_order,
-            "subEpics": [self._sub_epic_to_dict(s) for s in epic.epics],
+            "subEpics": [self._epic_to_dict(child) for child in epic.epics],
+            "stories": [self._story_to_dict(story) for story in epic.stories],
         }
         if epic.estimate:
             payload["estimate"] = epic.estimate
+        rows = self._example_rows(epic.examples)
+        if rows:
+            payload["exampleRows"] = rows
         return payload
 
-    def _sub_epic_to_dict(self, sub_epic: JsonEpic) -> Dict[str, Any]:
-        payload: Dict[str, Any] = {
-            "name": sub_epic.name,
-            "sequentialOrder": sub_epic.sequential_order,
-            "subEpics": [self._sub_epic_to_dict(s) for s in sub_epic.epics],
-            "stories": [self._story_to_dict(s) for s in sub_epic.stories],
-        }
-        if sub_epic.estimate:
-            payload["estimate"] = sub_epic.estimate
-        return payload
-
-    def _story_to_dict(self, story: JsonStory) -> Dict[str, Any]:
+    def _story_to_dict(self, story: Story) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
             "name": story.name,
             "sequentialOrder": story.sequential_order,
             "storyType": story.story_type.value,
-            "scenarios": [self._scenario_to_dict(s) for s in story.scenarios],
+            "scenarios": [self._scenario_to_dict(scenario) for scenario in story.scenarios],
         }
         if story.backgrounds:
             payload["backgrounds"] = [self._background_to_dict(background) for background in story.backgrounds]
         if story.actors:
             payload["actors"] = list(story.actors)
-        if getattr(story, "domain_terms", None):
+        if story.domain_terms:
             payload["domainTerms"] = list(story.domain_terms)
-        if getattr(story, "evidence", None):
+        if story.evidence:
             payload["evidence"] = list(story.evidence)
         return payload
 
-    def _scenario_to_dict(self, scenario: JsonScenario) -> Dict[str, Any]:
+    def _scenario_to_dict(self, scenario: Scenario) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
             "name": scenario.name,
             "sequentialOrder": scenario.sequential_order,
+            "steps": [self._step_to_dict(step) for step in scenario.steps],
         }
+        if scenario.is_outline:
+            payload["isOutline"] = True
         rows = self._example_rows(scenario.examples)
         if rows:
             payload["exampleRows"] = rows
@@ -188,19 +180,51 @@ class JsonStoryModel(StoryModel):
             payload["backgrounds"] = [self._background_to_dict(background) for background in scenario.backgrounds]
         return payload
 
-    def _increment_to_dict(self, inc: JsonIncrement) -> Dict[str, Any]:
+    def _background_to_dict(self, background: Background) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
-            "name": inc.name,
-            "sequentialOrder": inc.sequential_order,
-            "stories": [story.name for story in inc.stories],
+            "name": background.name,
+            "steps": [self._step_to_dict(step) for step in background.steps],
         }
-        if inc.outcome:
-            payload["outcome"] = inc.outcome
-        if inc.decision_prompt:
-            payload["decisionPrompt"] = inc.decision_prompt
-        if inc.slicing_notes:
-            payload["slicingNotes"] = inc.slicing_notes
+        rows = self._example_rows(background.examples)
+        if rows:
+            payload["exampleRows"] = rows
         return payload
+
+    def _step_to_dict(self, step: Step) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"keyword": step.keyword, "text": step.text}
+        if step.phase:
+            payload["stepType"] = step.phase
+        if step.ands:
+            payload["ands"] = [self._step_to_dict(extra) for extra in step.ands]
+        for key, value in (("concepts", step.concepts), ("values", step.values)):
+            if value:
+                payload[key] = list(value)
+        if step.actor:
+            payload["actor"] = step.actor
+        return payload
+
+    def _increment_to_dict(self, increment: Increment) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            "name": increment.name,
+            "sequentialOrder": increment.sequential_order,
+            "stories": [story.name for story in increment.stories],
+        }
+        if increment.outcome:
+            payload["outcome"] = increment.outcome
+        if increment.decision_prompt:
+            payload["decisionPrompt"] = increment.decision_prompt
+        if increment.slicing_notes:
+            payload["slicingNotes"] = increment.slicing_notes
+        return payload
+
+    def _example_rows(self, examples: Examples) -> List[Dict[str, str]]:
+        """Each example as its name under ``exampleName`` beside its own cells, so a cell named ``example`` stays a
+        cell."""
+        rows = []
+        for name, example in examples.items():
+            cells = {key: "" if value is None else str(value) for key, value in example.cells().items()}
+            rows.append({"exampleName": name, **cells})
+        return rows
 
     # -- parse helpers ---------------------------------------------------------
 
@@ -215,18 +239,12 @@ class JsonStoryModel(StoryModel):
     def _epic_from_dict(self, epic_record: Dict[str, Any]) -> JsonEpic:
         epic = JsonEpic(epic_record["name"], int(epic_record.get("sequentialOrder", 0)))
         epic.estimate = str(epic_record.get("estimate", "") or "")
-        for sub in epic_record.get("subEpics", []):
-            epic.epics.append(self._sub_epic_from_dict(sub))
+        for child in epic_record.get("subEpics", []):
+            epic.epics.append(self._epic_from_dict(child))
+        for story in epic_record.get("stories", []):
+            epic.stories.append(self._story_from_dict(story))
+        self._take_examples(epic.examples, epic_record)
         return epic
-
-    def _sub_epic_from_dict(self, sub_epic_record: Dict[str, Any]) -> JsonEpic:
-        sub_epic = JsonEpic(sub_epic_record["name"], int(sub_epic_record.get("sequentialOrder", 0)))
-        sub_epic.estimate = str(sub_epic_record.get("estimate", "") or "")
-        for nested in sub_epic_record.get("subEpics", []):
-            sub_epic.epics.append(self._sub_epic_from_dict(nested))
-        for story in sub_epic_record.get("stories", []):
-            sub_epic.stories.append(self._story_from_dict(story))
-        return sub_epic
 
     def _story_from_dict(self, story_record: Dict[str, Any]) -> JsonStory:
         story = JsonStory(
@@ -245,62 +263,63 @@ class JsonStoryModel(StoryModel):
             story.evidence = list(story_record["evidence"])
         for background in story_record.get("backgrounds") or []:
             story.backgrounds.append(self._background_from_dict(background, len(story.backgrounds) + 1))
-        for sc in story_record.get("scenarios", []):
-            story.scenarios.append(self._scenario_from_dict(sc))
+        for scenario in story_record.get("scenarios", []):
+            story.scenarios.append(self._scenario_from_dict(scenario, story.name))
         return story
 
-    def _scenario_from_dict(self, scenario_record: Dict[str, Any]) -> JsonScenario:
+    def _scenario_from_dict(self, scenario_record: Dict[str, Any], story_name: str) -> JsonScenario:
         scenario = JsonScenario(
             name=scenario_record.get("name", "Scenario"),
             sequential_order=int(scenario_record.get("sequentialOrder", 0)),
+            story_name=story_name,
         )
-        for index, row in enumerate(scenario_record.get("exampleRows") or [], start=1):
-            self._put_example(scenario.examples, row, index)
+        scenario.is_outline = bool(scenario_record.get("isOutline", False))
+        scenario.steps = self._steps_from(scenario_record)
+        self._take_examples(scenario.examples, scenario_record)
         for background in scenario_record.get("backgrounds") or []:
             scenario.backgrounds.append(self._background_from_dict(background, len(scenario.backgrounds) + 1))
         return scenario
 
-    def _example_rows(self, examples) -> List[Dict[str, str]]:
-        rows = []
-        for name, example in examples.items():
-            cells = {key: "" if value is None else str(value) for key, value in example.cells().items()}
-            cells.setdefault("example", name)
-            rows.append(cells)
-        return rows
-
-    def _put_example(self, examples, row: Dict[str, Any], index: int) -> None:
-        label = str(row.get("example") or row.get("name") or f"example-{index}")
-        if set(row) <= {"example"}:
-            examples[label] = label
-            return
-        examples[label] = dict(row)
-
-    def _background_to_dict(self, background) -> Dict[str, Any]:
-        payload: Dict[str, Any] = {"name": background.name}
-        rows = self._example_rows(background.examples)
-        if rows:
-            payload["exampleRows"] = rows
-        return payload
-
-    def _background_from_dict(self, record: Dict[str, Any], order: int):
-        from cdd_guidance.practices.stories.model.story_model import Background
-
+    def _background_from_dict(self, record: Dict[str, Any], order: int) -> Background:
         background = Background(record.get("name") or "background", order)
-        for index, row in enumerate(record.get("exampleRows") or [], start=1):
-            self._put_example(background.examples, row, index)
+        background.steps = self._steps_from(record)
+        self._take_examples(background.examples, record)
         return background
+
+    def _steps_from(self, record: Dict[str, Any]) -> List[Step]:
+        return [self._step_from_dict(step, order) for order, step in enumerate(record.get("steps") or [], start=1)]
+
+    def _step_from_dict(self, record: Dict[str, Any], order: int) -> Step:
+        phase = record.get("stepType")
+        step = Step(
+            str(record.get("text", "")),
+            StepType(phase) if phase else None,
+            order,
+            keyword=str(record.get("keyword", "")),
+            concepts=list(record.get("concepts") or []),
+            values=list(record.get("values") or []),
+            actor=str(record.get("actor", "") or ""),
+        )
+        step.ands = [self._step_from_dict(extra, index) for index, extra in enumerate(record.get("ands") or [], start=1)]
+        return step
+
+    def _take_examples(self, examples: Examples, record: Dict[str, Any]) -> None:
+        for index, row in enumerate(record.get("exampleRows") or [], start=1):
+            label = str(row.get("exampleName") or row.get("example") or row.get("name") or f"example-{index}")
+            cells = {key: value for key, value in row.items() if key != "exampleName"}
+            examples[label] = cells if set(cells) - {"example"} else label
 
     def _increment_from_dict(self, increment_record: Dict[str, Any]) -> JsonIncrement:
         stories = []
         for index, name in enumerate(increment_record.get("stories", []), start=1):
             story_name = name.get("name") if isinstance(name, dict) else str(name)
             stories.append(Story(story_name, index))
-        inc = JsonIncrement(
+        increment = JsonIncrement(
             name=increment_record["name"],
             sequential_order=int(increment_record.get("sequentialOrder", 0)),
             stories=stories,
         )
-        inc.outcome = str(increment_record.get("outcome", "") or "")
-        inc.decision_prompt = str(increment_record.get("decisionPrompt", "") or "")
-        inc.slicing_notes = str(increment_record.get("slicingNotes", "") or "")
-        return inc
+        increment.outcome = str(increment_record.get("outcome", "") or "")
+        increment.decision_prompt = str(increment_record.get("decisionPrompt", "") or "")
+        increment.slicing_notes = str(increment_record.get("slicingNotes", "") or "")
+        return increment

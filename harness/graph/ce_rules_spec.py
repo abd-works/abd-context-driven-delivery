@@ -280,11 +280,6 @@ export function refreshChatBar($: EngineInterface): void {}
     with context("prefer-instance-operations"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("prefer-instance-operations")
-        with it("should accept a classmethod named current that loads the running call's subject"):
-            rule = ce_rule_by_slug("prefer-instance-operations")
-            source = "class Board:\n    @classmethod\n    def current(cls) -> 'Board':\n        return cls()\n"
-            practice, root = practice_from_files({"board.py": source})
-            expect(violations_for_rule(rule, practice, root)).to(equal([]))
     with context("keep-classes-single-responsibility"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("keep-classes-single-responsibility")
@@ -586,11 +581,6 @@ def _sibling_modules(imported: int) -> dict[str, str]:
     return tree
 
 
-def _classes_with_methods(method_count: int) -> str:
-    methods = "".join(f"    def act{index}(self):\n        return {index}\n" for index in range(method_count))
-    return "".join(f"class Part{index}:\n{methods}\n" for index in range(6))
-
-
 def _markdown_class_hits(markdown: str) -> list[str]:
     rule = ce_rule_by_slug("write-interactions")
     return violations_for_rule(rule, *practice_from_class_text("Order", markdown, "order.md"))
@@ -671,14 +661,6 @@ with description("Clean Engineering graph rules (inline fault and clean fixtures
     with context("low-coupling"):
         with it("should flag a module importing more than eight siblings and accept a narrow fan-out"):
             assert_files_rule_pair("low-coupling", _sibling_modules(9), _sibling_modules(2))
-
-    with context("deep-module"):
-        with it("should flag a module of many one-method classes and accept classes with real surface"):
-            assert_files_rule_pair(
-                "deep-module",
-                _module("shapes", {"shapes.py": _classes_with_methods(1)}),
-                _module("shapes", {"shapes.py": _classes_with_methods(2)}),
-            )
 
     with context("domain-nouns-only"):
         with it("should flag a verb-named module and accept a domain noun"):

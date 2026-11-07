@@ -57,7 +57,7 @@ with description("a DrawIO Story Map") as self:
     ):
         with before.each:
             self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
-            self.text = self.source.clone()
+            self.text = self.source.save()
 
         with it("should serialize as a valid DrawIO document"):
             tree = ET.fromstring(self.text)
@@ -73,7 +73,7 @@ with description("a DrawIO Story Map") as self:
         with context("with an Epic appended and the DrawIO document re-rendered"):
             with before.each:
                 self.source.append_epic(DrawIOEpic("Epic 5", 5))
-                self.new_text = self.source.clone()
+                self.new_text = self.source.save()
 
             with context("the document"):
                 with it(
@@ -91,7 +91,7 @@ with description("a DrawIO Story Map") as self:
         with context("with the first Epic renamed and the DrawIO document re-rendered"):
             with before.each:
                 self.source.epics[0].name = "Epic 1 (renamed)"
-                self.new_text = self.source.clone()
+                self.new_text = self.source.save()
 
             with context("the shape for the first Epic"):
                 with it("should carry the new name as its label"):
@@ -100,7 +100,7 @@ with description("a DrawIO Story Map") as self:
         with context("with a Epic deleted and the DrawIO document re-rendered"):
             with before.each:
                 self.source.epics[0].epics.pop(0)
-                self.new_text = self.source.clone()
+                self.new_text = self.source.save()
 
             with context("the document"):
                 with it(
@@ -112,7 +112,7 @@ with description("a DrawIO Story Map") as self:
     with context("that has been rendered and parsed back without edits"):
         with before.each:
             self.original = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
-            self.parsed = self.drawio.load(self.original.clone())
+            self.parsed = self.drawio.load(self.original.save())
 
         with it("should preserve Story structure - scenarios are NOT embedded in the story-map view"):
             first_story = self.parsed.epics[0].epics[0].stories[0]
@@ -120,7 +120,7 @@ with description("a DrawIO Story Map") as self:
 
         with it("should preserve the actor shown above a Story"):
             self.original.epics[0].epics[0].stories[0].actors = ["Customer"]
-            parsed = self.drawio.load(self.original.clone())
+            parsed = self.drawio.load(self.original.save())
             expect(parsed.epics[0].epics[0].stories[0].actors).to(
                 equal(["Customer"])
             )
@@ -132,7 +132,7 @@ with description("a DrawIO Story Map") as self:
             first_sub_epic = self.original.epics[0].epics[0]
             first_sub_epic.append_story(DrawIOStory("Story 1.1.2", 2, StoryType.USER))
             first_sub_epic.stories[1].actors = ["Customer"]
-            tree = ET.fromstring(self.original.clone())
+            tree = ET.fromstring(self.original.save())
             root = tree.find(".//root")
             cells = list(root)[2:]
             for cell in cells:
@@ -236,7 +236,7 @@ with description("a DrawIO Story Map") as self:
             compose.append_epic(extras)
             epic.append_epic(compose)
             self.source.append_epic(epic)
-            self.text = self.source.clone()
+            self.text = self.source.save()
             self.tree = ET.fromstring(self.text)
             self.row_pitch = SUBEPIC_HEIGHT + SUBEPIC_DEPTH_GAP
 
@@ -307,7 +307,7 @@ with description("a DrawIO Story Map") as self:
             epic.append_epic(compose)
             epic.append_epic(approve)
             self.source.append_epic(epic)
-            self.text = self.source.clone()
+            self.text = self.source.save()
             self.tree = ET.fromstring(self.text)
 
         with it("should render * estimate labels below sub-epics beside stories"):

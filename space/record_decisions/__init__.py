@@ -1,4 +1,1 @@
-"""record_decisions — RecordDecisions toolset."""
-from space.record_decisions.record_decisions import RecordDecisions
-
-__all__ = ["RecordDecisions"]
+"""Record decisions: offer and write Context Decision Records for a session (record_decisions.py)."""

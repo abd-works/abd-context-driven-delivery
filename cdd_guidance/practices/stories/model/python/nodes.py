@@ -78,13 +78,7 @@ class PythonStory(CodeStory):
     @classmethod
     def load(cls, content: str, story_slug: str) -> "PythonStory":
         name_match = re.search(r'with story\("([^"]+)"\)', content)
-        story_name = (
-            name_match.group(1).strip()
-            if name_match
-            else story_slug.replace("-", " ").title()
-        )
-        story_name = re.sub(r"\s*\(tier-neutral\)\.?\s*$", "", story_name).strip()
-        story = cls(story_name, 1)
+        story = cls(cls.name_read(name_match.group(1) if name_match else None, story_slug), 1)
         actor_match = re.search(r"^# Actor:\s*(.+)$", content, re.MULTILINE)
         if actor_match:
             story.actors = [actor_match.group(1).strip()]

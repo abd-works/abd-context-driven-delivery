@@ -1,6 +1,7 @@
 """MCP mark, install, and runtime — one destination packager."""
 from __future__ import annotations
 
+import asyncio
 import importlib
 import json
 import logging
@@ -22,6 +23,7 @@ from mcp.server.models import InitializationOptions
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
 from harness.installation.destination import Destination, Installation, data_of
 from harness.mcp.restart_gate import RestartGate
+from harness.mcp.tool_calls import StillRunning, ToolCalls, ToolRequest
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
@@ -76,6 +78,16 @@ class McpStandupFailed(Exception):
         super().__init__(message)
         self.operation = operation
         self.host = host
+        self.cause = cause
+
+
+class McpConfigUnreadable(Exception):
+    """An IDE config file that cdd edits exists but is not readable JSON. cdd leaves it as it is rather than write over
+    whatever else it holds."""
+
+    def __init__(self, path: Path, cause: BaseException) -> None:
+        super().__init__(f"{path} is not readable JSON ({cause}); fix or remove it, then install again")
+        self.path = path
         self.cause = cause
 
 
@@ -216,10 +228,12 @@ class McpInstallation(Installation):
         """Let Claude Code call every ``cdd`` tool without a prompt. The user's settings file
         holds their own permissions too, so add the one entry and never track the file for clean."""
         try:
-            data = json.loads(settings.read_text(encoding="utf-8")) if settings.is_file() else {}
-        except (OSError, json.JSONDecodeError):
+            data = self._config_json(settings, {})
+        except McpConfigUnreadable as unreadable:
+            logger.warning("Claude Code will ask before every cdd tool call: %s", unreadable)
             return
         if not isinstance(data, dict):
+            logger.warning("Claude Code will ask before every cdd tool call: %s does not hold a JSON object", settings)
             return
         permissions = data.setdefault("permissions", {})
         allow = permissions.setdefault("allow", [])
@@ -234,8 +248,9 @@ class McpInstallation(Installation):
         Code, so it goes; the project's other servers stay."""
         project_config = self._project_root() / ".mcp.json"
         try:
-            data = json.loads(project_config.read_text(encoding="utf-8")) if project_config.is_file() else None
-        except (OSError, json.JSONDecodeError):
+            data = self._config_json(project_config, None)
+        except McpConfigUnreadable as unreadable:
+            logger.warning("a cdd entry in the project's config may still outrank the cdd plugin: %s", unreadable)
             return
         servers = data.get("mcpServers") if isinstance(data, dict) else None
         if not isinstance(servers, dict) or "cdd" not in servers:
@@ -250,9 +265,12 @@ class McpInstallation(Installation):
         """Claude Code runs a user-level entry's headersHelper in ``~/.claude`` for every chat, so the entry names no
         chat's project; the cdd plugin replaces it. ``~/.claude.json`` holds the app's own state too, so only ``cdd`` goes."""
         user = self.user_config
+        if user is None:
+            return
         try:
-            data = json.loads(user.path.read_text(encoding="utf-8")) if user is not None and user.path.is_file() else None
-        except (OSError, json.JSONDecodeError):
+            data = self._config_json(user.path, None)
+        except McpConfigUnreadable as unreadable:
+            logger.warning("a cdd entry in the user's config may still outrank the cdd plugin: %s", unreadable)
             return
         servers = data.get("mcpServers") if isinstance(data, dict) else None
         if not isinstance(servers, dict) or "cdd" not in servers:
@@ -286,10 +304,10 @@ class McpInstallation(Installation):
 
     def _has_cdd_entry(self, dest: Path, manifest: dict[str, Any]) -> bool:
         """Rewriting ``~/.claude.json`` makes Claude Code reconnect cdd in every open chat, so an entry already in
-        place is left alone."""
+        place is left alone. An unreadable config has no entry in place; writing it then fails by name."""
         try:
-            existing = json.loads(dest.read_text(encoding="utf-8")) if dest.is_file() else {}
-        except (OSError, json.JSONDecodeError):
+            existing = self._config_json(dest, {})
+        except McpConfigUnreadable:
             return False
         key = next(iter(manifest))
         servers = existing.get(key) if isinstance(existing, dict) else None
@@ -297,16 +315,23 @@ class McpInstallation(Installation):
 
     def _merged_with_other_servers(self, dest: Path, manifest: dict[str, Any]) -> dict[str, Any]:
         """The MCP config is shared with other servers (and, in ``~/.claude.json``, the IDE's own
-        state); replace only ``cdd``."""
-        try:
-            existing = json.loads(dest.read_text(encoding="utf-8")) if dest.is_file() else {}
-        except (OSError, json.JSONDecodeError):
-            existing = {}
+        state); replace only ``cdd``. A config that cannot be read raises ``McpConfigUnreadable``, because writing it
+        anyway would drop every other server it names."""
+        existing = self._config_json(dest, {})
         merged = dict(existing) if isinstance(existing, dict) else {}
         key = next(iter(manifest))
         servers = merged.get(key)
         merged[key] = {**(servers if isinstance(servers, dict) else {}), **manifest[key]}
         return merged
+
+    def _config_json(self, path: Path, missing: Any) -> Any:
+        """The JSON in ``path``, or ``missing`` when there is no such file."""
+        if not path.is_file():
+            return missing
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise McpConfigUnreadable(path, error) from error
 
     def _project_root(self) -> Path:
         path = Path(self.path)
@@ -603,6 +628,7 @@ class McpHost:
         self._runtimes: dict[Path, McpServer] = {runtime.project: runtime}
         self._runtimes_lock = threading.Lock()
         self._restart_gate = RestartGate()
+        self._tool_calls = ToolCalls()
         self._server = _CddProtocolServer("cdd")
         self._register_handlers()
 
@@ -692,28 +718,25 @@ class McpHost:
             if resolved in _SYNC_DISPATCH_TOOLS:
                 value = self._dispatch_reporting(name, arguments, None, project)
             else:
-                # Dispatch off the event loop. A synchronous tool call blocks
-                # stdin and stdout, and the client then waits until its timeout.
-                # A call that is still running after the limit is a failed call.
-                timeout = _LONG_CALL_TIMEOUT_SECONDS.get(
-                    resolved, _CALL_TIMEOUT_SECONDS
-                )
-                reporter = self._progress_reporter()
-                try:
-                    with anyio.fail_after(timeout):
-                        value = await anyio.to_thread.run_sync(
-                            self._dispatch_reporting, name, arguments, reporter, project
-                        )
-                except TimeoutError:
-                    return self._content_blocks(
-                        f"TimeoutError: {name} exceeded {timeout} seconds"
-                    )
+                value = await self._dispatch_off_loop(name, resolved, arguments, project)
             if resolved == BUILTIN_RESTART_TOOL:
                 await self._announce_tool_list_changed()
             return self._content_blocks(value)
         except Exception as error:
             logger.exception("MCP tool %s failed", name)
             return self._content_blocks(f"{type(error).__name__}: {error}")
+
+    async def _dispatch_off_loop(
+        self, name: str, resolved: str, arguments: dict[str, object] | None, project: Path | None
+    ) -> object:
+        """Run the call on a worker thread, because a synchronous call on the event loop holds every other chat's
+        requests. A call still running at its time limit keeps running and is reported as still running, not failed."""
+        seconds = _LONG_CALL_TIMEOUT_SECONDS.get(resolved, _CALL_TIMEOUT_SECONDS)
+        request = ToolRequest(resolved, project, arguments, seconds)
+        answer = await self._tool_calls.run(
+            request, lambda reporter: self._dispatch_reporting(name, arguments, reporter, project), self._progress_reporter()
+        )
+        return answer.message if isinstance(answer, StillRunning) else answer
 
     async def _announce_tool_list_changed(self) -> None:
         """A restart can add or drop tools, so the client is told to list them again."""
@@ -832,11 +855,13 @@ class McpHost:
         """Answer every chat over HTTP on ``listener``, which ``daemon`` claimed, until the process is stopped."""
         import uvicorn
 
+        from harness.mcp.listening_loop import ListeningLoop
+
         self._bind_as_serving()
         daemon.publish(self._runtime.repo)
         try:
-            config = uvicorn.Config(self.http_app(daemon.port), log_level="warning")
-            uvicorn.Server(config).run(sockets=[listener])
+            server = uvicorn.Server(uvicorn.Config(self.http_app(daemon.port), log_level="warning"))
+            asyncio.run(server.serve(sockets=[listener]), loop_factory=ListeningLoop(server).new_event_loop)
         finally:
             daemon.withdraw()
             self._unbind_as_serving()

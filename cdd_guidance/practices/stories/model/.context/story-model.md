@@ -11,7 +11,7 @@ story_model = StoryModelFactory.load(path)
 # practices/stories/model
 
 - **Purpose:** Keep stakeholder behaviour as one story model — epics, stories, and increments, then scenarios and steps — so a markdown file, a diagram, and a test file stay the same hierarchy every later fidelity reads. A diagram channel writes that hierarchy as a story map. A link to clean engineering is a graph edge recorded at load time. A later channel reads that edge from the loaded graph.
-- **Seam (terms):** StoryNode, StoryModelFactory, StoryModel, Epic, Increment, Story, StoryType, Background, Scenario, Step, StepType, Example, MiroApiClient
+- **Seam (terms):** StoryNode, StoryModelFactory, StoryModel, Epic, Increment, Story, StoryType, Background, Scenario, Step, StepType, Example
 - **Dependencies (one-way):** story loading reads clean engineering nodes that are already on the graph when cross-practice edges are built. The base factory does not load a class model.
 
 ## StoryNode
@@ -511,16 +511,6 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 - place(side: str, destination: DiagramStoryNode): None
 	// story cell under its epic
 
-## MiroApiClient
-
-The Miro REST API. `MiroStoryModel.upload` posts shapes through `create_shape`. `clear` deletes by id. `clear_story_map` lists the board and deletes shapes whose fill this model paints.
-
-+ create(token: str): MiroApiClient
-	// token, else MIRO_TOKEN, else ~/.miro-token, else .cursor/miro-token.txt
-+ create_shape(board_id: str, x: float, y: float, w: float, h: float, fill: str, stroke: str, stroke_width: int, content: str, rx: int, font_size: int): dict
-+ delete_shape(board_id: str, shape_id: str): None
-+ list_shapes(board_id: str): list
-
 ## MiroStoryNode : DiagramStoryNode
 
 + slug(): str
@@ -529,11 +519,8 @@ The Miro REST API. `MiroStoryModel.upload` posts shapes through `create_shape`. 
 	// id, x, y, w, h, rx, fill, stroke, stroke_width, content, role, font_size
 	// save writes that dict as a rect: data-role, data-content, and data-actor
 	// load reads those attributes back into the node
-	// upload turns the same dict into a board box
 + shapes(): list
 	// this shape, then each child's shapes. A story adds the actor shape when the actor changes
-+ fills(): set
-	// the fill colors this node paints. A board clear finds story-map shapes by these fills
 + matches(role: str): bool
 	// data-role equals this node's role. Load uses that to choose an epic, a nested epic, or a story
 
@@ -552,11 +539,6 @@ The Miro REST API. `MiroStoryModel.upload` posts shapes through `create_shape`. 
 - has_more_increment(): bool
 - get_next_increment_from_file(): MiroIncrement
 + save(): str
-+ upload(board_id: str, client: MiroApiClient): dict
-	// each shape goes to the board through client.create_shape. Miro places a shape by its centre
-+ clear(board_id: str, client: MiroApiClient, miro_ids: list[str]): int
-+ clear_story_map(board_id: str, client: MiroApiClient): int
-	// list_shapes, then delete the shapes whose fill this model paints
 
 ## MiroIncrement : DiagramIncrement, MiroStoryNode
 

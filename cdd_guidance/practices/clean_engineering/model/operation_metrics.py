@@ -132,12 +132,13 @@ def bare_catch_in_text(text: str) -> bool:
 
 
 def swallowing_catch_in_text(text: str) -> bool:
+    """An empty catch, or one that hands back a fallback value without throwing again."""
     for match in _CATCH.finditer(text):
         catch_body = _brace_body(text, match.end() - 1)
         if catch_body is None:
             continue
         stripped = catch_body.strip()
-        if stripped and stripped not in {";", "pass", "// ignore", "/* ignore */"}:
+        if stripped and stripped not in {";", "pass", "// ignore", "/* ignore */"} and not _returns_fallback(stripped):
             continue
         return True
     for match in _PY_EXCEPT.finditer(text):
@@ -145,6 +146,15 @@ def swallowing_catch_in_text(text: str) -> bool:
         if re.match(r"^\s*pass\b", tail, re.M):
             return True
     return False
+
+
+_THROW = re.compile(r"\bthrow\b")
+# The catch ends by handing back a stand-in value, so the caller never learns the call failed.
+_FALLBACK_RETURN = re.compile(r"\breturn\s*(?:null|undefined|false|true|\[\s*\]|\{\s*\}|''|\"\"|-?\d+)?\s*;?\s*$")
+
+
+def _returns_fallback(catch_body: str) -> bool:
+    return _THROW.search(catch_body) is None and _FALLBACK_RETURN.search(catch_body) is not None
 
 
 def unnamed_literal_numbers_in_text(text: str) -> list[str]:
@@ -210,6 +220,24 @@ def apply_python_function_metrics(operation: "Operation", node: ast.FunctionDef 
     operation.unnamed_literal_numbers = _python_unnamed_numbers(node)
     operation.narrative_comment_lines = 0
     operation.peer_private_access = _python_peer_private_access(node)
+    operation.packed_parameters = _python_packed_parameters(node)
+
+
+def _python_packed_parameters(node: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, int]:
+    """Each parameter that carries several values, with how many: a tuple the body unpacks (``x, y = rest``), and a
+    ``*args`` the parser leaves out of the parameter list. A packed tuple hides real parameters from the count."""
+    names = {arg.arg for arg in node.args.args + node.args.kwonlyargs}
+    packed: dict[str, int] = {}
+    if node.args.vararg is not None:
+        packed[node.args.vararg.arg] = 1
+        names.add(node.args.vararg.arg)
+    for child in ast.walk(node):
+        if not isinstance(child, ast.Assign) or not isinstance(child.value, ast.Name) or child.value.id not in names:
+            continue
+        for target in child.targets:
+            if isinstance(target, (ast.Tuple, ast.List)):
+                packed[child.value.id] = max(packed.get(child.value.id, 0), len(target.elts))
+    return packed
 
 
 def _python_peer_private_access(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
@@ -270,19 +298,35 @@ def _python_control_flow_depth(node: ast.AST) -> int:
 
 
 def _python_except_flags(node: ast.AST) -> tuple[bool, bool]:
+    """(catches everything, swallows a failure). A bare ``except`` catches everything. So does ``except Exception``
+    that never raises again: it returns or substitutes a fallback for every failure, the broken invariant included."""
     bare = False
     swallow = False
     for child in ast.walk(node):
         if not isinstance(child, ast.ExceptHandler):
             continue
-        if child.type is None:
-            bare = True
-        body = child.body
-        if len(body) == 1 and isinstance(body[0], ast.Pass):
-            swallow = True
-        elif not body:
-            swallow = True
+        reraises = any(isinstance(inner, ast.Raise) for inner in ast.walk(child))
+        catch_all = child.type is None or (_catches_every_exception(child.type) and not reraises)
+        bare = bare or catch_all
+        swallow = swallow or _handler_ignores(child.body) or (catch_all and not reraises)
     return bare, swallow
+
+
+_CATCH_ALL_TYPES = frozenset({"Exception", "BaseException"})
+
+
+def _catches_every_exception(caught: ast.expr) -> bool:
+    if isinstance(caught, ast.Tuple):
+        return any(_catches_every_exception(element) for element in caught.elts)
+    return isinstance(caught, ast.Name) and caught.id in _CATCH_ALL_TYPES
+
+
+def _handler_ignores(body: list[ast.stmt]) -> bool:
+    """An empty handler, or one that only says ``pass`` or ``...``."""
+    return all(
+        isinstance(stmt, ast.Pass) or (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant))
+        for stmt in body
+    )
 
 
 def _python_unnamed_numbers(node: ast.AST) -> list[str]:

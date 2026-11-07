@@ -3,7 +3,7 @@
 // Seed: state the cdd server owns, the TicketData and BoardData the Python Ticket and Board would report. A Given sets
 // it on the stubbed server (cdd-stub.ts), never on the pane.
 // Interaction: what a person types into the chat bar or reads from it, such as a new session's name.
-import type { BoardData, ColumnData } from '@cdd/harness/kanban/board'
+import type { BoardData, ColumnData, PracticeGuidanceData } from '@cdd/harness/kanban/board'
 import type { ActionStatesData, FidelityProgressData } from '@cdd/harness/kanban/fidelity-progress'
 import type { SessionData, TicketData } from '@cdd/harness/kanban/ticket'
 import type { PracticeSessionOutputData } from '@cdd/space/session/practice-session-output'
@@ -25,8 +25,9 @@ const ROOTS: Record<string, string> = { stories: 'harness/chat-ui/.context', ux:
 
 // Seed: the practice whose slug starts a fidelity's slug, such as clean_engineering for clean-engineering-model.
 const practiceOf = (slug: string): string => PRACTICES.find(practice => slug.startsWith(`${practice.replace('_', '-')}-`)) ?? ''
-// Seed: a fidelity's own name, as Python names it: story_map for stories-story-map.
-const fidelityNameOf = (slug: string): string => slug.slice(practiceOf(slug).length + 1).replace(/-/g, '_')
+// Seed: each practice as Board.practices reports it; a fidelity's slug begins with its practice's slug.
+const SHORT_NAMES: Record<string, [string, string]> = { stories: ['Stories', '#6BCB77'], ddd: ['DDD', '#6C5CE7'], ux: ['UX', '#E84393'], clean_engineering: ['CE', '#4FC3F7'], bdd: ['BDD', '#00B894'] }
+const practiceData = (key: string): PracticeGuidanceData => ({ key, slug: key.replace('_', '-'), short_name: SHORT_NAMES[key][0], colour: SHORT_NAMES[key][1], fidelities: EVERY_FIDELITY.filter(slug => practiceOf(slug) === key) })
 
 // Seed: one fidelity's progress as the Python FidelityProgress reports it. Its next action is satisfy while it has
 // violations, else the first of generate, validate and review not done, nothing once it is done.
@@ -82,13 +83,13 @@ const column = (name: string, tickets: TicketData[]): ColumnData => {
   return {
     name,
     in_progress: tickets.filter(ticket => ticket.column === name),
-    ...(work.length ? { work_required: work, fidelities: Object.fromEntries(work.map(slug => [slug, fidelityNameOf(slug)])), default_formats: { 'stories-scenarios': 'typescript', 'clean-engineering-model': 'typescript' } } : {}),
+    ...(work.length ? { work_required: work, default_formats: { 'stories-scenarios': 'typescript', 'clean-engineering-model': 'typescript' } } : {}),
   }
 }
 
 // Seed: the board as board.show returns it, each ticket in the column it names.
 export function boardOf(active: string | null, ...tickets: TicketData[]): BoardData {
-  return { project: 'abd-context-driven-delivery', active, columns: [{ name: 'Backlog', items: [] }, ...STAGE_ORDER.map(name => column(name, tickets))] }
+  return { project: 'abd-context-driven-delivery', practices: PRACTICES.map(practiceData), active, columns: [{ name: 'Backlog', items: [] }, ...STAGE_ORDER.map(name => column(name, tickets))] }
 }
 
 // Interaction: the name a person types in the session list's field.

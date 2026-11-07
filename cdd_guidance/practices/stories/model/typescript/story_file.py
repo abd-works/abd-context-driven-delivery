@@ -1,4 +1,4 @@
-"""TypeScript story file paths. create and load live on TypeScriptStory.
+"""TypeScript story file paths. TypeScriptStory writes and reads the story files.
 
 The step library folder is the one setting for where the shared story-test.ts sits:
 the file the render writes and the import every story file uses both come from it.
@@ -26,8 +26,3 @@ def story_test_file_path(story_test_folder: str) -> str:
 
 DEFAULT_STORY_TEST_IMPORT = story_test_import_path(default_story_test_folder("tests"))
 
-
-def render_story_file(story, *, story_test_import_path: str = DEFAULT_STORY_TEST_IMPORT) -> str:
-    from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptStory
-
-    return TypeScriptStory.create(story, story_test_import_path=story_test_import_path)
