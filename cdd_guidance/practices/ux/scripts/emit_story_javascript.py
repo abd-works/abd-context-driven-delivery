@@ -7,7 +7,8 @@ import re
 import sys
 from pathlib import Path
 
-_REPO = Path(__file__).resolve().parents[2]
+# The repository root, so this script imports the stories model by its one package name, as every other caller does.
+_REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
@@ -50,9 +51,9 @@ def dict_to_story(data: dict) -> Story:
             scenario.steps.append(Step(text, StepType.THEN, order))
     if flow.get("examples"):
         scenario.is_outline = True
-        for index, row in enumerate(flow["examples"], start=1):
-            label = str(row.get("example") or row.get("name") or f"example-{index}")
-            scenario.examples.append(Example(label, index, dict(row)))
+        for index, example in enumerate(flow["examples"], start=1):
+            label = str(example.get("example") or example.get("name") or f"example-{index}")
+            scenario.examples.append(Example(label, index, dict(example)))
     story.scenarios.append(scenario)
     return story
 

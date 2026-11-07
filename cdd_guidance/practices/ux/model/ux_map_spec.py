@@ -12,8 +12,12 @@ if str(_REPO) not in sys.path:
 
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.ux.model.nodes import Screen
-from cdd_guidance.practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.nodes import Control, Interaction, Region, Screen, Transition
+from cdd_guidance.practices.ux.model.ux_map import ScreenNotOnMap, UxMap
+
+
+def edge_pairs(graph, kind):
+    return [(edge.parent.name, edge.child.name) for edge in graph.practice("ux").edges.get(kind, [])]
 
 
 with description("a UxMap"):
@@ -31,10 +35,8 @@ with description("a UxMap"):
             expect(removed.name).to(equal("Catalog"))
             expect(len(self.ux_map.screens)).to(equal(1))
 
-        with it("should raise KeyError when the screen is missing"):
-            expect(lambda: self.ux_map.find_screen("Missing")).to(
-                raise_error(KeyError)
-            )
+        with it("should say the screen is not on the map when it is missing"):
+            expect(lambda: self.ux_map.find_screen("Missing")).to(raise_error(ScreenNotOnMap))
 
     with context("that holds story references and screen story names"):
         with before.each:
@@ -78,3 +80,49 @@ with description("a ux map on a graph"):
     with it("should open the same map from the graph"):
         restored = UxMap.create(self.graph)
         expect(restored.screens[0].name).to(equal("Catalog"))
+
+    with context("with a screen that holds regions, controls, and interactions"):
+        with before.each:
+            self.list_region = Region("product list", 0, "body")
+            self.browse = Control("Browse", 0, "button")
+            self.open_cart = Interaction("open cart", 0, "click")
+            self.browse.append_interaction(self.open_cart)
+            self.list_region.append_control(self.browse)
+            self.catalog.append_region(self.list_region)
+
+        with it("should keep the region on the map graph"):
+            expect(self.list_region.graph).to(be(self.graph))
+
+        with it("should keep the control on the map graph"):
+            expect(self.browse.graph).to(be(self.graph))
+
+        with it("should keep the interaction on the map graph"):
+            expect(self.open_cart.graph).to(be(self.graph))
+
+        with it("should record regions, controls, and interactions"):
+            expect(edge_pairs(self.graph, "regions") + edge_pairs(self.graph, "controls")
+                   + edge_pairs(self.graph, "interactions")).to(equal([
+                ("Catalog", "product list"), ("product list", "Browse"), ("Browse", "open cart"),
+            ]))
+
+        with it("should record that each belongs to its owner"):
+            expect(edge_pairs(self.graph, "belongsTo")).to(contain(
+                ("product list", "Catalog"), ("Browse", "product list"), ("open cart", "Browse"),
+            ))
+
+    with context("with a transition between two screens"):
+        with before.each:
+            self.cart = Screen("Cart", 1)
+            self.ux_map.append_screen(self.cart)
+            self.opens_cart = Transition("opens cart", 0, self.catalog, self.cart)
+            self.ux_map.transitions.append(self.opens_cart)
+
+        with it("should keep the transition on the map graph"):
+            expect(self.opens_cart.graph).to(be(self.graph))
+
+        with it("should record the transition on the map"):
+            expect(edge_pairs(self.graph, "transitions")).to(equal([("UxMap", "opens cart")]))
+
+        with it("should keep its link when a screen is renamed"):
+            self.cart.name = "Basket"
+            expect(self.opens_cart.to_screen.name).to(equal("Basket"))

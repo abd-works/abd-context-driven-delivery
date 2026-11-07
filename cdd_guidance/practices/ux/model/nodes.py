@@ -1,14 +1,41 @@
-"""Concrete UX node types: Screen, Region, Control, and peers."""
+"""Concrete UX node types: Screen, Region, Control, and peers.
+
+Every node is built on, or moved onto, its map's graph: the lists that hold a node's children record the graph edge
+when a child is appended. Links from one screen to another hold the Screen itself, so renaming a screen keeps them.
+"""
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any, Iterable, List, Mapping, Optional
 
 from harness.agent_tools.name import Name
+from harness.graph.bound_node import BoundChildren
 from harness.graph.graph import Graph
 
-from .update_report import ChildCollectionPair
 from .ux_node import UxNode
+
+
+@dataclass(frozen=True)
+class StoryStep:
+    """A story step a control runs in the mockup: its kind (given, when, then) and the step text Stories wrote."""
+
+    kind: str = ""
+    label: str = ""
+
+    @classmethod
+    def from_value(cls, value: "StoryStep | Mapping[str, Any]") -> "StoryStep":
+        """A step from a file's ``{kind, label}`` object, or the step itself."""
+        if isinstance(value, StoryStep):
+            return value
+        return cls(str(value.get("kind", "") or ""), str(value.get("label", "") or ""))
+
+    def as_dict(self) -> dict:
+        return {"kind": self.kind, "label": self.label}
+
+
+def story_steps_from(values: Iterable["StoryStep | Mapping[str, Any]"] | None) -> List[StoryStep]:
+    return [StoryStep.from_value(value) for value in values or ()]
 
 
 class Interaction(UxNode):
@@ -20,29 +47,13 @@ class Interaction(UxNode):
         sequential_order: int,
         trigger: str = "",
         effect: str = "",
-        destination_screen: str = "",
+        destination: Optional["Screen"] = None,
+        graph: Optional[Graph] = None,
     ) -> None:
-        super().__init__(name, sequential_order)
+        super().__init__(name, sequential_order, graph)
         self.trigger = trigger or name
         self.effect = effect
-        self.destination_screen = destination_screen
-
-    def update_self(self, source: "Interaction") -> None:
-        self.name = source.name
-        self.sequential_order = source.sequential_order
-        self.trigger = source.trigger
-        self.effect = source.effect
-        self.destination_screen = source.destination_screen
-
-    def child_collections(self, source: "Interaction") -> List[ChildCollectionPair]:
-        return []
-
-    def snapshot_fields(self) -> dict:
-        return {
-            "trigger": self.trigger,
-            "effect": self.effect,
-            "destination_screen": self.destination_screen,
-        }
+        self.destination = destination
 
 
 class Control(UxNode):
@@ -55,60 +66,27 @@ class Control(UxNode):
         control_type: str = "",
         label: str = "",
         bound_field: str = "",
+        graph: Optional[Graph] = None,
     ) -> None:
-        super().__init__(name, sequential_order)
+        super().__init__(name, sequential_order, graph)
         self.control_type = control_type
         self.label = label or name
         self.bound_field = bound_field
         self.states: List[str] = []
-        self.interactions: List[Interaction] = []
-
-    def update_self(self, source: "Control") -> None:
-        self.name = source.name
-        self.sequential_order = source.sequential_order
-        self.control_type = source.control_type
-        self.label = source.label
-        self.bound_field = source.bound_field
-        self.states = list(source.states)
-
-    def child_collections(self, source: "Control") -> List[ChildCollectionPair]:
-        return [
-            ChildCollectionPair(
-                self_children=self.interactions,
-                source_children=source.interactions,
-                load=self.load_interaction,
-            )
-        ]
-
-    def load_interaction(self, source: Interaction) -> Interaction:
-        return Interaction(
-            source.name,
-            source.sequential_order,
-            source.trigger,
-            source.effect,
-            source.destination_screen,
-        )
+        self.interactions = BoundChildren(self, "interactions")
 
     def append_interaction(self, interaction: Interaction) -> None:
         self.interactions.append(interaction)
         self._renumber(self.interactions)
 
-    def snapshot_fields(self) -> dict:
-        return {
-            "control_type": self.control_type,
-            "label": self.label,
-            "bound_field": self.bound_field,
-            "states": list(self.states),
-        }
-
 
 class StoryDemoControl(Control):
-    """Control subtype for Story Demo Play / Interactive bindings.
+    """A control that runs story steps in the Story Demo's Play and Interactive modes.
 
-    Interactive extras (domain-agnostic - not catalog/cart-specific):
-    - set_input - DOM -> scenario.input(key) (list pick or host)
-    - item_story_steps - shared When on a bound-list host (rows fill {name}/{product})
-    - item_value / item_label - which item field is the pick value / row label template
+    Interactive extras (domain-agnostic, not catalog or cart specific):
+    - set_input: the scenario input this control's value fills (a list pick or the control itself)
+    - item_story_steps: the When each item of a bound list runs (its labels fill {name} / {product})
+    - item_value / item_label: which item field is the picked value, and the template each item shows
     """
 
     _semantic_type_name = "StoryDemoControl"
@@ -120,125 +98,44 @@ class StoryDemoControl(Control):
         control_type: str = "",
         label: str = "",
         bound_field: str = "",
-        story_steps: List[Dict[str, Any]] | None = None,
+        story_steps: Iterable["StoryStep | Mapping[str, Any]"] | None = None,
         set_input: str = "",
-        item_story_steps: List[Dict[str, Any]] | None = None,
+        item_story_steps: Iterable["StoryStep | Mapping[str, Any]"] | None = None,
         item_value: str = "",
         item_label: str = "",
+        graph: Optional[Graph] = None,
     ) -> None:
-        super().__init__(name, sequential_order, control_type, label, bound_field)
-        # [{ "kind": "given"|"when"|"then", "label": "..." }, ...]
-        self.story_steps: List[Dict[str, Any]] = [
-            {"kind": s.get("kind", ""), "label": s.get("label", "")}
-            for s in (story_steps or [])
-        ]
+        super().__init__(name, sequential_order, control_type, label, bound_field, graph)
+        self.story_steps: List[StoryStep] = story_steps_from(story_steps)
         self.set_input = set_input or ""
-        self.item_story_steps: List[Dict[str, Any]] = [
-            {"kind": s.get("kind", ""), "label": s.get("label", "")}
-            for s in (item_story_steps or [])
-        ]
+        self.item_story_steps: List[StoryStep] = story_steps_from(item_story_steps)
         self.item_value = item_value or ""
         self.item_label = item_label or ""
-
-    def update_self(self, source: "Control") -> None:
-        super().update_self(source)
-        if isinstance(source, StoryDemoControl):
-            self.story_steps = [
-                {"kind": s.get("kind", ""), "label": s.get("label", "")}
-                for s in source.story_steps
-            ]
-            self.set_input = source.set_input
-            self.item_story_steps = [
-                {"kind": s.get("kind", ""), "label": s.get("label", "")}
-                for s in source.item_story_steps
-            ]
-            self.item_value = source.item_value
-            self.item_label = source.item_label
-
-    def snapshot_fields(self) -> dict:
-        fields = super().snapshot_fields()
-        fields["story_steps"] = [
-            {"kind": s.get("kind", ""), "label": s.get("label", "")}
-            for s in self.story_steps
-        ]
-        fields["set_input"] = self.set_input
-        fields["item_story_steps"] = [
-            {"kind": s.get("kind", ""), "label": s.get("label", "")}
-            for s in self.item_story_steps
-        ]
-        fields["item_value"] = self.item_value
-        fields["item_label"] = self.item_label
-        fields["kind"] = "StoryDemoControl"
-        return fields
 
 
 class Region(UxNode):
     _semantic_type_name = "Region"
 
-    def __init__(self, name: str, sequential_order: int, slot: str = "") -> None:
-        super().__init__(name, sequential_order)
-        self.slot = slot
-        self.controls: List[Control] = []
-
-    def update_self(self, source: "Region") -> None:
-        self.name = source.name
-        self.sequential_order = source.sequential_order
-        self.slot = source.slot
-
-    def child_collections(self, source: "Region") -> List[ChildCollectionPair]:
-        return [
-            ChildCollectionPair(
-                self_children=self.controls,
-                source_children=source.controls,
-                load=self.load_control,
-            )
-        ]
-
-    def load_control(self, source: Control) -> Control:
-        if isinstance(source, StoryDemoControl):
-            child = StoryDemoControl(
-                source.name,
-                source.sequential_order,
-                source.control_type,
-                source.label,
-                source.bound_field,
-                source.story_steps,
-                source.set_input,
-                source.item_story_steps,
-                source.item_value,
-                source.item_label,
-            )
-        else:
-            child = Control(
-                source.name,
-                source.sequential_order,
-                source.control_type,
-                source.label,
-                source.bound_field,
-            )
-        child.states = list(source.states)
-        for interaction in source.interactions:
-            child.append_interaction(
-                Interaction(
-                    interaction.name,
-                    interaction.sequential_order,
-                    interaction.trigger,
-                    interaction.effect,
-                    interaction.destination_screen,
-                )
-            )
-        return child
+    def __init__(self, name: str, sequential_order: int, area: str = "", graph: Optional[Graph] = None) -> None:
+        super().__init__(name, sequential_order, graph)
+        self.area = area
+        self.controls = BoundChildren(self, "controls")
 
     def append_control(self, control: Control) -> None:
         self.controls.append(control)
         self._renumber(self.controls)
 
-    def snapshot_fields(self) -> dict:
-        return {"slot": self.slot}
-
 
 class Screen(UxNode):
+    """One screen of the map.
+
+    Its story links are names written the way Stories keys them: a story by its name, a scenario as
+    ``Story › Scenario``, a step as ``Story › Scenario › Step``. Each story, scenario, and step on the same graph whose
+    key a screen lists records ``shownOn`` that screen, and the screen records ``shows`` each story.
+    """
+
     _semantic_type_name = "Screen"
+    _schema_edge_fields = UxNode._schema_edge_fields | {"story_names", "scenario_names", "step_names"}
 
     def __init__(
         self,
@@ -247,7 +144,7 @@ class Screen(UxNode):
         slug: str = "",
         layout: str = "",
         description: str = "",
-        chrome_of: str = "",
+        chrome_of: Optional["Screen"] = None,
         graph: Optional[Graph] = None,
     ) -> None:
         super().__init__(name, sequential_order, graph)
@@ -263,35 +160,7 @@ class Screen(UxNode):
         self.domain_concepts: List[str] = []
         self.image = ""
         self.prototype = ""
-        self.regions: List[Region] = []
-
-    def update_self(self, source: "Screen") -> None:
-        self.name = source.name
-        self.sequential_order = source.sequential_order
-        self.slug = source.slug
-        self.layout = source.layout
-        self.description = source.description
-        self.chrome_of = source.chrome_of
-        self.inactive_tabs = list(source.inactive_tabs)
-        self.story_names = list(source.story_names)
-        self.scenario_names = list(source.scenario_names)
-        self.step_names = list(source.step_names)
-        self.domain_terms = list(source.domain_terms)
-        self.domain_concepts = list(source.domain_concepts)
-        self.image = source.image
-        self.prototype = source.prototype
-
-    def child_collections(self, source: "Screen") -> List[ChildCollectionPair]:
-        return [
-            ChildCollectionPair(
-                self_children=self.regions,
-                source_children=source.regions,
-                load=self.load_region,
-            )
-        ]
-
-    def load_region(self, source: Region) -> Region:
-        return Region(source.name, source.sequential_order, source.slot)
+        self.regions = BoundChildren(self, "regions")
 
     def append_region(self, region: Region) -> None:
         self.regions.append(region)
@@ -302,57 +171,37 @@ class Screen(UxNode):
 
         Look at the matching `specifications/generic/<layout_id>.md` (or a
         branded sibling folder under `specifications/`, e.g. `abd-works/`)
-        for that layout's slots and append real `Region`s yourself; this no
-        longer auto-seeds placeholder regions from a hardcoded catalog.
+        for that layout's areas and append real `Region`s yourself; this does
+        not seed placeholder regions.
         """
         self.layout = (layout_id or "").strip()
 
     def attach_story_name(self, story_name: str) -> None:
-        if story_name and story_name not in self.story_names:
-            self.story_names.append(story_name)
+        self._attach(self.story_names, story_name)
 
     def attach_scenario_name(self, scenario_name: str) -> None:
         """A scenario this screen shows, named ``Story › Scenario``; the scenario's ``shownOn`` edge follows it."""
-        if scenario_name and scenario_name not in self.scenario_names:
-            self.scenario_names.append(scenario_name)
+        self._attach(self.scenario_names, scenario_name)
 
     def attach_step_name(self, step_name: str) -> None:
         """A step this screen shows, named ``Story › Scenario › Step``; the step's ``shownOn`` edge follows it."""
-        if step_name and step_name not in self.step_names:
-            self.step_names.append(step_name)
+        self._attach(self.step_names, step_name)
 
     def attach_domain_term(self, term: str) -> None:
         if term and term not in self.domain_terms:
             self.domain_terms.append(term)
 
-    def snapshot_fields(self) -> dict:
-        return {
-            "slug": self.slug,
-            "layout": self.layout,
-            "description": self.description,
-            "chrome_of": self.chrome_of,
-            "inactive_tabs": list(self.inactive_tabs),
-            "story_names": list(self.story_names),
-            "scenario_names": list(self.scenario_names),
-            "step_names": list(self.step_names),
-            "domain_terms": list(self.domain_terms),
-            "domain_concepts": list(self.domain_concepts),
-            "image": self.image,
-            "prototype": self.prototype,
-        }
+    def _attach(self, names: List[str], name: str) -> None:
+        if not name or name in names:
+            return
+        names.append(name)
+        self._sync_schema_edges()
 
 
 class UxComponent(UxNode):
-    """First-class UX structural peer on the map (transition, content type, nav)."""
+    """A structural peer of the screens on the map: a transition, a content type, or a nav component."""
 
     _semantic_type_name = "UxComponent"
-
-    def update_self(self, source: "UxComponent") -> None:
-        self.name = source.name
-        self.sequential_order = source.sequential_order
-
-    def child_collections(self, source: "UxComponent") -> List[ChildCollectionPair]:
-        return []
 
 
 class Transition(UxComponent):
@@ -362,77 +211,39 @@ class Transition(UxComponent):
         self,
         name: str,
         sequential_order: int,
-        from_screen: str = "",
-        to_screen: str = "",
+        from_screen: Optional[Screen] = None,
+        to_screen: Optional[Screen] = None,
         trigger: str = "",
         nav_type: str = "action",
+        graph: Optional[Graph] = None,
     ) -> None:
-        super().__init__(name, sequential_order)
+        super().__init__(name, sequential_order, graph)
         self.from_screen = from_screen
         self.to_screen = to_screen
         self.trigger = trigger or name
         self.nav_type = nav_type
 
-    def update_self(self, source: "Transition") -> None:
-        self.name = source.name
-        self.sequential_order = source.sequential_order
-        self.from_screen = source.from_screen
-        self.to_screen = source.to_screen
-        self.trigger = source.trigger
-        self.nav_type = source.nav_type
-
-    def child_collections(self, source: "Transition") -> List[ChildCollectionPair]:
-        return []
-
-    def snapshot_fields(self) -> dict:
-        return {
-            "from_screen": self.from_screen,
-            "to_screen": self.to_screen,
-            "trigger": self.trigger,
-            "nav_type": self.nav_type,
-        }
-
 
 class ContentType(UxComponent):
     _semantic_type_name = "ContentType"
 
-    def __init__(self, name: str, sequential_order: int, hierarchy: str = "") -> None:
-        super().__init__(name, sequential_order)
+    def __init__(
+        self, name: str, sequential_order: int, hierarchy: str = "", graph: Optional[Graph] = None
+    ) -> None:
+        super().__init__(name, sequential_order, graph)
         self.hierarchy = hierarchy
         self.key_actions: List[str] = []
-
-    def update_self(self, source: "ContentType") -> None:
-        self.name = source.name
-        self.sequential_order = source.sequential_order
-        self.hierarchy = source.hierarchy
-        self.key_actions = list(source.key_actions)
-
-    def child_collections(self, source: "ContentType") -> List[ChildCollectionPair]:
-        return []
-
-    def snapshot_fields(self) -> dict:
-        return {"hierarchy": self.hierarchy, "key_actions": list(self.key_actions)}
 
 
 class NavComponent(UxComponent):
     _semantic_type_name = "NavComponent"
 
-    def __init__(self, name: str, sequential_order: int, ux_type: str = "") -> None:
-        super().__init__(name, sequential_order)
+    def __init__(
+        self, name: str, sequential_order: int, ux_type: str = "", graph: Optional[Graph] = None
+    ) -> None:
+        super().__init__(name, sequential_order, graph)
         self.ux_type = ux_type
-        self.destinations: List[str] = []
-
-    def update_self(self, source: "NavComponent") -> None:
-        self.name = source.name
-        self.sequential_order = source.sequential_order
-        self.ux_type = source.ux_type
-        self.destinations = list(source.destinations)
-
-    def child_collections(self, source: "NavComponent") -> List[ChildCollectionPair]:
-        return []
-
-    def snapshot_fields(self) -> dict:
-        return {"ux_type": self.ux_type, "destinations": list(self.destinations)}
+        self.destinations: List[Screen] = []
 
 
 class UxContext(UxNode):
@@ -440,21 +251,7 @@ class UxContext(UxNode):
 
     _semantic_type_name = "UxContext"
 
-    def __init__(self, name: str = "context", sequential_order: int = 0) -> None:
-        super().__init__(name, sequential_order)
+    def __init__(self, name: str = "context", sequential_order: int = 0, graph: Optional[Graph] = None) -> None:
+        super().__init__(name, sequential_order, graph)
         self.notes: List[str] = []
         self.invariants: List[str] = []
-
-    def update_self(self, source: "UxContext") -> None:
-        self.name = source.name
-        self.sequential_order = source.sequential_order
-        self.notes = list(source.notes)
-        self.invariants = list(source.invariants)
-
-    def child_collections(self, source: "UxContext") -> List[ChildCollectionPair]:
-        return []
-
-    def snapshot_fields(self) -> dict:
-        return {"notes": list(self.notes), "invariants": list(self.invariants)}
-
-

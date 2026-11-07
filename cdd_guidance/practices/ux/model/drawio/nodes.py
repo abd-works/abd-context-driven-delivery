@@ -3,7 +3,8 @@
 Render builds CLI state from the UxMap and invokes `drawio_ux.mjs write`.
 Parse prefers the Site Map page for screens/transitions; region titles come
 from the Detailed IA page when present. JSON is still accepted for sideways
-transform tests.
+transform tests. The diagram carries screens, their regions, and transitions;
+layouts, story names, and controls stay in the JSON and HTML formats.
 """
 
 from __future__ import annotations
@@ -23,167 +24,159 @@ from cdd_guidance.practices.ux.model.nodes import Region, Screen, Transition
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 _CLI = Path(__file__).with_name("drawio_ux.mjs")
+# Writing a two-page diagram takes well under a second; a write still running after this has hung.
+_CLI_TIMEOUT_SECONDS = 60
+# A Site Map edge drawn both ways carries both triggers in one label, "there / back".
+_BOTH_WAYS = " / "
+
+
+class DrawioCliMissing(FileNotFoundError):
+    """The vendored drawio-ux command line is not beside this module, so no diagram can be written."""
+
+
+class DrawioCliFailed(RuntimeError):
+    """The drawio-ux command line exited with an error or wrote no diagram."""
+
+
+class DrawioCliTimedOut(DrawioCliFailed):
+    """The drawio-ux command line ran past its timeout and was stopped."""
+
+
+class UnreadableDrawio(ValueError):
+    """The draw.io content is not XML, so it holds no screens to read."""
 
 
 class DrawioUxMap(UxMap):
+    workspace_files = (
+        ".context/information-architecture.drawio",
+        ".context/ia.drawio",
+        "information-architecture.drawio",
+        "ia.drawio",
+        "site-map.drawio",
+        ".context/*.drawio",
+        "*.drawio",
+    )
+    cli_timeout_seconds: float = _CLI_TIMEOUT_SECONDS
+
     def parse(self, content: str) -> UxMap:
         stripped = content.strip()
         if stripped.startswith("{"):
             return JsonUxMap.create().parse(stripped)
-        return self._parse_mxfile(stripped)
+        try:
+            root_element = ET.fromstring(stripped)
+        except ET.ParseError as error:
+            raise UnreadableDrawio(f"draw.io content is not valid XML: {error}") from error
+        return DrawioUxMapReader(type(self).create(), root_element).read()
 
     def render(self, ux_map: UxMap) -> str:
         """Render Detailed IA + Site Map through the vendored drawio-ux CLI."""
         if not _CLI.is_file():
-            raise FileNotFoundError(f"drawio-ux CLI missing: {_CLI}")
-        with tempfile.TemporaryDirectory(prefix="ux-drawio-") as tmp:
-            tmp_path = Path(tmp)
-            out_path = tmp_path / "information-architecture.drawio"
-            state_path = tmp_path / "state.json"
-            state = ux_map_to_cli_state(ux_map, str(out_path))
-            state_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
-            result = subprocess.run(
-                ["node", str(_CLI), "write", str(out_path), str(state_path)],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if result.returncode != 0 or not out_path.is_file():
-                raise RuntimeError(
-                    "drawio-ux write failed:\n"
-                    f"{result.stdout}\n{result.stderr}"
-                )
+            raise DrawioCliMissing(f"drawio-ux CLI missing: {_CLI}")
+        with tempfile.TemporaryDirectory(prefix="ux-drawio-") as folder:
+            out_path = Path(folder) / "information-architecture.drawio"
+            state_path = Path(folder) / "state.json"
+            state_path.write_text(json.dumps(ux_map_to_cli_state(ux_map, str(out_path)), indent=2), encoding="utf-8")
+            self._run_cli(["node", str(_CLI), "write", str(out_path), str(state_path)])
+            if not out_path.is_file():
+                raise DrawioCliFailed(f"drawio-ux write produced no diagram at {out_path}")
             return out_path.read_text(encoding="utf-8")
 
-    @classmethod
-    def from_workspace(cls, root: Path) -> Optional[UxMap]:
-        root = Path(root)
-        loader = cls.create()
-        for candidate in (
-            root / ".context" / "information-architecture.drawio",
-            root / ".context" / "ia.drawio",
-            root / "information-architecture.drawio",
-            root / "ia.drawio",
-            root / "site-map.drawio",
-        ):
-            if candidate.is_file():
-                return loader.parse(candidate.read_text(encoding="utf-8"))
-        matches = sorted((root / ".context").glob("*.drawio")) if (root / ".context").is_dir() else []
-        matches += sorted(root.glob("*.drawio"))
-        if matches:
-            return loader.parse(matches[0].read_text(encoding="utf-8"))
-        return None
-
-    def _parse_mxfile(self, text: str) -> UxMap:
-        ux_map = type(self).create()
+    def _run_cli(self, command: list[str]) -> None:
         try:
-            root_el = ET.fromstring(text)
-        except ET.ParseError:
-            ux_map.context.notes.append("drawio parse failed - invalid XML")
-            return ux_map
+            result = subprocess.run(command, capture_output=True, text=True, check=False,
+                                    timeout=self.cli_timeout_seconds)
+        except subprocess.TimeoutExpired as error:
+            raise DrawioCliTimedOut(f"drawio-ux write ran past {self.cli_timeout_seconds} seconds") from error
+        if result.returncode != 0:
+            raise DrawioCliFailed(f"drawio-ux write failed:\n{result.stdout}\n{result.stderr}")
 
-        site_map = self._diagram_by_name(root_el, "Site Map")
-        detailed = self._diagram_by_name(root_el, "Detailed IA")
-        source = site_map if site_map is not None else root_el
-        self._id_to_screen = self._append_site_screens(ux_map, source)
-        if detailed is not None:
-            self._append_detailed_regions(ux_map, detailed)
-        self._append_transitions(ux_map, source)
-        return ux_map
 
-    def _append_site_screens(self, ux_map: UxMap, source: ET.Element) -> dict[str, Screen]:
-        id_to_screen: dict[str, Screen] = {}
+class DrawioUxMapReader:
+    """Reads one draw.io file into a new map: screens from the Site Map page, then each screen's regions from the
+    Detailed IA page, then the transitions drawn between screens."""
+
+    def __init__(self, ux_map: UxMap, root_element: ET.Element) -> None:
+        self.ux_map = ux_map
+        self.root_element = root_element
+        self._screen_by_cell: dict[str, Screen] = {}
+
+    def read(self) -> UxMap:
+        site_map = self._diagram_named("Site Map")
+        detailed = self._diagram_named("Detailed IA")
+        source = site_map if site_map is not None else self.root_element
+        with self.ux_map.batch_schema_sync():
+            self._read_screens(source)
+            if detailed is not None:
+                self._read_regions(detailed)
+            self._read_transitions(source)
+        return self.ux_map
+
+    def _read_screens(self, source: ET.Element) -> None:
         for cell in source.iter("mxCell"):
             if cell.get("vertex") != "1" or cell.get("parent") != "1":
                 continue
-            name = self._strip_html(cell.get("value", ""))
-            if not name or self._is_annotation(name):
+            name = _plain_text(cell.get("value", ""))
+            if not name or _is_annotation(name):
                 continue
-            screen = Screen(name, len(ux_map.screens))
-            ux_map.append_screen(screen)
-            id_to_screen[cell.get("id", "")] = screen
-        return id_to_screen
+            screen = Screen(name, len(self.ux_map.screens), graph=self.ux_map.graph)
+            self.ux_map.append_screen(screen)
+            self._screen_by_cell[cell.get("id", "")] = screen
 
-    def _append_detailed_regions(self, ux_map: UxMap, detailed: ET.Element) -> None:
-        name_to_screen = {screen.name: screen for screen in ux_map.screens}
-        detailed_ids: dict[str, Screen] = {}
+    def _read_regions(self, detailed: ET.Element) -> None:
+        screen_by_cell = self._detailed_screen_cells(detailed)
         for cell in detailed.iter("mxCell"):
-            if cell.get("vertex") != "1" or cell.get("parent") != "1":
+            screen = screen_by_cell.get(cell.get("parent", ""))
+            if cell.get("vertex") != "1" or screen is None or "strokeColor=none" in cell.get("style", ""):
                 continue
-            title = self._strip_html(cell.get("value", ""))
-            if title in name_to_screen:
-                detailed_ids[cell.get("id", "")] = name_to_screen[title]
-        for cell in detailed.iter("mxCell"):
-            parent = cell.get("parent", "")
-            if cell.get("vertex") != "1" or parent not in detailed_ids:
+            region_name = _plain_text(cell.get("value", ""))
+            if not region_name or _is_annotation(region_name):
                 continue
-            if "strokeColor=none" in cell.get("style", ""):
-                continue
-            region_name = self._strip_html(cell.get("value", ""))
-            if not region_name or self._is_annotation(region_name):
-                continue
-            screen = detailed_ids[parent]
             if any(region.name == region_name for region in screen.regions):
                 continue
-            screen.append_region(Region(region_name, len(screen.regions)))
+            screen.append_region(Region(region_name, len(screen.regions), graph=self.ux_map.graph))
 
-    def _append_transitions(self, ux_map: UxMap, source: ET.Element) -> None:
+    def _detailed_screen_cells(self, detailed: ET.Element) -> dict[str, Screen]:
+        screen_by_name = {screen.name: screen for screen in self.ux_map.screens}
+        found: dict[str, Screen] = {}
+        for cell in detailed.iter("mxCell"):
+            title = _plain_text(cell.get("value", ""))
+            if cell.get("vertex") == "1" and cell.get("parent") == "1" and title in screen_by_name:
+                found[cell.get("id", "")] = screen_by_name[title]
+        return found
+
+    def _read_transitions(self, source: ET.Element) -> None:
         for cell in source.iter("mxCell"):
             if cell.get("edge") != "1":
                 continue
-            src = self._id_to_screen.get(cell.get("source", ""))
-            tgt = self._id_to_screen.get(cell.get("target", ""))
-            if src is None or tgt is None:
+            origin = self._screen_by_cell.get(cell.get("source", ""))
+            target = self._screen_by_cell.get(cell.get("target", ""))
+            if origin is None or target is None:
                 continue
-            trigger = self._strip_html(cell.get("value", "")) or f"{src.name} -> {tgt.name}"
-            self._edge_src = src
-            self._edge_tgt = tgt
-            self._append_edge_transitions(ux_map, trigger)
+            trigger = _plain_text(cell.get("value", "")) or f"{origin.name} -> {target.name}"
+            if _BOTH_WAYS not in trigger:
+                self._append_transition(trigger, origin, target)
+                continue
+            there, back = [part.strip() for part in trigger.split(_BOTH_WAYS, 1)]
+            self._append_transition(there, origin, target)
+            self._append_transition(back, target, origin)
 
-    def _append_edge_transitions(self, ux_map: UxMap, trigger: str) -> None:
-        src = self._edge_src
-        tgt = self._edge_tgt
-        if " / " not in trigger:
-            ux_map.transitions.append(
-                Transition(
-                    trigger,
-                    len(ux_map.transitions),
-                    from_screen=src.name,
-                    to_screen=tgt.name,
-                    trigger=trigger,
-                )
-            )
-            return
-        left, right = [part.strip() for part in trigger.split(" / ", 1)]
-        ux_map.transitions.append(
-            Transition(
-                left,
-                len(ux_map.transitions),
-                from_screen=src.name,
-                to_screen=tgt.name,
-                trigger=left,
-            )
-        )
-        ux_map.transitions.append(
-            Transition(
-                right,
-                len(ux_map.transitions),
-                from_screen=tgt.name,
-                to_screen=src.name,
-                trigger=right,
-            )
+    def _append_transition(self, trigger: str, origin: Screen, target: Screen) -> None:
+        self.ux_map.transitions.append(
+            Transition(trigger, len(self.ux_map.transitions), origin, target, trigger, graph=self.ux_map.graph)
         )
 
-    def _diagram_by_name(self, root_el: ET.Element, name: str) -> Optional[ET.Element]:
-        for diagram in root_el.findall("diagram"):
+    def _diagram_named(self, name: str) -> Optional[ET.Element]:
+        for diagram in self.root_element.findall("diagram"):
             if diagram.get("name") == name:
                 return diagram
         return None
 
-    def _is_annotation(self, name: str) -> bool:
-        lower = name.lower()
-        return lower.startswith("stories:") or "domain terms:" in lower
 
-    def _strip_html(self, value: str) -> str:
-        plain = re.sub(r"<[^>]+>", " ", value or "")
-        return html.unescape(re.sub(r"\s+", " ", plain)).strip()
+def _is_annotation(name: str) -> bool:
+    lower = name.lower()
+    return lower.startswith("stories:") or "domain terms:" in lower
+
+
+def _plain_text(value: str) -> str:
+    plain = re.sub(r"<[^>]+>", " ", value or "")
+    return html.unescape(re.sub(r"\s+", " ", plain)).strip()

@@ -5,7 +5,7 @@
 Mockups deepen IA regions into typed controls with key interactions, running inside the Story Demo shell:
 
 1. **Ensure story/domain JS exists** — if Stories or CE haven't emitted JavaScript modules yet, run `transform` first. The mockup imports real domain modules, not UX-only adapters.
-2. **Deepen regions with controls** — each IA region slot gets concrete control types: text input, dropdown, button, list, tabs.
+2. **Deepen regions with controls** — each IA region gets concrete control types: text input, dropdown, button, list, tabs.
 3. **Wire GWT-bound controls** — controls that participate in story Given/When/Then use `StoryDemoControl` with `bound_field` (the expose path) and `story_steps` (matching step text exactly). This generates `data-story-steps` attributes for the Story Demo explorer.
 4. **One HTML per user goal** — not one file per screen, not one mega-file per epic. Each concrete user goal the user can demo gets its own HTML file.
 5. **Match the IA scope** — screens and `data-goto` targets follow the in-scope epics on the IA. A deferred epic in `ux-context.md` does not get screens, stories, or buttons on the mockup.

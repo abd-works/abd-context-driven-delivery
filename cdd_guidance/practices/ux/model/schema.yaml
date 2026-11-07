@@ -29,7 +29,7 @@ screen:
   layout?: string
   slug?: string
   chromeOf?: screen
-  stories?: [story]
+  shows?: [story]
   domainTerms?: [class]
   regions?: [region]
   where:
@@ -38,8 +38,8 @@ screen:
     - a tab or alternate state is its own screen
     - chromeOf shares chrome with the named screen
     - name uses a domain term
-    - at ia, regions are named slots
-    - stories are the user stories this screen shows
+    - at ia, regions are named areas
+    - shows are the user stories this screen shows; each story it names records shownOn this screen
     - domainTerms are the classes named on the screen
   rules:
     - tab-states-are-separate-screens
@@ -58,11 +58,11 @@ region:
   name: string
   order: number
   belongsTo: screen
-  slot?: string
+  area?: string
   controls?: [control]
   where:
     - id is the screen id, then this region name, joined by dots
-    - slot is the layout slot this region fills
+    - area is the layout area this region fills
     - controls appear from mockup onward
 
 control:

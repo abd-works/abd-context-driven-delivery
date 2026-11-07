@@ -88,11 +88,11 @@ sandbox/<epic>/
 
 ## Layout catalog (superseded 2026-08-04)
 - **Reversed:** the abd-skills `screen-templates` library (43 patterns, `.md` + `.drawio`) is now mirrored verbatim at `templates/screen-templates/` — no longer just vocabulary.
-- `ux_model/layouts.py` (the thin id → slots registry + `Screen.apply_layout` auto-seeding) is **deleted**. It only ever covered 14 of the 43 patterns and duplicated what the mirrored `.md` files already say. `Screen.apply_layout(id)` now just records the layout name; the AI reads the matching template pair for its slots and appends `Region`s itself.
+- `ux_model/layouts.py` (the thin id → areas registry + `Screen.apply_layout` auto-seeding) is **deleted**. It only ever covered 14 of the 43 patterns and duplicated what the mirrored `.md` files already say. `Screen.apply_layout(id)` now just records the layout name; the AI reads the matching template pair for its areas and appends `Region`s itself.
 - HTML still uses `data-layout` for a few structural grids (sidebar, split-screen, holy-grail, tabbed) — unaffected, it only reads `screen.layout` as a string.
 
 ## Branded specifications (abd.works) — 2026-08-04
-- Added `specifications/abd-works/` — one real HTML page per `templates/screen-templates/<id>` (43 + `index.html`), same slot geometry, dressed in the abd.works brand instead of ASCII/greybox.
+- Added `specifications/abd-works/` — one real HTML page per `templates/screen-templates/<id>` (43 + `index.html`), same area geometry, dressed in the abd.works brand instead of ASCII/greybox.
 - Brand tokens/type/components copied verbatim from `abd-works-brand/.agents/skills/abd-visual-branding/SKILL.md` (that skill is its own stated single source of truth) into one shared `abd-works-brand.css` — colors, Inter/JetBrains Mono type scale, spacing, buttons, cards, dual Executive(light)/Engineering(dark) mode via `data-theme`. Logo is a text lockup (`abd` + italic `.works`) — the real wordmark SVGs referenced by the brand skill were not present in the synced brand folder, so no binary asset was copied in.
 - Pages were produced with a throwaway Node generator (reused the same layout geometry as the screen-templates mirror, so the branded grid matches the unbranded reference 1:1) and the generator was deleted after running — the deliverable is the 45 static files, not a pipeline.
 - `ux.md` now points to this folder from both the `mockup` brand-opt-in rule and the `templates/screen-templates/` layouts note: when brand = abd.works, start from the matching `specifications/abd-works/<id>.html` instead of inventing tokens.

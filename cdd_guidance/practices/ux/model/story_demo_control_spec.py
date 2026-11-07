@@ -11,7 +11,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
-from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, StoryDemoControl
+from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, StoryDemoControl, StoryStep
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.model.html.nodes import _render_control
 
@@ -28,13 +28,13 @@ with description("StoryDemoControl"):
         )
         expect(control).to(be_a(Control))
         expect(control.bound_field).to(equal("character"))
-        expect(control.story_steps[0]["kind"]).to(equal("when"))
+        expect(control.story_steps[0]).to(equal(StoryStep("when", "the Player creates a Character")))
 
     with it("should round-trip story_steps through JSON"):
         ux_map = UxMap.create()
         ux_map.name = "demo"
         screen = Screen("character sheet", 0, "character-sheet")
-        region = Region("verb row", 0, "body")
+        region = Region("verbs", 0, "body")
         region.append_control(
             StoryDemoControl(
                 "Create Character",
@@ -51,9 +51,7 @@ with description("StoryDemoControl"):
         parsed = JsonUxMap.create().parse(JsonUxMap.create().render(ux_map))
         control = parsed.screens[0].regions[0].controls[0]
         expect(control).to(be_a(StoryDemoControl))
-        expect(control.story_steps[0]["label"]).to(
-            equal("the Player creates a Character")
-        )
+        expect(control.story_steps[0].label).to(equal("the Player creates a Character"))
         expect(control.bound_field).to(equal("character"))
 
     with it("should emit data-bound-field and data-story-steps in HTML"):
@@ -134,6 +132,6 @@ with description("StoryDemoControl"):
         control = parsed.screens[0].regions[0].controls[0]
         expect(control).to(be_a(StoryDemoControl))
         expect(control.set_input).to(equal("product"))
-        expect(control.item_story_steps[0]["label"]).to(equal("selects a Product"))
+        expect(control.item_story_steps[0].label).to(equal("selects a Product"))
         expect(control.item_value).to(equal("name"))
         expect(control.item_label).to(equal("{name}"))

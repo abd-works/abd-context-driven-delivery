@@ -1,25 +1,24 @@
-"""UxComponent collections - Transitions, ContentTypes, NavComponents."""
+"""The map's transitions, content types, and nav components: ordered lists the map owns on its graph."""
 
 from __future__ import annotations
 
-from typing import Iterator, List, TypeVar, overload
+from typing import Iterator, List, overload
+
+from harness.graph.bound_node import BoundChildren
 
 from .nodes import ContentType, NavComponent, Transition, UxComponent
-from .update_report import ChildCollectionPair
 from .ux_node import UxNode
 
-T = TypeVar("T", bound=UxComponent)
 
+class UxComponentCollection:
+    """One kind of UxComponent on the map, with append / remove / find. Appending records the map's edge to it."""
 
-class UxComponentCollection(UxNode):
-    """Named collection of UxComponent items with append / remove / find."""
-
-    _semantic_type_name = "UxComponentCollection"
     _item_type: type[UxComponent] = UxComponent
+    _edge_kind = ""
 
-    def __init__(self, name: str, sequential_order: int = 0) -> None:
-        super().__init__(name, sequential_order)
-        self.items: List[UxComponent] = []
+    def __init__(self, owner: UxNode) -> None:
+        self._owner = owner
+        self._items = BoundChildren(owner, self._edge_kind)
 
     def append(self, component: UxComponent) -> None:
         if not isinstance(component, self._item_type):
@@ -27,46 +26,28 @@ class UxComponentCollection(UxNode):
                 f"{type(self).__name__} expects {self._item_type.__name__}, "
                 f"got {type(component).__name__}"
             )
-        self.items.append(component)
-        self._renumber(self.items)
+        self._items.append(component)
+        self._owner._renumber(self._items)
 
     def remove(self, name: str) -> UxComponent:
-        for index, item in enumerate(self.items):
+        for index, item in enumerate(self._items):
             if item.name == name:
-                removed = self.items.pop(index)
-                self._renumber(self.items)
+                removed = self._items.pop(index)
+                self._owner._renumber(self._items)
                 return removed
-        raise KeyError(f"{self._item_type.__name__} {name!r} not found in {self.name}")
+        raise KeyError(f"{self._item_type.__name__} {name!r} not found in {self._edge_kind}")
 
     def find(self, name: str) -> UxComponent:
-        for item in self.items:
+        for item in self._items:
             if item.name == name:
                 return item
-        raise KeyError(f"{self._item_type.__name__} {name!r} not found in {self.name}")
-
-    def update_self(self, source: "UxComponentCollection") -> None:
-        self.name = source.name
-        self.sequential_order = source.sequential_order
-
-    def child_collections(
-        self, source: "UxComponentCollection"
-    ) -> List[ChildCollectionPair]:
-        return [
-            ChildCollectionPair(
-                self_children=self.items,
-                source_children=source.items,
-                load=self.load_component,
-            )
-        ]
-
-    def load_component(self, source: UxComponent) -> UxComponent:
-        raise NotImplementedError
+        raise KeyError(f"{self._item_type.__name__} {name!r} not found in {self._edge_kind}")
 
     def __iter__(self) -> Iterator[UxComponent]:
-        return iter(self.items)
+        return iter(self._items)
 
     def __len__(self) -> int:
-        return len(self.items)
+        return len(self._items)
 
     @overload
     def __getitem__(self, index: int) -> UxComponent: ...
@@ -75,59 +56,22 @@ class UxComponentCollection(UxNode):
     def __getitem__(self, index: slice) -> List[UxComponent]: ...
 
     def __getitem__(self, index: int | slice) -> UxComponent | List[UxComponent]:
-        return self.items[index]
+        return self._items[index]
 
     def __bool__(self) -> bool:
-        return bool(self.items)
+        return bool(self._items)
 
 
 class Transitions(UxComponentCollection):
-    _semantic_type_name = "Transitions"
     _item_type = Transition
-
-    def __init__(self, sequential_order: int = 0) -> None:
-        super().__init__("transitions", sequential_order)
-
-    def append(self, transition: Transition) -> None:  # type: ignore[override]
-        super().append(transition)
-
-    def load_component(self, source: UxComponent) -> Transition:
-        assert isinstance(source, Transition)
-        return Transition(
-            source.name,
-            source.sequential_order,
-            source.from_screen,
-            source.to_screen,
-            source.trigger,
-            source.nav_type,
-        )
+    _edge_kind = "transitions"
 
 
 class ContentTypes(UxComponentCollection):
-    _semantic_type_name = "ContentTypes"
     _item_type = ContentType
-
-    def __init__(self, sequential_order: int = 0) -> None:
-        super().__init__("content_types", sequential_order)
-
-    def append(self, content_type: ContentType) -> None:  # type: ignore[override]
-        super().append(content_type)
-
-    def load_component(self, source: UxComponent) -> ContentType:
-        assert isinstance(source, ContentType)
-        return ContentType(source.name, source.sequential_order, source.hierarchy)
+    _edge_kind = "contentTypes"
 
 
 class NavComponents(UxComponentCollection):
-    _semantic_type_name = "NavComponents"
     _item_type = NavComponent
-
-    def __init__(self, sequential_order: int = 0) -> None:
-        super().__init__("nav_components", sequential_order)
-
-    def append(self, nav_component: NavComponent) -> None:  # type: ignore[override]
-        super().append(nav_component)
-
-    def load_component(self, source: UxComponent) -> NavComponent:
-        assert isinstance(source, NavComponent)
-        return NavComponent(source.name, source.sequential_order, source.ux_type)
+    _edge_kind = "navComponents"

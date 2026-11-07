@@ -12,7 +12,7 @@ Control types and states are drawn as glyphs inside the box — not written as `
 
 **IA discipline:** no toolbar dumps, AC, or copy walls. ~4 user stories per screen. Tab states are **separate screens** under the same touchpoint; sibling chrome dimmed / `chrome: same as …`.
 
-**Layouts:** pick from the reference library at `specifications/generic/` (`sidebar`, `tabbed`, `modal-dialog`, `form`, `list`, `split-screen`, `holy-grail`, `breadcrumb`, `kanban-board`, … — 43 patterns, one `.md` ASCII + one `.drawio` fragment per layout) — the default, unbranded set. If a specific brand applies (e.g. abd.works), use its sibling folder under `specifications/` instead (e.g. `specifications/abd-works/`). Open the matching file(s), read its slots, and alter it for this screen rather than drawing the box from scratch. `apply_layout` just records the chosen layout name — append the regions yourself.
+**Layouts:** pick from the reference library at `specifications/generic/` (`sidebar`, `tabbed`, `modal-dialog`, `form`, `list`, `split-screen`, `holy-grail`, `breadcrumb`, `kanban-board`, … — 43 patterns, one `.md` ASCII + one `.drawio` fragment per layout) — the default, unbranded set. If a specific brand applies (e.g. abd.works), use its sibling folder under `specifications/` instead (e.g. `specifications/abd-works/`). Open the matching file(s), read its areas, and alter it for this screen rather than drawing the box from scratch. `apply_layout` just records the chosen layout name — append the regions yourself.
 
 ## Notation — headings carry the hierarchy
 

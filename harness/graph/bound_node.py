@@ -166,8 +166,9 @@ class BoundNode(Node):
                 else:
                     kept.append(edge)
             old.edges[kind] = kept
-        for node in subtree:
-            node._move_to(self.practice)
+        with schema_sync_paused():
+            for node in subtree:
+                node._move_to(self.practice)
         for edge in carried:
             self.practice.record(
                 {"kind": edge.kind, "order": edge.order, "display": edge.display},
@@ -178,17 +179,11 @@ class BoundNode(Node):
     def _move_to(self, practice) -> None:
         if self.practice is practice:
             return
-        old = self.practice
-        old.by_id.pop(self.node_id, None)
-        bucket = old.nodes.get(self.type, [])
-        if self in bucket:
-            bucket.remove(self)
-        if self.node_id in practice.by_id and practice.by_id[self.node_id] is not self:
-            self.node_id = _node_id(practice, self.type, self.name)
-        self.practice = practice
-        practice.by_id[self.node_id] = self
-        practice.nodes.setdefault(self.type, []).append(self)
-        practice.node_types.add(self.type)
+        node_id = _node_id(practice, self.type, self.name) if self.node_id in practice.by_id else self.node_id
+        # add places a parsed node at its lines; a bound object keeps the source it already has, whatever its kind.
+        source = self.source
+        practice.add(self, node_id, NO_SOURCE_FILE, 1, 1)
+        self.source = source
 
     def _subtree(self) -> list["BoundNode"]:
         found: list[BoundNode] = [self]
@@ -225,7 +220,7 @@ class BoundNode(Node):
             self._sync_schema_edges()
 
     def _sync_schema_edges(self) -> None:
-        if _SCHEMA_SYNC_PAUSED[0]:
+        if _SCHEMA_SYNC_PAUSED[0] > 0:
             return
         graph = getattr(self, "practice", None)
         graph = getattr(graph, "graph", None)
@@ -247,7 +242,8 @@ class BoundNode(Node):
         ]
 
 
-_SCHEMA_SYNC_PAUSED = [False]
+# How many schema_sync_paused blocks are open; rebuilds resume when the outermost one closes.
+_SCHEMA_SYNC_PAUSED = [0]
 
 
 @contextmanager
@@ -256,12 +252,13 @@ def schema_sync_paused() -> Iterator[None]:
 
     A working-copy load parses each file into model nodes only to read their facts;
     rebuilding schema edges on each append is quadratic per file and the edges are discarded.
+    Blocks nest: an inner block closing leaves the outer block's pause in place.
     """
-    _SCHEMA_SYNC_PAUSED[0] = True
+    _SCHEMA_SYNC_PAUSED[0] += 1
     try:
         yield
     finally:
-        _SCHEMA_SYNC_PAUSED[0] = False
+        _SCHEMA_SYNC_PAUSED[0] -= 1
 
 
 def _node_id(practice, semantic: str, name: str) -> str:

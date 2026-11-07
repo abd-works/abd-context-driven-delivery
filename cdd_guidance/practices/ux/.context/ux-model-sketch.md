@@ -25,13 +25,13 @@ UxMap
          slug
          layout
          apply_layout layout_id
-              // thin catalog → sets layout + seeds empty regions from slots
+              // thin catalog → sets layout + seeds empty regions from areas
          append_region region
          bind_domain_concept concept_name
               // vocabulary label for scanners — not object-model JS
               Region
                 name
-                slot
+                area
                 append_control control
                      Control
                        name
@@ -113,7 +113,7 @@ UxMap
  // No LayoutTemplate catalog - Screen.apply_layout(id) just records the
  // layout name; the AI reads the matching pair under
  // specifications/generic/ (or a branded sibling under specifications/)
- // for that layout's slots and appends the real Regions itself
+ // for that layout's areas and appends the real Regions itself
   ----
  UxChannel
       parse content

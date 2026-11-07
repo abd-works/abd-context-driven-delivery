@@ -6,6 +6,11 @@ from typing import Any
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.practice_catalogue import PracticeCatalogue
+
+
+class NoJavascriptPractice(ValueError):
+    """ensure_javascript was asked for JavaScript from a practice that does not write the JavaScript a mockup imports."""
 
 
 @agent_toolset
@@ -37,26 +42,27 @@ class Ux(PracticeGuidance):
             fidelity=fidelity,
             default_workspace_folder="ux",
             formats={
-                "drawio": ("ux.model.drawio.nodes", "DrawioUxMap"),
-                "html": ("ux.model.html.nodes", "HtmlUxMap"),
-                "markdown": ("ux.model.markdown.nodes", "MarkdownUxMap"),
-                "json": ("ux.model.json.nodes", "JsonUxMap"),
-                "claude_design": ("ux.model.claude_design.nodes", "ClaudeDesignUxMap"),
+                "drawio": ("cdd_guidance.practices.ux.model.drawio.nodes", "DrawioUxMap"),
+                "html": ("cdd_guidance.practices.ux.model.html.nodes", "HtmlUxMap"),
+                "markdown": ("cdd_guidance.practices.ux.model.markdown.nodes", "MarkdownUxMap"),
+                "json": ("cdd_guidance.practices.ux.model.json.nodes", "JsonUxMap"),
+                "claude_design": ("cdd_guidance.practices.ux.model.claude_design.nodes", "ClaudeDesignUxMap"),
             },
         )
 
+    # The practices whose JavaScript a mockup imports: story steps from Stories, the object model from Clean Engineering.
+    javascript_practices = ("stories", "clean_engineering")
+
     @agent_tool
-    def ensure_javascript(self, generator: str, source_format: str, content: Any) -> dict:
-        """Ensure Stories or Clean Engineering JS exists - transform via that generator if needed.
-        generator: 'stories' | 'clean_engineering'. Returns {format: javascript, content: ...}."""
-        if generator == "stories":
-            from cdd_guidance.practices.stories.stories import Stories
-
-            return Stories().render("javascript", content, source=source_format)
-        if generator == "clean_engineering":
-            from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-
-            return CleanEngineering().render("javascript", content, source=source_format)
-        raise ValueError(
-            f"Unsupported generator {generator!r}. Choose from: stories, clean_engineering"
-        )
+    def ensure_javascript(self, practice: str, source_format: str, content: Any) -> dict:
+        """Ensure Stories or Clean Engineering JS exists - transform via that practice if needed.
+        practice: 'stories' | 'clean_engineering', the practice's catalogue key. The practice works in this practice's
+        session and workspace. Returns {format: javascript, content: ...}."""
+        if practice not in self.javascript_practices:
+            raise NoJavascriptPractice(
+                f"Unsupported practice {practice!r}. Choose from: {', '.join(self.javascript_practices)}"
+            )
+        companion = PracticeCatalogue.create(practice)
+        companion.session = self.session
+        companion.workspace = self.workspace
+        return companion.render("javascript", content, source=source_format)

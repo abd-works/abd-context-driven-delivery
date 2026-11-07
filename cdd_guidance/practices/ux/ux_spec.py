@@ -16,7 +16,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 
 import cdd_guidance.practices  # noqa: F401
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
-from cdd_guidance.practices.ux.ux import Ux
+from cdd_guidance.practices.ux.ux import NoJavascriptPractice, Ux
 from cdd_guidance.practices.ux.model.nodes import Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
@@ -92,15 +92,15 @@ with description("Ux transform tool"):
 
 
 with description("Ux ensure_javascript tool"):
-    with context("an unsupported generator name"):
-        with it("should raise ValueError"):
+    with context("a practice that writes no mockup JavaScript"):
+        with it("should refuse it as a practice with no JavaScript"):
             expect(
-                lambda: Ux().ensure_javascript("unknown", "markdown", "")
-            ).to(raise_error(ValueError))
+                lambda: Ux().ensure_javascript("ddd", "markdown", "")
+            ).to(raise_error(NoJavascriptPractice))
 
 
 with description("Ux contexts instruction"):
-    with context("the contexts slot is expanded"):
+    with context("the contexts section is expanded"):
         with before.each:
             self.ux = Ux(fidelity="ia")
             self.contexts = self.ux.scoped_markdown()

@@ -67,9 +67,6 @@ ux_map = UxModelFactory.load(path)
 + remove_screen(name: str): Screen
 + find_screen(name: str): Screen
 	// a screen name is unique on the map
-+ append_transition(transition: Transition): None
-+ append_content_type(content_type: ContentType): None
-+ append_nav_component(nav_component: NavComponent): None
 + all_story_names(): list[str]
 	// the story names on the screens, each name once
 - load_ux_map_content(): None
@@ -83,19 +80,19 @@ ux_map = UxModelFactory.load(path)
 - get_next_screen_from_file(): Screen
 	// channel: the next screen shell from file, in screen_type
 - load_transitions(): None
-	// while has_more_transition: append_transition(load_next_transition())
+	// while has_more_transition: transitions.append(load_next_transition())
 - has_more_transition(): bool
 - load_next_transition(): Transition
 	// transition = get_next_transition_from_file()
 - get_next_transition_from_file(): Transition
 	// channel: the next transition, in transition_type
 - load_content_types(): None
-	// while has_more_content_type: append_content_type(load_next_content_type())
+	// while has_more_content_type: content_types.append(load_next_content_type())
 - has_more_content_type(): bool
 - load_next_content_type(): ContentType
 - get_next_content_type_from_file(): ContentType
 - load_nav_components(): None
-	// while has_more_nav_component: append_nav_component(load_next_nav_component())
+	// while has_more_nav_component: nav_components.append(load_next_nav_component())
 - has_more_nav_component(): bool
 - load_next_nav_component(): NavComponent
 - get_next_nav_component_from_file(): NavComponent
@@ -115,9 +112,12 @@ ux_map = UxModelFactory.load(path)
 + slug: str
 + layout: str
 + description: str
-+ chrome_of: str
++ chrome_of: Screen
+	// the screen whose chrome this tab shares
 + inactive_tabs: list[str]
 + story_names: list[str]
+	// story links are names keyed the way Stories keys them; scenario_names and step_names add Story › Scenario and Story › Scenario › Step
+	// each story on the graph that the screen names records shownOn, and the screen records shows
 + domain_terms: list[str]
 + domain_concepts: list[str]
 + regions: list[Region]
@@ -143,13 +143,13 @@ ux_map = UxModelFactory.load(path)
 ## Region
 
 + Region(source: Region)
-	// copies name, order, and slot
+	// copies name, order, and area
 	// a source StoryDemoControl becomes this channel's story demo control
 	// any other source control becomes this channel's control
 ------
 + name: str
 + sequential_order: int
-+ slot: str
++ area: str
 + controls: list[Control]
 	// composition
 + control_type: type
@@ -197,10 +197,10 @@ ux_map = UxModelFactory.load(path)
 ------
 + bound_field: str
 	// the expose path this control displays. The control does not own the domain value
-+ story_steps: list
-	// each entry is a kind and a label. Play emphasizes that step. Interactive runs the When
++ story_steps: list[StoryStep]
+	// each StoryStep is a kind and a label. Play emphasizes that step. Interactive runs the When
 + set_input: str
-+ item_story_steps: list
++ item_story_steps: list[StoryStep]
 + item_value: str
 + item_label: str
 
@@ -213,8 +213,8 @@ ux_map = UxModelFactory.load(path)
 + sequential_order: int
 + trigger: str
 + effect: str
-+ destination_screen: str
-	// association by screen name
++ destination: Screen
+	// association to a screen on the same map; a renamed screen keeps it
 
 ## UxComponent
 
@@ -229,8 +229,8 @@ ux_map = UxModelFactory.load(path)
 + Transition(source: Transition)
 	// copies name, order, the two screens, trigger, and nav type
 ------
-+ from_screen: str
-+ to_screen: str
++ from_screen: Screen
++ to_screen: Screen
 + trigger: str
 + nav_type: str
 
@@ -248,7 +248,7 @@ ux_map = UxModelFactory.load(path)
 	// copies name, order, UX type, and destinations
 ------
 + ux_type: str
-+ destinations: list[str]
++ destinations: list[Screen]
 
 ## UxContext
 

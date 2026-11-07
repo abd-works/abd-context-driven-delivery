@@ -3,14 +3,14 @@
 import sys
 from pathlib import Path
 
-from expects import equal, expect
-from mamba import before, description, it
+from expects import be, equal, expect, raise_error
+from mamba import before, context, description, it
 
-_REPO = Path(__file__).resolve().parents[3]
+_REPO = Path(__file__).resolve().parents[5]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from cdd_guidance.practices.ux.model.drawio.nodes import DrawioUxMap
+from cdd_guidance.practices.ux.model.drawio.nodes import DrawioCliTimedOut, DrawioUxMap, UnreadableDrawio
 from cdd_guidance.practices.ux.model.nodes import Region, Screen, Transition
 
 
@@ -21,7 +21,6 @@ class SpecFixture:
         ux_map.story_references = [
             "../practices/stories/update_ability_rank_stories.js",
         ]
-        ux_map.object_references = []
 
         sheet = Screen("Character Sheet", 0)
         sheet.apply_layout("sidebar")
@@ -30,20 +29,13 @@ class SpecFixture:
         sheet.attach_story_name("Update Ability Rank")
         sheet.attach_domain_term("Character")
 
-        abilities = Screen("Character Sheet - Abilities", 1, chrome_of="Character Sheet")
+        abilities = Screen("Character Sheet - Abilities", 1, chrome_of=sheet)
         abilities.inactive_tabs = ["Identities", "Movements"]
 
         ux_map.append_screen(sheet)
         ux_map.append_screen(abilities)
         ux_map.transitions.append(
-            Transition(
-                "selects Abilities tab",
-                0,
-                from_screen="Character Sheet",
-                to_screen="Character Sheet - Abilities",
-                trigger="selects Abilities tab",
-                nav_type="action",
-            )
+            Transition("selects Abilities tab", 0, sheet, abilities, "selects Abilities tab", "action")
         )
         return ux_map
 
@@ -51,11 +43,10 @@ class SpecFixture:
 fixture = SpecFixture()
 
 
-with description("DrawioUxMap"):
+with description("a UX map drawn as a draw.io information architecture"):
     with before.each:
         self.source = fixture.site_map()
         self.rendered = DrawioUxMap.create().render(self.source)
-        self.parsed = DrawioUxMap.create().parse(self.rendered)
 
     with it("should emit drawio-ux two-page mxfile"):
         expect(self.rendered.startswith("<mxfile")).to(equal(True))
@@ -63,25 +54,36 @@ with description("DrawioUxMap"):
         expect('name="Site Map"' in self.rendered).to(equal(True))
         expect("host=\"drawio-ux\"" in self.rendered).to(equal(True))
 
-    with it("should hold story_references on the source map"):
-        expect(self.source.story_references.as_list()).to(
-            equal(["../practices/stories/update_ability_rank_stories.js"])
-        )
-        expect(self.source.find_screen("Character Sheet").domain_terms).to(
-            equal(["Character"])
-        )
+    with context("that is read back"):
+        with before.each:
+            self.parsed = DrawioUxMap.create().parse(self.rendered)
 
-    with it("should round-trip screen names from the Site Map page"):
-        names = [screen.name for screen in self.parsed.screens]
-        expect(names).to(equal(["Character Sheet", "Character Sheet - Abilities"]))
+        with it("should read back the screen names from the Site Map page"):
+            names = [screen.name for screen in self.parsed.screens]
+            expect(names).to(equal(["Character Sheet", "Character Sheet - Abilities"]))
 
-    with it("should round-trip region titles from Detailed IA"):
-        sheet = next(s for s in self.parsed.screens if s.name == "Character Sheet")
-        expect([region.name for region in sheet.regions]).to(equal(["panel", "body"]))
+        with it("should read back the region titles from Detailed IA"):
+            expect([region.name for region in self.parsed.find_screen("Character Sheet").regions]).to(
+                equal(["panel", "body"])
+            )
 
-    with it("should round-trip transitions via the Transitions collection"):
-        expect(len(self.parsed.transitions)).to(equal(1))
-        expect(self.parsed.transitions[0].to_screen).to(
-            equal("Character Sheet - Abilities")
-        )
-        expect(self.parsed.transitions[0].trigger).to(equal("selects Abilities tab"))
+        with it("should read back the transition trigger"):
+            expect([transition.trigger for transition in self.parsed.transitions]).to(equal(["selects Abilities tab"]))
+
+        with it("should link the transition to the screens on the read map"):
+            expect(self.parsed.transitions[0].to_screen).to(be(self.parsed.find_screen("Character Sheet - Abilities")))
+
+        with it("should keep the regions on the read map's graph"):
+            expect(self.parsed.find_screen("Character Sheet").regions[0].graph).to(be(self.parsed.graph))
+
+    with context("that is not XML"):
+        with it("should refuse it as an unreadable diagram"):
+            expect(lambda: DrawioUxMap.create().parse("<mxfile><diagram>")).to(raise_error(UnreadableDrawio))
+
+    with context("with a command line that runs past its timeout"):
+        with before.each:
+            self.writer = DrawioUxMap.create()
+            self.writer.cli_timeout_seconds = 0.001
+
+        with it("should stop it and say it timed out"):
+            expect(lambda: self.writer.render(self.source)).to(raise_error(DrawioCliTimedOut))
