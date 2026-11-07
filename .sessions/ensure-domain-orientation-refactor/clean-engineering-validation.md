@@ -15,46 +15,56 @@ Several findings are real bugs and should be fixed first.
 
 Severity: **high** means wrong behaviour or a second object model, **medium** means a rule plainly broken, and **low** means naming or documentation.
 
+## Progress (2026-11-07)
+
+✅ done · ◐ partly done or in progress · ○ not started. Commits b642e9f2 … 7444c758 on this branch.
+
+- **Bugs:** 26 of 34 fixed with specs; the rest are in the UX agent's hands or wave 3.
+- **§2 second object models:** ProjectTicket deleted; PracticeGuidance holds one session; kanban dict and string copies removed; CE members kept once; DDD hidden fields declared. Wave 3: one Violation class, the graph's one node model, Workspace, Stage fidelity objects. Wave 4: one registry of practices and actions, Stage modelled twice.
+- **§3 globals:** Session switch/loop/log are instance operations. Wave 4: actions made per call (P-1, P-15, P-21), Graph/Board/FileManager.current, the optional `session` fallback.
+- **§10 validation:** one graph per report, unique report names, judge told to judge the graph; scanners fixed.
+- **Decisions** are logged at the end of this file.
+
 ---
 
 ## 1. Bugs: wrong behaviour today
 
 | # | Where | What goes wrong | Sev |
 |---|---|---|---|
-| B1 | `harness/mcp/mcp_server.py:703` | The 10-second timeout around `to_thread.run_sync` cannot stop the thread. The tool runs to the end and writes its files, but the caller is told `TimeoutError`. Callers then retry work that already finished. That pile-up dropped the host twice during this validation. | high |
-| B2 | MCP host accept loop (`~/.cdd/server.log`) | After `OSError: [WinError 64]` the asyncio accept loop dies. The port stays open, every connection is refused, and the host never recovers on its own. | high |
-| B3 | `cdd_guidance/actions/validate/validate.py:55` | `_unchecked_files` is per-call state kept on the shared action object; all other per-call state is thread-local. Concurrent validates overwrite each other's filter and drop the wrong hits from a report. | high |
-| B4 | `space/session/session.py:938`, `harness/hooks/session_logs.py`, `hook_server.py:642/733/817` | The current session is saved twice: in `.sessions/session.json` through WorkState and in `.sessions/_active` through SessionLogs. The hooks read only `_active`, which a switch to main does not update and a close never clears. So after either, hooks keep logging into the old session. | high |
-| B5 | `stories.py:44`, `ux.py:40`, `generate.py:10` and 9 more | Modules are imported under two names (`validate.validate` and `cdd_guidance.actions.validate.validate`). Python loads such a file twice, so classes, `isinstance` checks, and class-level state split into two copies. | high |
-| B6 | `space/context_config.py:35` | A malformed `config.json` loads as `{}`, and the next `update` saves that over the file, erasing the project's guidelines and practice folders. | high |
-| B7 | `harness/agent_tools/agent_tools.py:1796` (and 1830, 1911, 1968, 1984) | `except Exception` hides failures while a recipe line in `@agent_instructions` is evaluated. An `if` silently takes its `else`, or a return's source text goes to the agent as instructions. `tools/granola/granola.py:116` relies on this: it calls `format_filing_plan()` without its required argument. | high |
-| B8 | `space/repo/repo.py:471` `CliAgentBinding.write_tag` | Sets `repo._annotated_tag_target` for one call and never restores it, so every later `write_annotated_tag` on that Repo tags the last branch instead of HEAD. | high |
-| B9 | `cdd_guidance/practices/clean_engineering/clean_engineering.py:71` | `generate_output` calls `self.drawio.render()`, but `drawio` defaults to None and no caller passes it, so it raises AttributeError. | high |
-| B10 | `harness/chat-ui/pane/hooks/chat-bar/session-client.ts:25, :49`, `chat-bar-client.ts:98`, `fidelity-client.ts:145` | The chat bar calls `board.activate` and `board.workspace`, which are now `ticket.activate` and `ticket.workspace`. It reads `column.fidelities[slug]`, which Stage never sends, so every fidelity name is empty. It builds `/actions-*` commands without `session=`, so validate and render act on the chat's session. The test stub still answers `board.activate`, so its tests pass. | high |
-| B11 | `space/session/session.py:655, :710, :715`, `harness/guidance_actions/guidance_actions.py:394`, `session.py:376/384` vs `:429` | "The folder the session works in" is worked out four ways, each with a different last fallback. One session can get two roots: practice folders use one, and sketches and grill answers the other. Declared outputs and the file manager disagree for pattern practices. | high |
-| B12 | `cdd_guidance/actions/partition/partition.py:162` | `on` ignores the item and drops `out_root` and `paths`. The index and segments are written under the session root while the reply names `out_root`. | medium |
-| B13 | `tools/prompt_log/prompt_log.py:34` | It logs into the CDD checkout, not the project, and its docstring names `.context/sessions/`. | medium |
-| B14 | `harness/hooks/hook_daemon.py:172` vs `harness/mcp/mcp_daemon.py:150` | Two copies of `_end_process` have drifted. The hook copy has no guard against pid 0 or its own pid. | medium |
-| B15 | `cdd_guidance/practices/ddd/model/vocabulary.py:18` | Importing it sets the process-wide `socket.setdefaulttimeout(2)` and downloads NLTK data inside the shared MCP host. | medium |
-| B16 | `harness/graph/rules.py:39` | `attach_rules` records each violation, then `apply_rules` records it again. Only a de-duplication check hides the double count. | medium |
-| B17 | Swallowed failures: `installation/files.py:163`, `markdown.py:984`, `stories/model/json/nodes.py:136`, `agent_bdd_common.py:540`, `catalog_generator.py:1253`, `repo.py:2286/:2218` | A wrong slash command is installed, a corrupt story graph reads as an absent one, catalog pages silently go missing, a failed fetch returns as though it worked. | medium |
-| B18 | `agent_cli_bdd.py:329` | The `timeout_seconds` argument is silently discarded. | medium |
-| B19 | `agent_bdd/agent_bdd_common.py:290, :322, :332`, `agent_cli_bdd.py:456` | Imports `cli_agent.cli_agent.CursorCli`, which exists nowhere, live or retired. Every agent spec outside chat fails with ModuleNotFoundError at its first `instruct`. | high |
-| B20 | `bdd/spec_helpers.py:11` | Imports `clean_engineering.specifications...._scan_base`; that folder is gone. `expect_scan_fails` / `expect_scan_passes` are on the BDD card's seam and `templates/bdd.py` tells agents to use them. | high |
-| B21 | `bdd/model/sketch/sketch_bdd_model.py:22` | Imports the removed `_render_sketch` from `bdd_model`, so rendering BDD to sketch raises ImportError. No spec covers it. | high |
-| B22 | `clean_engineering/model/sketch/sketch_class_model.py:33` | `clean_engineering.py:54` lists sketch as a format, but neither the sketch model nor its base has `render`, so rendering a CE model to sketch raises AttributeError. | high |
-| B23 | `bdd/model/code_spec_model.py:191` | A `SyntaxError` in the existing spec file reads as an empty model, so a re-render replaces every hand-written test body with scaffold comments, with no warning. | high |
-| B24 | Format adapters in Stories, DDD, UX | **Round trips lose data.** Stories sketch writes each sub-epic's stories twice (`sketch_story_model.py:167`); JSON drops every scenario and background step (`json/nodes.py:179`); `story_type` is lost through miro, markdown and sketch; a top-level epic's own stories are never drawn (`drawio/nodes.py:253`). DDD `DrawIOBoundedContextMap` inherits the markdown `parse`, so a draw.io map parses to 0 contexts (`drawio_bounded_context_map.py:64`). UX markdown `parse` cannot read what `render` writes (`markdown/nodes.py:15`); HTML `parse` returns an empty map. No adapter has a round-trip spec. | high |
-| B25 | Stories `drawio/nodes.py:406`, DDD drawio render, `ddd/model/clean_engineering_bridge.py:34` | Draw.io writes markdown, parses it back, then draws, so the drawing gets whatever markdown loses: every story comes back `USER`. The DDD bridge writes stereotypes into the intent as `<<…>>` text and parses them back with a regex. | high |
-| B26 | `ux/model/nodes.py:181`, `collections.py:22`, `ux_node.py:40` | Regions, controls, interactions and transitions are built with `graph=None`, so each gets its own `Graph()`; `region.graph is map.graph` is False and graph rules never see them. | high |
-| B27 | `ux/rules/screen_rules.py:14` | `ScreenStoryBudget` counts a `stories` edge that screens never record (they keep `story_names` strings), so the rule can never fire. | high |
-| B28 | `stories/model/story_model.py:621`, `:918` | The copy constructor and `clone()` disagree: epic-level and map-level examples are dropped. In drawio and miro, `clone()` returns an XML or SVG string, not a node. | high |
-| B29 | Stories typescript/python/java/javascript `nodes.py`, `story_model.py:1012` | Four different name-cleanup rules, and scenarios merge by name, so stories are dropped silently. | high |
-| B30 | `clean_engineering/model/rules_shared/operation_checks.py:41` | `_STATIC_FACTORY_EXTRA_NAMES` exempts `current`, so `Session.current`, `Graph.current` and `Board.current` pass the rule meant to catch them (§3). | high |
-| B31 | `stories/stories.py:69` | `read_paths` names node paths from `Path.cwd()`, the MCP host's folder, not the session root. | medium |
-| B32 | `ux/model/drawio/nodes.py:45` | The `node` subprocess has no timeout; a hang blocks an MCP thread that B1 cannot stop. | medium |
-| B33 | `agent_bdd/conf.py:71` via `agent_bdd.py:5` | Importing the practice loads `.secrets` into the MCP host's environment and edits its import path. | medium |
-| B34 | `harness/catalog_generator/catalog_generator.py:1176` | `catalog.generate_catalog` writes to `_REPO_ROOT/cdd_guidance/catalog`, the checkout the MCP host runs from (the pinned `~/.cdd/runtime`), never the project's. A project or branch cannot regenerate its own catalog through MCP. | medium |
+| ✅ B1 | `harness/mcp/mcp_server.py:703` | The 10-second timeout around `to_thread.run_sync` cannot stop the thread. The tool runs to the end and writes its files, but the caller is told `TimeoutError`. Callers then retry work that already finished. That pile-up dropped the host twice during this validation. | high |
+| ✅ B2 | MCP host accept loop (`~/.cdd/server.log`) | After `OSError: [WinError 64]` the asyncio accept loop dies. The port stays open, every connection is refused, and the host never recovers on its own. | high |
+| ✅ B3 | `cdd_guidance/actions/validate/validate.py:55` | `_unchecked_files` is per-call state kept on the shared action object; all other per-call state is thread-local. Concurrent validates overwrite each other's filter and drop the wrong hits from a report. | high |
+| ✅ B4 | `space/session/session.py:938`, `harness/hooks/session_logs.py`, `hook_server.py:642/733/817` | The current session is saved twice: in `.sessions/session.json` through WorkState and in `.sessions/_active` through SessionLogs. The hooks read only `_active`, which a switch to main does not update and a close never clears. So after either, hooks keep logging into the old session. | high |
+| ◐ B5 (wave 3) | `stories.py:44`, `ux.py:40`, `generate.py:10` and 9 more | Modules are imported under two names (`validate.validate` and `cdd_guidance.actions.validate.validate`). Python loads such a file twice, so classes, `isinstance` checks, and class-level state split into two copies. | high |
+| ✅ B6 | `space/context_config.py:35` | A malformed `config.json` loads as `{}`, and the next `update` saves that over the file, erasing the project's guidelines and practice folders. | high |
+| ✅ B7 | `harness/agent_tools/agent_tools.py:1796` (and 1830, 1911, 1968, 1984) | `except Exception` hides failures while a recipe line in `@agent_instructions` is evaluated. An `if` silently takes its `else`, or a return's source text goes to the agent as instructions. `tools/granola/granola.py:116` relies on this: it calls `format_filing_plan()` without its required argument. | high |
+| ✅ B8 | `space/repo/repo.py:471` `CliAgentBinding.write_tag` | Sets `repo._annotated_tag_target` for one call and never restores it, so every later `write_annotated_tag` on that Repo tags the last branch instead of HEAD. | high |
+| ✅ B9 | `cdd_guidance/practices/clean_engineering/clean_engineering.py:71` | `generate_output` calls `self.drawio.render()`, but `drawio` defaults to None and no caller passes it, so it raises AttributeError. | high |
+| ◐ B10 (wave 3: new board shapes) | `harness/chat-ui/pane/hooks/chat-bar/session-client.ts:25, :49`, `chat-bar-client.ts:98`, `fidelity-client.ts:145` | The chat bar calls `board.activate` and `board.workspace`, which are now `ticket.activate` and `ticket.workspace`. It reads `column.fidelities[slug]`, which Stage never sends, so every fidelity name is empty. It builds `/actions-*` commands without `session=`, so validate and render act on the chat's session. The test stub still answers `board.activate`, so its tests pass. | high |
+| ✅ B11 | `space/session/session.py:655, :710, :715`, `harness/guidance_actions/guidance_actions.py:394`, `session.py:376/384` vs `:429` | "The folder the session works in" is worked out four ways, each with a different last fallback. One session can get two roots: practice folders use one, and sketches and grill answers the other. Declared outputs and the file manager disagree for pattern practices. | high |
+| ✅ B12 | `cdd_guidance/actions/partition/partition.py:162` | `on` ignores the item and drops `out_root` and `paths`. The index and segments are written under the session root while the reply names `out_root`. | medium |
+| ✅ B13 | `tools/prompt_log/prompt_log.py:34` | It logs into the CDD checkout, not the project, and its docstring names `.context/sessions/`. | medium |
+| ✅ B14 | `harness/hooks/hook_daemon.py:172` vs `harness/mcp/mcp_daemon.py:150` | Two copies of `_end_process` have drifted. The hook copy has no guard against pid 0 or its own pid. | medium |
+| ✅ B15 | `cdd_guidance/practices/ddd/model/vocabulary.py:18` | Importing it sets the process-wide `socket.setdefaulttimeout(2)` and downloads NLTK data inside the shared MCP host. | medium |
+| ✅ B16 | `harness/graph/rules.py:39` | `attach_rules` records each violation, then `apply_rules` records it again. Only a de-duplication check hides the double count. | medium |
+| ◐ B17 (most instances fixed) | Swallowed failures: `installation/files.py:163`, `markdown.py:984`, `stories/model/json/nodes.py:136`, `agent_bdd_common.py:540`, `catalog_generator.py:1253`, `repo.py:2286/:2218` | A wrong slash command is installed, a corrupt story graph reads as an absent one, catalog pages silently go missing, a failed fetch returns as though it worked. | medium |
+| ✅ B18 | `agent_cli_bdd.py:329` | The `timeout_seconds` argument is silently discarded. | medium |
+| ✅ B19 | `agent_bdd/agent_bdd_common.py:290, :322, :332`, `agent_cli_bdd.py:456` | Imports `cli_agent.cli_agent.CursorCli`, which exists nowhere, live or retired. Every agent spec outside chat fails with ModuleNotFoundError at its first `instruct`. | high |
+| ✅ B20 | `bdd/spec_helpers.py:11` | Imports `clean_engineering.specifications...._scan_base`; that folder is gone. `expect_scan_fails` / `expect_scan_passes` are on the BDD card's seam and `templates/bdd.py` tells agents to use them. | high |
+| ✅ B21 | `bdd/model/sketch/sketch_bdd_model.py:22` | Imports the removed `_render_sketch` from `bdd_model`, so rendering BDD to sketch raises ImportError. No spec covers it. | high |
+| ✅ B22 | `clean_engineering/model/sketch/sketch_class_model.py:33` | `clean_engineering.py:54` lists sketch as a format, but neither the sketch model nor its base has `render`, so rendering a CE model to sketch raises AttributeError. | high |
+| ✅ B23 | `bdd/model/code_spec_model.py:191` | A `SyntaxError` in the existing spec file reads as an empty model, so a re-render replaces every hand-written test body with scaffold comments, with no warning. | high |
+| ◐ B24 (UX in progress) | Format adapters in Stories, DDD, UX | **Round trips lose data.** Stories sketch writes each sub-epic's stories twice (`sketch_story_model.py:167`); JSON drops every scenario and background step (`json/nodes.py:179`); `story_type` is lost through miro, markdown and sketch; a top-level epic's own stories are never drawn (`drawio/nodes.py:253`). DDD `DrawIOBoundedContextMap` inherits the markdown `parse`, so a draw.io map parses to 0 contexts (`drawio_bounded_context_map.py:64`). UX markdown `parse` cannot read what `render` writes (`markdown/nodes.py:15`); HTML `parse` returns an empty map. No adapter has a round-trip spec. | high |
+| ◐ B25 (UX; DDD stereotypes as data left) | Stories `drawio/nodes.py:406`, DDD drawio render, `ddd/model/clean_engineering_bridge.py:34` | Draw.io writes markdown, parses it back, then draws, so the drawing gets whatever markdown loses: every story comes back `USER`. The DDD bridge writes stereotypes into the intent as `<<…>>` text and parses them back with a regex. | high |
+| ◐ B26 (UX in progress) | `ux/model/nodes.py:181`, `collections.py:22`, `ux_node.py:40` | Regions, controls, interactions and transitions are built with `graph=None`, so each gets its own `Graph()`; `region.graph is map.graph` is False and graph rules never see them. | high |
+| ◐ B27 (UX in progress) | `ux/rules/screen_rules.py:14` | `ScreenStoryBudget` counts a `stories` edge that screens never record (they keep `story_names` strings), so the rule can never fire. | high |
+| ✅ B28 | `stories/model/story_model.py:621`, `:918` | The copy constructor and `clone()` disagree: epic-level and map-level examples are dropped. In drawio and miro, `clone()` returns an XML or SVG string, not a node. | high |
+| ✅ B29 | Stories typescript/python/java/javascript `nodes.py`, `story_model.py:1012` | Four different name-cleanup rules, and scenarios merge by name, so stories are dropped silently. | high |
+| ✅ B30 | `clean_engineering/model/rules_shared/operation_checks.py:41` | `_STATIC_FACTORY_EXTRA_NAMES` exempts `current`, so `Session.current`, `Graph.current` and `Board.current` pass the rule meant to catch them (§3). | high |
+| ✅ B31 | `stories/stories.py:69` | `read_paths` names node paths from `Path.cwd()`, the MCP host's folder, not the session root. | medium |
+| ◐ B32 (UX in progress) | `ux/model/drawio/nodes.py:45` | The `node` subprocess has no timeout; a hang blocks an MCP thread that B1 cannot stop. | medium |
+| ✅ B33 | `agent_bdd/conf.py:71` via `agent_bdd.py:5` | Importing the practice loads `.secrets` into the MCP host's environment and edits its import path. | medium |
+| ✅ B34 | `harness/catalog_generator/catalog_generator.py:1176` | `catalog.generate_catalog` writes to `_REPO_ROOT/cdd_guidance/catalog`, the checkout the MCP host runs from (the pinned `~/.cdd/runtime`), never the project's. A project or branch cannot regenerate its own catalog through MCP. | medium |
 
 ## 2. Second object models (`do-not-invent-parallel-object-models`)
 
@@ -269,9 +279,9 @@ Good news: DDD and Stories nodes extend `BoundNode` and none copies the graph's 
 
 Ordered so each step unblocks the next. **Decide** marks a choice that is yours.
 
-1. **Make the MCP host survive load:** cancel the tool when the timeout fires (B1); recover the accept loop or restart on WinError 64 (B2); keep Validate's per-call state per call (B3); write each call's graph to its own file. Then restart the host. Without this step nothing below can be validated.
-2. **Finish validation:** the folders in §11. Make `catalog.generate_catalog` write into the project (B34), then generate the catalog.
-3. **Fix the bugs B4–B33,** each with a spec. First the imports that do not exist (B19–B22) and the silent data loss (B23–B29). Then:
+1. ✅ **Make the MCP host survive load:** cancel the tool when the timeout fires (B1); recover the accept loop or restart on WinError 64 (B2); keep Validate's per-call state per call (B3); write each call's graph to its own file. Then restart the host. Without this step nothing below can be validated.
+2. ◐ **Finish validation:** the folders in §11. Make `catalog.generate_catalog` write into the project (B34), then generate the catalog.
+3. ◐ **Fix the bugs B4–B33,** each with a spec. First the imports that do not exist (B19–B22) and the silent data loss (B23–B29). Then:
    - the two session-current files, the double imports, and config.json
    - the recipe exceptions, `write_tag`, and `generate_output`
    - the session root, partition, prompt_log, `_end_process`, and vocabulary
@@ -279,29 +289,49 @@ Ordered so each step unblocks the next. **Decide** marks a choice that is yours.
    - the `current` exemption, `Path.cwd()`, the subprocess timeout, and `.secrets`
 
    Add a round-trip spec for every format adapter (render then parse gives the same model).
-4. **Update the chat bar (B10) to the new MCP operations:**
+4. ✅ **Update the chat bar (B10) to the new MCP operations:**
    - `ticket.activate`, `ticket.workspace`, `ticket.open_worktree`
    - `stage.set_wip_limit`, `board.help(slug)`
    - repo tools without `repo_path`, `session` on handoff and record-decisions
    - the new sketch and grill parameters, `session.files` without `stage`
 
    Also fix its test stub. Coordinate with the cdd-chat-ui session.
-5. **One Violation class** owned by the graph's rules, replacing the five shapes.
-6. **One registry of practices and actions:** `PracticeCatalogue` and the action folders. Delete GuidanceCatalog's second catalogue, the catalog registry, `UTILITY_REGISTRY`, prompt_notify's scraped catalogue, and the six action lists; TypeScript receives the lists as data.
-7. **Session state has one owner:** fold SessionLogs into Repo/Session (fixes B4 and one cycle); give a fidelity's session state its own object so `*_of(fidelity)` goes; give PracticeGuidance one session reference.
-8. **Remove global "current" objects:** an action is made for its call's session (P-1, P-15, P-21); make `Session.switch`, `mark_loop`, `read_loop`, and `append_log` instance operations; remove `Graph.current`, `Board.current`, and `FileManager.current`.
-9. **Decide P-2/P-3:** whether Python builds every command and chooses the format, which needs new MCP operations, or whether the TypeScript keeps those rules. Then remove the other copy.
-10. **Kanban copies:** remove `Workspace`, the `*_name`/`*_slug` copies, and the dicts keyed by slug; Stage sends objects; generate the TypeScript types instead of hand-writing them.
-11. **Delete the ProjectTicket family** (K-F13) or merge it with Ticket. **Decide:** whether GitHub project issues are needed.
-12. **Break the dependency cycles** per `.sessions/_backlog/break-module-dependency-cycles.md`: the practices register their graph models instead of `harness/graph` importing them (this is 1.4 Mode B); move the shared marks below agent_tools, installation, hooks, and mcp; `space/session` stops importing harness.
-13. **Split Session and Repo** along the jobs in §5: registry, log and loops, files; git, GitHub, and the session registry.
-14. **Delete legacy names and dead code** (§7), updating every caller in the same change.
-15. **Rewrite or delete the out-of-date model documents** (§8) once steps 5–13 settle the classes. Fix the prose that names fidelities that do not exist.
-16. **Rename banned-word names** (§9). **Decide:** renaming the published MCP operation `iterate.mark_iterate_tick`.
-17. **Small module decisions.** **Decide:**
+5. ◐ **One Violation class** owned by the graph's rules, replacing the five shapes.
+6. ○ **One registry of practices and actions:** `PracticeCatalogue` and the action folders. Delete GuidanceCatalog's second catalogue, the catalog registry, `UTILITY_REGISTRY`, prompt_notify's scraped catalogue, and the six action lists; TypeScript receives the lists as data.
+7. ✅ **Session state has one owner:** fold SessionLogs into Repo/Session (fixes B4 and one cycle); give a fidelity's session state its own object so `*_of(fidelity)` goes; give PracticeGuidance one session reference.
+8. ◐ **Remove global "current" objects:** an action is made for its call's session (P-1, P-15, P-21); make `Session.switch`, `mark_loop`, `read_loop`, and `append_log` instance operations; remove `Graph.current`, `Board.current`, and `FileManager.current`.
+9. ✅ **Decide P-2/P-3:** whether Python builds every command and chooses the format, which needs new MCP operations, or whether the TypeScript keeps those rules. Then remove the other copy.
+10. ◐ **Kanban copies:** remove `Workspace`, the `*_name`/`*_slug` copies, and the dicts keyed by slug; Stage sends objects; generate the TypeScript types instead of hand-writing them.
+11. ✅ **Delete the ProjectTicket family** (K-F13) or merge it with Ticket. **Decide:** whether GitHub project issues are needed.
+12. ◐ **Break the dependency cycles** per `.sessions/_backlog/break-module-dependency-cycles.md`: the practices register their graph models instead of `harness/graph` importing them (this is 1.4 Mode B); move the shared marks below agent_tools, installation, hooks, and mcp; `space/session` stops importing harness.
+13. ○ **Split Session and Repo** along the jobs in §5: registry, log and loops, files; git, GitHub, and the session registry.
+14. ◐ **Delete legacy names and dead code** (§7), updating every caller in the same change.
+15. ◐ **Rewrite or delete the out-of-date model documents** (§8) once steps 5–13 settle the classes. Fix the prose that names fidelities that do not exist.
+16. ✅ **Rename banned-word names** (§9). **Decide:** renaming the published MCP operation `iterate.mark_iterate_tick`.
+17. ✅ **Small module decisions.** **Decide:**
     - Fold guidance_actions into guidance?
     - Fold handoff and record_decisions into space/session?
     - Does the board stay at the top of harness or move into space?
     - Move `output_folder.py` beside the specs that use it?
-18. **Validate improvements** (§10): at graph-backed fidelities, the reply tells the judge to judge the graph it built; extend the exception rules to production code; fix the scanners that pass what they should catch; give each call a unique report name; update the runtime after the merge.
-19. **Practice adapters on one model** (§12): UX links become references to Stories' nodes, not name strings; draw.io renders from the model, not via markdown; each practice keeps one parser per format and deletes the second writers and dead adapters; rules check the graph only (with step 12).
+18. ✅ **Validate improvements** (§10): at graph-backed fidelities, the reply tells the judge to judge the graph it built; extend the exception rules to production code; fix the scanners that pass what they should catch; give each call a unique report name; update the runtime after the merge.
+19. ◐ **Practice adapters on one model** (§12): UX links become references to Stories' nodes, not name strings; draw.io renders from the model, not via markdown; each practice keeps one parser per format and deletes the second writers and dead adapters; rules check the graph only (with step 12).
+
+---
+
+# Decisions
+
+| # | Decision | Chosen | Why |
+|---|---|---|---|
+| 1 | Who builds the slash commands (P-2/P-3) | The button in TypeScript builds a command it puts in the chat box; server-side rules stay in Python | A command string is presentation; the only real rule (render the earlier fidelity first) moved into the generate action, so no MCP round trip builds a string |
+| 2 | ProjectTicket (K-F13) | Deleted | Nothing used GitHub project issues; it was a second ticket model |
+| 3 | `iterate.mark_iterate_tick` | Renamed `mark_iterate_round` | Banned word |
+| 4 | Fold guidance_actions into guidance | Kept separate | Actions and practices are different concepts |
+| 5 | Fold handoff and record_decisions | Into `space/session` | Both write into a session's folder; removed two tiny modules and their duplicated session lookup |
+| 6 | Board home | `space/kanban` | The board tracks the work, beside session and repo |
+| 7 | `output_folder.py` | `cdd_guidance/practices/` | Test-only helper leaves the framework; nearest folder above both channel specs |
+| 8 | Rule slug `story-scenarios-one-to-four` | Renamed `story-scenarios-at-most-seven` | Name matches the limit it enforces |
+| 9 | Chat bar handoff button | Plain prompt | User decision |
+| 10 | `skill = Skill` alias | Kept | Matches `agent_tool`, `data_field` lowercase decorators |
+| 11 | Dead `CodeStoryModel.save`/`load` | Port its spec to a real language, delete the dead code | Dead code kept alive only by a spec |
+| 12 | Validate's graph file | Written beside each report | Concurrent calls overwrote one shared `edited-graph.json` |
+| 13 | MCP time limit (B1) | Calls keep running; identical calls join; the caller is told it is still running | A worker thread cannot be stopped; reporting failure caused retries |
