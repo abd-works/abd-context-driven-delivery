@@ -43,8 +43,8 @@ detect_echo(payload: HookPayload, toolsets: list | None): tuple[str, str] | None
 detect(payload: HookPayload): tuple[str, str] | None
 	// never toasts an action from a path
 	// names a guideline when the path is a rules path
-echo_toolsets(): list
-	// the CDD checkout's installed toolsets, loaded once per process; a toolset that fails to load raises
+echo_toolsets: list
+	// the toolsets RepositoryToolsets lists in the CDD checkout, loaded once by the hook server's notifier and kept; a toolset that fails to load raises
 show_toast(toast: str, workspace_roots: list[Path]): list[Path]
 	// the operation the hook server calls for each merged toast, on the one PromptNotify it registered
 	-> PromptNotify.show_ide_toast

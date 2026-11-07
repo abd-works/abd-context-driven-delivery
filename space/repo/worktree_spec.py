@@ -4,7 +4,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from expects import be_true, contain, equal, expect, raise_error
+from expects import be, be_false, be_none, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -105,3 +105,57 @@ with description("a branch on a clone") as self:
 
         with it("should need a push"):
             expect(Repo(self.clone).needs_push()).to(be_true)
+
+
+with description("a Repo and its checkouts") as self:
+    with before.each:
+        self.tmp = Path(tempfile.mkdtemp(prefix="repo-parts-spec-"))
+        self.origin, self.clone = _clone_with_origin(self.tmp)
+        self.repo = Repo(self.clone)
+
+    with after.each:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    with it("should keep one git command line"):
+        expect(self.repo.git).to(be(self.repo.git))
+
+    with it("should keep one list of its worktrees"):
+        expect(self.repo.worktrees).to(be(self.repo.worktrees))
+
+    with it("should keep one file manager"):
+        expect(self.repo.file_manager).to(be(self.repo.file_manager))
+
+    with it("should answer the branch it has checked out as a branch"):
+        expect(self.repo.current_branch).to(equal(self.repo.branch_named("main")))
+
+    with it("should be its own main clone"):
+        expect(self.repo.main_clone).to(be(self.repo))
+
+    with it("should have no open worktree before one is switched to"):
+        expect(self.repo.open_worktree).to(be_none)
+
+    with context("with a branch opened in a linked worktree"):
+        with before.each:
+            self.repo.switch_worktree("feature/a")
+            self.tree = WorkState(self.clone).worktree_folder
+            self.linked = Repo(self.tree)
+
+        with it("should answer the saved worktree as the one git lists there"):
+            expect(self.repo.open_worktree.path).to(equal(self.tree.resolve()))
+
+        with it("should answer the worktree's branch from its own checkout"):
+            expect(self.repo.open_worktree.branch.repo.root).to(equal(self.tree.resolve()))
+
+        with it("should find the main clone from the linked worktree"):
+            expect(self.linked.main_clone.root).to(equal(self.clone.resolve()))
+
+        with it("should share the main clone's saved work state with the linked worktree"):
+            expect(self.linked.work_state.path).to(equal(self.repo.work_state.path))
+
+        with it("should list the main clone with the repository that lists it"):
+            listed = self.repo.worktrees.at(self.clone)
+            expect(listed.repository).to(be(self.repo))
+
+        with it("should remove the worktree through the checkouts that listed it"):
+            self.repo.close_worktree()
+            expect(self.tree.exists()).to(be_false)

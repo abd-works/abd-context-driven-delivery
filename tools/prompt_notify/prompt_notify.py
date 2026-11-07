@@ -14,6 +14,7 @@ import re
 import shutil
 import sys
 from datetime import datetime, timezone
+from functools import cached_property
 from pathlib import Path
 from typing import ClassVar
 
@@ -43,7 +44,6 @@ class PromptNotify:
     """Echo detected action, practice, fidelity, and guideline names on preToolUse."""
 
     _catalog: ClassVar[list[tuple[str, str]] | None] = None
-    _echo_toolsets: ClassVar[list | None] = None
     _installed_extension: ClassVar[Path | None] = None
 
     # Each hook event is handled by the hook server's one instance, so nothing about one event is kept on it: two
@@ -82,7 +82,7 @@ class PromptNotify:
     def on_pre_tool_use(self, payload: HookPayload) -> dict:
         """Toast what the tool call uses in every workspace folder of the chat that made it."""
         self.install_ide_toast_extension()
-        result = self.handle(payload, toolsets=self.echo_toolsets())
+        result = self.handle(payload, toolsets=self.echo_toolsets)
         message = result.get("user_message")
         if message:
             self.show_toast(str(message), payload.workspace_roots)
@@ -105,7 +105,7 @@ class PromptNotify:
         if not invoked:
             return None
         searched = self._walk_toolsets(
-            toolsets if toolsets is not None else self.echo_toolsets()
+            toolsets if toolsets is not None else self.echo_toolsets
         )
         for toolset in searched:
             found = self._echo_on_toolset(invoked, toolset)
@@ -117,12 +117,15 @@ class PromptNotify:
         action_names = {self._mcp_tool_name(payload), payload.tool_name}
         return self._catalog_match(self._haystacks(payload), action_names)
 
+    @cached_property
     def echo_toolsets(self) -> list:
-        """The toolsets installed in the CDD checkout, whose @Toast annotations say which tool calls toast; loaded once per
-        process. A toolset that fails to load raises, so a broken toolset is seen rather than silently not toasting."""
-        if type(self)._echo_toolsets is None:
-            type(self)._echo_toolsets = self._load_echo_toolsets()
-        return type(self)._echo_toolsets
+        """The toolsets the CDD checkout defines, whose @Toast annotations say which tool calls toast; loaded once by the
+        hook server's one notifier. A toolset that fails to load raises, so a broken toolset is seen rather than silently
+        not toasting."""
+        from harness.agent_tools.agent_tools import AgentToolSet
+        from harness.installation.repository_toolsets import RepositoryToolsets
+
+        return AgentToolSet.from_items(RepositoryToolsets(_CDD_CHECKOUT).collect())
 
     def show_toast(self, toast: str, workspace_roots: list[Path]) -> list[Path]:
         """Show toast in every workspace folder of the chat it is for, the toast files written. The hook server hands
@@ -200,12 +203,6 @@ class PromptNotify:
         if not self._has_toast(begin.callable):
             return None
         return "action", Name(str(getattr(toolset, "slug", match.name))).kebab
-
-    def _load_echo_toolsets(self) -> list:
-        from harness.installer.installer import Installer
-        from harness.agent_tools.agent_tools import AgentToolSet
-
-        return AgentToolSet.from_items(Installer(repo=_CDD_CHECKOUT).toolsets.collect())
 
     def _toast_folders(self, workspace_roots: list[Path | str]) -> list[Path]:
         """Each workspace folder once, as Windows names it when Cursor sends `/c:/...`."""

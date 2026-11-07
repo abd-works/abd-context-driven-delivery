@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -110,23 +111,19 @@ class Repo:
     def __init__(self, root: str | Path = ".") -> None:
         self.root = Path(root).resolve()
         self.default_branch = "main"
+        # The git command line, run in this clone.
+        self.git = Git(self.root)
+        # The checkouts of this repository: the main clone and the linked worktrees beside it.
+        self.worktrees = Worktrees(self)
 
     @classmethod
     @tool_subject
     def of_project(cls, project: Path) -> Repo:
         """The clone holding project, the project a tool call names. One cdd server answers every chat, so each call is
         handed its project and acts on that project's clone, never on a clone named by an earlier call."""
-        return cls(cls(project).checkout_folder)
-
-    @property
-    def git(self) -> Git:
-        """The git command line, run in this clone."""
-        return Git(self.root)
-
-    @property
-    def worktrees(self) -> Worktrees:
-        """The checkouts of this repository: the main clone and the linked worktrees beside it."""
-        return Worktrees(self)
+        found = cls(project)
+        checkout = found.checkout_folder
+        return found if checkout == found.root else cls(checkout)
 
     def find_root(self) -> Path | None:
         current = self.root.parent if self.root.is_file() else self.root
@@ -163,9 +160,9 @@ class Repo:
             return checkout
         return (worktree_git / common.read_text(encoding="utf-8").strip()).resolve().parent
 
-    @property
+    @cached_property
     def file_manager(self) -> FileManager:
-        """Lists, finds, and reads the files anywhere in this repository."""
+        """Lists, finds, and reads the files anywhere in this repository; made once."""
         from tools.file_manager.file_manager import FileManager
 
         return FileManager(self.root, (self.root,))
@@ -183,8 +180,9 @@ class Repo:
         return Branch(self, name)
 
     @property
-    def current_branch(self) -> str:
-        return self.git.run("rev-parse", "--abbrev-ref", "HEAD")
+    def current_branch(self) -> Branch:
+        """The branch this checkout has checked out."""
+        return self.branch_named(self.git.run("rev-parse", "--abbrev-ref", "HEAD"))
 
     @property
     def current_commit(self) -> str:
@@ -226,12 +224,12 @@ class Repo:
         return self.current_commit
 
     def push_upstream(self) -> None:
-        self.git.run("push", "-u", "origin", self.current_branch)
+        self.git.run("push", "-u", "origin", self.current_branch.name)
 
     def needs_push(self) -> bool:
         """True when origin has no copy of the current branch yet or the branch is ahead of it. A git failure is raised,
         not read as nothing to push, so a close never reports a branch pushed that was not."""
-        branch = self.current_branch
+        branch = self.current_branch.name
         if not self.has_ref(f"refs/remotes/origin/{branch}"):
             return True
         return int(self.git.run("rev-list", f"origin/{branch}..HEAD", "--count") or "0") > 0
@@ -244,7 +242,7 @@ class Repo:
 
     def merge_from(self, other: Branch, message: str = "") -> str:
         """Merge other into the current branch without checking other out."""
-        if other.name == self.current_branch:
+        if other == self.current_branch:
             return self.current_commit
         self.git.run("merge", other.name, *(["-m", message] if message else ["--no-edit"]))
         return self.current_commit
@@ -253,46 +251,44 @@ class Repo:
         resolved = Path(path).resolve()
         return (resolved.relative_to(self.root) if resolved.is_relative_to(self.root) else resolved).as_posix()
 
-    @property
-    def _checkout(self) -> Repo:
-        """The checkout this clone's folder is in; the repo tools need one."""
-        root = self.find_root()
-        if root is None:
+    @cached_property
+    def main_clone(self) -> Repo:
+        """The repository's main checkout, found once: this clone unless it is a linked worktree. Branch commands act
+        there, never inside a linked worktree."""
+        if self.find_root() is None:
             raise RepoConnectError("repo tools require a git repository")
-        return self if root == self.root else Repo(root)
+        primary = self.primary_root()
+        return self if primary == self.root else Repo(primary)
+
+    @cached_property
+    def work_state(self) -> WorkState:
+        """The branch, worktree, and session saved as open in the main clone's ``.sessions/session.json``; every checkout
+        of the repository reads the main clone's one."""
+        main = self.main_clone
+        return WorkState(self.root) if main is self else main.work_state
 
     @property
-    def _main_clone(self) -> Repo:
-        """The main clone; branch commands never act inside a linked worktree."""
-        checkout = self._checkout
-        return Repo(checkout.primary_root()) if checkout.is_linked_worktree() else checkout
-
-    @property
-    def _work_state(self) -> WorkState:
-        return WorkState(self._main_clone.root)
+    def open_worktree(self) -> Worktree | None:
+        """The worktree saved as open, as the main clone's worktrees list it; none when none is saved or git no longer
+        lists one there."""
+        folder = self.work_state.worktree_folder
+        return self.main_clone.worktrees.at(folder) if folder is not None else None
 
     def _checkout_tools_act_in(self) -> Repo:
-        """The checkout the repo tools act in. In the main clone that is the worktree saved as open in
-        ``.sessions/session.json`` while its folder exists, so the work goes where ``switch_worktree`` moved the branch;
-        in a linked worktree, or with no worktree open, it is this checkout."""
-        own = self._checkout
-        if own.is_linked_worktree():
-            return own
-        opened = WorkState(own.root).worktree_folder
-        return Repo(opened) if opened is not None and opened.is_dir() else own
-
-    def _saved_worktree(self) -> Worktree | None:
-        """The worktree saved as open on the main clone, with the branch saved beside it; none when none is open."""
-        state = self._work_state
-        folder = state.worktree_folder
-        return Worktree.from_checkout(folder, state.branch_name) if folder is not None else None
+        """The checkout the repo tools act in. In the main clone that is the open worktree while its folder exists, so
+        the work goes where ``switch_worktree`` moved the branch; in a linked worktree, or with no worktree open, it is
+        this checkout."""
+        if self.is_linked_worktree():
+            return self
+        opened = self.open_worktree
+        return opened.repository if opened is not None and opened.path.is_dir() else self.main_clone
 
     def _named_or_saved_branch(self, name: str) -> Branch:
         """The branch called name on the main clone, else the branch saved as open."""
-        cleaned = (name or "").strip() or self._work_state.branch_name
+        cleaned = (name or "").strip() or self.work_state.branch_name
         if not cleaned:
             raise BranchNameRequiredError()
-        return self._main_clone.branch_named(cleaned)
+        return self.main_clone.branch_named(cleaned)
 
     @long_call
     @agent_tool
@@ -306,7 +302,7 @@ class Repo:
         ``name`` as ``branch`` in ``.sessions/session.json``. Does not touch worktrees or sessions.
         """
         branch = self._named_or_saved_branch(name).switch_to()
-        self._work_state.branch_name = branch.name
+        self.work_state.branch_name = branch.name
         return f"on branch {branch.name!r} at {branch.repo.root}"
 
     @long_call
@@ -323,9 +319,9 @@ class Repo:
         committed and pushed on the default branch.
         """
         branch = self._named_or_saved_branch(name)
-        release = LatestRelease(branch.repo, self._work_state.session or branch.name)
+        release = LatestRelease(branch.repo, self.work_state.session or branch.name)
         branch.close(commit_message)
-        self._work_state.branch_name = branch.repo.default_branch
+        self.work_state.branch_name = branch.repo.default_branch
         pruned = release.keep()
         kept = f"; kept {release.release!r} end-to-end results, removed {', '.join(pruned)}" if pruned else ""
         return f"closed branch {branch.name!r}: merged into {branch.repo.default_branch!r}, pushed, and deleted{kept}"
@@ -343,8 +339,8 @@ class Repo:
         When the worktree cannot be brought up to date with origin, the reply says so and why.
         """
         opened = self._named_or_saved_branch(name).move_to_worktree()
-        self._work_state.branch_name = opened.branch.name
-        self._work_state.worktree_folder = opened.path
+        self.work_state.branch_name = opened.branch.name
+        self.work_state.worktree_folder = opened.path
         behind = f"; not updated from origin: {opened.sync_failure}" if opened.sync_failure else ""
         return f"worktree for {opened.branch.name!r} at {opened.path}{behind}"
 
@@ -357,11 +353,11 @@ class Repo:
         Does not merge; the branch stays open as ``branch``. Clears ``worktree`` in
         ``.sessions/session.json`` and returns later repo tools to the main clone.
         """
-        worktree = self._saved_worktree()
+        worktree = self.open_worktree
         if worktree is None:
             raise NoOpenWorktreeError()
         branch = worktree.close(commit_message)
-        self._work_state.worktree_folder = None
+        self.work_state.worktree_folder = None
         return f"closed worktree for {branch.name!r}; branch pushed and kept open"
 
     @command(name="switch-branch")
@@ -480,7 +476,7 @@ class Branch:
     @data_field
     def is_checked_out(self) -> bool:
         """Whether the repository has this branch checked out; a commit lands on whatever is checked out."""
-        return self.exists and self._repo.current_branch == self.name
+        return self.exists and self._repo.current_branch == self
 
     @property
     def is_default(self) -> bool:
@@ -505,7 +501,7 @@ class Branch:
             return []
         git = self._repo.git
         committed = git.run("diff", "--name-only", f"{self._repo.default_branch}...{self.name}").splitlines()
-        if self._repo.current_branch != self.name:
+        if self._repo.current_branch != self:
             return committed
         uncommitted = git.run("status", "--porcelain", "--untracked-files=all", "--no-renames").splitlines()
         return [*committed, *(line[3:].strip('"') for line in uncommitted)]
@@ -520,9 +516,9 @@ class Branch:
 
     def switch_to(self) -> Branch:
         """Check this branch out in its clone after saving the branch being left."""
-        repository = self._repo
-        if repository.current_branch != self.name:
-            repository.branch_named(repository.current_branch).save(f"branch: switch to {self.name}")
+        leaving = self._repo.current_branch
+        if leaving != self:
+            leaving.save(f"branch: switch to {self.name}")
             self.check_out()
         return self
 
@@ -536,7 +532,7 @@ class Branch:
         repository = self._repo
         if self.is_default:
             raise DefaultBranchError("open a worktree for", repository.default_branch)
-        if repository.current_branch == self.name:
+        if repository.current_branch == self:
             self.save(f"worktree: move {self.name} to its worktree")
             repository.branch_named(repository.default_branch).check_out()
         return self.open_in_worktree()
