@@ -11,7 +11,8 @@ from __future__ import annotations
 
 from typing import Iterable, List, Optional
 
-from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in, without_marks
+from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import without_marks
 
 # Each DDD stereotype, lower-cased, and the building block it names. Order matters: the first one a class carries wins.
 _KIND_OF_STEREOTYPE = (
@@ -38,25 +39,24 @@ def plain_class_name(name: str) -> str:
 
 
 class TacticalClass:
-    """A class as DDD reads it: its name and the stereotypes it carries."""
+    """A class as DDD reads it: the class Clean Engineering read, held, with the building block its stereotypes or its
+    name make it."""
 
-    def __init__(self, name: str, stereotypes: Iterable[str]) -> None:
-        self.name = plain_class_name(name)
-        self._stereotypes = list(stereotypes)
+    def __init__(self, oclass: OoadClass) -> None:
+        self.oclass = oclass
 
-    @classmethod
-    def from_heading(cls, heading: str) -> "TacticalClass":
-        """The class a heading or sketch line names: `**Cart** <<Aggregate Root>> <<Entity>>`."""
-        return cls(heading, marks_in(heading))
+    @property
+    def name(self) -> str:
+        return plain_class_name(self.oclass.name)
 
     @property
     def stereotypes(self) -> List[str]:
         """The class's stereotypes that are DDD building blocks, as written."""
-        return [item for item in self._stereotypes if item.lower() in _TACTICAL_STEREOTYPES]
+        return [item for item in self.oclass.stereotypes if item.lower() in _TACTICAL_STEREOTYPES]
 
     def kind(self) -> Optional[str]:
         """The building block its stereotypes name; None for a class with none, or one marked as another system."""
-        lowered = {item.lower() for item in self._stereotypes}
+        lowered = {item.lower() for item in self.oclass.stereotypes}
         if "system" in lowered:
             return None
         return next((kind for stereotype, kind in _KIND_OF_STEREOTYPE if stereotype in lowered), None)
@@ -74,11 +74,12 @@ class TacticalClass:
             return "ValueObject"
         return "EntityRoot" if f"{self.name}Repository" in set(peer_names) else None
 
-    def declares_stereotype(self, graph_kind: str, peer_names: Iterable[str]) -> bool:
-        """True when the class carries a DDD stereotype, or its name itself says the building block it is."""
+    def declares_stereotype(self, graph_kind: str) -> bool:
+        """True when the class carries a DDD stereotype, or its name itself says the building block it is, among the
+        classes its file declares."""
         if self.stereotypes:
             return True
-        names = set(peer_names)
+        names = set(self.oclass.peer_names)
         kind = self.inferred_kind(names) or graph_kind
         return self._name_says(kind if kind in _TAGGED_KINDS else graph_kind, names)
 

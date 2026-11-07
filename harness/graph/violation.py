@@ -4,8 +4,9 @@ read it back from the saved graph."""
 
 from __future__ import annotations
 
+import copy
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from harness.installation.destination import SourceFile, data_field
 
@@ -60,21 +61,6 @@ class Violation:
         self._end_line = int(end_line) if end_line else self._line
         self._severity = severity
         self._source = list(source or [])
-
-    @classmethod
-    def on_node(cls, rule: str, message: str, node) -> Violation:
-        """A violation of rule found on node, at the node's place in its file."""
-        source = node.source
-        return cls(
-            rule,
-            message,
-            practice=node.practice.key,
-            node_id=node.node_id,
-            subject=f"{node.type} `{node.name}`",
-            location=source.file or "",
-            line=source.start_line,
-            end_line=source.end_line,
-        )
 
     @classmethod
     def from_data(cls, data: dict) -> Violation:
@@ -146,7 +132,7 @@ class Violation:
     @property
     def described(self) -> str:
         """The message with what it was found on in front, the way a report lists it."""
-        return f"{self._subject}: {self._message}" if self._subject else self._message
+        return f"{self.subject}: {self._message}" if self.subject else self._message
 
     def is_under(self, prefixes: list[str]) -> bool:
         """True when this violation's file is one of the path prefixes or sits under one."""
@@ -155,20 +141,12 @@ class Violation:
         return any(location == folder or location.startswith(f"{folder}/") for folder in folders)
 
     def in_file(self, location: str, file: Path, lines_before: int, lines_after: int) -> Violation:
-        """This violation named from location, with the lines around it read from file."""
-        source = self._lines_around(file, lines_before, lines_after)
-        return Violation(
-            self._rule,
-            self._message,
-            practice=self._practice,
-            node_id=self._node_id,
-            subject=self._subject,
-            location=location,
-            line=self._line,
-            end_line=self._end_line,
-            severity=self._severity,
-            source=source,
-        )
+        """This violation named from location, with the lines around it read from file; a violation found on a node
+        still holds that node's rule."""
+        moved = copy.copy(self)
+        moved._location = location
+        moved._source = self._lines_around(file, lines_before, lines_after)
+        return moved
 
     def _lines_around(self, file: Path, lines_before: int, lines_after: int) -> list[SourceLine]:
         if not self._line or not file.is_file():
@@ -185,7 +163,53 @@ class Violation:
 
     @property
     def _identity(self) -> tuple:
-        return (self._practice, self._rule, self._node_id, self._message, self._location, self._line, self._end_line, self._severity)
+        return (self.practice, self.rule, self.node_id, self._message, self._location, self._line, self._end_line, self._severity)
 
     def __repr__(self) -> str:
-        return f"Violation({self._rule!r}, {self.described!r} at {self._location}:{self._line})"
+        return f"Violation({self.rule!r}, {self.described!r} at {self._location}:{self._line})"
+
+
+class NodeViolation(Violation):
+    """A rule broken on a graph node: it holds the node's rule that found it (a *GraphRule*), and through that rule the
+    node and its practice, so its rule, practice, node, and subject are theirs, not copies. A saved graph keeps it as
+    the same data as any violation, which names them by slug, key, and id."""
+
+    def __init__(
+        self,
+        found_by: Any,
+        message: str,
+        *,
+        location: str = "",
+        line: int | None = None,
+        end_line: int | None = None,
+        severity: str = "error",
+    ) -> None:
+        super().__init__("", message, location=location, line=line, end_line=end_line, severity=severity)
+        self.found_by = found_by
+
+    @classmethod
+    def at_node(cls, found_by: Any, message: str) -> NodeViolation:
+        """A violation the rule found_by found on its node, at the node's place in its file."""
+        source = found_by.node.source
+        return cls(found_by, message, location=source.file or "", line=source.start_line, end_line=source.end_line)
+
+    @property
+    @data_field
+    def rule(self) -> str:
+        return self.found_by.slug
+
+    @property
+    @data_field
+    def practice(self) -> str:
+        return self.found_by.node.practice.key
+
+    @property
+    @data_field
+    def node_id(self) -> str:
+        return self.found_by.node.node_id
+
+    @property
+    @data_field
+    def subject(self) -> str:
+        node = self.found_by.node
+        return f"{node.type} `{node.name}`"

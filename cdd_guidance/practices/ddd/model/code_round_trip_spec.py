@@ -33,7 +33,7 @@ def _keeps_contexts(code_format):
 def _keeps_cards(code_format):
     _code, model = _round_trip(code_format)
     aggregate = _aggregate(model, "Customer", "Customer Profile")
-    expect([(card.node.name, card.stereotypes) for card in aggregate.cards]).to(
+    expect([(card.name, card.stereotypes) for card in aggregate.cards]).to(
         equal([
             ("CustomerProfile", ["Aggregate Root", "Entity"]),
             ("CustomerProfileRepository", ["Repository"]),
@@ -41,7 +41,7 @@ def _keeps_cards(code_format):
             ("Address", ["Value Object"]),
         ])
     )
-    expect([item.name for item in aggregate.repository.node.operations]).to(equal(["create", "load", "update"]))
+    expect([item.name for item in aggregate.repository.operations]).to(equal(["create", "load", "update"]))
 
 
 def _keeps_operations(code_format):
@@ -120,7 +120,7 @@ with description("Ddd.render at model fidelity"):
             code = "@dataclass\n@value_object\nclass Money:\n    amount: int\n\n@entity\nclass Wallet:\n    money: Money\n"
             back = Ddd(fidelity="model").render("markdown", code, source="python")["content"]
             cards = MarkdownBoundedContextMap().parse(back).contexts[0].aggregates[0].cards
-            expect(sorted((card.node.name, card.stereotypes) for card in cards)).to(
+            expect(sorted((card.name, card.stereotypes) for card in cards)).to(
                 equal([("Money", ["Value Object"]), ("Wallet", ["Entity"])])
             )
 
@@ -138,5 +138,5 @@ with description("Ddd.render at model fidelity"):
             back = Ddd(fidelity="model").render("markdown", code, source="python")["content"]
             model = MarkdownBoundedContextMap().parse(back)
             aggregate = model.contexts[0].aggregates[0]
-            expect([card.node.name for card in aggregate.cards]).to(equal(["Cart", "CartRepository", "CartLine"]))
+            expect([card.name for card in aggregate.cards]).to(equal(["Cart", "CartRepository", "CartLine"]))
             expect(aggregate.repository is not None).to(be_true)

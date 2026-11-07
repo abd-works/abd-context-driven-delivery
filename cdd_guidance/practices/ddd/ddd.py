@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
-from harness.markdown.format import Format
 
 
 @agent_toolset
@@ -75,59 +74,32 @@ class Ddd(PracticeGuidance):
         """Bounded contexts come from the folders that hold ``.context/bounded-context.md``, aggregates from the folders
         that hold domain classes, and building blocks from the classes Clean Engineering read, each seen through the DDD
         stereotype its declaration or name gives it."""
-        from cdd_guidance.practices.ddd.model.graph_reading import read_contexts_and_blocks
+        from cdd_guidance.practices.ddd.model.graph_reading import DddReading
 
-        read_contexts_and_blocks(self)
+        DddReading(self).read()
 
     def _skip_inactive_fidelity(self, current_name: str | None, name: str) -> bool:
         del current_name, name
         return False
 
     def _parse_content(self, source_format: str, content):
-        parsed = super()._parse_content(source_format, content)
-        if Format(source_format).name == "markdown" and not _has_aggregates(parsed):
-            # Plain class-model markdown with no contexts or aggregates reads as Clean Engineering.
-            from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (
-                MarkdownCleanEngineeringModel,
-            )
+        """A text the map reads as a plain class model, with no aggregate in it, is read by the Clean Engineering
+        practice this practice's fidelity has as its companion, through that practice's own adapter."""
+        from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
 
-            return MarkdownCleanEngineeringModel().parse(self._incoming(source_format, content))
+        parsed = super()._parse_content(source_format, content)
+        if isinstance(parsed, BoundedContextMap) and parsed.holds_classes_only:
+            return self.clean_engineering_companion.practice_guidance._parse_content(source_format, content)
         return parsed
 
     def _model_for(self, target, parsed):
-        # The code formats render Clean Engineering's class model; the DDD formats render the bounded-context map.
+        """The code formats render Clean Engineering's class model, which the map writes as one; the DDD formats
+        render the bounded-context map, which reads a class model back."""
         from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
-        from cdd_guidance.practices.ddd.model.clean_engineering_bridge import (
-            from_clean_engineering,
-            to_clean_engineering,
-        )
-        from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
+        from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 
-        if isinstance(target, CleanEngineeringModel) and isinstance(parsed, BoundedContextMap):
-            parsed = to_clean_engineering(parsed)
-            if type(target).__name__.startswith("Python"):
-                _python_generics(parsed)
-        elif isinstance(target, BoundedContextMap) and isinstance(parsed, CleanEngineeringModel):
-            parsed = from_clean_engineering(parsed)
+        if isinstance(target, CleanEngineeringModel) and isinstance(parsed, MarkdownBoundedContextMap):
+            return parsed.class_model()
+        if isinstance(target, MarkdownBoundedContextMap) and isinstance(parsed, CleanEngineeringModel):
+            return MarkdownBoundedContextMap().read_class_model(parsed)
         return parsed
-
-
-def _has_aggregates(parsed) -> bool:
-    from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
-
-    return isinstance(parsed, BoundedContextMap) and bool(parsed.every_aggregate)
-
-
-def _python_generics(model) -> None:
-    # `Collection<Root>` is not Python; the python channel needs `Collection[Root]` to read its own output back.
-    def fixed(hint: str) -> str:
-        return (hint or "").replace("<", "[").replace(">", "]")
-
-    for module in model.modules:
-        for oclass in module.classes:
-            for prop in oclass.properties:
-                prop.type_hint = fixed(prop.type_hint)
-            for operation in oclass.operations:
-                operation.return_type = fixed(operation.return_type)
-                for parameter in operation.parameters:
-                    parameter.type_hint = fixed(parameter.type_hint)

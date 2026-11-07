@@ -301,25 +301,30 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
     def class_close(self, has_members: bool) -> List[str]:
         return [] if has_members else ["    pass"]
 
+    def python_type(self, hint: str) -> str:
+        """A type written the way Python writes generics: `Collection<Root>` from another language is
+        `Collection[Root]`, so the file reads back as Python."""
+        return (hint or "").replace("<", "[").replace(">", "]")
+
     def property_line(self, prop: Property, contract: bool) -> List[str]:
-        hint = prop.type_hint or "object"
+        hint = self.python_type(prop.type_hint) or "object"
         if contract:
             return ["    @property", "    @abstractmethod", f"    def {prop.name}(self) -> {hint}: ..."]
         return [f"    {prop.name}: {hint}"]
 
     def constructor_lines(self, oclass: OoadClass, constructor: Optional[Operation], body: List[str]) -> List[str]:
         parameters = ", ".join(
-            f"{name}: {hint}" if hint else name for name, hint in self.constructor_parameters(oclass, constructor)
+            f"{name}: {self.python_type(hint)}" if hint else name for name, hint in self.constructor_parameters(oclass, constructor)
         )
         receiver = f"self, {parameters}" if parameters else "self"
         return [f"    def __init__({receiver}) -> None:"] + (body or ["        pass"])
 
     def signature(self, operation: Operation, contract: bool) -> List[str]:
         lines = [f"    @{decorator}" for decorator in self._decorators(operation, contract)]
-        parameters = ", ".join(parameter.save() for parameter in operation.parameters)
+        parameters = ", ".join(self.python_type(parameter.save()) for parameter in operation.parameters)
         receiver = self._receiver(operation)
         head = ", ".join(part for part in (receiver, parameters) if part)
-        definition = f"    def {operation.name}({head}) -> {operation.return_type or 'None'}:"
+        definition = f"    def {operation.name}({head}) -> {self.python_type(operation.return_type) or 'None'}:"
         if contract:
             return lines + [f"{definition} ..."]
         lines.append(definition)

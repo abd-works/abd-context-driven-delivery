@@ -871,19 +871,20 @@ class Graph:
 
     @overlays.setter
     def overlays(self, paths: list[str]) -> None:
-        """Apply the overlays at paths; the graph keeps each pattern's GraphOverlay, made once here."""
+        """Apply the overlays at paths: the graph holds the pattern each one is, and asks each for the GraphOverlay it
+        owns."""
         self._overlay_paths = list(paths)
-        self._pattern_overlays = [GraphOverlay.of(pattern) for pattern in PatternOverlays(self._overlay_paths).patterns]
-
-    @property
-    def overlay_patterns(self) -> tuple[str, ...]:
-        """The pattern folder names, such as ``lern_domain_driven``, of the overlays this graph applies."""
-        return tuple(overlay.pattern for overlay in self._pattern_overlays)
+        self._pattern_overlays = [pattern.graph_overlay for pattern in PatternOverlays(self._overlay_paths).patterns]
 
     @property
     def pattern_overlays(self) -> list[GraphOverlay]:
         """What each pattern this graph applies gives it: its nodes and its rules."""
         return list(self._pattern_overlays)
+
+    def loaded_practice(self, kind: type) -> PracticeGuidance | None:
+        """The practice of kind, such as the DDD practice, that the last load reads; none when it reads none of that
+        kind. A pattern's overlay asks for the practices it adds to by the class it builds on."""
+        return next((practice for practice in self.practices.values() if isinstance(practice, kind)), None)
 
     ## the practices this graph holds, and their nodes and edges
 
@@ -970,13 +971,13 @@ class Graph:
         """practice's schema, with this graph's pattern overlays applied."""
         from harness.graph.schema_rules import PracticeSchema
 
-        return PracticeSchema.load(practice, self.overlay_patterns)
+        return PracticeSchema.load(practice, tuple(self._pattern_overlays))
 
     def overlay_checks_of(self, practice: PracticeGuidance) -> dict:
         """The graph rules this graph's pattern overlays add to practice, by slug."""
         merged: dict = {}
         for overlay in self._pattern_overlays:
-            merged.update(overlay.rules_for(practice.key))
+            merged.update(overlay.rules_for(practice))
         return merged
 
     def rule_labels_of(self, practice: PracticeGuidance) -> list[str]:
@@ -1346,14 +1347,11 @@ class Graph:
                 found.append(path)
         return sorted(set(found))
 
-    def write_json(self, path: str, files: list[str] | None = None) -> str:
-        """Write this graph alone to ``path``, without merging into the folder's saved graph; with files, only the nodes
-        read from them, each a file or folder from a practice's source root, and the edges between them."""
+    def saved(self, files: list[str] | None = None) -> SavedGraph:
+        """This graph as it saves, taken while no load, refresh, or write changes it; with files, only the nodes read
+        from them, each a file or folder from a practice's source root, and the edges between them."""
         with self._changing:
-            target = Path(path)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(SavedGraph.from_graph(self, files).text, encoding="utf-8")
-            return str(target)
+            return SavedGraph.from_graph(self, files)
 
     @mcp
     @agent_tool

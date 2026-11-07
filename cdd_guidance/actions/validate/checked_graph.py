@@ -88,7 +88,7 @@ class CheckedGraph:
         clean engineering classes); the report keeps only the listed guidance's practice."""
         graph = self.session.graph
         graph.refresh(self.prefixes)
-        self._built = SavedGraph.from_graph(graph, self.prefixes)
+        self._built = graph.saved(self.prefixes)
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(self._built.text, encoding="utf-8")
         return destination

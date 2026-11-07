@@ -58,15 +58,15 @@ with description("Model fidelity class cards"):
         with it("should keep the repository's collection operations apart from the root's"):
             model = MarkdownBoundedContextMap().parse(_EXPECTED.read_text(encoding="utf-8"))
             aggregate = _aggregate(model, "Customer", "Customer Profile")
-            expect([item.name for item in aggregate.repository.node.operations]).to(
+            expect([item.name for item in aggregate.repository.operations]).to(
                 equal(["create", "load", "update"])
             )
-            expect(aggregate.repository.node.accesses is aggregate.root).to(be_true)
+            expect(aggregate.repository.accesses is aggregate.root).to(be_true)
 
-        with it("should list the members the root composes"):
+        with it("should hold the member cards the root composes"):
             model = MarkdownBoundedContextMap().parse(_EXPECTED.read_text(encoding="utf-8"))
             aggregate = _aggregate(model, "Customer", "Customer Profile")
-            expect([item.name for item in aggregate.root.invariant_objects]).to(equal(["Identity", "Address"]))
+            expect([item.name for item in aggregate.members]).to(equal(["Identity", "Address"]))
 
         with it("should keep the call to another aggregate on the operation that makes it"):
             model = MarkdownBoundedContextMap().parse(_EXPECTED.read_text(encoding="utf-8"))
@@ -86,10 +86,10 @@ with description("Model fidelity class cards"):
             model = SketchDddModel().parse(_SKETCH)
             aggregate = _aggregate(model, "Revenue", "billing")
             expect(aggregate.root.name).to(equal("BillingAccount"))
-            expect([item.node.name for item in aggregate.cards]).to(
+            expect([item.name for item in aggregate.cards]).to(
                 equal(["BillingAccount", "BillingAccountRepository", "CreditAdjustment"])
             )
-            expect([item.name for item in aggregate.repository.node.operations]).to(
+            expect([item.name for item in aggregate.repository.operations]).to(
                 equal(["create", "load", "update"])
             )
 

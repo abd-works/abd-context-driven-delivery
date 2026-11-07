@@ -34,11 +34,6 @@ class LernOverlay(GraphOverlay):
         }
     )
 
-    def guidance(self):
-        from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import LernDomainDriven
-
-        return LernDomainDriven()
-
     def read(self, graph: Graph) -> None:
         if not graph.folder:
             return
@@ -68,11 +63,15 @@ class _LernReading:
 
     def read(self) -> None:
         from cdd_guidance.patterns.lern_domain_driven.tier_facts import test_setup_text
+        from cdd_guidance.practices.ddd.ddd import Ddd
+        from cdd_guidance.practices.stories.stories import Stories
 
         self._behaviors()
-        if "ddd" not in self.graph.practices or "stories" not in self.graph.practices:
+        ddd = self.graph.loaded_practice(Ddd)
+        self.stories = self.graph.loaded_practice(Stories)
+        if ddd is None or self.stories is None:
             return
-        self.ddd = self.graph.practice("ddd")
+        self.ddd = ddd
         self.setup_text = test_setup_text(self.root)
         self._context_mappings()
         self._tier_folders()
@@ -85,9 +84,11 @@ class _LernReading:
         """LERN behavior files on the BDD practice, each carrying the facts its tier rules read."""
         from cdd_guidance.patterns.lern_domain_driven.tier_facts import TierFile
 
-        if "bdd" not in self.graph.practices:
+        from cdd_guidance.practices.bdd.bdd import Bdd
+
+        bdd = self.graph.loaded_practice(Bdd)
+        if bdd is None:
             return
-        bdd = self.graph.practice("bdd")
         for file in scanned_files(self.root):
             semantic = _BEHAVIOR_TIERS.get(".".join(file.name.split(".")[1:]))
             if semantic is not None:
@@ -209,7 +210,7 @@ class _LernReading:
     def _story_files(self) -> None:
         from cdd_guidance.patterns.lern_domain_driven.tier_facts import TierFile
 
-        stories = self.graph.practice("stories")
+        stories = self.stories
         for file in scanned_files(self.root):
             semantic = _story_semantic(file)
             if semantic is None:
@@ -259,5 +260,3 @@ def _parent_story_scope(stories, relative: str) -> Node | None:
     parent_name = Path(rel).parent.name.replace("_", "-")
     return next((node for node in epics if node.name.replace("_", "-") == parent_name), None)
 
-
-OVERLAY = LernOverlay("lern_domain_driven")

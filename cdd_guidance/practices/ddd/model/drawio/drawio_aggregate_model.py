@@ -23,12 +23,8 @@ from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import 
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import EDGE_STYLES, arrow_style
 from cdd_guidance.practices.ddd.model.drawio.drawn_diagram import DrawnCell, DrawnDiagram, label_texts
-from cdd_guidance.practices.ddd.model.markdown.class_cards import ClassCard, plain_properties
-from cdd_guidance.practices.ddd.model.markdown.nodes import (
-    MarkdownAggregate,
-    MarkdownBoundedContext,
-    MarkdownEntity,
-)
+from cdd_guidance.practices.ddd.model.markdown.class_cards import ClassCard, MarkdownEntity
+from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownAggregate, MarkdownBoundedContext
 from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
 
 _CONTEXT_STYLE = (
@@ -160,40 +156,40 @@ class DrawIOAggregateModel:
         y = top + _TITLE
         if root is not None:
             box = (left + _PAD, y, _root_width(root, repository), _card_height(root, repository))
-            cell = self._add_card(f"{_CARD_CELL}{_slug(root.node.name)}", _card_html(root, repository), box)
-            self._card_ids[root.node.name] = cell
-            self._root_ids[root.node.name] = cell
+            cell = self._add_card(f"{_CARD_CELL}{_slug(root.name)}", _card_html(root, repository), box)
+            self._card_ids[root.name] = cell
+            self._root_ids[root.name] = cell
             self._root_ids[aggregate.name] = cell
         x = left + _PAD + (_root_width(root, repository) + _GAP if root is not None else 0)
         width = _members_width(members)
         for member in members:
             height = _card_height(member, None)
-            cell = self._add_card(f"{_CARD_CELL}{_slug(aggregate.name)}-{_slug(member.node.name)}", _card_html(member, None),
+            cell = self._add_card(f"{_CARD_CELL}{_slug(aggregate.name)}-{_slug(member.name)}", _card_html(member, None),
                                   (x, y, width, height))
-            self._card_ids.setdefault(member.node.name, cell)
+            self._card_ids.setdefault(member.name, cell)
             y += height + _GAP
 
     def _draw_edges(self, aggregate) -> None:
         root, repository, members = _split(aggregate)
         if root is None:
             return
-        local = {card.node.name for card in members} | {root.node.name}
+        local = {card.name for card in members} | {root.name}
         composed = set()
         for card in [root] + members:
-            for prop in card.node.properties:
+            for prop in card.properties:
                 target = _type_name(getattr(prop, "type_hint", ""))
-                if getattr(prop, "stereotype", "") == "composition" and target in local and target != card.node.name:
-                    self._edge(card.node.name, target, "composition", self._card_ids, prop.name)
+                if getattr(prop, "stereotype", "") == "composition" and target in local and target != card.name:
+                    self._edge(card.name, target, "composition", self._card_ids, prop.name)
                     composed.add(target)
         for member in members:
-            if member.node.name not in composed:
-                self._edge(root.node.name, member.node.name, "composition", self._card_ids)
+            if member.name not in composed:
+                self._edge(root.name, member.name, "composition", self._card_ids)
         for card in [root] + members:
             for target, label in _dependencies(card, local):
-                self._edge(card.node.name, target, "association", self._root_ids, label)
+                self._edge(card.name, target, "association", self._root_ids, label)
         for integration in aggregate.integrations:
             if integration.target_name:
-                self._edge(root.node.name, integration.target_name, "association", self._root_ids)
+                self._edge(root.name, integration.target_name, "association", self._root_ids)
 
     def _edge(self, source: str, target: str, kind: str, targets: Dict[str, str], label: str = "") -> None:
         source_id = self._card_ids.get(source)
@@ -293,7 +289,7 @@ def _cards_drawn_in(box: DrawnCell) -> List[ClassCard]:
 def _card_drawn(heading: str, members: List[str], as_repository: bool = False) -> ClassCard:
     # The repository part of a root card holds only operations; a card holds properties, then operations.
     texts = label_texts(heading)
-    card = ClassCard.from_name(texts[-1], [text.strip(_GUILLEMETS) for text in texts[:-1]])
+    card = ClassCard.named(texts[-1], [text.strip(_GUILLEMETS) for text in texts[:-1]])
     sections = ([""] if as_repository else []) + members
     for line in label_texts(sections[0]):
         card.add_member(line, as_operation=False)
@@ -328,7 +324,7 @@ def _members_width(members: List[ClassCard]) -> int:
 
 
 def _text_lines(card: ClassCard) -> List[str]:
-    return [_property_text(prop) for prop in _properties(card)] + [_operation_text(item) for item in card.node.operations]
+    return [_property_text(prop) for prop in _properties(card)] + [_operation_text(item) for item in card.operations]
 
 
 def _fitted_width(lines: List[str], smallest: int) -> int:
@@ -339,33 +335,33 @@ def _fitted_width(lines: List[str], smallest: int) -> int:
 
 
 def _card_height(card: ClassCard, repository: Optional[ClassCard]) -> float:
-    lines = len(card.stereotypes) + max(len(_properties(card)), 1) + max(len(card.node.operations), 1)
+    lines = len(card.stereotypes) + max(len(_properties(card)), 1) + max(len(card.operations), 1)
     height = _CARD_HEAD + lines * _LINE
     if repository is not None:
-        height += _CARD_HEAD + max(len(repository.node.operations), 1) * _LINE
+        height += _CARD_HEAD + max(len(repository.operations), 1) * _LINE
     return height
 
 
 def _card_html(card: ClassCard, repository: Optional[ClassCard]) -> str:
     parts = [_STEREOTYPE_LINE.format(escape(item)) for item in card.stereotypes]
-    parts.append(_NAME_LINE.format(escape(card.node.name)))
+    parts.append(_NAME_LINE.format(escape(card.name)))
     parts.append(_RULE)
     parts.append(_MEMBERS_LINE.format("<br/>".join(escape(_property_text(prop)) for prop in _properties(card))))
     parts.append(_RULE)
-    parts.append(_MEMBERS_LINE.format("<br/>".join(escape(_operation_text(item)) for item in card.node.operations)))
+    parts.append(_MEMBERS_LINE.format("<br/>".join(escape(_operation_text(item)) for item in card.operations)))
     if repository is not None:
         parts.append(_RULE)
         parts.append(_STEREOTYPE_LINE.format("Repository"))
-        parts.append(_REPOSITORY_NAME_LINE.format(escape(repository.node.name)))
+        parts.append(_REPOSITORY_NAME_LINE.format(escape(repository.name)))
         parts.append(_RULE)
         parts.append(_MEMBERS_LINE.format(
-            "<br/>".join(escape(_operation_text(item)) for item in repository.node.operations)
+            "<br/>".join(escape(_operation_text(item)) for item in repository.operations)
         ))
     return "".join(parts)
 
 
 def _properties(card: ClassCard) -> list:
-    return plain_properties(card.node)
+    return card.plain_properties
 
 
 def _property_text(prop) -> str:
@@ -385,12 +381,12 @@ def _type_name(type_hint: str) -> str:
 def _dependencies(card: ClassCard, local: set[str]) -> List[Tuple[str, str]]:
     """Each aggregate this card needs, with the call or the field that needs it, so the arrow names why it is there."""
     found: List[Tuple[str, str]] = []
-    for operation in card.node.operations:
+    for operation in card.operations:
         for callee in operation.callees:
             match = _CALL.match(callee.strip())
             if match and match.group(1) not in local:
                 found.append((match.group(1), operation.name))
-    for prop in card.node.properties:
+    for prop in card.properties:
         target = _type_name(getattr(prop, "type_hint", ""))
         if getattr(prop, "stereotype", "") == "association" and target and target[0].isupper() and target not in local:
             found.append((target, prop.name))

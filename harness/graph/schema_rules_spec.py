@@ -5,8 +5,12 @@ from mamba import before, description, it
 
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.graph_rules_collection import GraphRulesCollection
+from harness.graph.pattern_overlays import PatternOverlays
 from harness.graph.schema_rules import PracticeSchema
 from harness.guidance.practice_catalogue import PracticeCatalogue
+
+# The overlay the LERN pattern owns, as a graph applying that pattern holds it.
+_LERN = tuple(pattern.graph_overlay for pattern in PatternOverlays(["lern_domain_driven"]).patterns)
 
 
 with description("schema rules on a node"):
@@ -88,13 +92,13 @@ with description("DDD schema extends clean engineering"):
 
 with description("LERN overlay rules"):
     with it("should give NodeRoot the tier rules when the overlay is active"):
-        slugs = PracticeSchema.load(PracticeCatalogue.practice("ddd"), ("lern_domain_driven",)).slugs_for("NodeRoot")
+        slugs = PracticeSchema.load(PracticeCatalogue.practice("ddd"), _LERN).slugs_for("NodeRoot")
         expect(slugs).to(contain("node-decides-next-page"))
         expect(slugs).to(contain("node-tier-uses-node-suffix"))
 
     with it("should prefix overlay-declared tier rules in qualified labels"):
         expect(
-            PracticeSchema.load(PracticeCatalogue.practice("ddd"), ("lern_domain_driven",)).rule_label("NodeRoot", "node-decides-next-page")
+            PracticeSchema.load(PracticeCatalogue.practice("ddd"), _LERN).rule_label("NodeRoot", "node-decides-next-page")
         ).to(equal("lern.domain.driven.ddd.NodeRoot.node-decides-next-page"))
 
 
@@ -105,6 +109,6 @@ with description("a rule label"):
         )
 
     with it("should prefix a pattern node"):
-        expect(PracticeSchema.load(PracticeCatalogue.practice("ddd"), ("lern_domain_driven",)).rule_label("Route", "keep-classes-single-responsibility")).to(
+        expect(PracticeSchema.load(PracticeCatalogue.practice("ddd"), _LERN).rule_label("Route", "keep-classes-single-responsibility")).to(
             equal("lern.domain.driven.ddd.Route.keep-classes-single-responsibility")
         )

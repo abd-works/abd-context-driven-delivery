@@ -1,52 +1,107 @@
-"""Class cards under an aggregate — the model fidelity's `####` sections in CE class notation."""
+"""Class cards under an aggregate — the model fidelity's `####` sections in CE class notation.
+
+Each markdown building block is its own card: a *MarkdownEntity*, *MarkdownValueObject*, *MarkdownRepository*, and the
+others read and write their own `####` section, and the sketch's fence for them. Its stereotypes are the class's
+`stereotypes`; its invariants are its own list."""
 
 from __future__ import annotations
 
 import re
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.ddd.model.nodes import DomainEvent, InvariantObject, building_block_type
-from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in
+from cdd_guidance.practices.ddd.model.nodes import (
+    DomainEvent,
+    DomainService,
+    Entity,
+    Factory,
+    InvariantObject,
+    Repository,
+    Specification,
+    ValueObject,
+)
 from cdd_guidance.practices.ddd.model.stereotypes import plain_class_name
 
-_CARD = "#### "
+CARD = "#### "
 _PROPERTIES = "------"
 _OPERATIONS = "----"
 _CALL = "->"
 _NOTE = "//"
 _INVARIANT = "invariant:"
-_LEAVES_CARD = ("integrations:", "emits events:", "consumes events:", "### ")
-_OPERATION = re.compile(r"^([+-])\s*(?:<<\s*(\w+)\s*>>\s*)?(\w+)\((.*?)\)\s*(?::\s*(.+))?$")
-_PROPERTY = re.compile(r"^([+-])\s*(?:<<\s*(\w+)\s*>>\s*)?(\w+)\s*(?::\s*(.+))?$")
 _ROOT = "aggregate root"
 _REPOSITORY = "repository"
 _ORDER = ("Aggregate Root", "Entity", "Value Object", "Repository")
+_REFERENCE = re.compile(r"^-?\s*(?:→|->)?\s*([A-Za-z][\w ·]*?)\s*\(by\s+([A-Za-z_]\w*)\s*\)")
+_IDENT = re.compile(r"^[A-Za-z_]\w*$")
+_REPOSITORY_OPERATIONS = re.compile(r"[/,]")
+# Lines in an entity fence that belong to the aggregate's map, not to the class: integration arcs and event lists.
+_MAP_LINES = ("- ", "→", "pattern:", "crosses:", "integrat", "direction:")
 
 
-class ClassCard:
-    """One `####` card: a classified class with its stereotypes and the lines it was read from."""
+class MarkdownDomainNode:
+    def plain_name(self, text: str) -> str:
+        name = text.replace("**", "").replace("`", "").strip()
+        if "|" in name:
+            name = name.split("|", 1)[0]
+        return name.strip()
 
-    def __init__(self, node: OoadClass, stereotypes: list[str]) -> None:
-        self.node = node
-        self.stereotypes = stereotypes
+    def owner_from(self, heading: str) -> str:
+        if "|" not in heading:
+            return ""
+        return heading.split("|", 1)[1].strip()
+
+
+class MarkdownInvariantObject(InvariantObject, MarkdownDomainNode):
+    pass
+
+
+class ClassCard(MarkdownDomainNode):
+    """A building block as its `####` card: the class with its stereotypes, its members in CE class notation, and the
+    invariants the card lists. Each markdown building block is a card and reads and writes its own lines."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        self._made_root = False
+        super().__init__(*args, **kwargs)
         self.invariants: list[str] = []
 
-    @classmethod
-    def from_heading(cls, heading: str) -> "ClassCard":
-        """An empty card for `Name <<Stereotype>> …`."""
-        return cls.from_name(plain_class_name(heading), marks_in(heading))
-
-    @classmethod
-    def from_name(cls, name: str, stereotypes: list[str]) -> "ClassCard":
-        """An empty card, its class typed by the building block its stereotypes name."""
+    @staticmethod
+    def named(name: str, stereotypes: list[str]) -> "ClassCard":
+        """An empty card of the building block its stereotypes name; a plain class card for none."""
         marks = ordered_stereotypes(stereotypes)
-        return cls(building_block_type(marks)(name, 0), marks)
+        lowered = {item.lower() for item in marks}
+        card_type = next((card for mark, card in _CARD_TYPES if mark in lowered), MarkdownClass)
+        card = card_type(name, 0)
+        card.stereotypes = marks
+        return card
+
+    @staticmethod
+    def from_heading(heading: str) -> "ClassCard":
+        """An empty card for `Name <<Stereotype>> …`."""
+        return ClassCard.named(plain_class_name(heading), marks_in(heading))
+
+    @staticmethod
+    def read(section: list[str]) -> "ClassCard":
+        """The card a `####` section writes: its heading, then its members and invariants."""
+        card = ClassCard.from_heading(section[0].strip()[len(CARD):])
+        card.read_lines(section[1:])
+        return card
+
+    @staticmethod
+    def from_sketch(heading: str, lines: list[str]) -> list["ClassCard"]:
+        """A sketch entity fence as cards: the entity itself, then its repository when the fence names `repo:`."""
+        card = ClassCard.from_heading(heading)
+        return [card] + card.read_sketch_lines(lines)
 
     @property
     def is_root(self) -> bool:
-        return any(item.lower() == _ROOT for item in self.stereotypes)
+        """True when the card is marked <<Aggregate Root>>, or its aggregate made it its root."""
+        return self._made_root or any(item.lower() == _ROOT for item in self.stereotypes)
+
+    @is_root.setter
+    def is_root(self, value: bool) -> None:
+        self._made_root = value
 
     @property
     def is_repository(self) -> bool:
@@ -54,7 +109,15 @@ class ClassCard:
 
     @property
     def heading(self) -> str:
-        return f"{self.node.name} {' '.join(f'<<{item}>>' for item in self.stereotypes)}".rstrip()
+        return f"{self.name} {' '.join(f'<<{item}>>' for item in self.stereotypes)}".rstrip()
+
+    @property
+    def plain_properties(self) -> list[Property]:
+        """What the class holds — not the events or invariant objects DDD hangs on the same list."""
+        return [
+            item for item in self.properties
+            if isinstance(item, Property) and not isinstance(item, (DomainEvent, InvariantObject))
+        ]
 
     def add_member(self, line: str, as_operation: bool) -> Property | Operation | None:
         """Read one `+ name: Type` or `+ name(parameters): Type` line onto the card's class."""
@@ -66,8 +129,64 @@ class ClassCard:
             return self._add_property(*prop.groups())
         return None
 
+    def read_lines(self, lines: list[str]) -> None:
+        """Read the card's body: its members under `------` and `----`, the notes and calls under each, and the
+        invariants it lists."""
+        in_operations = False
+        in_invariants = False
+        last: Property | Operation | None = None
+        for raw in lines:
+            line = raw.strip()
+            if not line:
+                continue
+            if line in (_PROPERTIES, _OPERATIONS):
+                in_operations = line == _OPERATIONS
+                continue
+            if line.lower().startswith("**invariants**"):
+                in_invariants = True
+                continue
+            if in_invariants and line.startswith("- "):
+                self.invariants.append(line[2:].strip())
+                continue
+            if not _reads_note(line, last) and line.startswith(("+", "-")):
+                last = self.add_member(line, in_operations)
+
+    def read_sketch_lines(self, lines: list[str]) -> list["ClassCard"]:
+        """Read the sketch fence under this card's heading, the way the clean-engineering sketch reads one: a line with
+        an `->` under it, or with parameters, is an operation; a single word is a property; `Name <<Stereotype>>` is an
+        owned member; `refs:` entries are other aggregates held by identity; a `+ name(parameters): Type` line is read
+        as on a card. Answers the repository card the fence's `repo:` names, when it names one."""
+        cleaned = [_without_note(raw) for raw in lines]
+        found: list[ClassCard] = []
+        last: Property | Operation | None = None
+        index = 0
+        while index < len(cleaned):
+            line = cleaned[index]
+            index += 1
+            lower = line.lower()
+            if not line or line.startswith("```"):
+                continue
+            if lower.startswith(_INVARIANT):
+                self.invariants.append(line.split(":", 1)[1].strip())
+            elif lower.startswith("refs:"):
+                index = self._read_references(cleaned, index)
+            elif lower.startswith("repo:"):
+                repository, index = _repository_named(line.split(":", 1)[1].strip(), cleaned, index)
+                found.append(repository)
+            elif line.startswith(_CALL) and isinstance(last, Operation):
+                last.callees.append(line[len(_CALL):].strip())
+            elif line.endswith(":") or line.startswith(_MAP_LINES):
+                continue
+            elif line.startswith(("+", "-")):
+                last = self.add_member(line, "(" in line)
+            else:
+                last = None
+                calls, index = _calls_below(cleaned, index)
+                self._read_sketch_member(line, calls)
+        return found
+
     def lines(self) -> list[str]:
-        written = [f"{_CARD}{self.heading}", "", _PROPERTIES]
+        written = [f"{CARD}{self.heading}", "", _PROPERTIES]
         written.extend(self.property_lines())
         written.append(_OPERATIONS)
         written.extend(self.operation_lines())
@@ -79,7 +198,7 @@ class ClassCard:
 
     def property_lines(self) -> list[str]:
         written: list[str] = []
-        for prop in plain_properties(self.node):
+        for prop in self.plain_properties:
             access = "-" if prop.access == "private" else "+"
             kind = f"<< {prop.stereotype} >> " if prop.stereotype else ""
             typed = f": {prop.type_hint}" if prop.type_hint else ""
@@ -90,7 +209,7 @@ class ClassCard:
 
     def operation_lines(self) -> list[str]:
         written: list[str] = []
-        for operation in self.node.operations:
+        for operation in self.operations:
             access = "-" if getattr(operation, "access", "") == "private" else "+"
             parameters = ", ".join(item.save() for item in operation.parameters)
             returned = f": {operation.return_type}" if operation.return_type else ""
@@ -105,79 +224,127 @@ class ClassCard:
         invariants = [f"{_INVARIANT} {item}" for item in self.invariants]
         return self.property_lines() + self.operation_lines() + invariants
 
+    def code_class(self, place: str, order: int) -> OoadClass:
+        """The class a code file writes for this card: its stereotypes, a copy of its members, and its place as the
+        first line of its intent. Code keeps its own copy, since a class belongs to one model."""
+        oclass = OoadClass(self.name, order, intent=f"{place}\n{self.intent}" if self.intent else place)
+        oclass.stereotypes = list(self.stereotypes)
+        oclass.properties = [item.clone() for item in self.plain_properties]
+        oclass.operations = [item.clone() for item in self.operations]
+        return oclass
+
     def _add_operation(self, access: str, _kind: str, name: str, parameters: str, returned: str) -> Operation:
         found = Operation(
             name,
-            len(self.node.operations) + 1,
+            len(self.operations) + 1,
             return_type=(returned or "").strip(),
             parameters=[item.strip() for item in parameters.split(",") if item.strip()],
         )
         found.access = "private" if access == "-" else "public"
-        self.node.operations.append(found)
+        self.operations.append(found)
         return found
 
     def _add_property(self, access: str, kind: str, name: str, type_hint: str) -> Property:
-        found = Property(name, len(self.node.properties) + 1, (type_hint or "").strip())
+        found = Property(name, len(self.properties) + 1, (type_hint or "").strip())
         found.stereotype = (kind or "").lower()
         found.access = "private" if access == "-" else "both"
-        self.node.properties.append(found)
+        self.properties.append(found)
         return found
 
+    def _read_references(self, lines: list[str], index: int) -> int:
+        """The `refs:` entries below: each another aggregate this class holds by its identity."""
+        while index < len(lines) and _REFERENCE.match(lines[index]):
+            target, identity = _REFERENCE.match(lines[index]).groups()
+            held = Property(identity, len(self.properties) + 1, target.split("·")[-1].strip())
+            held.stereotype = "association"
+            self.properties.append(held)
+            index += 1
+        return index
 
-def plain_properties(node: OoadClass) -> list[Property]:
-    """What the class holds — not the events or invariant objects DDD hangs on the same list."""
-    return [
-        item for item in node.properties
-        if isinstance(item, Property) and not isinstance(item, (DomainEvent, InvariantObject))
-    ]
+    def _read_sketch_member(self, line: str, arrows: list[str]) -> None:
+        marks = marks_in(line)
+        tokens = plain_class_name(line).replace("()", " ").split()
+        if not tokens:
+            return
+        if marks:
+            member = tokens[0]
+            owned = Property(member[0].lower() + member[1:], len(self.properties) + 1, member)
+            owned.stereotype = "composition"
+            self.properties.append(owned)
+            return
+        if arrows or len(tokens) > 1 or "(" in line:
+            operation = Operation(
+                tokens[0].split("(", 1)[0],
+                len(self.operations) + 1,
+                parameters=[token for token in tokens[1:] if _IDENT.match(token)],
+            )
+            operation.callees.extend(arrows)
+            self.operations.append(operation)
+            return
+        self.properties.append(Property(tokens[0], len(self.properties) + 1))
+
+
+class MarkdownClass(ClassCard, OoadClass):
+    """A card whose stereotypes name no building block: a plain class."""
+
+
+class MarkdownEntity(ClassCard, Entity):
+    """An entity in markdown: a card at model fidelity, or at bounded-context fidelity the root an aggregate's lines
+    name, with the member lines under it that it reads as its invariant objects."""
+
+    def __init__(self, name: str = "", sequential_order: int = 0, member_lines: list[str] | None = None, **kwargs) -> None:
+        super().__init__(name, sequential_order, **kwargs)
+        self._member_lines = list(member_lines or [])
+        self._member_index = 0
+        self.invariant_object_type = MarkdownInvariantObject
+
+    def has_more_invariant_object(self) -> bool:
+        return self._member_index < len(self._member_lines)
+
+    def get_next_invariant_object_from_file(self) -> InvariantObject:
+        line = self._member_lines[self._member_index].strip()
+        self._member_index += 1
+        return MarkdownInvariantObject(self.plain_name(line), len(self.invariant_objects))
+
+
+class MarkdownValueObject(ClassCard, ValueObject):
+    pass
+
+
+class MarkdownRepository(ClassCard, Repository):
+    pass
+
+
+class MarkdownDomainService(ClassCard, DomainService):
+    pass
+
+
+class MarkdownSpecification(ClassCard, Specification):
+    pass
+
+
+class MarkdownFactory(ClassCard, Factory):
+    pass
+
+
+# Which building block a card's stereotypes make it, first match first; a card with none is a plain class.
+_CARD_TYPES: tuple[tuple[str, type[ClassCard]], ...] = (
+    ("specification", MarkdownSpecification),
+    ("value object", MarkdownValueObject),
+    ("repository", MarkdownRepository),
+    ("domain service", MarkdownDomainService),
+    ("service", MarkdownDomainService),
+    ("factory", MarkdownFactory),
+    ("entity", MarkdownEntity),
+    ("aggregate root", MarkdownEntity),
+)
+_OPERATION = re.compile(r"^([+-])\s*(?:<<\s*(\w+)\s*>>\s*)?(\w+)\((.*?)\)\s*(?::\s*(.+))?$")
+_PROPERTY = re.compile(r"^([+-])\s*(?:<<\s*(\w+)\s*>>\s*)?(\w+)\s*(?::\s*(.+))?$")
 
 
 def ordered_stereotypes(found: list[str]) -> list[str]:
     known = [item for item in _ORDER if any(item.lower() == mark.lower() for mark in found)]
     return known + [item for item in found if item.lower() not in {mark.lower() for mark in known}]
-
-
-def split_cards(body: list[str]) -> tuple[list[list[str]], list[str]]:
-    """Separate `####` card sections from the aggregate's map lines (root line, integrations, events)."""
-    cards: list[list[str]] = []
-    rest: list[str] = []
-    current: list[str] | None = None
-    for raw in body:
-        line = raw.strip()
-        if line.startswith(_CARD):
-            current = [raw]
-            cards.append(current)
-            continue
-        if current is not None and not raw.startswith((" ", "\t")) and line.lower().startswith(_LEAVES_CARD):
-            current = None
-        if current is None:
-            rest.append(raw)
-        else:
-            current.append(raw)
-    return cards, rest
-
-
-def read_card(section: list[str]) -> ClassCard:
-    card = ClassCard.from_heading(section[0].strip()[len(_CARD):])
-    in_operations = False
-    in_invariants = False
-    last: Property | Operation | None = None
-    for raw in section[1:]:
-        line = raw.strip()
-        if not line:
-            continue
-        if line in (_PROPERTIES, _OPERATIONS):
-            in_operations = line == _OPERATIONS
-            continue
-        if line.lower().startswith("**invariants**"):
-            in_invariants = True
-            continue
-        if in_invariants and line.startswith("- "):
-            card.invariants.append(line[2:].strip())
-            continue
-        if not _reads_note(line, last) and line.startswith(("+", "-")):
-            last = card.add_member(line, in_operations)
-    return card
 
 
 def _reads_note(line: str, last: Property | Operation | None) -> bool:
@@ -191,109 +358,27 @@ def _reads_note(line: str, last: Property | Operation | None) -> bool:
     return False
 
 
-_REFERENCE = re.compile(r"^-?\s*(?:→|->)?\s*([A-Za-z][\w ·]*?)\s*\(by\s+([A-Za-z_]\w*)\s*\)")
-_IDENT = re.compile(r"^[A-Za-z_]\w*$")
-_REPOSITORY_OPERATIONS = re.compile(r"[/,]")
-# Lines in an entity fence that belong to the aggregate's map, not to the class: integration arcs and event lists.
-_MAP_LINES = ("- ", "→", "pattern:", "crosses:", "integrat", "direction:")
+def _repository_named(named: str, lines: list[str], index: int) -> tuple[ClassCard, int]:
+    """The repository card a `repo:` line names, with the collection operations the line below lists."""
+    repository = ClassCard.from_heading(named if "<<" in named else f"{named} <<Repository>>")
+    following = lines[index] if index < len(lines) else ""
+    if following and not following.endswith(":"):
+        for name in _REPOSITORY_OPERATIONS.split(following):
+            name = name.strip().rstrip("()")
+            if _IDENT.match(name):
+                repository.operations.append(Operation(name, len(repository.operations) + 1))
+        index += 1
+    return repository, index
 
 
-def card_from_sketch(heading: str, lines: list[str]) -> list[ClassCard]:
-    """A sketch entity fence as cards: the entity itself, plus its repository when the fence names `repo:`.
-
-    Same reading as the clean-engineering sketch: a line with an `->` under it, or with parameters, is an
-    operation; a single word is a property; `Name <<Stereotype>>` is an owned member; `refs:` entries are
-    other aggregates held by identity; `repo:` names the repository and its collection operations; a
-    `+ name(parameters): Type` line is read as on a card, with the `->` calls under it."""
-    return _SketchFence(heading, lines).cards()
-
-
-class _SketchFence:
-    """Reads one entity fence of a sketch, a line at a time, into the entity's card and its repository's."""
-
-    def __init__(self, heading: str, lines: list[str]) -> None:
-        self.card = ClassCard.from_heading(heading)
-        self.found = [self.card]
-        self.lines = [_without_note(raw) for raw in lines]
-        self.index = 0
-        self.last: Property | Operation | None = None
-
-    def cards(self) -> list[ClassCard]:
-        while self.index < len(self.lines):
-            line = self.lines[self.index]
-            self.index += 1
-            if line and not line.startswith("```"):
-                self._read(line)
-        return self.found
-
-    def _read(self, line: str) -> None:
-        lower = line.lower()
-        if lower.startswith(_INVARIANT):
-            self.card.invariants.append(line.split(":", 1)[1].strip())
-        elif lower.startswith("refs:"):
-            self._read_references()
-        elif lower.startswith("repo:"):
-            self._read_repository(line.split(":", 1)[1].strip())
-        elif line.startswith(_CALL) and isinstance(self.last, Operation):
-            self.last.callees.append(line[len(_CALL):].strip())
-        elif line.endswith(":") or line.startswith(_MAP_LINES):
-            return
-        elif line.startswith(("+", "-")):
-            self.last = self.card.add_member(line, "(" in line)
-        else:
-            self.last = None
-            _read_sketch_member(line, self.card.node, self._calls_below())
-
-    def _read_references(self) -> None:
-        while self.index < len(self.lines) and _REFERENCE.match(self.lines[self.index]):
-            target, identity = _REFERENCE.match(self.lines[self.index]).groups()
-            held = Property(identity, len(self.card.node.properties) + 1, target.split("·")[-1].strip())
-            held.stereotype = "association"
-            self.card.node.properties.append(held)
-            self.index += 1
-
-    def _read_repository(self, named: str) -> None:
-        repository = ClassCard.from_heading(named if "<<" in named else f"{named} <<Repository>>")
-        following = self.lines[self.index] if self.index < len(self.lines) else ""
-        if following and not following.endswith(":"):
-            for name in _REPOSITORY_OPERATIONS.split(following):
-                name = name.strip().rstrip("()")
-                if _IDENT.match(name):
-                    repository.node.operations.append(Operation(name, len(repository.node.operations) + 1))
-            self.index += 1
-        self.found.append(repository)
-
-    def _calls_below(self) -> list[str]:
-        calls: list[str] = []
-        while self.index < len(self.lines) and self.lines[self.index].startswith(_CALL):
-            calls.append(self.lines[self.index][len(_CALL):].strip())
-            self.index += 1
-        return calls
+def _calls_below(lines: list[str], index: int) -> tuple[list[str], int]:
+    calls: list[str] = []
+    while index < len(lines) and lines[index].startswith(_CALL):
+        calls.append(lines[index][len(_CALL):].strip())
+        index += 1
+    return calls, index
 
 
 def _without_note(raw: str) -> str:
     stripped = raw.strip()
     return "" if stripped.startswith(_NOTE) else stripped.split(_NOTE, 1)[0].strip()
-
-
-def _read_sketch_member(line: str, node: OoadClass, arrows: list[str]) -> None:
-    marks = marks_in(line)
-    tokens = plain_class_name(line).replace("()", " ").split()
-    if not tokens:
-        return
-    if marks:
-        member = tokens[0]
-        owned = Property(member[0].lower() + member[1:], len(node.properties) + 1, member)
-        owned.stereotype = "composition"
-        node.properties.append(owned)
-        return
-    if arrows or len(tokens) > 1 or "(" in line:
-        operation = Operation(
-            tokens[0].split("(", 1)[0],
-            len(node.operations) + 1,
-            parameters=[token for token in tokens[1:] if _IDENT.match(token)],
-        )
-        operation.callees.extend(arrows)
-        node.operations.append(operation)
-        return
-    node.properties.append(Property(tokens[0], len(node.properties) + 1))
