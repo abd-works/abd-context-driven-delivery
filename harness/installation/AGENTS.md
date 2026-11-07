@@ -1,6 +1,8 @@
 # installation
 
-- **`Installer` state path must exist.** If `.install-state.json` points at a directory that is gone (a temp install from specs), ignore it and install to `{repo}/.cursor`. Do not write the CDD checkout into a dead temp tree.
-- **The deploy walk parses `harness/`.** Marked toolsets there install with the rest of the repo. Leave `harness/` off `PYTHONPATH` so `import mcp` stays the MCP SDK.
-- Prove `/install` by the path in `.install-state.json` matching this repo’s `.cursor`, and by `cdd.ping` → `pong`. A returned `McpInstallation` object is not that proof.
-- **`@noDeploy` keeps that operation out of install.** Skill, command, MCP, and hook marks on the same operation do not write files. The catalog can still list it. Use it when the operation is not ready to deploy.
+- **The Installer lives in `harness/installer/`; this module holds what it publishes with.** `RepositoryToolsets` finds every marked toolset in a repository, `IdeLayout` says where each IDE keeps its files, the destination kinds say what each mark writes, and `ContextConfig` (`context_config.py`) reads a project's `.context/config.json`.
+- **The install record must point at a folder that exists.** `InstallRecord` (`harness/installer/.install-state.json`) names the IDE and folder of the last install. If that folder is gone (a temp install from specs), install to `{repo}/.cursor` rather than writing the CDD checkout into a dead temp tree. A corrupt record raises `InstallRecordUnreadable`; it is never overwritten, because `clean` reads it to know which files to remove.
+- **The deploy walk parses `harness/`.** Marked toolsets there install with the rest of the repository. Leave `harness/` off `PYTHONPATH` so `import mcp` stays the MCP SDK.
+- **The hook daemon imports every toolset module when it starts** (`RepositoryToolsets.import_modules()`), so the registrations made at import — the session opener, the toast notifier, each practice's `GraphPractice` — hold there as they do in the MCP host.
+- Prove `/install` by the folder in `.install-state.json` matching this repository's `.cursor` or `.claude`, and by `cdd.ping` → `pong`. A returned `McpInstallation` object is not that proof.
+- **`@noDeploy` keeps that operation out of install.** Skill, command, MCP, and hook marks on the same operation write no files. The catalog can still list it. Use it when the operation is not ready to deploy.

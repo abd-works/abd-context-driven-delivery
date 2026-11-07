@@ -4,13 +4,14 @@ Agentic tools that bring agile product, delivery, and engineering practices to A
 
 ## Layout
 
-- `cdd_guidance/practices/` — Stories, DDD, UX, Clean Engineering, BDD. Each practice is one `{practice}.md` (Overview, shared rules, a section per fidelity with its Rules) plus a thin `{practice}.py`, templates, and `_examples/`.
+- `cdd_guidance/practices/` — Stories, DDD, UX, Clean Engineering, BDD. Each practice is one `{practice}.md` (Overview, shared rules, a section per fidelity with its Rules) plus a thin `{practice}.py`, templates, `_examples/`, a `graph_practice.py` that registers what the knowledge graph reads from it, and `rules/rule_examples.py`, the spec support that checks a failing and a repaired example against one rule.
 - `cdd_guidance/actions/` — the shared verbs: partition, document, sketch, grill, generate, validate, satisfy, render, iterate, repair.
 - `cdd_guidance/patterns/`, `cdd_guidance/builders/` — stack patterns (LERN, MERN) and builders for new toolsets and practices.
 - `cdd_guidance/rules/` — always-on rules, installed into every IDE. `cdd_guidance/references/` — reference docs installed to `<ide>/references/`.
 - `cdd_guidance/agents/` — Discoverer, Specification, Implementation, Context agents.
-- `harness/` — the framework: `agent_tools` (decorators), `guidance`, `installation`, `mcp`, `graph`, `hooks`, `catalog_generator`.
-- `space/` — session, repo, handoff, and decision tools. `tools/` — echo, granola, prompt log.
+- `harness/` — the framework. From the bottom up: `name` and `marks` (the decorator marks), `agent_tools` (toolsets and the per-call `ToolCall`), `markdown`, `guidance` (practice and action catalogues, and the stages in `stages.py`), `guidance_actions`, `installation`, `process`, `hooks`, `mcp`, `graph`; then `installer`, `diagnostics`, `sub_agent`, `health`, `catalog_generator`, `design_canvas`, and the `chat-ui` plugin.
+- `harness/` imports nothing from `space/`, `tools/`, or `cdd_guidance/`. They register with the framework instead: `space/session` with `ToolCall.open_sessions_with`, the prompt notifier with `HookServer.show_toasts_with`, and each practice through its `GraphPractice`. Keep it that way, so the framework can change and be tested without the code built on it.
+- `space/` — the work: `session` (sessions, their log, files, handoffs, and decision records), `repo` (branches, commits, worktrees), and the Session Board (`space/kanban`). `tools/` — chat, echo, file manager, Granola, prompt log, prompt notify.
 
 | Practice | Discovery | Specification | Implementation |
 |---|---|---|---|
