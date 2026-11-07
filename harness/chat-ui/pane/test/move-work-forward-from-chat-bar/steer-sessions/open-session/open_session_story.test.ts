@@ -2,7 +2,7 @@ import { expect } from 'claude-code/testing'
 
 import { called } from '../../../cdd-stub'
 import { boardOf, checkoutFlow, paymentRetry } from '../../../examples/chat-bar.examples'
-import { buttonKeys, CHAT_BAR, drawn, expectMarks, textOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, buttonKeys, drawn, expectMarks, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -41,7 +41,7 @@ story('Open Session', CHAT_BAR, () => {
     // ChatBarView paints the list from the board.show answer
     then('the list box shows checkout-flow Specification and payment-retry Discovery', async ($, on, scene) => {
       const sessions = await Promise.all(['session-row-checkout-flow', 'session-row-payment-retry'].map(async key => (await drawn(scene.ui, key))?.children?.map((child: any) => textOf(child.type === 'Button' ? child.children?.[0] : child))))
-      expect(sessions).toEqual([['checkout-flow', 'Specification'], ['payment-retry', 'Discovery']])
+      expect(sessions).toEqual([['▤', 'checkout-flow'], ['⌕', 'payment-retry']])
     })
     and('a field to name a new session', async ($, on, scene) => {
       expect((await drawn(scene.ui, 'new-session'))?.props?.placeholder).toBe('New session name')

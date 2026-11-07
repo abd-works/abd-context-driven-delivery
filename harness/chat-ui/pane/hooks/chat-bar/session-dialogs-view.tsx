@@ -4,6 +4,7 @@ import { BRAND } from '../brand'
 import type { ChatBarDraw } from './chat-bar-view'
 import { activateSession, closeSession, createSession } from './session-client'
 import { cancelClose, cancelSwitch, pickSession } from './session-dialogs-client'
+import { stageIconOf } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
@@ -11,17 +12,17 @@ type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 const LEAVE_CHOICES = '☑ commit ☑ push'
 const OPEN_CHOICES = '☑ create branch ☑ create worktree'
 
-// The sessions a person can switch to, each with its stage, and a field to name a new one.
+// The sessions a person can switch to, each after its stage's orange icon, and a field to name a new one.
 export function SessionListView($: EngineInterface, { Box, Button, Input, Text }: ElementTable, { chatBar, view }: ChatBarDraw) {
   if (!view.isSessionListOpen) return null
   return (
     <Box key="session-list" flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
       {chatBar.sessions.map(session => (
         <Box key={`session-row-${session.name}`} flexDirection="row" gap={1}>
-          <Button key={`session-${session.name}`} plain label={session.name} onPress={() => pickSession($, session.name)}>
+          <Text color={BRAND.accent}>{stageIconOf(session.stage)}</Text>
+          <Button key={`session-${session.name}`} plain onPress={() => pickSession($, session.name)}>
             <Text color={session.name === chatBar.sessionName ? BRAND.accent : BRAND.text}>{session.name}</Text>
           </Button>
-          <Text color={BRAND.muted}>{session.stage}</Text>
         </Box>
       ))}
       <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, value.trim()) : undefined)} />

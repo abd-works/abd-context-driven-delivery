@@ -1,11 +1,14 @@
 // The engine and the cdd server beneath the chat bar, for the story tests. board.show answers `board`, the Seed a Given
 // sets. The ticket tools a press reaches change that board as the Python Ticket does, so a test reads the server's state
-// after the press rather than setting it by hand. Every other tool answers from `answers`, and any tool fails with the
-// server's own text from `refusals`. An operation Python does not have, or an argument it does not take, is refused and
-// kept in `unknown`, which every story expects empty, so a test fails when the chat bar calls a name Python dropped.
+// after the press rather than setting it by hand. The read tools answer from the server's state for the ticket,
+// fidelity or path asked for, as the Python Ticket, Session and FidelityProgress do: `branches` per ticket, `declared`
+// files and `reports` per fidelity, `texts` per path. Any tool fails with the server's own text from `refusals`. An
+// operation Python does not have, or an argument it does not take, is refused and kept in `unknown`, which every story
+// expects empty, so a test fails when the chat bar calls a name Python dropped.
 import type { BoardData } from '@cdd/space/kanban/board'
-import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
-import type { TicketData } from '@cdd/space/kanban/ticket'
+import type { FidelityProgressData, FileEntryData, ReportData } from '@cdd/space/kanban/fidelity-progress'
+import type { BranchData, TicketData } from '@cdd/space/kanban/ticket'
+import type { FileTextData } from '@cdd/space/session/session'
 
 import { boardOf, checkoutFlow, HEALTHY, progressOf, STAGE_ORDER } from './examples/chat-bar.examples'
 
@@ -18,7 +21,10 @@ export type World = {
   sent: string[]
   fills: string[]
   toasts: string[]
-  answers: Record<string, unknown>
+  branches: Record<string, BranchData>
+  declared: Record<string, Record<string, FileEntryData[]>>
+  reports: Record<string, ReportData>
+  texts: Record<string, string>
   refusals: Record<string, string>
   health: unknown
   healthText: string | null
@@ -91,12 +97,42 @@ function create(world: World, { title }: { title: string }): TicketData {
   return created
 }
 
-const TICKET_TOOLS: Record<string, (world: World, args: any) => TicketData | FidelityProgressData> = {
+// A refusal the cdd server sends back as its error text.
+class Refused extends Error {}
+
+// FidelityProgress.files: the files the asked fidelity declares, by format; none for a fidelity that declares none.
+const files = (world: World, { fidelity }: { fidelity: string }): Record<string, FileEntryData[]> => world.declared[fidelity] ?? {}
+
+// FidelityProgress.report: the asked fidelity's latest validation report; an empty report when it has none.
+const report = (world: World, { fidelity }: { fidelity: string }): ReportData => world.reports[fidelity] ?? ({ path: '', text: '', rules: [], has_saved_graph: false } as ReportData)
+
+// Session.read_file: the text of a path under the session's roots, no text once it is gone; a path that climbs out of
+// the roots is refused with PathOutsideRootsError's text.
+function readFile(world: World, { path }: { session: string; path: string }): FileTextData {
+  if (path.split('/').includes('..')) throw new Refused(`${path} is outside the session's roots`)
+  return { path, text: world.texts[path] ?? '' }
+}
+
+// Ticket.branch: the ticket's own branch, named as the ticket; one the repository does not have for a ticket the story
+// gives none.
+const branch = (world: World, { ticket }: { ticket: string }): BranchData => world.branches[ticket] ?? { name: ticket, exists: false, is_checked_out: false }
+
+const TOOLS: Record<string, (world: World, args: any) => unknown> = {
+  'ticket.branch': branch,
   'ticket.move_next': moveNext,
   'fidelity-progress.finish_review': finishReview,
   'ticket.close': close,
   'ticket.activate': activate,
   'ticket.create': create,
+  'fidelity-progress.files': files,
+  'fidelity-progress.report': report,
+  'session.read_file': readFile,
+}
+
+// A tool call the agent makes on the cdd server, not the chat bar: the server's state changes and the chat bar only
+// hears of it through the engine's tool.call event.
+export function agentCalls(world: World, tool: string, args: unknown): void {
+  TOOLS[tool]!(world, args)
 }
 
 // Each cdd operation the chat bar calls, with the arguments its Python signature takes: the tool subject's, such as
@@ -111,6 +147,7 @@ export const OPERATIONS: Record<string, string[]> = {
   'ticket.move_next': ['ticket'],
   'fidelity-progress.finish_review': ['ticket', 'fidelity'],
   'fidelity-progress.files': ['ticket', 'fidelity'],
+  'fidelity-progress.report': ['ticket', 'fidelity'],
   'session.read_file': ['session', 'path'],
 }
 
@@ -133,8 +170,14 @@ function answerTool(world: World, tool: string, args: unknown) {
   if (tool === 'server-health.report') return world.healthText !== null ? toolText(world.healthText, false) : toolAnswer(world.health)
   if (world.refusals[tool]) return toolText(world.refusals[tool], true)
   if (tool === 'board.show') return toolAnswer(world.board)
-  const operation = TICKET_TOOLS[tool]
-  return toolAnswer(operation ? operation(world, args) : world.answers[tool])
+  const operation = TOOLS[tool]
+  if (!operation) throw new Error(`the cdd stub has no tool ${tool}`)
+  try {
+    return toolAnswer(operation(world, args))
+  } catch (failure) {
+    if (failure instanceof Refused) return toolText(failure.message, true)
+    throw failure
+  }
 }
 
 function runProcess(world: World, argv: string[]) {
@@ -151,7 +194,10 @@ export function cdd(on: any, board: BoardData = boardOf('checkout-flow', checkou
     sent: [],
     fills: [],
     toasts: [],
-    answers: {},
+    branches: {},
+    declared: {},
+    reports: {},
+    texts: {},
     refusals: {},
     health: HEALTHY,
     healthText: null,

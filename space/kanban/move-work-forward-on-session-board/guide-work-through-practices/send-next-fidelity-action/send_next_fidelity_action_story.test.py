@@ -14,7 +14,7 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # Acceptance criteria:
 # - Name Next Fidelity: the button names the step that runs next. Observed: `Ticket.next_fidelity`, `Ticket.next_action`.
 # - Run next steps through generate, validate, and review for each practice in order. Observed: `Ticket.next_action`.
-# - Run next holds on fix violations until they are fixed, and says "fix violations". Observed.
+# - Run next holds on review while violations hold the fidelity, says "review violations", and opens the report. Observed.
 with story("Send Next Fidelity Action"):
     with scenario("Generate the next fidelity in its default format"):
         # Evidence: observed: ticket-client.spec 'with generate next' — 'should send the generate command in the default format'; 'should name the step that runs next'; kanban_tools_spec 'should name generate as the next action'.
@@ -41,16 +41,16 @@ with story("Send Next Fidelity Action"):
         with then("the chat's prompt holds /actions-validate stories-story-map"):
             pass
     with scenario("Open the report while violations hold the ticket"):
-        # Evidence: observed: ticket-client.spec 'should say fix violations on held violations', 'with violations held and no chat connected' — 'should still offer Run next', 'should open the report'; kanban_tools_spec 'should name satisfy as the next action'; tests/board-surface.spec.ts 'should keep local actions working'.
+        # Evidence: observed: ticket-client.spec 'should say review violations on held violations', 'with violations held and no chat connected' — 'should still offer Run next', 'should open the report'; kanban_tools_spec 'should name review as the next action'; tests/board-surface.spec.ts 'should keep local actions working'.
         with given("checkout-flow's story map has a verb-noun-format violation on .context/story-map.md line 6"):
             pass
         with but_("no chat is connected"):
             pass
         with when("the Person runs checkout-flow's next step"):
-            # Person -> Ticket.next_action <- satisfy on stories-story-map
+            # Person -> Ticket.next_action <- review on stories-story-map
             # Person -> Ticket.report('stories-story-map')
             pass
-        with then("Run next read Run next: fix violations"):
+        with then("Run next read Run next: review violations"):
             pass
         with and_("the report panel opens on stories-story-map"):
             pass

@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { FileEntryData } from '@cdd/space/kanban/fidelity-progress'
+import type { FileEntryData, ReportData } from '@cdd/space/kanban/fidelity-progress'
 import type { FileTextData } from '@cdd/space/session/session'
 
 import type { FidelityFilesJson } from '../../types'
@@ -30,6 +30,17 @@ export async function openFiles($: EngineInterface, fidelity: FidelityProgressCl
     if (paths[0]) await showFile($, paths[0])
   } catch (failure) {
     $.ui.toast(`${fidelity.slug} files: ${reasonOf(failure)}`)
+  }
+}
+
+// The fidelity's latest validation report in its own tab, as the board opens it from a violation count, so the person
+// reads the violations before telling the agent to fix them.
+export async function openReport($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
+  try {
+    const report = await callTool<ReportData>($, 'fidelity-progress.report', { ticket: fidelity.progress.ticket.name, fidelity: fidelity.slug })
+    await update($, fidelityFiles, () => ({ fidelity: fidelity.slug, tabs: [{ path: report.path, text: report.text }], shown: report.path }))
+  } catch (failure) {
+    $.ui.toast(`${fidelity.slug} report: ${reasonOf(failure)}`)
   }
 }
 

@@ -1,69 +1,94 @@
 import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../brand'
-import { actionOf } from './action-button-view'
+import { GlyphButtonView } from '../glyph-button-view'
 import type { ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
+import { openFiles } from './fidelity-files-client'
+import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
+import { closeCard } from './session-dialogs-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
 // The hover group of the session name and its card: the pointer on either keeps the card shown.
 export const CARD_SCOPE = 'session-card'
 
-// The cells each part of the line takes, as LineView lays it out with a gap of one between parts, so a card row can
-// start in the column of the part it sits over.
-const GAP = 1
-const HEALTH_MARK = 1
-const LIST_BUTTON = 1
-const SEPARATOR = 1
-const DOT = 1
-const ACTION_BUTTON = 2
-const STAGE_ICON = 1
-// An outlined stage icon has a border cell each side.
-const OUTLINE = 2
-// The card's own border and padding, which its rows start inside.
-const CARD_FRAME = 2
+// The card's columns. name starts the fidelities where the dots start on the line: the session name, gap, ▾, gap, │,
+// gap, inside the card's border and padding, which take the two cells the health mark and its gap take on the line.
+// fidelities fits the widest fidelity row, so every folder starts in one column.
+type CardColumns = { name: number; fidelities: number }
+const NAME_TO_DOTS = 5
+const FOLDER_GAP = 3
 
-// The column each fidelity's dot and the shown stage's icon start at on the line.
-function columnsOf(chatBar: ChatBarClient): { fidelities: number[]; stage: number } {
-  let column = HEALTH_MARK + GAP + chatBar.sessionName.length + GAP + LIST_BUTTON + GAP + SEPARATOR + GAP
-  const fidelities = chatBar.fidelities.map(fidelity => {
-    const start = column
-    column += DOT + (fidelity.violationCount ? String(fidelity.violationCount).length : 0) + GAP
-    return start
-  })
-  column += (actionOf(chatBar) ? ACTION_BUTTON + GAP : 0) + SEPARATOR + GAP
-  let stage = column
-  for (const entry of chatBar.stages) {
-    if (entry.stage === chatBar.shownStage) stage = column
-    column += STAGE_ICON + (entry.isCurrent || entry.isShown ? OUTLINE : 0) + GAP
-  }
-  return { fidelities, stage }
+function rowWidthOf(fidelity: FidelityProgressClient): number {
+  return `■ ${fidelity.name} ${fidelity.mark} ${fidelity.word}`.length
 }
 
-const indentFor = (column: number): number => Math.max(0, column - CARD_FRAME)
+function cardColumnsOf(chatBar: ChatBarClient): CardColumns {
+  return { name: chatBar.sessionName.length + NAME_TO_DOTS, fidelities: Math.max(0, ...chatBar.fidelities.map(rowWidthOf)) + FOLDER_GAP }
+}
 
-// The session card, laid out over the strip beneath it: the server health panel stacked on top, then each fidelity's
-// colour, name, state and folder starting in its dot's column, and the shown stage starting in its icon's column.
-// Hovering the session name shows it; a press on the name pins it.
-export function SessionCardView({ Box, Text }: ElementTable, { chatBar, view, health }: ChatBarDraw) {
-  if (!chatBar.hasSession) return null
+// The session name over the name, FIDELITY over the dots, the shown stage in orange over the folders, and a ✕ that
+// closes a card pinned open.
+function HeaderView($: EngineInterface, elements: ElementTable, chatBar: ChatBarClient, columns: CardColumns) {
+  const { Box, Text } = elements
+  return (
+    <Box key="card-header" flexDirection="row">
+      <Box width={columns.name}>
+        <Text weight="bold" color={BRAND.text}>{chatBar.sessionName}</Text>
+      </Box>
+      <Box width={columns.fidelities}>
+        <Text size="caption" color={BRAND.muted}>FIDELITY</Text>
+      </Box>
+      <Box key="card-stage">
+        <Text weight="bold" color={BRAND.accent}>{chatBar.shownStage}</Text>
+      </Box>
+      <Box flexGrow={1} />
+      {GlyphButtonView(elements, 'card-close', '✕', BRAND.muted, () => closeCard($))}
+    </Box>
+  )
+}
+
+// One fidelity under the dots: its square, its name (a press selects it) and its state, underlined when selected; its
+// folder beside it as a small chip, a press showing its files.
+function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: FidelityProgressClient, columns: CardColumns) {
+  const { Box, Text } = elements
+  const nameColour = fidelity.state === 'not_started' ? BRAND.muted : BRAND.text
+  return (
+    <Box key={`card-${fidelity.slug}`} flexDirection="row" marginLeft={columns.name} alignItems="center">
+      <Box width={columns.fidelities}>
+        <Box key={`card-cell-${fidelity.slug}`} flexDirection="row" gap={1} alignItems="center">
+          <Text color={fidelity.shade}>■</Text>
+          {GlyphButtonView(elements, `card-pick-${fidelity.slug}`, fidelity.name, nameColour, () => selectFidelity($, fidelity), fidelity.isSelected)}
+          <Text color={fidelity.lookColour} underline={fidelity.isSelected}>{`${fidelity.mark} ${fidelity.word}`}</Text>
+        </Box>
+      </Box>
+      {fidelity.folder ? (
+        <Box key={`card-folder-chip-${fidelity.slug}`} paddingX={1} backgroundColor={BRAND.surface}>
+          {GlyphButtonView(elements, `card-folder-${fidelity.slug}`, `▸ ${fidelity.folder}`, BRAND.muted, () => openFiles($, fidelity))}
+        </Box>
+      ) : null}
+    </Box>
+  )
+}
+
+// The session card above the line: the server health panel on top, then, once there is a session, the canvas's
+// orange-edged card of the shown stage's fidelities. Hovering the session name or the health mark shows it; a press on
+// either pins it, and ✕ or another press closes it.
+export function SessionCardView($: EngineInterface, elements: ElementTable, { chatBar, view, health }: ChatBarDraw) {
+  const { Box } = elements
   const shown = view.isCardOpen ? {} : { display: 'none' as const, hover: { display: 'flex' as const, scope: CARD_SCOPE } }
-  const columns = columnsOf(chatBar)
+  const columns = cardColumnsOf(chatBar)
   return (
     <Box key="session-card" flexDirection="column">
-      <Box flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.border} backgroundColor={BRAND.raised} {...shown}>
+      <Box flexDirection="column" gap={1} {...shown}>
         {health.panel}
-        {chatBar.fidelities.map((fidelity, index) => (
-          <Box key={`card-${fidelity.slug}`} flexDirection="row" gap={1} marginLeft={indentFor(columns.fidelities[index])}>
-            <Text color={fidelity.colour}>{fidelity.mark}</Text>
-            <Text color={BRAND.text}>{`${fidelity.name} ${fidelity.word}`}</Text>
-            <Text color={BRAND.muted}>{fidelity.folder}</Text>
+        {chatBar.hasSession ? (
+          <Box key="card-grid" flexDirection="column" paddingX={1} borderStyle="round" borderColor={BRAND.accent} backgroundColor={BRAND.raised}>
+            {HeaderView($, elements, chatBar, columns)}
+            {chatBar.fidelities.map(fidelity => FidelityRowView($, elements, fidelity, columns))}
           </Box>
-        ))}
-        <Box key="card-stage" marginLeft={indentFor(columns.stage)}>
-          <Text weight="semibold" color={BRAND.accent}>{chatBar.shownStage}</Text>
-        </Box>
+        ) : null}
       </Box>
     </Box>
   )

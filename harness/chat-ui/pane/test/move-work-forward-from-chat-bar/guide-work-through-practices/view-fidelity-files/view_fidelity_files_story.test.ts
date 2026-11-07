@@ -1,7 +1,8 @@
 import { expect } from 'claude-code/testing'
 
 import { called } from '../../../cdd-stub'
-import { CHAT_BAR, findText, textOf } from '../../../chat-bar-screen'
+import { boardOf, CHAT_BAR_CLIENT_TEXT, checkoutFlowWith, MODEL_FILES, MODEL_REPORT, VALIDATED } from '../../../examples/chat-bar.examples'
+import { CHAT_BAR, drawn, findText, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -15,8 +16,8 @@ story('View Fidelity Files', CHAT_BAR, () => {
   scenario('Read a file into its tab', ({ given, when, then }) => {
     // Evidence: inferred: mirrors View Fidelity Files, kanban_tools_spec "should return the file's text"; no chat bar code yet
     given('the tab pane/hooks/chat-bar/chat-bar-client.ts is open', async ($, on, scene) => {
-      scene.world.answers['fidelity-progress.files'] = { typescript: [{ path: 'pane/hooks/chat-bar/chat-bar-client.ts', exists: true }, { path: 'pane/hooks/chat-bar/fidelity-client.ts', exists: true }] }
-      scene.world.answers['session.read_file'] = { path: 'pane/hooks/chat-bar/chat-bar-client.ts', text: '// Model shell for the chat bar\nexport class ChatBarClient {}' }
+      scene.world.declared['clean-engineering-model'] = MODEL_FILES
+      scene.world.texts = CHAT_BAR_CLIENT_TEXT
       await scene.ui.press({ key: 'dot-clean-engineering-model' })
       await scene.ui.press({ key: 'files-button' })
     })
@@ -29,19 +30,36 @@ story('View Fidelity Files', CHAT_BAR, () => {
       expect(called(scene.world, 'session.read_file')).toEqual({ session: '.sessions/checkout-flow/session.json', path: 'pane/hooks/chat-bar/chat-bar-client.ts' })
     })
   })
-  scenario('Refuse a file outside the repository', ({ given, when, then }) => {
-    // Evidence: inferred: mirrors kanban_tools_spec 'should refuse a file outside the repository, naming the path and the ticket'
-    given("checkout-flow's repository is the project folder", async ($, on, scene) => {
-      scene.world.answers['fidelity-progress.files'] = { typescript: [{ path: '../secrets.txt', exists: false }] }
-      scene.world.refusals['session.read_file'] = '../secrets.txt is not a file in this repository'
+  scenario("Refuse a file outside the session's roots", ({ given, when, then }) => {
+    // Evidence: inferred: mirrors kanban_tools_spec 'should refuse a file outside the repository'
+    given("checkout-flow's clean-engineering-model declares ../secrets.txt, outside the session's roots", async ($, on, scene) => {
+      scene.world.declared['clean-engineering-model'] = { typescript: [{ path: '../secrets.txt', exists: false }] }
     })
-    when('a file outside the repository is asked for', async ($, on, scene) => {
+    when('the Person opens the files of clean-engineering-model', async ($, on, scene) => {
       await scene.ui.press({ key: 'dot-clean-engineering-model' })
       await scene.ui.press({ key: 'files-button' })
     })
-    // $.mcp.call('session.read_file', { session: '.sessions/checkout-flow/session.json', path: '../secrets.txt' }) <- FileOutsideRepositoryError
-    then('the tab says ../secrets.txt is not a file in this repository', async ($, on, scene) => {
-      expect(textOf(await findText(scene.ui, /secrets/))).toBe('../secrets.txt is not a file in this repository')
+    // $.mcp.call('session.read_file', { session: '.sessions/checkout-flow/session.json', path: '../secrets.txt' }) <- PathOutsideRootsError
+    then("the tab says ../secrets.txt is outside the session's roots", async ($, on, scene) => {
+      expect(textOf(await findText(scene.ui, /secrets/))).toBe("../secrets.txt is outside the session's roots")
+    })
+  })
+  scenario('Read the violations from their count', ({ given, when, then, and }) => {
+    // Evidence: requested: a press on the red violation count opens the violations, as the board does
+    given("checkout-flow's clean-engineering-model has 7 violations in its latest validation report", async ($, on, scene) => {
+      scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'clean-engineering-model': { ...VALIDATED, progress: 'violations', violations: 7 } }))
+      scene.world.reports['clean-engineering-model'] = MODEL_REPORT
+    })
+    when('the Person presses the count 7', async ($, on, scene) => {
+      await scene.ui.press({ key: 'violations-clean-engineering-model' })
+    })
+    // count press -> openReport($, fidelity) -> $.mcp.call('fidelity-progress.report', { ticket: 'checkout-flow', fidelity: 'clean-engineering-model' }) -> FidelityProgress.report()
+    then('the report opens in its own tab', async ($, on, scene) => {
+      expect(called(scene.world, 'fidelity-progress.report')).toEqual({ ticket: 'checkout-flow', fidelity: 'clean-engineering-model' })
+      expect(await drawn(scene.ui, `file-${MODEL_REPORT.path}`)).toBeDefined()
+    })
+    and('its text is drawn as markdown', async ($, on, scene) => {
+      expect((await drawn(scene.ui, 'file-markdown'))?.props?.text).toBe(MODEL_REPORT.text)
     })
   })
 })

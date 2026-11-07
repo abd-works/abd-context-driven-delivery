@@ -13,11 +13,10 @@ import { fixReportPrompt, fixRulePrompt, fixViolationPrompt, ReportClient } from
 
 const RUN_NEXT_COMMANDS: Record<string, string> = {
   validate: '/actions-validate',
-  satisfy: '/actions-satisfy',
 }
-// Steps the board does itself rather than sending to a chat: fixing violations opens the report, and a review is the
-// person's own approval.
-const STEPS_WITHOUT_CHAT = ['satisfy', 'review']
+// Steps the board does itself rather than sending to a chat: a review is the person's own, opening the report while the
+// fidelity has violations and recording the approval once it has none.
+const STEPS_WITHOUT_CHAT = ['review']
 const CLOSE_SESSION_COMMAND = '/space:session:close-session'
 
 // Each fidelity's files by format, as its own files tool answers, by the fidelity's slug: a tile or panel over several
@@ -129,7 +128,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   get nextStepName(): string {
-    return this.nextAction === 'satisfy' ? 'fix violations' : this.nextAction
+    return this.nextAction === 'review' && this.nextProgress?.state === 'violations' ? 'review violations' : this.nextAction
   }
 
   get runNextLabel(): string {
@@ -280,7 +279,7 @@ export class TicketClient extends TicketClientGenerated {
   async runNext(): Promise<void> {
     const next = this.nextProgress
     if (!next) return
-    if (this.nextAction === 'satisfy') return this.page.panels.openReport(this, next)
+    if (this.nextAction === 'review' && next.state === 'violations') return this.page.panels.openReport(this, next)
     if (this.nextAction === 'review') return this.review(next)
     if (this.nextAction !== 'generate') return this.chat.fill(this.actionCommand(`${RUN_NEXT_COMMANDS[this.nextAction]} ${next.fidelity.slug}`))
     const format = next.fidelity.default_format

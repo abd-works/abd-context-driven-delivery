@@ -20,7 +20,7 @@
 *Given* checkout-flow's story map has a verb-noun-format violation on .context/story-map.md line 6
 *But* no chat is connected
 *When* the Person runs checkout-flow's next step
-*Then* Run next read Run next: fix violations
+*Then* Run next read Run next: review violations
 *And* the report panel opens on stories-story-map
 
 #### Scenario: Record a review with no chat

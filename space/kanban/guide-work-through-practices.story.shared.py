@@ -298,9 +298,9 @@ def _(s):
         world.before = world.data_of(ticket)
         world.report = world.data_of(ticket.progress_of(world.before["next"]["fidelity"]["slug"]).report())
 
-    @s.then("Run next read Run next: fix violations")
+    @s.then("Run next read Run next: review violations")
     def _(world):
-        expect(next_in(world.before)["next_action"]).to(equal("satisfy"))
+        expect(next_in(world.before)["next_action"]).to(equal("review"))
 
     @s.and_("the report panel opens on stories-story-map")
     def _(world):

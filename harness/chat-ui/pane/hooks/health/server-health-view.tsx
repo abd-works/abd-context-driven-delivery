@@ -3,14 +3,12 @@ import { colourOf, detailsOf, headlineOf, installLineOf, partsOf } from './serve
 import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../brand'
+import { GlyphButtonView } from '../glyph-button-view'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
-// Wide enough for an icon and the longest value, `▦ running :5173`; the columns wrap when the band is narrower than five of them.
-const PART_WIDTH = 16
-
 type Actions = {
-  togglePin: () => unknown
+  toggleCard: () => unknown
   openDetails: () => unknown
   hideDetails: () => unknown
   reconnect: () => unknown
@@ -22,13 +20,6 @@ type Band = {
   install: InstallJson
   actions: Actions
 }
-// Where the panel is drawn: above the health mark, revealed on hover or pinned, or on top of the session card, shown
-// whenever the card is. The card's copy prefixes its keys, so a press finds the Button it means. The panel at the mark
-// has no key of its own, so hovering the mark's keyed Box reveals it.
-type Placement = { isRevealed: boolean; keyOf: (name: string) => string; panel: { key?: string } }
-const AT_THE_MARK = (view: HealthViewJson): Placement => ({ isRevealed: view.isPinned, keyOf: name => name, panel: {} })
-const ON_THE_CARD: Placement = { isRevealed: true, keyOf: name => `card-${name}`, panel: { key: 'card-health' } }
-
 const LOOKS = {
   connected: { glyph: '✓', color: BRAND.success, wash: BRAND.successWash, border: BRAND.success },
   reconnecting: { glyph: '⟳', color: BRAND.warning, wash: BRAND.raised, border: BRAND.border },
@@ -38,12 +29,12 @@ const LOOKS = {
 
 
 // The surface has no tooltip, so the part's name is a card revealed while the pointer is over its icon and value.
-function PartsView({ Box, Text }: ElementTable, health: ServerHealthJson, placement: Placement) {
+function PartsView({ Box, Text }: ElementTable, health: ServerHealthJson) {
   return (
-    <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
+    <Box flexDirection="row" columnGap={3}>
       {partsOf(health).map(part => (
-        <Box key={placement.keyOf(part.label)} flexDirection="row" gap={1} width={PART_WIDTH}>
-          <Text size="heading" color={colourOf(part)}>{part.icon}</Text>
+        <Box key={part.label} flexDirection="row" gap={1}>
+          <Text color={colourOf(part)}>{part.icon}</Text>
           <Text color={colourOf(part)}>{part.value}</Text>
           <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
             <Text color={BRAND.text}>{part.label}</Text>
@@ -67,16 +58,16 @@ function DetailsView({ Box, Text }: ElementTable, health: ServerHealthJson, inst
   )
 }
 
-function ButtonsView(elements: ElementTable, { health, view, install, actions }: Band, { keyOf }: Placement) {
+function ButtonsView(elements: ElementTable, { health, view, install, actions }: Band) {
   const { Box, Button } = elements
   const isDisconnected = health.connection === 'disconnected'
   if (!isDisconnected && health.connection !== 'tools-missing') return null
   const canInstall = install.state !== 'running' && install.state !== 'installed'
   return (
     <Box flexDirection="row" gap={1}>
-      {view.areDetailsOpen ? <Button key={keyOf('health-hide')} label="Hide" onPress={actions.hideDetails} /> : <Button key={keyOf('health-details')} label="Details" onPress={actions.openDetails} />}
-      {canInstall ? <Button key={keyOf('health-install')} label="Run install" onPress={actions.runInstall} /> : null}
-      {isDisconnected ? <Button key={keyOf('health-reconnect')} label="Reconnect" variant="primary" onPress={actions.reconnect} /> : null}
+      {view.areDetailsOpen ? <Button key="health-hide" label="Hide" onPress={actions.hideDetails} /> : <Button key="health-details" label="Details" onPress={actions.openDetails} />}
+      {canInstall ? <Button key="health-install" label="Run install" onPress={actions.runInstall} /> : null}
+      {isDisconnected ? <Button key="health-reconnect" label="Reconnect" variant="primary" onPress={actions.reconnect} /> : null}
     </Box>
   )
 }
@@ -99,45 +90,42 @@ function InstallLineView({ Text }: ElementTable, install: InstallJson) {
   return line ? <Text color={BRAND.text}>{line}</Text> : null
 }
 
-function ExpandedView(elements: ElementTable, band: Band, placement: Placement) {
+function ExpandedView(elements: ElementTable, band: Band) {
   const { Box } = elements
   const { health, view, install } = band
   const look = LOOKS[health.connection]
   return (
     <Box
-      {...placement.panel}
+      key="card-health"
       flexDirection="column"
       paddingX={1}
       borderStyle="single"
       borderColor={look.border}
       backgroundColor={look.wash}
-      {...(placement.isRevealed ? {} : { display: 'none' as const, hover: { display: 'flex' as const } })}
+      alignSelf="flex-start"
     >
       {HeadlineView(elements, health)}
       {InstallLineView(elements, install)}
-      {health.connection === 'connected' ? PartsView(elements, health, placement) : null}
+      {health.connection === 'connected' ? PartsView(elements, health) : null}
       {view.areDetailsOpen ? DetailsView(elements, health, install) : null}
-      {ButtonsView(elements, band, placement)}
+      {ButtonsView(elements, band)}
     </Box>
   )
 }
 
-// The band is one icon until the pointer is over it or a click pins it, so it stays out of the way. The icon
-// sits beside what it expands, so the pointer stays on it as the panel opens.
-export function ServerHealthBandView(elements: ElementTable, band: Band) {
-  const { Box, Button, Text } = elements
+// The band is one icon on the line. It opens no panel of its own: hovering it shows the session card with this panel on
+// top, as hovering the session name does, and a press pins the card. hoverScope is the card's hover group.
+export function ServerHealthBandView(elements: ElementTable, band: Band, hoverScope: string) {
+  const { Box } = elements
   const look = LOOKS[band.health.connection]
   return (
-    <Box key="server-health" flexDirection="row" gap={1}>
-      {ExpandedView(elements, band, AT_THE_MARK(band.view))}
-      <Button key="health-icon" plain label={look.glyph} onPress={band.actions.togglePin}>
-        <Text color={look.color}>{look.glyph}</Text>
-      </Button>
+    <Box key="server-health" flexDirection="row" hover={{ scope: hoverScope }}>
+      {GlyphButtonView(elements, 'health-icon', look.glyph, look.color, band.actions.toggleCard)}
     </Box>
   )
 }
 
-// The same panel stacked on top of the session card, as CDR 0001 has hovering the session name show it.
+// The panel stacked on top of the session card, as CDR 0001 has hovering the session name show it.
 export function ServerHealthPanelView(elements: ElementTable, band: Band) {
-  return ExpandedView(elements, band, ON_THE_CARD)
+  return ExpandedView(elements, band)
 }

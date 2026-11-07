@@ -1,7 +1,7 @@
 import { expect } from 'claude-code/testing'
 
-import { boardOf, checkoutFlowWith, GENERATED } from '../../../examples/chat-bar.examples'
-import { CHAT_BAR, expectMarks, findText, labelOf, textOf } from '../../../chat-bar-screen'
+import { boardOf, checkoutFlow, checkoutFlowWith, GENERATED } from '../../../examples/chat-bar.examples'
+import { CHAT_BAR, findText, markOf, textOf, tipOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -21,22 +21,24 @@ story('Invoke Next Fidelity Action', CHAT_BAR, () => {
     when('the Person runs the next action', async ($, on, scene) => {
       await scene.ui.press({ key: 'next-action' })
     })
-    // ChatBarView press -> runAction($, fidelity, 'validate') -> $.command.run({ command: 'actions-validate', args: 'ux-mockup session=.sessions/checkout-flow/session.json' })
-    then("the chat runs /actions-validate ux-mockup in checkout-flow's session", async ($, on, scene) => {
-      expect(scene.world.sent).toEqual(['/actions-validate ux-mockup session=.sessions/checkout-flow/session.json'])
+    // ChatBarView press -> runAction($, fidelity, 'validate') -> promptCommand -> $.prompt.fill({ text: '/actions-validate ux-mockup session=.sessions/checkout-flow/session.json', mode: 'append' })
+    then("/actions-validate ux-mockup in checkout-flow's session waits in the prompt box for the Person to send", async ($, on, scene) => {
+      expect(scene.world.fills).toEqual(['/actions-validate ux-mockup session=.sessions/checkout-flow/session.json'])
+      expect(scene.world.sent).toEqual([])
     })
   })
   scenario("Generate in the stage's default format", ({ given, when, then }) => {
     // Evidence: Stage.default_formats; the generate action renders the earlier fidelity first when its file is missing
     given("checkout-flow's clean-engineering-model is not started and is the selected fidelity", async ($, on, scene) => {
+      scene.world.board = boardOf('checkout-flow', checkoutFlow())
       await scene.ui.press({ key: 'dot-clean-engineering-model' })
     })
     when('the Person runs the next action', async ($, on, scene) => {
       await scene.ui.press({ key: 'next-action' })
     })
-    // ChatBarView press -> runAction($, fidelity, 'generate') -> $.command.run({ command: 'actions-generate', args: 'clean-engineering-model format=typescript session=...' })
-    then("the chat runs /actions-generate clean-engineering-model in typescript, in checkout-flow's session", async ($, on, scene) => {
-      expect(scene.world.sent).toEqual(['/actions-generate clean-engineering-model format=typescript session=.sessions/checkout-flow/session.json'])
+    // ChatBarView press -> runAction($, fidelity, 'generate') -> promptCommand -> $.prompt.fill({ text: '/actions-generate clean-engineering-model format=typescript session=...', mode: 'append' })
+    then("/actions-generate clean-engineering-model in typescript, in checkout-flow's session, waits in the prompt box", async ($, on, scene) => {
+      expect(scene.world.fills).toEqual(['/actions-generate clean-engineering-model format=typescript session=.sessions/checkout-flow/session.json'])
     })
   })
   scenario('Show the next action before it runs', ({ given, when, then }) => {
@@ -49,8 +51,8 @@ story('Invoke Next Fidelity Action', CHAT_BAR, () => {
       await $.prompt.submit({ text: 'again' })
     })
     then('the button shows the validate icon, with validate ux-mockup on hover', async ($, on, scene) => {
-      await expectMarks(scene.ui, { 'next-action': '◎' })
-      expect(await labelOf(scene.ui, 'next-action')).toBe('validate ux-mockup')
+      expect(textOf(await markOf(scene.ui, 'next-action-mark'))).toBe('✓')
+      expect(await tipOf(scene.ui, 'action')).toBe('validate ux-mockup')
       expect(textOf(await findText(scene.ui, 'validate ux-mockup'))).toBe('validate ux-mockup')
     })
   })

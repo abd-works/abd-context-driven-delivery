@@ -38,8 +38,10 @@ class SessionFiles:
         return [FileEntry(repo.path_from_top(path), True) for path in files]
 
     def read(self, path: str) -> FileText:
-        """The text of path, a file in the session's repository; no text when the file is gone."""
-        return self._session.repo.file_manager.read(path)
+        """The text of path, a file in the session's repository or under a folder its practices write to, such as its
+        ticket's worktree beside the repository; no text when the file is gone."""
+        repo = self._session.repo
+        return FileManager(repo.root, (repo.root, *self.file_manager.roots)).read(path)
 
     def worked_on(self) -> set[Path] | None:
         """The files that are the session's work: every file when it works in a folder of its own, which holds only its

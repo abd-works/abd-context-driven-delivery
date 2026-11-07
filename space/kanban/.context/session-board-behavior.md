@@ -229,7 +229,7 @@ ticket-client.spec  describe Send Next Fidelity Action
 kanban_spec         it should name Generate on story_map as next
 ticket-client.spec  it should mark its tile as the next one
 kanban_spec         with every required fidelity in its stage done
-kanban_spec         it should name satisfy as the next action
+kanban_spec         it should name review as the next action
 ```
 
 # (E) Generate Fidelity Outputs

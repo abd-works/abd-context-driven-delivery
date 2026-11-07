@@ -5,9 +5,9 @@ import type { PracticeGuidanceData } from '@cdd/space/kanban/board'
 import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
-import { commandOf } from '../chat-command'
+import { promptCommand } from '../chat-command'
 import { reasonOf } from '../failure'
-import { closeActionPicker } from './action-picker-client'
+import { clearChosenAction } from './action-picker-client'
 import { callTool, currentChatBar, refreshChatBar, type ChatBarClient } from './chat-bar-client'
 
 const selectedFidelity = atom({ plugin: 'cdd-board', key: 'selectedFidelity' } as const, null as string | null)
@@ -48,8 +48,18 @@ export class FidelityProgressClient {
     return this.progress.state === 'violations' ? `${this.violationCount} violations` : this.#look.word
   }
 
+  // The state as FidelityProgress.state sends it: not_started, in_progress, violations or done.
+  get state(): string {
+    return this.progress.state
+  }
+
   get mark(): string {
     return this.#look.mark
+  }
+
+  // The colour of the state's mark and word on the session card.
+  get lookColour(): string {
+    return this.#look.colour
   }
 
   get colour(): string {
@@ -65,8 +75,8 @@ export class FidelityProgressClient {
     return this.progress.violation_count
   }
 
-  // What the Python FidelityProgress names next: satisfy while it has violations, else the first of generate, validate
-  // and review not done; nothing once it is done.
+  // What the Python FidelityProgress names next: review while it has violations, since a person reads them and tells
+  // the agent to fix them, else the first of generate, validate and review not done; nothing once it is done.
   get nextAction(): string {
     return this.progress.next_action
   }
@@ -95,25 +105,11 @@ export function selectedFidelitySlug($: EngineInterface) {
   return read($, selectedFidelity)
 }
 
-// Selecting one fidelity replaces the last, so one dot is selected at most.
+// Selecting one fidelity replaces the last, so one dot is selected at most. Selecting another fidelity drops an action
+// picked for the one before, so the button shows this one's next action.
 export async function selectFidelity($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
   await update($, selectedFidelity, () => fidelity.slug)
-}
-
-// Choosing from the picker runs that action on the fidelity in place of its next one. Review is recorded as the action
-// button records it, never run as a command.
-export async function chooseAction($: EngineInterface, fidelity: FidelityProgressClient, action: string): Promise<void> {
-  await closeActionPicker($)
-  if (action === 'review') await reviewFidelity($, fidelity)
-  else await runAction($, fidelity, action)
-}
-
-async function runCommand($: EngineInterface, text: string): Promise<void> {
-  try {
-    await $.command.run(commandOf(text))
-  } catch (failure) {
-    $.ui.toast(`The chat would not run ${text}: ${reasonOf(failure)}`)
-  }
+  await clearChosenAction($)
 }
 
 // The one place a chat bar command names its session: every action command names the ticket's session.json, because
@@ -123,9 +119,10 @@ function actionCommand(chatBar: ChatBarClient, fidelity: FidelityProgressClient,
   return `/actions-${action} ${fidelity.slug}${format} session=${chatBar.sessionFile}`
 }
 
-// Generate renders the earlier fidelity first itself when that fidelity has no file in the format.
+// The action's command goes in the prompt box for the person to send. Generate renders the earlier fidelity first
+// itself when that fidelity has no file in the format, so every action is one command.
 export async function runAction($: EngineInterface, fidelity: FidelityProgressClient, action: string): Promise<void> {
-  await runCommand($, actionCommand(await currentChatBar($), fidelity, action))
+  await promptCommand($, actionCommand(await currentChatBar($), fidelity, action))
 }
 
 // Review is the person's own approval, recorded by the Python FidelityProgress, which refuses it until the latest
@@ -142,10 +139,4 @@ export async function reviewFidelity($: EngineInterface, fidelity: FidelityProgr
   $.ui.toast(`${slug} reviewed on ${ticket}`)
   await refreshChatBar($)
   return (await currentChatBar($)).fidelities.find(entry => entry.slug === slug) ?? fidelity
-}
-
-// A dot opens the board on this session at that fidelity, and the action button follows it.
-export async function openBoard($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
-  await selectFidelity($, fidelity)
-  await runCommand($, `/board ${fidelity.progress.ticket.name} ${fidelity.slug}`)
 }

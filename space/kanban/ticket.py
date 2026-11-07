@@ -35,7 +35,6 @@ GRAPH_RULE_VIOLATION = "graph-rule"
 MOVED_INTO = "move"
 MARKED_DONE = "done"
 MARKED_IN_PROGRESS = "in-progress"
-SATISFY = "satisfy"
 ALWAYS_ALLOWED = (GENERATE,)
 ONCE_THERE_IS_OUTPUT = (VALIDATE, REVIEW)
 LEAVE_COMMIT = "commit"
@@ -438,10 +437,10 @@ class FidelityProgress:
     @property
     @data_field
     def next_action(self) -> str:
-        """What Run next does on this fidelity: satisfy while it has violations, else the first of its stage's actions
-        not done, or nothing once it is done."""
+        """What Run next does on this fidelity: review while it has violations, since a person reads them and tells the
+        agent to fix them, else the first of its stage's actions not done, or nothing once it is done."""
         if self._has_violations:
-            return SATISFY
+            return REVIEW
         remaining = self.remaining_actions
         return remaining[0] if remaining else ""
 

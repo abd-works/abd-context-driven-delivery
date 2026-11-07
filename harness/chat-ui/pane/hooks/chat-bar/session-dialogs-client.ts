@@ -22,6 +22,10 @@ export async function toggleSessionList($: EngineInterface): Promise<void> {
 }
 
 // Hovering the session name shows the card; a press pins it open.
+export async function closeCard($: EngineInterface): Promise<void> {
+  await update($, chatBarView, view => ({ ...view, isCardOpen: false }))
+}
+
 export async function toggleCard($: EngineInterface): Promise<void> {
   await update($, chatBarView, view => ({ ...view, isCardOpen: !view.isCardOpen, isSessionListOpen: false }))
 }

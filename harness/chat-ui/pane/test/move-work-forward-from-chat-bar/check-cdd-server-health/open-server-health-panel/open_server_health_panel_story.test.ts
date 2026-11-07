@@ -1,7 +1,6 @@
 import { expect } from 'claude-code/testing'
 
-import { cdd } from '../../../cdd-stub'
-import { HEALTHY } from '../../../examples/chat-bar.examples'
+import { boardOf, checkoutFlow, HEALTHY } from '../../../examples/chat-bar.examples'
 import { CHAT_BAR, drawn, findText, labelOf, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
@@ -15,7 +14,10 @@ import { scenario, story } from '../../../story-test'
 story('Open Server Health Panel', CHAT_BAR, () => {
   scenario('Show every part running on one line', ({ given, when, then, and }) => {
     // Evidence: observed: server-health-view.tsx lists MCP host, Tools, Kanban app, Graph app, Hook server; register.test.ts
-    given('cdd is connected with 116 tools loaded, the Kanban app on port 8778 and the Graph app on port 5173')
+    given('cdd is connected with 116 tools loaded, the Kanban app on port 8778 and the Graph app on port 5173', async ($, on, scene) => {
+      scene.world.toolCount = 116
+      scene.world.health = HEALTHY
+    })
     and('the hook server is not running', async ($, on, scene) => {
       scene.world.health = { ...HEALTHY, is_hook_server_running: false }
     })
@@ -23,10 +25,10 @@ story('Open Server Health Panel', CHAT_BAR, () => {
       await scene.ui.press({ key: 'health-icon' })
     })
     // ServerHealthBandView -> ExpandedView(elements, health)
-    then('the panel opens above the mark with MCP host, Tools, Kanban app and Graph app green', async ($, on, scene) => {
+    then('the session card opens with the panel on top, MCP host, Tools, Kanban app and Graph app green', async ($, on, scene) => {
       const colours = await Promise.all(['running', '116 loaded', 'running :8778', 'running :5173'].map(async text => (await findText(scene.ui, text))?.props?.color))
       expect(colours).toEqual(['#22C55E', '#22C55E', '#22C55E', '#22C55E'])
-      expect((await drawn(scene.ui, 'server-health'))?.children?.[0]?.props?.display).toBeUndefined()
+      expect((await drawn(scene.ui, 'session-card'))?.children?.[0]?.props?.display).toBeUndefined()
     })
     and('Tools reads 116 loaded, Kanban app 8778 and Graph app 5173', async ($, on, scene) => {
       const values = await Promise.all(['116 loaded', 'running :8778', 'running :5173'].map(async text => textOf(await findText(scene.ui, text))))
@@ -41,14 +43,18 @@ story('Open Server Health Panel', CHAT_BAR, () => {
     })
   })
   scenario('Pin the panel open', ({ given, when, then }) => {
-    // Evidence: observed: server-health-client.ts togglePin
-    given('the server health panel is open over the mark')
-    when('the Person pins the panel', async ($, on, scene) => {
+    // Evidence: requested: the health mark opens only with the session card
+    // The surface applies a hover without calling the mod, so before the press the panel shows only on hover.
+    given('cdd is connected and checkout-flow is the active session', async ($, on, scene) => {
+      scene.world.health = HEALTHY
+      scene.world.board = boardOf('checkout-flow', checkoutFlow())
+    })
+    when('the Person presses the server health mark', async ($, on, scene) => {
       await scene.ui.press({ key: 'health-icon' })
     })
-    // ServerHealthBandView press -> togglePin($)
-    then('the panel stays open after the pointer leaves the mark', async ($, on, scene) => {
-      expect((await drawn(scene.ui, 'server-health'))?.children?.[0]?.props?.display).toBeUndefined()
+    // ServerHealthBandView press -> toggleCard($)
+    then('the session card and its panel stay open after the pointer leaves the mark', async ($, on, scene) => {
+      expect((await drawn(scene.ui, 'session-card'))?.children?.[0]?.props?.display).toBeUndefined()
     })
   })
   scenario('Say what is wrong when cdd is down', ({ given, when, then, and }) => {

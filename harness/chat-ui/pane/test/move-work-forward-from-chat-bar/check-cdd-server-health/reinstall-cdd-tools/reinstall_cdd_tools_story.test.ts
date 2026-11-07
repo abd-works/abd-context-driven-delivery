@@ -13,23 +13,24 @@ import { scenario, story } from '../../../story-test'
 story('Reinstall CDD Tools', CHAT_BAR, () => {
   scenario('Install the missing tools', ({ given, when, then, and }) => {
     // Evidence: observed: server-health-client.ts runInstall runs the installer from the mod, because the MCP host may be what is broken
-    given('the server health panel reads Tools missing, 40 loaded, server-health.report is not one of them.', async ($, on, scene) => {
+    given('cdd is connected with 40 tools loaded, server-health.report not one of them', async ($, on, scene) => {
       scene.world.toolCount = 40
       scene.world.healthText = "KeyError: 'server-health.report'"
+    })
+    and('the server health panel is open', async ($, on, scene) => {
       await scene.ui.press({ key: 'health-icon' })
-      expect(textOf(await findText(scene.ui, 'Tools missing'))).toBe('Tools missing')
     })
     when('the Person runs the install', async ($, on, scene) => {
       await scene.ui.press({ key: 'health-install' })
     })
     // ServerHealthBandView press -> runInstall($) -> $.process.run(['python', 'scripts/install.py', '--ide', 'Claude'])
-    then('the panel says installing while the installer runs', async ($, on, scene) => {
-      // The test kit draws nothing while any engine call is pending, so a held installer times the test out; this checks
-      // the installer the Installing. line waits on, and the surface heavy spec reads the line itself.
-      expect(scene.world.installs.map(argv => argv.slice(1))).toEqual([['scripts/install.py', '--ide', 'Claude']])
-    })
-    and('then says Installed. Open a new session to pick it up.', async ($, on, scene) => {
+    // The test kit draws nothing while an engine call is pending, so the Installing. line drawn while the installer runs
+    // is read by the surface heavy spec, not here.
+    then('the panel says Installed. Open a new session to pick it up.', async ($, on, scene) => {
       expect(textOf(await findText(scene.ui, /^Installed/))).toBe('Installed. Open a new session to pick it up.')
+    })
+    and('the installer that ran is scripts/install.py --ide Claude', async ($, on, scene) => {
+      expect(scene.world.installs.map(argv => argv.slice(1))).toEqual([['scripts/install.py', '--ide', 'Claude']])
     })
   })
   scenario('Show why the install failed', ({ given, when, then }) => {

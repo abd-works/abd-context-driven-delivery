@@ -37,7 +37,7 @@
 - Its *work required* is every fidelity of its active practices. A practice is active until a person turns it off for this session, so tickets can work on different practices on one board.
 - Each fidelity goes through the same actions in order: Generate, Validate, then Review, where a person approves it. Each action on a fidelity is to do, in progress, or done.
 - A fidelity is done when every action is done. Validate is done when its latest activity on that fidelity names no graph-rule violations and the judgment the validating agent added to its latest report fails no rule. The person checks the AI-judged rules in Review, which counts only after Validate is done.
-- *Next action* is what Run next does on a ticket: on the first fidelity not done in its stage or any stage before it, earliest stage first, the first of generate, validate, and review not done. Violations hold a session on that fidelity, because Review needs a clean Validate, so the next action is satisfy until they are fixed.
+- *Next action* is what Run next does on a ticket: on the first fidelity not done in its stage or any stage before it, earliest stage first, the first of generate, validate, and review not done. Violations hold a session on that fidelity, so the next action is review: a person reads the violations and tells the agent to fix them, and the review itself is recorded only after a clean Validate.
 
 ### activity
 
@@ -340,7 +340,7 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 + is_enabled: bool
 	// data field: the ticket's session works on its practice
 + next_action: str
-	// data field: satisfy while it has violations, else the first of its stage's actions not done
+	// data field: review while it has violations, else the first of its stage's actions not done
 + allowed_actions: list[str]
 	// data field: generate always; validate and review once an action is recorded or a declared file is there
 + state: str

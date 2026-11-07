@@ -913,7 +913,7 @@ Send Next Fidelity Action
   ```
   ```
   -> TicketClient.runNextLabel
-  it should say fix violations on held violations
+  it should say review violations on held violations
   ```
   ```
   -> TicketClient.runNext()
@@ -2927,7 +2927,7 @@ the board tools
         -> ReportFile.report()
         <- Report
       <- Report
-      it should name satisfy as the next action
+      it should name review as the next action
       ```
       ```
       -> FidelityProgress.report()
@@ -2969,7 +2969,7 @@ the board tools
     ```
     -> Board.ticket(name: str)
     <- Ticket
-    it should name satisfy as the next action
+    it should name review as the next action
     ```
     ```
     -> Board.ticket(name: str)

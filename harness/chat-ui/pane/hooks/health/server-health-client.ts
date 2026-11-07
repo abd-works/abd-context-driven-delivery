@@ -23,7 +23,7 @@ const serverHealth = atom({ plugin: 'cdd-board', key: 'serverHealth' } as const,
   problem: null,
   attempt: 0,
 } as ServerHealthJson)
-const healthView = atom({ plugin: 'cdd-board', key: 'healthView' } as const, { isPinned: false, areDetailsOpen: false } as HealthViewJson)
+const healthView = atom({ plugin: 'cdd-board', key: 'healthView' } as const, { areDetailsOpen: false } as HealthViewJson)
 const install = atom({ plugin: 'cdd-board', key: 'install' } as const, { state: 'idle', error: null } as InstallJson)
 
 type Answer = Pick<ServerHealthJson, 'connection' | 'report' | 'problem'>
@@ -80,12 +80,8 @@ export async function reconnect($: EngineInterface, onRestored: () => Promise<vo
   if (answer.connection === 'connected') await onRestored()
 }
 
-export async function togglePin($: EngineInterface): Promise<void> {
-  await update($, healthView, view => ({ isPinned: !view.isPinned, areDetailsOpen: false }))
-}
-
 export async function openDetails($: EngineInterface): Promise<void> {
-  await update($, healthView, () => ({ isPinned: true, areDetailsOpen: true }))
+  await update($, healthView, () => ({ areDetailsOpen: true }))
 }
 
 export async function hideDetails($: EngineInterface): Promise<void> {

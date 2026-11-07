@@ -449,7 +449,7 @@ it should name the step that runs next
 ```
 
 ```
-it should say fix violations on held violations
+it should say review violations on held violations
 -> TicketClient.runNextLabel
 ```
 
@@ -3576,7 +3576,7 @@ it should name review as the next action
 ##### with a report whose judgment fails rules the graph passed
 
 ```
-it should name satisfy as the next action
+it should name review as the next action
 -> ProjectTools.report("sign-up", "stories-story-map-20261031T041200")
 ```
 
@@ -3625,7 +3625,7 @@ it should write no review for the others named with it
 #### with a ticket whose next fidelity has violations
 
 ```
-it should name satisfy as the next action
+it should name review as the next action
 -> Board.ticket("sign-up",
                 "2026-10-31T01:00:00Z generate /work)
 <- Ticket

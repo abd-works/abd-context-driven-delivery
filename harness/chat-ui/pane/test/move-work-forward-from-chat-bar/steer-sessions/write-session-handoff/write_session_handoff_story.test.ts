@@ -1,5 +1,6 @@
 import { expect } from 'claude-code/testing'
 
+import { boardOf, checkoutFlow } from '../../../examples/chat-bar.examples'
 import { CHAT_BAR } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
@@ -13,7 +14,9 @@ import { scenario, story } from '../../../story-test'
 story('Write Session Handoff', CHAT_BAR, () => {
   scenario('Ask the chat to write a handoff', ({ given, when, then }) => {
     // Evidence: inferred: mirrors Write Ticket Handoff, ticket-client.spec 'should fill the prompt with the handoff command'; no chat bar code yet
-    given('checkout-flow is the active [session](../../../../../../../space/kanban/.context/kanban-model.md#session)')
+    given('checkout-flow is the active [session](../../../../../../../space/kanban/.context/kanban-model.md#session)', async ($, on, scene) => {
+      scene.world.board = boardOf('checkout-flow', checkoutFlow())
+    })
     when('the Person asks for a handoff on checkout-flow', async ($, on, scene) => {
       await scene.ui.press({ key: 'handoff' })
     })

@@ -330,7 +330,7 @@ class Session:
     @agent_tool
     @noSessionLog
     def read_file(self, path: str = "") -> FileText:
-        """Return the text of path, a file in this repository; no text when the file is gone, such as one deleted since the board listed it."""
+        """Return the text of path, a file in this repository or under a folder this session's practices write to, such as its ticket's worktree; no text when the file is gone, such as one deleted since the board listed it."""
         return self.session_files.read(path)
 
     @mcp
