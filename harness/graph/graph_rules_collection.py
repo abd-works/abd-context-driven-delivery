@@ -1,4 +1,5 @@
-"""Rules that apply to one graph node — same collection shape as practice guidelines."""
+"""The rules that apply to one graph node, in the same collection shape as a practice's guidance rules. In the
+explorer tree the collection is the node's rules entry and each rule is a child of it."""
 
 from __future__ import annotations
 
@@ -6,62 +7,83 @@ from typing import Any
 
 from harness.guidance.rule import Rule, RulesCollection
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Violation
+from harness.installation.destination import data_field
 
 
 class GraphRule(PracticeGraphRule, Rule):
-    """One schema rule on a node: slug, prose body, and optional executable check."""
+    """One schema rule on one node: its slug, its prose, whether a check runs it, and the violations it found there."""
 
     def __init__(
         self,
+        node: Any,
         slug: str,
         body: str = "",
         node_types: tuple[str, ...] = (),
         *,
-        executable: bool = False,
+        check: PracticeGraphRule | None = None,
     ) -> None:
         PracticeGraphRule.__init__(self)
         Rule.__init__(self, slug=slug, body=body)
-        self.slug = slug
+        self.node = node
         self.node_types = node_types
-        self.executable = executable
-        self._violations: list[str] = []
-        self.hits: list[dict] = []
-
-    @classmethod
-    def from_check(cls, check: PracticeGraphRule, body: str = "") -> GraphRule:
-        rule = cls(
-            check.slug,
-            body=body,
-            node_types=tuple(check.node_types),
-            executable=True,
-        )
-        rule.check = check.check  # type: ignore[method-assign]
-        return rule
-
-    @classmethod
-    def prose_only(cls, slug: str, body: str = "", node_types: tuple[str, ...] = ()) -> GraphRule:
-        return cls(slug, body=body, node_types=node_types, executable=False)
+        self.executable = check is not None
+        if check is not None:
+            self.check = check.check  # type: ignore[method-assign]
+        self._violations: list[Violation] = []
 
     @property
-    def violations(self) -> list[str]:
+    @data_field
+    def slug(self) -> str:
+        """The guidance rule's slug; a check's own class attribute would hide it."""
+        return Rule.slug.fget(self)
+
+    @property
+    @data_field
+    def type(self) -> str:
+        return "Rule"
+
+    @property
+    @data_field
+    def name(self) -> str:
+        return self.slug
+
+    @property
+    @data_field
+    def node_id(self) -> str:
+        return f"{self.node.node_id}:rules:{self.slug}"
+
+    @property
+    @data_field
+    def children(self) -> list:
+        return []
+
+    @property
+    @data_field
+    def status(self) -> str:
+        """``violating`` when it found a violation here, ``prompt`` when no check runs it, else ``passing``."""
+        if self._violations:
+            return "violating"
+        return "passing" if self.executable else "prompt"
+
+    @property
+    @data_field
+    def violations(self) -> list[Violation]:
         return list(self._violations)
 
-    def record(self, message: str, source: Any = None) -> None:
-        """Keep message as a violation of this rule at source, the node's place in its file; a hit with no source has
-        no file or lines."""
-        text = (message or "").strip()
-        if text and text not in self._violations:
-            self._violations.append(text)
-            self.hits.append({
-                "message": text,
-                "file": getattr(source, "file", "") or "",
-                "start": int(getattr(source, "start_line", 0) or 0),
-                "end": int(getattr(source, "end_line", 0) or 0),
-            })
+    def record(self, message: str) -> None:
+        """Keep message as a violation of this rule at the node's place in its file; the same message is kept once."""
+        violation = Violation.on_node(self.slug, message, self.node)
+        if violation.message and all(kept.message != violation.message for kept in self._violations):
+            self._violations.append(violation)
+
+    def restore(self, violation: Violation) -> None:
+        """Keep a violation a saved graph recorded, at the place it was saved with."""
+        if violation not in self._violations:
+            self._violations.append(violation)
 
     def clear_violations(self) -> None:
         self._violations.clear()
-        self.hits.clear()
 
     @property
     def is_failing(self) -> bool:
@@ -75,18 +97,69 @@ class GraphRulesCollection(RulesCollection):
         super().__init__(entries)
         self.node = node
 
+    @classmethod
+    def from_node(cls, node: Any) -> GraphRulesCollection:
+        """The rules node's schema gives its type, each with its prose and, when one exists, the check that runs it."""
+        from harness.graph.graph_practice import GraphPractices
+        from harness.graph.schema_rules import PracticeSchema
+
+        patterns = node.practice.graph.overlay_patterns if node.practice.graph else ()
+        schema = PracticeSchema.load(node.practice.name, patterns)
+        checks = GraphPractices.named(node.practice.name).checks(patterns)
+        entries: dict[str, GraphRule] = {}
+        for slug in schema.slugs_for(node.type):
+            check = checks.get(slug)
+            node_types = tuple(check.node_types) if check is not None else (node.type,)
+            entries[slug] = GraphRule(node, slug, body=schema.rule_prose.get(slug, ""), node_types=node_types, check=check)
+        return cls(node, entries)
+
+    @property
+    @data_field
+    def type(self) -> str:
+        return "rules"
+
+    @property
+    @data_field
+    def name(self) -> str:
+        return "rules"
+
+    @property
+    @data_field
+    def node_id(self) -> str:
+        return f"{self.node.node_id}:rules"
+
+    @property
+    @data_field
+    def children(self) -> list[GraphRule]:
+        """The rules the graph's filter shows under the node."""
+        return self.shown
+
+    @property
+    def shown(self) -> list[GraphRule]:
+        """Every rule, or only the violating ones of the chosen rules when the graph's filter asks for violations."""
+        graph = self.node.practice.graph
+        if graph is None:
+            return self.chosen(False, [])
+        return self.chosen(graph.filter.violations, list(graph.filter.rules))
+
+    def chosen(self, violations_only: bool, selected: list[str]) -> list[GraphRule]:
+        """Every rule; with violations_only, the violating ones, and of those only the selected slugs when any are."""
+        if not violations_only:
+            return self.graph_rules
+        return [rule for rule in self.graph_rules if rule.is_failing and (not selected or rule.slug in selected)]
+
     @property
     def slugs(self) -> list[str]:
         return list(self.entries.keys())
 
     @property
-    def violations(self) -> list[tuple[str, str]]:
-        """Each violation on this node as its rule's slug and its message."""
-        return [(rule.slug, message) for rule in self.graph_rules for message in rule.violations]
+    def violations(self) -> list[Violation]:
+        """Every violation on this node, rule by rule."""
+        return [violation for rule in self.graph_rules for violation in rule.violations]
 
     @property
     def failed_slugs(self) -> list[str]:
-        return list(dict.fromkeys(slug for slug, _message in self.violations))
+        return [rule.slug for rule in self.graph_rules if rule.is_failing]
 
     @property
     def passing_slugs(self) -> list[str]:
@@ -98,11 +171,16 @@ class GraphRulesCollection(RulesCollection):
         return [value for value in self.entries.values() if isinstance(value, GraphRule)]
 
     def record_violation(self, slug: str, message: str) -> None:
-        """Keep message as a violation of the rule slug, at this node's source. A slug this node has no rule for
-        records nothing, since the rule does not apply to it."""
+        """Keep message as a violation of the rule slug on this node. A slug this node has no rule for records nothing,
+        since the rule does not apply to it."""
         entry = self.entries.get(slug)
         if isinstance(entry, GraphRule):
-            entry.record(message, getattr(self.node, "source", None))
+            entry.record(message)
+
+    def restore(self, violation: Violation) -> None:
+        entry = self.entries.get(violation.rule)
+        if isinstance(entry, GraphRule):
+            entry.restore(violation)
 
     def clear_violations(self) -> None:
         for rule in self.graph_rules:

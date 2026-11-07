@@ -27,7 +27,7 @@ from cdd_guidance.practices.stories.rules.story_map import (
     BranchOnMechanicalUniqueness,
     FourToNineChildren,
     KebabCasePaths,
-    StoryScenariosOneToFour,
+    StoryScenariosAtMostSeven,
     RightSizeStoryNodes,
     StoryNameCapturesSystemMechanic,
     VerbNounFormat,
@@ -35,7 +35,7 @@ from cdd_guidance.practices.stories.rules.story_map import (
 
 RULES: tuple = (
     FourToNineChildren(),
-    StoryScenariosOneToFour(),
+    StoryScenariosAtMostSeven(),
     VerbNounFormat(),
     ScenariosShape(),
     KebabCasePaths(),

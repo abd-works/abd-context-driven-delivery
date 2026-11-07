@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from harness.installation.repository_toolsets import RepositoryToolsets
+
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
@@ -11,8 +13,6 @@ def repo_root() -> Path:
 
 def ensure_import_path(repo: Path | str | None = None) -> Path:
     """Add repo root and ``cdd_guidance/actions`` (etc.) so ``from validate.validate`` works."""
-    from harness.installation.installer import Installer
-
     root = Path(repo).resolve() if repo is not None else repo_root()
-    Installer(repo=root).ensure_import_path(root)
+    RepositoryToolsets(root).ensure_import_path()
     return root

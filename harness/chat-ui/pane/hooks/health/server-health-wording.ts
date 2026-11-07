@@ -1,4 +1,4 @@
-import type { ServerHealthData } from '@cdd/harness/health/server-health'
+import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
 import type { InstallJson, ServerHealthJson } from '../../types'
 import { BRAND } from '../brand'

@@ -12,11 +12,11 @@ Every scaffold pass ends with **validate** on the new or patched practice folder
 # Overview
 ## Favour defaults
 
-- **`favour-defaults`** — `PracticeGuidance` already assembles **overview**, **guidance**, **shared rules**, **fidelities**, **templates** (active format), **examples**, and optional **`model/{format}/`** adapters from `{domain}/{domain}.md` and co-located files. **Do not override** `module_dir`. Put the `.py` module inside the practice folder (`practices/stories/stories.py` is the model). **Do not** re-implement `instructions`, `scoped_markdown`, or `render` unless the practice owns `_formats`. Use **`PracticeGuidance.render`** and set `_formats` when the practice owns artifact channels; otherwise render defers to the active fidelity’s Clean Engineering companion. Session / workspace layout: **`utilities/workspace/workspace_session.md`**. Partition: **`utilities/partition_pipeline/partition_pipeline.md`** and optional domain **`partition.md`**.
+- **`favour-defaults`** — `PracticeGuidance` already assembles **overview**, **guidance**, **shared rules**, **fidelities**, **templates** (active format), **examples**, and optional **`model/{format}/`** adapters from `{domain}/{domain}.md` and co-located files. **Do not override** `module_dir`. Put the `.py` module inside the practice folder (`practices/stories/stories.py` is the model). **Do not** re-implement `instructions`, `scoped_markdown`, or `render`. Use **`PracticeGuidance.render`**, and pass `formats=` to `super().__init__` when the practice owns its formats' parse and render adapters; otherwise render defers to the active fidelity’s Clean Engineering companion. The session a practice works in gives it its folder and the places each fidelity writes; `space/session/.context/module-context.md` describes the session's folder, its workpath, and each practice's folder in it. The Partition action (`cdd_guidance/actions/partition/partition.md`) indexes a source by the **Scaffold** subsection of the practice's current fidelity, so write one for every fidelity: it says what the index lists.
 
 ## Minimal Python module
 
-- **`minimal-python-module`** — Domain `.py` is thin: `@agent_toolset`, `class Domain(PracticeGuidance):`, class docstring `"""# Instructions"""` (builder/agent entry — detailed prose lives in `{domain}.md`). Pass **`fidelity`**, **`format`**, and optional **`default_workspace_folder`** / **`_formats`** through `super().__init__(...)`. Call **`self._attach_workspace(path=..., session=...)`** when the practice accepts workspace roots. **No** `@instruction` slots and **no** `context_index_key` class attribute — install keys the practice from its folder name (`PracticeGuidance.context_index_key`). Add **`@agent_tool`** / **`@Hook`** members only when the practice owns tools; **`inject_rules`** must appear on `tools` if chat edits should load practice rules.
+- **`minimal-python-module`** — Domain `.py` is thin: `@agent_toolset`, `class Domain(PracticeGuidance):`, class docstring `"""# Instructions"""` (builder/agent entry — detailed prose lives in `{domain}.md`). Pass **`fidelity`**, **`format`**, and optional **`default_workspace_folder`** / **`formats`** through `super().__init__(...)`. Take no `path` or `session`: the session that works on the practice gives it its folder, so a practice built with its own would write somewhere the session does not know. Write no instruction members and no `key` of your own — `PracticeGuidance` reads the instructions from `{domain}.md` and keys the practice by its folder name (`PracticeGuidance.key`). Add **`@agent_tool`** / **`@Hook`** members only when the practice owns tools; **`inject_rules`** must appear on `tools` if chat edits should load practice rules.
 
 ## Canonical practice markdown
 
@@ -48,19 +48,19 @@ Every scaffold pass ends with **validate** on the new or patched practice folder
 
 ## PracticeGuidance class module
 
-- **`practice-guidance-class-module`** — `from harness.guidance.guidance import PracticeGuidance` and `from harness.agent_tools.agent_tools import agent_toolset`. Class docstring: `"""# Instructions"""`. **Subclass** `PracticeGuidance` (`class Domain(PracticeGuidance):`). Optional `# @toolset-manifest python -m harness manifest <module>:<Class>` on line 1 for catalog install.
+- **`practice-guidance-class-module`** — `from harness.guidance.guidance import PracticeGuidance` and `from harness.agent_tools.agent_tools import agent_toolset`. Class docstring: `"""# Instructions"""`. **Subclass** `PracticeGuidance` (`class Domain(PracticeGuidance):`). The installer and the catalog find the practice through `@agent_toolset`, so it needs no other mark.
 
 ## Format templates vs scaffold templates
 
-- **`format-vs-scaffold-templates`** — **`builders/create_practice_guidance/templates/`** = meta scaffolds for **building new practices** (Python + md + examples); loaded via this builder’s `templates` slot, **no format filter**. **`templates/`** inside each practice = artifact templates for generate/satisfy (format-aware). **`model/{format}/`** = parse/render adapters when `_formats` is set.
+- **`format-vs-scaffold-templates`** — **`builders/create_practice_guidance/templates/`** = meta scaffolds for **building new practices** (Python + md + examples); loaded through this builder’s `templates` section, **no format filter**. **`templates/`** inside each practice = artifact templates for generate/satisfy (format-aware). **`model/{format}/`** = parse/render adapters, named by the practice's `formats=`.
 
 ## Reference extension example
 
-- **`reference-extension-example`** — **`builders/create_practice_guidance/_examples/car_chronicle/`** shows a minimal practice: `car_chronicle.py` beside `car_chronicle.md`, `templates/car_chronicle-templates.md`, `_examples/examples.md`, repair fixtures, and **`output/`** with sample generated artifact (`output/driving-log.md`).
+- **`reference-extension-example`** — **`builders/create_practice_guidance/_examples/car_chronicle/`** shows a minimal practice: `car_chronicle.py` beside `car_chronicle.md`, `car_chronicle-templates.md`, `_examples/examples.md`, repair fixtures, and **`output/`** with sample generated artifact (`output/driving-log.md`).
 
 ## Examples and repair fixtures
 
-- **`examples-and-fixtures`** — `_examples/examples.md` for worked samples. Pair faulty/repaired assets under `_examples/<rule-or-scenario>/` for repair regression; see `utilities/repair/repair.md`.
+- **`examples-and-fixtures`** — `_examples/examples.md` for worked samples. Pair faulty/repaired assets under `_examples/<rule-or-scenario>/` for repair regression; see the repair action, `cdd_guidance/actions/improvement/repair.md`.
 
 ---
 # Generate

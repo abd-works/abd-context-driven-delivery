@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 
 _LINK = re.compile(r"\[([^\]\n]+)\]\(([^)\s]*)\)")
 _CODE_SPAN = re.compile(r"`[^`\n]+`")
@@ -40,10 +40,6 @@ def heading_anchor(heading: str) -> str:
 
 def _slug(name: str) -> str:
     return Name(unlink(name)).title_slug
-
-
-def _words(name: str) -> List[str]:
-    return re.findall(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+", name)
 
 
 def _relative(target: Path, base: Path) -> str:
@@ -126,7 +122,8 @@ class StoryMapLinks:
         """``id(node)`` to its ``story-map.md#anchor`` link, for every epic, sub-epic, and story.
 
         Anchors follow the outline headings the markdown story map renders:
-        ``(E) {name}`` for an epic or sub-epic, ``(S) {actor} --> {name}`` for a story.
+        ``(E) {name}`` for an epic or sub-epic, ``(S) {actor} --> {name}`` for a story, its mark naming the kind
+        when it is not a user story (``(S:system)``).
         Empty when there is no ``story-map.md``.
         """
         if self.map_file is None or not self.map_file.is_file():
@@ -137,8 +134,8 @@ class StoryMapLinks:
 
         def story_entries(epic) -> None:
             for story in epic.stories:
-                actor = unlink(story.actors[0]).strip() if story.actors else ""
-                heading = f"(S) {actor} --> {story.name}" if actor else f"(S) --> {story.name}"
+                actor = f"{unlink(story.actors[0]).strip()} " if story.actors else ""
+                heading = f"{story.story_type.outline_mark} {actor}--> {story.name}"
                 links[id(story)] = f"{target}#{anchors.next(heading)}"
 
         def sub_epic_entries(epics) -> None:
@@ -209,14 +206,14 @@ class DomainModelLinks:
             return None
         parts: List[str] = []
         for name in sorted(self.terms, key=len, reverse=True):
-            words = _words(name) or [name]
+            words = Name(name).words or [name]
             self._by_key.setdefault(" ".join(w.lower() for w in words), name)
             parts.append(r"\s*".join(re.escape(w) for w in words))
         return re.compile(r"\b(?:" + "|".join(parts) + r")s?\b", re.IGNORECASE)
 
     def target(self, term: str) -> str:
         """``path#anchor`` for *term*, or ``""`` when the model does not define it."""
-        key = " ".join(w.lower() for w in _words(term))
+        key = " ".join(Name(term).words)
         name = self._by_key.get(key) or self._by_key.get(key.removesuffix("s"))
         if name is None:
             return ""

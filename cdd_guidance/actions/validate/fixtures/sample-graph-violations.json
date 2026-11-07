@@ -3,15 +3,20 @@
     "practice": "clean_engineering",
     "type": "Operation",
     "name": "sampleOp",
-    "violations": [
+    "node_id": "clean_engineering:Operation:src/example.ts:sampleOp:Sample",
+    "rules": [
       {
-        "rule": "limit-operation-parameters",
-        "messages": [
+        "name": "limit-operation-parameters",
+        "status": "violating",
+        "violations": [
           {
+            "rule": "limit-operation-parameters",
+            "subject": "Operation `sampleOp`",
             "message": "Operation 'sampleOp' has too many parameters.",
-            "file": "src/example.ts",
-            "start": 10,
-            "end": 10
+            "location": "src/example.ts",
+            "line": 10,
+            "end_line": 10,
+            "severity": "error"
           }
         ]
       }

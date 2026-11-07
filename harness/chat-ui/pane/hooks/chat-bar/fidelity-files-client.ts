@@ -1,13 +1,13 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { FileEntryData, ReportData } from '@cdd/harness/kanban/fidelity-progress'
+import type { FileEntryData, ReportData } from '@cdd/space/kanban/fidelity-progress'
 import type { FileTextData } from '@cdd/space/session/session'
 
 import type { FidelityFilesJson } from '../../types'
 import { reasonOf } from '../failure'
 import { callTool, currentChatBar } from './chat-bar-client'
-import type { FidelityClient } from './fidelity-client'
+import type { FidelityProgressClient } from './fidelity-progress-client'
 
 // The files view of one fidelity: a tab per file fidelity-progress.files declares, each tab's text read by session.read_file.
 const fidelityFiles = atom({ plugin: 'cdd-board', key: 'fidelityFiles' } as const, null as FidelityFilesJson)
@@ -21,27 +21,26 @@ export function currentFidelityFiles($: EngineInterface) {
 }
 
 // One tab per file the fidelity declares; the first tab's text is read straight away.
-export async function openFiles($: EngineInterface, fidelity: FidelityClient): Promise<void> {
+export async function openFiles($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
   const chatBar = await currentChatBar($)
   try {
-    const files = await callTool<Record<string, FileEntryData[]>>($, 'fidelity-progress.files', { ticket: chatBar.sessionName, fidelity: fidelity.fidelity })
+    const files = await callTool<Record<string, FileEntryData[]>>($, 'fidelity-progress.files', { ticket: fidelity.progress.ticket.name, fidelity: fidelity.slug })
     const paths = [...new Set(Object.values(files).flat().map(entry => entry.path))].sort((a, b) => fileOrder(a) - fileOrder(b))
-    await update($, fidelityFiles, () => ({ fidelity: fidelity.fidelity, tabs: paths.map(path => ({ path, text: null })), shown: paths[0] ?? null }))
+    await update($, fidelityFiles, () => ({ fidelity: fidelity.slug, tabs: paths.map(path => ({ path, text: null })), shown: paths[0] ?? null }))
     if (paths[0]) await showFile($, paths[0])
   } catch (failure) {
-    $.ui.toast(`${fidelity.guidance} files: ${reasonOf(failure)}`)
+    $.ui.toast(`${fidelity.slug} files: ${reasonOf(failure)}`)
   }
 }
 
 // The fidelity's latest validation report in its own tab, as the board opens it from a violation count, so the person
 // reads the violations before telling the agent to fix them.
-export async function openReport($: EngineInterface, fidelity: FidelityClient): Promise<void> {
-  const chatBar = await currentChatBar($)
+export async function openReport($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
   try {
-    const report = await callTool<ReportData>($, 'fidelity-progress.report', { ticket: chatBar.sessionName, fidelity: fidelity.fidelity })
-    await update($, fidelityFiles, () => ({ fidelity: fidelity.fidelity, tabs: [{ path: report.path, text: report.text }], shown: report.path }))
+    const report = await callTool<ReportData>($, 'fidelity-progress.report', { ticket: fidelity.progress.ticket.name, fidelity: fidelity.slug })
+    await update($, fidelityFiles, () => ({ fidelity: fidelity.slug, tabs: [{ path: report.path, text: report.text }], shown: report.path }))
   } catch (failure) {
-    $.ui.toast(`${fidelity.guidance} report: ${reasonOf(failure)}`)
+    $.ui.toast(`${fidelity.slug} report: ${reasonOf(failure)}`)
   }
 }
 

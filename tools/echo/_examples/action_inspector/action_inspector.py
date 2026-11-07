@@ -1,7 +1,7 @@
 """ActionInspector - wrap action instructions in a DO-NOT-FOLLOW fence for inspection."""
 from __future__ import annotations
 
-from echo.echo import Echo
+from tools.echo.echo import Echo
 
 
 class ActionInspector:

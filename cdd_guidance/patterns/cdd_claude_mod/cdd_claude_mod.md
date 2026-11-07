@@ -20,7 +20,7 @@ class Report:
 | Python | Mod |
 |---|---|
 | `class Report` | `ReportClient` in `report-client.ts`, `ReportView` in `report-view.tsx` |
-| Properties marked `@data_field` | `ReportData` from the language adapter, and one client property for each field a view paints |
+| Properties annotated `@data_field` | `ReportData` from the language adapter, and one client property for each field a view paints |
 | `@mcp @agent_tool def publish` | `publish($, report, audience)` exported beside the client, the MCP tool `report.publish`, and a control in the view |
 | `report: str` | The `ReportClient` the view is painting, which the action reads the identity from |
 | `audience: str` | An argument of `publish($, report, audience)`, and an input in the view |
@@ -145,12 +145,12 @@ This pattern answers the questions `patterns-lern-domain-driven` answers: where 
 
 ### The Kanban, layer by layer
 
-`harness/kanban/` is the worked example, and every new domain component follows it.
+`space/kanban/` is the worked example, and every new domain component follows it.
 
 | Layer | In the Kanban |
 |---|---|
 | Domain | `Board`, `Ticket`, `Stage`, `BacklogItem` over `Session`, `Repo`, `Graph` |
-| Tool | `ticket.move_next`, `ticket.move_previous`, `ticket.close`, `ticket.archive`, `ticket.create`, `board.show`, `backlog-item.start`, marked directly on `Ticket`, `Board`, and `BacklogItem`. `Ticket` holds a reference to its `Session`, which owns the session's files, so `Ticket.close` calls `Session.close` |
+| Tool | `ticket.move_next`, `ticket.move_previous`, `ticket.close`, `ticket.archive`, `ticket.create`, `board.show`, `backlog-item.start`, annotated directly on `Ticket`, `Board`, and `BacklogItem`. `Ticket` holds a reference to its `Session`, which owns the session's files, so `Ticket.close` calls `Session.close` |
 | Generated | The `cdd` entry in `.mcp.json` and the `harness-kanban-*` skills |
 | Contract | `TicketData`, `BoardData`, `ColumnData` from the language adapter |
 | Client | `TicketClient` and its actions in `pane/hooks/kanban/ticket-client.ts`, `BoardClient` and its actions in `pane/hooks/kanban/board-client.ts` |
@@ -196,7 +196,7 @@ export async function moveNext($: EngineInterface, ticket: TicketClient): Promis
 }
 ```
 
-**MCP tool**, `ticket.move_next`. The marks sit on the domain operation itself. The toolset's `@tool_subject` loader finds the ticket the call names, so the tool takes the loader's arguments and the operation's together, and the MCP server sends the object the operation returns as its data fields.
+**MCP tool**, `ticket.move_next`. The annotations sit on the domain operation itself. The toolset's `@tool_subject` loader finds the ticket the call names, so the tool takes the loader's arguments and the operation's together, and the MCP server sends the object the operation returns as its data fields.
 
 ```python
 @agent_toolset
@@ -213,7 +213,7 @@ class Ticket:
         ...
 ```
 
-**Domain**, the body of that operation in `harness/kanban/ticket.py`. `Ticket` decides what moving next means and records it in the session log.
+**Domain**, the body of that operation in `space/kanban/ticket.py`. `Ticket` decides what moving next means and records it in the session log.
 
 ```python
 def move_next(self) -> Ticket:
@@ -270,7 +270,7 @@ The canvas and the story map are designed upstream by `ux` and `stories`. `gener
 1. Follow **session_guidance**. Start from the Python: name the classes this slice exposes, read their `.context/`, and list their `@mcp @agent_tool` operations, because that list decides the client's operations and the view's controls.
 2. Add any missing domain operation and its Mamba spec first. Specs first, small RED cycles.
 3. Add the `@mcp @agent_tool` operation on the `{Object}` toolset and its tool spec. Run `python scripts/install.py --ide Claude` so the generated skills, commands, and MCP entry follow.
-4. Mark each property the mod reads with `@data_field`, mark the class with `@language_adapter(language="typescript")`, and install, so `{Object}Data` follows.
+4. Annotate each property the mod reads with `@data_field`, annotate the class with `@language_adapter(language="typescript")`, and install, so `{Object}Data` follows.
 5. Add `{Object}Client` properties and operations for what this slice displays and does, then the view that paints them. Scaffold from `templates/`.
 6. Connect events in `register.tsx`.
 7. Run `claude plugin validate`, `tsc -p`, and `claude plugin test` on the mod folder, and Mamba on the Python specs.

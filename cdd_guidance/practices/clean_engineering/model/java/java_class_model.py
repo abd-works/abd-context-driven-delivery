@@ -6,22 +6,11 @@ this module only spells Java lines.
 from __future__ import annotations
 
 import re
-import sys
-from pathlib import Path
 from typing import List, Optional
 
-_repo = Path(__file__).resolve().parents[3]
-if str(_repo) not in sys.path:
-    sys.path.insert(0, str(_repo))
-
-from cdd_guidance.practices.clean_engineering.model.base_class_model import (
-    CleanEngineeringModel,
-    OoadClass,
-    companion_interface_name,
-    is_interface_name,
-)
+from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
-from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.code_class_model import BraceCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
@@ -32,36 +21,14 @@ def _pascal(name: str) -> str:
     return "".join(part.title() for part in re.split(r"_+", name))
 
 
-class JavaOoadClass(OoadClass):
-    pass
-
-
-class JavaCleanEngineeringModel(CodeCleanEngineeringModel):
+class JavaCleanEngineeringModel(BraceCleanEngineeringModel):
     language = _JAVA
 
-    def load_class(self, source: OoadClass) -> JavaOoadClass:
-        return JavaOoadClass(name=source.name, sequential_order=source.sequential_order)
+    def interface_declaration(self, oclass: OoadClass) -> List[str]:
+        return [f"public interface {oclass.name} {{"]
 
-    @classmethod
-    def parse(cls, text: str) -> "JavaCleanEngineeringModel":
-        from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
-
-        return CFamilyParse(
-            model_factory=lambda: cls(name="", sequential_order=1),
-            class_factory=lambda **kw: JavaOoadClass(**kw),
-            language=_JAVA,
-        ).parse(text)
-
-    def class_open(self, oclass: OoadClass, known_names: List[str]) -> List[str]:
-        lines = ["", f"/** {oclass.intent} */"] if oclass.intent else [""]
-        if is_interface_name(oclass.name):
-            return lines + [f"public interface {oclass.name} {{"]
-        iface = companion_interface_name(oclass.name, known_names)
-        if iface:
-            return lines + [f"public class {oclass.name} implements {iface} {{"]
-        if oclass.collaborators:
-            return lines + [f"public class {oclass.name} extends {oclass.collaborators[0]} {{"]
-        return lines + [f"public class {oclass.name} {{"]
+    def class_modifiers(self, implemented: List[str]) -> str:
+        return "public "
 
     def property_line(self, prop: Property, contract: bool) -> List[str]:
         type_name = self._type(prop.type_hint)

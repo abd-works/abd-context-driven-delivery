@@ -5,76 +5,37 @@ this module only spells TypeScript lines.
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from typing import List, Optional
 
-_repo = Path(__file__).resolve().parents[3]
-if str(_repo) not in sys.path:
-    sys.path.insert(0, str(_repo))
-
-from cdd_guidance.practices.clean_engineering.model.base_class_model import (
-    CleanEngineeringModel,
-    Module,
-    OoadClass,
-    companion_interface_name,
-    is_interface_name,
-)
-from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
+from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass, is_interface_name
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import pascal_case_decorator
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
-from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.code_class_model import BraceCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
 _TYPESCRIPT = CodeLanguage.named("typescript")
 
 
-class TypeScriptOoadClass(OoadClass):
-    pass
-
-
-class TypeScriptModule(Module):
-    def load_class(self, source: OoadClass) -> TypeScriptOoadClass:
-        loaded = TypeScriptOoadClass(name=source.name, sequential_order=source.sequential_order)
-        loaded.update_self(source)
-        return loaded
-
-
-class TypeScriptCleanEngineeringModel(CodeCleanEngineeringModel):
+class TypeScriptCleanEngineeringModel(BraceCleanEngineeringModel):
     language = _TYPESCRIPT
 
-    def load_module(self, source: Module) -> TypeScriptModule:
-        loaded = TypeScriptModule(name=source.name, sequential_order=source.sequential_order)
-        loaded.update_self(source)
-        return loaded
+    def class_doc(self, intent: str) -> List[str]:
+        notes = [f" * {note.strip()}" for note in intent.splitlines() if note.strip()]
+        return ["/**", *notes, " */"] if notes else []
 
-    def load_class(self, source: OoadClass) -> TypeScriptOoadClass:
-        loaded = TypeScriptOoadClass(name=source.name, sequential_order=source.sequential_order)
-        loaded.update_self(source)
-        return loaded
+    def class_intent(self, oclass: OoadClass) -> str:
+        return oclass.intent
 
-    @classmethod
-    def parse(cls, text: str) -> "TypeScriptCleanEngineeringModel":
-        return CFamilyParse(
-            model_factory=lambda: cls(name="", sequential_order=1),
-            class_factory=lambda **kw: TypeScriptOoadClass(**kw),
-            language=_TYPESCRIPT,
-        ).parse(text)
+    def stereotype_decorators(self, oclass: OoadClass) -> List[str]:
+        return [f"@{pascal_case_decorator(item)}()" for item in oclass.stereotypes]
 
-    def class_open(self, oclass: OoadClass, known_names: List[str]) -> List[str]:
-        lines = [""]
-        if oclass.intent:
-            lines.append("/**")
-            lines.extend(f" * {note.strip()}" for note in oclass.intent.splitlines() if note.strip())
-            lines.append(" */")
-        if is_interface_name(oclass.name):
-            return lines + [f"interface {oclass.name} {{"]
-        iface = companion_interface_name(oclass.name, known_names)
-        if iface:
-            return lines + [f"abstract class {oclass.name} implements {iface} {{"]
-        if oclass.collaborators:
-            return lines + [f"class {oclass.name} extends {oclass.collaborators[0]} {{"]
-        return lines + [f"class {oclass.name} {{"]
+    def interface_declaration(self, oclass: OoadClass) -> List[str]:
+        return [f"interface {oclass.name} {{"]
+
+    def class_modifiers(self, implemented: List[str]) -> str:
+        """A class that implements its I{Class} contract leaves the contract's members to its subclasses."""
+        return "abstract " if any(is_interface_name(base) for base in implemented) else ""
 
     def property_line(self, prop: Property, contract: bool) -> List[str]:
         type_name = self.language.type_name(prop.type_hint) if prop.type_hint else "any"

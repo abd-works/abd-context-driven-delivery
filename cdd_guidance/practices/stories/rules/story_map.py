@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from harness.graph.practice_rule import PracticeGraphRule
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
 
 _VERB_OPENINGS = {"verb", "unlisted"}
 _MOST_SCENARIOS = 7
@@ -12,7 +18,7 @@ class VerbNounFormat(PracticeGraphRule):
     slug = "verb-noun-format"
     node_types = ("Epic", "SubEpic", "Story")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if not node.has_fact("opening_class"):
             return []
         kind = node.get_fact("opening_class") or ""
@@ -25,7 +31,7 @@ class FourToNineChildren(PracticeGraphRule):
     slug = "four-to-nine-children"
     node_types = ("Epic", "SubEpic")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if node.type in {"Story", "Scenario"}:
             return []
         severity = node.get_fact("child_band") or ""
@@ -37,14 +43,14 @@ class FourToNineChildren(PracticeGraphRule):
         return [f"{kind} {node.name!r}: {count} {label} (target 4-9)"]
 
 
-class StoryScenariosOneToFour(PracticeGraphRule):
+class StoryScenariosAtMostSeven(PracticeGraphRule):
     """Code scenarios on a story: at most 7. More than seven and the story is huge. A story with none
     has not had its scenarios written yet, which is ordinary while the map is ahead of the scenarios."""
 
-    slug = "story-scenarios-one-to-four"
+    slug = "story-scenarios-at-most-seven"
     node_types = ("Story",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         count = node.get_fact("scenario_count")
         if count is None and (node.get_fact("child_label") or "") == "scenarios":
             count = node.get_fact("child_count", 0)
@@ -60,7 +66,7 @@ class KebabCasePaths(PracticeGraphRule):
     slug = "kebab-case-paths"
     node_types = ("Story", "Scenario", "Epic", "SubEpic")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if not node.get_fact("camel_case_path"):
             return []
         name = node.get_fact("artifact_name") or ""
@@ -71,7 +77,7 @@ class StoryNameCapturesSystemMechanic(PracticeGraphRule):
     slug = "story-name-captures-system-mechanic"
     node_types = ("Story",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if not node.get_fact("generic_handler"):
             return []
         return [
@@ -85,7 +91,7 @@ class RightSizeStoryNodes(PracticeGraphRule):
     slug = "right-size-story-nodes"
     node_types = ("Story",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if not node.get_fact("near_duplicate"):
             return []
         return [f"Story {node.name!r} is too similar to another story on the same map node."]
@@ -95,7 +101,7 @@ class BranchOnMechanicalUniqueness(PracticeGraphRule):
     slug = "branch-on-mechanical-uniqueness"
     node_types = ("Epic", "SubEpic", "Story")
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         verb = node.get_fact("shared_verb") or ""
         if not verb:
             return []
@@ -108,7 +114,7 @@ class BehavioursNotOneTimeTasks(PracticeGraphRule):
     slug = "behaviours-not-one-time-tasks"
     node_types = ("Story",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if not node.get_fact("one_time_task"):
             return []
         return [f"Story {node.name!r} reads like a one-time task, not a repeatable behaviour."]

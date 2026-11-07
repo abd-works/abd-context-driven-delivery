@@ -1,411 +1,280 @@
 # Story model
 
-*StoryModel* reads one file into epics, stories, and increments. A nested epic is an epic whose parent is an epic. An increment is a thin slice: a name, an outcome, slicing notes, a decision, and the stories in that slice. Markdown, JSON, and the code languages continue through one background, then scenarios, steps, and examples. Draw.io and Miro stop at stories, and they still read increments. Every channel uses the same walk. A channel only differs in how the next node is taken out of the file.
+*StoryModel* is one story map: epics, the sub-epics nested under them, the stories in each, and the increments that slice them, then each story's backgrounds and scenarios down to steps and examples. A nested epic is an epic whose parent is an epic. An increment is a thin slice: a name, an outcome, slicing notes, a decision, and the stories in that slice. Every node is a graph node (*ModelNode*), so a loaded model is also the stories practice's part of the knowledge graph.
 
-Callers use the base nodes. `StoryModelFactory.load` takes a file or a folder. A given step loads its example. Cross-practice links to a class, operation, property, module, or example are recorded on the graph when the working copy loads (_record_story_edges in harness/graph/working_copy.py). A transform to another channel traverses those edges on the loaded graph. The copy reads the node already on the edge. It does not look the name up again.
+Each format is a *StoryModel* subclass with its own node subclasses, listed by `Stories` under `formats`: sketch, markdown, json, drawio, miro, python, typescript, java, javascript. `StoryModel(source)` copies any model into the subclass's node types; `parse` reads text in that format and `render(canonical, previous)` writes a model out. Markdown, JSON, and the code formats carry scenarios, steps, and examples; the diagram formats (drawio, miro) stop at stories and still read increments. The Claude Design story canvas, which shows the stories on their screens, is a *DiagramStoryModel* the UX practice draws (`practices/ux/model/claude_design/story_canvas.py`).
 
 ```
-story_model = StoryModelFactory.load(path)
+story_map = StoryModel.load(folder)            # story-map.md (or .json), increments, scenarios
+drawio = DrawIOStoryModel().render(story_map)
 ```
 
 # practices/stories/model
 
-- **Purpose:** Keep stakeholder behaviour as one story model — epics, stories, and increments, then scenarios and steps — so a markdown file, a diagram, and a test file stay the same hierarchy every later fidelity reads. A diagram channel writes that hierarchy as a story map. A link to clean engineering is a graph edge recorded at load time. A later channel reads that edge from the loaded graph.
-- **Seam (terms):** StoryNode, StoryModelFactory, StoryModel, Epic, Increment, Story, StoryType, Background, Scenario, Step, StepType, Example, MiroApiClient
-- **Dependencies (one-way):** story loading reads clean engineering nodes that are already on the graph when cross-practice edges are built. The base factory does not load a class model.
+- **Purpose:** Keep stakeholder behaviour as one story model — epics, stories, and increments, then scenarios and steps — so a markdown file, a diagram, and a test file stay the same hierarchy every later fidelity reads.
+- **Seam (terms):** StoryNode, StoryModel, Epic, Increment, Story, StoryType, Background, Scenario, Step, StepType, Example, Examples, SourceLocation, and one StoryModel subclass per format
+- **Dependencies (one-way):** harness/graph (*ModelNode*, *Graph*), harness/name (*Name*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*, *SketchLens*)
 
-## StoryNode
+These dependencies are owned by the modules named; this model only uses them. *GraphStoryModel* writes a loaded model onto the stories practice graph; cross-practice links from steps and examples to Clean Engineering nodes are recorded there.
 
-Every epic, increment, story, background, scenario, step, and example is a StoryNode. A channel node extends the same base, so a MarkdownEpic and a DrawIOEpic share name, order, parent, and estimate.
+## StoryNode : ModelNode
 
+Every epic, increment, story, background, scenario, step, and example. It carries the facts story-map graph rules read.
+
++ StoryNode(name: str, sequential_order: int, graph: Graph | None = None)
+------
 + name: str
 + sequential_order: int
-+ parent: StoryNode
 + estimate: str
+	// shaping size, such as "approx 2-3 more stories"; meaningful on an epic
 + written: WrittenBlock | None
 	// how this node was written in code: a sub-epic file, a story, a background, or a scenario. None outside code
 + setup: CodeBody
-	// the code inside a story or scenario that is not a background, scenario, or step: shared fields and helpers
+	// the code inside a story or scenario that is not a background, scenario, or step
++ opening_token, opening_class, child_count, child_label, child_band, near_duplicate, generic_handler, shared_verb, one_time_task, artifact_name, camel_case_path
+	// the facts graph rules read; load_map_facts fills them
 ----
-+ semantic_type(): str
-	// Epic, Story, Step, and the other node kinds
++ load_map_facts(): None
++ opens_with_verb(): bool
++ load_child_band(count: int, label: str): None
+	// child_band is "error" unless the count is 0 or 4 to 9
++ take_code_from(source: StoryNode): None
+	// keeps written and setup when the node is copied into another format or cloned
 + clone(): StoryNode
 	// a copy of this node, including its children
-+ take_code_from(source: StoryNode): None
-	// keeps written and setup when the node is copied into another channel or cloned. A step also keeps its body
-+ code_key: tuple
-	// a step: keyword, text, and body. A background: its name and steps. A scenario: name, examples, backgrounds, and steps.
-	// A story: name, actors, evidence, and backgrounds. While a node's key is the one it was read with, its code stands
 
-## StoryModelFactory
+## StoryModel : StoryNode
 
-+ load(path: str): StoryModel
-	// path is a file, or a folder of files
-	// the file type, or the files in the folder, selects the channel story model
-	// the model loads itself
-	// cross-practice links are resolved when the graph working copy loads
-	// the return is a StoryModel
-
-## StoryModel
-
-+ StoryModel(source: StoryModel)
-	// source empty: the model is empty until load
-	// source set: epics, stories, and increments are this channel's types, built from source. A nested epic uses epic_type. An increment uses increment_type
-	// the new model does not keep the source's channel types
++ StoryModel(source: StoryModel | Graph | None = None, graph: Graph | None = None)
+	// source set: each epic and increment becomes this format's epic_type and increment_type, each story its story_type
 ------
-+ file: str
 + epics: list[Epic]
 	// composition — an epic has no model outside this story model
-	// a nested epic is an epic whose parent is an epic
 + increments: list[Increment]
 	// composition — an increment has no model outside this story model
++ examples: Examples
+	// examples shared by the whole map
 + epic_type: type
 + story_type: type
 + increment_type: type
 ----
-+ load(file: str): StoryModel
-	// stores file, then runs the same walk for every channel
-	self.file = file
-	self.load_content()
-	self.load_epics()
-	self.load_increments()
-+ save(): str
-	// every channel writes its file with this operation
++ load(root): StoryModel
+	// class operation: the story map, increments, and scenarios in a folder
++ load_files(files, project): StoryModel
+	// class operation: the story maps and story tests among files; each node names its file as a path from project
++ every_epic(): list[Epic]
+	// every epic and nested epic, each before its own children
++ every_story(): list[Story]
++ append_epic(epic: Epic): None
 + append_increment(increment: Increment): None
-- load_content(): None
-	// each channel overrides this. load calls this one operation
-	// a file channel prepares its cursor over the file
-	// the graph loader registers facts, then populate walks edges
-- load_epics(): None
-	// while has_more_epic: append load_next_epic()
-- has_more_epic(): bool
-	// channel: another epic remains in file
-- load_next_epic(): Epic
-	// epic = get_next_epic_from_file()
-	// -> epic.load_epics()
-	// -> epic.load_stories()
-- get_next_epic_from_file(): Epic
-	// channel: the next epic shell from file, in epic_type
-- load_increments(): None
-	// while has_more_increment: append_increment(load_next_increment())
-- has_more_increment(): bool
-	// channel: another increment remains in the file
-- load_next_increment(): Increment
-	// increment = get_next_increment_from_file()
-	// -> increment.load_stories()
-- get_next_increment_from_file(): Increment
-	// channel: the next increment shell from file, in increment_type
++ clone(): StoryModel
 
-## Increment
+## Epic : StoryNode
 
-+ Increment(source: Increment)
-	// copies name, order, outcome, slicing notes, and decision
-	// each source story becomes this channel's story
++ Epic(name: str | Epic, sequential_order: int = 0, story_class: type | None = None)
+	// given an epic: copies name, order, estimate, child epics, and stories, each story in story_class
 ------
-+ name: str
-+ sequential_order: int
++ epics: list[Epic]
++ stories: list[Story]
++ examples: Examples
++ has_epics: bool
++ depth: int
+----
++ estimate_label(): str
+	// "* {estimate}". Load strips the star and any HTML
++ every_epic(): list[Epic]
++ every_story(): list[Story]
++ append_epic(epic: Epic): None
++ append_story(story: Story): None
++ place_in(file: str): None
+	// names file on this epic and everything under it that names no file yet
++ span_columns(): int
++ diagram_span_columns(): int
++ tree_depth(): int
+
+## Increment : StoryNode
+
++ Increment(name: str | Increment, sequential_order: int = 0, stories: list[Story] | None = None, story_class: type | None = None)
+------
 + outcome: str
 + slicing_notes: str
 + decision_prompt: str
++ source: SourceLocation | None
 + stories: list[Story]
-	// the stories in this thin slice. Each story still belongs to its epic
+	// the stories in this thin slice. Each story still belongs to its epic, and records this increment
 ----
-+ append_story(story: Story): None
-- load_stories(): None
-	// while has_more_story: append_story(load_next_story())
-- has_more_story(): bool
-- load_next_story(): Story
-	// story = get_next_story_from_file()
-	// a slice names the story. It does not load a background or scenarios
-- get_next_story_from_file(): Story
-	// channel: the next story name in this slice, in the model's story_type
++ clone(): Increment
 
-## Epic
+## Story : StoryNode
 
-+ Epic(source: Epic)
-	// copies name, order, and estimate
-	// a nested epic is an epic whose parent is an epic
-	// each source child epic becomes this channel's epic
-	// each source story becomes this channel's story
++ Story(name: str | Story, sequential_order: int = 0, story_type: StoryType = StoryType.USER)
+	// given a story: copies name, order, type, actors, domain terms, evidence, backgrounds, and scenarios
 ------
-+ name: str
-+ sequential_order: int
-+ estimate: str
-+ epics: list[Epic]
-+ stories: list[Story]
-----
-+ estimate_label(): str
-	// "* {estimate}". A nested epic writes the same label. Load strips the star and any HTML
-+ append_epic(epic: Epic): None
-+ append_story(story: Story): None
-- load_epics(): None
-	// while has_more_epic: append_epic(load_next_epic())
-- has_more_epic(): bool
-	// channel: another child epic remains in the file
-- load_next_epic(): Epic
-	// child = get_next_epic_from_file()
-	// -> child.load_epics()
-	// -> child.load_stories()
-- get_next_epic_from_file(): Epic
-	// channel: the next child epic, in the model's epic_type
-- load_stories(): None
-	// while has_more_story: append_story(load_next_story())
-- has_more_story(): bool
-- load_next_story(): Story
-	// story = get_next_story_from_file()
-	// -> story.load_background()
-	// -> story.load_scenarios()
-- get_next_story_from_file(): Story
-	// channel: the next story shell from the file, in the model's story_type
-
-## Story
-
-+ Story(source: Story)
-	// copies name, order, and story type
-	// the source background becomes this channel's background
-	// each source scenario becomes this channel's scenario
-------
-+ name: str
-+ sequential_order: int
 + story_type: StoryType
-	// user, system, or technical. StoryModel.story_type is the channel class, not this value
-+ background: Background
++ increment: Increment | None
++ actors: list[str]
++ domain_terms: list[str]
++ evidence: list[str]
++ backgrounds: list[Background]
 + scenarios: list[Scenario]
++ scenario_type: type
+	// the scenario class this story's format copies scenarios into
++ code_key: tuple
+	// name, actors, evidence, and backgrounds: while it is the key the story was read with, its code stands
 ----
-- load_background(): None
-	// background = get_background_from_file()
-	// -> background.load_step()
-	// -> background.load_examples()
-- get_background_from_file(): Background
-- load_scenarios(): None
-	// while has_more_scenario: append the next scenario
-- has_more_scenario(): bool
-- load_next_scenario(): Scenario
-	// scenario = get_next_scenario_from_file()
-	// -> scenario.load_steps()
-	// -> scenario.load_examples()
-- get_next_scenario_from_file(): Scenario
++ load_map_facts(): None
+	// also flags a near-duplicate of a later sibling
++ clone(): Story
 
 ## StoryType
 
-+ user
-+ system
-+ technical
-
-## Background
-
-+ Background(source: Background)
-	// copies name and order
-	// the source step becomes this channel's step, ands included
-	// each source example becomes this channel's example
++ USER = "user"
++ SYSTEM = "system"
++ TECHNICAL = "technical"
 ------
-+ name: str
-+ sequential_order: int
-+ step: Step
-+ examples: list[Example]
++ outline_mark: str
+	// (S), (S:system), or (S:technical)
 ----
-- load_step(): None
-	// step = get_step_from_file()
-	// -> step.load_ands()
-	// -> step.load_example()
-- get_step_from_file(): Step
-- load_examples(): None
-	// while has_more_example: append load_next_example()
-- has_more_example(): bool
-- load_next_example(): Example
-- get_next_example_from_file(): Example
++ from_mark(kind: str | None): StoryType
 
-## Scenario
+## Background : StoryNode
 
-+ Scenario(source: Scenario)
-	// copies name, order, and story name
-	// each source step and example becomes this channel's step and example
++ Background(name: str | Background = "background", sequential_order: int = 1)
 ------
-+ name: str
-+ sequential_order: int
 + steps: list[Step]
-+ examples: list[Example]
++ examples: Examples
++ code_key: tuple
 ----
-- load_steps(): None
-- has_more_step(): bool
-- load_next_step(): Step
-	// step = get_next_step_from_file()
-	// -> step.load_ands()
-	// -> step.load_example()
-- get_next_step_from_file(): Step
-- load_examples(): None
-- has_more_example(): bool
-- load_next_example(): Example
-- get_next_example_from_file(): Example
++ clone(): Background
 
-## Step
+## Scenario : StoryNode
 
-+ Step(source: Step)
-	// copies text, step type, keyword, and order
-	// each source and becomes this channel's and
-	// the source example becomes this channel's example
++ Scenario(name: str | Scenario = "", sequential_order: int = 0, story_name: str = "")
+------
++ story_name: str
++ backgrounds: list[Background]
++ steps: list[Step]
++ examples: Examples
++ is_outline: bool
++ evidence: list[str]
++ source: SourceLocation | None
++ code_key: tuple
+----
++ steps_in(step_type: StepType): list[Step]
++ when_then_runs(): list[tuple]
+	// a When after a Then starts the next run
++ clone(): Scenario
+
+## Step : StoryNode
+
++ Step(text: str | Step, step_type: StepType | None = None, sequential_order: int = 0, keyword: str = "", concepts, values, actor: str = "", source: SourceLocation | None = None, name: str = "")
 ------
 + text: str
-+ step_type: StepType
++ step_type: StepType | None
 	// given, when, or then. An and keeps the step type of the step it continues
 + keyword: str
 	// Given, When, Then, And, or But
-+ sequential_order: int
 + ands: list[Step]
-+ example: Example
-	// given. The example this step names
++ concepts: list[str]
++ values: list[str]
++ actor: str
++ source: SourceLocation | None
++ call_graph: list[CallGraphEntry]
 + body: CodeBody
 	// the step's test code as read, in the language it was written in. Empty outside code
-	// a code story writes it with CodeBody.lines_in: the body in the same language, otherwise the step placeholder
++ is_continuation: bool
++ phase: str
++ callees: list[str]
+	// the capitalised concepts the step names: the domain classes it reaches
++ code_key: tuple
+	// keyword, text, and body
 ----
-- load_ands(): None
-	// while has_more_and: append the next and
-- has_more_and(): bool
-- load_next_and(): Step
-	// and = get_next_and_from_file()
-	// -> and.load_example()
-- get_next_and_from_file(): Step
-- load_example(): None
-	// given, and an and that continues a given
-	// example is the example this step names
++ clone(): Step
 
 ## StepType
 
-+ given
-+ when
-+ then
++ GIVEN = "given"
++ WHEN = "when"
++ THEN = "then"
 
-## Example
+## Example : StoryNode
 
-+ Example(source: Example)
-	// copies name, value, and text
++ Example(name: str, value: Any = None, sequential_order: int = 0, scope: StoryNode | None = None)
 ------
-+ name: str
-+ value: str
-+ text: str
-	// the class text in the markdown or the code
++ value: Any
+	// a field map by default
++ scope: StoryNode | None
+	// the node that shares this example: a background, a scenario, a sub-epic, an epic, or the story map
+----
++ cells(): dict
++ as_code(): str
++ clone(): Example
 
-## MarkdownStoryNode
+## Examples : dict
 
-+ strip_backticks(text: str): str
-+ strip_markup(text: str): str
-	// backticks, then the surrounding stars. Increment, scenario, and the story model all read names through this
+Example name to value, for one scope.
+
++ Examples(scope: StoryNode | None = None)
+------
++ scope: StoryNode | None
+----
++ table(): list[dict]
++ clone(scope: StoryNode | None = None): Examples
+
+## SourceLocation
+
++ SourceLocation(file: str, line: int = 0, end_line: int = 0, text: str = "")
+----
++ render(): str
+	// file:line-end_line
+
+---
+
+## Formats
+
+Each format class below is a *StoryModel* subclass. Its node subclasses (`MarkdownEpic`, `DrawIOStory`, …) set the node types `StoryModel(source)` copies into; a format overrides only what it reads or writes differently.
+
+## SketchStoryModel : StoryModel
+
+The `sketch` format: the stories section of an integrated sketch.
+
+----
++ parse(text: str): SketchStoryModel
+	-> SketchOutline.body_for
++ render(story_map: StoryModel | None = None, previous: str | None = None): str
 
 ## MarkdownStoryModel : StoryModel
 
-+ MarkdownStoryModel(source: StoryModel)
+The `markdown` format: `story-map.md`, the scenario files beside it, and the increments file. Nodes: MarkdownEpic, MarkdownStory, MarkdownIncrement, MarkdownScenario, MarkdownStep.
+
 ------
 + epic_type: MarkdownEpic
 + story_type: MarkdownStory
-+ increment_type: MarkdownIncrement
 ----
-- load_content(): None
-	// cursor is the markdown headings in file. Increments are the headings in thin-slicing.md, thin-slice.md, thin-slices.md, or increments.md
-- has_more_epic(): bool
-- get_next_epic_from_file(): MarkdownEpic
-- has_more_increment(): bool
-- get_next_increment_from_file(): MarkdownIncrement
++ from_workspace(root: Path, project: Path | None = None): MarkdownStoryModel | None
++ parse(text: str): MarkdownStoryModel
++ render(story_map: StoryModel, previous: str | None = None, links: StoryMapLinks | None = None, workspace: str | None = None): str
+	// with links, each story that has its own markdown file links to it
 + save(): str
-
-## MarkdownIncrement : Increment, MarkdownStoryNode
-
-- has_more_story(): bool
-- get_next_story_from_file(): MarkdownStory
-	// a bullet under Stories. Outcome, slicing notes, and decision are the fields on this increment
-
-## MarkdownEpic : Epic, MarkdownStoryNode
-
-- has_more_epic(): bool
-- get_next_epic_from_file(): MarkdownEpic
-- has_more_story(): bool
-- get_next_story_from_file(): MarkdownStory
-
-## MarkdownStory : Story, MarkdownStoryNode
-
-- get_background_from_file(): MarkdownBackground
-- has_more_scenario(): bool
-- get_next_scenario_from_file(): MarkdownScenario
-
-## MarkdownBackground : Background, MarkdownStoryNode
-
-- get_step_from_file(): MarkdownStep
-- has_more_example(): bool
-- get_next_example_from_file(): MarkdownExample
-
-## MarkdownStep : Step, MarkdownStoryNode
-
-+ display_text(): str
-	// step text without a leading And or But
-+ prose(step: Step): str
-----
-- has_more_and(): bool
-- get_next_and_from_file(): MarkdownStep
-
-## MarkdownScenario : Scenario, MarkdownStoryNode
-
-- read(body: str): None
-	// steps, the one background, and example rows from a scenario file
-- has_more_step(): bool
-- get_next_step_from_file(): MarkdownStep
-- has_more_example(): bool
-- get_next_example_from_file(): MarkdownExample
-
-## JsonStoryNode
-
-+ record(): dict
-	// this node's JSON object
++ attach_source_locations(text: str, rel_file: str): None
 
 ## JsonStoryModel : StoryModel
 
-+ JsonStoryModel(source: StoryModel)
-------
-+ epic_type: JsonEpic
-+ story_type: JsonStory
-+ increment_type: JsonIncrement
+The `json` format. Nodes: JsonEpic, JsonStory, JsonIncrement, JsonScenario.
+
 ----
-- load_content(): None
-	// cursor is the JSON epic array in file. Increments are the increments array in the same file
-- has_more_epic(): bool
-- get_next_epic_from_file(): JsonEpic
-- has_more_increment(): bool
-- get_next_increment_from_file(): JsonIncrement
-+ save(): str
++ from_workspace(root: Path): JsonStoryModel | None
++ parse(text: str): JsonStoryModel
++ render(story_map: StoryModel, previous: str | None = None): str
++ attach_source_locations(file_name: str): None
 
-## JsonIncrement : Increment, JsonStoryNode
+## DiagramStoryModel : StoryModel
 
-- has_more_story(): bool
-- get_next_story_from_file(): JsonStory
+The layout shared by the diagram formats. Nodes: DiagramEpic, DiagramStory, DiagramIncrement, each also a *DiagramStoryNode*.
 
-## JsonEpic : Epic, JsonStoryNode
-
-- has_more_epic(): bool
-- get_next_epic_from_file(): JsonEpic
-- has_more_story(): bool
-- get_next_story_from_file(): JsonStory
-
-## JsonStory : Story, JsonStoryNode
-
-- get_background_from_file(): JsonBackground
-- has_more_scenario(): bool
-- get_next_scenario_from_file(): JsonScenario
-
-## JsonBackground : Background, JsonStoryNode
-
-- get_step_from_file(): JsonStep
-- has_more_example(): bool
-- get_next_example_from_file(): JsonExample
-
-## JsonScenario : Scenario, JsonStoryNode
-
-- has_more_step(): bool
-- get_next_step_from_file(): JsonStep
-- has_more_example(): bool
-- get_next_example_from_file(): JsonExample
-
-## JsonStep : Step, JsonStoryNode
-
-- has_more_and(): bool
-- get_next_and_from_file(): JsonStep
+------
++ max_sub_epic_depth: int
++ actor_y: int
 
 ## DiagramStoryNode
 
@@ -417,380 +286,115 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 + place(side: str, destination: DiagramStoryNode): None
 	// side is above, below, after, or before
 + add(child: DiagramStoryNode): None
-	// place(below, this): the child sits under its parent
-	// place(after, previous child): the child sits to the right of the previous child
-	// then stretch()
+	// the child sits under its parent and to the right of the previous child, then stretch()
 + stretch(): None
-	// width becomes the sum of the children's widths. A story is one pitch wide. An estimate on a leaf epic adds columns
-	// then parent.stretch(), so the parent and the grandparent grow when a story or a nested epic is added
-	// the next sibling reads this width, so it shifts right
+	// width becomes the sum of the children's widths, then the parent stretches
 + role(): str
 	// epic, subepic:{depth}, story:{type}, actor, or estimate
-	// Draw.io writes this as the style prefix. Miro writes it as data-role. Load matches the same word
-
-## DiagramStoryModel : StoryModel
-
-+ DiagramStoryModel(source: StoryModel)
-	// children are DiagramEpic and DiagramStory. A nested epic is a DiagramEpic whose parent is a DiagramEpic. An increment is a DiagramIncrement
-------
-+ epic_type: DiagramEpic
-+ story_type: DiagramStory
-+ increment_type: DiagramIncrement
-+ actor_y: int
-----
-+ save(): str
-
-## DiagramIncrement : Increment, DiagramStoryNode
-
-+ label_width: int
-+ lane_height: int
-+ lane_gap: int
-	// the thin-slice lane. Draw.io and Miro place the stories of this increment in that lane
-
-## DiagramEpic : Epic, DiagramStoryNode
-
-## DiagramStory : Story, DiagramStoryNode
-	// width is the story pitch. height is the story size
-
-## DrawIOStoryNode : DiagramStoryNode
-
-+ slug(): str
-	// the same name-to-slug on an epic and a story. A nested epic uses it too
-+ cell_id(): str
-	// {parent.cell_id}/{slug}. The epic is the root and returns slug. A story appends a count when a sibling shares the slug
-+ style(): str
-	// role, then the shared tail: whiteSpace=wrap, html, overflow, fillColor, strokeColor, fontColor
-+ cell(): Vertex
-	// one mxCell from cell_id, name, x, y, width, height, and style
-+ cells(): list
-	// this cell, then each child's cells
-+ matches(style: str): bool
-	// the style starts with this node's role. Load uses that to choose an epic, a nested epic, a story, an actor, or an estimate
 
 ## DrawIOStoryModel : DiagramStoryModel
 
-+ DrawIOStoryModel(source: StoryModel)
-	// DrawIOEpic for each epic, including a nested epic, then DrawIOStory. An increment is a DrawIOIncrement
-------
-+ epic_type: DrawIOEpic
-+ story_type: DrawIOStory
-+ increment_type: DrawIOIncrement
+The `drawio` format. Nodes: DrawIOEpic, DrawIOStory, DrawIOIncrement.
+
 ----
-- load_content(): None
-	// cursor is the vertex cells in file. Increments are the inc-lane cells
-- has_more_epic(): bool
-- get_next_epic_from_file(): DrawIOEpic
-- has_more_increment(): bool
-- get_next_increment_from_file(): DrawIOIncrement
++ parse(text: str): DrawIOStoryModel
+	-> load(text)
++ load(text: str): DrawIOStoryModel
+	// reads cells by where they sit, not their order in the file
++ render(canonical: StoryModel | None = None, previous: str | None = None, links: StoryMapLinks | None = None, workspace: str | None = None): str
+	// with links, each cell links to its story-map.md entry
 + save(): str
-	// writes the story map
-
-## DrawIOIncrement : DiagramIncrement, DrawIOStoryNode
-
-- has_more_story(): bool
-- get_next_story_from_file(): DrawIOStory
-	// an increment-story cell in this lane
-
-## DrawIOEpic : DiagramEpic, DrawIOStoryNode
-
-- place(side: str, destination: DiagramStoryNode): None
-	// parent is the model: the epic bar and the estimate row
-	// parent is an epic: the nested bar. height stays the diagram height
-- estimate_label(): str
-	// writes Epic.estimate_label as the estimate cell
-----
-- has_more_epic(): bool
-- get_next_epic_from_file(): DrawIOEpic
-- has_more_story(): bool
-- load_next_story(): DrawIOStory
-	// returns the story and stops. No background, scenarios, steps, or examples
-- get_next_story_from_file(): DrawIOStory
-
-## DrawIOStory : DiagramStory, DrawIOStoryNode
-
-- place(side: str, destination: DiagramStoryNode): None
-	// story cell under its epic
-
-## MiroApiClient
-
-The Miro REST API. `MiroStoryModel.upload` posts shapes through `create_shape`. `clear` deletes by id. `clear_story_map` lists the board and deletes shapes whose fill this model paints.
-
-+ create(token: str): MiroApiClient
-	// token, else MIRO_TOKEN, else ~/.miro-token, else .cursor/miro-token.txt
-+ create_shape(board_id: str, x: float, y: float, w: float, h: float, fill: str, stroke: str, stroke_width: int, content: str, rx: int, font_size: int): dict
-+ delete_shape(board_id: str, shape_id: str): None
-+ list_shapes(board_id: str): list
-
-## MiroStoryNode : DiagramStoryNode
-
-+ slug(): str
-	// the same name-to-slug on an epic and a story. A nested epic uses it too
-+ shape(): dict
-	// id, x, y, w, h, rx, fill, stroke, stroke_width, content, role, font_size
-	// save writes that dict as a rect: data-role, data-content, and data-actor
-	// load reads those attributes back into the node
-	// upload turns the same dict into a board box
-+ shapes(): list
-	// this shape, then each child's shapes. A story adds the actor shape when the actor changes
-+ fills(): set
-	// the fill colors this node paints. A board clear finds story-map shapes by these fills
-+ matches(role: str): bool
-	// data-role equals this node's role. Load uses that to choose an epic, a nested epic, or a story
 
 ## MiroStoryModel : DiagramStoryModel
 
-+ MiroStoryModel(source: StoryModel)
-------
-+ epic_type: MiroEpic
-+ story_type: MiroStory
-+ increment_type: MiroIncrement
+The `miro` format: a canvas-composer SVG, with increments as a thin-slice table. Nodes: MiroEpic, MiroStory, MiroIncrement.
+
 ----
-- load_content(): None
-	// cursor is the Miro items in file. Increments are the rows of the thin-slice table
-- has_more_epic(): bool
-- get_next_epic_from_file(): MiroEpic
-- has_more_increment(): bool
-- get_next_increment_from_file(): MiroIncrement
++ load(text: str): MiroStoryModel
 + save(): str
-+ upload(board_id: str, client: MiroApiClient): dict
-	// each shape goes to the board through client.create_shape. Miro places a shape by its centre
-+ clear(board_id: str, client: MiroApiClient, miro_ids: list[str]): int
-+ clear_story_map(board_id: str, client: MiroApiClient): int
-	// list_shapes, then delete the shapes whose fill this model paints
-
-## MiroIncrement : DiagramIncrement, MiroStoryNode
-
-- has_more_story(): bool
-- get_next_story_from_file(): MiroStory
-	// a cell in this table row, after the increment name
-
-## MiroEpic : DiagramEpic, MiroStoryNode
-
-- place(side: str, destination: DiagramStoryNode): None
-	// parent is the model: the epic bar
-	// parent is an epic: the nested bar
-----
-- has_more_epic(): bool
-- get_next_epic_from_file(): MiroEpic
-- has_more_story(): bool
-- load_next_story(): MiroStory
-	// returns the story and stops. No background, scenarios, steps, or examples
-- get_next_story_from_file(): MiroStory
-
-## MiroStory : DiagramStory, MiroStoryNode
-
-- place(side: str, destination: DiagramStoryNode): None
-
-## CodeStoryNode
-
-+ slug(): str
-	// kebab folder name
-+ snake(): str
-+ pascal(): str
-+ camel(): str
-+ name_from_slug(slug: str): str
-	// the name read back from a folder
 
 ## CodeStoryModel : StoryModel
 
-+ CodeStoryModel(source: StoryModel)
-	// file for load is the path-to-content map of the source tree
-	// a test tree has no increment files. Increments arrive when this model is built from a source that already has them
+A story map written as test code: one file per sub-epic holding its stories, under epic folders. Nodes: CodeEpic, CodeStory, CodeScenario, CodeIncrement, each also a *CodeStoryNode* (`slug`, `snake`, `pascal`, `camel`, `name_from_slug`).
+
 ------
-+ epic_type: CodeEpic
-+ story_type: CodeStory
-+ increment_type: CodeIncrement
++ language: CodeLanguage | None
+	// each language model sets its instance
++ tests_root: str
 ----
-- load_content(): None
-	// cursor is epic folders, then nested epic folders, then story files
-- has_more_epic(): bool
-- get_next_epic_from_file(): CodeEpic
-- has_more_increment(): bool
-	// false for a test tree
-- get_next_increment_from_file(): CodeIncrement
-+ save(): str
-	// one story file per story, under the epic folders
-+ render(canonical: StoryModel, previous: dict | None): dict
-	// previous is the path-to-content map already on disk
-	// each epic, story, scenario, and step without code in this language takes the previous file's code for the same names
-	// -> parse(previous), then adopt_code
-+ language: CodeLanguage
-	// each language model sets its instance. A model without one writes generically and adopts nothing
++ parse(external: dict[str, str]): CodeStoryModel
+	// external is the path-to-content map of the test tree
++ load(external: dict[str, str]): CodeStoryModel
++ render(canonical: StoryModel, previous: dict[str, str] | None = None): dict[str, str]
+	Invariant: previous is the path-to-content map already on disk, never one text
+	// each epic, story, scenario, and step without code in this language takes the previous tree's code for the same names
+	-> parse(previous)
+	-> adopt_code
++ save(): dict[str, str]
++ adopt_code(kept: CodeStoryModel): None
 + story_lines(story: Story): list[str]
-	// the one story render. Read in this language and story.code_key unchanged: every line as read
-	// otherwise: story_open, the setup, each background, then each scenario, story_close
-	// each scenario decides for itself, so editing one scenario rewrites only that one
+	// read in this language and story.code_key unchanged: every line as read; otherwise the generic spelling
 + scenario_lines(scenario: Scenario, indent: str): list[str]
-	// read in this language and scenario.code_key unchanged: every line as read
-	// otherwise: scenario_open, the setup, each background, each step through step_lines, scenario_close
 + step_lines(clause: StepClause, indent: str): list[str]
-	// one step, the verb it opens with, and the steps chained onto it, each with its body through CodeBody.lines_in
-	// step_placeholder marks a body still to write; an empty body also carries the realization call graph as comments
-- write_epics(files: dict): dict
-	// an epic with child epics is a folder; a sub-epic with stories is one file
-	// a sub-epic read from a file in this language writes back to that path, with the code above and below its stories as read
-- read_code(content: str, stories: list[Story], path: str): WrittenBlock | None
-	// each language's reader gives each story, background, scenario, and step the code it was written with
-	// the return is the file's code above the first story and below the last
-- file_name, file_header, folder_files, story_open, story_close, story_background_lines, no_scenarios_lines,
-  scenario_open, scenario_close, scenario_background_lines, examples_lines, clauses, verb,
-  step_open, step_close, and_open, and_body_indent, and_close, step_placeholder, empty_block
-	// each language model overrides the spelling operations above. None of them decides what a body holds
-	// TypeScript and JavaScript share BraceStoryModel; Python and Java spell their own
++ read_code(content: str, stories: list[Story], path: str): WrittenBlock | None
+	// gives each story, background, scenario, and step the code it was written with
++ file_name, file_header, folder_files, story_open, story_close, story_background_lines, no_scenarios_lines, scenario_open, scenario_close, scenario_background_lines, examples_lines, clauses, verb, step_open, step_close, and_open, and_body_indent, and_close, step_placeholder, empty_block
+	// each language overrides the spelling operations; none of them decides what a body holds
 
-## CodeIncrement : Increment, CodeStoryNode
-
-- has_more_story(): bool
-- get_next_story_from_file(): CodeStory
-
-## CodeEpic : Epic, CodeStoryNode
-
-+ write(parent: str, files: dict, tests_root: str): None
-	// an epic with child epics writes a folder, then each child writes into that folder
-	// a sub-epic that has stories writes one file in the parent folder, named for the sub-epic
-	// that file holds every story. The sub-epic does not get a folder
-- has_more_epic(): bool
-- get_next_epic_from_file(): CodeEpic
-- has_more_story(): bool
-- get_next_story_from_file(): CodeStory
-
-## CodeStory : Story, CodeStoryNode
-
-+ scenario_type: CodeScenario
-+ write(parent: str, files: dict, tests_root: str): None
-	// create() is this story's text inside the sub-epic file. The sub-epic file is the one the epic writes
-----
-- fill(content: str): None
-	// -> scenario_type.backgrounds_in
-	// -> scenario_type.example_names
-	// -> scenario_type.scenario_blocks, then add_scenario
-- load(content: str, story_slug: str): CodeStory
-	// each language overrides this
-- create(story: Story): str
-	// each language overrides this
-- get_background_from_file(): Background
-- has_more_scenario(): bool
-- get_next_scenario_from_file(): CodeScenario
-
-## CodeScenario : Scenario, CodeStoryNode
-
-- read(body: str): None
-	// -> calls_in, then steps_from. Example names found in the body become examples
-- calls_in(body: str): list
-	// each language reads its own call spelling
-- steps_from(calls: list): list[Step]
-	// and and but become ands on the previous step
-- scenario_blocks(content: str): list
-- backgrounds_in(content: str): list[Background]
-- example_names(content: str): list[str]
-- create(scenario: Scenario): list[str]
-- balanced(text: str, open_at: int): str
-	// the brace body a language uses to cut a scenario out of a file
-- has_more_step(): bool
-- get_next_step_from_file(): Step
-- has_more_and(): bool
-- get_next_and_from_file(): Step
-- has_more_example(): bool
-- get_next_example_from_file(): Example
+## CodeStoryModelError : Exception
 
 ## PythonStoryModel : CodeStoryModel
 
-+ PythonStoryModel(source: StoryModel)
-------
-+ epic_type: PythonEpic
-+ story_type: PythonStory
-+ increment_type: PythonIncrement
-----
-+ save(): str
+The `python` format: Mamba story tests. Nodes: PythonEpic, PythonStory, PythonScenario. Read through *PythonStoryReader*.
 
-## PythonIncrement : CodeIncrement
+## BraceStoryModel : CodeStoryModel
 
-## PythonEpic : CodeEpic
+The spelling TypeScript and JavaScript share. Nodes: BraceScenario. Read through *BraceStoryReader*.
 
-## PythonStory : CodeStory
+## TypeScriptStoryModel : BraceStoryModel
 
-+ scenario_type: PythonScenario
+The `typescript` format. Nodes: TypeScriptEpic, TypeScriptStory, TypeScriptScenario.
 
-## PythonScenario : CodeScenario
+## JavaScriptStoryModel : BraceStoryModel
 
-- get_next_step_from_file(): Step
-	// reads `with given`, `with when`, `with then`, and `with and_` from the story file
-- get_next_and_from_file(): Step
-- get_next_example_from_file(): Example
-
-## TypeScriptStoryModel : CodeStoryModel
-
-+ TypeScriptStoryModel(source: StoryModel)
-------
-+ epic_type: TypeScriptEpic
-+ story_type: TypeScriptStory
-+ increment_type: TypeScriptIncrement
-----
-+ save(): str
-
-## TypeScriptIncrement : CodeIncrement
-
-## TypeScriptEpic : CodeEpic
-
-## TypeScriptStory : CodeStory
-
-+ scenario_type: TypeScriptScenario
-
-## TypeScriptScenario : CodeScenario
-
-- get_next_step_from_file(): Step
-- get_next_and_from_file(): Step
-- get_next_example_from_file(): Example
-
-## JavaScriptStoryModel : CodeStoryModel
-
-+ JavaScriptStoryModel(source: StoryModel)
-------
-+ epic_type: JavaScriptEpic
-+ story_type: JavaScriptStory
-+ increment_type: JavaScriptIncrement
-----
-+ save(): str
-
-## JavaScriptIncrement : CodeIncrement
-
-## JavaScriptEpic : CodeEpic
-
-## JavaScriptStory : CodeStory
-
-+ scenario_type: JavaScriptScenario
-
-## JavaScriptScenario : CodeScenario
-
-- get_next_step_from_file(): Step
-- get_next_and_from_file(): Step
-- get_next_example_from_file(): Example
+The `javascript` format. Nodes: JavaScriptEpic, JavaScriptStory, JavaScriptScenario.
 
 ## JavaStoryModel : CodeStoryModel
 
-+ JavaStoryModel(source: StoryModel)
-------
-+ epic_type: JavaEpic
-+ story_type: JavaStory
-+ increment_type: JavaIncrement
+The `java` format. Nodes: JavaEpic, JavaStory, JavaScenario.
+
+## StoryReader
+
+Reads one story file: the file's own code around its stories, then each story the file and the model share. *PythonStoryReader* and *BraceStoryReader* spell the blocks.
+
++ StoryReader(language: CodeLanguage, content: str)
 ----
-+ save(): str
++ read(stories: list[Story], path: str): WrittenBlock | None
+	// the file's code above the first story and below the last
 
-## JavaIncrement : CodeIncrement
+## GraphStoryModel
 
-## JavaEpic : CodeEpic
+One loaded story model, written as graph nodes and edges.
 
-## JavaStory : CodeStory
++ GraphStoryModel(model: StoryModel)
+----
++ record(practice, on_node: Callable | None = None): None
+	// epics, stories, backgrounds, scenarios, steps, and examples onto the stories practice
 
-+ scenario_type: JavaScenario
+## StoryMapLinks
 
-## JavaScenario : CodeScenario
+The `story-map.md` entry and story file each epic, sub-epic, and story links to.
 
-- get_next_step_from_file(): Step
-- get_next_and_from_file(): Step
-- get_next_example_from_file(): Example
++ StoryMapLinks.from_workspace(root: Path, base: Path | None = None): StoryMapLinks
+----
++ story_file(story: Story): str
++ entries(story_map: StoryModel): dict[int, str]
 
-## Graph explorer loading
+## DomainModelLinks
 
-`harness/graph/working_copy.py` loads story TypeScript (and markdown fallback) via `TypeScriptStoryModel` / `StoryModel`, records nodes on the stories practice with `GraphStoryModel`, and links steps and examples to clean engineering nodes in `_record_story_edges`.
+Links domain terms in story text to the heading that defines each in `domain-model.md` (DDD) or `class-model.md` (Clean Engineering).
 
++ DomainModelLinks.from_workspace(root: Path, base: Path | None = None): DomainModelLinks
+----
++ target(term: str): str
++ link(text: str): str

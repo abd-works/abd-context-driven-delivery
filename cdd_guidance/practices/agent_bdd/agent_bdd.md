@@ -8,29 +8,29 @@ The **`bdd`** generator supplies the underlying test discipline (RED-GREEN, AAA,
 
 ## Guidance
 
-Read `practices/bdd/bdd.md` § Overview — the underlying test discipline applies here too. Scaffold from `templates/agent_bdd-templates.py`: `with description(...)` → `with context(...)` → `with it(...)` → `with agent(...):`. Assert immediately after each step. Point every session at `.agent_bdd_sessions/<scenario>.json` beside the spec.
+Read `practices/bdd/bdd.md` § Overview — the underlying test discipline applies here too. Scaffold from `templates/agent_bdd-templates.py`: `with description(...)` → `with context(...)` → `with it(...)` → `with agent(...) as run:`. Assert immediately after each step. Point every session at `.agent_bdd_sessions/<scenario>.json` beside the spec.
 
 ### Harness
 
-- **`same-harness-interface`** — `agent(workspace, session_file)` in `practices/agent_bdd/__init__.py` routes to `cli_agent` (cursor-agent CLI, `agent_cli_bdd.py`) or `chat_agent` (in-chat inbox, `agent_chat_bdd.py`) based on `AGENT_BDD_IN_CHAT`. Both blocks expose the same three operations; specs never import either implementation directly.
-- **`free-function-api`** — `instruct`, `instruct_use_tool`, and `ai_judge` are free functions imported from `agent_bdd`. They delegate to the active `with agent(...)` block via a thread-local. Call them directly — never via a session prefix. If called outside an `agent` block, they raise `RuntimeError`.
+- **`same-harness-interface`** — `agent(workspace, session_file)` in `practices/agent_bdd/agent_block.py` opens the cursor-agent CLI block (`agent_cli_bdd.py`) or the in-chat inbox block (`agent_chat_bdd.py`), chosen by `AGENT_BDD_IN_CHAT`. Both are an *AgentBlock* with the same steps, so specs never import either implementation directly.
+- **`steps-on-the-block`** — Take every step on the block the `with` yields: `with agent(...) as run:`, then `run.instruct`, `run.instruct_use_tool`, `run.run_toolset`, `run.ai_judge`, `run.read_workspace`, `run.generate_and_judge`. The block holds the agent session and the workspace its toolset runs work in, so each step acts on the session and project this spec opened, never on whichever one the process opened last.
 
 ### instruct vs instruct_use_tool
 
-- **`instruct-for-setup`** — Use `instruct(prompt)` when the agent should read files, prime state, or perform a natural-language step. Returns `AgentResult(exit_code, stdout, stderr, elapsed_seconds)`; treat assertions on `stdout` as opportunistic.
-- **`instruct-run-for-toolset`** — Use `instruct_use_tool(prompt)` when the agent must invoke `python -m harness run -` and return a fenced YAML CLI response. Returns `RunResponse` with parsed `.ok`, `.toolset`, `.action`, `.tool`, `.tools`, `.instructions`, `.arguments`, `.resources`, `.result`.
+- **`instruct-for-setup`** — Use `run.instruct(prompt)` when the agent should read files, prime state, or perform a natural-language step. Returns `AgentResult(exit_code, stdout, stderr, elapsed_seconds)`; treat assertions on `stdout` as opportunistic.
+- **`instruct-run-for-toolset`** — Use `run.instruct_use_tool(prompt)` when the agent must invoke `python -m harness run -` and return a fenced YAML CLI response. Returns `RunResponse` with parsed `.ok`, `.toolset`, `.action`, `.tool`, `.tools`, `.instructions`, `.arguments`, `.resources`, `.result`.
 - **`fenced-yaml-contract`** — `instruct_use_tool` auto-appends *"Return the complete fenced YAML stdout from the CLI"* and validates the response `action`/`tool` matches the prompt YAML. If the agent skips the shell call, the harness replays the YAML through a local subprocess as a fallback so the assertion still runs.
 
 ### Session lifecycle
 
-- **`act-assert-inline`** — Place the `with agent(...):` block directly inside `with it(...)`. Assert immediately after each `instruct` or `instruct_use_tool` call — no `self.*` accumulation, no split `before.all` + separate `it` blocks. Act → assert → act → assert in one linear flow.
+- **`act-assert-inline`** — Place the `with agent(...) as run:` block directly inside `with it(...)`. Assert immediately after each `instruct` or `instruct_use_tool` call — no `self.*` accumulation, no split `before.all` + separate `it` blocks. Act → assert → act → assert in one linear flow.
 - **`session-file-per-scenario`** — Session JSON lands in `.agent_bdd_sessions/<name>.json` beside the spec. One file per `it` so each run is isolatable and re-runnable.
 
 ### Assertions
 
 - **`assert-on-response-fields`** — Structural checks target `response.ok`, `response.action`, `response.tools`, `response.arguments`, and substrings in `response.instructions`. These are cheap and deterministic. Use them to check the **tools run** (correct action/owner/args). They do **not** prove the agent finished the work.
 - **`assert-on-run-artifacts`** — When the scenario is that the agent **produces work** (sketch, generate, repair, chronicle, answers file, …), assert the **run outcome**: file exists at the expected path, non-empty, and content matches the domain. Prefer a fixed output path in the prompt so the example can `expect(path.is_file())` and `read_text` before judging. Do **not** PASS because a skill was deployed, a prompt file was read, or the agent *said* it wrote something.
-- **`judge-qualitative-outcomes`** — Free-form outputs go through `ai_judge(output, rubric)` inside the `with agent(...)` block. Pass the **artifact text** (file contents / `response.result`), not a chat summary of what the agent claims it did. `ai_judge` raises `AssertionError(reason)` on FAIL — it is self-contained like `expect`. For a **pass fixture** (mistake / generate regression), call `generate_and_judge(pass_path)` — it generates something similar to that file, judges it, and returns the artifact to hold for human review.
+- **`judge-qualitative-outcomes`** — Free-form outputs go through `run.ai_judge(output, rubric)` inside the `with agent(...)` block. Pass the **artifact text** (file contents / `response.result`), not a chat summary of what the agent claims it did. `ai_judge` raises `AssertionError(reason)` on FAIL — it is self-contained like `expect`. For a **pass fixture** (mistake / generate regression), call `run.generate_and_judge(pass_path)` — it generates something similar to that file, judges it, and returns the artifact to hold for human review.
 - **`instruction-expansion-ok-to-judge-prose`** — Specs that only check *how* instructions expand (owner toolset, review gate wording) may judge agent prose about those instructions. Behavioral regressions (did sketch/generate/repair actually happen correctly?) must use **`assert-on-run-artifacts`**.
 - **`no-mocking-the-harness`** — Agent specs test the real agent end-to-end. Never mock `agent()`, the block, the harness helpers, or the agent's output.
 
@@ -51,16 +51,16 @@ alwaysApply: false
 globs: "**/*agent_spec*,**/.agent_bdd_sessions/**,**/*-sketch.md"
 ```
 
-Whenever an agent-harness spec (`agent()`, `instruct`, `instruct_use_tool`) is in play, or production behavior that spec is proving. Follow these rules.
+Whenever an agent-harness spec (`agent()`, `run.instruct`, `run.instruct_use_tool`) is in play, or production behavior that spec is proving. Follow these rules.
 
 If the live-agent layer is not needed, follow `practices/bdd/bdd-development.mdc`.
 
-- **`same-harness-interface`** — `agent(workspace, session_file)` in `practices/agent_bdd/__init__.py` routes to `cli_agent` or `chat_agent` based on `AGENT_BDD_IN_CHAT`. Specs never import either implementation directly.
-- **`free-function-api`** — Call `instruct`, `instruct_use_tool`, and `ai_judge` as free functions. Do not use a session prefix.
-- **`instruct-for-setup`** — Use `instruct(prompt)` for file reads, priming, and natural-language steps.
-- **`instruct-run-for-toolset`** — Use `instruct_use_tool(prompt)` when the agent must return a fenced YAML CLI response.
+- **`same-harness-interface`** — `agent(workspace, session_file)` in `practices/agent_bdd/agent_block.py` opens the CLI or the in-chat block, chosen by `AGENT_BDD_IN_CHAT`. Specs never import either implementation directly.
+- **`steps-on-the-block`** — Take every step on the block `with agent(...) as run:` yields, so it acts on this spec's agent session and project.
+- **`instruct-for-setup`** — Use `run.instruct(prompt)` for file reads, priming, and natural-language steps.
+- **`instruct-run-for-toolset`** — Use `run.instruct_use_tool(prompt)` when the agent must return a fenced YAML CLI response.
 - **`fenced-yaml-contract`** — `instruct_use_tool` validates `action`/`tool` against the prompt YAML and replays locally if the agent skips the shell call.
-- **`act-assert-inline`** — Put `with agent(...):` inside `with it(...)`. Assert immediately after each step.
+- **`act-assert-inline`** — Put `with agent(...) as run:` inside `with it(...)`. Assert immediately after each step.
 - **`session-file-per-scenario`** — One `.agent_bdd_sessions/<name>.json` beside the spec per `it`.
 - **`assert-on-response-fields`** — Check `response.ok`, `response.action`, `response.tools`, `response.arguments`, and instruction substrings for the tools run.
 - **`assert-on-run-artifacts`** — For work-producing scenarios, assert the file on disk, not chat claims.
@@ -76,16 +76,16 @@ If the live-agent layer is not needed, follow `practices/bdd/bdd-development.mdc
 # Generate
 
 1. Read `practices/bdd/bdd.md` § Overview — the underlying test discipline applies here too.
-2. Read § Overview above and the harness surface: `practices/agent_bdd/__init__.py`, `practices/agent_bdd/agent_bdd_common.py` (types `AgentResult`, `RunResponse`, `JudgeResult`).
+2. Read § Overview above and the harness surface: `practices/agent_bdd/agent_block.py` (`agent` and the *AgentBlock* it yields), `practices/agent_bdd/agent_bdd_common.py` (types `AgentResult`, `RunResponse`, `JudgeResult`).
 3. Scaffold from `templates/agent_bdd-templates.py`:
-   - `with description(...)` → `with context(...)` → `with it(...)` → `with agent(...):`.
-   - Assert immediately after each step — `expect(response.ok).to(be_true)` right after `instruct_use_tool`, `ai_judge(...)` right after the final `instruct`. No `self.*`, no `before.all`.
+   - `with description(...)` → `with context(...)` → `with it(...)` → `with agent(...) as run:`.
+   - Assert immediately after each step — `expect(response.ok).to(be_true)` right after `run.instruct_use_tool`, `run.ai_judge(...)` right after the final `run.instruct`. No `self.*`, no `before.all`.
 4. Assert `response.action`, `response.tools`, and required substrings in `response.instructions` for the tools run. For work-producing scenarios, also assert the **artifact on disk** (exists, non-empty, domain markers), then `ai_judge` that file’s contents — not chat claims.
 5. Point every session at `.agent_bdd_sessions/<scenario>.json` beside the spec.
 6. Run **validate**.
 7. On a **red** agent BDD: triage prompt vs code (§ Failures). Code gaps → fix code + add the vanilla BDD that covers the miss; prompt gaps → fix guidance/agent BDD only.
 
-**Do not:** use a `session.` prefix (`session.instruct`, `session.ai_judge`, etc.) — import and call the free functions; mock the harness or the agent; assert on raw `stdout` when `RunResponse` has a parsed field for the same value; share one session across contexts; catch `AgentHarnessError` in the spec — let it surface with the log-directory path in the message; fix a **code** failure with prompt-only changes and no vanilla BDD for the gap; or treat “prompt/skill exists” / “agent said it worked” as a PASS for a behavioral run.
+**Do not:** call a step on anything but the block `with agent(...) as run:` yields; mock the harness or the agent; assert on raw `stdout` when `RunResponse` has a parsed field for the same value; share one session across contexts; catch `AgentHarnessError` in the spec — let it surface with the log-directory path in the message; fix a **code** failure with prompt-only changes and no vanilla BDD for the gap; or treat “prompt/skill exists” / “agent said it worked” as a PASS for a behavioral run.
 
 ---
 

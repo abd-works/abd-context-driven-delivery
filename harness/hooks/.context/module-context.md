@@ -1,38 +1,14 @@
-## Language
-
-*Hook* is an operation Cursor may call when a named IDE event fires. The author marks the member; install writes Cursor’s hook files; Cursor starts `hook_server.py` with stdin JSON and gets one merged result.
-
-Object model: [hooks-runtime-model.md](hooks-runtime-model.md). Toast work lives in [tools/prompt_notify](../../tools/prompt_notify/.context/module-context.md).
-
-### Hook
-
-- Put `@Hook("sessionStart")` (or `hook`) on a toolset member so that Cursor event runs the method.
-- Put `@Hook("postToolUse", disabled=True)` on one operation to skip install, runtime dispatch, and chat injection for that member. A disabled `inject_rules` returns nothing, including when another action calls it.
-- The body receives the event payload and returns the fields Cursor reads (`permission`, `continue`, `user_message`, `agent_message`, `followup_message`, `additional_context`).
-- **Invariant:** the event string is one of `Hook.EVENTS`. Unknown names fail at decoration.
-
-### Hooks
-
-- Put `@Hooks(disabled=True)` above `@agent_toolset` to skip every hook on that class. PromptLog uses this today; PromptNotify does not.
-
-### HookInstallation
-
-- `Installer.install` walks marked members here. The writer records handlers and points each distinct event at `hook_server.py`.
-- `@Hook` and `@mcp` on the same operation stay two independent installs.
-
-### HookServer
-
-- Cursor’s stdin process for every hooked event. Authors do not start it by hand; install wires the command.
-
-Build order: `installation` → `harness/hooks`
-
----
-
 # harness/hooks
-- **Purpose:** Mark a member `@Hook("event")` so Cursor stdin events run that Python and return one merged result.
-- **Seam (terms):** Hook, Hooks, HookInstallation, HookServer, SessionLogs, HookDaemon
-- **Dependencies (one-way):** `installation` (*Destination*, *Installation*), `harness/agent_tools`
+*Hook* lets a toolset member run when the IDE fires a named event, such as `sessionStart`, `preToolUse`, or `afterAgentResponse`: the author types `@hook("preToolUse")` on the member, the member receives the event's payload (*HookPayload*), and it returns the fields the IDE reads (`permission`, `continue`, `user_message`, `agent_message`, `additional_context`), or a *HookResult*. Every hook on the same event runs, and the IDE gets one merged answer. `@hook("event", disabled=True)` turns one member off; `@Hooks(disabled=True)` above `@agent_toolset` turns off every hook on that class.
+*HookInstallation* is how `/install` publishes hooks: it records each hooked member in the IDE folder's `hook-handlers.json`, points every event it uses at the hook server in `hooks.json`, and answers which events and operations an install registered (`registered_events`, `registered_operations`). A `hooks.json` that is not JSON is refused with *HooksFileUnreadable* and left as it is, so the person's own hooks are never written over. `@hook` and `@mcp` on the same member are two separate publications.
+*HookDaemon* is the long-running hook server of one checkout (`HookDaemon(repo)`): it answers whether it is running (`is_running()`), and `ensure()` starts it, or replaces one that loaded older hook code, and answers its address. Health reports and the installer ask it; the installed hook command asks it for the address and forwards the event there. When it starts it imports the module of every toolset the repository defines (`RepositoryToolsets.import_modules`), so the registrations those modules make, such as how a call opens its session, hold in the hook process as they do in the MCP host.
+*HookServer* runs inside the daemon and answers every event: for each one it reads the session saved as open in the repository's `.sessions/session.json` (main when none is) through a *ToolCall*, as every tool call does, so a switch or a close made through MCP reaches the hooks at once, and it writes its logs under that session's `logs/` folder. A project that registers no sessions still gets its events answered, with nothing logged.
+A hook's result can carry a `toast`, a short notice the person sees beside the chat; it is not sent to the IDE. The hook server hands each merged toast to the notifier registered with `HookServer.show_toasts_with` (tools/prompt_notify registers when it is loaded), so a hook names its toast and never the notifier. `rules_toast(source, labels)` writes the toast for injected rules, and `TOAST_ARROW` separates a toast's source from the rest, so the notifier can join the toasts of one burst.
+
+- **Purpose:** Let a toolset member answer IDE events, and keep one hook server per checkout that runs every hooked member and merges their answers.
+- **Seam (terms):** Hook, Hooks, HookPayload, HookResult, HookInstallation, HooksFileUnreadable, HookDaemon, HookServer, `HookServer.show_toasts_with`, `rules_toast`, `TOAST_ARROW`; the annotations `@hook("event")` and `@Hooks(disabled=True)`
+- **Dependencies (one-way):** harness/agent_tools (the hook server reads the open session through *ToolCall*, as every tool call does), harness/annotations (*Destination*), harness/installation (*Installation*, *RepositoryToolsets*, and *ContextConfig*, which says which guideline applies to an edited file), harness/process (the daemon starts its process with *BackgroundStart* and *PythonInterpreter*, and stops it with *StoppableProcess*). harness/guidance, harness/guidance_actions, harness/diagnostics, and harness/installer import this module; it imports none of them and nothing above the framework.
 
 ## Constraint
 
-The event name is the Cursor event (`sessionStart`, `preToolUse`, …) from `Hook.EVENTS` in `harness.hooks.hooks`. `@Hooks(disabled=True)` on a toolset skips every hook on it; `@Hook(..., disabled=True)` on one operation skips only that member. *Echo* / *PromptNotify* live in `tools/prompt_notify`.
+Name the event exactly as the IDE does; it must be one of `Hook.EVENTS`, and an unknown name fails when the class is decorated, so a misspelled hook never installs silently. A disabled hook returns nothing, even when another operation calls it directly. Do not start the hook server by hand: the installed hook command and `HookDaemon.ensure()` start it, and a second start finds the first through its lock file. Importing this module changes nothing in the process; the hook command puts the checkout on the import path when it runs as a script.

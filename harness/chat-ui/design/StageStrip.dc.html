@@ -258,6 +258,7 @@ const STAGE_ICONS = {
   Implementation: { d: PATHS.implementation, scope: 'story · narrowest / deep' },
   Complete: { d: PATHS.complete, scope: 'reviewed and closed' }
 };
+// A sample of each stage's actions as board.show sends them (ApproachStage.actions in cdd_guidance/practices/stages.py).
 const BUILDER_ACTIONS = ['generate', 'validate', 'review', 'iterate', 'sketch', 'render', 'document'];
 // What the select offers depends on the step the viewed stage is at, as the board's allowed actions do.
 const CHOICES = {
@@ -579,7 +580,7 @@ class Component extends DCLogic {
       enterCard: () => this.setState({ open: true }),
       leaveCard: () => this.setState({ open: false }),
       togglePin: () => this.setState({ pinned: !s.pinned }),
-      handoff: () => this.say('› /space-handoff-handoff-session'),
+      handoff: () => this.say('› /space-session-handoff-session'),
       files: () => this.setState({ filesOpen: !s.filesOpen, fileTab: null }),
       isFilesOpen: s.filesOpen,
       closeFiles: () => this.setState({ filesOpen: false }),

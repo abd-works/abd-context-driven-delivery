@@ -1,82 +1,52 @@
-"""Hook server — run enabled Cursor hooks and return one merged result."""
+"""Hook server — run the enabled hooks for one IDE event and return one merged result.
+
+An IDE runs this file as its hook command: ``python -u harness/hooks/hook_server.py`` with the event's fields on stdin.
+The command hands the event to the checkout's hook daemon, which keeps one *HookServer* loaded between events."""
 from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+if __name__ == "__main__":
+    # Run by path, this file's folder is on the import path and the checkout is not; put the checkout first so the
+    # imports below resolve. main() sets the rest of the checkout's import path through RepositoryToolsets.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import json
 import logging
 import os
-import sys
-import time
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any
+from typing import Any, Callable, ClassVar
 
-_READY_WAIT_SECONDS = 90
-_READY_POLL_SECONDS = 0.2
-_PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-
-
-def _lock_pid(lock_path: Path) -> int:
-    try:
-        return int(lock_path.read_text(encoding="ascii").strip())
-    except (OSError, ValueError):
-        return 0
-
-
-def _pid_alive(pid: int) -> bool:
-    if pid <= 0:
-        return False
-    if sys.platform == "win32":
-        import ctypes
-
-        handle = ctypes.windll.kernel32.OpenProcess(
-            _PROCESS_QUERY_LIMITED_INFORMATION, False, pid
-        )
-        if not handle:
-            return False
-        ctypes.windll.kernel32.CloseHandle(handle)
-        return True
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
-
-
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-os.environ["PYTHONPYCACHEPREFIX"] = str(_REPO_ROOT / ".pycache")
-sys.pycache_prefix = os.environ["PYTHONPYCACHEPREFIX"]
-for _category in ("tools", "cdd_guidance/practices", "cdd_guidance/actions", "cdd_guidance/patterns"):
-    _entry = str(_REPO_ROOT / _category)
-    if _entry not in sys.path:
-        sys.path.insert(0, _entry)
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-
-from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
-from harness.installation.installer import Installer
-from harness.hooks.hooks import Hook
-
-Installer(repo=_REPO_ROOT).ensure_import_path()
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
+from harness.agent_tools.tool_call import ToolCall
+from harness.hooks.hooks import HookHandlersFile
+from harness.installation.context_config import ContextConfig
+from harness.installation.repository_toolsets import RepositoryToolsets
 
 logger = logging.getLogger(__name__)
 
-
-class CursorEvent:
-    """Named Cursor hook moment. Identity is the event string."""
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    def normalize(self) -> str:
-        return Hook.normalize_event(self.name)
+# What loading a toolset by its ``module:Class`` reference raises when the reference is wrong or the class cannot be
+# made: a malformed reference, a missing module or class, a class that is no toolset, or a constructor it cannot call.
+_TOOLSET_LOAD_FAILURES = (ImportError, AttributeError, TypeError, ValueError)
 
 
-class HookPayload:
-    """Cursor stdin JSON for one firing."""
+class HookPayload(Mapping[str, Any]):
+    """The fields an IDE sends on stdin for one firing of a hook, such as the tool that just ran and its input. Its
+    handlers read them through the named properties; it reads as a mapping of those fields too."""
 
-    def __init__(self, fields: dict[str, Any]) -> None:
+    def __init__(self, fields: Mapping[str, Any]) -> None:
         self._fields = dict(fields)
+
+    def __getitem__(self, key: str) -> Any:
+        return self._fields[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._fields)
+
+    def __len__(self) -> int:
+        return len(self._fields)
 
     @classmethod
     def from_stdin(cls, raw: bytes) -> HookPayload:
@@ -97,27 +67,74 @@ class HookPayload:
     def generation_id(self) -> str:
         return str(self._fields.get("generation_id") or "")
 
-    def edited_path(self) -> str:
-        for key in ("file_path", "path", "uri"):
-            value = self._fields.get(key)
-            if isinstance(value, str) and value.strip():
-                return value
+    @property
+    def tool_name(self) -> str:
+        """The tool the event is about, such as ``mcp__cdd__generate_generate``; empty for an event about no tool."""
+        return str(self._fields.get("tool_name") or "")
+
+    @property
+    def tool_input(self) -> dict[str, Any]:
+        """The arguments the tool was called with; none when the IDE sent none or sent text that is no JSON object."""
         raw = self._fields.get("tool_input") or {}
         if isinstance(raw, str):
             try:
                 raw = json.loads(raw)
             except json.JSONDecodeError:
-                return ""
-        if not isinstance(raw, dict):
-            return ""
-        return str(raw.get("path") or raw.get("file_path") or raw.get("target_notebook") or "")
+                return {}
+        return raw if isinstance(raw, dict) else {}
 
-    def as_dict(self) -> dict[str, Any]:
-        return dict(self._fields)
+    @property
+    def workspace_roots(self) -> list[Path]:
+        """The folders Cursor names as the chat's workspace."""
+        raw = self._fields.get("workspace_roots") or []
+        if isinstance(raw, str):
+            raw = [raw]
+        if not isinstance(raw, list):
+            return []
+        return [Path(item) for item in raw if isinstance(item, str) and item.strip()]
+
+    @property
+    def project(self) -> Path | None:
+        """The folder of the project the event happened in: Cursor's first workspace root, else the folder Claude Code
+        ran in; none when the event names neither."""
+        roots = self.workspace_roots
+        if roots:
+            return roots[0]
+        folder = str(self._fields.get("cwd") or "").strip()
+        return Path(folder) if folder else None
+
+    @property
+    def chat_id(self) -> str:
+        """The chat whose rules this event's injection belongs to: for ``subagentStop``, the subagent's own
+        transcript; for any other event, the conversation."""
+        if self.hook_event_name == "subagentStop":
+            stem = Path(str(self._fields.get("agent_transcript_path") or "")).stem.strip()
+            if stem:
+                return stem
+        return self.conversation_id.strip()
+
+    def edited_path(self) -> str:
+        for key in ("file_path", "path", "uri"):
+            value = self._fields.get(key)
+            if isinstance(value, str) and value.strip():
+                return value
+        tool_input = self.tool_input
+        return str(tool_input.get("path") or tool_input.get("file_path") or tool_input.get("target_notebook") or "")
+
+
+# A toast that names its source writes it before this arrow, such as `generate → rules : stories scenarios`, so the
+# notifier can join the toasts of one burst.
+TOAST_ARROW = " \u2192 "
+
+
+def rules_toast(source: str, labels: list[str]) -> str:
+    """The toast for the rules a hook gave the agent: what injected them, then each rule set's label."""
+    return f"{source}{TOAST_ARROW}rules : {', '.join(labels)}"
 
 
 class HookResult:
-    """Fields Cursor reads back from the hook process."""
+    """Fields Cursor reads back from the hook process, and the toast the person sees beside the chat. The toast is not
+    sent to Cursor: the hook server hands it to the notifier that shows toasts."""
 
     def __init__(
         self,
@@ -127,6 +144,7 @@ class HookResult:
         agent_message: Any = None,
         followup_message: Any = None,
         additional_context: Any = None,
+        toast: Any = None,
     ) -> None:
         self.permission = permission
         self.continue_flag = continue_flag
@@ -134,6 +152,7 @@ class HookResult:
         self.agent_message = self._optional_text(agent_message)
         self.followup_message = self._optional_text(followup_message)
         self.additional_context = self._optional_text(additional_context)
+        self.toast = self._optional_text(toast)
         self.followup_only = False
 
     def _optional_text(self, value: Any) -> str | None:
@@ -153,6 +172,7 @@ class HookResult:
             agent_message=raw.get("agent_message"),
             followup_message=raw.get("followup_message"),
             additional_context=raw.get("additional_context"),
+            toast=raw.get("toast"),
         )
         if "permission" not in raw and result.followup_message:
             result.followup_only = True
@@ -174,6 +194,7 @@ class HookResult:
             text,
             self.followup_message,
             self.additional_context,
+            self.toast,
         )
 
     def merge(self, other: HookResult) -> HookResult:
@@ -186,6 +207,7 @@ class HookResult:
             self._join_lines(self.agent_message, other.agent_message),
             other.followup_message or self.followup_message,
             self._join_unique_context(other),
+            self._join_lines(self.toast, other.toast),
         )
 
     def _join_lines(self, first: str | None, second: str | None) -> str | None:
@@ -219,19 +241,20 @@ class HookResult:
 
 
 class HookHandler:
-    """One marked operation that may run for an event."""
+    """One hook tool that may run for an event. It reads the tool's name, toolset, callable, and description from the
+    ``AgentTool`` it holds."""
 
-    def __init__(self, tool: Any, event: CursorEvent, repo_root: Path) -> None:
+    def __init__(self, tool: AgentTool, repo_root: Path) -> None:
         self.tool = tool
-        self.event = event
-        self.operation = tool.name
-        self.owner = type(tool.toolset)
         self.repo_root = repo_root
 
+    @property
+    def label(self) -> str:
+        """``{toolset class}.{operation}``, the name the dispatch log and skipped handlers report."""
+        return f"{type(self.tool.toolset).__name__}.{self.tool.name}"
+
     def is_enabled(self, payload: HookPayload | None = None) -> bool:
-        if bool(getattr(self.owner, "_hooks_disabled", False)):
-            return False
-        if bool(getattr(self.tool.callable, "_hook_disabled", False)):
+        if bool(getattr(type(self.tool.toolset), "_hooks_disabled", False)):
             return False
         pattern = self._pattern_name()
         if not pattern:
@@ -253,7 +276,7 @@ class HookHandler:
 
     def _guideline_roots(self, payload: HookPayload) -> list[Path]:
         edited = payload.edited_path()
-        roots = self._declared_roots(payload)
+        roots = payload.workspace_roots
         if not edited:
             return roots or [self.repo_root]
         edited_path = Path(edited)
@@ -269,14 +292,6 @@ class HookHandler:
             return roots
         return [self.repo_root]
 
-    def _declared_roots(self, payload: HookPayload) -> list[Path]:
-        raw = payload.as_dict().get("workspace_roots") or []
-        if isinstance(raw, str):
-            raw = [raw]
-        if not isinstance(raw, list):
-            return []
-        return [Path(item) for item in raw if isinstance(item, str) and item.strip()]
-
     def _contains(self, root: Path, edited: Path) -> bool:
         try:
             edited.resolve().relative_to(root.resolve())
@@ -285,44 +300,26 @@ class HookHandler:
         return True
 
     def _context_parents(self, edited: Path) -> list[Path]:
-        from space.context_config import ContextConfig
-
         for parent in edited.resolve().parents:
             if ContextConfig(parent).exists():
                 return [parent]
         return []
 
     def _guideline_value(self, root: Path, pattern: str) -> str:
-        from space.context_config import ContextConfig
-
         return ContextConfig(root).guideline(pattern)
 
     def invoke(self, payload: HookPayload) -> HookResult:
-        toolset = self.tool.toolset
-        operation = self._bound_operation(toolset)
-        raw = operation(payload.as_dict())
+        raw = self.tool.callable(payload)
         fields = raw if isinstance(raw, Mapping) else None
         result = HookResult.from_handler(fields)
         if result.additional_context or not fields:
             return result
         return result.with_description(self.tool.docstring)
 
-    def _bound_operation(self, toolset: Any) -> Any:
-        own = getattr(type(toolset), self.operation, None)
-        if callable(own) and getattr(own, "_hook", False):
-            bound_own = getattr(toolset, self.operation, None)
-            if bound_own is not None:
-                return bound_own
-        if self.operation == "inject_rules":
-            rules = getattr(toolset, "rules", None)
-            bound = getattr(rules, "inject_rules", None) if rules is not None else None
-            if bound is not None:
-                return bound
-        return getattr(toolset, self.operation, None) or self.tool.callable
-
 
 class HandlerCatalog:
-    """Loaded AgentToolSets. Hook operations come from ``toolset.tools``."""
+    """The toolsets whose hook operations may run, loaded from a list of toolsets, from the references a
+    ``hook-handlers.json`` lists, or from every toolset the repository defines."""
 
     def __init__(
         self,
@@ -336,44 +333,24 @@ class HandlerCatalog:
         self.toolsets: list[Any] = []
         self._load_items(self._source_items(toolsets, handlers))
 
-    def _source_items(
-        self, toolsets: list[Any] | None, handlers: Path | str | None
-    ) -> list[Any]:
+    def _source_items(self, toolsets: list[Any] | None, handlers: Path | str | None) -> list[Any]:
         if handlers is not None:
-            return list(self.refs_from_handlers(handlers))
-        if toolsets is None:
-            return self._refs_from_file() or self._collect_refs()
-        return list(toolsets)
+            return list(HookHandlersFile(handlers).refs)
+        if toolsets is not None:
+            return list(toolsets)
+        installed = HookHandlersFile((self.repo_root or Path()) / ".cursor" / HookHandlersFile.NAME).refs
+        return list(installed) or list(RepositoryToolsets(self.repo_root).collect())
 
     def _load_items(self, items: list[Any]) -> None:
         for item in items:
             try:
                 loaded = AgentToolSet.from_items([item])
-            except Exception as error:
+            except _TOOLSET_LOAD_FAILURES as error:
                 self.failures.append((self.ref_label(item), error))
                 continue
-            self._append_loaded(loaded)
-
-    def _append_loaded(self, loaded: list[Any]) -> None:
-        for instance in loaded:
-            if type(instance).__name__ in {"RulesCollection", "FidelityGuidance"}:
-                continue
-            self.toolsets.append(instance)
-
-    def refs_from_handlers(self, handlers: Path | str) -> tuple[str, ...]:
-        path = Path(handlers)
-        if not path.is_file():
-            return ()
-        try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return ()
-        refs: list[str] = []
-        for item in payload.get("handlers") or []:
-            ref = item.get("ref")
-            if ref and str(ref) not in refs:
-                refs.append(str(ref))
-        return tuple(refs)
+            self.toolsets.extend(
+                instance for instance in loaded if type(instance).__name__ not in AgentToolSet.HOSTED_ONLY_CLASS_NAMES
+            )
 
     def ref_label(self, item: Any) -> str:
         if isinstance(item, str):
@@ -386,63 +363,33 @@ class HandlerCatalog:
         typ = item if isinstance(item, type) else type(item)
         return f"{typ.__module__}:{typ.__name__}"
 
-    def _refs_from_file(self) -> list[str]:
-        return list(self.refs_from_handlers((self.repo_root or Path()) / ".cursor" / "hook-handlers.json"))
+    @property
+    def event_names(self) -> list[str]:
+        """Every event some loaded hook operation serves, each once."""
+        return list(dict.fromkeys(tool.hook_event for tool in self._hook_tools() if tool.hook_event))
 
-    def _collect_refs(self) -> list[str]:
-        from harness.installation.installer import Installer
+    def for_event(self, event_name: str) -> list[HookHandler]:
+        handlers: dict[tuple[str, str], HookHandler] = {}
+        for tool in self._hook_tools():
+            key = (type(tool.toolset).__name__, tool.name)
+            if self._serves_event(tool, event_name) and key not in handlers:
+                handlers[key] = HookHandler(tool, self.repo_root or Path())
+        return list(handlers.values())
 
-        return list(Installer(repo=self.repo_root).collect_toolsets())
+    def _hook_tools(self) -> list[AgentTool]:
+        return [tool for toolset in self.toolsets for tool in toolset.tools_for(InstallDestination.HOOK)]
 
-    def for_event(self, event: CursorEvent) -> list[HookHandler]:
-        handlers: list[HookHandler] = []
-        seen: set[tuple[str, str]] = set()
-        repo_root = self.repo_root or Path()
-        for toolset in self.toolsets:
-            try:
-                tools = toolset.tools_for(InstallDestination.HOOK)
-            except Exception as error:
-                self.failures.append((self.ref_label(toolset), error))
-                continue
-            for tool in tools:
-                if not self._serves_event(tool, event.name):
-                    continue
-                key = (type(toolset).__name__, tool.name)
-                if key in seen:
-                    continue
-                seen.add(key)
-                handlers.append(HookHandler(tool, event, repo_root))
-        return handlers
-
-    def _serves_event(self, tool: Any, event_name: str) -> bool:
-        hooked = getattr(tool.callable, "_hook_name", None)
-        if hooked == event_name:
+    def _serves_event(self, tool: AgentTool, event_name: str) -> bool:
+        """A tool serves the event its annotation names. Rule injection annotated for ``postToolUse`` also serves
+        ``afterFileEdit``, because Cursor reports a file edit under that event as well as ``postToolUse``."""
+        if tool.hook_event == event_name:
             return True
-        return (
-            event_name == "afterFileEdit"
-            and hooked == "postToolUse"
-            and tool.name == "inject_rules"
-        )
-
-
-class HookStandupFailed(Exception):
-    """The hook server could not stand up or failed diagnose."""
-
-    def __init__(
-        self,
-        operation: str,
-        server: Any,
-        message: str,
-        cause: BaseException | None = None,
-    ) -> None:
-        super().__init__(message)
-        self.operation = operation
-        self.server = server
-        self.cause = cause
+        return event_name == "afterFileEdit" and tool.hook_event == "postToolUse" and tool.name == "inject_rules"
 
 
 class HookIllegitimateHandler(Exception):
-    """One hook handler was skipped so the hook server could finish standup."""
+    """One hook handler was skipped: its toolset could not be loaded, or it raised while answering an event. The
+    server keeps answering every event with the other handlers, and diagnose reports this one."""
 
     def __init__(self, tool: str, reason: str, cause: BaseException | None = None) -> None:
         super().__init__(f"{tool}: {reason}")
@@ -451,275 +398,68 @@ class HookIllegitimateHandler(Exception):
         self.cause = cause
 
 
-class HookServer:
-    """Long-lived daemon that holds one Session across Cursor hook runs."""
+class ChatInjections:
+    """The rules a hook gave each chat of one session, kept in the session's ``chat-injections`` folder so the next
+    prompt in the same chat gets them again, and never another chat's."""
 
-    def __init__(
-        self,
-        repo_root: Path,
-        catalog: HandlerCatalog | None = None,
-        *,
-        host: str | None = None,
-        port: int | None = None,
-    ) -> None:
+    _CHAT_START = "--- chat ---"
+    _CHAT_END = "--- end chat ---"
+    # Text that tells the person rules were injected; the model never needs it in a prompt.
+    _NOTICE_LINES = frozenset(
+        {
+            "These rules are injected in the chat.",
+            "The user sees the chat line. Do not paste the rule text into the chat.",
+            "Before you continue, echo the following message to the user:",
+            "The following rules need to be followed while editing this document:",
+        }
+    )
+    # The openings of a rules dump made for one edit; replaying it into a later prompt would repeat a stale check.
+    _DUMP_OPENINGS = (
+        "You just edited ",
+        "The following rules need to be followed",
+        "Before you continue, echo the following message",
+    )
+    _DUMP_LINE = "The following rules need to be followed while editing this document:"
+
+    def __init__(self, session: Any, repo_root: Path) -> None:
+        self._session = session
         self._repo_root = repo_root
-        self.exceptions: list[HookIllegitimateHandler] = []
-        self._host = host
-        self._port = port
-        self._catalog = catalog
-        self._payload: HookPayload | None = None
-        from space.session import Session
 
-        self.session = Session.current(repo_root)
-        if catalog is not None:
-            self._absorb_catalog_failures()
+    def path_for(self, chat_id: str) -> Path:
+        """The file that keeps chat_id's injection."""
+        safe = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in chat_id)
+        return self._session.session_path / "chat-injections" / f"{safe.strip('-') or 'unknown'}.md"
 
-    @classmethod
-    def state_path(cls, repo: Path) -> Path:
-        return Path(repo).resolve() / ".cursor" / "hook-server.json"
-
-    @classmethod
-    def ensure(cls, repo: Path) -> HookServer:
-        path = cls.state_path(repo)
-        from harness.hooks.hook_daemon import HookDaemon
-
-        HookDaemon().replace_stale(repo, path)
-        connected = cls._connect(repo, path)
-        if connected is not None:
-            return connected
-        cls._spawn(repo, path)
-        connected = cls(repo)._wait_until_connected(path)
-        if connected is None:
-            raise HookStandupFailed(
-                "ensure", None, "hook server daemon did not become ready"
-            )
-        return connected
-
-    @classmethod
-    def _connect(cls, repo: Path, path: Path) -> HookServer | None:
-        from harness.hooks.hook_daemon import HookDaemon
-
-        address = HookDaemon().live_address(path)
-        if address is None:
-            return None
-        host, port, _pid = address
-        return cls(repo, host=host, port=port)
-
-    def _wait_until_connected(self, path: Path) -> HookServer | None:
-        attempts = int(_READY_WAIT_SECONDS / _READY_POLL_SECONDS)
-        for _ in range(attempts):
-            connected = type(self)._connect(self._repo_root, path)
-            if connected is not None:
-                return connected
-            time.sleep(_READY_POLL_SECONDS)
-        return None
-
-    @classmethod
-    def _spawn(cls, repo: Path, path: Path) -> None:
-        from harness.hooks.hook_daemon import HookDaemon
-
-        lock_path = path.parent / "hook-server.spawn.lock"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        deadline = time.time() + _READY_WAIT_SECONDS
-        while time.time() < deadline:
-            if cls._connect(repo, path) is not None:
-                return
-            if not cls._claim_spawn(lock_path):
-                time.sleep(_READY_POLL_SECONDS)
-                continue
-            try:
-                HookDaemon().spawn(repo, path)
-                cls._wait_for_daemon(repo, path, deadline)
-            finally:
-                cls._release_spawn(lock_path)
-            return
-
-    @classmethod
-    def _claim_spawn(cls, lock_path: Path) -> bool:
-        cls._release_dead_spawn(lock_path)
-        try:
-            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError:
-            return False
-        try:
-            os.write(fd, str(os.getpid()).encode("ascii"))
-        finally:
-            os.close(fd)
-        return True
-
-    @classmethod
-    def _release_dead_spawn(cls, lock_path: Path) -> None:
-        if not lock_path.is_file():
-            return
-        if _pid_alive(_lock_pid(lock_path)):
-            return
-        try:
-            lock_path.unlink()
-        except OSError:
-            return
-
-    @classmethod
-    def _wait_for_daemon(cls, repo: Path, path: Path, deadline: float) -> None:
-        while time.time() < deadline:
-            if cls._connect(repo, path) is not None:
-                return
-            time.sleep(_READY_POLL_SECONDS)
-
-    @classmethod
-    def _release_spawn(cls, lock_path: Path) -> None:
-        try:
-            lock_path.unlink(missing_ok=True)
-        except OSError:
-            return
-
-    def _absorb_catalog_failures(self) -> None:
-        if self._catalog is None:
-            return
-        for tool, error in self._catalog.failures:
-            self.skip(tool, error)
-        self._catalog.failures.clear()
-
-    def skip(self, tool: str, error: BaseException) -> None:
-        skipped = (
-            error
-            if isinstance(error, HookIllegitimateHandler)
-            else HookIllegitimateHandler(tool, str(error), error)
-        )
-        self.exceptions.append(skipped)
-        logger.error(
-            "hook standup exception: skipped %s: %s",
-            skipped.tool,
-            skipped.reason,
-            exc_info=skipped.cause,
-        )
-
-    def dispatch(self, payload: HookPayload) -> HookResult:
-        self._payload = payload
-        event = CursorEvent(payload.hook_event_name)
-        fields = payload.as_dict()
-        path = payload.edited_path()
-        self._append_debug(
-            f"EVENT {event.name!r} tool={fields.get('tool_name')!r} path={path!r} "
-            f"conversation_id={payload.conversation_id!r} "
-            f"payload_keys={sorted(fields.keys())}"
-        )
-        if not event.name:
-            self._append_debug("NO_EVENT merged={}")
-            return HookResult()
-        results = self._invoke_enabled(event, payload)
-        merged = HookResult()
-        for item in results:
-            merged = merged.merge(item)
-        self._append_debug(f"MERGED {json.dumps(merged.as_dict())}")
-        return merged
-
-    def _invoke_enabled(
-        self, event: CursorEvent, payload: HookPayload
-    ) -> list[HookResult]:
-        enabled: list[str] = []
-        results: list[HookResult] = []
-        if self._catalog is None:
-            return results
-        for handler in self._catalog.for_event(event):
-            self._absorb_catalog_failures()
-            if not handler.is_enabled(payload):
-                continue
-            label = f"{handler.owner.__name__}.{handler.operation}"
-            enabled.append(label)
-            try:
-                result = handler.invoke(payload)
-            except Exception as error:
-                self.skip(label, error)
-                continue
-            results.append(result)
-            self._append_debug(f"HANDLER {label} result={json.dumps(result.as_dict())}")
-        self._absorb_catalog_failures()
-        self._append_debug(f"ENABLED {enabled or ['(none)']}")
-        return results
-
-    def handle_stdin(self, raw: bytes) -> HookResult:
-        if self._port is not None:
-            from harness.hooks.hook_daemon import HookDaemon
-
-            return HookResult.from_handler(
-                HookDaemon(self._host or "127.0.0.1", self._port).call_handle_stdin(raw)
-            )
-        from harness.hooks.session_logs import SessionLogs
-
-        SessionLogs(self._repo_root).ensure_main_session()
-        if not raw.strip():
-            return HookResult()
-        try:
-            payload = HookPayload.from_stdin(raw)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return HookResult()
-        result = self.dispatch(payload)
-        if self._is_rules_dump(result.additional_context or ""):
-            result.additional_context = ""
-        self._publish_context(result)
-        self._write_last_chat_injected(result)
-        if payload.hook_event_name == "beforeSubmitPrompt":
-            result = self._inject_saved_chat_context(payload, result)
-        if payload.hook_event_name in ("stop", "subagentStop"):
-            result.followup_only = result.followup_message is not None
-        return result
-
-    def run(self) -> None:
-        print(json.dumps(self.handle_stdin(sys.stdin.buffer.read()).as_dict()))
-
-    def _write_last_chat_injected(self, result: HookResult) -> None:
-        from harness.hooks.session_logs import SessionLogs
-
-        logs = SessionLogs(self._repo_root)
-        folder = logs.session_folder(logs.active_session_name())
-        folder.mkdir(parents=True, exist_ok=True)
-        dest = folder / "last-chat-injected-rules.md"
-        dest.write_text(result.additional_context or "", encoding="utf-8")
-
-    def _inject_path(self) -> Path:
-        return self._repo_root / ".cursor" / "rules" / "practices" / "chat-inject.mdc"
-
-    def _publish_context(self, result: HookResult) -> None:
-        """Remember this chat's injection. A shared always-apply rule would enter every chat."""
+    def keep(self, result: HookResult, payload: HookPayload) -> None:
+        """Remember result's rules for the chat the event came from, and the last rules sent in the session."""
         self._retire_shared_inject()
         body = (result.additional_context or "").strip()
-        conversation_id = self._conversation_id()
-        if not body or not conversation_id:
-            return
-        dest = self._chat_injection_path(conversation_id)
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(body, encoding="utf-8")
+        if body and payload.chat_id:
+            dest = self.path_for(payload.chat_id)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(body, encoding="utf-8")
+        folder = self._session.session_path
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "last-chat-injected-rules.md").write_text(result.additional_context or "", encoding="utf-8")
 
-    def _inject_saved_chat_context(self, payload: HookPayload, result: HookResult) -> HookResult:
-        if result.additional_context:
+    def replay(self, payload: HookPayload, result: HookResult) -> HookResult:
+        """result with the rules kept for the prompt's chat, when the hooks gave none of their own."""
+        chat_id = payload.conversation_id.strip()
+        if result.additional_context or not chat_id:
             return result
-        conversation_id = payload.conversation_id.strip()
-        if not conversation_id:
-            return result
-        dest = self._chat_injection_path(conversation_id)
+        dest = self.path_for(chat_id)
         if not dest.is_file():
             return result
-        raw_body = dest.read_text(encoding="utf-8")
-        if self._is_rules_dump(raw_body):
+        kept = dest.read_text(encoding="utf-8")
+        if self.is_rules_dump(kept):
             dest.unlink(missing_ok=True)
             return result
-        body = self._model_context(raw_body)
-        if not body:
-            return result
-        result.additional_context = body
+        result.additional_context = self._model_context(kept) or None
         return result
 
-    def _is_rules_dump(self, body: str) -> bool:
+    def is_rules_dump(self, body: str) -> bool:
         text = body.lstrip()
-        if not text:
-            return False
-        if text.startswith("You just edited "):
-            return True
-        if text.startswith("The following rules need to be followed"):
-            return True
-        if text.startswith("Before you continue, echo the following message"):
-            return True
-        return "The following rules need to be followed while editing this document:" in text
+        return bool(text) and (text.startswith(self._DUMP_OPENINGS) or self._DUMP_LINE in text)
 
     def _model_context(self, body: str) -> str:
         """Rule text for the model. The injected-rules notice stays out of the prompt."""
@@ -727,88 +467,116 @@ class HookServer:
         hide = False
         for line in body.splitlines():
             stripped = line.strip()
-            if stripped == "--- chat ---":
-                hide = True
+            if stripped in (self._CHAT_START, self._CHAT_END):
+                hide = stripped == self._CHAT_START
                 continue
-            if stripped == "--- end chat ---":
-                hide = False
-                continue
-            if hide or self._is_rules_notice_line(stripped):
-                continue
-            kept.append(line)
+            if not hide and not stripped.startswith("rules injected") and stripped not in self._NOTICE_LINES:
+                kept.append(line)
         return "\n".join(kept).strip()
 
-    def _is_rules_notice_line(self, line: str) -> bool:
-        if line.startswith("rules injected"):
-            return True
-        return line in {
-            "These rules are injected in the chat.",
-            "The user sees the chat line. Do not paste the rule text into the chat.",
-            "Before you continue, echo the following message to the user:",
-            "The following rules need to be followed while editing this document:",
-        }
-
-    def _conversation_id(self) -> str:
-        if self._payload is None:
-            return ""
-        if self._payload.hook_event_name == "subagentStop":
-            transcript = str(self._payload.as_dict().get("agent_transcript_path") or "")
-            stem = Path(transcript).stem.strip()
-            if stem:
-                return stem
-        return self._payload.conversation_id.strip()
-
-    def _chat_injection_path(self, conversation_id: str) -> Path:
-        from harness.hooks.session_logs import SessionLogs
-
-        logs = SessionLogs(self._repo_root)
-        folder = logs.session_folder(logs.active_session_name()) / "chat-injections"
-        return folder / f"{self._chat_injection_name(conversation_id)}.md"
-
-    def _chat_injection_name(self, conversation_id: str) -> str:
-        safe = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in conversation_id)
-        return safe.strip("-") or "unknown"
-
     def _retire_shared_inject(self) -> None:
-        dest = self._inject_path()
-        if dest.is_file():
-            dest.unlink()
-        sent = dest.with_suffix(".sent")
-        if sent.is_file():
-            sent.unlink()
+        """Remove the always-apply rule older installs shared between every chat."""
+        shared = self._repo_root / ".cursor" / "rules" / "practices" / "chat-inject.mdc"
+        shared.unlink(missing_ok=True)
+        shared.with_suffix(".sent").unlink(missing_ok=True)
 
-    def ping(self) -> str:
-        return "pong"
 
-    def _event_names(self) -> list[str]:
-        if self._catalog is None:
-            return []
-        names: list[str] = []
-        for toolset in self._catalog.toolsets:
-            try:
-                tools = toolset.tools_for(InstallDestination.HOOK)
-            except Exception as error:
-                self.skip(self._catalog.ref_label(toolset), error)
-                continue
-            for tool in tools:
-                event = getattr(tool.callable, "_hook_name", None)
-                if event and event not in names:
-                    names.append(str(event))
-        return names
+class HookServer:
+    """The hooks of one checkout, loaded once: it runs the enabled handlers for each event and merges their answers.
+    The checkout's hook daemon holds one and hands it every event its hook commands receive."""
+
+    # Shows a merged result's toast in the chat's workspace folders. The notifier registers itself when it is loaded,
+    # so a hook names its toast in its result and never the notifier; with none registered, no toast is shown.
+    _toast_shown_by: ClassVar[Callable[[str, list[Path]], Any] | None] = None
+
+    @classmethod
+    def show_toasts_with(cls, show: Callable[[str, list[Path]], Any]) -> None:
+        """Have show(toast, workspace_roots) show each toast a dispatched event's hooks give."""
+        cls._toast_shown_by = show
+
+    def __init__(self, repo_root: Path, catalog: HandlerCatalog) -> None:
+        self._repo_root = repo_root
+        self._catalog = catalog
+        self.exceptions: list[HookIllegitimateHandler] = []
+        self._absorb_catalog_failures()
+
+    @classmethod
+    def from_toolsets(cls, repo_root: Path, toolsets: list[Any] | None = None) -> HookServer:
+        return cls(repo_root, HandlerCatalog(toolsets, repo_root))
+
+    @classmethod
+    def from_handlers(cls, handlers: Path | str, *, repo: Path | str) -> HookServer:
+        """The hook server of the toolsets a ``hook-handlers.json`` lists, for the checkout at repo."""
+        resolved = Path(repo).resolve()
+        server = cls(resolved, HandlerCatalog(repo_root=resolved, handlers=handlers))
+        server.notify_exceptions()
+        return server
+
+    @property
+    def session(self) -> Any:
+        """The session saved as open in the project's ``.sessions/session.json``, main when none is. It is read for each
+        event, so hooks follow a switch or a close made through MCP at once. The hook server reads it the way every
+        tool call reads its session, through a call on this repository; none when no sessions are registered."""
+        return ToolCall(project=self._repo_root).session
+
+    @property
+    def chat_injections(self) -> ChatInjections | None:
+        """The rules kept for each chat of the open session; none when no sessions are registered."""
+        session = self.session
+        return ChatInjections(session, self._repo_root) if session is not None else None
+
+    def skip(self, tool: str, error: BaseException) -> None:
+        skipped = error if isinstance(error, HookIllegitimateHandler) else HookIllegitimateHandler(tool, str(error), error)
+        self.exceptions.append(skipped)
+        logger.error("hook standup exception: skipped %s: %s", skipped.tool, skipped.reason, exc_info=skipped.cause)
+
+    def handle_stdin(self, raw: bytes) -> HookResult:
+        """The answer to the event an IDE wrote on stdin, with the rules kept for its chat."""
+        if not raw.strip():
+            return HookResult()
+        try:
+            payload = HookPayload.from_stdin(raw)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return HookResult()
+        result = self.dispatch(payload)
+        injections = self.chat_injections
+        if injections is not None:
+            result = self._with_chat_injections(injections, payload, result)
+        if payload.hook_event_name in ("stop", "subagentStop"):
+            result.followup_only = result.followup_message is not None
+        return result
+
+    def _with_chat_injections(self, injections: ChatInjections, payload: HookPayload, result: HookResult) -> HookResult:
+        if injections.is_rules_dump(result.additional_context or ""):
+            result.additional_context = None
+        injections.keep(result, payload)
+        if payload.hook_event_name == "beforeSubmitPrompt":
+            return injections.replay(payload, result)
+        return result
+
+    def dispatch(self, payload: HookPayload) -> HookResult:
+        event = payload.hook_event_name
+        self._append_debug(
+            f"EVENT {event!r} tool={payload.tool_name!r} path={payload.edited_path()!r} "
+            f"conversation_id={payload.conversation_id!r} payload_keys={sorted(payload)}"
+        )
+        if not event:
+            self._append_debug("NO_EVENT merged={}")
+            return HookResult()
+        merged = HookResult()
+        for result in self._invoke_enabled(event, payload):
+            merged = merged.merge(result)
+        self._append_debug(f"MERGED {json.dumps(merged.as_dict())}")
+        self._show_toast(merged, payload)
+        return merged
 
     def diagnose(self) -> dict[str, Any]:
-        reply = self.ping()
-        if reply != "pong":
-            raise HookStandupFailed("diagnose", self, "hook server ping failed")
         self.dispatch(HookPayload({}))
-        exceptions = [
-            {"tool": item.tool, "reason": item.reason} for item in self.exceptions
-        ]
         return {
             "ok": True,
-            "ping": reply,
-            "events": self._event_names(),
-            "exceptions": exceptions,
+            "ping": "pong",
+            "events": self._catalog.event_names,
+            "exceptions": [{"tool": item.tool, "reason": item.reason} for item in self.exceptions],
             "notice": self.notice(),
         }
 
@@ -816,8 +584,7 @@ class HookServer:
         if not self.exceptions:
             return ""
         lines = ["hook standup skipped illegitimate handlers and continued:"]
-        for item in self.exceptions:
-            lines.append(f"- {item.tool}: {item.reason}")
+        lines.extend(f"- {item.tool}: {item.reason}" for item in self.exceptions)
         return "\n".join(lines)
 
     def notify_exceptions(self) -> None:
@@ -825,41 +592,58 @@ class HookServer:
         if text:
             print(text, file=sys.stderr)
 
-    @classmethod
-    def from_toolsets(
-        cls, repo_root: Path, toolsets: list[Any] | None = None
-    ) -> HookServer:
-        return cls(repo_root, HandlerCatalog(toolsets, repo_root))
+    def _absorb_catalog_failures(self) -> None:
+        for tool, error in self._catalog.failures:
+            self.skip(tool, error)
+        self._catalog.failures.clear()
 
-    @classmethod
-    def from_handlers(cls, handlers: Path | str, *, repo: Path | str | None = None) -> HookServer:
-        resolved = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
-        try:
-            server = cls(resolved, HandlerCatalog(repo_root=resolved, handlers=handlers))
-        except Exception as error:
-            raise HookStandupFailed("standup", None, str(error), error) from error
-        return server.standup()
+    def _invoke_enabled(self, event: str, payload: HookPayload) -> list[HookResult]:
+        enabled: list[str] = []
+        results: list[HookResult] = []
+        for handler in self._catalog.for_event(event):
+            if not handler.is_enabled(payload):
+                continue
+            enabled.append(handler.label)
+            try:
+                result = handler.invoke(payload)
+            # Hooks are other toolsets' code. One handler's failure must not cost the person the other handlers'
+            # answers or the IDE's event, so it is recorded as a skipped handler, with its traceback in the log, and
+            # diagnose reports it.
+            except Exception as error:  # noqa: BLE001
+                self.skip(handler.label, error)
+                continue
+            results.append(result)
+            self._append_debug(f"HANDLER {handler.label} result={json.dumps(result.as_dict())}")
+        self._append_debug(f"ENABLED {enabled or ['(none)']}")
+        return results
 
-    def standup(self) -> HookServer:
-        self.notify_exceptions()
-        return self
+    def _show_toast(self, result: HookResult, payload: HookPayload) -> None:
+        show = type(self)._toast_shown_by
+        if result.toast and show is not None:
+            show(result.toast, payload.workspace_roots)
 
     def _append_debug(self, message: str) -> None:
-        from harness.hooks.session_logs import SessionLogs
-
-        path = SessionLogs(self._repo_root).session_log_path("dispatch.debug")
+        session = self.session
+        if session is None:
+            return
         stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        with open(path, "a", encoding="utf-8") as log:
+        with open(session.hook_log("dispatch.debug"), "a", encoding="utf-8") as log:
             log.write(f"{stamp} {message}\n")
 
 
 def main() -> None:
-    os.chdir(_REPO_ROOT)
+    """The hook command: hand the event on stdin to this checkout's hook daemon and print its answer for the IDE."""
+    from harness.hooks.hook_daemon import HookDaemon
+
+    checkout = Path(__file__).resolve().parents[2]
+    RepositoryToolsets(checkout).use_for_this_process()
+    os.chdir(checkout)
     raw = sys.stdin.buffer.read()
     if not raw.strip():
         print(json.dumps(HookResult().as_dict()))
         return
-    print(json.dumps(HookServer.ensure(_REPO_ROOT).handle_stdin(raw).as_dict()))
+    answer = HookDaemon(checkout).ensure().handle_stdin(raw)
+    print(json.dumps(HookResult.from_handler(answer).as_dict()))
 
 
 if __name__ == "__main__":

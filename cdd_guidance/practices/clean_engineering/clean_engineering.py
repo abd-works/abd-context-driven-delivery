@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio import Drawio
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.java.java_class_model import JavaCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import JavaScriptCleanEngineeringModel
@@ -19,6 +20,8 @@ class CleanEngineering(PracticeGuidance):
     """# Instructions"""
 
     sketch_titles = ("ce:", "clean engineering:")
+    SHORT_NAME = "CE"
+    COLOUR = "#4FC3F7"
 
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {
@@ -35,7 +38,6 @@ class CleanEngineering(PracticeGuidance):
         self,
         fidelity: str = "modules",
         format: str | None = None,
-        drawio=None,
     ) -> None:
         super().__init__(
             format=format,
@@ -52,9 +54,15 @@ class CleanEngineering(PracticeGuidance):
                 "sketch": SketchCleanEngineeringModel,
             },
         )
-        self.drawio = drawio
-        if self.drawio is not None:
-            self.drawio.mode = "tool"
+        self._drawio: Drawio | None = None
+
+    @property
+    def drawio(self) -> Drawio:
+        """The Draw.io toolset this practice renders its diagrams with."""
+        if self._drawio is None:
+            self._drawio = Drawio()
+            self._drawio.mode = "tool"
+        return self._drawio
 
     @agent_instructions
     def generate_output(self) -> str:
@@ -66,6 +74,7 @@ class CleanEngineering(PracticeGuidance):
         (markdown / python / …) from contexts, examples, and templates — do
         not invoke drawio.render.
         """
-        tools(self.drawio.render())
+        if self.format == "drawio":
+            tools(self.drawio.render())
         return "Artifact written under {session.path}/."
     

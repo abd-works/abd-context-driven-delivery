@@ -69,17 +69,17 @@ Inject all feedback back into the context, so Ai benefts from compunded leanring
 
 **Iterate and Learn** — Layer context and limit AI runs to the cognitive load of what humans can absorb; guide, validate, and improve the system.
 
-[Sketch](https://github.com/abd-works/abd-context-driven-delivery/blob/main/actions/sketch/sketch.md) engages a person and AI in an interactive probe, grill, illustrate, and align session. Multiple rounds scaffold stories, domain, UX, and more for rapid understanding and feedback.
+[Sketch](https://github.com/abd-works/abd-context-driven-delivery/blob/main/cdd_guidance/actions/sketch/sketch.md) engages a person and AI in an interactive probe, grill, illustrate, and align session. Multiple rounds scaffold stories, domain, UX, and more for rapid understanding and feedback.
 
 **Code Is Context** — Managing context is critical. With the right product engineering practices, your code is the primary source of truth for how the business and the technology work — linking, versioning, reviews, and auditing come practically for free.
 
-[Stories](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md) generate working code that describes both functional and business logic. Flipping between [documentation](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/_examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.md) and [code](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/_examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.ts) is seamless.
+[Stories](https://github.com/abd-works/abd-context-driven-delivery/blob/main/cdd_guidance/practices/stories/stories.md) generate working code that describes both functional and business logic. Flipping between [documentation](https://github.com/abd-works/abd-context-driven-delivery/blob/main/cdd_guidance/practices/stories/_examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.md) and [code](https://github.com/abd-works/abd-context-driven-delivery/blob/main/cdd_guidance/practices/stories/_examples/telco-website/onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.ts) is seamless.
 
 **Context Storming** — Define and connect context across product, engineering, and operations. Bring those artifacts into one knowledge graph, in place of scattered docs, tickets, and tribal memory.
 
 Collaboratively build artifacts at the right level of abstraction to support the right level of decision making.
 
-The [graph explorer](https://github.com/abd-works/abd-context-driven-delivery/tree/main/harness/graph) loads these models and the relationships between them from source via `harness/graph/working_copy.py`.
+The [knowledge graph](https://github.com/abd-works/abd-context-driven-delivery/tree/main/harness/graph) loads these models and the relationships between them from source: `graph.load_working_copy` reads every practice's files into one graph, and the graph explorer shows it.
 
 - **Stories** — actors, systems, and the interactions that deliver the solution
 - **Domain-driven design** — the business concepts and the boundaries that protect them

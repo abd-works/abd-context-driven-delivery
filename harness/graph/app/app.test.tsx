@@ -173,10 +173,11 @@ const engineeringTree = {
                       status: 'violating',
                       violations: [
                         {
+                          rule: 'limit-operation-parameters',
                           message: "Operation 'failure' takes 4 parameters (maximum 2).",
-                          file: 'register.ts',
-                          start: 1,
-                          end: 2,
+                          location: 'register.ts',
+                          line: 1,
+                          end_line: 2,
                         },
                       ],
                       children: [],
@@ -894,6 +895,9 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
   if (operation === 'inventory') {
     return inventoryBundle();
   }
+  if (operation === 'practice_names') {
+    return ['stories', 'ddd', 'ux', 'clean_engineering', 'bdd'];
+  }
   if (operation === 'set_overlays') {
     activeOverlays = Array.isArray(body.overlays) ? (body.overlays as string[]) : [];
     return inventoryBundle();
@@ -925,20 +929,20 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
       start_line: 1,
       end_line: storySource.text.split('\n').length,
       members: [
-        { id: 'op-1', name: 'register', kind: 'Operation', owner: 'AccountCredentials', text: registerText, file: 'register.ts', start: 1, end: 4 },
-        { id: 'save', name: 'save', kind: 'Operation', owner: 'Credentials', text: 'save() {\n  stored();\n}', file: 'credentials.ts', start: 1, end: 3 },
-        { id: 'notify', name: 'notify', kind: 'Operation', owner: 'Credentials', text: 'notify() {\n  sent();\n}', file: 'credentials.ts', start: 5, end: 7 },
-        { id: 'class-c', name: 'Credentials', kind: 'OoadClass', owner: '', text: 'class Credentials {\n  token: string;\n}', file: 'credentials.ts', start: 1, end: 3 },
-        { id: 'class-token', name: 'AccountToken', kind: 'OoadClass', owner: '', text: 'class AccountToken {\n  value: string;\n}', file: 'token.ts', start: 1, end: 3 },
+        { node_id: 'op-1', name: 'register', type: 'Operation', owner: 'AccountCredentials', text: registerText, file: 'register.ts', start_line: 1, end_line: 4 },
+        { node_id: 'save', name: 'save', type: 'Operation', owner: 'Credentials', text: 'save() {\n  stored();\n}', file: 'credentials.ts', start_line: 1, end_line: 3 },
+        { node_id: 'notify', name: 'notify', type: 'Operation', owner: 'Credentials', text: 'notify() {\n  sent();\n}', file: 'credentials.ts', start_line: 5, end_line: 7 },
+        { node_id: 'class-c', name: 'Credentials', type: 'OoadClass', owner: '', text: 'class Credentials {\n  token: string;\n}', file: 'credentials.ts', start_line: 1, end_line: 3 },
+        { node_id: 'class-token', name: 'AccountToken', type: 'OoadClass', owner: '', text: 'class AccountToken {\n  value: string;\n}', file: 'token.ts', start_line: 1, end_line: 3 },
         {
-          id: 'class-account',
+          node_id: 'class-account',
           name: 'AccountCredentials',
-          kind: 'OoadClass',
+          type: 'OoadClass',
           owner: '',
           text: 'class AccountCredentials {\n  token: AccountToken;\n  only-in-class-body();\n}',
           file: 'account.ts',
-          start: 1,
-          end: 4,
+          start_line: 1,
+          end_line: 4,
         },
       ],
     };

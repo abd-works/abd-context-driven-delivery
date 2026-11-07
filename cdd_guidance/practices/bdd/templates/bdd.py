@@ -58,14 +58,11 @@ with description('{DomainEntity}'):
             expect(self.entity.{property}).to(equal({expected_value}))
 
 
-# Scan fixture pair — mechanical mistake specs use these helpers, not an eval harness.
-from cdd_guidance.practices.bdd.spec_helpers import expect_scan_fails, expect_scan_passes
+# Rule example pair — a mechanical mistake spec uses the rule examples in its practice's rules folder
+# (assert_rule_pair, assert_bdd_source_pair, assert_ddd_example_pair, assert_stories_example_pair).
+from cdd_guidance.practices.clean_engineering.rules.rule_examples import assert_rule_pair
 
-with description('a scan fixture pair'):
-    with context('a file that violates the rule'):
-        with it('should fail scan'):
-            expect_scan_fails({scan}, '{FailFixturePath}', rule='{Rule}')
-
-    with context('a file that satisfies the rule'):
-        with it('should pass scan'):
-            expect_scan_passes({scan}, '{PassFixturePath}', rule='{Rule}')
+with description('the {Rule} rule'):
+    with context('on a failing example and its repaired example'):
+        with it('should flag only the failing example'):
+            assert_rule_pair('{Rule}', {FailSource}, {PassSource})

@@ -1,18 +1,15 @@
 """A graph loaded from the account-credentials working copy."""
 
 import json
-import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 from expects import be_above, contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
-from graph import Graph, Node, PracticeGraph, Source
+from harness.graph.graph import EdgeType, Graph, Node, PracticeGraph, Source
 
 _ROOT = _HERE
 _SAMPLE = _ROOT / "_examples" / "input"
@@ -145,7 +142,7 @@ def nodes_in(graph: Graph, practice: str, scope: list[str]) -> set[str]:
 
 
 def violations_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, str]]:
-    return {(slug, node.node_id) for node in _practice_nodes(graph, practice, scope) for slug, _ in node.rules.violations}
+    return {(slug, node.node_id) for node in _practice_nodes(graph, practice, scope) for slug in node.rules.failed_slugs}
 
 
 def edges_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, str, str]]:
@@ -158,6 +155,10 @@ def edges_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, st
 
 
 with description("a graph"):
+    with context("with nothing loaded yet"):
+        with it("should name every practice it can load, so the explorer loads each one on the folder it opens"):
+            expect(Graph().practice_names()).to(equal(["stories", "ddd", "ux", "clean_engineering", "bdd"]))
+
     with context("loaded from the account credentials working copy"):
         with before.all:
             self.graph = Graph()
@@ -189,7 +190,7 @@ with description("a graph"):
                     {"Module", "OoadClass", "Operation", "Property", "Parameter"} <= owned_types(self.clean_tree, "clean_engineering")
                 ).to(equal(True))
 
-            with it("should order relative, owns, properties, belongsTo, hasParameter, hasType, invokes, and dependsOn"):
+            with it("should order relative, owns, properties, belongsTo, hasParameter, hasType, invokedBy, and dependsOn"):
                 expect(self.clean.edge_type_kinds).to(
                     equal(
                         [
@@ -204,7 +205,6 @@ with description("a graph"):
                             "invokedBy",
                             "returns",
                             "retrievedUsing",
-                            "invokes",
                             "dependsOn",
                             "usedBy",
                         ]
@@ -293,7 +293,7 @@ with description("a graph"):
                     expect(self.register.source.file).to(contain("account-credentials.ts"))
 
                 with it("should start at the file line Monaco numbers from"):
-                    expect(self.register.source.startLine).to(be_above(0))
+                    expect(self.register.source.start_line).to(be_above(0))
 
                 with it("should mark the emailValidationCode call"):
                     expect(self.register.source.text).to(contain("/* call:this.emailValidationCode */"))
@@ -323,8 +323,8 @@ with description("a graph"):
                     with before.all:
                         self.graph.filter.select_node_types(["Operation"])
 
-                    with it("should offer invokes for operations"):
-                        expect(self.graph.filter.relationships).to(contain("invokes"))
+                    with it("should offer invokedBy for operations"):
+                        expect(self.graph.filter.relationships).to(contain("invokedBy"))
 
                     with it("should offer the operation parameter rule"):
                         expect(self.graph.filter.rules).to(contain("clean_engineering.Operation.limit-operation-parameters"))
@@ -478,7 +478,7 @@ with description("a graph"):
                             "story-name-captures-system-mechanic",
                             "right-size-story-nodes",
                             "behaviours-not-one-time-tasks",
-                            "story-scenarios-one-to-four",
+                            "story-scenarios-at-most-seven",
                         }
                         <= set(_rule_names(self.handle_request))
                     ).to(equal(True))
@@ -492,11 +492,11 @@ with description("a graph"):
 
                 with it("should store the verb-noun span on Handle Request"):
                     hit = rule_on(self.handle_request, "verb-noun-format")["violations"][0]
-                    expect(hit["file"]).to(
+                    expect(hit["location"]).to(
                         equal("tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts")
                     )
-                    expect(hit["start"]).to(equal(444))
-                    expect(hit["end"]).to(equal(_HANDLE_REQUEST_END))
+                    expect(hit["line"]).to(equal(444))
+                    expect(hit["end_line"]).to(equal(_HANDLE_REQUEST_END))
 
                 with it("should violate the system mechanic on Handle Request"):
                     hit = rule_on(self.handle_request, "story-name-captures-system-mechanic")
@@ -509,8 +509,8 @@ with description("a graph"):
 
                 with it("should store the system-mechanic span on Handle Request"):
                     hit = rule_on(self.handle_request, "story-name-captures-system-mechanic")["violations"][0]
-                    expect(hit["start"]).to(equal(444))
-                    expect(hit["end"]).to(equal(_HANDLE_REQUEST_END))
+                    expect(hit["line"]).to(equal(444))
+                    expect(hit["end_line"]).to(equal(_HANDLE_REQUEST_END))
 
                 with it("should leave verb-noun format passing on Submit Order"):
                     expect(rule_on(self.submit_order, "verb-noun-format")["status"]).to(equal("passing"))
@@ -524,12 +524,12 @@ with description("a graph"):
 
                 with it("should store the epic child-count hit on the line that names the epic"):
                     hit = rule_on(self.onboard, "four-to-nine-children")["violations"][0]
-                    expect({"file": hit["file"], "start": hit["start"], "end": hit["end"]}).to(
+                    expect({"location": hit["location"], "line": hit["line"], "end_line": hit["end_line"]}).to(
                         equal(
                             {
-                                "file": "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
-                                "start": 1,
-                                "end": 1,
+                                "location": "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
+                                "line": 1,
+                                "end_line": 1,
                             }
                         )
                     )
@@ -549,12 +549,12 @@ with description("a graph"):
 
                     with it("should store that similarity hit on the story line"):
                         hit = rule_on(self.submit_order, "right-size-story-nodes")["violations"][0]
-                        expect({"file": hit["file"], "start": hit["start"], "end": hit["end"]}).to(
+                        expect({"location": hit["location"], "line": hit["line"], "end_line": hit["end_line"]}).to(
                             equal(
                                 {
-                                    "file": "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
-                                    "start": 429,
-                                    "end": 435,
+                                    "location": "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
+                                    "line": 429,
+                                    "end_line": 435,
                                 }
                             )
                         )
@@ -622,11 +622,7 @@ with description("a graph"):
                     expect(self.invoked["type"]).to(equal("Operation"))
                     expect(str(self.invoked["node_id"]).startswith("clean_engineering:")).to(equal(True))
 
-                with it("should place that step back under the operation"):
-                    operation = tree_by_id(self.clean_tree, self.invoked["node_id"])
-                    expect(tree_names(tree_child(operation, "invokes"))).to(contain(self.invoking_step["name"]))
-
-                with it("should name the inverse invokedBy on the operation"):
+                with it("should place that step back under the operation, under invokedBy"):
                     operation = tree_by_id(self.clean_tree, self.invoked["node_id"])
                     expect(tree_names(tree_child(operation, "invokedBy"))).to(contain(self.invoking_step["name"]))
 
@@ -1005,7 +1001,7 @@ with description("a scenario"):
             self.given = _node(self.practice, "Step", "given the account exists", 10)
             self.when = _node(self.practice, "Step", "when the User creates their account", 20)
             self.then = _node(self.practice, "Step", "then the account is unconfirmed", 30)
-            owns = {"kind": "owns", "order": 1, "display": "direct"}
+            owns = EdgeType("owns", 1, "direct")
             self.practice.record(owns, self.scenario, self.then)
             self.practice.record(owns, self.scenario, self.when)
             self.practice.record(owns, self.scenario, self.given)
@@ -1021,7 +1017,7 @@ with description("a scenario"):
             self.step = _node(self.practice, "Step", "when the User creates their account", 20)
             self.later = _node(self.practice, "Operation", "register", 80)
             self.earlier = _node(self.practice, "Operation", "save", 5)
-            invokes = {"kind": "invokes", "order": 2, "display": "grouped"}
+            invokes = EdgeType("invokes", 2, "grouped")
             self.practice.record(invokes, self.step, self.later)
             self.practice.record(invokes, self.step, self.earlier)
             self.step.populate()
@@ -1141,3 +1137,44 @@ with description("an example a story test imports"):
     with context("that is a constant the story test declares itself"):
         with it("should stay at the story test"):
             expect(self._aligned("LOCAL").file).to(equal(self.story_test))
+
+
+with description("a practice's graph"):
+    with before.each:
+        import tempfile
+
+        self.folder = Path(tempfile.mkdtemp())
+        self.source = self.folder / "src"
+        self.source.mkdir()
+
+    with after.each:
+        import shutil
+
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    with context("over a source root within the load budget"):
+        with before.each:
+            (self.source / "order.py").write_text("class Order:\n    pass\n", encoding="utf-8")
+            self.graph = Graph.of_practice(self.folder, "clean_engineering", self.source)
+
+        with it("should save its graph in the folder's .context"):
+            expect((self.folder / ".context" / "graph.json").is_file()).to(equal(True))
+
+        with it("should name the practice on its source root"):
+            expect(self.graph.practices["clean_engineering"].source_root).to(equal(str(self.source.resolve())))
+
+    with context("over a source root with more source files than the load budget"):
+        with before.each:
+            for number in range(41):
+                (self.source / f"module_{number}.py").write_text("x = 1\n", encoding="utf-8")
+            self.graph = Graph.of_practice(self.folder, "clean_engineering", self.source)
+
+        with it("should name the practice on its source root"):
+            expect(self.graph.practices["clean_engineering"].source_root).to(equal(str(self.source)))
+
+        with it("should read none of the files"):
+            expect((self.folder / ".context" / "graph.json").exists()).to(equal(False))
+
+        with it("should report the folder it belongs to"):
+            expect(self.graph.folder).to(equal(str(self.folder)))
+

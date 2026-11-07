@@ -12,11 +12,12 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import contain, equal, expect
+from expects import contain, expect
 from mamba import before, context, description, it
 
-from validate.validation_report import build_graph_json_report
-from validate.verify_report_links import verify_report
+from harness.graph.violation import Violation
+from space.session import Session
+from cdd_guidance.actions.validate.validation_report import ValidationReport
 
 
 with description("validation report formatter links"):
@@ -30,22 +31,20 @@ with description("validation report formatter links"):
             source.parent.mkdir(parents=True)
             source.write_text("\n" * 286 + "export function credentialsFailure() {}\n", encoding="utf-8")
             self.violations = [
-                {
-                    "rule_slug": "limit-operation-parameters",
-                    "location": "src/customer/account/account.ts",
-                    "line_number": 287,
-                    "violation_message": "Operation `credentialsFailure`: takes 4 parameters.",
-                    "severity": "error",
-                    "graph_rule": True,
-                }
+                Violation(
+                    "limit-operation-parameters",
+                    "takes 4 parameters.",
+                    subject="Operation `credentialsFailure`",
+                    location="src/customer/account/account.ts",
+                    line=287,
+                )
             ]
 
-        with it("should emit absolute path #L links that verify_report_links accepts"):
-            report_md = build_graph_json_report(
-                self.violations,
-                workspace_directory=self.root,
-                link_from_directory=self.session_dir,
-            )
+        with it("should link each finding to its file by absolute path and line"):
+            session = Session(self.root)
+            session.workpath = self.root
+            session.session_path = self.session_dir
+            report_md = ValidationReport(session).of_graph_and_ai_rules(self.violations, [])
             report_path = self.session_dir / "validate-clean-engineering-code-src.md"
             report_path.write_text(report_md, encoding="utf-8")
             account = (self.root / "src/customer/account/account.ts").resolve()
@@ -54,4 +53,3 @@ with description("validation report formatter links"):
             )
             expect(report_md).not_to(contain("vscode://"))
             expect(report_md).not_to(contain("file://"))
-            expect(verify_report(report_path)).to(equal([]))

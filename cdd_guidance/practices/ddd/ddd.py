@@ -16,6 +16,8 @@ class Ddd(PracticeGuidance):
     """
 
     sketch_titles = ("ddd:", "domain driven design:")
+    SHORT_NAME = "DDD"
+    COLOUR = "#6C5CE7"
 
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {
@@ -64,8 +66,6 @@ class Ddd(PracticeGuidance):
 
     def _parse_content(self, source_format: str, content):
         parsed = super()._parse_content(source_format, content)
-        if Format(source_format).is_code and isinstance(content, str):
-            _take_doc_comments(parsed, content)
         if Format(source_format).name == "markdown" and not _has_aggregates(parsed):
             # Plain class-model markdown with no contexts or aggregates reads as Clean Engineering.
             from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (
@@ -75,7 +75,8 @@ class Ddd(PracticeGuidance):
             return MarkdownCleanEngineeringModel().parse(self._incoming(source_format, content))
         return parsed
 
-    def _call_render(self, target, parsed, previous: str, keep_positioning: bool, workspace: str = ""):
+    def _model_for(self, target, parsed):
+        # The code formats render Clean Engineering's class model; the DDD formats render the bounded-context map.
         from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
         from cdd_guidance.practices.ddd.model.clean_engineering_bridge import (
             from_clean_engineering,
@@ -89,35 +90,13 @@ class Ddd(PracticeGuidance):
                 _python_generics(parsed)
         elif isinstance(target, BoundedContextMap) and isinstance(parsed, CleanEngineeringModel):
             parsed = from_clean_engineering(parsed)
-        return super()._call_render(target, parsed, previous, keep_positioning, workspace)
+        return parsed
 
 
 def _has_aggregates(parsed) -> bool:
-    contexts = list(getattr(parsed, "contexts", []) or [])
-    while contexts:
-        context = contexts.pop()
-        if context.aggregates:
-            return True
-        contexts.extend(context.contexts)
-    return False
+    from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
 
-
-_DOC_COMMENT = r"/\*\*((?:(?!\*/)[\s\S])*)\*/\s*(?:@\w+(?:\([^)]*\))?\s*)*(?:export\s+)?(?:abstract\s+)?class\s+{name}\b"
-
-
-def _take_doc_comments(parsed, text: str) -> None:
-    # Brace-language parsers skip the JSDoc above a class; the aggregate model keeps its stereotypes and place there.
-    import re
-
-    for module in getattr(parsed, "modules", []):
-        for oclass in module.classes:
-            if oclass.intent:
-                continue
-            found = re.search(_DOC_COMMENT.format(name=re.escape(oclass.name)), text)
-            if found is None:
-                continue
-            lines = [line.strip().lstrip("*").strip() for line in found.group(1).splitlines()]
-            oclass.intent = "\n".join(line for line in lines if line)
+    return isinstance(parsed, BoundedContextMap) and bool(parsed.every_aggregate)
 
 
 def _python_generics(model) -> None:

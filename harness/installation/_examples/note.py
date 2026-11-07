@@ -9,11 +9,12 @@ from typing import Annotated
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tool_subject
-from harness.installation.destination import SourceFile, data_field, edits, language_adapter
+from harness.installation.destination import SourceFile, data_field, edits, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 
 
-@language_adapter(language="typescript", identity="name")
+@identity("name")
+@language_adapter(language="typescript")
 @agent_toolset
 class Note:
     """Hold one note: a title, its text, and whether it is pinned."""

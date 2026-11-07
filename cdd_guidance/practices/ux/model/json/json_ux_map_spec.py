@@ -1,52 +1,52 @@
-"""BDD spec for JsonUxMap - screen and transition round-trip."""
+"""BDD spec for JsonUxMap - the whole map round-trips through JSON."""
 
+import json
 import sys
 from pathlib import Path
 
-from expects import equal, expect
-from mamba import before, description, it
+from expects import be, equal, expect, raise_error
+from mamba import before, context, description, it
 
 _REPO = Path(__file__).resolve().parents[5]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
-from cdd_guidance.practices.ux.model.nodes import Region, Screen, Transition
-from cdd_guidance.practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.ux_map import ScreenNotOnMap, UxMap
+from cdd_guidance.practices.ux.model.ux_map_spec_fixture import OrderingMap, outline
 
 
-with description("JsonUxMap"):
+with description("a UX map written as JSON"):
     with before.each:
-        self.source = UxMap.create(name="demo")
-        self.source.scope = "Place New Order"
-        screen = Screen("Catalog", 0, "catalog")
-        screen.apply_layout("stack")
-        screen.append_region(Region("rows", 0, "rows"))
-        screen.attach_domain_term("Product")
-        self.source.append_screen(screen)
-        self.source.append_transition(
-            Transition(
-                "opens cart",
-                0,
-                from_screen="Catalog",
-                to_screen="Cart",
-                trigger="opens cart",
-                nav_type="action",
-            )
-        )
+        self.source = OrderingMap().build(UxMap.create())
         self.rendered = JsonUxMap.create().render(self.source)
-        self.parsed = JsonUxMap.create().parse(self.rendered)
 
-    with it("should round-trip scope and screen names"):
-        expect(self.parsed.scope).to(equal("Place New Order"))
-        expect([s.name for s in self.parsed.screens]).to(equal(["Catalog"]))
+    with context("that is read back"):
+        with before.each:
+            self.parsed = JsonUxMap.create().parse(self.rendered)
 
-    with it("should round-trip regions and domain terms"):
-        screen = self.parsed.find_screen("Catalog")
-        expect(screen.layout).to(equal("stack"))
-        expect(screen.domain_terms).to(equal(["Product"]))
-        expect([r.slot for r in screen.regions]).to(equal(["rows"]))
+        with it("should read back the same map it wrote"):
+            expect(outline(self.parsed)).to(equal(outline(self.source)))
 
-    with it("should round-trip transitions"):
-        expect(len(self.parsed.transitions)).to(equal(1))
-        expect(self.parsed.transitions[0].to_screen).to(equal("Cart"))
+        with it("should link each transition to the screens on the read map"):
+            expect(self.parsed.transitions[0].to_screen).to(be(self.parsed.find_screen("Cart")))
+
+        with it("should link a tab to the screen whose chrome it shares"):
+            expect(self.parsed.find_screen("Cart - Saved").chrome_of).to(be(self.parsed.find_screen("Cart")))
+
+        with it("should link each interaction to its destination screen"):
+            browse = self.parsed.find_screen("Catalog").regions[0].controls[0]
+            expect(browse.interactions[0].destination).to(be(self.parsed.find_screen("Cart")))
+
+        with it("should keep every node on the read map's graph"):
+            control = self.parsed.find_screen("Catalog").regions[0].controls[0]
+            expect(control.interactions[0].graph).to(be(self.parsed.graph))
+
+    with context("that names a screen the map does not have"):
+        with before.each:
+            data = json.loads(self.rendered)
+            data["transitions"][0]["to_screen"] = "Checkout"
+            self.broken = json.dumps(data)
+
+        with it("should refuse it as a screen not on the map"):
+            expect(lambda: JsonUxMap.create().parse(self.broken)).to(raise_error(ScreenNotOnMap))

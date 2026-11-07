@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-from partition.segment import SegmentCompletenessConfig
+from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, SegmentCompletenessConfig
 
 _PARTITION_CONFIG = re.compile(
     r"<!--\s*partition-config\s*\n(.*?)-->",
@@ -61,18 +61,6 @@ class PartitionIndex:
     def completeness(self) -> SegmentCompletenessConfig:
         return self._completeness
 
-    @property
-    def non_entry_headers(self) -> frozenset[str]:
-        return self._completeness.non_entry_headers
-
-    @property
-    def short_body_pattern(self) -> re.Pattern[str] | None:
-        return self._completeness.short_body_pattern
-
-    @property
-    def min_body_chars(self) -> int:
-        return self._completeness.min_body_chars
-
     @classmethod
     def _completeness_from_text(cls, text: str) -> SegmentCompletenessConfig:
         raw = cls._parse_config(text)
@@ -110,8 +98,8 @@ class PartitionIndex:
 
     @staticmethod
     def _min_body_chars(raw: dict[str, Any]) -> int:
-        chars_raw = raw.get("min-body-chars", 120)
+        chars_raw = raw.get("min-body-chars", MIN_ENTRY_BODY_CHARS)
         try:
             return int(chars_raw)
         except (TypeError, ValueError):
-            return 120
+            return MIN_ENTRY_BODY_CHARS

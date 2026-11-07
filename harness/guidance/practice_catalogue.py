@@ -9,13 +9,23 @@ if TYPE_CHECKING:
     from harness.guidance.guidance import PracticeGuidance
 
 
+class UnknownPractice(KeyError):
+    """A practice key the catalogue does not hold, such as a misspelt ``clean-engineering`` for ``clean_engineering``."""
+
+    def __init__(self, key: str, keys: tuple[str, ...]) -> None:
+        super().__init__(f"no practice {key!r}; the practices are {', '.join(keys)}")
+        self.key = key
+
+
 class PracticeCatalogue:
     """Every practice CDD ships, in the order the approach walks them: Stories, DDD, UX, Clean Engineering, BDD.
 
     Callers that only need the practice keys read ``keys()``, which imports no practice code, so the graph and schema
     modules the practices themselves import can use it. Callers that need a practice's fidelities, rules, folder, or
-    schema read the shared instance from ``practices()`` or ``practice(key)``; a caller that changes a practice's
-    current fidelity or format makes its own with ``create(key)``, so it does not change what other callers see.
+    schema read the catalogue's own instance from ``practices()`` or ``practice(key)``; a caller that changes a
+    practice's current fidelity or format makes its own with ``create(key)``, so it does not change what other callers
+    see. The catalogue keeps its instances because a practice's fidelities and rules are read from its markdown, which
+    does not change while the process runs, and every hook and tool call reads them; nothing that reads one sets it.
     """
 
     _REFS = {
@@ -57,7 +67,7 @@ class PracticeCatalogue:
     def practice_class(cls, key: str) -> type[PracticeGuidance]:
         ref = cls._REFS.get(key)
         if ref is None:
-            raise KeyError(f"no practice {key!r}; the practices are {', '.join(cls._REFS)}")
+            raise UnknownPractice(key, cls.keys())
         module, name = ref.split(":")
         return getattr(importlib.import_module(module), name)
 
@@ -76,7 +86,24 @@ class PracticeCatalogue:
         return None
 
     @classmethod
-    def key_of(cls, guidance: PracticeGuidance) -> str | None:
-        """The catalogue key of ``guidance``; none for guidance that is not one of the practices, such as a pattern."""
-        key = getattr(guidance, "key", None)
-        return key if key in cls._REFS else None
+    def toolset_ref(cls, slug: str) -> str | dict[str, str] | None:
+        """The toolset ref a guidance action lists for slug: the practice's ``module:Class`` for a practice's slug, such
+        as ``stories``; that ref with the fidelity's name for a fidelity's slug, such as ``stories-story-map``, or for a
+        fidelity's bare name, such as ``story_map`` or ``story-map``. A bare name two practices share, such as
+        ``model``, is the first practice's in catalogue order. None when no practice goes by slug."""
+        for key in cls._REFS:
+            practice = cls.practice(key)
+            if practice.slug == slug:
+                return cls._REFS[key]
+            fidelity = next((fidelity for fidelity in practice.fidelities if fidelity.slug == slug), None)
+            if fidelity is not None:
+                return {"toolset": cls._REFS[key], "fidelity": fidelity.name}
+        return cls._bare_fidelity_ref(slug)
+
+    @classmethod
+    def _bare_fidelity_ref(cls, name: str) -> dict[str, str] | None:
+        for key in cls._REFS:
+            for fidelity in cls.practice(key).fidelities:
+                if name in (fidelity.name, fidelity.name.replace("_", "-")):
+                    return {"toolset": cls._REFS[key], "fidelity": fidelity.name}
+        return None

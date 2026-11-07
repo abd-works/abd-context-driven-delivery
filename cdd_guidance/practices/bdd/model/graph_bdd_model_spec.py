@@ -72,11 +72,11 @@ with description("a saved graph of a spec and the code it tests"):
 
     with context("with a Clean Engineering model beside the code"):
         with it("should give the code's operation the model's interactions"):
-            add = next(node for node in self.clean.by_id.values() if node.type == "Operation" and node.name == "add")
-            expect(add.get_fact("interactions")).to(equal(["Ledger.record"]))
+            members = json.loads(self.saved)["practices"]["clean_engineering"]["root_facts"]["model_members"]
+            expect(members["Cart.add"]["interactions"]).to(equal(["Ledger.record"]))
 
         with it("should keep every member the model describes, the ones with no code too"):
-            members = json.loads(json.loads(self.saved)["practices"]["clean_engineering"]["root_facts"])["model_members"]
+            members = json.loads(self.saved)["practices"]["clean_engineering"]["root_facts"]["model_members"]
             expect(members["Ledger.record"]["model_returns"]).to(equal("str"))
 
     with context("that is rendered as a bdd realization"):

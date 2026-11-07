@@ -1,66 +1,12 @@
-Build order: `practices` → `practices/clean_engineering` → `practices/bdd` → `practices/stories` → `practices/ux` → `practices/ddd` → `practices/agent_bdd`
+# cdd_guidance/practices
+*Practice* is a field of expertise used as a lens on the work — Stories, DDD, UX, Clean Engineering, BDD, and agent BDD — each a *PracticeGuidance* with its own `{practice}.md` (Overview, shared rules, and a section per fidelity with its rules), templates, examples, and formats. Each practice is its own module with its own card in its folder; this card covers what the practices share.
 
-# practices
+*Stage* is how far the work has gone — `discovery`, `specification`, or `implementation` — written on each fidelity as **Stage:**, so the fidelities of different practices line up: story map, bounded context, IA, modules, and behavior are all discovery. The stage names are the constants `DISCOVERY`, `SPECIFICATION`, and `IMPLEMENTATION` in `harness.guidance.stages`, the framework's vocabulary that the graph, the catalog, and the Session Board's *Stage* columns (space/kanban) all read.
 
-*Practices* are fields of expertise — Clean Engineering, BDD, Stories, UX, DDD, agent BDD — each a *PracticeGuidance* plus co-located markdown. Lifecycle generate / validate / document live on *actions*, not on the practice class.
+- **Purpose:** Name the stages every practice's fidelities line up on, so the board and the actions can move work through the same three stages whatever practice it uses.
+- **Seam (terms):** the stage names each fidelity's **Stage:** gives, from `harness.guidance.stages` — `DISCOVERY`, `SPECIFICATION`, `IMPLEMENTATION`
+- **Dependencies (one-way):** none
 
-### Stage
+## Constraint
 
-- A named deepen step written on a fidelity as **Stage:** — discovery, specification, or implementation — so modules / model / code line up across practices.
-
-- **Purpose:** Hold one *PracticeGuidance* per field so the same kits can generate and check work against that field’s words.
-- **Seam (terms):** PracticeGuidance, Stage
-- **Dependencies (one-way):** `harness/guidance`
-- **Constraint:** Do not put `/generate` on the practice. Pass the practice into the kit: `Generate().generate(guidance=[ce])`.
-- **Constraint:** A practice model follows `practices/stories/model/.context/practice-model.md`. The story model is the worked example. One walk on the base types. The path is one file or a folder of files; a channel only changes how the next node is read.
-
-# practices/clean_engineering
-
-Partition, type, and implement objects — modules, then model, then code — in the caller’s language.
-
-- **Purpose:** Partition, type, and implement objects — modules, then model, then code — in the caller’s language.
-- **Seam (terms):** CleanEngineering, `@clean-engineering-modules`, `@clean-engineering-model`, `@clean-engineering-code`
-- **Dependencies (one-way):** `harness/guidance`
-- **Constraint:** Each `# {path}` opens with language, then Purpose / Seam / Dependencies / Constraint bullets. Typed class dumps wait for model. A mistake in `module-context.md` is named here in the same turn.
-
-# practices/bdd
-
-Lock describe/it observations first, then fill tests red-green, then hand class code to Clean Engineering.
-
-- **Purpose:** Lock describe/it observations first, then fill tests red-green, then hand class code to Clean Engineering.
-- **Seam (terms):** Bdd
-- **Dependencies (one-way):** `harness/guidance`, `practices/clean_engineering`
-
-# practices/stories
-
-Map stakeholder behaviour as Epic → Story so later fidelities share one hierarchy.
-
-- **Purpose:** Map stakeholder behaviour as Epic → Story so later fidelities share one hierarchy.
-- **Seam (terms):** Stories
-- **Dependencies (one-way):** `harness/guidance`, `practices/clean_engineering`
-
-# practices/ux
-
-Decide screens, then greybox, then production UI, in domain words.
-
-- **Purpose:** Decide screens, then greybox, then production UI, in domain words.
-- **Seam (terms):** Ux
-- **Dependencies (one-way):** `harness/guidance`, `practices/stories`, `practices/clean_engineering`
-
-# practices/ddd
-
-Draw where language changes — bounded context, then building blocks, then tactics — and reuse Clean Engineering for the OO ladder.
-
-- **Purpose:** Draw where language changes — bounded context, then building blocks, then tactics — and reuse Clean Engineering for the OO ladder.
-- **Seam (terms):** Ddd
-- **Dependencies (one-way):** `harness/guidance`, `practices/clean_engineering`
-- **Constraint:** Do not restate Clean Engineering class analysis in DDD artifacts. Use the fidelity’s Clean Engineering companion.
-
-# practices/agent_bdd
-
-Drive a real agent through `agent(...)` and assert on the parsed run — not a mocked transcript.
-
-- **Purpose:** Drive a real agent through `agent(...)` and assert on the parsed run — not a mocked transcript.
-- **Seam (terms):** AgentBdd, agent, instruct, instruct_use_tool, ai_judge
-- **Dependencies (one-way):** `practices/bdd`
-- **Constraint:** Specs call the harness only inside `with agent(...)`. Do not import CLI backends from specs.
+A practice's fidelity names its stage with one of these three names; do not add stage names in a practice. Run lifecycle steps on a practice through the actions — `generate.generate(guidance=["stories-story-map"])` — rather than adding them as methods on the practice class.

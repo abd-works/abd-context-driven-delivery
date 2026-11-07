@@ -1,76 +1,16 @@
-## Language
-
-*AgentToolSet* is the root a practice decorates with `@agent_toolset`. It holds *AgentTool* members: *AgentOperation* (`@agent_tool`) and *AgentInstructions* (`@agent_instructions`).
-
-### AgentToolSet
-
-- One decorated class — `@agent_toolset` merges *AgentToolSet* onto it; do not subclass *AgentToolSet*.
-- Class docstring is toolset **description**; **name** is the slugified class name.
-- **Invariant:** Each callable member has exactly one mark — `@agent_tool` or `@agent_instructions`.
-
-### AgentTool
-
-- Named callable on a parent *AgentToolSet*.
-- Introspection: **kind**, **description**, **parameters**, **response**.
-- **mcp_name** is the one name MCP publishes it under and the session log records it by: `{toolset slug}.{name}`, or a practice's slug alone for its own instructions. **invoke_line** is the `Use MCP tool:` line a skill or command ends with.
-- **input_schema** is the JSON Schema of its parameters, read from their type hints by *ParameterSchema*; the MCP tool list and the TypeScript language adapter both read it.
-- **invoke** runs one call: log it in the session, turn text sent for a `Path` parameter into a `Path`, call the callable. The MCP server calls this and nothing else.
-- Install marks live on the callable; **install_to** and **destinations** read *InstallDestination*.
-
-### AgentOperation
-
-- `@agent_tool` — body runs as Python on **invoke**. A guidance action's operation starts a fresh session line before it runs.
-- **kind** is `tool`.
-
-### AgentInstructions
-
-- `@agent_instructions` — **expand** walks the body; unwrapped code runs during expand; `tools(...)` defers; `instructions(...)` expands nested *AgentInstructions*.
-- **tools** (read-only) names deferred `@agent_tool` callables, including those merged from nested `instructions(...)`.
-- First parameter is **self** (the toolset).
-- **invoke** answers with the expanded instructions, which is how MCP answers a call to a prompt.
-- **Invariant:** Nested `instructions(...)` cycles are rejected.
-
-### ExpansionMode
-
-- On the callee *AgentToolSet* (**mode**): `instructions` expands nested actions inline; `tool` defers them onto the tools list.
-
-### ExpansionResult
-
-- Output of **expand**: **instructions** prose, **tools** names, **result**.
-
-### AgentToolValidationError
-
-- Raised when decorate-time **validate** rejects an `@agent_instructions` body.
-
-### InstallDestination
-
-- Where a member may enroll: `mcp`, `hook`, `skill`, `command`, `rules`.
-
-### ToolSetCollection
-
-- Named child *AgentToolSet* instances on **nested_toolsets**, iterated in entry order.
-
-## Modules
-
-Build order: `agent_tools`
-
----
-
 # harness/agent_tools
-- **Purpose:** Register, introspect, validate, and expand one decorated *AgentToolSet* and its *AgentTool* members. *agent_tools_probe* pings and invokes workspace MCP tools on the live host for `/agent-tools-diagnostics`.
-- **Seam (terms):** AgentToolSet, AgentTool, AgentOperation, AgentInstructions, ExpansionMode, ExpansionResult, AgentToolValidationError, InstallDestination, ToolSetCollection, ParameterSchema, Name
-- **Dependencies (one-way):** *(none)*
+*AgentToolSet* turns an ordinary Python class into a set of operations an agent can list, run as Python, or follow as written **instructions**, without the author writing MCP, skill, or hook files. The author types `@agent_toolset` on the class; the class docstring is the description the agent reads, and the class name, in kebab case, is the toolset's one name everywhere it is published.
+*AgentTool* is one member of that set that an agent can see and call. *AgentOperation* is a member annotated `@agent_tool`: the agent runs its Python now. *AgentInstructions* is a member annotated `@agent_instructions`: the method body is the recipe the agent follows, and inside it `tools(...)` names the operations the agent may call while following it and `instructions(...)` includes another recipe.
+`@tool_subject` annotates the class method that finds the object a call acts on, so a domain class whose constructor takes collaborators can still publish its instance operations as tools. `@noSessionLog` keeps a frequently repeated read out of the session log.
+*ToolSetCollection* lets one toolset publish named child toolsets in the order they were added, so nested toolsets stay nested. `@subAgent` puts the hand-off to a background sub-agent at the start of a member's description; the `sub-agent.sub_agent` operation itself is tools/sub_agent.
+*ParameterSchema* is the JSON Schema of a callable's parameters read from its type hints, so what MCP publishes and what it passes on agree. A toolset's `parameter_notes` say what an agent reads about a parameter after the description of every tool that takes it, as a guidance action explains `guidance`.
+*ToolCall* is one call of a tool: the arguments its caller sent, the project folder the calling chat names, and *ChatPointer*, the chat it came from (its id, its transcript, and the transcript lines the call covers), which ends every session.log line the call writes. `ToolCall.sent(arguments, project, tool=..., mcp_host=...)` takes the chat out of the arguments a chat sent, so the tool gets only its own, and the call carries the tool's name and the MCP host answering it, so a tool that inspects the host (the diagnostics) reaches it from its call. A call's session (`call.session`, or `call.session_named(session_file)` for the session a board command names) is opened through a *SessionOpener*, the seam *ToolCall* declares: the module that keeps sessions (space/session) registers its opener with `ToolCall.open_sessions_with` when it is imported, so the framework opens a call's session without importing space. A call that names no project, or runs where no opener is registered, works in no session.
+*AgentTool* knows which channels it is published to by asking the *Destination* annotations in harness/annotations, so this module never imports the publishers (harness/installation, harness/mcp, harness/hooks); they depend on it. A member's description is read from markdown beside the toolset through harness/markdown. *ToolSubjectLoader* is how a publisher reads the `@tool_subject` loader of a domain class, so the arguments that find the object come before the operation's own.
 
-## Public API
-
-- `@agent_toolset`, `@agent_tool`, `@agent_instructions`
-- `tools(...)`, `instructions(...)` — wrappers inside `@agent_instructions` bodies
-- `AgentToolSet` — `name`, `description`, `operations`, `instructions`, `tools`, `tools_for`, `mode`, `nested_toolsets`, `instantiate`, `validate`
-- `AgentTool` — `kind`, `description`, `parameters`, `response`, `mcp_name`, `invoke_line`, `input_schema`, `invoke`
-- `ParameterSchema(callable)` — `json_schema` and `coerced(arguments)`, the one reader of a tool's parameter type hints
-- `Name(text)` — `snake`, `kebab`, `camel`, `words`, `spellings`, and `title_slug`: the one place a class, event, field, or fidelity name changes case, so a toolset's name, its slug, and its published tools agree
-- `@agent_instructions` — the member’s **instructions**; `tools(...)` / `instructions(...)` in the body
+- **Purpose:** Let an author publish an ordinary class as operations and recipes an agent can list and use, and let every publisher (MCP, skills, hooks, the catalog) read those members from one place.
+- **Seam (terms):** AgentToolSet, AgentTool, AgentOperation, AgentInstructions, ToolSetCollection, ParameterSchema, InstallDestination, ToolCall, SessionOpener, SessionsNotLoaded, ChatPointer, ToolSubjectLoader; the annotations `@agent_toolset`, `@agent_tool`, `@agent_instructions`, `@tool_subject`, `@noSessionLog`, `@subAgent`; `tools(...)`, `instructions(...)`; `parameter_notes`
+- **Dependencies (one-way):** harness/name, harness/annotations, harness/markdown. space/session registers its *SessionOpener* with *ToolCall*; this module imports nothing above the framework.
 
 ## Constraint
 
-Callers must decorate with `@agent_toolset` rather than subclass *AgentToolSet*. A member must carry exactly one of `@agent_tool` or `@agent_instructions`. `@agent_instructions` is the **instructions** the agent follows, not a Python call; wrap deferred work in `tools(...)` and nested recipes in `instructions(...)`. Wire-out (MCP, hooks, skills) lives in `installation` — this module does not enroll destinations.
+Put `@agent_toolset` on the class rather than subclassing *AgentToolSet*, so the class keeps its own base and constructor. Give each published member exactly one of `@agent_tool` (run the Python) or `@agent_instructions` (follow the recipe), because the agent has to know which of the two it is calling. Inside an `@agent_instructions` body, name callable operations only through `tools(...)` and nested recipes only through `instructions(...)`; a recipe that includes itself is rejected when the class is decorated. Where a member is published (MCP, skill, command, rules, hook) is decided by the annotations harness/installation, harness/mcp, and harness/hooks define on *Destination*, not by this module; a publisher asks the *AgentTool* whether it is published on its channel, and nothing here imports a publisher's annotation.

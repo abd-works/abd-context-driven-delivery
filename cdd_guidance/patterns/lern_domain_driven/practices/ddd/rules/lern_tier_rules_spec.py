@@ -17,7 +17,7 @@ from cdd_guidance.patterns.lern_domain_driven.practices.ddd.rules.lern_tier_rule
 from cdd_guidance.patterns.lern_domain_driven.practices.stories.rules.shared_story_rules import (
     DomainOperationsInlineInSteps,
     NoExpectInGiven,
-    OutlineRowsLoopOverExamples,
+    OutlineEntriesLoopOverExamples,
     TierBoundRepositoryAccessor,
 )
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import (
@@ -28,10 +28,10 @@ from cdd_guidance.patterns.lern_domain_driven.tier_facts import (
     test_setup_text,
     web_path_literals,
 )
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import prototype_swap_in_text
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.rules.no_prototype_swapping import NoPrototypeSwapping
 from harness.graph.graph import Node, PracticeGraph, Source
-from harness.graph.practice_rules_registry import checks_for_practice
+from harness.graph.graph_practice import GraphPractices
 
 
 def tier_node(name, node_type, facts, file="src/a/a-node.ts"):
@@ -56,10 +56,10 @@ def story_file(text, node_type="StoryShared"):
 
 with description("the lern_domain_driven pattern rules"):
     with it("should load into the ddd and stories practices only when the overlay is active"):
-        expect(list(checks_for_practice("ddd", ("lern_domain_driven",)))).to(contain("node-repository-parses-on-read"))
-        expect(list(checks_for_practice("stories", ("lern_domain_driven",)))).to(contain("no-expect-in-given"))
-        expect(list(checks_for_practice("stories", ("lern_domain_driven",)))).to(contain("domain-operations-inline-in-steps"))
-        expect("node-repository-parses-on-read" in checks_for_practice("ddd")).to(equal(False))
+        expect(list(GraphPractices.named("ddd").checks(("lern_domain_driven",)))).to(contain("node-repository-parses-on-read"))
+        expect(list(GraphPractices.named("stories").checks(("lern_domain_driven",)))).to(contain("no-expect-in-given"))
+        expect(list(GraphPractices.named("stories").checks(("lern_domain_driven",)))).to(contain("domain-operations-inline-in-steps"))
+        expect("node-repository-parses-on-read" in GraphPractices.named("ddd").checks()).to(equal(False))
         expect(sorted(BY_SLUG)).to(have_len(5))
 
     with description("node-repository-parses-on-read"):
@@ -198,8 +198,8 @@ with description("the lern_domain_driven pattern rules"):
         with it("should flag an outline row written by hand and pass the examples loop"):
             faulty = "scenario('Address requirement is unmet: parish', ({ when }) => {});\n"
             repaired = "expectedUnmetAddressOutlines.forEach(({ field }) => {\n  scenario(`Address requirement is unmet: ${field}`, ({ when }) => {});\n});\n"
-            expect(OutlineRowsLoopOverExamples().check(story_file(faulty, "PlaywrightSpec"), None)).to(have_len(1))
-            expect(OutlineRowsLoopOverExamples().check(story_file(repaired, "PlaywrightSpec"), None)).to(equal([]))
+            expect(OutlineEntriesLoopOverExamples().check(story_file(faulty, "PlaywrightSpec"), None)).to(have_len(1))
+            expect(OutlineEntriesLoopOverExamples().check(story_file(repaired, "PlaywrightSpec"), None)).to(equal([]))
 
         with it("should leave a screen gesture helper alone"):
             gesture = (
@@ -211,7 +211,7 @@ with description("the lern_domain_driven pattern rules"):
 
     with description("no-prototype-swapping (Clean Engineering)"):
         with it("should flag a prototype swap and pass a factory"):
-            swapped = {"prototype_swap": prototype_swap_in_text("Object.setPrototypeOf(loaded, XNode.prototype);", 1)}
-            factory = {"prototype_swap": prototype_swap_in_text("return this.blank(id);", 1)}
+            swapped = {"prototype_swap": SourceText("Object.setPrototypeOf(loaded, XNode.prototype);").prototype_swap(1)}
+            factory = {"prototype_swap": SourceText("return this.blank(id);").prototype_swap(1)}
             expect(NoPrototypeSwapping().check(tier_node("XRepositoryNode", "OoadClass", swapped), None)).to(have_len(1))
             expect(NoPrototypeSwapping().check(tier_node("XRepositoryNode", "OoadClass", factory), None)).to(equal([]))

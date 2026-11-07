@@ -16,8 +16,8 @@ import shutil
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from space.work_state import DESIGN_CANVAS_FOLDER, WorkState
-
+# The folder a release keeps its canvas in, under the release's own folder (``.sessions/<release>/``).
+DESIGN_CANVAS_FOLDER = "design-canvas"
 _VERSION = re.compile(r"^version-(\d+)$")
 
 
@@ -26,7 +26,7 @@ class PublishedVersion(Exception):
 
 
 class CanvasVersions:
-    """The versions of the canvas kept under *root* (for example ``.sessions/<release>/design-canvas``)."""
+    """The versions of the canvas kept under *root* (for example ``.sessions/<session>/design-canvas``)."""
 
     record_name = "versions.json"
 
@@ -34,9 +34,10 @@ class CanvasVersions:
         self.root = Path(root)
 
     @classmethod
-    def from_release(cls, repo_root: str | Path, release: str = "") -> CanvasVersions:
-        """The canvas of *release* in the checkout at *repo_root*; the release being worked on when none is named."""
-        return cls(WorkState(repo_root).release_folder(release) / DESIGN_CANVAS_FOLDER)
+    def in_session_folder(cls, session_folder: str | Path) -> CanvasVersions:
+        """The canvas a session keeps in its folder, such as the open session's folder under
+        ``WorkState(repo).sessions_folder``."""
+        return cls(Path(session_folder) / DESIGN_CANVAS_FOLDER)
 
     @property
     def numbers(self) -> List[int]:
@@ -93,7 +94,8 @@ class CanvasVersions:
         return self.latest
 
     def title(self, number: int, name: str) -> str:
-        return f"{name} — version-{number}"
+        """The title the version is published under: the canvas's *name* and the version's folder."""
+        return f"{name} — {self.folder(number).name}"
 
     def links(self) -> Dict[str, str]:
         """Each published version's canvas link, by version folder name."""

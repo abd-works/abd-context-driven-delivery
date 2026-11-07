@@ -1,7 +1,7 @@
 ﻿import { expect, test } from 'claude-code/testing'
 
 // Organised by story. A test whose name starts `should` has the same signature as a Mamba example in
-// harness/health/server_health_spec.py; the others cover what a person sees and presses on the band.
+// harness/diagnostics/server_health_spec.py; the others cover what a person sees and presses on the band.
 const BAND = {
   plugin: 'cdd-board',
   component: 'AbovePrompt',

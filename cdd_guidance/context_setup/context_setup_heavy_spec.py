@@ -32,17 +32,11 @@ from mamba import after, before, context, description, it
 
 from inspect import signature
 
-from cdd_guidance.context_setup.context_setup import (
-    CaptureResult,
-    ContextSetup,
-    ConversionResult,
-    PageCapture,
-    ScoutResult,
-    ScreenResult,
-    SmokeTestResult,
-    StructureNote,
-)
+from cdd_guidance.context_setup.context_setup import ContextSetup, ConversionResult, StructureNote
+from cdd_guidance.context_setup.live_app_capture import CaptureResult, PageCapture, ScoutResult, ScreenResult, SmokeTestResult
 from harness.agent_tools.agent_tools import AgentInstructions
+from harness.agent_tools.tool_call import ToolCall
+from space.session.throwaway_project import ThrowawayProject
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -90,33 +84,51 @@ class _AppHandler(BaseHTTPRequestHandler):
 
 
 class SpecFixture:
+    """Opens the folders, servers, and projects an example works with, and closes every one of them in ``release``. An
+    ``after.each`` that closed the attributes its ``before.each`` set would raise AttributeError whenever that setup
+    failed part way, and mamba would report that error in place of the one that broke the setup."""
+
     def __init__(self) -> None:
         self._root = Path()
         self._name = ""
         self._content = ""
+        self._folders: list[tempfile.TemporaryDirectory] = []
+        self._servers: list[HTTPServer] = []
+        self.session_root = Path()
 
-    def context_setup(self) -> ContextSetup:
-        return ContextSetup.from_defaults()
+    def temporary_folder(self) -> Path:
+        folder = tempfile.TemporaryDirectory()
+        self._folders.append(folder)
+        return Path(folder.name)
 
-    def start_test_server(self) -> tuple[HTTPServer, int]:
+    def start_test_server(self) -> int:
+        """Serve the test app on a free port until ``release``; answer the port."""
         server = HTTPServer(("localhost", 0), _AppHandler)
-        port = server.server_address[1]
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
+        self._servers.append(server)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
         time.sleep(0.1)
-        return server, port
+        return server.server_address[1]
 
-    def expanded_capture_from_documents(self) -> str:
-        cs = self.context_setup()
-        func = getattr(type(cs), "capture_from_documents")
-        body = AgentInstructions.for_callable(func, cs)
-        return "\n".join(body.prompt)
+    def release(self) -> None:
+        while self._servers:
+            self._servers.pop().shutdown()
+        while self._folders:
+            self._folders.pop().cleanup()
+        ThrowawayProject.close_all()
+
+    def context_setup_for_a_call(self) -> ContextSetup:
+        """A ContextSetup made for a call on a throwaway project, as the cdd server makes one for each call, so the
+        partition it hands documents to works in the session open in that project."""
+        call = ToolCall(project=ThrowawayProject().root)
+        self.session_root = call.session.root
+        return ContextSetup().for_call(call)
+
+    def instructions_for(self, cs: ContextSetup, name: str) -> AgentInstructions:
+        return AgentInstructions.for_callable(getattr(type(cs), name), cs)
 
     def expanded_capture_from_live_app(self) -> str:
-        cs = self.context_setup()
-        func = getattr(type(cs), "capture_from_live_app")
-        body = AgentInstructions.for_callable(func, cs)
-        return "\n".join(body.prompt)
+        cs = ContextSetup()
+        return "\n".join(self.instructions_for(cs, "capture_from_live_app").prompt)
 
     def write(self) -> Path:
         path = self._root / self._name
@@ -132,38 +144,21 @@ fixture = SpecFixture()
 with description("a ContextSetup"):
     with context("that is created"):
         with it("should be a ContextSetup instance"):
-            expect(ContextSetup.from_defaults()).to(be_a(ContextSetup))
-
-    with context("that chooses where capture artifacts are written"):
-        with it("should write under repo_path when capture_repo is blank"):
-            app = Path(tempfile.mkdtemp())
-            cs = ContextSetup.from_defaults()
-            cs.repo_path = str(app)
-            cs.capture_repo = ""
-            expect(cs._write_root().resolve()).to(equal(app.resolve()))
-
-        with it("should write under capture_repo when it is given"):
-            app = Path(tempfile.mkdtemp())
-            capture = Path(tempfile.mkdtemp())
-            cs = ContextSetup.from_defaults()
-            cs.repo_path = str(app)
-            cs.capture_repo = str(capture)
-            expect(cs._write_root().resolve()).to(equal(capture.resolve()))
+            expect(ContextSetup()).to(be_a(ContextSetup))
 
     # ── Tool: Convert To Markdown ─────────────────────────────────────────────
 
     with context("whose convert tool is given a folder with a plain markdown file"):
         with before.each:
-            self._tmp = tempfile.TemporaryDirectory()
-            self._root = Path(self._tmp.name)
+            self._root = fixture.temporary_folder()
             fixture._root = self._root
             fixture._name = "notes.md"
             fixture._content = "# Title\n\nSome body text with several words.\n"
             fixture.write()
-            self._result = ContextSetup.from_defaults().convert(str(self._root))
+            self._result = ContextSetup().convert(str(self._root))
 
         with after.each:
-            self._tmp.cleanup()
+            fixture.release()
 
         with it("should return a ConversionResult"):
             expect(self._result).to(be_a(ConversionResult))
@@ -196,16 +191,15 @@ with description("a ContextSetup"):
 
     with context("whose convert tool is given a folder with multiple heading levels"):
         with before.each:
-            self._tmp = tempfile.TemporaryDirectory()
-            self._root = Path(self._tmp.name)
+            self._root = fixture.temporary_folder()
             fixture._root = self._root
             fixture._name = "deep.md"
             fixture._content = "# H1\n\n## H2\n\n### H3\n\nsome content words here\n"
             fixture.write()
-            self._result = ContextSetup.from_defaults().convert(str(self._root))
+            self._result = ContextSetup().convert(str(self._root))
 
         with after.each:
-            self._tmp.cleanup()
+            fixture.release()
 
         with it("should report heading_depth as 3"):
             note = self._result.structure_notes[0]
@@ -217,16 +211,15 @@ with description("a ContextSetup"):
 
     with context("whose convert tool is given a folder with no headings"):
         with before.each:
-            self._tmp = tempfile.TemporaryDirectory()
-            self._root = Path(self._tmp.name)
+            self._root = fixture.temporary_folder()
             fixture._root = self._root
             fixture._name = "flat.md"
             fixture._content = "Just plain prose with no headings at all.\n"
             fixture.write()
-            self._result = ContextSetup.from_defaults().convert(str(self._root))
+            self._result = ContextSetup().convert(str(self._root))
 
         with after.each:
-            self._tmp.cleanup()
+            fixture.release()
 
         with it("should report heading_depth as 0 (flat document)"):
             note = self._result.structure_notes[0]
@@ -238,8 +231,7 @@ with description("a ContextSetup"):
 
     with context("whose convert tool is given a folder containing an unsupported file type"):
         with before.each:
-            self._tmp = tempfile.TemporaryDirectory()
-            self._root = Path(self._tmp.name)
+            self._root = fixture.temporary_folder()
             fixture._root = self._root
             fixture._name = "ignored.csv"
             fixture._content = "col1,col2\nval1,val2\n"
@@ -247,10 +239,10 @@ with description("a ContextSetup"):
             fixture._name = "kept.md"
             fixture._content = "# Kept\n\nContent.\n"
             fixture.write()
-            self._result = ContextSetup.from_defaults().convert(str(self._root))
+            self._result = ContextSetup().convert(str(self._root))
 
         with after.each:
-            self._tmp.cleanup()
+            fixture.release()
 
         with it("should skip the unsupported file"):
             expect(self._result.markdown_files).to(have_len(1))
@@ -260,11 +252,10 @@ with description("a ContextSetup"):
 
     with context("whose convert tool is given an empty folder"):
         with before.each:
-            self._tmp = tempfile.TemporaryDirectory()
-            self._result = ContextSetup.from_defaults().convert(self._tmp.name)
+            self._result = ContextSetup().convert(str(fixture.temporary_folder()))
 
         with after.each:
-            self._tmp.cleanup()
+            fixture.release()
 
         with it("should return no markdown files"):
             expect(self._result.markdown_files).to(be_empty)
@@ -274,8 +265,7 @@ with description("a ContextSetup"):
 
     with context("whose convert tool is given multiple supported files"):
         with before.each:
-            self._tmp = tempfile.TemporaryDirectory()
-            self._root = Path(self._tmp.name)
+            self._root = fixture.temporary_folder()
             fixture._root = self._root
             fixture._name = "alpha.md"
             fixture._content = "# Alpha\n\nAlpha content.\n"
@@ -283,10 +273,10 @@ with description("a ContextSetup"):
             fixture._name = "beta.md"
             fixture._content = "# Beta\n\nBeta content.\n"
             fixture.write()
-            self._result = ContextSetup.from_defaults().convert(str(self._root))
+            self._result = ContextSetup().convert(str(self._root))
 
         with after.each:
-            self._tmp.cleanup()
+            fixture.release()
 
         with it("should produce one entry per file"):
             expect(self._result.markdown_files).to(have_len(2))
@@ -296,47 +286,43 @@ with description("a ContextSetup"):
 
     # ── AgentTool: capture_from_documents (expansion tests) ─────────────────────
 
-    with context("whose capture_from_documents action is expanded"):
-        with it("should list convert as a tool to call"):
-            prose = fixture.expanded_capture_from_documents()
-            expect("convert" in prose).to(be_true)
+    with context("that is made for a call on a project"):
+        with before.each:
+            self.instructions = fixture.instructions_for(fixture.context_setup_for_a_call(), "capture_from_documents")
+            self.prose = "\n".join(self.instructions.prompt)
 
-        with it("should instruct the AI to ask the user to choose indexers"):
-            prose = fixture.expanded_capture_from_documents()
-            expect("AskQuestion" in prose or "indexer" in prose.lower()).to(be_true)
+        with after.each:
+            fixture.release()
 
-        with it("should mention partition delegation to context tools"):
-            prose = fixture.expanded_capture_from_documents()
-            expect("partition" in prose).to(be_true)
+        with context("whose capture_from_documents action is expanded"):
+            with it("should list convert as a tool to call"):
+                expect("convert" in self.prose).to(be_true)
 
-        with it("should mention embed as the final step"):
-            prose = fixture.expanded_capture_from_documents()
-            expect("embed" in prose).to(be_true)
+            with it("should instruct the AI to ask the user to choose indexers"):
+                expect("AskQuestion" in self.prose or "indexer" in self.prose.lower()).to(be_true)
 
-    with context("whose capture_from_documents action tools are resolved"):
-        with it("should include convert"):
-            from harness.agent_tools.agent_tools import AgentInstructions
-            cs = ContextSetup.from_defaults()
-            func = getattr(type(cs), "capture_from_documents")
-            body = AgentInstructions.for_callable(func, cs)
-            expect("convert" in body.tools).to(be_true)
+            with it("should mention partition delegation to context tools"):
+                expect("partition" in self.prose).to(be_true)
 
-        with it("should expand the partition action for the selected context tools"):
-            # Practices no longer carry partition; one Partition action takes them as guidance.
-            from harness.agent_tools.agent_tools import AgentInstructions
-            cs = ContextSetup.from_defaults()
-            func = getattr(type(cs), "capture_from_documents")
-            body = AgentInstructions.for_callable(func, cs)
-            prompt = "\n".join(body.prompt)
-            expect(prompt).to(contain("Split the given context into an index plus verbatim segments"))
-            expect(prompt).to(contain("guidance set to the selected practices"))
+            with it("should expand the partition action for the selected context tools"):
+                # Practices no longer carry partition; one Partition action takes them as guidance.
+                expect(self.prose).to(contain("Split the given context into an index plus verbatim segments"))
 
-        with it("should include embed from ContextIndex"):
-            from harness.agent_tools.agent_tools import AgentInstructions
-            cs = ContextSetup.from_defaults()
-            func = getattr(type(cs), "capture_from_documents")
-            body = AgentInstructions.for_callable(func, cs)
-            expect("embed" in body.tools).to(be_true)
+            with it("should tell the AI to set guidance to the selected practices"):
+                expect(self.prose).to(contain("guidance set to the selected practices"))
+
+            with it("should have the partition write under the session open in that project"):
+                expect(self.prose).to(contain(f"docs under {fixture.session_root.as_posix()}/.context/"))
+
+            with it("should mention embed as the final step"):
+                expect("embed" in self.prose).to(be_true)
+
+        with context("whose capture_from_documents action tools are resolved"):
+            with it("should include convert"):
+                expect("convert" in self.instructions.tools).to(be_true)
+
+            with it("should include embed from ContextIndex"):
+                expect("embed" in self.instructions.tools).to(be_true)
 
     # ── AgentTool: capture_from_live_app (expansion tests) ──────────────────────
 
@@ -379,10 +365,9 @@ with description("a ContextSetup"):
                 be_true
             )
 
-        with it("should tell the AI to set capture_repo then call smoke_test with repo_path and surface"):
+        with it("should tell the AI to pass capture_repo to smoke_test with repo_path and surface"):
             prose = fixture.expanded_capture_from_live_app()
-            expect("capture_repo field" in prose).to(be_true)
-            expect("smoke_test(repo_path=repo_path, surface=surface)" in prose).to(be_true)
+            expect("smoke_test(repo_path=repo_path, surface=surface, capture_repo=capture_repo)" in prose).to(be_true)
 
         with it("should list smoke_test as a tool to call"):
             prose = fixture.expanded_capture_from_live_app()
@@ -406,25 +391,25 @@ with description("a ContextSetup"):
 
     with context("whose capture_from_live_app action tools are resolved"):
         with it("should include smoke_test"):
-            cs = ContextSetup.from_defaults()
+            cs = ContextSetup()
             func = getattr(type(cs), "capture_from_live_app")
             body = AgentInstructions.for_callable(func, cs)
             expect("smoke_test" in body.tools).to(be_true)
 
         with it("should include scout_app"):
-            cs = ContextSetup.from_defaults()
+            cs = ContextSetup()
             func = getattr(type(cs), "capture_from_live_app")
             body = AgentInstructions.for_callable(func, cs)
             expect("scout_app" in body.tools).to(be_true)
 
         with it("should include complete_capture"):
-            cs = ContextSetup.from_defaults()
+            cs = ContextSetup()
             func = getattr(type(cs), "capture_from_live_app")
             body = AgentInstructions.for_callable(func, cs)
             expect("complete_capture" in body.tools).to(be_true)
 
         with it("should include embed from ContextIndex"):
-            cs = ContextSetup.from_defaults()
+            cs = ContextSetup()
             func = getattr(type(cs), "capture_from_live_app")
             body = AgentInstructions.for_callable(func, cs)
             expect("embed" in body.tools).to(be_true)
@@ -433,20 +418,18 @@ with description("a ContextSetup"):
 
     with context("whose smoke_test tool is given a running web server"):
         with before.each:
-            self._tmp = tempfile.TemporaryDirectory()
-            self._server, port = fixture.start_test_server()
+            self._folder = str(fixture.temporary_folder())
+            port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
-            cs = ContextSetup.from_defaults()
-            cs.base_url = self._base_url
-            cs.entry_paths = ["/"]
-            self._result = cs.smoke_test(
-                repo_path=self._tmp.name,
+            self._result = ContextSetup().smoke_test(
+                repo_path=self._folder,
                 surface="web",
+                base_url=self._base_url,
+                entry_paths=["/"],
             )
 
         with after.each:
-            self._server.shutdown()
-            self._tmp.cleanup()
+            fixture.release()
 
         with it("should return a SmokeTestResult"):
             expect(self._result).to(be_a(SmokeTestResult))
@@ -470,17 +453,16 @@ with description("a ContextSetup"):
 
     with context("whose smoke_test tool is probing a non-existent server"):
         with before.each:
-            self._tmp = tempfile.TemporaryDirectory()
-            cs = ContextSetup.from_defaults()
-            cs.base_url = "http://localhost:19999"
-            cs.entry_paths = ["/"]
-            self._result = cs.smoke_test(
-                repo_path=self._tmp.name,
+            self._folder = str(fixture.temporary_folder())
+            self._result = ContextSetup().smoke_test(
+                repo_path=self._folder,
                 surface="web",
+                base_url="http://localhost:19999",
+                entry_paths=["/"],
             )
 
         with after.each:
-            self._tmp.cleanup()
+            fixture.release()
 
         with it("should return passed=False when the server is not reachable"):
             expect(self._result.passed).to(be_false)
@@ -490,20 +472,18 @@ with description("a ContextSetup"):
 
     with context("whose smoke_test tool probes multiple paths"):
         with before.each:
-            self._tmp = tempfile.TemporaryDirectory()
-            self._server, port = fixture.start_test_server()
+            self._folder = str(fixture.temporary_folder())
+            port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
-            cs = ContextSetup.from_defaults()
-            cs.base_url = self._base_url
-            cs.entry_paths = ["/", "/login"]
-            self._result = cs.smoke_test(
-                repo_path=self._tmp.name,
+            self._result = ContextSetup().smoke_test(
+                repo_path=self._folder,
                 surface="web",
+                base_url=self._base_url,
+                entry_paths=["/", "/login"],
             )
 
         with after.each:
-            self._server.shutdown()
-            self._tmp.cleanup()
+            fixture.release()
 
         with it("should produce one ScreenResult per path"):
             expect(self._result.screen_results).to(have_len(2))
@@ -515,20 +495,18 @@ with description("a ContextSetup"):
 
     with context("whose scout_app tool captures pages from a running web server"):
         with before.each:
-            self._tmp = tempfile.TemporaryDirectory()
-            self._server, port = fixture.start_test_server()
+            self._folder = str(fixture.temporary_folder())
+            port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
-            cs = ContextSetup.from_defaults()
-            cs.base_url = self._base_url
-            cs.entry_paths = ["/", "/login"]
-            self._result = cs.scout_app(
-                repo_path=self._tmp.name,
+            self._result = ContextSetup().scout_app(
+                repo_path=self._folder,
                 surface="web",
+                base_url=self._base_url,
+                entry_paths=["/", "/login"],
             )
 
         with after.each:
-            self._server.shutdown()
-            self._tmp.cleanup()
+            fixture.release()
 
         with it("should return a ScoutResult"):
             expect(self._result).to(be_a(ScoutResult))
@@ -562,24 +540,24 @@ with description("a ContextSetup"):
 
     with context("whose complete_capture tool adds a missing page to an existing capture"):
         with before.each:
-            self._tmp = tempfile.TemporaryDirectory()
-            self._server, port = fixture.start_test_server()
+            self._folder = str(fixture.temporary_folder())
+            port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
-            cs = ContextSetup.from_defaults()
-            cs.base_url = self._base_url
-            cs.entry_paths = ["/"]
+            cs = ContextSetup()
             self._scout = cs.scout_app(
-                repo_path=self._tmp.name,
+                repo_path=self._folder,
                 surface="web",
+                base_url=self._base_url,
+                entry_paths=["/"],
             )
             self._result = cs.complete_capture(
-                repo_path=self._tmp.name,
+                repo_path=self._folder,
                 missing_pages=["/login"],
+                base_url=self._base_url,
             )
 
         with after.each:
-            self._server.shutdown()
-            self._tmp.cleanup()
+            fixture.release()
 
         with it("should return a CaptureResult"):
             expect(self._result).to(be_a(CaptureResult))

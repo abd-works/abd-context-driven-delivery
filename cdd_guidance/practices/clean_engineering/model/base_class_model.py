@@ -6,16 +6,12 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, List, Optional
 
-from harness.graph.bound_node import BoundChildren, BoundNode
+from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
-    markdown_bullet_lines,
-    prose_comment_in_text,
-    prototype_swap_in_text,
-)
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair, TranslationError, UpdateReport
 
 if TYPE_CHECKING:
@@ -29,6 +25,13 @@ _SCRIPT_IMPORT = re.compile(r"""(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(?\s*
 _IS_A = re.compile(r"\*is a type of\*", re.I)
 _CHILD_PARENT = re.compile(r"^\s*#{1,6}\s+\S.+\s+:\s+\S", re.MULTILINE)
 _INTERNAL_MARKDOWN = re.compile(r"^##\s+Internal\b", re.MULTILINE | re.IGNORECASE)
+# A class with one of these stereotypes owns the peers it builds, so building them is not a hidden dependency.
+_PEER_COMPOSING_STEREOTYPES = frozenset({"entity", "aggregate root"})
+
+
+class UnreadableSource(ValueError):
+    """A source file its language cannot read, such as Python that does not parse. Reading it as an empty or partial
+    model would drop its classes from every check without saying so."""
 
 
 def _internal_design_in(paths: List[Path]) -> str:
@@ -99,7 +102,7 @@ def companion_interface_name(class_name: str, known_names: Iterable[str]) -> str
     return None
 
 
-class OoadNode(BoundNode):
+class OoadNode(ModelNode):
     _graph_practice = "clean_engineering"
     _semantic_type_name: str = "OoadNode"
     _belongs = {
@@ -176,6 +179,7 @@ class OoadClass(OoadNode):
     _semantic_type_name = "OoadClass"
     graph_facts = (
         "bases",
+        "stereotypes",
         "method_count",
         "operation_shapes",
         "property_names",
@@ -204,22 +208,24 @@ class OoadClass(OoadNode):
         super().__init__(name, sequential_order, graph)
         self.intent = intent
         self.line = line
+        # The stereotypes the class carries, as words: `Aggregate Root`, `Value Object`.
+        self.stereotypes: List[str] = []
         # Parser facts for the graph: last source line and declared base classes.
         self.end_line: int | None = None
         self.bases: List[str] = []
         self.peer_names: List[str] = []
         self.module_helpers: List[list] = []
         self.collaborators: List[str] = collaborators if collaborators is not None else []
-        self._properties = BoundChildren(self, "participants")
-        self._operations = BoundChildren(self, "participants")
+        # What this class does to another class at run time, each named by its interaction: `---<<stops>>--> RunningProcess`.
+        self.dependencies: List[Relationship] = []
+        self._properties = ModelChildren(self, "participants")
+        self._operations = ModelChildren(self, "participants")
         if properties:
             self._properties.extend(properties)
         if operations:
             self._operations.extend(operations)
         for relationship in relationships or []:
             self.place_relationship(relationship)
-        self.property_nodes: List["Property"] = []
-        self.operation_nodes: List["Operation"] = []
 
     @property
     def properties(self) -> List["Property"]:
@@ -237,15 +243,9 @@ class OoadClass(OoadNode):
     def operations(self, operations: List["Operation"]) -> None:
         self._refill(self._operations, operations)
 
-    def own_operations(self) -> List["Operation"]:
-        """Operations declared inside this class; parsers may hang module-level functions on a class too."""
-        if not self.line or not self.end_line:
-            return list(self.operations)
-        return [op for op in self.operations if not op.line or self.line <= op.line <= self.end_line]
-
     def load_source_facts(self, class_text: str) -> None:
         """Fill the shape and source-span facts this class owns."""
-        operations = self.own_operations()
+        operations = list(self.operations)
         constructor = next((op for op in operations if op.name in {"__init__", "constructor"}), None)
         self.method_count = len(operations)
         self.operation_shapes = [
@@ -254,22 +254,29 @@ class OoadClass(OoadNode):
         ]
         self.property_names = sorted(prop.name for prop in self.properties)
         self.constructs = [type_name for type_name, _line in constructor.constructed_types] if constructor else []
-        self.prose_comment = prose_comment_in_text(class_text, hash_only=True)
-        self.prototype_swap = prototype_swap_in_text(class_text, self.line or 1)
-        bullets = markdown_bullet_lines(class_text)
+        source = SourceText(class_text)
+        self.prose_comment = source.has_prose_comment(hash_only=True)
+        self.prototype_swap = source.prototype_swap(self.line or 1)
+        bullets = source.markdown_bullet_lines()
         self.bold_interaction_lines = bullets.get("bold_interaction_lines", [])
         self.bold_invariant_lines = bullets.get("bold_invariant_lines", [])
 
+    def declared_bases(self, known_names: Iterable[str]) -> List[str]:
+        """The bases its declaration names: its own, then the I{Class} contract it implements when one is known."""
+        bases = list(self.bases)
+        contract = companion_interface_name(self.name, known_names)
+        if contract and contract not in bases:
+            bases.append(contract)
+        return bases
+
     def update_self(self, source: "OoadNode") -> None:
+        """Copy what the class itself says; its properties and operations are reconciled as children."""
         assert isinstance(source, OoadClass)
         self.intent = source.intent
-        self.properties = list(source.properties)
-        self.operations = list(source.operations)
+        self.stereotypes = list(source.stereotypes)
+        self.bases = list(source.bases)
         self.collaborators = list(source.collaborators)
-        if not source.property_nodes and not source.operation_nodes:
-            self.sync_tree_from_legacy()
-        elif not source.properties and not source.operations:
-            self.sync_legacy_from_tree()
+        self.dependencies = [item.clone() for item in getattr(source, "dependencies", [])]
 
     def clone(self) -> "OoadClass":
         cloned = type(self)(
@@ -279,10 +286,11 @@ class OoadClass(OoadNode):
             collaborators=list(self.collaborators),
             line=self.line,
         )
+        cloned.stereotypes = list(self.stereotypes)
+        cloned.bases = list(self.bases)
+        cloned.dependencies = [item.clone() for item in self.dependencies]
         cloned.properties = [item.clone() for item in self.properties]
         cloned.operations = [item.clone() for item in self.operations]
-        cloned.property_nodes = [item.clone() for item in self.property_nodes]
-        cloned.operation_nodes = [item.clone() for item in self.operation_nodes]
         return cloned
 
     def as_record(self) -> dict:
@@ -290,17 +298,14 @@ class OoadClass(OoadNode):
             "name": self.name,
             "sequentialOrder": self.sequential_order,
             "intent": self.intent,
+            "stereotypes": list(self.stereotypes),
+            "bases": list(self.bases),
             "properties": [item.as_record() for item in self.properties],
             "operations": [item.as_record() for item in self.operations],
             "relationships": [item.as_record() for item in self.relationships],
+            "dependencies": [item.as_record() for item in self.dependencies],
             "collaborators": list(self.collaborators),
         }
-
-    def load_property_field(self, source: "Property") -> "Property":
-        return self.load_property(source)
-
-    def load_operation_field(self, source: "Operation") -> "Operation":
-        return self.load_operation(source)
 
     def load_relationship(self, source: Relationship) -> Relationship:
         loaded = Relationship(target=source.target)
@@ -308,55 +313,26 @@ class OoadClass(OoadNode):
         return loaded
 
     def load_property(self, source: "Property") -> "Property":
+        """A new property for this class's channel, filled from source."""
         from cdd_guidance.practices.clean_engineering.model.property import Property as PropertyNode
 
-        loaded = PropertyNode(
-            source.name,
-            source.sequential_order,
-            type_hint=source.type_hint,
-            description=source.description,
-        )
-        loaded.access = getattr(source, "access", "both")
-        loaded.stereotype = getattr(source, "stereotype", "") or ""
-        loaded.cardinality = getattr(source, "cardinality", "") or ""
-        loaded.origin = getattr(source, "origin", "") or ""
-        source_relationship = getattr(source, "relationship", None)
-        loaded.relationship = source_relationship.clone() if source_relationship is not None else None
-        if loaded.relationship is None:
-            from cdd_guidance.practices.clean_engineering.model.property import bind_property_relationship
-
-            bind_property_relationship(loaded)
-        loaded.invariants = [item.clone() for item in getattr(source, "invariants", [])]
+        loaded = PropertyNode(source.name, source.sequential_order)
+        loaded.update_self(source)
         return loaded
 
     def load_operation(self, source: "Operation") -> "Operation":
+        """A new operation for this class's channel, filled from source."""
         from cdd_guidance.practices.clean_engineering.model.operation import Operation as OperationNode
 
-        node = OperationNode(
-            source.name,
-            source.sequential_order,
-            return_type=source.return_type,
-            description=source.description,
-            callees=list(source.callees),
-            parameters=[parameter.clone() for parameter in source.parameters],
-        )
-        node.invariants = [item.clone() for item in getattr(source, "invariants", [])]
-        node.body = source.body
-        return node
+        loaded = OperationNode(source.name, source.sequential_order)
+        loaded.update_self(source)
+        return loaded
 
     def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:
         assert isinstance(source, OoadClass)
         return [
-            ChildCollectionPair(
-                self_children=self.property_nodes,
-                source_children=source.property_nodes,
-                load=self.load_property,
-            ),
-            ChildCollectionPair(
-                self_children=self.operation_nodes,
-                source_children=source.operation_nodes,
-                load=self.load_operation,
-            ),
+            ChildCollectionPair(self.properties, source.properties, self.load_property),
+            ChildCollectionPair(self.operations, source.operations, self.load_operation),
         ]
 
     def load_properties(self) -> None:
@@ -399,10 +375,12 @@ class OoadClass(OoadNode):
 
     def place_relationship(self, relationship: Relationship) -> None:
         """Put this relationship on every property whose type names the target."""
-        from cdd_guidance.practices.clean_engineering.model.property import bind_property_relationship
         from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
 
         if (relationship.kind or "").lower() == "inheritance":
+            return
+        if (relationship.kind or "").lower() == "dependency":
+            self.depend_on(relationship.target, relationship.label)
             return
         for prop in self.properties:
             if relationship.target not in domain_type_names(getattr(prop, "type_hint", "") or ""):
@@ -413,7 +391,13 @@ class OoadClass(OoadNode):
                 prop.cardinality = relationship.cardinality
             if relationship.description and not getattr(prop, "origin", ""):
                 prop.origin = relationship.description
-            bind_property_relationship(prop)
+            prop.derive_relationship()
+
+    def depend_on(self, target: str, label: str) -> None:
+        """Record that this class acts on target at run time, labelled by the interaction; the same pair and label once."""
+        if any(item.target == target and item.label == label for item in self.dependencies):
+            return
+        self.dependencies.append(Relationship(target=target, kind="dependency", label=label))
 
     def load_relationships(self) -> None:
         while self.has_more_relationship():
@@ -427,23 +411,6 @@ class OoadClass(OoadNode):
 
     def get_next_relationship_from_file(self) -> Relationship:
         raise NotImplementedError(f"{type(self).__name__} must implement get_next_relationship_from_file")
-
-    def sync_tree_from_legacy(self) -> None:
-        from cdd_guidance.practices.clean_engineering.model.operation import Operation as OperationNode
-        from cdd_guidance.practices.clean_engineering.model.property import Property as PropertyNode
-
-        self.property_nodes = [
-            PropertyNode.from_field(field, index)
-            for index, field in enumerate(self.properties, start=1)
-        ]
-        self.operation_nodes = [
-            OperationNode.from_field(field, index)
-            for index, field in enumerate(self.operations, start=1)
-        ]
-
-    def sync_legacy_from_tree(self) -> None:
-        self.properties = list(self.property_nodes)
-        self.operations = list(self.operation_nodes)
 
 
 class File(OoadNode):
@@ -498,8 +465,8 @@ class Module(OoadNode):
         self.seam_terms: List[str] = list(seam_terms) if seam_terms is not None else []
         self.dependencies: List[str] = list(dependencies) if dependencies is not None else []
         self.preamble = CodeBody()
-        self._modules = BoundChildren(self, "participants")
-        self._classes = BoundChildren(self, "participants")
+        self._modules = ModelChildren(self, "participants")
+        self._classes = ModelChildren(self, "participants")
         self._class_blocks: List[str] = []
 
     @property
@@ -614,19 +581,12 @@ class Module(OoadNode):
 
     def load_source_facts(self, text: str, file: Path, root: Path) -> None:
         """Fill the facts one parsed source file owns: what it imports, which classes share it,
-        and which of them the file declares as <<Entity>> / <<Aggregate Root>>."""
-        from cdd_guidance.practices.ddd.model.stereotypes import (
-            class_declaration_decorated_name,
-            is_aggregate_root,
-            is_entity,
-        )
-
+        and which of them carry the Entity or Aggregate Root stereotype, which may build the peers they own."""
         self.dependencies = self.import_targets(text, file, root)
         peer_names = [oclass.name for oclass in self.classes]
         for oclass in self.classes:
             oclass.peer_names = peer_names
-            decorated = class_declaration_decorated_name(text, oclass.name)
-            oclass.composes_peers = is_entity(decorated) or is_aggregate_root(decorated)
+            oclass.composes_peers = bool(_PEER_COMPOSING_STEREOTYPES & {item.lower() for item in oclass.stereotypes})
 
     def import_targets(self, text: str, file: Path, root: Path) -> List[str]:
         """Root-relative paths named by relative script imports (`./x`, `../y`)."""
@@ -641,13 +601,13 @@ class Module(OoadNode):
         """Fill the facts a code folder owns: its context files and its own source files."""
         from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
 
-        module_context = ModuleContext(folder / "_.py")
+        module_context = ModuleContext(folder)
         content = module_context.read()
         sources = [path for path in folder.iterdir() if path.is_file() and path.suffix.lower() in _CODE_SUFFIXES]
         self.has_module_context = module_context.exists()
         self.has_bounded_context = (folder / ".context" / "bounded-context.md").is_file()
-        self.modules_heading = module_context.modules_heading_hit({}) is not None
-        self.model_blocks = [hit["message"] for hit in module_context.model_block_hits({})]
+        self.modules_heading = module_context.has_modules_heading()
+        self.model_blocks = module_context.model_blocks()
         self.is_a_in_context = bool(_IS_A.search(content))
         self.child_parent_in_context = bool(_CHILD_PARENT.search(content))
         self.public_source_internal = _internal_design_in(
@@ -681,7 +641,7 @@ class CleanEngineeringModel(OoadNode):
             name = "model"
         super().__init__(name, sequential_order, graph)
         self.path = ""
-        self._modules = BoundChildren(self, "participants")
+        self._modules = ModelChildren(self, "participants")
         if opened:
             self._copy_modules_on_graph()
 
@@ -704,20 +664,20 @@ class CleanEngineeringModel(OoadNode):
         for module in others[0].modules:
             self.modules.append(module.clone())
 
-    @property
-    def classes(self) -> List[OoadClass]:
-        """Flat view of all classes across all modules - for backward compat."""
-        return [cls for module in self.modules for cls in module.classes]
+    def every_class(self) -> List[OoadClass]:
+        """Every class in every module, nested modules included, in module order."""
+        found: List[OoadClass] = []
+        pending = list(self.modules)
+        while pending:
+            module = pending.pop(0)
+            found.extend(module.classes)
+            pending[:0] = module.modules
+        return found
 
     def as_record(self) -> dict:
-        if self.modules:
-            return {
-                "name": self.name,
-                "modules": [module.as_record() for module in self.modules],
-            }
         return {
             "name": self.name,
-            "classes": [loaded.as_record() for loaded in self.classes],
+            "modules": [module.as_record() for module in self.modules],
         }
 
     def update_self(self, source: "OoadNode") -> None:
@@ -741,6 +701,13 @@ class CleanEngineeringModel(OoadNode):
 
     def save(self) -> str:
         raise NotImplementedError(f"{type(self).__name__} must implement save")
+
+    def parse(self, text: str) -> "CleanEngineeringModel":
+        raise NotImplementedError(f"{type(self).__name__} must implement parse")
+
+    def sync(self, text: str, canonical: "CleanEngineeringModel") -> UpdateReport:
+        """Bring canonical up to date with the model this channel reads from text."""
+        return canonical.translate_from(self.parse(text))
 
     def load_content(self) -> None:
         return None
@@ -772,61 +739,3 @@ class CleanEngineeringModel(OoadNode):
                 load=self.load_module,
             )
         ]
-
-
-class CleanEngineeringModelFactory:
-    """Pick the channel model from a file or a folder and return a CleanEngineeringModel."""
-
-    @staticmethod
-    def load(path: str) -> CleanEngineeringModel:
-        from pathlib import Path
-
-        target = Path(path)
-        if target.is_dir() or target.suffix.lower() == ".py":
-            from cdd_guidance.practices.clean_engineering.model.python.python_class_model import (
-                PythonCleanEngineeringModel,
-            )
-
-            model = PythonCleanEngineeringModel()
-            if target.is_file():
-                return model.parse(target.read_text(encoding="utf-8"))
-            return model.load(str(target))
-        text = target.read_text(encoding="utf-8")
-        suffix = target.suffix.lower()
-        if suffix == ".drawio":
-            from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import (
-                DrawIOCleanEngineeringModel,
-            )
-
-            return DrawIOCleanEngineeringModel().load(text)
-        if suffix == ".json":
-            from cdd_guidance.practices.clean_engineering.model.json.json_class_model import (
-                JsonCleanEngineeringModel,
-            )
-
-            return JsonCleanEngineeringModel().parse(text)
-        if suffix in {".svg", ".html"}:
-            from cdd_guidance.practices.clean_engineering.model.miro.miro_class_model import (
-                MiroCleanEngineeringModel,
-            )
-
-            return MiroCleanEngineeringModel().load(text)
-        from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (
-            MarkdownCleanEngineeringModel,
-        )
-
-        loaded = MarkdownCleanEngineeringModel()
-        loaded.path = str(target)
-        return loaded.load(str(target))
-
-
-def __getattr__(name: str):
-    if name == "Property":
-        from cdd_guidance.practices.clean_engineering.model.property import Property
-
-        return Property
-    if name in ("Operation", "Parameter"):
-        from cdd_guidance.practices.clean_engineering.model.operation import Operation, Parameter
-
-        return Operation if name == "Operation" else Parameter
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

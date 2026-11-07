@@ -16,30 +16,31 @@ from mamba import before, description, it
 
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.ddd.model import ddd_class_kind
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, Entity
-from cdd_guidance.practices.ddd.model.stereotypes import inferred_tactical_kind
+from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
 
-with description("DDD model nodes"):
-    with it("should classify tactical stereotypes from decorated class names"):
-        expect(ddd_class_kind("**ShoppingCart** <<Aggregate Root>> <<Entity>>")).to(
-            equal("EntityRoot")
-        )
-        expect(ddd_class_kind("**CartItem** <<Value Object>>")).to(equal("ValueObject"))
-        expect(ddd_class_kind("**ShoppingCartRepository** <<Repository>>")).to(
-            equal("Repository")
-        )
+with description("a class as DDD reads it"):
+    with it("should name the aggregate root its heading marks"):
+        expect(TacticalClass.from_heading("**ShoppingCart** <<Aggregate Root>> <<Entity>>").kind()).to(equal("EntityRoot"))
 
-    with it("should not infer tactical kinds for screen registry class names"):
-        expect(inferred_tactical_kind("OnboardingStepScreen", set())).to(equal(None))
+    with it("should name the value object its heading marks"):
+        expect(TacticalClass.from_heading("**CartItem** <<Value Object>>").kind()).to(equal("ValueObject"))
 
-    with it("should read @repository decorators from class declarations"):
-        from cdd_guidance.practices.ddd.model.stereotypes import class_declaration_decorated_name
+    with it("should name the repository its heading marks"):
+        expect(TacticalClass.from_heading("**ShoppingCartRepository** <<Repository>>").kind()).to(equal("Repository"))
 
-        source = "@repository\nclass CartRepository:\n    pass\n"
-        decorated = class_declaration_decorated_name(source, "CartRepository")
-        expect(ddd_class_kind(decorated)).to(equal("Repository"))
+    with it("should read the repository stereotype the graph reads from a @repository decorator"):
+        expect(TacticalClass("CartRepository", ["Repository"]).kind()).to(equal("Repository"))
+
+    with it("should not infer a building block for a screen registry class name"):
+        expect(TacticalClass("OnboardingStepScreen", []).inferred_kind(set())).to(equal(None))
+
+    with it("should not make a capitalised class with no stereotype an entity"):
+        expect(TacticalClass("Invoice", []).inferred_kind({"Invoice", "Customer"})).to(equal(None))
+
+    with it("should name an aggregate root by the repository beside it"):
+        expect(TacticalClass("Invoice", []).inferred_kind({"Invoice", "InvoiceRepository"})).to(equal("EntityRoot"))
 
 
 with description("a bounded context on a graph"):

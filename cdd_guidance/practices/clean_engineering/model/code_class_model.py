@@ -10,6 +10,8 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     OoadClass,
     is_interface_name,
 )
+from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marked_intent
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property, property_notes
@@ -24,7 +26,7 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
 
     def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
         kept = self.parse(previous) if previous else type(self)(name="", sequential_order=1)
-        known_names = [oclass.name for oclass in canonical.classes]
+        known_names = [oclass.name for oclass in canonical.every_class()]
         lines = self.file_header(canonical, self._preamble(canonical, kept))
         for module in canonical.modules:
             lines.extend(self._render_module(module, known_names, kept))
@@ -32,7 +34,7 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
 
     def operation_body(self, class_name: str, operation_name: str) -> CodeBody:
         """The body this model read for one operation; "constructor" finds the constructor in any language."""
-        for oclass in self.classes:
+        for oclass in self.every_class():
             if oclass.name != class_name:
                 continue
             for operation in oclass.operations:
@@ -87,7 +89,44 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         return preamble.lines_in(self.language, "", "")
 
     def class_open(self, oclass: OoadClass, known_names: List[str]) -> List[str]:
-        raise NotImplementedError(f"{type(self).__name__} must spell class_open")
+        """A blank line, the class's doc comment, its stereotype decorators, then the declaration for its kind: an
+        interface, or a class with the bases it declares. A language spells each piece; an interface takes no
+        decorators, so its stereotypes are marked in its doc comment."""
+        if is_interface_name(oclass.name):
+            return [""] + self.class_doc(marked_intent(oclass.stereotypes, oclass.intent)) + self.interface_declaration(oclass)
+        lines = [""] + self.class_doc(self.class_intent(oclass)) + self.stereotype_decorators(oclass)
+        return lines + self.class_declaration(oclass, oclass.declared_bases(known_names))
+
+    def class_doc(self, intent: str) -> List[str]:
+        return [f"/** {intent} */"] if intent else []
+
+    def class_intent(self, oclass: OoadClass) -> str:
+        """What the class's doc comment says. A language with no decorators marks the stereotypes there."""
+        return marked_intent(oclass.stereotypes, oclass.intent)
+
+    def stereotype_decorators(self, oclass: OoadClass) -> List[str]:
+        """The decorator lines that carry the class's stereotypes; none for a language that marks them in the doc."""
+        return []
+
+    def interface_declaration(self, oclass: OoadClass) -> List[str]:
+        raise NotImplementedError(f"{type(self).__name__} must spell interface_declaration")
+
+    def class_declaration(self, oclass: OoadClass, bases: List[str]) -> List[str]:
+        """`class Name extends Base implements Contract, Other {`: the first base that is not an I{Class} contract is
+        extended, and every other base is implemented."""
+        extended, implemented = self.heritage(bases)
+        extends = f" extends {extended}" if extended else ""
+        implements = f" implements {', '.join(implemented)}" if implemented else ""
+        return [f"{self.class_modifiers(implemented)}class {oclass.name}{extends}{implements} {{"]
+
+    def heritage(self, bases: List[str]) -> tuple:
+        """(the one base a class extends, the bases it implements). A brace language extends one class only."""
+        extended = next((base for base in bases if not is_interface_name(base)), "")
+        return extended, [base for base in bases if base != extended]
+
+    def class_modifiers(self, implemented: List[str]) -> str:
+        """The words before `class`, such as Java's `public`."""
+        return ""
 
     def class_close(self, has_members: bool) -> List[str]:
         return ["}"]
@@ -172,3 +211,14 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         notes = [self.language.comment(invariant.text) for invariant in operation.invariants]
         calls = [self.language.interaction(callee) for callee in operation.callees]
         return [f"{indent}{line}" for line in notes + calls if line]
+
+
+class BraceCleanEngineeringModel(CodeCleanEngineeringModel):
+    """A class model written in a brace language: TypeScript, JavaScript, or Java. They read through one parse."""
+
+    def parse(self, text: str) -> "BraceCleanEngineeringModel":
+        return CFamilyParse(
+            model_factory=lambda: type(self)(name="", sequential_order=1),
+            class_factory=OoadClass,
+            language=self.language,
+        ).parse(text)

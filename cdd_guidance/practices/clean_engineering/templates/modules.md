@@ -30,7 +30,7 @@ fidelity: modules
 *{Concept}* is {the job a caller hires it for — then what it holds and does.
 These lines ARE the definition. Identity and purpose. Not a decorator or merge.}
 
-{Another sentence naming the next term a caller uses, and the mark they type.}
+{Another sentence naming the next term a caller uses, and the annotation they type.}
 
 - **Purpose:** {the job a caller hires this module for — not how it is wired}
 - **Seam (terms):** {Concept}, {AnotherConcept}, ...
@@ -38,4 +38,4 @@ These lines ARE the definition. Identity and purpose. Not a decorator or merge.}
 
 ## Constraint
 
-{what callers must or must not do at this seam — the marks they type, not runtime names they never write}
+{what callers must or must not do at this seam — the annotations they type, not runtime names they never write}

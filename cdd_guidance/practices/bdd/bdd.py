@@ -8,13 +8,11 @@ from harness.guidance.guidance import PracticeGuidance
 
 @agent_toolset
 class Bdd(PracticeGuidance):
-    """# Instructions
-
-    Depends on CleanEngineering (lazy import to avoid circular imports at
-    module load time).
-    """
+    """# Instructions"""
 
     sketch_titles = ("bdd:", "behavior driven development:")
+    SHORT_NAME = "BDD"
+    COLOUR = "#00B894"
 
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {
@@ -31,8 +29,6 @@ class Bdd(PracticeGuidance):
         self,
         fidelity: str = "behavior",
         format: str | None = None,
-        path: str | None = None,
-        session: str | None = None,
     ) -> None:
         super().__init__(
             format=format,
@@ -47,5 +43,3 @@ class Bdd(PracticeGuidance):
                 "graph": ("cdd_guidance.practices.bdd.model.graph_bdd_model", "GraphBddModel"),
             },
         )
-        if path is not None or session is not None:
-            self._attach_workspace(path=path, session=session)

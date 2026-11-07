@@ -4,7 +4,7 @@ Single plan for CDD workspace, sessions, eval traceability, kanban workflow (tic
 **creation**, GitHub Issues/PRs/Actions, themes), gap coverage (G-01–G-37), tooling
 extensions, and external tools — with maximum out-of-box Git and minimal custom code.
 
-**Status:** design proposal (Aug 2026)  
+**Status:** design proposal (Aug 2026). Ticket creation through GitHub Issues (§8.2, G-36) was dropped in Nov 2026 (decision K-F13): the board's Ticket in `space/kanban` is the only ticket, and CDD creates no GitHub issues or project items.  
 **Related:** `actions/workspace/.context/module-context.md`,
 `eval-consolidate-workspace/workspace-bdd-sketch.md` (Git-primary association),
 `git-primary-association-proof.md`
@@ -249,9 +249,9 @@ CDD assigns CDD-42 from session-scoped counter in refs/cdd/tickets/CDD-42
 Git:  Ticket: CDD-42 + workflow note only (no GitHub-Issue: trailer)
 ```
 
-Planned CDD surface (Phase 3, G-04 / G-36): `WorkSession.create_ticket`,
-`WorkSession.link_issue`, `GitRepo.workflow_note` — thin wrappers around
-`gh issue create` / `gh issue view`, always finishing with a turn commit.
+Dropped (Nov 2026, decision K-F13): the planned `WorkSession.create_ticket`,
+`WorkSession.link_issue`, and `GitRepo.workflow_note` were never built, and the
+GitHub project-issue code that grew instead was deleted. Tickets live on the board.
 
 ### 8.3 Workflow state on the session branch
 
@@ -478,7 +478,7 @@ For each gap: **CDD tooling extension**, **artifacts**, **external tools**, **ph
 | `harness/agent_tools` | expand → SessionLog/SpanLog |
 | `harness/agent_tools` | manifest paths |
 | `tools/agent_skills` | deploy, `configure_git_notes`, team `.vscode` settings |
-| `space/handoff` | handoff payload + span |
+| `space/session` (handoff) | handoff payload + span |
 | `harness/catalog_generator` | HTML shells (catalog, kanban) |
 | `tools/trace_graph` *(new)* | `build_eval_graph`, `regen_*_index` |
 
@@ -503,7 +503,7 @@ For each gap: **CDD tooling extension**, **artifacts**, **external tools**, **ph
 | G-03 | Eval graph | `record_mistake`, `record_correction`, `GitRepo.note` | eval-mistakes notes; Fixes-Mistake | GitLens `${notes}`; Git Notes list | **0** ✓ |
 | G-04 | Workflow state | `Workflow-State:` on each turn; workflow notes | trailers + cdd-workflow notes | kanban HTML; GitHub Projects *(mirror)* | **3** |
 | G-05 | Platform linkage | `CDDRepo`, `cddAt`, WorkSession branch | CDD-At; branch@sha in index | Git Graph session lane | **1** / **4** |
-| G-36 | Ticket create/link | `WorkSession.create_ticket`, `link_issue`; `gh issue create` | Ticket + GitHub-Issue trailers; anchor note | `gh issue`; GitHub Issues UI | **3** |
+| G-36 | Ticket create/link | dropped (K-F13): the board's Ticket is the only ticket | — | — | — |
 
 ### Context & instructions
 
@@ -521,7 +521,7 @@ For each gap: **CDD tooling extension**, **artifacts**, **external tools**, **ph
 | --- | --- | --- | --- | --- | --- |
 | G-11 | Causal graph | `SpanLog` + expand hooks | `spans.jsonl` | `build_eval_graph` Mermaid | **1** |
 | G-12 | Run identity | single `tools.ps1 run`/turn; `run_id` at open | run_id in index/spans | — | **1** |
-| G-13 | Handoff | extend `space/handoff` | `handoff-payload.yaml` + span | — | **2** |
+| G-13 | Handoff | extend the handoff in `space/session` | `handoff-payload.yaml` + span | — | **2** |
 | G-14 | Rationale/rejected | design-turn `Rationale:`/`Rejected:` in body | commit body | GitLens search | **3** |
 
 ### Runtime
@@ -704,7 +704,7 @@ Working repo .context/sessions/foo/pointer.yaml ──► Archive repo full sess
 | Order of steps? | events.log | spans.jsonl |
 | Why trust this SHA? | — | Verified-By trailer |
 | Ticket on board? | — | Workflow-State + kanban HTML |
-| Create ticket? | — | G-36: `create_ticket` → gh issue + turn commit |
+| Create ticket? | — | on the board (G-36 dropped, K-F13) |
 | PR + CI green? | — | `gh pr checks`; Checks-Pass trailer on merge |
 
 Team git setup (`agent_skills` deploy):

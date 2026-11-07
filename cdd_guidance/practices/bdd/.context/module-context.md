@@ -1,13 +1,12 @@
-# Bdd
+# cdd_guidance/practices/bdd
+*Bdd* (behavior-driven development) specifies domain logic through nested describe/it tests that serve both as documentation and as automated tests. Its fidelities deepen one test hierarchy: *behavior* fixes the describe and `it should` names for every observation with no test bodies (`bdd-behavior`); *realization* traces each observation through the domain calls that make it true, as signatures with no bodies (`bdd-realization`); *development* fills the tests red, then green, with production code (`bdd-development`). `bdd.instructions` is the practice's guidance at its current fidelity.
 
-**Purpose:** Multi-fidelity BDD generator — behavior signatures deepen into development tests, then hand off to CleanEngineering for matching class code. Hosts a Diagnose companion for stuck RED fixes.
+The hierarchy is written as a sketch, markdown, Python, or TypeScript, and `render(format, content)` converts between them; a saved knowledge graph can be rendered to draw the realization. Rule specs check a failing example and its repaired example with the rule examples in each practice's `rules/rule_examples.py`.
 
-**Primary use case:** Satisfy or iterate BDD specs for a module path: lock describe/it hierarchy, fill tests RED→GREEN, call `ce()` for production code, and call `diagnostic().diagnose()` when the same test stays RED after two fix attempts.
+- **Purpose:** Turn domain vocabulary into passing tests, locking what is observed before how it is built.
+- **Seam (terms):** Bdd, `bdd.instructions`, `bdd-behavior`, `bdd-realization`, `bdd-development`, `render`
+- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `harness/name`, `cdd_guidance/actions/sketch` (*SketchOutline*), `cdd_guidance/practices/clean_engineering` (class model, for the code a test drives).
 
-**Rationale:** BDD owns the observation hierarchy and test cycle; CleanEngineering owns OO class deepening at the matching fidelity. Diagnose stays a separate tool so the six-phase loop is not inlined into satisfy/iterate markdown.
+## Constraint
 
-**Seam:** `Bdd`; `spec_helpers.expect_scan_fails` / `expect_scan_passes` for fail-file / pass-file scan pairs.
-
-**Public API:** constructor (`fidelity`, `format`, `path`, `session`, `workspace`); providers `ce()`, `diagnostic()`; lifecycle actions `generate`, `grill`, `sketch`, `iterate`, `satisfy`, `validate`, `repair`; tools `transform`, `render(format, content)` (calls `transform` from the current format); scan rules discovered from `scanners/` (`missing-spec` plus ported abd-skills rules: `plain-english-only`, `business-readable-language`, `signature-markers`, `no-remaining-signatures`, `observable-behavior`, `layer-isolation`); spec helpers `expect_scan_fails(scan, path, *, rule, root)` and `expect_scan_passes(scan, path, *, rule, root)` — mistake specs use these instead of a parallel eval harness.
-
-**Dependencies:** BaseContextTool (lifecycle); CleanEngineering (lazy via `ce()` / `transform`); Diagnose (lazy via `diagnostic()`)
+Agree the describe/it hierarchy at behavior before writing any test body, and keep later fidelities to that hierarchy. Write production classes at Clean Engineering's matching fidelity rather than describing them in BDD artifacts. Run lifecycle steps through the actions with this practice as guidance, not as methods on *Bdd*.

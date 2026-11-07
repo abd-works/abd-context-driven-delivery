@@ -16,6 +16,11 @@ class DiagramStoryNode:
             node = node.parent
         return node
 
+    def _layout(self) -> "DiagramStoryModel":
+        """The diagram map this node is drawn on; an empty one when the node sits on no map yet."""
+        story_map = self._owning_map()
+        return story_map if isinstance(story_map, DiagramStoryModel) else DiagramStoryModel()
+
     @property
     def width(self) -> int:
         if isinstance(self, Story):
@@ -158,3 +163,25 @@ class DiagramStoryModel(StoryModel):
     @property
     def actor_y(self) -> int:
         return (self.max_sub_epic_depth + 2) * self.row_height
+
+    @property
+    def sub_epic_top(self) -> int:
+        """Top of the first nested level of sub-epic bars."""
+        return DiagramEpic.nested_row_y
+
+    @property
+    def story_floor(self) -> int:
+        """The highest a story may sit, however shallow the map."""
+        return self.story_type.row_y
+
+    def sub_epic_y(self, depth: int) -> int:
+        """Top of a sub-epic bar at *depth*: each nested level stacks one bar lower."""
+        return self.sub_epic_top + depth * (DiagramEpic.bar_height + DiagramEpic.depth_gap)
+
+    @property
+    def story_y(self) -> int:
+        """Top of the story line: below the deepest sub-epic bar, leaving room for the actor drawn above each story,
+        so a story at any depth keeps its actor and never sits on a bar."""
+        story = self.story_type
+        deepest_bottom = self.sub_epic_y(self.max_sub_epic_depth) + DiagramEpic.bar_height
+        return max(self.story_floor, deepest_bottom + story.actor_height + story.actor_gap + story.pad_below_sub_epic)

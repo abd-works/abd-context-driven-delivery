@@ -130,12 +130,12 @@ If no template is found, say so and stop. Do not invent a notation.
 
 ## Persistence lifecycle
 
-- **Session-rooted paths:** when chained from a Context generator, read the host **`active`** resource.
-  - Engagement docs/diagrams → `destination = session` → `{session}/.context/{slug}-sketch.md`
-  - Module sketch → `destination = {session}/{module}` → `{session}/{module}/.context/{slug}-sketch.md`
-  - Generated code for that module → `{session}/{module}/` (not under `.context/`)
-- Sketches live at `{destination}/.context/{slug}-sketch.md`. The slug names the subject, not the practice. When the session sketches more than one practice or guidance together (clean-engineering-model and bdd-behavior, object model and BDD), put every lens in that one file so the pairing stays visible; do not add `{slug}-bdd-sketch.md` beside it.
-- `.context/` is created inside the destination if it does not already exist.
+- **Session-rooted paths:** `save_sketch` writes under the session's root, the folder the session works in.
+  - The session's sketch → `{session root}/.context/{session}-sketch.md`
+  - A module's sketch → `save_sketch(module="{module}")` → `{session root}/{module}/.context/{session}-sketch.md`
+  - Generated code for that module → `{session root}/{module}/` (not under `.context/`)
+- The sketch is named after the session, because a session is named for the subject it works on, not for a practice. When the session sketches more than one practice or guidance together (clean-engineering-model and bdd-behavior, object model and BDD), put every lens in that one file so the pairing stays visible; do not add `{session}-bdd-sketch.md` beside it.
+- `.context/` is created under the session root, or the module, if it does not already exist.
 - **Hard rule:** `save_sketch` the shell in the same turn it is written. After three or four grill answers, sketch the theme into that same file, `save_sketch` again, then `review_sketch`. Do not ask the next theme until that review confirms the sketch. The three or four grill questions happen before that sketch, not after a review.
 - **Carry-forward mistakes:** mistakes named in review — bad assumptions, poor performance, poor hygiene, or anything else — must shape the next sketch. Correct the model; do not regenerate as if those mistakes never happened.
 - They persist until a formal artifact absorbs their content.

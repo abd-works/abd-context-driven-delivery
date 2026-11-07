@@ -10,12 +10,15 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from harness.graph.bound_node import BoundChildren
+from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, OoadClass
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
+
+# The `# Title` line of a bounded context's `.context/bounded-context.md`: the context's name.
+_CONTEXT_TITLE = re.compile(r"^\s*#\s+(.+?)\s*$", re.M)
 
 _PATTERNS = (
     "Shared Kernel",
@@ -27,12 +30,11 @@ _PATTERNS = (
 )
 
 
-class UnsupportedBoundedContextFile(Exception):
-    """No channel can read the given bounded-context file."""
-
-    def __init__(self, path: str) -> None:
-        super().__init__(f"No bounded-context channel reads {path}")
-        self.path = path
+# `→ Context · Aggregate · Entity`: the segments of an integration's target.
+_TARGET_SEGMENT = re.compile(r"[·•]")
+_ARROWS = ("→", "->")
+# `Product (by ProductId)`: the identity an integration holds its target by.
+_HELD_BY = "(by"
 
 
 class Integration:
@@ -54,6 +56,24 @@ class Integration:
             self.crosses = source.crosses
             self.integration = source.integration
             self.pattern = source.pattern
+
+    @property
+    def target_parts(self) -> tuple[str, str, str]:
+        """The target's context, aggregate, and entity; a target that names one class names only the entity."""
+        text = self.target.split(_HELD_BY, 1)[0].strip()
+        for arrow in _ARROWS:
+            text = text.removeprefix(arrow).strip()
+        parts = [part.strip() for part in _TARGET_SEGMENT.split(text) if part.strip()]
+        if len(parts) == 1:
+            return "", "", parts[0]
+        padded = parts + ["", "", ""]
+        return padded[0], padded[1], padded[2]
+
+    @property
+    def target_name(self) -> str:
+        """The class the arrow points at: the entity when the target names one, else the aggregate."""
+        _context, aggregate, entity = self.target_parts
+        return entity or aggregate or self.aggregate
 
 
 class InvariantObject(Property):
@@ -82,47 +102,28 @@ _AMBIENT_STATE = re.compile(
 )
 
 
-class TacticalBuildingBlock(OoadClass):
-    """A class-shaped DDD building block. Loads the tactical facts DDD rules read from its graph node.
+def tactical_facts(parsed: OoadClass, kind: str) -> dict:
+    """The facts DDD's tactical rules read about a class its language parser read, seen as a building block of kind:
+    which operations reach into other objects, which helpers are public, which only delegate, which loads find their
+    identity in ambient state, and whether the class says which building block it is."""
+    from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
-    The block is the parsed class seen through DDD, so it also carries that class's own facts.
-    """
-
-    graph_facts = OoadClass.graph_facts + (
-        "peer_private_operations",
-        "public_derive_operations",
-        "delegating_operations",
-        "identity_free_loads",
-        "tactical_stereotype",
-    )
-
-    def load_tactical_facts(self, parsed: OoadClass, file_text: str) -> None:
-        """Fill the facts this building block owns, from the class its language parser read and the file around it."""
-        from cdd_guidance.practices.clean_engineering.model.rules_shared.span_helpers import method_body
-        from cdd_guidance.practices.ddd.model.stereotypes import declares_tactical_stereotype
-
-        for name in OoadClass.graph_facts:
-            if hasattr(parsed, name):
-                setattr(self, name, getattr(parsed, name))
-        operations = parsed.own_operations()
-        public = [op for op in operations if op.name and not op.name.startswith("_")]
-        self.peer_private_operations = [op.name for op in operations if op.peer_private_access]
-        self.public_derive_operations = [op.name for op in public if _DERIVE_PREFIX.match(op.name)]
-        self.delegating_operations = [op.name for op in public if _ONLY_DELEGATES.search(method_body(file_text, op.name))]
-        self.identity_free_loads = [
+    operations = list(parsed.operations)
+    public = [op for op in operations if op.name and not op.name.startswith("_")]
+    return {
+        "peer_private_operations": [op.name for op in operations if op.peer_private_access],
+        "public_derive_operations": [op.name for op in public if _DERIVE_PREFIX.match(op.name)],
+        "delegating_operations": [op.name for op in public if _ONLY_DELEGATES.search(op.body.text)],
+        "identity_free_loads": [
             op.name
             for op in operations
-            if op.name.lower() in _LOAD_NAMES and not op.parameters and _AMBIENT_STATE.search(method_body(file_text, op.name))
-        ]
-        self.tactical_stereotype = declares_tactical_stereotype(
-            file_text, parsed.name, self.tactical_kind(), set(parsed.peer_names)
-        )
-
-    def tactical_kind(self) -> str:
-        return "EntityRoot" if getattr(self, "is_root", False) else self._semantic_type_name
+            if op.name.lower() in _LOAD_NAMES and not op.parameters and _AMBIENT_STATE.search(op.body.text)
+        ],
+        "tactical_stereotype": TacticalClass(parsed.name, parsed.stereotypes).declares_stereotype(kind, parsed.peer_names),
+    }
 
 
-class Entity(TacticalBuildingBlock):
+class Entity(OoadClass):
     """Identity that stays the same when its values change."""
 
     _semantic_type_name = "Entity"
@@ -161,7 +162,7 @@ class Entity(TacticalBuildingBlock):
         return self.invariant_object_type(sequential_order=len(self.invariant_objects))
 
 
-class ValueObject(TacticalBuildingBlock):
+class ValueObject(OoadClass):
     """No write operations and no setters. create, clone, and mix return a new instance."""
 
     _semantic_type_name = "ValueObject"
@@ -183,7 +184,7 @@ class ValueObject(TacticalBuildingBlock):
         return type(self)(self.name, self.sequential_order, intent=other.intent or self.intent)
 
 
-class Repository(TacticalBuildingBlock):
+class Repository(OoadClass):
     """A collection. Operations are any of create, read, update, delete, and search."""
 
     _semantic_type_name = "Repository"
@@ -203,7 +204,7 @@ class Repository(TacticalBuildingBlock):
             self.accesses = None
 
 
-class DomainService(TacticalBuildingBlock):
+class DomainService(OoadClass):
     """No state. An operation here is one no domain object can perform."""
 
     _semantic_type_name = "DomainService"
@@ -251,7 +252,7 @@ class DomainEvent(Property):
             self.subject = Property("subject", 0, description="the state of the event")
 
 
-class Specification(TacticalBuildingBlock):
+class Specification(OoadClass):
     _semantic_type_name = "Specification"
     _graph_practice = "ddd"
 
@@ -259,12 +260,31 @@ class Specification(TacticalBuildingBlock):
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
 
-class Factory(TacticalBuildingBlock):
+class Factory(OoadClass):
     _semantic_type_name = "Factory"
     _graph_practice = "ddd"
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
+
+
+# Which building block a class card's stereotypes make it, first match first; a card with none is a plain class.
+_BLOCK_TYPES: tuple[tuple[str, type[OoadClass]], ...] = (
+    ("specification", Specification),
+    ("value object", ValueObject),
+    ("repository", Repository),
+    ("domain service", DomainService),
+    ("service", DomainService),
+    ("factory", Factory),
+    ("entity", Entity),
+    ("aggregate root", Entity),
+)
+
+
+def building_block_type(stereotypes: list[str]) -> type[OoadClass]:
+    """The class a card with these stereotypes is read into."""
+    marks = {item.lower() for item in stereotypes}
+    return next((block for mark, block in _BLOCK_TYPES if mark in marks), OoadClass)
 
 
 class Aggregate(Module):
@@ -299,9 +319,21 @@ class Aggregate(Module):
         # The entity records this aggregate and loads its own invariant objects.
         if self.root is None:
             return
-        self.root.is_root = True
-        self.root.aggregate = self
+        self.take_root(self.root)
         self.root.load_invariant_objects()
+
+    def take_root(self, entity: Entity) -> None:
+        """Make the entity this aggregate's root, its only way in."""
+        self.root = entity
+        entity.is_root = True
+        entity.aggregate = self
+
+    @property
+    def events(self) -> list[DomainEvent]:
+        """The domain events the root emits."""
+        if self.root is None:
+            return []
+        return [item for item in self.root.properties if isinstance(item, DomainEvent)]
 
 
 class BoundedContext(Module):
@@ -324,9 +356,10 @@ class BoundedContext(Module):
         else:
             super().__init__(name, sequential_order, graph=graph)
             self.owner = ""
-        self.contexts = BoundChildren(self, "contexts")
-        self.aggregates = BoundChildren(self, "aggregates")
+        self.contexts = ModelChildren(self, "contexts")
+        self.aggregates = ModelChildren(self, "aggregates")
         self._map: BoundedContextMap | None = None
+        self.context_file_lines = 1
         if graph is None:
             return
         others = [
@@ -341,12 +374,36 @@ class BoundedContext(Module):
         for aggregate in others[0].aggregates:
             self.append_aggregate(aggregate.clone())
 
+    def load_context_folder(self, folder: Path) -> None:
+        """Read the folder that holds this context in code: its name is the title of `.context/bounded-context.md`,
+        else the folder's own name, and it owns the facts every code folder carries."""
+        text = (folder / ".context" / "bounded-context.md").read_text(encoding="utf-8")
+        title = _CONTEXT_TITLE.search(text)
+        self.name = title.group(1).strip() if title else folder.name
+        self.context_file_lines = max(1, text.count("\n") if text.endswith("\n") else text.count("\n") + 1)
+        self.load_folder_facts(folder)
+
     def append_context(self, context: "BoundedContext") -> None:
         context._map = self._map
         self.contexts.append(context)
 
     def append_aggregate(self, aggregate: Aggregate) -> None:
         self.aggregates.append(aggregate)
+
+    @property
+    def every_aggregate(self) -> list[Aggregate]:
+        """This context's aggregates, then those of every context nested in it."""
+        found = list(self.aggregates)
+        for child in self.contexts:
+            found.extend(child.every_aggregate)
+        return found
+
+    @property
+    def enclosing_contexts(self) -> list["BoundedContext"]:
+        """The contexts this one is nested in, outermost first, ending with this context."""
+        parent = self.parent
+        outer = parent.enclosing_contexts if isinstance(parent, BoundedContext) else []
+        return outer + [self]
 
     def load_bounded_contexts(self) -> None:
         while self.has_more_bounded_context():
@@ -432,19 +489,11 @@ class BoundedContextMap:
     def get_next_bounded_context_from_file(self) -> BoundedContext:
         return self.bounded_context_type(sequential_order=len(self.contexts) + 1)
 
+    def append_context(self, context: BoundedContext) -> None:
+        context._map = self
+        self.contexts.append(context)
 
-class DDDModelFactory:
-    @staticmethod
-    def load(path: str) -> BoundedContextMap:
-        # The file type selects the channel. That map loads itself.
-        chosen = _channel_for(path)
-        return chosen().load(path)
-
-
-def _channel_for(path: str) -> type[BoundedContextMap]:
-    from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
-
-    location = Path(path)
-    if location.suffix.lower() in {".md", ".markdown"}:
-        return MarkdownBoundedContextMap
-    raise UnsupportedBoundedContextFile(path)
+    @property
+    def every_aggregate(self) -> list[Aggregate]:
+        """Every aggregate on the map, those in nested contexts included."""
+        return [aggregate for context in self.contexts for aggregate in context.every_aggregate]

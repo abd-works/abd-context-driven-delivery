@@ -133,10 +133,7 @@ class BraceStoryModel(CodeStoryModel):
         return clauses
 
     def story_open(self, story: Story) -> List[str]:
-        actor = (story.actors[0] if story.actors else "").strip()
-        lines: List[str] = ["/**", f" * Story: {story.name}"]
-        if actor:
-            lines.append(f" * Actor: {actor}")
+        lines: List[str] = ["/**", f" * Story: {story.name}", *self.description_lines(story, " * ")]
         lines.extend([" */", ""])
         example_line = self.story_type.background_example_line(story, "// ")
         if example_line:

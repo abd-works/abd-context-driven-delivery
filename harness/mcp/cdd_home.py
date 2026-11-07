@@ -5,9 +5,10 @@ import hashlib
 import json
 import os
 import shutil
-import subprocess
 import sys
 from pathlib import Path
+
+from harness.process.git import Git, RepoConnectError
 
 CDD_HOME_ENV = "CDD_HOME"
 CLAUDE_MARKETPLACE = "cdd-home"
@@ -43,6 +44,16 @@ class PinFailed(Exception):
     def __init__(self, checkout: Path, detail: str) -> None:
         super().__init__(f"could not pin the cdd runtime to {checkout}: {detail}")
         self.checkout = checkout
+
+
+class RuntimeRecordUnreadable(Exception):
+    """``~/.cdd/runtime.json`` exists but is not readable JSON, so which checkout the server runs is unknown. cdd stops
+    rather than read it as not installed, which would pin a new runtime over it."""
+
+    def __init__(self, path: Path, cause: BaseException) -> None:
+        super().__init__(f"{path} is not readable JSON ({cause}); fix or remove it, then install again")
+        self.path = path
+        self.cause = cause
 
 
 class CddHome:
@@ -132,6 +143,11 @@ class CddHome:
         path.write_text(json.dumps(content, indent=2) + "\n", encoding="utf-8")
 
     @property
+    def runtime_record(self) -> Path:
+        """Which checkout the server runs, in which mode, on which Python."""
+        return self.folder / "runtime.json"
+
+    @property
     def pinned_checkout(self) -> Path:
         return self.folder / "runtime"
 
@@ -181,10 +197,10 @@ class CddHome:
         source = Path(checkout).resolve()
         target = self.pinned_checkout
         if not (target / ".git").exists():
-            self._git(source, "init", "--quiet", str(target))
-        self._git(source, "-C", str(target), "fetch", "--quiet", "--no-tags", str(source), "HEAD")
-        self._git(source, "-C", str(target), "checkout", "--quiet", "--force", "--detach", "FETCH_HEAD")
-        commit = self._git(source, "-C", str(target), "rev-parse", "HEAD")
+            self._git(source, source, "init", "--quiet", str(target))
+        self._git(source, target, "fetch", "--quiet", "--no-tags", str(source), "HEAD")
+        self._git(source, target, "checkout", "--quiet", "--force", "--detach", "FETCH_HEAD")
+        commit = self._git(source, target, "rev-parse", "HEAD")
         if not (target / SERVER_MODULE).is_file():
             raise PinFailed(source, f"commit {commit[:8]} has no {SERVER_MODULE}; commit the one-server code before pinning")
         self._mirror_origin(source, target)
@@ -194,38 +210,36 @@ class CddHome:
 
     def _mirror_origin(self, source: Path, target: Path) -> None:
         """Give the pinned copy the checkout's ``origin``: tools that cite the repository, such as the catalog, read it."""
-        found = subprocess.run(["git", "remote", "get-url", "origin"], cwd=source, capture_output=True, text=True)
-        if found.returncode != 0:
+        if not Git(source).succeeds("remote", "get-url", "origin"):
             return
-        url = found.stdout.strip()
-        has_origin = subprocess.run(["git", "remote", "get-url", "origin"], cwd=target, capture_output=True, text=True).returncode == 0
-        self._git(target, "remote", "set-url" if has_origin else "add", "origin", url)
+        url = self._git(source, source, "remote", "get-url", "origin")
+        has_origin = Git(target).succeeds("remote", "get-url", "origin")
+        self._git(source, target, "remote", "set-url" if has_origin else "add", "origin", url)
 
     def serve_from(self, checkout: Path | str) -> None:
         """Run the server on ``checkout`` as it is on disk, so a ``cdd.restart`` picks up its edits."""
         self._save_runtime(Path(checkout).resolve(), self.CHECKOUT)
         self.write_board_plugin()
 
-    def _git(self, checkout: Path, *arguments: str) -> str:
-        # Some fixtures nest deeper than Windows' default path limit, and the pinned copy needs every file.
-        done = subprocess.run(["git", "-c", "core.longpaths=true", *arguments], cwd=checkout, capture_output=True, text=True)
-        if done.returncode != 0:
-            raise PinFailed(checkout, done.stderr.strip() or done.stdout.strip())
-        return done.stdout.strip()
+    def _git(self, checkout: Path, folder: Path, *arguments: str) -> str:
+        """Run git in folder while pinning checkout; a failure is the pin's failure."""
+        try:
+            return Git(folder).run(*arguments)
+        except RepoConnectError as failure:
+            raise PinFailed(checkout, str(failure)) from failure
 
     def _save_runtime(self, source: Path, mode: str, *, commit: str = "") -> None:
-        self.folder.mkdir(parents=True, exist_ok=True)
         runtime = {"source": str(source), "mode": mode, "python": self.python}
         if commit:
             runtime["commit"] = commit
-        (self.folder / "runtime.json").write_text(json.dumps(runtime, indent=2) + "\n", encoding="utf-8")
+        self._write_json(self.runtime_record, runtime)
 
     def _runtime(self) -> dict[str, str]:
-        path = self.folder / "runtime.json"
+        path = self.runtime_record
         if not path.is_file():
             return {}
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            return {}
+        except (OSError, json.JSONDecodeError) as unreadable:
+            raise RuntimeRecordUnreadable(path, unreadable) from unreadable
         return {str(key): str(value) for key, value in data.items()} if isinstance(data, dict) else {}

@@ -16,7 +16,8 @@ export const BAR = {
 const ENGINE_SETTLE_MILLISECONDS = 50
 
 // Every chat bar story: the engine and cdd stubbed before the steps; once the Givens have seeded cdd, the chat starts,
-// one prompt has the chat bar read the board, and the bar is mounted above the prompt.
+// one prompt has the chat bar read the board, and the bar is mounted above the prompt. No scenario may call a cdd
+// operation Python does not have, or pass an argument it does not take.
 export const CHAT_BAR: Lifecycle = {
   wire: (on, scene) => {
     scene.world = cdd(on)
@@ -25,6 +26,9 @@ export const CHAT_BAR: Lifecycle = {
     await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
     await $.prompt.submit({ text: 'look' })
     return $.ui.mount(BAR)
+  },
+  check: scene => {
+    expect(scene.world.unknown).toEqual([])
   },
 }
 

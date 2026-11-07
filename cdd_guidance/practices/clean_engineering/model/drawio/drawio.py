@@ -1,7 +1,7 @@
-"""Draw.io miniature kit — render class diagrams, scan layout rules, repair on failure.
+"""The Draw.io toolset: render a class or modules diagram, scan its layout rules, repair the generator on failure.
 
-Not a full context tool: no partition / grill / sketch / fidelities. Composed by
-CleanEngineering when ``format`` is ``drawio``. Layout scan lives on DrawioScanner.
+It has no partition, grill, sketch, or fidelities of its own; CleanEngineering composes it when ``format`` is
+``drawio``. Each layout rule is a scanner under ``scanners/``.
 """
 
 from __future__ import annotations
@@ -22,12 +22,11 @@ from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model im
 class Drawio:
     """# Instructions
 
-    Miniature kit for Clean Engineering Draw.io class diagrams: create →
+    The Draw.io toolset for Clean Engineering diagrams: create →
     validate/scan layout rules → repair (sub-agent) on definitive failures.
     """
 
-    def __init__(self, workspace=None) -> None:
-        self.workspace = workspace
+    def __init__(self) -> None:
         self.source_format = "markdown"
         self.previous = ""
         self.keep_positioning = False
@@ -101,8 +100,7 @@ class Drawio:
     def scan(self, paths: list[str]) -> str:
         """scan layout rules on `.drawio` paths (drawio.md rule slugs)."""
         scan_root = self.scan_root if self.scan_root is not None else str(self.module_dir)
-        scanner = DrawioScanner(self.rule)
-        scanner.workspace_root = scan_root
+        scanner = DrawioScanner(self.rule, scan_root=scan_root)
         return str(scanner.run_report(paths))
 
     @agent_instructions
@@ -139,6 +137,6 @@ class Drawio:
         """Regression check after repair (scan before/after + judge)."""
         _ = examples_root
         return (
-            "Eval the repair with expect_scan_fails on the before file and "
-            "expect_scan_passes on the after file (cdd_guidance.practices.bdd.spec_helpers)."
+            "Check the repair with assert_files_rule_pair (cdd_guidance/practices/clean_engineering/rules/rule_examples.py): "
+            "the before files must break the rule and the after files must not."
         )

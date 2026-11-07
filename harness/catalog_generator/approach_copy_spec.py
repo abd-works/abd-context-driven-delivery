@@ -1,24 +1,11 @@
 """Approach page copy lives in markdown so it can be hand-edited."""
-import sys
 import tempfile
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("cdd_guidance/practices", "tools"):
-    _p = str(_REPO_ROOT / _cat)
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
-
 from expects import equal, expect
-from mamba import description, it
+from mamba import before, context, description, it
 
-from harness.catalog_generator.approach_copy import load_approach_copy
-from harness.catalog_generator.catalog_generator import Catalog
-from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN
-from harness.catalog_generator.foundry_chrome import approach_board_stages, render_hub_board
-from harness.installation.installer import Installer  # noqa: F401
+from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, ApproachCopy
 
 _MINIMAL_MD = """# Approach
 
@@ -45,25 +32,12 @@ kind: descriptions
 
 - HAND-EDITABLE-BULLET
 
+See [the stories](stories.md).
+
 ## Library
 
 HAND-EDITABLE-LIBRARY
 """
-
-
-with description("load_approach_copy"):
-    with it("reads subhead, stages, practices, and library from markdown"):
-        path = Path(tempfile.mkdtemp()) / "cdd-approach.md"
-        path.write_text(_MINIMAL_MD, encoding="utf-8")
-        copy = load_approach_copy(path)
-        expect(copy.subhead).to(equal("HAND-EDITABLE-SUBHEAD"))
-        expect(copy.principles_heading).to(equal("Context Driven Delivery Practices"))
-        expect(copy.library_heading).to(equal("HAND-EDITABLE-LIBRARY"))
-        expect(copy.stages[0]["id"]).to(equal("context"))
-        expect(copy.stages[0]["paras"][0]).to(equal("HAND-EDITABLE-STAGE-COPY"))
-        expect(copy.practices[0]["slug"]).to(equal("product-engineering"))
-        expect(copy.practices[0]["bullets"][0]).to(equal("HAND-EDITABLE-BULLET"))
-
 
 _BOARD_STAGE_MD = """# Approach
 
@@ -74,7 +48,6 @@ Subhead
 ### Discovery
 
 id: discovery
-board_key: discovery
 items: ZZ-CHIP
 
 ZZ-PARA
@@ -82,7 +55,6 @@ ZZ-PARA
 ### Specification
 
 id: specification
-board_key: spec
 items: Spec Chip
 
 Spec paragraph
@@ -90,88 +62,59 @@ Spec paragraph
 ### Implement
 
 id: implementation
-board_key: engineer
 items: Engineer Chip
 
 Engineer paragraph
 """
 
 
-with description("approach board stages"):
-    with it("reads stage chips and paragraphs from approach markdown"):
-        path = Path(tempfile.mkdtemp()) / "cdd-approach.md"
-        path.write_text(_BOARD_STAGE_MD, encoding="utf-8")
-        stages = approach_board_stages(path)
-        expect(stages["discovery"]["items"]).to(equal(("ZZ-CHIP",)))
-        expect(stages["discovery"]["paras"][0]).to(equal("ZZ-PARA"))
-
-    with it("renders those chips on the catalog board"):
-        path = Path(tempfile.mkdtemp()) / "cdd-approach.md"
-        path.write_text(_BOARD_STAGE_MD, encoding="utf-8")
-        html = render_hub_board([], [], [], approach_md_path=path)
-        expect("ZZ-CHIP" in html).to(equal(True))
-        expect("ZZ-PARA" in html).to(equal(True))
+def _copy(markdown: str) -> ApproachCopy:
+    path = Path(tempfile.mkdtemp()) / "cdd-approach.md"
+    path.write_text(markdown, encoding="utf-8")
+    return ApproachCopy.load(path)
 
 
-with description("Catalog approach markdown folder"):
-    with it("reads approach copy from the generator markdown folder"):
-        catalog = Catalog(out_root=str(Path(tempfile.mkdtemp()) / "out"))
-        source = Path(__file__).resolve().parent / "markdown" / "cdd-approach.md"
-        expect(catalog.approach_md_path).to(equal(source))
-        expect(source.is_file()).to(equal(True))
-        expect("CDD harness" in catalog._approach_copy().subhead).to(equal(True))
+with description("the approach page's copy"):
+    with context("read from hand-edited markdown"):
+        with before.all:
+            self.copy = _copy(_MINIMAL_MD)
 
+        with it("should read the subhead from the intro"):
+            expect(self.copy.subhead).to(equal("HAND-EDITABLE-SUBHEAD"))
 
-with description("Catalog approach page"):
-    with it("renders copy from the approach markdown file"):
-        tmp = Path(tempfile.mkdtemp())
-        md = tmp / "cdd-approach.md"
-        md.write_text(_MINIMAL_MD, encoding="utf-8")
-        catalog = Catalog(out_root=str(tmp / "out"), approach_md_path=md)
-        catalog._board_tools = []
-        catalog._write_approach_page()
-        html = (tmp / "out" / "cdd-approach.html").read_text(encoding="utf-8")
-        expect("HAND-EDITABLE-SUBHEAD" in html).to(equal(True))
-        expect("HAND-EDITABLE-STAGE-COPY" in html).to(equal(True))
-        expect("HAND-EDITABLE-BULLET" in html).to(equal(True))
-        expect("HAND-EDITABLE-LIBRARY" in html).to(equal(True))
+        with it("should read the principles heading"):
+            expect(self.copy.principles_heading).to(equal("Context Driven Delivery Practices"))
 
+        with it("should read the library heading"):
+            expect(self.copy.library_heading).to(equal("HAND-EDITABLE-LIBRARY"))
 
-with description("stage example links"):
-    with it("hyperlinks discovery, specification, and implementation on the board"):
-        html = render_hub_board([], [], [], approach_md_path=APPROACH_MARKDOWN)
-        expect('href="examples/discovery.html"' in html).to(equal(True))
-        expect('href="examples/specification.html"' in html).to(equal(True))
-        expect('href="examples/implementation.html"' in html).to(equal(True))
+        with it("should read each stage's settings"):
+            expect(self.copy.stages[0].id).to(equal("context"))
 
-    with it("copies those assets and expands them under the Iterate and Learn diagram"):
-        tmp = Path(tempfile.mkdtemp())
-        catalog = Catalog(out_root=str(tmp / "out"), approach_md_path=APPROACH_MARKDOWN)
-        catalog._board_tools = []
-        catalog._write_approach_page()
-        html = (tmp / "out" / "cdd-approach.html").read_text(encoding="utf-8")
-        expect('id="approach-stage-examples"' in html).to(equal(True))
-        expect('data-stage-id="discovery"' in html).to(equal(True))
-        expect('data-stage-id="specification"' in html).to(equal(True))
-        expect('data-stage-id="implementation"' in html).to(equal(True))
-        expect("a simple graph is easier to change, compare, and reorganize" in html).to(equal(True))
-        expect(
-            "<em>a simple graph is easier to change, compare, and reorganize. Humans catch AI Order-of-Magnitude sizing errors.</em>"
-            in html
-        ).to(equal(True))
-        # Diagram examples with a PNG sibling render as the image, not a live drawio viewer.
-        expect(
-            '<img class="catalog-example__image" alt="story_map.png" src="examples/stories/story_map.png">'
-            in html
-        ).to(equal(True))
-        expect("catalog-example--story-map" in html).to(equal(True))
-        expect("viewer.diagrams.net" in html).to(equal(False))
-        expect("approach-stage-column" in html).to(equal(True))
-        # toggleStageColumn lives in the shared commons script, not inline.
-        expect('src="commons/catalog-refine-row.js' in html).to(equal(True))
-        expect("openNextColumn" in html).to(equal(True))
-        expect("Display Create Account" in html).to(equal(True))
-        expect('id="catalog-monaco"' in html).to(equal(True))
-        expect("&quot;start&quot;:" in html).to(equal(True))
-        expect("showStageExample" in html).to(equal(True))
-        expect((tmp / "out" / "examples" / "story_map.png").is_file()).to(equal(True))
+        with it("should read each stage's paragraphs"):
+            expect(self.copy.stages[0].paras).to(equal(("HAND-EDITABLE-STAGE-COPY",)))
+
+        with it("should read each principle's bullets"):
+            expect(self.copy.principles[0].bullets).to(equal(("HAND-EDITABLE-BULLET",)))
+
+        with it("should write a principle's caption links as HTML"):
+            expect(self.copy.principles[0].caption).to(equal('See <a href="stories.md">the stories</a>.'))
+
+        with it("should keep the scope a stage of the page alone gives in its settings"):
+            scope = self.copy.stages[0].scope
+            expect((scope.shape, scope.name, scope.reach)).to(equal(("square", "Context", "square")))
+
+    with context("whose stages are the approach's own"):
+        with before.all:
+            self.copy = _copy(_BOARD_STAGE_MD)
+
+        with it("should take a CDD stage's scope from the approach's stages"):
+            scope = self.copy.stages[0].scope
+            expect((scope.shape, scope.name, scope.reach)).to(equal(("solution", "Whole solution", "wide / shallow")))
+
+        with it("should give the board each stage by its column's key"):
+            expect(self.copy.board_stages["spec"].items).to(equal(("Spec Chip",)))
+
+    with context("kept beside the catalog generator"):
+        with it("should open with the harness sentence"):
+            expect("CDD harness" in ApproachCopy.load(APPROACH_MARKDOWN).subhead).to(equal(True))

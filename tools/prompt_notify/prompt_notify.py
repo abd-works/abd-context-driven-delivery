@@ -2,7 +2,7 @@
 Prompt notify hook — detect CDD action, practice, fidelity, and guideline use.
 
 Fires on preToolUse. Matches MCP names (`sketch.sketch`, `bdd-behavior()`),
-CallMcpTool wrappers, skill/rule paths, and legacy YAML `action:` fences.
+CallMcpTool wrappers, and skill/rule paths.
 
 Off when the class is annotated ``@Hooks(disabled=True)``.
 """
@@ -10,68 +10,34 @@ Off when the class is annotated ``@Hooks(disabled=True)``.
 from __future__ import annotations
 
 import json
-import os
 import re
 import shutil
-import sqlite3
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import ClassVar
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+# The CDD checkout this hook runs from: its installed toolsets are the code the hook server runs, so their @Toast annotations
+# are read from here whichever project the event came from.
+_CDD_CHECKOUT = Path(__file__).resolve().parents[2]
 
 from harness.agent_tools.agent_tools import agent_toolset
-from harness.agent_tools.name import Name
-from harness.installation.destination import Destination
-from harness.hooks.hooks import Hook
-
-
-class Echo(Destination):
-    """Mark an AgentOperation or AgentInstructions so PromptNotify toasts it."""
-
-    flag = "_echo"
-
-    def __new__(cls, operation=None):
-        inst = object.__new__(cls)
-        inst.name = None
-        if callable(operation):
-            return inst.annotate(operation)
-        return inst
-
-
-echo = Echo
+from harness.name.name import Name
+from harness.installation.destination import noCatalog
+from harness.annotations.annotation import Toast
+from harness.hooks.hook_server import TOAST_ARROW, HookPayload, HookServer, rules_toast
+from harness.hooks.hooks import hook
+from space.session.session_log import SessionLog
 
 TOAST_NOTICE = ".cursor/prompt-notify-toast.json"
 IDE_TOAST_EXTENSION = "cdd.prompt-notify-0.0.1"
-_FALLBACK_ACTIONS = (
-    "create-rule",
-    "createRule",
-    "document",
-    "generate",
-    "grill",
-    "iterate",
-    "partition",
-    "render",
-    "repair",
-    "satisfy",
-    "scan",
-    "sketch",
-    "validate",
-)
-_YAML_ACTION = re.compile(r"\baction:\s*([A-Za-z0-9_-]+)", re.I)
 _SKIP_BEGIN_FALLBACK = frozenset({"open_workspace", "end", "begin"})
-_ARROW = " \u2192 "
 _SAME_BURST_SECONDS = 2
-_FLAT_ACTION_PREFIX = "actions-"
-_FLAT_PRACTICE_PREFIX = "practices-"
-_RULE_SUFFIXES = frozenset({".mdc", ".md"})
 _SKILL_DIRS = ("/.cursor/skills/", "/.claude/skills/")
 _RULE_DIRS = ("/.cursor/rules/", "/.claude/rules/")
 
 
+@noCatalog
 @agent_toolset
 class PromptNotify:
     """Echo detected action, practice, fidelity, and guideline names on preToolUse."""
@@ -80,195 +46,93 @@ class PromptNotify:
     _echo_toolsets: ClassVar[list | None] = None
     _installed_extension: ClassVar[Path | None] = None
 
-    def __init__(self) -> None:
-        self.repo: Path | None = None
-        self.toast_roots: list | None = None
-        self.echo = ""
-        self.toast_stamp = ""
-        self.tool_name = ""
-        self.echo_kind = ""
-        self.echo_label = ""
-        self.skill_kind = ""
-        self.skill_found: dict[str, str] = {}
-        self._begin_tools: dict = {}
-        self._begin_toolset = None
-        self._toast_dest: Path | None = None
+    # Each hook event is handled by the hook server's one instance, so nothing about one event is kept on it: two
+    # events at once would read each other's values.
 
     @property
     def catalog(self) -> list[tuple[str, str]]:
-        if type(self)._catalog is not None:
-            return type(self)._catalog
-        found: dict[str, str] = {}
-        skills = _REPO_ROOT / ".cursor" / "skills"
-        self.skill_found = found
-        self.skill_kind = "action"
-        self._walk_skill_tree(skills / "actions")
-        self.skill_kind = "practice"
-        self._walk_skill_tree(skills / "practices")
-        self._walk_flat_skill_tree(_REPO_ROOT / ".claude" / "skills")
-        for ide in (".cursor", ".claude"):
-            self._walk_rule_tree(_REPO_ROOT / ide / "rules" / "practices", found)
-        for name in _FALLBACK_ACTIONS:
-            found.setdefault(name.replace("_", "-"), "action")
-        type(self)._catalog = sorted(found.items(), key=lambda item: len(item[0]), reverse=True)
+        """Every name a tool call can mention, longest first, with its kind: each practice and fidelity CDD has, each
+        practice rule file, and each operation an action publishes as a skill. Read from the practice catalogue and the
+        action folders once per process, so a toast names only what exists."""
+        if type(self)._catalog is None:
+            found = {**self._practice_names(), **self._action_names()}
+            type(self)._catalog = sorted(found.items(), key=lambda item: len(item[0]), reverse=True)
         return type(self)._catalog
 
-    @Hook("preToolUse")
-    def on_pre_tool_use(self, hook_payload: dict) -> dict:
+    def _practice_names(self) -> dict[str, str]:
+        """Each practice's slug, each fidelity's slug, and each practice rule file's name, which joins the two
+        (``bdd-bdd-behavior``)."""
+        from harness.guidance.practice_catalogue import PracticeCatalogue
+
+        names: dict[str, str] = {}
+        for practice in PracticeCatalogue.practices():
+            names[practice.slug] = "practice"
+            for fidelity in practice.fidelities:
+                names[fidelity.slug] = "fidelity"
+                names[f"{practice.slug}-{fidelity.slug}"] = "guideline"
+        return names
+
+    def _action_names(self) -> dict[str, str]:
+        """Each action in the action catalogue, such as generate, grill, and create-rule."""
+        from harness.guidance.action_catalogue import ActionCatalogue
+
+        return {self._compact(name): "action" for name in ActionCatalogue.names()}
+
+    @hook("preToolUse")
+    def on_pre_tool_use(self, payload: HookPayload) -> dict:
+        """Toast what the tool call uses in every workspace folder of the chat that made it."""
         self.install_ide_toast_extension()
-        result = self.handle(hook_payload, toolsets=self.echo_toolsets())
+        result = self.handle(payload, toolsets=self.echo_toolsets())
         message = result.get("user_message")
         if message:
-            self.show_ide_toast(str(message))
+            self.show_toast(str(message), payload.workspace_roots)
         return result
 
-    def handle(self, hook_payload: dict, toolsets: list | None = None) -> dict:
-        tool_name = hook_payload.get("tool_name", "")
-        if not tool_name:
+    def handle(self, payload: HookPayload, toolsets: list | None = None) -> dict:
+        if not payload.tool_name:
             return {"permission": "allow"}
-        detected = self._detected(hook_payload, toolsets)
+        detected = self._detected(payload, toolsets)
         if not detected:
             return {"permission": "allow"}
         kind, label = detected
-        self.tool_name = str(tool_name)
-        self.echo_kind = kind
-        self.echo_label = label
-        self._log_echo()
-        return {"permission": "allow", "user_message": f"{kind.title()}{_ARROW}{label}"}
+        self._log_echo(payload.tool_name, kind, label)
+        return {"permission": "allow", "user_message": f"{kind.title()}{TOAST_ARROW}{label}"}
 
     def detect_echo(
-        self, hook_payload: dict, toolsets: list | None = None
+        self, payload: HookPayload, toolsets: list | None = None
     ) -> tuple[str, str] | None:
-        invoked = self._mcp_tool_name(hook_payload)
+        invoked = self._mcp_tool_name(payload)
         if not invoked:
             return None
-        hosts = self._walk_toolsets(
+        searched = self._walk_toolsets(
             toolsets if toolsets is not None else self.echo_toolsets()
         )
-        for toolset in hosts:
+        for toolset in searched:
             found = self._echo_on_toolset(invoked, toolset)
             if found is not None:
                 return found
         return None
 
-    def detect(self, hook_payload: dict) -> tuple[str, str] | None:
-        named = self._yaml_action(hook_payload)
-        if named:
-            return "action", named
-        invoked = self._mcp_tool_name(hook_payload)
-        tool_name = str(hook_payload.get("tool_name") or "")
-        action_names = {invoked, tool_name}
-        return self._catalog_match(self._haystacks(hook_payload), action_names)
+    def detect(self, payload: HookPayload) -> tuple[str, str] | None:
+        action_names = {self._mcp_tool_name(payload), payload.tool_name}
+        return self._catalog_match(self._haystacks(payload), action_names)
 
-    def echo_toolsets(self, repo: Path | None = None) -> list:
-        if repo is None and type(self)._echo_toolsets is not None:
-            return type(self)._echo_toolsets
-        loaded = self._load_echo_toolsets(repo)
-        if repo is None:
-            type(self)._echo_toolsets = loaded
-        return loaded
+    def echo_toolsets(self) -> list:
+        """The toolsets installed in the CDD checkout, whose @Toast annotations say which tool calls toast; loaded once per
+        process. A toolset that fails to load raises, so a broken toolset is seen rather than silently not toasting."""
+        if type(self)._echo_toolsets is None:
+            type(self)._echo_toolsets = self._load_echo_toolsets()
+        return type(self)._echo_toolsets
 
-    def show_ide_toast(self, echo: str) -> Path:
-        dest = self._toast_path(self.repo)
-        self._toast_dest = dest
-        self.echo = echo
-        self.toast_stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        message = self._burst_message()
-        notice = json.dumps({"message": message, "at": self.toast_stamp}, ensure_ascii=False) + "\n"
-        self._write_notice(dest, notice)
-        for path in self._toast_destinations(dest):
-            self._write_notice(path, notice)
-        return dest
+    def show_toast(self, toast: str, workspace_roots: list[Path]) -> list[Path]:
+        """Show toast in every workspace folder of the chat it is for, the toast files written. The hook server hands
+        each hook's toast here, so a hook names its toast and never this notifier."""
+        return self.show_ide_toast(toast, workspace_roots)
 
-    def inject_rules_toast(self, source: str, labels: list[str]) -> str:
-        return f"{source}{_ARROW}rules : {', '.join(labels)}"
-
-    def chat_edit_source(self, hook_payload: dict | None) -> str:
-        """Name the chat that edited the file, so the toast is not shared across chats."""
-        title = self._chat_title(hook_payload or {})
-        if not title:
-            return "chat edit"
-        return f"chat {title} edited file"
-
-    def _chat_title(self, hook_payload: dict) -> str:
-        for key in ("conversation_title", "composer_title", "chat_title", "title"):
-            value = hook_payload.get(key)
-            if isinstance(value, str) and value.strip() and not self._looks_like_path(value):
-                return " ".join(value.split())
-        named = self._composer_name(str(hook_payload.get("conversation_id") or ""))
-        if named:
-            return named
-        return self._title_from_transcript(str(hook_payload.get("transcript_path") or ""))
-
-    def _looks_like_path(self, text: str) -> bool:
-        compact = " ".join(text.split())
-        if compact.startswith("@") or "\\" in compact or "/" in compact:
-            return True
-        return Path(compact).suffix.lower() in {".md", ".py", ".ts", ".tsx", ".js", ".json"}
-
-    def _composer_name(self, conversation_id: str) -> str:
-        if not conversation_id:
-            return ""
-        db = self._cursor_state_db()
-        if db is None or not db.is_file():
-            return ""
-        try:
-            con = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
-            try:
-                row = con.execute(
-                    "SELECT value FROM cursorDiskKV WHERE key = ?",
-                    (f"composerData:{conversation_id}",),
-                ).fetchone()
-            finally:
-                con.close()
-        except (OSError, sqlite3.Error):
-            return ""
-        if not row or row[0] is None:
-            return ""
-        raw = row[0]
-        if isinstance(raw, bytes):
-            raw = raw.decode("utf-8", "replace")
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
-            return ""
-        name = data.get("name") if isinstance(data, dict) else ""
-        if not isinstance(name, str) or not name.strip() or self._looks_like_path(name):
-            return ""
-        return " ".join(name.split())
-
-    def _cursor_state_db(self) -> Path | None:
-        override = getattr(self, "state_db", None)
-        if isinstance(override, Path):
-            return override
-        appdata = os.environ.get("APPDATA")
-        if not appdata:
-            return None
-        return Path(appdata) / "Cursor" / "User" / "globalStorage" / "state.vscdb"
-
-    def _title_from_transcript(self, transcript_path: str) -> str:
-        path = Path(transcript_path)
-        if not transcript_path or not path.is_file():
-            return ""
-        try:
-            first = path.open(encoding="utf-8").readline()
-        except OSError:
-            return ""
-        match = re.search(r"<user_query>\s*(.*?)\s*</user_query>", first, re.DOTALL)
-        text = match.group(1) if match else ""
-        text = re.sub(r"\s+", " ", text).strip()
-        if not text or self._looks_like_path(text):
-            return ""
-        if len(text) <= 60:
-            return text
-        shortened = text[:60].rsplit(" ", 1)[0]
-        return shortened or text[:60]
-
-    def toast_notice(self, echo: str) -> dict[str, str]:
-        return {
-            "message": echo,
-            "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        }
+    def show_ide_toast(self, echo: str, workspace_roots: list[Path | str]) -> list[Path]:
+        """Write echo as the toast of each workspace folder, joined with a toast written there in the same burst."""
+        now = datetime.now(timezone.utc)
+        return [ToastFile(folder).show(echo, now) for folder in self._toast_folders(workspace_roots)]
 
     def install_ide_toast_extension(self) -> Path:
         """Every preToolUse asks for this, so copy the tree once per process."""
@@ -281,18 +145,16 @@ class PromptNotify:
         type(self)._installed_extension = dest
         return dest
 
-    def _detected(self, hook_payload: dict, toolsets: list | None) -> tuple[str, str] | None:
+    def _detected(self, payload: HookPayload, toolsets: list | None) -> tuple[str, str] | None:
         if toolsets is not None:
-            marked = self.detect_echo(hook_payload, toolsets=toolsets)
-            if marked:
-                return marked
-        return self.detect(hook_payload)
+            annotated = self.detect_echo(payload, toolsets=toolsets)
+            if annotated:
+                return annotated
+        return self.detect(payload)
 
-    def _log_echo(self) -> None:
-        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        sys.stderr.write(
-            f"{stamp} [prompt-notify] tool={self.tool_name} {self.echo_kind}={self.echo_label}\n"
-        )
+    def _log_echo(self, tool_name: str, kind: str, label: str) -> None:
+        stamp = SessionLog.timestamp(datetime.now(timezone.utc))
+        sys.stderr.write(f"{stamp} [prompt-notify] tool={tool_name} {kind}={label}\n")
 
     def _catalog_match(
         self, haystacks: list[str], action_names: set[str]
@@ -324,36 +186,31 @@ class PromptNotify:
         )
         if match is None:
             return None
-        if self._has_echo(match.callable):
+        if self._has_toast(match.callable):
             return self._echo_kind_label(match)
-        if match.name == "instructions" and self._inherited_echo(toolset, "instructions"):
+        if match.name == "instructions" and self._inherited_toast(toolset, "instructions"):
             return self._echo_kind_label(match)
-        self._begin_tools = tools
-        self._begin_toolset = toolset
-        return self._begin_echo(match)
+        return self._begin_toast(match, tools, toolset)
 
-    def _begin_echo(self, match) -> tuple[str, str] | None:
-        begin = self._begin_tools.get("begin")
+    def _begin_toast(self, match, tools: dict, toolset) -> tuple[str, str] | None:
+        """The action toast of a toolset whose begin step is annotated, for a tool of that toolset that is not annotated."""
+        begin = tools.get("begin")
         if begin is None or match.name in _SKIP_BEGIN_FALLBACK:
             return None
-        if not self._has_echo(begin.callable):
+        if not self._has_toast(begin.callable):
             return None
-        return "action", str(getattr(self._begin_toolset, "slug", match.name)).replace("_", "-")
+        return "action", Name(str(getattr(toolset, "slug", match.name))).kebab
 
-    def _load_echo_toolsets(self, repo: Path | None) -> list:
-        from harness.installation.installer import Installer
+    def _load_echo_toolsets(self) -> list:
+        from harness.installer.installer import Installer
         from harness.agent_tools.agent_tools import AgentToolSet
 
-        installer = Installer(repo=repo or _REPO_ROOT)
-        return AgentToolSet.from_items(installer.collect_toolsets(), skip_errors=True)
+        return AgentToolSet.from_items(Installer(repo=_CDD_CHECKOUT).toolsets.collect())
 
-    def _toast_path(self, repo: Path | None) -> Path:
-        root = Path(repo) if repo is not None else _REPO_ROOT
-        return root / TOAST_NOTICE
-
-    def _write_notice(self, dest: Path, notice: str) -> None:
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(notice, encoding="utf-8")
+    def _toast_folders(self, workspace_roots: list[Path | str]) -> list[Path]:
+        """Each workspace folder once, as Windows names it when Cursor sends `/c:/...`."""
+        folders = [self._workspace_root(root) for root in workspace_roots]
+        return list({folder.resolve(): folder for folder in folders}.values())
 
     def _workspace_root(self, root: object) -> Path:
         text = str(root).strip().replace("\\", "/")
@@ -362,114 +219,12 @@ class PromptNotify:
             text = f"{slash_drive.group(1)}:/{slash_drive.group(2)}"
         return Path(text)
 
-    def _toast_destinations(self, primary: Path) -> list[Path]:
-        seen = {primary.resolve()}
-        extra: list[Path] = []
-        for root in self.toast_roots or []:
-            dest = self._workspace_root(root) / TOAST_NOTICE
-            try:
-                resolved = dest.resolve()
-            except OSError:
-                continue
-            if resolved in seen:
-                continue
-            seen.add(resolved)
-            extra.append(dest)
-        return extra
-
-    def _burst_message(self) -> str:
-        dest = self._toast_dest
-        echo = self.echo
-        stamp = self.toast_stamp
-        if dest is None or not dest.is_file():
-            return echo
-        previous = self._read_toast(dest)
-        prev_msg = str(previous.get("message") or "")
-        prev_at = self._parse_toast_time(str(previous.get("at") or ""))
-        now = self._parse_toast_time(stamp)
-        if not prev_msg or prev_at is None or now is None:
-            return echo
-        if abs((now - prev_at).total_seconds()) > _SAME_BURST_SECONDS:
-            return echo
-        if self._rules_notice(prev_msg) and self._rules_notice(echo):
-            if echo in prev_msg:
-                return prev_msg
-            return f"{prev_msg}\n\n{echo}"
-        return self._join_arrow_toasts(prev_msg, echo)
-
-    def _read_toast(self, dest: Path) -> dict:
-        try:
-            previous = json.loads(dest.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError, TypeError):
-            return {}
-        return previous if isinstance(previous, dict) else {}
-
     def _compact(self, text: str) -> str:
         return Name(text).kebab
 
-    def _walk_skill_tree(self, root: Path) -> None:
-        if not root.is_dir():
-            return
-        found = self.skill_found
-        top_kind = self.skill_kind
-        for child in root.iterdir():
-            if not child.is_dir():
-                continue
-            token = child.name.replace("_", "-")
-            found.setdefault(token, top_kind)
-            if top_kind != "practice":
-                continue
-            self._walk_practice_leaves(child)
-
-    def _walk_practice_leaves(self, child: Path) -> None:
-        found = self.skill_found
-        for leaf in child.iterdir():
-            if leaf.is_dir():
-                found.setdefault(leaf.name.replace("_", "-"), "fidelity")
-
-    def _walk_flat_skill_tree(self, root: Path) -> None:
-        """Claude joins nested skill folders into one name: ``actions-sketch``,
-        ``practices-bdd``, ``practices-bdd-bdd-behavior``."""
-        if not root.is_dir():
-            return
-        names = [child.name for child in root.iterdir() if child.is_dir()]
-        for name in names:
-            if name.startswith(_FLAT_ACTION_PREFIX):
-                self.skill_found.setdefault(name[len(_FLAT_ACTION_PREFIX):], "action")
-        practice_names = [
-            name[len(_FLAT_PRACTICE_PREFIX):] for name in names if name.startswith(_FLAT_PRACTICE_PREFIX)
-        ]
-        for name in practice_names:
-            self._add_flat_practice_skill(name, practice_names)
-
-    def _add_flat_practice_skill(self, name: str, practice_names: list[str]) -> None:
-        owners = [other for other in practice_names if name.startswith(f"{other}-")]
-        if not owners:
-            self.skill_found.setdefault(name, "practice")
-            return
-        owner = max(owners, key=len)
-        self.skill_found.setdefault(name[len(owner) + 1:], "fidelity")
-
-    def _walk_rule_tree(self, root: Path, found: dict[str, str]) -> None:
-        if not root.is_dir():
-            return
-        for child in root.iterdir():
-            if child.suffix in _RULE_SUFFIXES:
-                found.setdefault(child.stem.replace("_", "-"), "guideline")
-                continue
-            if not child.is_dir():
-                continue
-            found.setdefault(child.name.replace("_", "-"), "guideline")
-            for leaf in (path for path in child.iterdir() if path.suffix in _RULE_SUFFIXES):
-                found.setdefault(
-                    f"{child.name}-{leaf.stem}".replace("_", "-"),
-                    "guideline",
-                )
-
-    def _mcp_tool_name(self, hook_payload: dict) -> str:
-        name = str(hook_payload.get("tool_name") or "")
-        raw = hook_payload.get("tool_input")
-        inp = raw if isinstance(raw, dict) else {}
+    def _mcp_tool_name(self, payload: HookPayload) -> str:
+        name = payload.tool_name
+        inp = payload.tool_input
         nested = inp.get("toolName") or inp.get("tool_name") or inp.get("name")
         if isinstance(nested, str) and nested.strip():
             if "mcp" in name.lower() or name in {"CallMcpTool", "call_mcp_tool"}:
@@ -478,9 +233,8 @@ class PromptNotify:
                 return nested.strip()
         return name
 
-    def _paths(self, hook_payload: dict) -> list[str]:
-        raw = hook_payload.get("tool_input")
-        inp = raw if isinstance(raw, dict) else {}
+    def _paths(self, payload: HookPayload) -> list[str]:
+        inp = payload.tool_input
         found: list[str] = []
         for key in ("path", "file_path", "command"):
             value = inp.get(key)
@@ -488,9 +242,9 @@ class PromptNotify:
                 found.append(value)
         return found
 
-    def _haystacks(self, hook_payload: dict) -> list[str]:
-        values = [self._mcp_tool_name(hook_payload), str(hook_payload.get("tool_name") or "")]
-        for path in self._paths(hook_payload):
+    def _haystacks(self, payload: HookPayload) -> list[str]:
+        values = [self._mcp_tool_name(payload), payload.tool_name]
+        for path in self._paths(payload):
             if self._skill_or_rule_path(path):
                 values.append(path)
         return [item for item in values if item]
@@ -504,17 +258,10 @@ class PromptNotify:
         compacted_token = f"-{self._compact(token)}-"
         return compacted_token in compacted_hay
 
-    def _yaml_action(self, hook_payload: dict) -> str | None:
-        for text in self._paths(hook_payload):
-            match = _YAML_ACTION.search(text)
-            if match:
-                return match.group(1).replace("_", "-")
-        return None
-
-    def _has_echo(self, operation) -> bool:
+    def _has_toast(self, operation) -> bool:
         target = operation.fget if isinstance(operation, property) else operation
         inner = getattr(target, "__func__", target)
-        return bool(getattr(inner, "_echo", False) or getattr(target, "_echo", False))
+        return Toast.annotates(inner) or Toast.annotates(target)
 
     def _echo_kind_label(self, tool) -> tuple[str, str]:
         toolset = tool.toolset
@@ -524,15 +271,15 @@ class PromptNotify:
             return "practice", getattr(toolset, "slug", tool.name)
         if tool.name == "begin":
             return "action", getattr(toolset, "slug", tool.name)
-        return "action", tool.name.replace("_", "-")
+        return "action", Name(tool.name).kebab
 
-    def _inherited_echo(self, toolset, name: str) -> bool:
+    def _inherited_toast(self, toolset, name: str) -> bool:
         for cls in type(toolset).mro():
             member = cls.__dict__.get(name)
             if member is None:
                 continue
             target = member.fget if isinstance(member, property) else member
-            if self._has_echo(target):
+            if self._has_toast(target):
                 return True
         return False
 
@@ -559,47 +306,75 @@ class PromptNotify:
                 found.append(child)
         return found
 
-    def _parse_toast_time(self, stamp: str) -> datetime | None:
+
+class ToastFile:
+    """The toast notice of one workspace folder, ``.cursor/prompt-notify-toast.json``, which the IDE toast extension
+    shows. A toast written within a moment of the last one joins it, so a burst of tool calls shows as one toast."""
+
+    def __init__(self, folder: Path) -> None:
+        self.path = Path(folder) / TOAST_NOTICE
+
+    def show(self, message: str, now: datetime) -> Path:
+        """Write message as this folder's toast, joined with the toast already there when it is from the same burst."""
+        notice = {"message": self._joined_with_previous(message, now), "at": SessionLog.timestamp(now)}
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(json.dumps(notice, ensure_ascii=False) + "\n", encoding="utf-8")
+        return self.path
+
+    def _joined_with_previous(self, message: str, now: datetime) -> str:
+        previous = self._previous()
+        earlier = str(previous.get("message") or "")
+        shown_at = self._time_of(str(previous.get("at") or ""))
+        if not earlier or shown_at is None or abs((now - shown_at).total_seconds()) > _SAME_BURST_SECONDS:
+            return message
+        if self._is_rules_notice(earlier) and self._is_rules_notice(message):
+            return earlier if message in earlier else f"{earlier}\n\n{message}"
+        return self._join_arrow_toasts(earlier, message)
+
+    def _previous(self) -> dict:
+        """The toast shown here last; none when there is none or it was torn by a write still in progress."""
+        if not self.path.is_file():
+            return {}
         try:
-            return datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+            previous = json.loads(self.path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return {}
+        return previous if isinstance(previous, dict) else {}
+
+    def _time_of(self, stamp: str) -> datetime | None:
+        try:
+            return datetime.fromisoformat(stamp)
         except ValueError:
             return None
 
-    def _rules_notice(self, text: str) -> bool:
+    def _is_rules_notice(self, text: str) -> bool:
         lines = [line.strip() for line in text.splitlines() if line.strip()]
         return bool(lines) and all(line.startswith("rules injected") for line in lines)
 
-    def _rules_rest(self, rest: str) -> bool:
+    def _is_rules_rest(self, rest: str) -> bool:
         lowered = rest.strip().lower()
         return lowered.startswith("rules :") or lowered.startswith("rules:")
 
-    def _guidance_names_from_toast_rest(self, rest: str) -> list[str]:
+    def _guidance_names(self, rest: str) -> list[str]:
+        """The guidance names after a toast's arrow, such as `clean engineering code` from `rules : clean engineering
+        code rules`."""
         text = rest.strip()
-        lowered = text.lower()
-        if lowered.startswith("rules :") or lowered.startswith("rules:"):
+        if self._is_rules_rest(text):
             text = text.split(":", 1)[1]
-        names: list[str] = []
-        for chunk in text.split(","):
-            name = chunk.strip()
-            if name.endswith(" rules"):
-                name = name[: -len(" rules")].strip()
-            if name and name not in names:
-                names.append(name)
-        return names
+        names = [chunk.strip().removesuffix(" rules").strip() for chunk in text.split(",")]
+        return list(dict.fromkeys(name for name in names if name))
 
     def _join_arrow_toasts(self, previous: str, incoming: str) -> str:
         if incoming in previous:
             return previous
-        if _ARROW not in previous or _ARROW not in incoming:
+        if TOAST_ARROW not in previous or TOAST_ARROW not in incoming:
             return f"{previous}; {incoming}"
-        prev_src, prev_rest = previous.split(_ARROW, 1)
-        inc_src, inc_rest = incoming.split(_ARROW, 1)
-        if prev_src.strip() != inc_src.strip() or not self._rules_rest(prev_rest) or not self._rules_rest(inc_rest):
+        previous_source, previous_rest = previous.split(TOAST_ARROW, 1)
+        incoming_source, incoming_rest = incoming.split(TOAST_ARROW, 1)
+        if previous_source.strip() != incoming_source.strip() or not self._is_rules_rest(previous_rest) or not self._is_rules_rest(incoming_rest):
             return f"{previous}; {incoming}"
-        names: list[str] = []
-        for name in self._guidance_names_from_toast_rest(
-            prev_rest
-        ) + self._guidance_names_from_toast_rest(inc_rest):
-            if name not in names:
-                names.append(name)
-        return f"{prev_src.strip()}{_ARROW}rules : {', '.join(names)}"
+        names = list(dict.fromkeys(self._guidance_names(previous_rest) + self._guidance_names(incoming_rest)))
+        return rules_toast(previous_source.strip(), names)
+
+
+HookServer.show_toasts_with(PromptNotify().show_toast)

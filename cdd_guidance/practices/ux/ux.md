@@ -21,7 +21,7 @@ sandbox/<epic>/
     ux-context.md                          <- optional notes/invariants
 ```
 
-Sketch and context markdown stay in `.context/`. Story and object-model JS stay where Stories and Clean Engineering emit them; HTML imports those modules. `UxMap.story_references` and `object_references` store **paths** to those artifacts. If they are missing, run that generator's `transform` to `javascript`.
+Sketch and context markdown stay in `.context/`. Story and object-model JS stay where Stories and Clean Engineering emit them; HTML imports those modules. `UxMap.story_references` and `object_references` store **paths** to those artifacts. If they are missing, render them to `javascript` through that practice (`ensure_javascript`).
 
 **Story Demo (mockup+).** Generated HTML uses `templates/html/mockup_shell.html` — product screens **LEFT**, story explorer **RIGHT**. `story-demo/mount-generated-mockup.js` loads `create{Story}Story` exports, runs `PlayDualRunner`, and paints the explorer. Serve from the **repo root** so `/practices/...` imports resolve. Worked example: `practices/ux/_examples/manage-customer-orders/`.
 
@@ -33,7 +33,7 @@ Sketch and context markdown stay in `.context/`. Story and object-model JS stay 
 - `specifications/abd-works/` — the same layouts as brand-styled HTML sharing `abd-works-brand.css`. Use this folder when the screen needs the abd.works brand (`brand-is-opt-in`).
 - Add further sibling folders for other brands the same way; each folder stays self-contained.
 
-Before sketching ASCII, drawio regions, or brand-layer html, open the matching file in the folder that applies (`generic/` unless a brand is asked for or already established), read its slots, and adapt that file. Do not draw from scratch when a specification already covers the shape. `Screen.apply_layout(layout_id)` records the layout name; append real `Region`s from the slots you just read.
+Before sketching ASCII, drawio regions, or brand-layer html, open the matching file in the folder that applies (`generic/` unless a brand is asked for or already established), read its areas, and adapt that file. Do not draw from scratch when a specification already covers the shape. `Screen.apply_layout(layout_id)` records the layout name; append real `Region`s from the areas you just read.
 
 **Fidelities.**
 
@@ -55,7 +55,7 @@ Whenever you name screens, attach stories, or import domain terms on the UX surf
 - **`tab-states-are-separate-screens`** — N tabs → N screens; chrome shared via `chrome_of` / inactive tabs.
 - **`screen-story-budget`** — ~4 user stories per screen; more signals missed decomposition.
 - **`screen-names-use-domain-terms`** — Screen labels trace to domain language when it exists.
-- **`ia-named-regions-only`** — At IA, regions are named slots; no control detail yet.
+- **`ia-named-regions-only`** — At IA, regions are named areas; no control detail yet.
 - **`story-domain-js-imported`** — At mockup+, when practices/stories/domain exist, JS modules are present (transform if needed) and imported by the html surface.
 
 ---
@@ -90,7 +90,7 @@ Decide what screens exist and how users move between them.
 
 Screens, layouts, named regions, transitions, nav components, content types. Story names and domain terms attach as traces. Optional `ux-context.md` for invariants not on the canvas. No control types, no interaction JS, no brand.
 
-Link each story to the screen it shows with a `shownOn` edge — on the story, a scenario, or a step, at the highest level that is true — so the Claude Design story map and explorer show the right screen. Follow `model/claude_design/claude_design.md`.
+Link each story to the screen it shows with a `shownOn` edge — on the story, a scenario, or a step, at the highest level that is true — so the Claude Design story map and explorer show the right screen. Follow `model/claude_design/claude_design.md` and `model/claude_design/story_canvas.md`.
 
 #### Scaffold
 
@@ -156,7 +156,7 @@ Ask what the person does on this screen to accomplish the outcome, and what they
    - Brand/css tokens already exist somewhere in the workspace (check before deciding).
    Do not invent brand. When active, pick the sibling folder under `specifications/` for the brand that applies (e.g. `specifications/abd-works/`) and start from its matching page rather than inventing tokens; if no named brand applies, `specifications/generic/` (no brand layer) is the default. Fall back to whatever brand/css tokens already exist in the workspace when neither covers it. Add a thin css layer to the greybox html; keep the Story Demo shell fully functional. Brand applied here carries forward to **front_end_code** automatically — do not re-apply.
 9. Document every faked behaviour explicitly — list all stubs; no silent pretence of production services.
-10. **Claude Design channel.** When the session runs in Claude Design, port each story's screen as a prototype screen on the canvas instead of a greybox: the product's own markup and stylesheets, data from the stories' fixtures, real domain logic, the shared fixture bar, and buttons that move the story explorer to the next story. Follow `practices/stories/model/claude_design/claude_design.md` § Prototype screens.
+10. **Claude Design channel.** When the session runs in Claude Design, port each story's screen as a prototype screen on the canvas instead of a greybox: the product's own markup and stylesheets, data from the stories' fixtures, real domain logic, the shared fixture bar, and buttons that move the story explorer to the next story. Follow `model/claude_design/story_canvas.md` § Prototype screens.
 
 #### Rules
 

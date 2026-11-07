@@ -10,20 +10,20 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.installation.bootstrap import ensure_import_path
-from harness.installation.installer import Installer
+from harness.installer.installer import Installer
 
 ensure_import_path(_REPO_ROOT)
 
 from expects import contain, equal, expect
 from mamba import description, it
 
-from space.session.session_diagnostics import SessionDiagnostics, write_session_diagnostics
-from space.session.session_probe import probe_session_log
+from space.session.session_diagnostics import SessionDiagnostics
+from space.session.session_probe import SessionProbe
 
 
 with description("session diagnostics"):
     with it("should probe session.log for generate and validate in a temp session"):
-        result = probe_session_log()
+        result = SessionProbe().run()
         expect(result.get("color")).to(equal("green"))
         expect(result.get("checks", {}).get("generate_line")).to(equal(True))
         expect(result.get("checks", {}).get("validate_line")).to(equal(True))
@@ -47,7 +47,7 @@ with description("session diagnostics"):
         tree = Path(tempfile.mkdtemp())
         try:
             installer = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT)
-            report = write_session_diagnostics(installer)
+            report = SessionDiagnostics().write_to(installer)
             expect(report.startswith("green\n")).to(equal(True))
             data = json.loads((tree / "diagnostics.json").read_text(encoding="utf-8"))
             expect("session" in data).to(equal(True))

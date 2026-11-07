@@ -8,21 +8,21 @@ import { scenario, story } from '../../../story-test'
 // Epic: Move Work Forward From Chat Bar
 // Sub-epic: See Work In Chat Bar
 // Map: ../../../../../.context/story-map.md#s-chat-bar----display-stage-strip
-// Model: ../../../../../../kanban/.context/kanban-model.md
+// Model: ../../../../../../../space/kanban/.context/kanban-model.md
 // Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
 
 // (S) Chat Bar --> Display Stage Strip
 story('Display Stage Strip', CHAT_BAR, () => {
   scenario('Show the active session as one line', ({ given, when, then, and }) => {
     // Evidence: inferred: CDR 0001 'The line reads left to right' and design/StageStrip.dc.html; no chat bar code draws it yet, so this is intended behaviour
-    given('the [session](../../../../../../kanban/.context/kanban-model.md#session) checkout-flow is active and In progress in Specification', async ($, on, scene) => {
+    given('the [session](../../../../../../../space/kanban/.context/kanban-model.md#session) checkout-flow is active and In progress in Specification', async ($, on, scene) => {
       scene.world.board = boardOf('checkout-flow', checkoutFlow())
     })
     when('the Chat Bar draws above the prompt')
     // Boot ui.render -> refreshChatBar($) -> $.mcp.call('board.show') -> Board.show()
     // Board <- to_json(): active, columns
     // Boot -> ChatBarView($, currentChatBar($))
-    then('the line reads the health mark, checkout-flow ▾, the Specification fidelity dots, the action button, the five [stage](../../../../../../kanban/.context/kanban-model.md#stage--column) icons, then handoff, files and close', async ($, on, scene) => {
+    then('the line reads the health mark, checkout-flow ▾, the Specification fidelity dots, the action button, the five [stage](../../../../../../../space/kanban/.context/kanban-model.md#stage--column) icons, then handoff, files and close', async ($, on, scene) => {
       expect(buttonKeys(await drawn(scene.ui, 'line'))).toEqual([
         'health-icon',
         'session-name-button',

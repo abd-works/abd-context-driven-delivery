@@ -12,7 +12,7 @@ from cdd_guidance.patterns.lern_domain_driven.practices.bdd.rules.shared_behavio
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import behavior_file_facts
 from cdd_guidance.practices.bdd.model.code_spec_model import TypeScriptBddModel
 from harness.graph.graph import Node, PracticeGraph, Source
-from harness.graph.practice_rules_registry import checks_for_practice
+from harness.graph.graph_practice import GraphPractices
 
 _SHARED = """
 export const ticketBehavior = shareBehavior<TicketDriver>(({ describe, it, before, driver, expect }) => {
@@ -37,8 +37,8 @@ def behavior_file(text, node_type):
 
 with description("the lern_domain_driven behavior rules"):
     with it("should load into the bdd practice only when the overlay is active"):
-        expect(list(checks_for_practice("bdd", ("lern_domain_driven",)))).to(contain("tier-runs-shared-behavior"))
-        expect("tier-runs-shared-behavior" in checks_for_practice("bdd")).to(equal(False))
+        expect(list(GraphPractices.named("bdd").checks(("lern_domain_driven",)))).to(contain("tier-runs-shared-behavior"))
+        expect("tier-runs-shared-behavior" in GraphPractices.named("bdd").checks()).to(equal(False))
 
     with description("a shared behavior"):
         with it("should read as the same describe tree the bdd practice reads from any spec"):

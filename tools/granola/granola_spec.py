@@ -15,12 +15,12 @@ for _cat in ("tools", "cdd_guidance/practices"):
 from expects import be_true, equal, expect
 from mamba import context, description, it
 
-from granola.granola import Granola
+from tools.granola.granola import Granola
 from harness.agent_tools.agent_tools import AgentInstructions
 
 
 def _expanded(action: str) -> str:
-    toolset = Granola()
+    toolset = Granola(tempfile.gettempdir())
     body = AgentInstructions.for_callable(getattr(type(toolset), action), toolset)
     return "\n".join(body.prompt)
 
@@ -32,7 +32,7 @@ with description("a Granola toolset"):
                 {"note_id": "a", "title": "Inventory", "date": "2026-08-25", "folder": "Paradise", "new_folder": True},
                 {"note_id": "b", "title": "New note", "date": "2026-09-30", "folder": ""},
             ])
-            rendered = Granola().format_filing_plan(plan)
+            rendered = Granola(tempfile.gettempdir()).format_filing_plan(plan)
             expect("## Paradise (new)" in rendered).to(be_true)
             expect("## Review Before Filing" in rendered).to(be_true)
             expect("2 notes into 2 folders" in rendered).to(be_true)
@@ -40,7 +40,7 @@ with description("a Granola toolset"):
     with context("whose write_note_context writes a note into a folder"):
         with it("should write a Granola-marked file that list_note_context then finds"):
             with tempfile.TemporaryDirectory() as root:
-                granola = Granola(path=root)
+                granola = Granola(root)
                 written = granola.write_note_context(
                     "src/inventory", "abc-123", "Inventory and payment systems", "2026-08-31",
                     "https://notes.granola.ai/d/abc-123", "## Summary\nStock moves.",
@@ -50,6 +50,16 @@ with description("a Granola toolset"):
                 expect("note_id: abc-123" in stored).to(be_true)
                 expect(Path(written).name).to(equal("2026-08-31-inventory-and-payment-systems.md"))
                 expect(granola.list_note_context("src/inventory")).to(equal(written))
+
+    with context("that a tool call makes for its project"):
+        with it("should write a relative folder's notes into that project, not the server's folder"):
+            from harness.agent_tools.agent_tools import AgentToolSet
+
+            with tempfile.TemporaryDirectory() as project:
+                tool = AgentToolSet.instantiate(Granola).tools["write_note_context"]
+                note = {"folder": "src", "note_id": "n1", "title": "Pricing", "date": "2026-09-01", "url": "u", "content": "c"}
+                written = tool.invoke(note, project=project)
+                expect(Path(str(written)).is_relative_to(Path(project).resolve())).to(be_true)
 
     with context("whose organize action is expanded"):
         with it("should ask for confirmation before creating or moving anything"):

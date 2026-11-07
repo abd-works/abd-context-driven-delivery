@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sketch.sketch import Sketch
+from cdd_guidance.actions.sketch.sketch import Sketch
 
 
 class ModuleSketch(Sketch):

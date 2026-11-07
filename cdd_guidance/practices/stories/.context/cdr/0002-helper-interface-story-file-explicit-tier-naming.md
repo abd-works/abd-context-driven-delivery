@@ -1,5 +1,7 @@
 # Story file declares a helper interface; every tier is named explicitly
 
+**Status:** deprecated. The code formats no longer write a helper interface or `{story}_test_helper.{tier}` files, and `SubEpic.testSuites` is gone. Each sub-epic is now one story file (`{sub_epic}_story.test.ts`, `.test.js`, `.test.py`, or `{SubEpic}Story.java`) whose `story()` and `scenario()` blocks hold their steps' code inline; see `practices/stories/model/.context/story-model.md` (*CodeStoryModel*).
+
 `{story}_story.<ext>` (scenario fidelity, no suffix) now declares one
 helper-interface method per distinct Given/When/Then clause and wires
 `story()`/`scenario()` blocks that call those methods only — no assertions, no

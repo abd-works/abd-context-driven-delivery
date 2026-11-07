@@ -20,6 +20,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 )
 from harness.guidance.fixtures.split_tool.split_tool import SplitPracticeGuidance
 from harness.markdown import HTML, Markdown
+from harness.hooks.hook_server import HookPayload
 
 _READS_PER_FIDELITY = 10
 
@@ -84,16 +85,18 @@ with description("context guidance"):
         with it("should inject rules markdown when the agent writes a matching path"):
             guidance = SampleGuidance(format="markdown")
             result = guidance.rules.inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Write",
                     "tool_input": {"path": "pkg/foo_sample_bar.py"},
-                }
+                })
             )
             expect(result).to(equal({}))
             inject = type(guidance.rules).inject_rules
-            expect(getattr(inject, "_hook", False)).to(equal(True))
-            expect(getattr(inject, "_hook_disabled", False)).to(equal(True))
-            expect(getattr(inject, "_hook_name", "")).to(equal("postToolUse"))
+            from harness.hooks.hooks import Hook
+
+            expect(Hook.annotates(inject)).to(equal(True))
+            expect(Hook.disabled_on(inject)).to(equal(True))
+            expect(Hook.name_annotated_on(inject)).to(equal("postToolUse"))
 
         with it("should list inject_rules on tools but not enroll a disabled hook"):
             guidance = SampleGuidance(format="markdown")
@@ -113,12 +116,12 @@ with description("context guidance"):
             from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
             result = CleanEngineering().rules.inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Write",
                     "tool_input": {
                         "path": "cdd_guidance/actions/validate/validate.py",
                     },
-                }
+                })
             )
             expect(result).to(equal({}))
 
@@ -126,10 +129,10 @@ with description("context guidance"):
             from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
             result = CleanEngineering().rules.inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Read",
                     "tool_input": {"path": "cdd_guidance/actions/validate/validate.py"},
-                }
+                })
             )
             expect(result).to(equal({}))
 
@@ -137,20 +140,20 @@ with description("context guidance"):
             from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
             result = CleanEngineering().rules.inject_rules(
-                {
+                HookPayload({
                     "hook_event_name": "afterFileEdit",
                     "file_path": r"C:\dev\other-repo\src\cart.py",
-                }
+                })
             )
             expect(result).to(equal({}))
 
         with it("should not inject rules markdown when the agent writes a non-matching path"):
             guidance = SampleGuidance(format="markdown")
             result = guidance.rules.inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Write",
                     "tool_input": {"path": "pkg/other.py"},
-                }
+                })
             )
             expect(result).to(equal({}))
 
@@ -290,12 +293,14 @@ with description("a guidance collection of context guidance children") as self:
         self.practice = SamplePracticeWithFidelities(format="markdown")
         self.collection = self.practice.fidelities
 
-    with context("with the class marked as a toolset collection"):
+    with context("with the class annotated as a toolset collection"):
         with it("should be a ToolSetCollection without subclassing it in the source"):
             from harness.agent_tools.agent_tools import ToolSetCollection
 
             expect(isinstance(self.collection, ToolSetCollection)).to(equal(True))
-            expect(getattr(type(self.collection), "_is_toolset_collection", False)).to(equal(True))
+            from harness.agent_tools.agent_tools import ToolSetCollectionAnnotation
+
+            expect(ToolSetCollectionAnnotation.annotates(type(self.collection))).to(equal(True))
             from harness.markdown import MarkdownCollection
 
             expect(isinstance(self.collection, MarkdownCollection)).to(equal(True))

@@ -26,14 +26,12 @@ sys.path.insert(0, _root)
 from expects import be_a, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.clean_engineering.specifications._scan_kit import (
-    DOMAIN_MODULE_RULE_GLOBS,
-)
 from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import (
     LernDomainDriven,
 )
 from cdd_guidance.practices.stories.stories import Stories
 from harness.guidance.rule import RulesCollection
+from harness.hooks.hook_server import HookPayload
 
 _ALL_RULE_SLUGS = (
     "screens-live-in-their-domain",
@@ -70,7 +68,7 @@ _ALL_RULE_SLUGS = (
     "throw-http-exceptions",
     "tier-bound-repository-accessor",
     "no-expect-in-given",
-    "outline-rows-loop-over-examples",
+    "outline-entries-loop-over-examples",
     "reset-every-repository",
     "shared-behavior-stays-tier-free",
     "tier-runs-shared-behavior",
@@ -92,7 +90,7 @@ with description("a LernDomainDriven generator"):
             expect(self.tool.default_workspace_folder).to(equal("packages"))
 
         with it("should key context_index on lern_domain_driven"):
-            expect(self.tool.context_index_key).to(equal("lern_domain_driven"))
+            expect(self.tool.key).to(equal("lern_domain_driven"))
 
         with it("should resolve module_dir to this package"):
             expect(self.tool.module_dir).to(equal(_MODULE_DIR))
@@ -112,7 +110,7 @@ with description("a LernDomainDriven generator"):
 
         with it("should carry that format through to the Clean Engineering companion"):
             companion = self.stories.fidelities.current.clean_engineering
-            expect(companion.practice_guidance.format).to(equal("typescript"))
+            expect(companion.format).to(equal("typescript"))
 
         with it("should point the step library at test-utils/story-test"):
             expect(self.stories.story_test_folder).to(equal("test-utils/story-test"))
@@ -132,7 +130,7 @@ with description("a LernDomainDriven generator"):
             for leaf in leaves:
                 expect(paths[leaf]).to(contain('from "test-utils/story-test/story-test"'))
 
-    with context("whose contexts slot is expanded"):
+    with context("whose contexts section is expanded"):
         with before.each:
             self.rendered = (_MODULE_DIR / "lern_domain_driven.md").read_text(encoding="utf-8")
 
@@ -173,26 +171,26 @@ with description("a LernDomainDriven generator"):
     with context("whose rules collection injects on matching paths"):
         with before.each:
             self.rules = self.tool.rules
-            self.payload = {
+            self.payload = HookPayload({
                 "tool_name": "Write",
                 "tool_input": {"path": "src/customer/customer-node.ts"},
-            }
+            })
 
         with it("should load shared rules as a RulesCollection"):
             expect(self.rules).to(be_a(RulesCollection))
             expect(len(list(self.rules))).to(equal(len(_ALL_RULE_SLUGS)))
 
         with it("should scope inject globs to src domains and epic packages"):
-            expect(self.rules.glob).to(equal(DOMAIN_MODULE_RULE_GLOBS))
+            expect(self.rules.applies_to.globs).to(equal("packages/**/*,src/**/*"))
 
         with it("should match domain node files under src"):
-            expect(self.rules.matches("src/customer/customer-node.ts")).to(equal(True))
+            expect(self.rules.applies_to.matches("src/customer/customer-node.ts")).to(equal(True))
 
         with it("should match epic screen files under packages"):
-            expect(self.rules.matches("packages/wire-pay/send-wire/send-wire.tsx")).to(equal(True))
+            expect(self.rules.applies_to.matches("packages/wire-pay/send-wire/send-wire.tsx")).to(equal(True))
 
         with it("should not match unrelated files outside src or packages"):
-            expect(self.rules.matches("cdd_guidance/actions/validate/validate.py")).to(equal(False))
+            expect(self.rules.applies_to.matches("cdd_guidance/actions/validate/validate.py")).to(equal(False))
 
         with it("should inject rules markdown when a matching src file is written"):
             result = self.rules.inject_rules(self.payload)

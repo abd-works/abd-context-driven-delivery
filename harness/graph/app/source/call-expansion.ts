@@ -48,23 +48,15 @@ const CLASS_KINDS = new Set([
   "Specification",
 ]);
 
-export type FoldNode = {
-  nodeId: string;
-  name: string;
-  nodeType?: { name?: string } | null;
-  source?: { text?: string; file?: string; startLine?: number; endLine?: number } | null;
-  children?: FoldNode[];
-};
-
 export type FoldMember = {
-  id: string;
+  node_id: string;
   name: string;
-  kind: string;
+  type: string;
   owner: string;
   text: string;
   file: string;
-  start: number;
-  end: number;
+  start_line: number;
+  end_line: number;
   classes?: string[];
 };
 
@@ -81,51 +73,6 @@ export function initialOpenFolds(folds: InlineFold[]): number[] {
 }
 
 export type InlineLayout = { text: string; folds: InlineFold[]; lineNumbers: string[]; depths: number[] };
-
-export function collectFoldMembers(nodes: FoldNode[]): FoldMember[] {
-  const seen = new Map<string, FoldMember>();
-  const visit = (node: FoldNode, owner: string, parentIsClass: boolean) => {
-    const kind = node.nodeType?.name ?? "";
-    const isClass = CLASS_KINDS.has(kind);
-    const grouped = kind === "FieldGroup";
-    if ((kind === "Operation" || kind === "Property" || isClass) && node.nodeId) {
-      const existing = seen.get(node.nodeId);
-      const realOwner = isClass ? "" : parentIsClass ? owner : (existing?.owner ?? "");
-      if (!existing) {
-        seen.set(node.nodeId, {
-          id: node.nodeId,
-          name: node.name,
-          kind,
-          owner: realOwner,
-          text: node.source?.text ?? "",
-          file: node.source?.file ?? "",
-          start: Number(node.source?.startLine) || 0,
-          end: Number(node.source?.endLine) || 0,
-        });
-      } else {
-        if (parentIsClass && !isClass) {
-          existing.owner = owner;
-        }
-        if (!existing.text && node.source?.text) {
-          existing.text = node.source.text;
-        }
-        if (!existing.file && node.source?.file) {
-          existing.file = node.source.file;
-          existing.start = Number(node.source.startLine) || existing.start;
-          existing.end = Number(node.source.endLine) || existing.end;
-        }
-      }
-    }
-    const nextOwner = isClass ? node.name : owner;
-    for (const child of node.children ?? []) {
-      visit(child, nextOwner, isClass || (grouped && parentIsClass));
-    }
-  };
-  for (const node of nodes) {
-    visit(node, "", false);
-  }
-  return [...seen.values()];
-}
 
 export function classPanelLayout(text: string, folds: InlineFold[] = []): InlineLayout {
   const lines = text ? text.split("\n") : [""];
@@ -252,7 +199,7 @@ export function inlineCallLayout(
   const namedCalls: CallBody[] = [];
   const namedClasses: ClassBody[] = [];
   for (const member of options.named ?? []) {
-    if (CLASS_KINDS.has(member.kind)) {
+    if (CLASS_KINDS.has(member.type)) {
       const listed = classes.get(member.name);
       if (listed && !namedClasses.some((item) => item.id === listed.id)) {
         namedClasses.push(listed);
@@ -260,11 +207,11 @@ export function inlineCallLayout(
       continue;
     }
     namedCalls.push({
-      id: member.id,
+      id: member.node_id,
       member: member.name,
       label: member.name,
       text: member.text || member.name,
-      start: member.start || 1,
+      start: member.start_line || 1,
       types: (member.classes ?? [])
         .map((name) => classes.get(name))
         .filter((item): item is ClassBody => Boolean(item)),
@@ -363,10 +310,10 @@ function variableTypes(text: string): Map<string, string> {
 function classCatalog(members: FoldMember[]): Map<string, ClassBody> {
   const classes = new Map<string, ClassBody>();
   for (const member of members) {
-    if (!CLASS_KINDS.has(member.kind) || !member.text || classes.has(member.name)) {
+    if (!CLASS_KINDS.has(member.type) || !member.text || classes.has(member.name)) {
       continue;
     }
-    classes.set(member.name, { id: member.id, name: member.name, text: member.text, start: member.start || 1 });
+    classes.set(member.name, { id: member.node_id, name: member.name, text: member.text, start: member.start_line || 1 });
   }
   return classes;
 }
@@ -379,7 +326,7 @@ function callCatalog(members: FoldMember[], classes: Map<string, ClassBody>, own
     return leftOwner - rightOwner;
   });
   for (const member of ordered) {
-    if (member.kind !== "Operation" && member.kind !== "Property") {
+    if (member.type !== "Operation" && member.type !== "Property") {
       continue;
     }
     if (!member.text || isSimpleProperty(member.text)) {
@@ -387,12 +334,12 @@ function callCatalog(members: FoldMember[], classes: Map<string, ClassBody>, own
     }
     const key = memberKey(member.owner, member.name);
     const body: CallBody = {
-      id: member.id,
+      id: member.node_id,
       member: member.name,
       label: member.owner ? `${member.owner}.${member.name}` : member.name,
       text: member.text,
-      start: member.start || 1,
-      types: typesIn(member.kind, member.text, classes),
+      start: member.start_line || 1,
+      types: typesIn(member.type, member.text, classes),
     };
     if (!bodies.has(key)) {
       bodies.set(key, body);

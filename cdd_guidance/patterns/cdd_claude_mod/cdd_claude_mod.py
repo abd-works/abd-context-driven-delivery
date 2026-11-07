@@ -1,6 +1,6 @@
 """CddClaudeMod generator - implementation fidelity for a Claude Code mod that is a view of the CDD domain.
 The domain stays in Python. Each component runs one straight line: view, client, MCP tool, domain.
-See harness/kanban for the worked example."""
+See space/kanban for the worked example."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from harness.guidance.guidance import PracticeGuidance
 
 @agent_toolset
 class CddClaudeMod(PracticeGuidance):
-    """# Instructions"""
+    """A Claude Code mod that is a view of the CDD domain: each component runs view, client, MCP tool, domain."""
 
     pattern = "cdd_claude_mod"
 

@@ -185,4 +185,4 @@ section: body
 | --- | --- | --- | --- |
 | Ticket Archive name | harness/.context/story-map.md | 86 to 88 | Ticket Archive |
 | Move Ticket size | harness/.context/story-map.md | 148 to 150 | Move Ticket |
-| Activate Ticket name | harness/kanban/ticket.py | 212 to 213 | Activate Ticket |
+| Activate Ticket name | space/kanban/ticket.py | 212 to 213 | Activate Ticket |

@@ -1,5 +1,9 @@
 // === Porting ===
 
+/**
+ * Donor / account / device / verified live here. Cart **links** this type (``). `planSelected` is the cart bundle name.
+ */
+@Association()
 class Portability {
   donorOperator: string;
   portNumber: string;
@@ -41,6 +45,9 @@ class Portability {
   }
 }
 
+/**
+ * Twilio Verify. Port-in SMS.
+ */
 class TwilioService {
   constructor() {
   }
@@ -62,6 +69,9 @@ class PortingSmsCode {
   }
 }
 
+/**
+ * Commit failures after `Portability.verify`.
+ */
 class PortingErrors {
   portingSmsCode: string | null;
 

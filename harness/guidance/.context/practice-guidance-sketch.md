@@ -1,6 +1,7 @@
 fidelity: model / behavior
 scope: PracticeGuidance format, CE companion, render folders
 status: ce model agreed; bdd behavior signatures in practice_guidance_behavior_spec.py
+// built: the current classes are in practice-guidance-model.md; names below follow the code
 
 =========
 theme: default format
@@ -8,10 +9,10 @@ theme: default format
 ce:
 PracticeGuidance : Guidance
   fidelities
-  format
-  load_fidelities_from_markdown
-       -> fidelity_blocks
+       // @markdownCollection: MarkdownCollection.coerce reads the Fidelities section
+       -> Markdown.fidelity_blocks
        -> FidelityGuidance
+  format
   // never _fidelity_format_defaults
   // constructor format overrides FidelityGuidance.default_format
   // omitted format → current fidelity default_format
@@ -48,8 +49,8 @@ PracticeGuidance : Guidance
        -> fidelities.current
             -> // if clean_engineering is null, skip
             -> clean_engineering.instructions
-  load_fidelities_from_markdown
-       -> fidelity_clean_engineering body
+  fidelities
+       -> Markdown.fidelity_clean_engineering body
             -> // resolve name against CleanEngineering.fidelities; miss → null
 
   ----
@@ -104,17 +105,15 @@ clean-engineering-model (Skill)
   // agent already has the python model artifact; conversion starts here
   -> render (Skill)
        -> McpServer.invoke_tool render.render
-            -> Render.render guidance format content
-                 -> GuidanceAction.run guidance
-                      -> begin action="render"
-                           -> Workspace.open
-                           -> Turn.action
-                           -> RecordDecisions.record_decisions_session
+            -> Render.render guidance format paths
+                 -> _work_on guidance
+                 -> load_document content paths
+                 -> each
                       -> listed
                            -> AgentToolSet.instantiate_all
                                 -> CleanEngineering fidelity="model"
                       -> each Guidance
-                           -> CleanEngineering.render format="drawio" content
+                           -> CleanEngineering.render_files format="drawio" paths
                                 -> fidelities.current
                                      -> // default_format python unless constructor format was passed
                                 -> formats[source or self.format].parse content
@@ -123,15 +122,15 @@ clean-engineering-model (Skill)
                                 -> formats[format].render model
                                      -> drawio.render model
                                           // keep_positioning / previous stay in drawio/
-                      -> end
-                           -> Turn.turn
+                 -> act_quickly
+                 -> place_rendered
 
   ----
 bdd-behavior (Skill)
   // no model/{format}/ on BDD — companion supplies render
   -> render (Skill)
-       -> Render.render guidance format content
-            -> Bdd.render format content
+       -> Render.render guidance format paths
+            -> Bdd.render_files format paths
                  -> fidelities.current.clean_engineering
                       // null → skip (no conversion)
                       -> practice_guidance.render format content

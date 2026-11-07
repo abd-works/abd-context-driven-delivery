@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from expects import be_true, contain, equal, expect
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
+from space.session.throwaway_project import ThrowawayProject
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
@@ -17,19 +18,20 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.tool_call import ToolCall
 import cdd_guidance.practices  # noqa: F401 - generator package on path
 from harness.markdown import Markdown
 
-from satisfy.satisfy import Satisfy
-from validate.validate import Validate
+from cdd_guidance.actions.satisfy.satisfy import Satisfy
+from cdd_guidance.actions.validate.validate import Validate
 
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "clean_engineering"
 _GENERATE_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "generate"
 _VALIDATE_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "validate"
 _SATISFY_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "satisfy"
 _CLEAN_ENGINEERING_TOOLSET = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
-_VALIDATE_TOOLSET = "validate.validate:Validate"
-_SATISFY_TOOLSET = "satisfy.satisfy:Satisfy"
+_VALIDATE_TOOLSET = "cdd_guidance.actions.validate.validate:Validate"
+_SATISFY_TOOLSET = "cdd_guidance.actions.satisfy.satisfy:Satisfy"
 
 
 class CleanEngineeringKit:
@@ -50,7 +52,7 @@ class CleanEngineeringKit:
 
         func = getattr(type(instance), self.action_name)
         return AgentInstructions.for_callable(func, instance).expand(
-            self.context, self.arguments
+            self.arguments
         )
 
     def action_prose(self) -> str:
@@ -110,6 +112,13 @@ class CleanEngineeringKit:
 
 
 with description("CleanEngineering action expansion"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        self.project = ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("a CleanEngineering generator constructed with format python"):
         with before.all:
             kit = CleanEngineeringKit()
@@ -146,7 +155,7 @@ with description("CleanEngineering action expansion"):
             with before.each:
                 self.kit.action_name = "validate"
                 self.kit.arguments = {"guidance": [self.clean_engineering]}
-                self.response = self.kit.expand(Validate())
+                self.response = self.kit.expand(Validate(session=ToolCall(project=self.project.root).session))
 
             with it("should inline validate.md from the validate kit"):
                 self.kit.kit_dir = _VALIDATE_DIR
@@ -159,7 +168,7 @@ with description("CleanEngineering action expansion"):
             with before.each:
                 self.kit.action_name = "satisfy"
                 self.kit.arguments = {"guidance": [self.clean_engineering]}
-                self.response = self.kit.expand(Satisfy())
+                self.response = self.kit.expand(Satisfy(session=ToolCall(project=self.project.root).session))
 
             with it("should inline satisfy.md from the satisfy kit"):
                 self.kit.kit_dir = _SATISFY_DIR
@@ -192,6 +201,13 @@ with description("CleanEngineering action expansion"):
 
 
 with description("clean_engineering content helpers"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("load_concepts_section"):
         with it("should return non-empty text containing the word Contexts"):
             result = CleanEngineeringKit().contexts_section()

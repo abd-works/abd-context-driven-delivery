@@ -97,10 +97,32 @@ with description("Ddd.render at model fidelity"):
             _keeps_integrations("typescript")
 
     with context("to python"):
+        with it("should write each class's stereotypes as decorators"):
+            code, _model = _round_trip("python")
+            expect(code).to(contain("@aggregate_root\n@entity\nclass CustomerProfile"))
+
+        with it("should keep only the class's place in its doc comment"):
+            code, _model = _round_trip("python")
+            expect(code).to(contain('class CustomerProfile:\n    """Customer | custom · Customer Profile"""'))
+
         with it("should write generics python can read back"):
             code, _model = _round_trip("python")
             expect(code).to(contain("Collection[CustomerProfile]"))
             expect("Collection<" in code).to(equal(False))
+
+    with context("to typescript"):
+        with it("should write each class's stereotypes as decorators"):
+            code, _model = _round_trip("typescript")
+            expect(code).to(contain("@AggregateRoot()\n@Entity()\nclass CustomerProfile"))
+
+    with context("from code whose classes carry decorators that are not DDD's"):
+        with it("should keep only the DDD stereotypes on each card"):
+            code = "@dataclass\n@value_object\nclass Money:\n    amount: int\n\n@entity\nclass Wallet:\n    money: Money\n"
+            back = Ddd(fidelity="model").render("markdown", code, source="python")["content"]
+            cards = MarkdownBoundedContextMap().parse(back).contexts[0].aggregates[0].cards
+            expect(sorted((card.node.name, card.stereotypes) for card in cards)).to(
+                equal([("Money", ["Value Object"]), ("Wallet", ["Entity"])])
+            )
 
     with context("from code with no stereotypes or places"):
         with it("should group each repository and member with the class that holds it"):

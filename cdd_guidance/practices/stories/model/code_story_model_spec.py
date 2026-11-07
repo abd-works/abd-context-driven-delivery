@@ -1,330 +1,198 @@
-"""Mamba spec for `a code Story Map`. Mirrors ../../bdd-context.md `## Code` -> `a code Story Map`.
+"""Mamba spec for `a code Story Map`: the folder and file layout every language shares, observed through Python
+story tests. The code inside each file is covered by the TypeScript, Python, JavaScript, and Java specs."""
 
-Uses a thin concrete backend `_MinimalCodeBackend` to observe the abstract folder-tree
-behavior - the language-specific leaf content is covered by the TS/Python/Java specs.
+from expects import be_false, be_true, equal, expect, have_len, raise_error
+from mamba import before, context, description, it
 
-Exercises the Uniform Callable Surface: the backend is stateless - every call
-passes the canonical StoryModel explicitly through `render(canonical, previous=None)`,
-`parse(external)`, and `sync(external, canonical)`.
-"""
-
-import sys
-from pathlib import Path
-
-_HERE = Path(__file__).resolve()
-for _candidate in _HERE.parents:
-    if (_candidate / "practices" / "stories" / "src" / "practices" / "stories").is_dir():
-        if str(_candidate) not in sys.path:
-            sys.path.insert(0, str(_candidate))
-        break
-
-from mamba import description, context, it, before
-from expects import equal, have_len, be_true, be_false, expect, raise_error
-
-from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
-from cdd_guidance.practices.stories.model.story_model import Scenario
-from cdd_guidance.practices.stories.model.story_model import StoryModel
-from cdd_guidance.practices.stories.model.code_story_model import (
-    CodeEpic,
-    CodeStoryModel,
-    CodeStoryModelError,
-)
+from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError
+from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
+from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Story, StoryModel, StoryType
+from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
 
-class _MinimalCodeBackend(CodeStoryModel):
-    LEAF_EXTENSION = ".txt"
-    LANGUAGE_LINE_COMMENT = "#"
-
-    def _render_leaf_file(self, sub_epic: Epic, owning_epic: Epic) -> str:
-        lines = [f"# leaf: {sub_epic.name}"]
-        for story in sub_epic.stories:
-            lines.append(f"## story: {story.name}")
-            for scenario in story.scenarios:
-                lines.append(f"- scenario: {scenario.name}")
-        return "\n".join(lines) + "\n"
+def story_named(name: str) -> Story:
+    story = Story(name, 1, StoryType.USER)
+    story.scenarios.append(Scenario(name=f"{name} works", sequential_order=1))
+    return story
 
 
-class SpecFixture:
-    def story_map_with_4_epics_and_3_leaf_epics(self) -> StoryModel:
-        story_map = StoryModel()
-        for i in range(1, 5):
-            story_map.append_epic(Epic(f"Epic {i}", i))
-        first = story_map.epics[0]
-        for j in range(1, 4):
-            sub = Epic(f"Epic 1.{j}", j)
-            story = Story(f"Story {j}", 1, StoryType.USER)
-            story.scenarios.append(Scenario(name=f"scenario {j}", sequential_order=1))
-            sub.stories.append(story)
-            first.epics.append(sub)
-        return story_map
+def epics_each_with_a_story(count: int) -> StoryModel:
+    story_map = StoryModel()
+    for order in range(1, count + 1):
+        epic = Epic(f"Epic {order}", order)
+        epic.stories.append(story_named(f"Story of epic {order}"))
+        story_map.append_epic(epic)
+    return story_map
 
 
-fixture = SpecFixture()
+def first_epic_with_three_sub_epics() -> StoryModel:
+    story_map = epics_each_with_a_story(4)
+    first = story_map.epics[0]
+    for order in range(1, 4):
+        sub_epic = Epic(f"Epic 1.{order}", order)
+        sub_epic.stories.append(story_named(f"Story {order}"))
+        first.epics.append(sub_epic)
+    return story_map
+
+
+def files_under(tree: dict, folder: str) -> list:
+    return [path for path in tree if path.startswith(f"{folder}/")]
 
 
 with description("a code Story Map") as self:
     with before.each:
-        self.backend_cls = _MinimalCodeBackend
-        self.code_map = self.backend_cls()
+        self.code_map = PythonStoryModel("tests")
 
-    with it("should hold no folders under the tests root when rendered from an empty canonical Story Map"):
-        tree = self.code_map.render(StoryModel())
-        expect(tree).to(equal({}))
+    with it("should write no files for an empty Story Map"):
+        expect(self.code_map.render(StoryModel())).to(equal({}))
 
-    with context("with a canonical Story Map that has Epics but no Epics"):
+    with context("with 4 Epics that each hold their own Story"):
         with before.each:
-            self.canonical = StoryModel()
-            for i in range(1, 5):
-                self.canonical.append_epic(Epic(f"Epic {i}", i))
+            self.canonical = epics_each_with_a_story(4)
             self.tree = self.code_map.render(self.canonical)
-            self.parsed = self.code_map.parse(self.tree)
 
-        with it("should preserve Epic count after render/parse"):
-            expect(self.parsed.epics).to(have_len(4))
+        with it("should write each Epic's stories into a folder named after the Epic"):
+            expect(sorted(self.tree)).to(equal([
+                "tests/epic-1/epic_1_story.test.py",
+                "tests/epic-2/epic_2_story.test.py",
+                "tests/epic-3/epic_3_story.test.py",
+                "tests/epic-4/epic_4_story.test.py",
+            ]))
 
-    with context("with a canonical Story Map of 4 Epics in sequential order"):
-        with before.each:
-            self.canonical = StoryModel()
-            for i in range(1, 5):
-                self.canonical.append_epic(Epic(f"Epic {i}", i))
+        with it("should read back every Epic"):
+            expect([epic.name for epic in self.code_map.parse(self.tree).epics]).to(
+                equal(["Epic 1", "Epic 2", "Epic 3", "Epic 4"])
+            )
 
-        with context("every Epic"):
-            with it("should produce a folder under the tests root, named after the Epic slug"):
-                # Epics with no sub-epics generate no leaf files; add one to observe folders.
-                for epic in self.canonical.epics:
-                    epic.epics.append(Epic("child", 1))
-                tree = self.code_map.render(self.canonical)
-                folders = self.code_map.folders_of(tree)
-                epic_folders = [f for f in folders if f.count("/") == 1]
-                expected = sorted(
-                    f"{self.code_map.tests_root}/{CodeEpic(e.name).slug()}"
-                    for e in self.canonical.epics
-                )
-                expect(sorted(epic_folders)).to(equal(expected))
+        with it("should read back each Epic's own Story"):
+            parsed = self.code_map.parse(self.tree)
+            expect([story.name for epic in parsed.epics for story in epic.stories]).to(
+                equal([f"Story of epic {order}" for order in range(1, 5)])
+            )
 
-        with context("with a fifth Epic appended to the canonical"):
+        with context("with a fifth Epic appended"):
             with before.each:
-                for epic in self.canonical.epics:
-                    epic.epics.append(Epic("child", 1))
-                self.previous_tree = self.code_map.render(self.canonical)
-                self.canonical.append_epic(Epic("Epic 5", 5))
-                self.canonical.epics[-1].epics.append(Epic("child", 1))
+                fifth = Epic("Epic 5", 5)
+                fifth.stories.append(story_named("Story of epic 5"))
+                self.canonical.append_epic(fifth)
                 self.new_tree = self.code_map.render(self.canonical)
 
-            with context("the appended Epic"):
-                with it("should produce a new folder under the tests root"):
-                    folders = self.code_map.folders_of(self.new_tree)
-                    expect(
-                        f"{self.code_map.tests_root}/{CodeEpic('Epic 5').slug()}" in folders
-                    ).to(be_true)
+            with it("should write a new folder for the appended Epic"):
+                expect(files_under(self.new_tree, "tests/epic-5")).to(have_len(1))
 
-            with context("the folders for the first four Epics"):
-                with it("should be byte-identical to before"):
-                    for path, content in self.previous_tree.items():
-                        expect(path in self.new_tree).to(be_true)
-                        expect(self.new_tree[path]).to(equal(content))
+            with it("should leave the files of the first four Epics byte-identical"):
+                for path, content in self.tree.items():
+                    expect(self.new_tree[path]).to(equal(content))
 
-        with context("with the first Epic removed from the canonical"):
+        with context("with the first Epic removed"):
             with before.each:
-                for epic in self.canonical.epics:
-                    epic.epics.append(Epic("child", 1))
-                self.previous_tree = self.code_map.render(self.canonical)
                 self.canonical.epics.pop(0)
                 self.new_tree = self.code_map.render(self.canonical)
 
-            with context("the folder for the removed Epic and everything under it"):
-                with it("should be gone"):
-                    removed_prefix = f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/"
-                    expect(
-                        any(p.startswith(removed_prefix) for p in self.new_tree)
-                    ).to(be_false)
+            with it("should write nothing under the removed Epic's folder"):
+                expect(files_under(self.new_tree, "tests/epic-1")).to(have_len(0))
 
-            with context("the folders for the remaining Epics"):
-                with it("should be byte-identical to before"):
-                    for path, content in self.previous_tree.items():
-                        if path.startswith(
-                            f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/"
-                        ):
-                            continue
-                        expect(path in self.new_tree).to(be_true)
-                        expect(self.new_tree[path]).to(equal(content))
+            with it("should still write the files of the remaining Epics"):
+                for path in files_under(self.tree, "tests/epic-2") + files_under(self.tree, "tests/epic-4"):
+                    expect(path in self.new_tree).to(be_true)
 
-        with context("with the first Epic renamed in the canonical"):
+        with context("with the first Epic renamed"):
             with before.each:
-                for epic in self.canonical.epics:
-                    epic.epics.append(Epic("child", 1))
-                self.previous_leaf = self.code_map.render(self.canonical)[
-                    f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/child/child{self.code_map.LEAF_EXTENSION}"
-                ]
-                self.canonical.epics[0].name = "Epic 1 (renamed)"
+                self.canonical.epics[0].name = "Epic 1 renamed"
                 self.new_tree = self.code_map.render(self.canonical)
 
-            with context("the folder for the first Epic"):
-                with it("should carry the new slug"):
-                    new_prefix = (
-                        f"{self.code_map.tests_root}/{CodeEpic('Epic 1 (renamed)').slug()}/"
-                    )
-                    expect(any(p.startswith(new_prefix) for p in self.new_tree)).to(
-                        be_true
-                    )
+            with it("should write the Epic's folder under the new slug"):
+                expect(files_under(self.new_tree, "tests/epic-1-renamed")).to(have_len(1))
 
-                with context("its contents"):
-                    with it("should be byte-identical to before"):
-                        new_leaf = self.new_tree[
-                            f"{self.code_map.tests_root}/{CodeEpic('Epic 1 (renamed)').slug()}/child/child{self.code_map.LEAF_EXTENSION}"
-                        ]
-                        expect(new_leaf).to(equal(self.previous_leaf))
+            with it("should keep the Epic's Story in the renamed folder"):
+                content = self.new_tree["tests/epic-1-renamed/epic_1_renamed_story.test.py"]
+                expect("Story of epic 1" in content).to(be_true)
 
-        with context("with the first Epic holding 3 leaf Epics"):
-            with before.each:
-                self.canonical = fixture.story_map_with_4_epics_and_3_leaf_epics()
-                self.first_epic = self.canonical.epics[0]
-                self.tree = self.code_map.render(self.canonical)
-
-            with context("the folder for the first Epic"):
-                with it("should contain 3 sub-folders (one per leaf Epic)"):
-                    epic_prefix = f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/"
-                    sub_folders = {
-                        p.split("/")[2]
-                        for p in self.tree
-                        if p.startswith(epic_prefix)
-                    }
-                    expect(sub_folders).to(have_len(3))
-
-            with context("every leaf Epic of the first Epic"):
-                with it(
-                    "should produce a sub-folder under the first Epic's folder, named after the Epic slug"
-                ):
-                    for sub in self.first_epic.epics:
-                        prefix = f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/{CodeEpic(sub.name).slug()}/"
-                        expect(any(p.startswith(prefix) for p in self.tree)).to(
-                            be_true
-                        )
-
-                with it(
-                    "should produce exactly one leaf file inside its own sub-folder, named after the Epic slug"
-                ):
-                    for sub in self.first_epic.epics:
-                        expected = f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/{CodeEpic(sub.name).slug()}/{CodeEpic(sub.name).slug()}{self.code_map.LEAF_EXTENSION}"
-                        expect(expected in self.tree).to(be_true)
-
-            with context("with a leaf Epic appended to the first Epic"):
-                with before.each:
-                    self.previous_tree = dict(self.tree)
-                    new_sub = Epic("Epic 1.4", 4)
-                    new_sub.stories.append(Story("Story 1", 1, StoryType.USER))
-                    self.first_epic.epics.append(new_sub)
-                    self.new_tree = self.code_map.render(self.canonical)
-
-                with context("the folder for the first Epic"):
-                    with it("should contain 4 sub-folders"):
-                        epic_prefix = (
-                            f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/"
-                        )
-                        sub_folders = {
-                            p.split("/")[2]
-                            for p in self.new_tree
-                            if p.startswith(epic_prefix)
-                        }
-                        expect(sub_folders).to(have_len(4))
-
-                with context("the appended Epic"):
-                    with it("should produce a new sub-folder holding a new leaf file"):
-                        expected = f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/{CodeEpic('Epic 1.4').slug()}/{CodeEpic('Epic 1.4').slug()}{self.code_map.LEAF_EXTENSION}"
-                        expect(expected in self.new_tree).to(be_true)
-
-                with context("the leaf files for the first three Epics"):
-                    with it("should be byte-identical to before"):
-                        for path, content in self.previous_tree.items():
-                            expect(self.new_tree[path]).to(equal(content))
-
-            with context("with the first Epic of the first Epic renamed"):
-                with before.each:
-                    self.previous_leaf = self.tree[
-                        f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/{CodeEpic('Epic 1.1').slug()}/{CodeEpic('Epic 1.1').slug()}{self.code_map.LEAF_EXTENSION}"
-                    ]
-                    self.first_epic.epics[0].name = "Epic 1.1 (renamed)"
-                    self.new_tree = self.code_map.render(self.canonical)
-
-                with context("the sub-folder for the first Epic"):
-                    with it("should carry the new slug"):
-                        prefix = f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/{CodeEpic('Epic 1.1 (renamed)').slug()}/"
-                        expect(any(p.startswith(prefix) for p in self.new_tree)).to(
-                            be_true
-                        )
-
-                with context("the leaf file inside it"):
-                    with it("should carry the new slug in its filename"):
-                        expected = f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/{CodeEpic('Epic 1.1 (renamed)').slug()}/{CodeEpic('Epic 1.1 (renamed)').slug()}{self.code_map.LEAF_EXTENSION}"
-                        expect(expected in self.new_tree).to(be_true)
-
-                    with context("its Story blocks"):
-                        with it("should be unchanged"):
-                            new_leaf = self.new_tree[
-                                f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/{CodeEpic('Epic 1.1 (renamed)').slug()}/{CodeEpic('Epic 1.1 (renamed)').slug()}{self.code_map.LEAF_EXTENSION}"
-                            ]
-                            expect("Story 1" in new_leaf).to(be_true)
-
-            with context(
-                "with a nested Epic added under the first (previously leaf) Epic"
-            ):
-                with before.each:
-                    first_sub = self.first_epic.epics[0]
-                    first_sub.epics.append(Epic("Nested", 1))
-                    first_sub.epics[0].stories.append(
-                        Story("Nested Story", 1, StoryType.USER)
-                    )
-                    self.new_tree = self.code_map.render(self.canonical)
-
-                with context("the sub-folder for the first Epic"):
-                    with it("should hold a further sub-folder for the nested Epic"):
-                        nested_prefix = f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/{CodeEpic('Epic 1.1').slug()}/{CodeEpic('Nested').slug()}/"
-                        expect(
-                            any(p.startswith(nested_prefix) for p in self.new_tree)
-                        ).to(be_true)
-
-                    with context("the nested sub-folder"):
-                        with it("should hold a leaf file for the nested Epic"):
-                            nested_leaf = f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/{CodeEpic('Epic 1.1').slug()}/{CodeEpic('Nested').slug()}/{CodeEpic('Nested').slug()}{self.code_map.LEAF_EXTENSION}"
-                            expect(nested_leaf in self.new_tree).to(be_true)
-
-                with context("the leaf file that previously sat at the first Epic level"):
-                    with it("should still exist when the first Epic still has Stories"):
-                        previous_leaf = f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/{CodeEpic('Epic 1.1').slug()}/{CodeEpic('Epic 1.1').slug()}{self.code_map.LEAF_EXTENSION}"
-                        expect(previous_leaf in self.new_tree).to(be_true)
-
-    with context(
-        "that holds hand-written code in a leaf file outside the generated Story blocks"
-    ):
+    with context("with the first Epic holding 3 sub-Epics"):
         with before.each:
-            from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
+            self.canonical = first_epic_with_three_sub_epics()
+            self.first_epic = self.canonical.epics[0]
+            self.tree = self.code_map.render(self.canonical)
 
+        with it("should write one file per sub-Epic inside the first Epic's folder"):
+            for order in range(1, 4):
+                expect(f"tests/epic-1/epic_1_{order}_story.test.py" in self.tree).to(be_true)
+
+        with it("should keep the first Epic's own Story in its own file beside them"):
+            expect("tests/epic-1/epic_1_story.test.py" in self.tree).to(be_true)
+
+        with it("should read back the sub-Epics under the first Epic"):
+            parsed = self.code_map.parse(self.tree)
+            expect([sub.name for sub in parsed.epics[0].epics]).to(equal(["Epic 1.1", "Epic 1.2", "Epic 1.3"]))
+
+        with context("with a sub-Epic appended to the first Epic"):
+            with before.each:
+                appended = Epic("Epic 1.4", 4)
+                appended.stories.append(story_named("Story 4"))
+                self.first_epic.epics.append(appended)
+                self.new_tree = self.code_map.render(self.canonical)
+
+            with it("should write a new file for the appended sub-Epic"):
+                expect("tests/epic-1/epic_1_4_story.test.py" in self.new_tree).to(be_true)
+
+            with it("should leave the files of the first three sub-Epics byte-identical"):
+                for order in range(1, 4):
+                    path = f"tests/epic-1/epic_1_{order}_story.test.py"
+                    expect(self.new_tree[path]).to(equal(self.tree[path]))
+
+        with context("with the first sub-Epic renamed"):
+            with before.each:
+                self.first_epic.epics[0].name = "Epic 1.1 renamed"
+                self.new_tree = self.code_map.render(self.canonical)
+
+            with it("should write the sub-Epic's file under the new name"):
+                expect("tests/epic-1/epic_1_1_renamed_story.test.py" in self.new_tree).to(be_true)
+
+            with it("should no longer write the file under the old name"):
+                expect("tests/epic-1/epic_1_1_story.test.py" in self.new_tree).to(be_false)
+
+            with it("should keep the sub-Epic's Story in the renamed file"):
+                expect("Story 1" in self.new_tree["tests/epic-1/epic_1_1_renamed_story.test.py"]).to(be_true)
+
+        with context("with a nested sub-Epic added under the first sub-Epic"):
+            with before.each:
+                first_sub_epic = self.first_epic.epics[0]
+                nested = Epic("Nested", 1)
+                nested.stories.append(story_named("Nested Story"))
+                first_sub_epic.epics.append(nested)
+                self.new_tree = self.code_map.render(self.canonical)
+
+            with it("should make the first sub-Epic a folder holding the nested sub-Epic's file"):
+                expect("tests/epic-1/epic-1-1/nested_story.test.py" in self.new_tree).to(be_true)
+
+            with it("should keep the first sub-Epic's own Stories in a file inside its folder"):
+                expect("tests/epic-1/epic-1-1/epic_1_1_story.test.py" in self.new_tree).to(be_true)
+
+            with it("should read the nested sub-Epic back under the first sub-Epic"):
+                parsed = self.code_map.parse(self.new_tree)
+                expect([nested.name for nested in parsed.epics[0].epics[0].epics]).to(equal(["Nested"]))
+
+    with context("that holds hand-written code in a story file outside the generated Story blocks"):
+        with before.each:
             self.typescript_map = TypeScriptStoryModel("tests")
-            self.canonical = fixture.story_map_with_4_epics_and_3_leaf_epics()
+            self.canonical = first_epic_with_three_sub_epics()
             initial_tree = self.typescript_map.render(self.canonical)
-            self.first_leaf_path = next(path for path in initial_tree if path.endswith("epic_1_1_story.test.ts"))
+            self.first_file_path = next(path for path in initial_tree if path.endswith("epic_1_1_story.test.ts"))
             self.previous_tree = dict(initial_tree)
-            self.previous_tree[self.first_leaf_path] = (
-                initial_tree[self.first_leaf_path] + "\nconst mySetupVariable = 42;\n"
+            self.previous_tree[self.first_file_path] = (
+                initial_tree[self.first_file_path] + "\nconst mySetupVariable = 42;\n"
             )
 
-        with context("with the leaf file regenerated from the canonical Story Map and the previous tree"):
+        with context("with the story file written again from the canonical Story Map and the previous tree"):
             with before.each:
                 self.new_tree = self.typescript_map.render(self.canonical, previous=self.previous_tree)
 
-            with context("the leaf file"):
-                with it("should keep the hand-written code byte-for-byte"):
-                    expect("const mySetupVariable = 42;" in self.new_tree[self.first_leaf_path]).to(be_true)
+            with it("should keep the hand-written code byte-for-byte"):
+                expect("const mySetupVariable = 42;" in self.new_tree[self.first_file_path]).to(be_true)
 
-            with context("the generated Story blocks"):
-                with it("should still be written from the canonical Story Map"):
-                    expect("story('Story 1', () => {" in self.new_tree[self.first_leaf_path]).to(be_true)
+            with it("should still write the Story blocks from the canonical Story Map"):
+                expect("story('Story 1', () => {" in self.new_tree[self.first_file_path]).to(be_true)
 
-    with context(
-        "that has been asked to parse a value that is not a valid code Story Map tree"
-    ):
-        with context("the parse"):
-            with it("should be rejected"):
-                expect(lambda: self.code_map.parse("not a mapping")).to(
-                    raise_error(CodeStoryModelError)
-                )
+    with context("that has been asked to parse a value that is not a mapping of paths to file content"):
+        with it("should reject it"):
+            expect(lambda: self.code_map.parse("not a mapping")).to(raise_error(CodeStoryModelError))

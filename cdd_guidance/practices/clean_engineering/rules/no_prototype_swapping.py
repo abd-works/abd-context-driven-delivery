@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from harness.graph.practice_rule import PracticeGraphRule
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
 
 
 class NoPrototypeSwapping(PracticeGraphRule):
@@ -11,7 +17,7 @@ class NoPrototypeSwapping(PracticeGraphRule):
     slug = "no-prototype-swapping"
     node_types = ("OoadClass",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         swap = node.get_fact("prototype_swap") or {}
         if not swap:
             return []

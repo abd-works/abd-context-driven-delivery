@@ -5,7 +5,7 @@ import time
 from typing import TypedDict
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
-from harness.mcp.mcp_server import Mcp
+from harness.mcp.mcp_server import mcp
 
 
 class PlanWorkResult(TypedDict):
@@ -26,14 +26,14 @@ class HostingDemo:
         self._count = 0
         super().__init__()
 
-    @Mcp
+    @mcp
     @agent_tool
     def increment(self, step: int = 1) -> int:
         """Increase the running count."""
         self._count += int(step)
         return self._count
 
-    @Mcp
+    @mcp
     @agent_tool
     def read_count(self) -> int:
         """Return the current count."""
@@ -42,20 +42,20 @@ class HostingDemo:
     def _ordinary_helper(self) -> str:
         return "plain-result"
 
-    @Mcp
+    @mcp
     @agent_tool
     def plan_work(self, concept: str) -> PlanWorkResult:
         """Think about the concept before acting."""
         count = self.increment(step=2)
         return {"concept": concept, "count": int(count)}
 
-    @Mcp
+    @mcp
     @agent_tool
     def guidance_only(self) -> str:
         """Guidance with no orchestrated AI tools."""
         return "guidance-text"
 
-    @Mcp
+    @mcp
     @agent_tool
     def orchestrate_with_plain(self) -> OrchestrateResult:
         """Mix explicit AI tool use with ordinary code."""
@@ -63,7 +63,7 @@ class HostingDemo:
         count = self.increment(step=1)
         return {"plain": plain, "count": int(count)}
 
-    @Mcp
+    @mcp
     @agent_tool
     def linger(self, seconds: float) -> float:
         """Keep a call running long enough for a client to cancel it."""

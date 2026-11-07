@@ -4,8 +4,8 @@ import { BRAND } from '../brand'
 import { GlyphButtonView } from '../glyph-button-view'
 import type { ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
-import { selectFidelity, type FidelityClient } from './fidelity-client'
 import { openFiles } from './fidelity-files-client'
+import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
 import { closeCard } from './session-dialogs-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
@@ -20,7 +20,7 @@ type CardColumns = { name: number; fidelities: number }
 const NAME_TO_DOTS = 5
 const FOLDER_GAP = 3
 
-function rowWidthOf(fidelity: FidelityClient): number {
+function rowWidthOf(fidelity: FidelityProgressClient): number {
   return `■ ${fidelity.name} ${fidelity.mark} ${fidelity.word}`.length
 }
 
@@ -51,21 +51,21 @@ function HeaderView($: EngineInterface, elements: ElementTable, chatBar: ChatBar
 
 // One fidelity under the dots: its square, its name (a press selects it) and its state, underlined when selected; its
 // folder beside it as a small chip, a press showing its files.
-function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: FidelityClient, columns: CardColumns) {
+function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: FidelityProgressClient, columns: CardColumns) {
   const { Box, Text } = elements
-  const nameColour = fidelity.status === 'not_started' ? BRAND.muted : BRAND.text
+  const nameColour = fidelity.state === 'not_started' ? BRAND.muted : BRAND.text
   return (
-    <Box key={`card-${fidelity.fidelity}`} flexDirection="row" marginLeft={columns.name} alignItems="center">
+    <Box key={`card-${fidelity.slug}`} flexDirection="row" marginLeft={columns.name} alignItems="center">
       <Box width={columns.fidelities}>
-        <Box key={`card-cell-${fidelity.fidelity}`} flexDirection="row" gap={1} alignItems="center">
+        <Box key={`card-cell-${fidelity.slug}`} flexDirection="row" gap={1} alignItems="center">
           <Text color={fidelity.shade}>■</Text>
-          {GlyphButtonView(elements, `card-pick-${fidelity.fidelity}`, fidelity.name, nameColour, () => selectFidelity($, fidelity), fidelity.isSelected)}
+          {GlyphButtonView(elements, `card-pick-${fidelity.slug}`, fidelity.name, nameColour, () => selectFidelity($, fidelity), fidelity.isSelected)}
           <Text color={fidelity.lookColour} underline={fidelity.isSelected}>{`${fidelity.mark} ${fidelity.word}`}</Text>
         </Box>
       </Box>
       {fidelity.folder ? (
-        <Box key={`card-folder-chip-${fidelity.fidelity}`} paddingX={1} backgroundColor={BRAND.surface}>
-          {GlyphButtonView(elements, `card-folder-${fidelity.fidelity}`, `▸ ${fidelity.folder}`, BRAND.muted, () => openFiles($, fidelity))}
+        <Box key={`card-folder-chip-${fidelity.slug}`} paddingX={1} backgroundColor={BRAND.surface}>
+          {GlyphButtonView(elements, `card-folder-${fidelity.slug}`, `▸ ${fidelity.folder}`, BRAND.muted, () => openFiles($, fidelity))}
         </Box>
       ) : null}
     </Box>

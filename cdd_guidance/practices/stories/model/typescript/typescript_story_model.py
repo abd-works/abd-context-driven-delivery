@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
+from harness.name.name import Name
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError, example_names_of
 from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
@@ -23,7 +24,6 @@ _STORY_TEST_SUFFIX = "_story.test.ts"
 
 class TypeScriptStoryModel(BraceStoryModel):
     LEAF_EXTENSION = ".ts"
-    LANGUAGE_LINE_COMMENT = "//"
     epic_type = TypeScriptEpic
     story_type = TypeScriptStory
     language = CodeLanguage.named("typescript")
@@ -96,8 +96,7 @@ class TypeScriptStoryModel(BraceStoryModel):
         suffix = _STORY_TEST_SUFFIX if name.endswith(_STORY_TEST_SUFFIX) else "_story.spec.ts"
         if not name.endswith(suffix):
             return None
-        stem = name[: -len(suffix)]
-        return stem.replace("_", "-")
+        return Name(name[: -len(suffix)]).title_slug
 
     def load(self, external: Dict[str, str], *, on_file=None) -> "TypeScriptStoryModel":
         if not isinstance(external, dict):

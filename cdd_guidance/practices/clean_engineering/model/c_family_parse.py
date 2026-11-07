@@ -4,16 +4,23 @@ from __future__ import annotations
 import re
 from typing import Callable
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, Operation
+from cdd_guidance.practices.clean_engineering.model.base_class_model import (
+    CleanEngineeringModel,
+    Module,
+    OoadClass,
+)
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import ClassHead
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import apply_brace_body_metrics
 from cdd_guidance.practices.clean_engineering.model.property import Property, append_invariant, take_property_note
+from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
 
 _CLASS_RE = re.compile(
     r"(?:export\s+)?(?:abstract\s+)?(?:public\s+|private\s+|protected\s+)?class\s+(\w+)",
 )
-_EXTENDS_RE = re.compile(r"\bextends\s+([\w.]+)")
+# A class's heritage clause: `extends Basket implements Auditable, ICart`.
+_HERITAGE_RE = re.compile(r"\b(?:extends|implements)\s+(.+?)(?=\s+implements\b|$)", re.S)
 _METHOD_RE = re.compile(
     r"(?:public|private|protected|static|async|override)?\s*"
     r"(?:public|private|protected|static|async|override)?\s*"
@@ -41,13 +48,6 @@ _ASSIGN_FIELD_RE = re.compile(
     r"^\s*(?:(?:public|private|protected|readonly|static|declare|override)\s+)+(\w+)\s*=",
     re.M,
 )
-_SKIP_TYPES = frozenset({
-    "String", "Number", "Boolean", "Void", "Any", "Unknown", "Object",
-    "Record", "Array", "Promise", "Partial", "Omit", "Pick", "Date", "Error",
-    "Map", "Set", "Readonly", "Required", "NonNullable",
-})
-
-
 class CFamilyParse:
     def __init__(
         self,
@@ -105,19 +105,32 @@ class CFamilyParse:
             if body is None:
                 continue
             self._body_start = body_start
+            head = ClassHead.above(self._text[: match.start()])
             oclass = self._class_factory(
                 name=match.group(1),
                 sequential_order=class_order,
+                intent=head.doc,
                 line=self._line_at(self._text, match.start()),
             )
+            oclass.stereotypes = head.stereotypes
             oclass.end_line = self._line_at(self._text, body_start + len(body))
-            oclass.bases = _EXTENDS_RE.findall(self._text[match.end() : body_start])
+            oclass.bases = self._bases(self._text[match.end() : body_start]) + head.implemented
             oclass.operations = self._methods_from_body(body, match.group(1))
             self._prepend_constructors(oclass, body)
             oclass.properties = self._fields_from_body(oclass, body)
-            self._bind_member_relationships(oclass)
+            self._derive_member_relationships(oclass)
             module.classes.append(oclass)
             class_order += 1
+
+    def _bases(self, heritage: str) -> list[str]:
+        """Every class the heritage clause between the name and the body extends or implements."""
+        clause = heritage.strip().rstrip("{").strip()
+        return [
+            base.strip()
+            for names in _HERITAGE_RE.findall(clause)
+            for base in split_top_level(names)
+            if base.strip()
+        ]
 
     def _prepend_constructors(self, oclass: OoadClass, body: str) -> None:
         for ctor in _CTOR_RE.finditer(body):
@@ -238,7 +251,7 @@ class CFamilyParse:
         op.line_count = max(1, len([line for line in body.splitlines() if line.strip()]))
         op.body_fingerprint = operation_body_fingerprint(body)
         op.body = CodeBody(body, self._language)
-        apply_brace_body_metrics(op, body)
+        op.load_brace_body_facts(body)
         if op.name in {"constructor", "__init__"}:
             op.constructed_types = self._constructed_types(body, op.line or 1)
         return op
@@ -273,10 +286,7 @@ class CFamilyParse:
         if not raw.strip():
             return []
         params: list[str] = []
-        for part in self._split_param_parts(raw):
-            part = part.strip()
-            if not part:
-                continue
+        for part in split_top_level(raw):
             default_at = self._top_level_index(part, "=")
             if default_at >= 0:
                 part = part[:default_at].strip()
@@ -307,27 +317,10 @@ class CFamilyParse:
                 return index
         return -1
 
-    def _split_param_parts(self, raw: str) -> list[str]:
-        """Split parameter list on commas outside generic brackets."""
-        parts: list[str] = []
-        depth = 0
-        start = 0
-        for index, ch in enumerate(raw):
-            if ch in "<([{":
-                depth += 1
-            elif ch in ">)]}":
-                depth = max(0, depth - 1)
-            elif ch == "," and depth == 0:
-                parts.append(raw[start:index])
-                start = index + 1
-        parts.append(raw[start:])
-        return parts
-
     def _fields_from_body(self, oclass: OoadClass, body: str) -> list:
         outside = self._outside_braces(body)
         props = []
         seen: set[str] = set()
-        load = getattr(oclass, "load_property_field", None)
         cursor = 0
         for match in _FIELD_RE.finditer(outside):
             name = match.group(1)
@@ -337,18 +330,14 @@ class CFamilyParse:
             prop = Property(name=name, sequential_order=len(props) + 1, type_hint=match.group(2).strip())
             for note in self._comments_above(outside[cursor:match.start()]):
                 take_property_note(prop, note)
-            props.append(load(prop) if load is not None else prop)
+            props.append(prop)
             cursor = match.end()
         for match in _ASSIGN_FIELD_RE.finditer(outside):
             name = match.group(1)
             if name in seen:
                 continue
             seen.add(name)
-            props.append(
-                load(Property(name=name, sequential_order=len(props) + 1))
-                if load is not None
-                else Property(name=name, sequential_order=len(props) + 1)
-            )
+            props.append(Property(name=name, sequential_order=len(props) + 1))
         return props
 
     def _comments_above(self, prefix: str) -> list[str]:
@@ -382,39 +371,20 @@ class CFamilyParse:
                 chars.append(" ")
         return "".join(chars)
 
-    def _bind_member_relationships(self, oclass: OoadClass) -> None:
+    def _derive_member_relationships(self, oclass: OoadClass) -> None:
         """A field relates only when its type names a domain class."""
-        from cdd_guidance.practices.clean_engineering.model.property import bind_property_relationship
-
         for prop in oclass.properties:
-            bind_property_relationship(prop)
-
-    def _domain_types(self, type_raw: str) -> list[str]:
-        names: list[str] = []
-        for match in re.finditer(r"\b([A-Z][A-Za-z0-9]*)\b", type_raw or ""):
-            name = match.group(1)
-            if name in _SKIP_TYPES or name in names:
-                continue
-            names.append(name)
-        return names
+            prop.derive_relationship()
 
     def _brace_body(self, text: str, open_index: int) -> tuple[str | None, int]:
         while open_index < len(text) and text[open_index] != "{":
             open_index += 1
         if open_index >= len(text):
             return None, -1
-        depth = 0
-        i = open_index
-        while i < len(text):
-            ch = text[i]
-            if ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-                if depth == 0:
-                    return text[open_index + 1 : i], open_index + 1
-            i += 1
-        return None, -1
+        close_index = self._closing_brace_index(text, open_index)
+        if close_index < 0:
+            return None, -1
+        return text[open_index + 1 : close_index], open_index + 1
 
     def _line_at(self, text: str, index: int) -> int:
         return text.count("\n", 0, index) + 1

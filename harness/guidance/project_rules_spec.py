@@ -15,8 +15,8 @@ from expects import equal, expect
 from mamba import description, it
 
 from harness.guidance.guidance import PracticeGuidance
-from harness.guidance.project_rules import load_project_rules
 from harness.guidance.rule import Rule
+from space.session.session import Session
 
 
 class _Fidelities:
@@ -26,16 +26,18 @@ class _Fidelities:
         "acceptance_tests": None,
     }
 
+    def __iter__(self):
+        return iter(())
+
 
 class _StoriesRules(PracticeGuidance):
-    def __init__(self) -> None:
-        self.path = None
-        self.workspace = None
-        self.session = None
+    def __init__(self, root=None) -> None:
         self.format = None
+        if root is not None:
+            Session(root).practice("stories").guideline = self
 
     @property
-    def context_index_key(self) -> str:
+    def key(self) -> str:
         return "stories"
 
     @property
@@ -73,11 +75,7 @@ with description("project rules"):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _stories_tree(root)
-            rules = load_project_rules(
-                root,
-                "stories",
-                ["story_map", "scenarios", "acceptance_tests"],
-            )
+            rules = _StoriesRules(root).project_rules()
             by_slug = {rule.slug: rule for rule in rules}
             story = by_slug["project-story-rule"]
             fidelity = by_slug["project-code-rule"]
@@ -85,16 +83,13 @@ with description("project rules"):
             expect(story.practice).to(equal("stories"))
             expect(fidelity.fidelity).to(equal("story_map"))
             expect(fidelity.tag).to(equal("project"))
-            via_guidance = _StoriesRules().project_rules(root)
-            expect(sorted(rule.slug for rule in via_guidance)).to(
-                equal(["project-code-rule", "project-story-rule"])
-            )
 
     with it("should return no rules when the folder has no project ruleset"):
         with tempfile.TemporaryDirectory() as tmp:
-            expect(load_project_rules(Path(tmp), "stories", ["story_map"])).to(equal([]))
-            expect(_StoriesRules().project_rules(".")).to(equal([]))
-            expect(_StoriesRules().project_rules("")).to(equal([]))
+            expect(_StoriesRules(Path(tmp)).project_rules()).to(equal([]))
+
+    with it("should return no rules when the practice works in no folder"):
+        expect(_StoriesRules().project_rules()).to(equal([]))
 
     with it("should load rules from an asset location under the project"):
         with tempfile.TemporaryDirectory() as tmp:
@@ -104,7 +99,7 @@ with description("project rules"):
                 "assets/orders/.context/rules/stories/rules.md",
                 "- **`asset-story-rule`** - order rule\n",
             )
-            rules = load_project_rules(root, "stories", ["story_map"])
+            rules = _StoriesRules(root).project_rules()
             expect([rule.slug for rule in rules]).to(equal(["asset-story-rule"]))
             expect(rules[0].tag).to(equal("project"))
 
@@ -116,7 +111,7 @@ with description("project rules"):
                 ".context/rules/stories/story-map/rules.md",
                 "- **`hyphen-fidelity-rule`** - hyphen folder\n",
             )
-            rules = load_project_rules(root, "stories", ["story_map"])
+            rules = _StoriesRules(root).project_rules()
             expect(rules[0].slug).to(equal("hyphen-fidelity-rule"))
             expect(rules[0].fidelity).to(equal("story_map"))
 
@@ -128,4 +123,4 @@ with description("project rules"):
                 "node_modules/pkg/.context/rules/stories/rules.md",
                 "- **`hidden-rule`** - vendor rule\n",
             )
-            expect(load_project_rules(root, "stories", ["story_map"])).to(equal([]))
+            expect(_StoriesRules(root).project_rules()).to(equal([]))

@@ -19,11 +19,11 @@ You own orchestration. If the user names the practice lenses to use, follow thei
 
 Load the umbrella skill for each selected lens to establish shared vocabulary and rules:
 
-- `stories` and `stories-scaffold` for the story map and the primary end-to-end user journey flow.
-- `ddd` and `ddd-bounded_context` for bounded contexts, aggregate boundaries, ubiquitous language definitions, and context relationships.
+- `stories` and `stories-story-map` for the story map and the primary end-to-end user journey flow.
+- `ddd` and `ddd-bounded-context` for bounded contexts, aggregate boundaries, ubiquitous language definitions, and context relationships.
 - `ux` and `ux-ia` for screen maps, layout regions, navigation flows, and user interaction sequences.
-- `clean_engineering` and `clean_engineering-modules` for deep modules, public interfaces, and one-way module dependencies.
-- `bdd` and `bdd-modules` only when a high-level subject index is needed for discovery coverage; discovery normally omits BDD.
+- `clean-engineering` and `clean-engineering-modules` for deep modules, public interfaces, and one-way module dependencies.
+- `bdd` and `bdd-behavior` only when a high-level subject index is needed for discovery coverage; discovery normally omits BDD.
 
 ## Working Method
 
@@ -35,4 +35,4 @@ Output persistence is mandatory. Create and update at least one markdown artifac
 
 ## Handoff
 
-Run `handoff` when the discovery role is complete. State whether the handoff is for a fresh Discoverer session or for the Specifier. Include the scope, source material, the single engagement sketch artifact path, active and omitted lenses, decisions with supporting evidence, agreed domain terms and boundaries, primary user journey flow, question-and-answer log, assumptions, conflicts, and deferred questions. For a Specification handoff, identify the exact increment or sub-epic to specify, its boundaries and priorities, the authoritative discovery decisions, and the questions the specification must resolve without reopening settled solution design.
+Run the `space-session-handoff-session` skill when the discovery role is complete. State whether the handoff is for a fresh Discoverer session or for the Specifier. Include the scope, source material, the single engagement sketch artifact path, active and omitted lenses, decisions with supporting evidence, agreed domain terms and boundaries, primary user journey flow, question-and-answer log, assumptions, conflicts, and deferred questions. For a Specification handoff, identify the exact increment or sub-epic to specify, its boundaries and priorities, the authoritative discovery decisions, and the questions the specification must resolve without reopening settled solution design.

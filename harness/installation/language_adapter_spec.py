@@ -7,38 +7,38 @@ from pathlib import Path
 from expects import be_false, be_true, contain, equal, expect, have_key, raise_error
 from mamba import before, context, description, it
 
-from harness.installation.installer import Installer
+from harness.installer.install_diagnostics import InstallDiagnostics
+from harness.installation.repository_toolsets import RepositoryToolsets
 
 _REPO = Path(__file__).resolve().parents[2]
-Installer(repo=_REPO).ensure_import_path()
+RepositoryToolsets(_REPO).ensure_import_path()
 
 from harness.agent_tools.agent_tools import AgentToolSet  # noqa: E402
 from harness.installation.destination import (  # noqa: E402
+    DataClass,
+    Identity,
+    ReferenceWithoutIdentityError,
     data_field,
-    data_fields_of,
     data_of,
-    edited_fields_of,
     edits,
-    identity_fields_of,
+    identity,
     language_adapter,
-    languages_of,
 )
 from harness.installation.language_adapter import (  # noqa: E402
     LanguageAdapterInstallation,
     MissingIdentityError,
-    argument_schema,
-    schema_type,
+    PublishedSchema,
 )
 
 _KANBAN = (
-    "harness.kanban.board:Board",
-    "harness.kanban.ticket:Ticket",
-    "harness.kanban.ticket:FidelityProgress",
-    "harness.kanban.backlog_item:BacklogItem",
-    "space.session.session:PracticeSessionOutput",
+    "space.kanban.board:Board",
+    "space.kanban.ticket:Ticket",
+    "space.kanban.ticket:FidelityProgress",
+    "space.kanban.backlog_item:BacklogItem",
+    "space.session.practice_session_output:PracticeSessionOutput",
 )
 _ADAPTERS = "language-adapters/typescript"
-_IDENTITY_FLAG = "_language_adapter_identity"
+_IDENTITY_FLAG = Identity.flag
 
 
 def _install(install_path, references=_KANBAN):
@@ -54,34 +54,44 @@ def _between(text, start, end):
 
 
 with description("a language adapter"):
-    with description("a toolset marked for a language"):
+    with description("a toolset annotated for a language"):
         with it("should name that language"):
             @language_adapter(language="typescript")
-            class Marked:
+            class Annotated:
                 pass
 
-            expect(languages_of(Marked)).to(equal(("typescript",)))
+            expect(DataClass(Annotated).languages).to(equal(("typescript",)))
 
         with it("should name the field of its data that holds an object's name"):
-            @language_adapter(language="typescript", identity="name")
+            @identity("name")
             class Named:
                 pass
 
-            expect(identity_fields_of(Named)).to(equal(("name",)))
+            expect(DataClass(Named).identity).to(equal(("name",)))
+
+        with it("should name a subclass as its base is named"):
+            @identity("name")
+            class Named:
+                pass
+
+            class Kind(Named):
+                pass
+
+            expect(DataClass(Kind).identity).to(equal(("name",)))
 
         with it("should name the fields an operation changes when its arguments are named differently"):
             @edits("title")
             def rename(new_title):
                 return new_title
 
-            expect(edited_fields_of(rename)).to(equal(("title",)))
+            expect(DataClass(type(None)).edited_by(rename)).to(equal(("title",)))
 
-        with context("that no mark names"):
+        with context("that no annotation names"):
             with it("should name no language"):
                 class Unmarked:
                     pass
 
-                expect(languages_of(Unmarked)).to(equal(()))
+                expect(DataClass(Unmarked).languages).to(equal(()))
 
     with description("the data of a domain object"):
         with before.all:
@@ -94,10 +104,27 @@ with description("a language adapter"):
                 def folder(self) -> Path:
                     return self._folder
 
+            @identity("name")
+            class Stage:
+                def __init__(self, name, cards):
+                    self._name = name
+                    self._cards = cards
+
+                @property
+                @data_field
+                def name(self) -> str:
+                    return self._name
+
+                @property
+                @data_field
+                def cards(self) -> list:
+                    return self._cards
+
             class Card:
                 def __init__(self, title, places):
                     self._title = title
                     self._places = places
+                    self._stage = Stage("Discovery", [self])
 
                 @property
                 @data_field
@@ -105,9 +132,9 @@ with description("a language adapter"):
                     return self._title
 
                 @property
-                @data_field(key="column")
-                def column_name(self) -> str:
-                    return "Discovery"
+                @data_field(key="column", reference=True)
+                def stage(self) -> Stage:
+                    return self._stage
 
                 @property
                 @data_field
@@ -131,30 +158,46 @@ with description("a language adapter"):
             self.card_class, self.pinned_class = Card, PinnedCard
             self.card = PinnedCard("Visits", [Place(Path("notes"))])
 
-        with it("should be the properties marked as its data, under their names"):
-            expect(list(data_fields_of(self.card_class))).to(equal(["title", "column", "places"]))
+        with it("should be the properties annotated as its data, under their names"):
+            expect(list(DataClass(self.card_class).fields)).to(equal(["title", "column", "places"]))
 
-        with it("should keep the data a base class marks, ahead of its own"):
-            expect(list(data_fields_of(self.pinned_class))).to(equal(["title", "column", "places", "is_pinned"]))
+        with it("should keep the data a base class annotates, ahead of its own"):
+            expect(list(DataClass(self.pinned_class).fields)).to(equal(["title", "column", "places", "is_pinned"]))
 
         with it("should be written as a plain value, each object it holds written as its own data"):
-            expect(data_of(self.card)).to(equal({"title": "Pinned: Visits", "column": "Discovery", "places": [{"folder": "notes"}], "is_pinned": True}))
+            expect(data_of(self.card)).to(equal({"title": "Pinned: Visits", "column": {"name": "Discovery"}, "places": [{"folder": "notes"}], "is_pinned": True}))
 
-        with it("should read a field a subclass overrides from the subclass, though only the base marks it"):
+        with it("should send an object a reference field holds by that object's identity alone, so an object can name the one holding it"):
+            expect(data_of(self.card)["column"]).to(equal({"name": "Discovery"}))
+
+        with context("whose reference field holds an object with no identity"):
+            with it("should refuse, because nothing could say which object it names"):
+                class Unnamed:
+                    pass
+
+                class Holder:
+                    @property
+                    @data_field(reference=True)
+                    def held(self) -> Unnamed:
+                        return Unnamed()
+
+                expect(lambda: data_of(Holder())).to(raise_error(ReferenceWithoutIdentityError))
+
+        with it("should read a field a subclass overrides from the subclass, though only the base annotates it"):
             expect(data_of(self.card)["title"]).to(equal("Pinned: Visits"))
 
-        with it("should leave out a property it does not mark"):
+        with it("should leave out a property it does not annotate"):
             expect(data_of(self.card)).not_to(have_key("unshown"))
 
-    with description("the installation of a marked toolset"):
+    with description("the installation of an annotated toolset"):
         with before.all:
             self.install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
             self.adapters = _install(self.install_path)
             self.root = self.install_path / _ADAPTERS
-            self.ticket = (self.root / "harness/kanban/ticket.ts").read_text(encoding="utf-8")
-            self.board = (self.root / "harness/kanban/board.ts").read_text(encoding="utf-8")
-            self.backlog_item = (self.root / "harness/kanban/backlog-item.ts").read_text(encoding="utf-8")
-            self.progress = (self.root / "harness/kanban/fidelity-progress.ts").read_text(encoding="utf-8")
+            self.ticket = (self.root / "space/kanban/ticket.ts").read_text(encoding="utf-8")
+            self.board = (self.root / "space/kanban/board.ts").read_text(encoding="utf-8")
+            self.backlog_item = (self.root / "space/kanban/backlog-item.ts").read_text(encoding="utf-8")
+            self.progress = (self.root / "space/kanban/fidelity-progress.ts").read_text(encoding="utf-8")
             self.practice = (self.root / "space/session/practice-session-output.ts").read_text(encoding="utf-8")
 
         with it("should mirror the folders the toolset's source sits in, with every generated class of an object in one file"):
@@ -163,14 +206,14 @@ with description("a language adapter"):
                 "cdd-connection.ts",
                 "cdd-shared.ts",
                 "cdd-views.tsx",
-                "harness/kanban/backlog-item-views.tsx",
-                "harness/kanban/backlog-item.ts",
-                "harness/kanban/board-views.tsx",
-                "harness/kanban/board.ts",
-                "harness/kanban/fidelity-progress-views.tsx",
-                "harness/kanban/fidelity-progress.ts",
-                "harness/kanban/ticket-views.tsx",
-                "harness/kanban/ticket.ts",
+                "space/kanban/backlog-item-views.tsx",
+                "space/kanban/backlog-item.ts",
+                "space/kanban/board-views.tsx",
+                "space/kanban/board.ts",
+                "space/kanban/fidelity-progress-views.tsx",
+                "space/kanban/fidelity-progress.ts",
+                "space/kanban/ticket-views.tsx",
+                "space/kanban/ticket.ts",
                 "space/session/practice-session-output-views.tsx",
                 "space/session/practice-session-output.ts",
             ]))
@@ -185,20 +228,32 @@ with description("a language adapter"):
         with it("should track every file it writes, so clean removes them"):
             tracked = []
             adapters = LanguageAdapterInstallation("Claude", self.install_path, repo=_REPO)
-            adapters.bind_tracker(tracked.append)
-            adapters.record(AgentToolSet.instantiate("harness.kanban.ticket:Ticket"))
+            adapters.track_writes_with(tracked.append)
+            adapters.record(AgentToolSet.instantiate("space.kanban.ticket:Ticket"))
             adapters.write_all()
             expect(sorted(path.name for path in tracked)).to(equal(["cdd-connection.ts", "cdd-shared.ts", "cdd-views.tsx", "package.json", "ticket-views.tsx", "ticket.ts"]))
 
-        with context("that has no mark"):
+        with context("whose tools run on the one toolset a project holds, which no call loads by name"):
+            with before.all:
+                install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
+                _install(install_path, ("harness.graph.graph:Graph",))
+                self.graph = (install_path / _ADAPTERS / "harness/graph/graph.ts").read_text(encoding="utf-8")
+
+            with it("should type data that holds a type another of its modules defines, as the graph's filtered nodes type their rules"):
+                expect(self.graph).to(contain("rules: GraphRuleData[]"))
+
+            with it("should call each operation on the client the page holds, not on the class"):
+                expect(self.graph).to(contain("  inventory(): Promise<InventoryData | null> {"))
+
+        with context("that has no annotation"):
             with it("should write nothing"):
                 install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
                 _install(install_path, ("tools.echo.echo:Echo",))
                 expect((install_path / _ADAPTERS).exists()).to(be_false)
 
-        with context("whose tools load one object by name, with no identity on its mark"):
+        with context("whose tools load one object by name, with no identity on its annotation"):
             with it("should refuse, because a browser object could not say which object its routes act on"):
-                ticket_class = type(AgentToolSet.instantiate("harness.kanban.ticket:Ticket"))
+                ticket_class = type(AgentToolSet.instantiate("space.kanban.ticket:Ticket"))
                 named = getattr(ticket_class, _IDENTITY_FLAG)
                 delattr(ticket_class, _IDENTITY_FLAG)
                 try:
@@ -243,7 +298,7 @@ with description("a language adapter"):
                 expect(shared).to(contain("{ path: '/cdd/progress', run: async cdd => cdd.progress() }"))
 
         with description("its data"):
-            with it("should state the data the Python class marks"):
+            with it("should state the data the Python class annotates"):
                 expect(self.ticket).to(contain("export type TicketData = {"))
                 expect(self.ticket).to(contain("  is_done: boolean\n"))
 
@@ -251,7 +306,13 @@ with description("a language adapter"):
                 expect(self.board).to(contain("  wip_limit?: number\n"))
 
             with it("should keep a field that may be null nullable"):
-                expect(self.board).to(contain("  active: string | null\n"))
+                expect(self.ticket).to(contain("  next: { ticket: { name: string }; fidelity: { slug: string } } | null\n"))
+
+            with it("should name a referenced object by its identity, and an identity field that is an object by that object's own identity"):
+                expect(self.progress).to(contain("  ticket: { name: string }\n"))
+
+            with it("should read an identity field that is an object by the field that names it"):
+                expect(self.progress).to(contain("ticket: string = state?.ticket?.name ?? '', fidelity: string = state?.fidelity?.slug ?? ''"))
 
             with it("should state a nested shape in the file that uses it"):
                 expect(self.ticket).to(contain("export type ReportData = {"))
@@ -259,14 +320,14 @@ with description("a language adapter"):
             with it("should type a field holding objects as their data, named after their class"):
                 expect(self.ticket).to(contain("  source: SourceLineData[]\n"))
 
-            with it("should type a field holding another marked object as that object's data, imported from its file"):
+            with it("should type a field holding another annotated object as that object's data, imported from its file"):
                 expect(self.board).to(contain("  in_progress?: TicketData[]\n"))
 
             with context("with a field that takes one of a few named words"):
                 with it("should allow only those words"):
                     install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
-                    _install(install_path, ("tools.chat.chat:Chat",))
-                    chat = (install_path / _ADAPTERS / "tools/chat/chat.ts").read_text(encoding="utf-8")
+                    _install(install_path, ("harness.chat.chat:Chat",))
+                    chat = (install_path / _ADAPTERS / "harness/chat/chat.ts").read_text(encoding="utf-8")
                     expect(chat).to(contain("  state: 'waiting' | 'taken' | 'shown' | 'done' | 'failed'\n"))
 
         with description("its shared base"):
@@ -333,7 +394,7 @@ with description("a language adapter"):
                     expect(self.progress).to(contain("report(): Promise<ReportData>"))
 
                 with it("should type a list of strings"):
-                    expect(self.ticket).to(contain("Promise<string[]>"))
+                    expect(self.board).to(contain("Promise<string[]>"))
 
             with context("for a class operation, which no loaded object runs"):
                 with it("should be a static operation that takes the connection and returns the new object's data"):
@@ -343,8 +404,15 @@ with description("a language adapter"):
             with it("should extend the shared base"):
                 expect(self.ticket).to(contain("export class TicketClientGenerated extends Ticket {"))
 
-            with it("should take its identity from the field the mark names"):
+            with it("should take its identity from the field the annotation names"):
                 expect(self.ticket).to(contain("ticket: string = state?.name ?? ''"))
+
+            with it("should type a reference field as the identity of the object it names"):
+                expect(self.ticket).to(contain("  column: { name: string }"))
+
+            with it("should show a reference field in its view by the field that names the object it refers to"):
+                views = (self.root / "space/kanban/ticket-views.tsx").read_text(encoding="utf-8")
+                expect(views).to(contain('<ReadOnlyField label="Column" value={ticket.column.name} />'))
 
             with it("should post to its object's route, with the name safe in the path"):
                 expect(self.ticket).to(contain("this.api.post<TicketData>(`/ticket/${encodeURIComponent(this.#ticket)}/move-next`, {})"))
@@ -377,7 +445,7 @@ with description("a language adapter"):
                 with it("should leave the name out of the path"):
                     expect(self.board).to(contain("path: '/board/show', run: (cdd, request) => new BoardAdapter(cdd).show()"))
 
-    with description("the generated views of a marked toolset"):
+    with description("the generated views of an annotated toolset"):
         with before.all:
             install_path = Path(tempfile.mkdtemp(prefix="language-adapter-views-"))
             _install(install_path, ("harness.installation._examples.note:Note", "tools.file_manager.file_manager:FileManager"))
@@ -401,7 +469,7 @@ with description("a language adapter"):
             with it("should make it an input that saves through that operation"):
                 expect(self.views).to(contain('<EditableField label="Text" kind="text" value={note.text} onSave={value => note.updateText(value as string)} />'))
 
-        with context("for a field an operation marks with @edits"):
+        with context("for a field an operation annotates with @edits"):
             with it("should make it an input that saves through that operation"):
                 expect(self.views).to(contain("onSave={value => note.rename(value as string)}"))
 
@@ -429,7 +497,7 @@ with description("a language adapter"):
             with it("should draw a form that creates it"):
                 expect(self.views).to(contain("export function NoteNewViewGenerated({ api, onCreated }: NoteNewViewProps): ReactNode {"))
 
-        with context("for a field Python marks as a source file"):
+        with context("for a field Python annotates as a source file"):
             with it("should type it as the path it holds"):
                 expect(self.note).to(contain("  source: string\n"))
 
@@ -446,17 +514,26 @@ with description("a language adapter"):
             with it("should take Monaco from the application"):
                 expect(self.file_views).to(contain("from '@monaco-editor/react'"))
 
+    with description("the installation of a toolset whose objects are named, with an operation that names none"):
+        with before.all:
+            out = Path(tempfile.mkdtemp(prefix="language-adapter-session-"))
+            _install(out, ["space.session.session:Session"])
+            self.session = (out / _ADAPTERS / "space/session/session.ts").read_text(encoding="utf-8")
+
+        with it("should route the operation to the class, since it acts on no one object"):
+            expect(self.session).to(contain("run: (cdd, request) => SessionAdapter.recordDecisionsSession(cdd) }"))
+
     with description("a published schema"):
         with it("should keep only what checking a sent value needs"):
-            expect(argument_schema({"type": "string", "title": "Stage", "default": ""})).to(equal({"type": "string"}))
+            expect(PublishedSchema({"type": "string", "title": "Stage", "default": ""}).argument_check).to(equal({"type": "string"}))
 
         with it("should become a TypeScript array"):
-            expect(schema_type({"type": "array", "items": {"type": "string"}})).to(equal("string[]"))
+            expect(PublishedSchema({"type": "array", "items": {"type": "string"}}).typescript_type).to(equal("string[]"))
 
         with context("with a union"):
             with it("should keep every option"):
-                expect(schema_type({"anyOf": [{"type": "integer"}, {"type": "null"}]})).to(equal("number | null"))
+                expect(PublishedSchema({"anyOf": [{"type": "integer"}, {"type": "null"}]}).typescript_type).to(equal("number | null"))
 
     with description("the installer"):
         with it("should deploy this channel beside the others"):
-            expect("language-adapter" in Installer._DEPLOYED_CHANNELS).to(be_true)
+            expect("language-adapter" in InstallDiagnostics.CHANNELS).to(be_true)

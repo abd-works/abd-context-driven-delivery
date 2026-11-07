@@ -14,7 +14,7 @@ The assessment separates:
 
 ## Sources Reviewed
 
-- `C:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.md`
+- `C:\dev\abd-context-driven-delivery\cdd_guidance\practices\clean_engineering\clean_engineering.md`
 - Clean Engineering templates, testing guidance, class-model Draw.io guidance, and companion tool behavior
 - `C:\dev\paradise-mobile\pml-domainmodel\domain\AGENTS.md`
 - Paradise `domain-model.md` and `bounded-context-map.md`
@@ -97,7 +97,7 @@ The shared guidance rejects `Manager`, `Service`, `Helper`, and `Processor` clas
 
 A repository represents a typed collection of one aggregate root. Its collection property has the root's multiplicity; a singular reference is not a substitute for the collection.
 
-**Recommended `ddd-building_blocks` rule:** Model a repository as a typed collection of one aggregate root. Show collection multiplicity explicitly, because a singular reference describes one loaded object rather than the root's persistence boundary.
+**Recommended DDD `model` rule:** Model a repository as a typed collection of one aggregate root. Show collection multiplicity explicitly, because a singular reference describes one loaded object rather than the root's persistence boundary.
 
 ### `repository-owns-aggregate-lifecycle`
 
@@ -105,7 +105,7 @@ A repository represents a typed collection of one aggregate root. Its collection
 
 An aggregate instance does not create or load itself. Its repository owns creation, lookup, loading, and persistence for that root.
 
-**Recommended `ddd-building_blocks` rule:** Put creation and loading of an aggregate root on its repository. Keep behavior that changes an existing aggregate on the aggregate itself, because lifecycle lookup and domain behavior have different owners.
+**Recommended DDD `tactics` rule:** Put creation and loading of an aggregate root on its repository. Keep behavior that changes an existing aggregate on the aggregate itself, because lifecycle lookup and domain behavior have different owners.
 
 ### `external-system-access-is-a-service-interface`
 
@@ -113,7 +113,7 @@ An aggregate instance does not create or load itself. Its repository owns creati
 
 Paradise separates the domain collection from the external system. A domain repository holds its aggregate collection and collaborates with an external-system interface. The external interface has operations, not a collection of domain roots.
 
-**Recommended `ddd-building_blocks` rule:** Represent access to another system with a named service or gateway interface. Let the domain repository hold the domain aggregate collection and call that interface when persistence or retrieval crosses the system boundary, because the external system is not the domain collection.
+**Recommended DDD `tactics` rule:** Represent access to another system with a named service or gateway interface. Let the domain repository hold the domain aggregate collection and call that interface when persistence or retrieval crosses the system boundary, because the external system is not the domain collection.
 
 ### `model-modules-follow-the-partition`
 
@@ -260,7 +260,7 @@ The document contains spelling and grammar defects, including `rigourous`, `whil
 
 1. Repair missing references, absent sections, the broken H1 dependency, the language-tools link, undefined scaffold rules, and editorial defects.
 2. Clarify the operation-parameter rule, external-system `Service` distinction, and language-neutral property rule.
-3. Add repository collection, aggregate lifecycle, and external-system access rules to `ddd-building_blocks`.
+3. Add repository collection, aggregate lifecycle, and external-system access rules to the DDD `model` and `tactics` fidelities.
 4. Add the direction-of-knowledge rule to `clean_engineering-model`.
 5. Add model-from-partition and canonical-model-document rules.
 6. Add record-or-named-failure and catalog-evaluation rules.
@@ -269,6 +269,6 @@ The document contains spelling and grammar defects, including `rigourous`, `whil
 
 ## Bottom Line
 
-Paradise demonstrates several missing model practices on a large working artifact. Its Repository and external-system access rules belong in `ddd-building_blocks`; its model-boundary, external dependency direction, and failure-result rules belong in `clean_engineering-model` after they are rewritten without PML names.
+Paradise demonstrates several missing model practices on a large working artifact. Its Repository and external-system access rules belong in the DDD `model` and `tactics` fidelities; its model-boundary, external dependency direction, and failure-result rules belong in `clean_engineering-model` after they are rewritten without PML names.
 
 The shared document should first become internally consistent and explicit about its formats and references. Paradise's topology, file workflow, and vendor-specific modeling decisions should remain project guidance, and its duplicated or stale rules should be corrected before their wording is reused.

@@ -1,27 +1,34 @@
 """Scanner: edges-do-not-cross-classes - edge routes must not cut through unrelated class boxes."""
 from __future__ import annotations
 
-from pathlib import Path
+from harness.graph.violation import Violation
 
-from _drawio_base import DrawioScanner
+from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
+    DrawioPage,
+    DrawioScanner,
+    segment_hits_box,
+)
+
+# How close, in pixels, an edge may pass a class box before it counts as touching it.
+BOX_MARGIN = 3
 
 
 class EdgesDoNotCrossClassesScanner(DrawioScanner):
     RULE = "edges-do-not-cross-classes"
 
-    def scan_page(self, page_root) -> list:
-        crossings = self._check_edges_crossing_classes(page_root)
-        # Definitive only - approximate auto-router guesses are warnings elsewhere.
-        definitive = [
-            (edge, cls) for edge, cls in crossings if "(approx)" not in edge
-        ]
-        return [
-            self.violation(
-                f"[{self._scan_page_name}] Edge {edge} crosses through {cls}",
-                location=str(self._scan_file_path),
-            )
-            for edge, cls in definitive
-        ]
+    def scan_page(self, page: DrawioPage) -> list[Violation]:
+        """Only routes the file states exactly; Draw.io's router may find a better way for an edge with no waypoints."""
+        violations = []
+        for edge in page.edges:
+            segments, approximate = page.segments(edge)
+            if approximate:
+                continue
+            ends = (edge.get("source", ""), edge.get("target", ""))
+            for cell_id, box in page.boxes.items():
+                if cell_id in ends or not any(segment_hits_box(segment, box, BOX_MARGIN) for segment in segments):
+                    continue
+                violations.append(self.violation(page, f"Edge {page.describe(edge)} crosses through {page.class_names[cell_id]}"))
+        return violations
 
 
 if __name__ == "__main__":

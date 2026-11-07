@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Any
 
 from expects import be_true, equal, expect
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
+from space.session.throwaway_project import ThrowawayProject
 
 _AGENT_BDD_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _AGENT_BDD_DIR.parents[2]
@@ -20,19 +21,19 @@ for _p in [
         sys.path.insert(0, _p)
 
 from harness.agent_tools.agent_tools import AgentToolSet
-import agent_bdd.conf  # noqa: F401 - repo root on sys.path
 import cdd_guidance.practices  # noqa: F401
 from harness.markdown import Markdown
 from harness.agent_tools import AgentToolSet
-from validate.validate import Validate
+from cdd_guidance.actions.validate.validate import Validate
+from harness.agent_tools.tool_call import ToolCall
 from cdd_guidance.practices.bdd.bdd import Bdd
 
-_AGENT_BDD_TOOLSET = "agent_bdd.agent_bdd:AgentBdd"
+_AGENT_BDD_TOOLSET = "cdd_guidance.practices.agent_bdd.agent_bdd:AgentBdd"
 _BDD_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "bdd"
 _GENERATE_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "generate"
 _VALIDATE_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "validate"
-_GENERATE_TOOLSET = "generate.generate:Generate"
-_VALIDATE_TOOLSET = "validate.validate:Validate"
+_GENERATE_TOOLSET = "cdd_guidance.actions.generate.generate:Generate"
+_VALIDATE_TOOLSET = "cdd_guidance.actions.validate.validate:Validate"
 
 
 def _kit_prose(action: str, kit_dir: Path) -> str:
@@ -59,7 +60,6 @@ def _expand_action(
 
     func = getattr(type(instance), action_name)
     return AgentInstructions.for_callable(func, instance).expand(
-        context or {},
         arguments or {},
     )
 
@@ -69,6 +69,13 @@ def _assert_text_inlined(instructions: str, source: str) -> None:
 
 
 with description("AgentBdd action expansion"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        self.project = ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("an AgentBdd generator with format python"):
         with before.all:
             self.bdd = _AgentBddSpecFixture().load()
@@ -100,7 +107,7 @@ with description("AgentBdd action expansion"):
         with context("the Validate kit is expanded with this Guidance"):
             with before.each:
                 self.response = _expand_action(
-                    Validate(),
+                    Validate(session=ToolCall(project=self.project.root).session),
                     "validate",
                     arguments={"guidance": [self.bdd]},
                 )

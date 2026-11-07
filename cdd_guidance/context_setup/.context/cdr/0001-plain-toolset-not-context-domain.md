@@ -1,9 +1,11 @@
 # Context Setup is a plain primitives toolset, not a context_tools @context domain
 
 Context Setup (capture → prepare → ask, replacing the 7 script-based
-abd-context-* skills) is built directly on `primitives`
-(`@agentic_toolset` + `@action` + `@tool`), not as a `context_tools`
-`@context` domain like Stories/Bdd/CleanEngineering. Every other capability
+abd-context-* skills) is built directly on `harness/agent_tools`
+(`@agent_toolset` + `@agent_instructions` + `@agent_tool`), not as a
+`PracticeGuidance` practice like Stories/Bdd/CleanEngineering. (When this was
+decided, those were `primitives`, `@agentic_toolset` + `@action` + `@tool`, and a
+`context_tools` `@context` domain.) Every other capability
 in this repo follows the `@context` generate/validate/document/satisfy/repair
 shape, so this is a deliberate deviation a future reader will ask about.
 

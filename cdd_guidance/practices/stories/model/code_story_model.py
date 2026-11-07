@@ -1,27 +1,22 @@
 """CodeStoryModel - a StoryModel stored as a source-code tree.
 
-Layout produced (identical shape across TS/Python/Java backends):
+Layout written, the same shape in every language:
 
     <tests-root>/
       <epic-slug>/
+        <epic story file>                    # the epic's own stories, when it has any
+        <sub-epic story file>                # one file per sub-epic that has no sub-epics of its own
         <sub-epic-slug>/
-          <sub-epic-slug>.<ext>              # leaf file for this Epic
-          <nested-sub-epic-slug>/
-            <nested-sub-epic-slug>.<ext>     # nested leaf file when the Epic is not a leaf
+          <nested sub-epic story file>       # a sub-epic with sub-epics of its own is a folder
 
-A leaf Epic is one with no nested Epics of its own. Only leaf Epics get
-`<sub-epic-slug>.<ext>` leaf files; if a previously-leaf Epic gains a nested
-Epic, its own leaf file disappears.
-
-Backends override `_render_leaf_file(sub_epic, epic)` and `_render_epic_helper(epic)`
-to produce their language-specific text.
+Each language names its story files (`file_name`) and spells the code inside them.
 
 Every story, background, scenario, and step read from a file keeps the code it was written with
 (`written`, `setup`, and each step's `body`). Rendered back in the same language and unchanged, a node
 is written exactly as read; otherwise it is spelled again with its bodies kept.
 
-load fills this map from the files. save writes this map's epics and stories.
-render and parse call those so existing callers keep working.
+load fills this map from the files; each language reads its own. save writes this map's epics and stories.
+render writes another map in this language and parse reads a tree into a new map, through save and load.
 """
 
 from __future__ import annotations
@@ -31,7 +26,7 @@ import textwrap
 from typing import Dict, List, Optional, Tuple, Union
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import render_call_graph_block
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock, WrittenKey
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
@@ -42,6 +37,7 @@ from cdd_guidance.practices.stories.model.story_model import (
     StepType,
     Story,
     StoryModel,
+    StoryType,
 )
 
 
@@ -85,22 +81,16 @@ class CodeStoryNode:
     """Name forms shared by every code node. slug is the kebab folder name."""
 
     def slug(self) -> str:
-        return re.sub(r"[^0-9a-z]+", "-", self.name.strip().lower()).strip("-") or "unnamed"
+        return Name(self.name).title_slug or "unnamed"
 
     def snake(self) -> str:
-        return re.sub(r"[^0-9a-z]+", "_", self.name.strip().lower()).strip("_") or "unnamed"
+        return Name(self.name).title_snake or "unnamed"
 
     def pascal(self) -> str:
-        parts = [word for word in re.split(r"[^0-9A-Za-z]+", self.name.strip()) if word]
-        return "".join(word[:1].upper() + word[1:].lower() for word in parts) or "Unnamed"
+        return Name(self.name).title_pascal or "Unnamed"
 
     def camel(self) -> str:
-        parts = [word for word in re.split(r"[^0-9A-Za-z]+", self.name.strip()) if word]
-        if not parts:
-            return "unnamed"
-        first = parts[0].lower()
-        rest = "".join(word[:1].upper() + word[1:].lower() for word in parts[1:])
-        return first + rest
+        return Name(self.name).title_camel or "unnamed"
 
     @classmethod
     def name_from_slug(cls, slug: str) -> str:
@@ -122,17 +112,6 @@ class CodeScenario(Scenario, CodeStoryNode):
         for name in example_names or []:
             if re.search(rf"\b{re.escape(name)}\b", body):
                 self.examples[name] = name
-
-    @staticmethod
-    def background_lines(scenario, prefix: str) -> List[str]:
-        lines: List[str] = []
-        for background in scenario.backgrounds:
-            lines.append(f"{prefix}background: {background.name}")
-            for step in background.steps:
-                lines.append(f"{prefix}background-step: {step.keyword} | {step.text}")
-                for extra in step.ands:
-                    lines.append(f"{prefix}background-step: {extra.keyword} | {extra.text}")
-        return lines
 
     def _take_background_comments(self, body: str) -> str:
         kept: List[str] = []
@@ -235,6 +214,27 @@ class CodeScenario(Scenario, CodeStoryNode):
 class CodeStory(Story, CodeStoryNode):
     scenario_type = CodeScenario
 
+    # A story test names its tier after the story; the tier is not part of the story's name.
+    _TIER_NEUTRAL = re.compile(r"\s*\(tier-neutral\)\.?\s*$")
+    # What opens a line of the comment that describes a story in this language.
+    description_mark = r"\*\s*"
+
+    def read_description(self, content: str) -> None:
+        """The actor and kind the story's comment names; a story whose comment names no kind is a user story."""
+        actor = re.search(rf"{self.description_mark}Actor:\s*(.+)", content, re.MULTILINE)
+        if actor:
+            self.actors = [actor.group(1).strip()]
+        kind = re.search(rf"{self.description_mark}Kind:\s*(user|system|technical)\b", content, re.MULTILINE)
+        if kind:
+            self.story_type = StoryType.from_mark(kind.group(1))
+
+    @classmethod
+    def name_read(cls, found: Optional[str], story_slug: str) -> str:
+        """The story's name as its story test wrote it, else its file's slug as words. Every language reads a name
+        this one way, so a story test's scenarios find the story of the same name on the map."""
+        name = found.strip() if found else cls.name_from_slug(story_slug)
+        return cls._TIER_NEUTRAL.sub("", name).strip()
+
     @classmethod
     def load_all(cls, content: str) -> List["CodeStory"]:
         """Every story in one sub-epic file. A language splits the file."""
@@ -302,10 +302,6 @@ class CodeStory(Story, CodeStoryNode):
         """Write this story in the language file. Each language overrides it."""
         raise NotImplementedError
 
-    @classmethod
-    def from_source(cls, content: str, story_slug: str) -> "CodeStory":
-        return cls.load(content, story_slug)
-
 
 class CodeIncrement(Increment, CodeStoryNode):
     pass
@@ -336,8 +332,6 @@ class CodeEpic(Epic, CodeStoryNode):
 class CodeStoryModel(StoryModel):
     """Source-tree story map. The epics and stories are the story map. load and save are the files."""
 
-    LEAF_EXTENSION: str = ""
-    LANGUAGE_LINE_COMMENT: str = "//"
     epic_type = CodeEpic
     story_type = CodeStory
     increment_type = CodeIncrement
@@ -366,14 +360,7 @@ class CodeStoryModel(StoryModel):
 
     def save(self) -> Dict[str, str]:
         """Write this story map's epics and stories to source files."""
-        tree: Dict[str, str] = {}
-        for epic in self.epics:
-            self._render_epic(
-                epic=epic,
-                epic_slug=self._folder_slug(epic, self.epics),
-                tree=tree,
-            )
-        return tree
+        return self.write_epics({})
 
     def render(
         self,
@@ -386,7 +373,7 @@ class CodeStoryModel(StoryModel):
             raise CodeStoryModelError("previous must be the path-to-content map of the story tree already on disk")
         model = self._copy_of(canonical)
         if previous:
-            model.adopt_code(self.parse(previous))
+            model._adopt_code(self.parse(previous))
         return model.save()
 
     def _copy_of(self, canonical: StoryModel) -> "CodeStoryModel":
@@ -402,14 +389,18 @@ class CodeStoryModel(StoryModel):
     statement_end = ""
 
     def write_epics(self, files: Dict[str, str]) -> Dict[str, str]:
-        """Every epic's folders and sub-epic files, added to files."""
+        """Every epic's folders and sub-epic files, added to files. A top-level epic is always a folder, so the
+        file holding its own stories sits inside it and reads back onto that epic."""
         for epic in self.epics:
-            self._write_epic(epic, self.tests_root, files)
+            if epic.epics:
+                self._write_epic(epic, self.tests_root, files)
+            else:
+                self._write_stories(epic, f"{self.tests_root}/{epic.slug()}", files)
         return files
 
     def read_from_code(self) -> bool:
         """Some sub-epic or story in this tree was read from a file in this language."""
-        nodes = [node for epic in self.all_epics() for node in (epic, *epic.stories)]
+        nodes = [node for epic in self.every_epic() for node in (epic, *epic.stories)]
         return any(node.written is not None and node.written.language is self.language for node in nodes)
 
     def story_text(self, story: Story) -> str:
@@ -428,10 +419,10 @@ class CodeStoryModel(StoryModel):
         opened = len(lines)
         for scenario in story.scenarios:
             gap = [] if len(lines) == opened else self.scenario_gap
-            lines = joined(lines, self.scenario_lines(scenario, self.scenario_indent), self._is_as_read(scenario), gap)
+            lines = joined(lines, self._scenario_lines(scenario, self.scenario_indent), self._is_as_read(scenario), gap)
         return lines
 
-    def scenario_lines(self, scenario: Scenario, indent: str) -> List[str]:
+    def _scenario_lines(self, scenario: Scenario, indent: str) -> List[str]:
         """Read in this language and unchanged: every line as read. Otherwise the generic spelling, bodies kept."""
         written = as_read(scenario.written, self.language, scenario.code_key)
         if written is not None:
@@ -441,7 +432,7 @@ class CodeStoryModel(StoryModel):
         for background in scenario.backgrounds:
             lines.extend(self.scenario_background_lines(background, inner))
         if scenario.examples:
-            lines.extend(self.examples_lines(scenario, inner))
+            lines.extend(self._examples_lines(scenario, inner))
         for clause in self.clauses(scenario.steps):
             lines.extend(self.step_lines(clause, inner))
         if not scenario.steps and scenario.setup.is_empty:
@@ -451,16 +442,16 @@ class CodeStoryModel(StoryModel):
     def step_lines(self, clause: "StepClause", indent: str) -> List[str]:
         """One step and the steps chained onto it, each with its body. A body not written yet gets the placeholder."""
         step, verb, continuations = clause
-        lines = [self.step_open(verb, step, indent)] + self.body_lines(step, indent + self.language.indent)
+        lines = [self.step_open(verb, step, indent)] + self._body_lines(step, indent + self.language.indent)
         lines.extend(line for line in [self.step_close(indent)] if line is not None)
         for extra in [*step.ands, *continuations]:
             lines.append(self.and_open(extra, indent))
-            lines.extend(self.body_lines(extra, self.and_body_indent(indent)))
+            lines.extend(self._body_lines(extra, self.and_body_indent(indent)))
             lines.extend(line for line in [self.and_close(indent)] if line is not None)
         lines[-1] += self.statement_end
         return lines
 
-    def body_lines(self, step: Step, indent: str) -> List[str]:
+    def _body_lines(self, step: Step, indent: str) -> List[str]:
         """The step's body; an empty one carries the realization call graph as comments above the placeholder."""
         scaffold: List[str] = []
         if step.body.is_empty and step.call_graph:
@@ -474,6 +465,17 @@ class CodeStoryModel(StoryModel):
 
     def verb(self, step: Step) -> str:
         return step.keyword.lower()
+
+    def description_lines(self, story: Story, prefix: str) -> List[str]:
+        """The story's actor and, when it is not a user story, its kind, as the lines of its comment; the outline
+        notations name a kind the same way, only when it is not user."""
+        lines: List[str] = []
+        actor = (story.actors[0] if story.actors else "").strip()
+        if actor:
+            lines.append(f"{prefix}Actor: {actor}")
+        if story.story_type is not StoryType.USER:
+            lines.append(f"{prefix}Kind: {StoryType(story.story_type).value}")
+        return lines
 
     def read_code(self, content: str, stories: List[Story], path: str) -> Optional[WrittenBlock]:
         """Give each story, background, scenario, and step the code it was written with; return the file's own code.
@@ -511,7 +513,7 @@ class CodeStoryModel(StoryModel):
     def scenario_background_lines(self, background: Background, indent: str) -> List[str]:
         return []
 
-    def examples_lines(self, scenario: Scenario, indent: str) -> List[str]:
+    def _examples_lines(self, scenario: Scenario, indent: str) -> List[str]:
         return [f"{indent}{self.language.comment('examples: ' + ', '.join(scenario.examples))}"]
 
     def step_open(self, verb: str, step: Step, indent: str) -> str:
@@ -573,25 +575,17 @@ class CodeStoryModel(StoryModel):
     def _is_as_read(self, node: Union[Story, Scenario]) -> bool:
         return as_read(node.written, self.language, node.code_key) is not None
 
-    def adopt_code(self, kept: "CodeStoryModel") -> None:
+    def _adopt_code(self, kept: "CodeStoryModel") -> None:
         """Each epic, story, background, scenario, and step without code in this language takes kept's code
         for the node with the same name."""
         if self.language is None:
             return
-        epics = {epic.name: epic for epic in kept.all_epics()}
+        epics = {epic.name: epic for epic in kept.every_epic()}
         stories = {story.name: story for epic in epics.values() for story in epic.stories}
-        for epic in self.all_epics():
+        for epic in self.every_epic():
             self._take_code(epic, epics.get(epic.name))
             for story in epic.stories:
                 self._take_story_code(story, stories.get(story.name))
-
-    def all_epics(self) -> List[Epic]:
-        found, pending = [], list(self.epics)
-        while pending:
-            epic = pending.pop(0)
-            found.append(epic)
-            pending.extend(epic.epics)
-        return found
 
     def _take_story_code(self, story: Story, kept: Optional[Story]) -> None:
         """A story, its backgrounds, its scenarios, and theirs take kept's code for the nodes with the same name."""
@@ -630,35 +624,8 @@ class CodeStoryModel(StoryModel):
             step.body = step.body.in_language_of(bodies.get(step.text, CodeBody()), language)
 
     def load(self, external: Dict[str, str]) -> "CodeStoryModel":
-        """Read source files into this story map's epics and stories."""
-        if not isinstance(external, dict):
-            raise CodeStoryModelError("Tree must be a mapping of paths to file content")
-        self.epics.clear()
-        epics_by_slug: Dict[str, Epic] = {}
-        for path in self._ordered_paths(external):
-            parts = path.split("/")
-            if not parts or parts[0] != self._tests_root:
-                continue
-            if len(parts) < 3:
-                continue
-            _, epic_slug, *rest = parts
-            epic = epics_by_slug.get(epic_slug)
-            if epic is None:
-                epic = self.epic_for(epic_slug)
-                epics_by_slug[epic_slug] = epic
-            if len(rest) < 2:
-                continue
-            *sub_epic_slugs, _file_name = rest
-            current_sub_epic = self.sub_epic_for(epic, sub_epic_slugs)
-            if current_sub_epic is not None:
-                self._leaf_file_name = _file_name
-                self._leaf_content = external[path]
-                self._hydrate_leaf_sub_epic_from_content(current_sub_epic)
-        if not self.epics and external:
-            raise CodeStoryModelError(
-                "Tree contains no recognisable Epic folders under the tests root"
-            )
-        return self
+        """Read source files into this story map's epics and stories. Each language reads its own files."""
+        raise NotImplementedError(f"{type(self).__name__} must read its story files")
 
     def parse(self, external: Dict[str, str]) -> "CodeStoryModel":
         return type(self)(self._tests_root).load(external)
@@ -682,8 +649,8 @@ class CodeStoryModel(StoryModel):
     def take_sub_epic_file(self, parts: List[str], content: str, source_file: str = "") -> bool:
         """One file is one sub-epic. Every story in the file belongs to it.
 
-        A parent folder with the same slug is that sub-epic, so the file is not a second level.
-        A file in its own top folder is the epic itself, and its stories sit on the epic.
+        A parent folder with the same slug as the file, or as the epic its header names, is that sub-epic, so the
+        file is not a second level. A file in its own top folder is the epic itself, and its stories sit on the epic.
         """
         if len(parts) < 2:
             return False
@@ -695,10 +662,10 @@ class CodeStoryModel(StoryModel):
         if not leaf_slug:
             return False
         folders = list(parts[:-1])
-        if folders[-1] == stem_slug:
+        if folders[-1] in (stem_slug, leaf_slug):
             folders = folders[:-1]
         if not folders:
-            holder = self.epic_for(stem_slug)
+            holder = self.epic_for(leaf_slug)
         else:
             epic = self.epic_for(folders[0])
             nested = folders[1:]
@@ -758,97 +725,3 @@ class CodeStoryModel(StoryModel):
         if current is None:
             raise CodeStoryModelError("A story file needs a sub-epic folder")
         return current
-
-    def _hydrate_leaf_sub_epic_from_content(self, current_sub_epic: Epic) -> None:
-        # WHY: language backends override this to reconstruct story and scenario
-        # structure when parsing generated source trees back into StoryModel.
-        return None
-
-    def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
-        return sorted(
-            p for p in tree if p.endswith(self.LEAF_EXTENSION) and self._is_leaf_path(p)
-        )
-
-    def folders_of(self, tree: Dict[str, str]) -> List[str]:
-        folders: set = set()
-        for path in tree:
-            parts = path.split("/")
-            for i in range(1, len(parts)):
-                folders.add("/".join(parts[:i]))
-        return sorted(folders)
-
-    def _is_leaf_path(self, path: str) -> bool:
-        parts = path.split("/")
-        return len(parts) >= 4 and parts[-1].endswith(self.LEAF_EXTENSION)
-
-    def _render_epic(
-        self,
-        epic: Epic,
-        epic_slug: str,
-        tree: Dict[str, str],
-    ) -> None:
-        epic_root = f"{self._tests_root}/{epic_slug}"
-        helper_content = self._render_epic_helper(epic)
-        if helper_content is not None:
-            helper_path = self._epic_helper_path(epic_root, epic)
-            tree[helper_path] = helper_content
-        if not epic.epics and helper_content is None:
-            tree[self._epic_marker_path(epic_root)] = self._render_epic_marker(epic)
-        for sub_epic in epic.epics:
-            self._render_sub_epic(
-                sub_epic=sub_epic,
-                sibling_epics=epic.epics,
-                parent_path=epic_root,
-                owning_epic=epic,
-                tree=tree,
-            )
-
-    def _render_sub_epic(
-        self,
-        sub_epic: Epic,
-        sibling_epics: List[Epic],
-        parent_path: str,
-        owning_epic: Epic,
-        tree: Dict[str, str],
-    ) -> None:
-        folder = f"{parent_path}/{self._folder_slug(sub_epic, sibling_epics)}"
-        for nested in sub_epic.epics:
-            self._render_sub_epic(
-                sub_epic=nested,
-                sibling_epics=sub_epic.epics,
-                parent_path=folder,
-                owning_epic=owning_epic,
-                tree=tree,
-            )
-        if sub_epic.stories or not sub_epic.epics:
-            leaf_path = f"{folder}/{sub_epic.slug()}{self.LEAF_EXTENSION}"
-            tree[leaf_path] = self._render_leaf_file(sub_epic, owning_epic)
-
-    def _epic_helper_path(self, epic_root: str, epic: Epic) -> str:
-        return ""  # WHY: only backends that need a helper (Python, Java) override.
-
-    def _render_epic_helper(self, epic: Epic) -> Optional[str]:
-        # WHY: TypeScript backend needs no per-Epic helper file; Python/Java do.
-        return None
-
-    def _epic_marker_path(self, epic_root: str) -> str:
-        return f"{epic_root}/.epic"
-
-    def _render_epic_marker(self, epic: Epic) -> str:
-        return f"epic:{epic.name}\n"
-
-    def _folder_slug(
-        self,
-        node: Union[Epic, Epic],
-        siblings: List[Union[Epic, Epic]],
-    ) -> str:
-        base = node.slug()
-        duplicate_count = sum(
-            1 for sibling in siblings if sibling.slug() == base
-        )
-        if duplicate_count <= 1:
-            return base
-        return f"{base}--{node.sequential_order}"
-
-    def _render_leaf_file(self, sub_epic: Epic, owning_epic: Epic) -> str:
-        raise NotImplementedError

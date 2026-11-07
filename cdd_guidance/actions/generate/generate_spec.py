@@ -16,19 +16,25 @@ import tempfile
 from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
-from generate.generate import Generate
+from cdd_guidance.actions.generate.generate import Generate
 from harness.agent_tools.agent_tools import AgentInstructions
+from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
 from harness.mcp.mcp_server import McpServer
-from space.session import Session
-from space.session.throwaway_project import ProjectCall, ThrowawayProject
+from space.session import Sessions
+from space.session.throwaway_project import ThrowawayProject
+
+
+def _made_for(project):
+    """A generate made for a call on project, working in the session open there."""
+    return Generate().for_call(ToolCall({}, project))
 
 
 def _expanded_generate(action, arguments):
     return AgentInstructions.for_callable(Generate.generate, action).expand(
-        {}, arguments
+        arguments
     )
 
 
@@ -49,7 +55,6 @@ with description("a generate action on practice guidance") as self:
         self.action = Generate()
 
     with after.each:
-        ProjectCall.close_all()
         self.throwaway.close()
 
     with context("with a fidelity active"):
@@ -73,13 +78,10 @@ with description("a generate action on practice guidance") as self:
     with context("with no named session on the project"):
         with before.each:
             self.project = Path(tempfile.mkdtemp(prefix="cdd-generate-"))
-            ProjectCall(self.project)
             (self.project / ".git").mkdir()
-            Session.forget_current()
-            Session.current(self.project)
+            self.action = _made_for(self.project)
 
         with after.each:
-            Session.forget_current()
             shutil.rmtree(self.project, ignore_errors=True)
 
         with it("should say where each format of the artifact is saved in the main session"):
@@ -89,18 +91,39 @@ with description("a generate action on practice guidance") as self:
     with context("with a session open"):
         with before.each:
             self.project = Path(tempfile.mkdtemp(prefix="cdd-generate-"))
-            ProjectCall(self.project)
             (self.project / ".git").mkdir()
-            Session.forget_current()
-            Session.new("alpha", self.project, self.project)
+            sessions = Sessions(self.project)
+            sessions.open(sessions.create("alpha", self.project))
+            self.action = _made_for(self.project)
 
         with after.each:
-            Session.forget_current()
             shutil.rmtree(self.project, ignore_errors=True)
 
         with it("should say where each format of the artifact is saved"):
             prose = _expanded_generate(self.action, {"guidance": ["stories-story-map"]}).instructions
             expect(prose).to(contain(f"{self.project.resolve().as_posix()}/.context/story-map.md"))
+
+        with context("that generates a fidelity in a format its earlier fidelity has no file in, but another format it has"):
+            with before.each:
+                (self.project / ".context").mkdir(exist_ok=True)
+                (self.project / ".context" / "story-map.drawio").write_text("<mxfile/>\n", encoding="utf-8")
+                self.prose = _expanded_generate(self.action, {"guidance": "stories-scenarios format=markdown"}).instructions
+
+            with it("should render the earlier fidelity into that format first"):
+                expect(self.prose).to(contain("render the earlier fidelity stories-story-map into markdown"))
+
+            with it("should render it from the earlier fidelity's file in the format it has"):
+                expect(self.prose).to(contain("source drawio, and paths .context/story-map.drawio"))
+
+        with context("that generates a fidelity in a format its earlier fidelity already has a file in"):
+            with before.each:
+                (self.project / ".context").mkdir(exist_ok=True)
+                (self.project / ".context" / "story-map.drawio").write_text("<mxfile/>\n", encoding="utf-8")
+                (self.project / ".context" / "story-map.md").write_text("# Story map\n", encoding="utf-8")
+                self.prose = _expanded_generate(self.action, {"guidance": "stories-scenarios format=markdown"}).instructions
+
+            with it("should render nothing first"):
+                expect(self.prose).not_to(contain("render the earlier fidelity"))
 
         with context("that an MCP call names a guidance slug"):
             with before.each:
@@ -120,7 +143,7 @@ with description("a generate action on practice guidance") as self:
         with context("that an agent runs it as an MCP command"):
             with before.each:
                 server = McpServer(project=self.project)
-                server.start(("generate.generate:Generate",))
+                server.start(("cdd_guidance.actions.generate.generate:Generate",))
                 self.reply = server.invoke_prompt("generate.generate", {"guidance": "stories-story-map"})
 
             with it("should name the session's session.json"):
@@ -141,7 +164,7 @@ with description("a generate action on practice guidance") as self:
                 other.mkdir(parents=True)
                 (other / "session.json").write_text('{"name": "beta", "workpath": "' + (self.project / "src").as_posix() + '"}', encoding="utf-8")
                 server = McpServer(project=self.project)
-                server.start(("generate.generate:Generate",))
+                server.start(("cdd_guidance.actions.generate.generate:Generate",))
                 self.reply = server.invoke_prompt("generate.generate", {"guidance": "stories-story-map session=.sessions/beta/session.json"})
 
             with it("should describe that session, not the one open"):
@@ -157,7 +180,7 @@ with description("a generate action on practice guidance") as self:
         with context("that the same cdd server has already generated once"):
             with before.each:
                 server = McpServer(project=self.project)
-                server.start(("generate.generate:Generate",))
+                server.start(("cdd_guidance.actions.generate.generate:Generate",))
                 server.invoke_prompt("generate.generate", {"guidance": "stories-story-map"})
                 server.invoke_prompt("generate.generate", {"guidance": "stories-scenarios"})
 

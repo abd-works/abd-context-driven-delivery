@@ -1,27 +1,24 @@
-"""Shared agent BDD types, helpers, session management, and runbook building."""
+"""Shared agent BDD types, helpers, session management, and in-process toolset runs."""
 from __future__ import annotations
 
-import ast
+import contextvars
 import json
 import re
 import subprocess
 import sys
+import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, Callable, Generic, TypeVar
 
-from agent_bdd.yaml_fence import YamlFence
+from cdd_guidance.practices.agent_bdd.cursor_cli import CursorCli
+from cdd_guidance.practices.agent_bdd.yaml_fence import YamlFence
 
 try:
     import yaml
 except ImportError:  # pragma: no cover
     yaml = None  # type: ignore
-
-_TOOLS_RUN = re.compile(
-    r"(?:toolset:\s*\S|action:\s*\w|tool:\s*\w)",
-    re.IGNORECASE,
-)
 
 JUDGE_TASK = """\
 You are an AI judge.
@@ -41,21 +38,15 @@ JUDGE_LAUNCH = (
     "Reply with only one JSON line as specified in that file."
 )
 
-AGENT_DEFERRAL_PHRASES = (
-    "paste the",
-    "paste the full",
-    "paste the exact",
-    "didn't come through",
-    "did not come through",
-    "missing from your message",
-    "nothing after the colon",
-    "command itself is missing",
-    "didn't come through after the colon",
-)
-
 CMDLINE_SAFE = 4096
 
 INBOX_POLL_SECONDS = 0.25
+
+# How long each step may take before the spec fails: an agent step, the judge, an in-process toolset run, and a read.
+INSTRUCT_TIMEOUT_SECONDS = 300
+JUDGE_TIMEOUT_SECONDS = 180
+TOOL_RUN_TIMEOUT_SECONDS = 180
+READ_TIMEOUT_SECONDS = 120
 
 
 class AgentHarnessError(RuntimeError):
@@ -87,6 +78,14 @@ class ChatInboxPending(AgentHarnessError):
     """Chat harness wrote an inbox prompt and waits for a response file."""
 
 
+class ToolRunTimedOut(AgentHarnessError):
+    """An in-process toolset run outlived its timeout. Python cannot stop its thread, so the run may still finish."""
+
+    def __init__(self, label: str, timeout_seconds: float) -> None:
+        super().__init__(f"{label} did not finish within {timeout_seconds} seconds")
+        self.timeout_seconds = timeout_seconds
+
+
 @dataclass(frozen=True)
 class AgentResult:
     """Outcome of a single agent instruct run."""
@@ -95,11 +94,6 @@ class AgentResult:
     text: str
     stderr: str
     elapsed_seconds: float
-
-    @property
-    def stdout(self) -> str:
-        """Alias for text — the agent's captured stdout."""
-        return self.text
 
     def ok(self) -> bool:
         return self.exit_code == 0
@@ -284,12 +278,6 @@ class AgentSession:
         self._log = HarnessLog("cursor_channel")
 
     @classmethod
-    def launcher(cls) -> str | None:
-        from cli_agent.cli_agent import CursorCli
-
-        return CursorCli().launcher()
-
-    @classmethod
     def load(cls, session_file: Path) -> AgentSession | None:
         if not session_file.is_file():
             return None
@@ -317,8 +305,6 @@ class AgentSession:
             if existing is not None:
                 log.write(f"session resumed: {existing.chat_id} ({session_file.name})")
                 return existing
-        from cli_agent.cli_agent import CursorCli
-
         log.write(f"creating new session for {session_file.name} in {workspace} ...")
         chat_id = CursorCli().create_chat(str(workspace.resolve()))
         session = cls(chat_id=chat_id, session_file=session_file)
@@ -326,9 +312,7 @@ class AgentSession:
         log.write(f"session created: {session.chat_id}")
         return session
 
-    def run(self, prompt: str, workspace: Path, *, timeout_seconds: int = 300) -> AgentResult:
-        from cli_agent.cli_agent import CursorCli
-
+    def run(self, prompt: str, workspace: Path, *, timeout_seconds: int = INSTRUCT_TIMEOUT_SECONDS) -> AgentResult:
         self._log.write(
             f"agent run starting (session={self.chat_id[:8]}..., timeout={timeout_seconds}s)"
         )
@@ -426,15 +410,6 @@ class ToolsRunYaml:
             for prefix in ("resources:", "instructions:", "action:", "tool:")
         )
 
-    def fenced_yaml_from_text(self, text: str) -> str | None:
-        if "ok:" not in text:
-            return None
-        for match in re.finditer(r"```(?:yaml)?\s*\n(.*?)```", text, re.DOTALL | re.IGNORECASE):
-            block = match.group(1)
-            if self.looks_like_tools_run_output(block):
-                return self._fence.fenced(block.strip())
-        return None
-
     def extract_yaml_from_command(self, command: str) -> str | None:
         powershell = re.search(r'@"\s*\r?\n(.*?)\"@', command, re.DOTALL)
         if powershell:
@@ -486,38 +461,16 @@ class ToolsRunYaml:
             lines.append(line)
         return "\n".join(lines).strip()
 
-    def expected_run_fields_from_prompt(self, prompt: str) -> dict[str, str]:
-        body = self.yaml_from_prompt(prompt)
-        if not body:
-            return {}
-        expected: dict[str, str] = {}
-        for line in body.splitlines():
-            stripped = line.strip()
-            if stripped.startswith("action:"):
-                expected["action"] = stripped.split(":", 1)[1].strip()
-            elif stripped.startswith("tool:"):
-                expected["tool"] = stripped.split(":", 1)[1].strip()
-        return expected
-
-    def run_request(self, yaml_body: str) -> str:
+    def run_request(self, yaml_body: str, timeout_seconds: float | None = None) -> str:
         if yaml is None:
             raise AgentHarnessError("PyYAML required to parse run request", prefix=self._prefix)
         parsed = yaml.safe_load(yaml_body)
         if not isinstance(parsed, dict):
             raise AgentHarnessError("run request must be a mapping", prefix=self._prefix)
-        response = invoke_run_request(parsed)
+        if self._workspace is None:
+            raise AgentHarnessError("a run request runs in a workspace; this reader was made with none", prefix=self._prefix)
+        response = invoke_run_request(parsed, self._workspace, timeout_seconds)
         return self._fence.fenced(self._fence.dump_manifest(response_to_dict(response)))
-
-    def replay(self, command: str) -> str | None:
-        if not _TOOLS_RUN.search(command):
-            return None
-        yaml_body = self.extract_yaml_from_command(command)
-        if not yaml_body:
-            return None
-        try:
-            return self.run_request(yaml_body)
-        except AgentHarnessError:
-            return None
 
 
 def looks_like_tools_run_output(text: str) -> bool:
@@ -529,68 +482,56 @@ def yaml_from_prompt(prompt: str) -> str | None:
     return ToolsRunYaml().yaml_from_prompt(prompt)
 
 
-def cli_output_matches_prompt(cli_output: str, prompt: str) -> bool:
-    expected = ToolsRunYaml().expected_run_fields_from_prompt(prompt)
-    if not expected:
-        return True
-    try:
-        parsed = RunResponse.from_cli_output(cli_output)
-    except Exception:
-        # Malformed captures (e.g. Python source mistaken for YAML) must not abort
-        # instruct_use_tool — callers fall back to replaying the prompt YAML.
-        return False
-    if "action" in expected and parsed.action != expected["action"]:
-        return False
-    if "tool" in expected and parsed.tool != expected["tool"]:
-        return False
-    return True
-
-
-def reject_agent_deferral(agent_text: str) -> None:
-    """Raise when the agent defers instead of running the embedded invoke block."""
-    lowered = (agent_text or "").lower()
-    for phrase in AGENT_DEFERRAL_PHRASES:
-        if phrase in lowered:
-            raise AgentHarnessError(
-                f"agent deferred invoke ({phrase!r}) instead of running the request"
-            )
-
-
 class ToolsetInvoke:
     """Expand an action or invoke a tool on a live toolset instance."""
 
-    def __init__(self, instance: Any, toolset_path: str) -> None:
+    def __init__(self, instance: Any, toolset_path: str, project: Path) -> None:
         self._instance = instance
         self._toolset_path = toolset_path
-        self._context: dict[str, Any] = {}
+        self._project = project
         self._arguments: dict[str, Any] = {}
         self._action_name: str | None = None
         self._tool_name: str | None = None
 
     @classmethod
-    def create(cls, request: dict[str, Any]) -> ToolsetInvoke:
+    def create(cls, request: dict[str, Any], project: Path) -> ToolsetInvoke:
+        """The run a request names, on the project it names; a request that names none runs on project, the one the
+        spec works in."""
         from harness.agent_tools.agent_tools import AgentToolSet
 
         toolset_path = request.get("toolset")
         if not toolset_path:
             raise AgentHarnessError("request missing toolset")
-        session = request.get("session")
-        if session is not None:
-            from workspace import SessionLog
-
-            SessionLog.instance().set_session(str(session))
+        project = Path(request.get("project") or project)
         context = dict(request.get("context") or {})
+        if request.get("session"):
+            context["session"] = cls._session_named(str(request["session"]), project)
         arguments = dict(request.get("arguments") or {})
         try:
             instance = AgentToolSet.instantiate({"toolset": str(toolset_path), "context": context})
         except TypeError as exc:
             raise AgentHarnessError(str(exc)) from exc
-        invoke = cls(instance, str(toolset_path))
-        invoke._context = context
+        invoke = cls(instance, str(toolset_path), project)
         invoke._arguments = arguments
         invoke._action_name = str(request["action"]) if request.get("action") else None
         invoke._tool_name = str(request["tool"]) if request.get("tool") else None
         return invoke
+
+    @classmethod
+    def _session_named(cls, name: str, project: Path) -> Any:
+        """The project's session a run request names, which the toolset is made for, so the run works in that session
+        and not in whichever session the project has open."""
+        from space.session.sessions import Sessions
+
+        session = Sessions(project).named(name)
+        if session is None:
+            raise AgentHarnessError(f"request names session {name!r}, which the project does not have")
+        return session
+
+    @property
+    def toolset(self) -> Any:
+        """The toolset the request is run on, made for the session the request names."""
+        return self._instance
 
     def response(self) -> RunResponse:
         if self._action_name:
@@ -602,7 +543,7 @@ class ToolsetInvoke:
     def expanded_action(self) -> RunResponse:
         try:
             expanded = self._instance.instructions[self._action_name].expand(
-                self._context, self._arguments
+                self._arguments
             )
         except KeyError as exc:
             raise AgentHarnessError(f"unknown action {self._action_name!r}") from exc
@@ -639,13 +580,59 @@ class ToolsetInvoke:
         from harness.agent_tools.agent_tools import AgentOperation
 
         if isinstance(member, AgentOperation):
-            return member.invoke(self._arguments)
+            return member.invoke(self._arguments, project=self._project)
         return getattr(self._instance, self._tool_name)(**self._arguments)
 
 
-def invoke_run_request(request: dict[str, Any]) -> RunResponse:
-    """Load a toolset and expand or invoke the named member the same way production does."""
-    return ToolsetInvoke.create(request).response()
+def invoke_run_request(request: dict[str, Any], project: Path, timeout_seconds: float | None = None) -> RunResponse:
+    """Load a toolset and expand or invoke the named member the same way production does, on project unless the
+    request names its own; with a timeout, fail the spec when the run outlives it."""
+    if timeout_seconds is None:
+        return ToolsetInvoke.create(request, project).response()
+    label = str(request.get("toolset") or "toolset run")
+    return ToolRunDeadline(timeout_seconds).run(lambda: ToolsetInvoke.create(request, project).response(), label)
+
+
+_Outcome = TypeVar("_Outcome")
+
+
+class ToolRunDeadline:
+    """Runs in-process work on a worker thread and fails when it outlives the timeout, so a hung toolset fails its
+    spec instead of hanging the whole run."""
+
+    def __init__(self, timeout_seconds: float) -> None:
+        self.timeout_seconds = timeout_seconds
+
+    def run(self, work: Callable[[], _Outcome], label: str) -> _Outcome:
+        """The work's result or its own error; ToolRunTimedOut when it is still running at the timeout."""
+        attempt = _TimedAttempt(work)
+        # WHY: the worker runs in a copy of the caller's context, so it acts on the project and session the spec opened.
+        worker = threading.Thread(target=contextvars.copy_context().run, args=(attempt.run,), daemon=True)
+        worker.start()
+        worker.join(self.timeout_seconds)
+        if worker.is_alive():
+            raise ToolRunTimedOut(label, self.timeout_seconds)
+        return attempt.outcome()
+
+
+class _TimedAttempt(Generic[_Outcome]):
+    """One run of the work on the worker thread: what it returned, or the error it raised for the caller to see."""
+
+    def __init__(self, work: Callable[[], _Outcome]) -> None:
+        self._work = work
+        self._result: _Outcome | None = None
+        self._error: BaseException | None = None
+
+    def run(self) -> None:
+        try:
+            self._result = self._work()
+        except BaseException as error:  # noqa: BLE001 - handed to the caller's thread and raised there
+            self._error = error
+
+    def outcome(self) -> _Outcome:
+        if self._error is not None:
+            raise self._error
+        return self._result  # type: ignore[return-value]
 
 
 def response_to_dict(response: RunResponse) -> dict[str, Any]:
@@ -704,11 +691,7 @@ class AgentSpecManifest:
 def read_manifest(spec_path: Path) -> AgentSpecManifest:
     """Load manifest metadata from comment headers at the top of an agent spec file."""
     text = spec_path.read_text(encoding="utf-8")
-    finder = AgentSpecRunbook()
-    finder._source = text
-    command = finder._find_marker_command()
-    if command is None:
-        command = "agent-spec"
+    command = _marker_command(text) or "agent-spec"
     harness = _HARNESS_RE.search(text)
     session = _SESSION_RE.search(text)
     chat = _AGENT_READING_RE.search(text)
@@ -722,450 +705,13 @@ def read_manifest(spec_path: Path) -> AgentSpecManifest:
     )
 
 
-# ---------------------------------------------------------------------------
-# Runbook - build chat runbook YAML from an agent spec Python file
-# ---------------------------------------------------------------------------
-
-@dataclass
-class _RunbookStep:
-    kind: str
-    prompt: str | None = None
-    save_as: str | None = None
-    timeout_seconds: int | None = None
-
-
-@dataclass
-class _RunbookAssertion:
-    description: str
-    expression: str
-
-
-@dataclass
-class _RunbookJudge:
-    description: str
-    output: str
-    rubric: str
-
-
-@dataclass
-class _RunbookScenario:
-    name: str
-    session: str | None
-    setup: list[_RunbookStep] = field(default_factory=list)
-    assertions: list[_RunbookAssertion] = field(default_factory=list)
-    judges: list[_RunbookJudge] = field(default_factory=list)
-
-
-class _AgentSpecRunbookDocument(TypedDict):
-    """Serializable agent-spec runbook for CLI / harness consumers."""
-
-    harness: str
-    workspace: str
-    spec_path: str
-    chat_instruction: str | None
-    scenarios: list[dict[str, Any]]
-
-
-@dataclass
-class AgentSpecRunbook:
-    harness: str = ""
-    workspace: str = ""
-    spec_path: str = ""
-    chat_instruction: str | None = None
-    scenarios: list[_RunbookScenario] = field(default_factory=list)
-
-    def to_dict(self) -> _AgentSpecRunbookDocument:
-        return {
-            "harness": self.harness,
-            "workspace": self.workspace,
-            "spec_path": self.spec_path,
-            "chat_instruction": self.chat_instruction,
-            "scenarios": [self._scenario_to_dict(scenario) for scenario in self.scenarios],
-        }
-
-    def _scenario_to_dict(self, scenario: _RunbookScenario) -> dict[str, Any]:
-        return {
-            "name": scenario.name,
-            "session": scenario.session,
-            "setup": [
-                {
-                    "kind": step.kind,
-                    "prompt": step.prompt,
-                    "save_as": step.save_as,
-                    "timeout_seconds": step.timeout_seconds,
-                }
-                for step in scenario.setup
-            ],
-            "assertions": [
-                {"description": item.description, "expression": item.expression}
-                for item in scenario.assertions
-            ],
-            "judges": [
-                {
-                    "description": item.description,
-                    "output": item.output,
-                    "rubric": item.rubric,
-                }
-                for item in scenario.judges
-            ],
-        }
-
-    @classmethod
-    def from_spec(cls, spec_path: Path, workspace: Path | None = None) -> AgentSpecRunbook:
-        runbook = cls()
-        runbook._assemble(spec_path, workspace)
-        return runbook
-
-    def _assemble(self, spec_path: Path, workspace: Path | None) -> None:
-        self._manifest = read_manifest(spec_path)
-        self._root_start = spec_path.resolve().parent
-        repo_root = workspace or self._infer_repo_root()
-        self._source = spec_path.read_text(encoding="utf-8")
-        self._tree = ast.parse(self._source)
-        self.harness = self._manifest.harness
-        self.workspace = str(repo_root.resolve())
-        self.spec_path = str(self._manifest.spec_path)
-        self.chat_instruction = self._manifest.chat_instruction
-        self.scenarios = self._extract_scenarios()
-
-    def _infer_repo_root(self) -> Path:
-        for parent in [self._root_start, *self._root_start.parents]:
-            if (parent / "harness").is_dir() and (parent / "contexts").is_dir():
-                return parent
-        return self._root_start.parent.parent
-
-    def _find_marker_command(self) -> str | None:
-        for line in self._source.splitlines():
-            command = self._marker_command_from_line(line)
-            if command is not None:
-                return command
-            if self._stops_header_scan(line):
-                return None
-        return None
-
-    def _stops_header_scan(self, line: str) -> bool:
+def _marker_command(text: str) -> str | None:
+    """The command after the manifest marker in the spec's opening comments; None when they name none."""
+    for line in text.splitlines():
         stripped = line.strip()
-        if stripped.startswith("#"):
-            return False
-        if not stripped or stripped.startswith('"""') or stripped.startswith("'''"):
-            return False
-        return True
-
-    def _marker_command_from_line(self, line: str) -> str | None:
-        stripped = line.strip()
-        if not stripped.startswith("#"):
+        if stripped and not stripped.startswith(("#", '"""', "'''")):
             return None
         body = stripped.lstrip("#").strip()
-        if AGENT_SPEC_MARKER not in body:
-            return None
-        remainder = body.split(AGENT_SPEC_MARKER, 1)[1].strip()
-        if remainder.startswith(":"):
-            remainder = remainder[1:].strip()
-        return remainder or None
-
-    def _extract_scenarios(self) -> list[_RunbookScenario]:
-        self._collected: list[_RunbookScenario] = []
-        self._current_name = "default"
-        self._current_session = self._manifest.session
-        self._setup_steps: list[_RunbookStep] = []
-        self._pending_it: str | None = None
-        for node in ast.walk(self._tree):
-            self._ingest_node(node)
-        self._append_remaining_setup()
-        return self._merged_scenarios()
-
-    def _ingest_node(self, node: ast.AST) -> None:
-        if isinstance(node, ast.With):
-            self._ingest_with(node)
-        if isinstance(node, ast.Call):
-            self._ingest_call(node)
-
-    def _ingest_with(self, node: ast.With) -> None:
-        context_name = self._with_context_name(node)
-        if context_name:
-            self._begin_named_context(context_name)
-        it_desc = self._it_description(node)
-        if it_desc:
-            self._pending_it = it_desc
-
-    def _begin_named_context(self, context_name: str) -> None:
-        if self._setup_steps or self._pending_it:
-            self._collected.append(
-                _RunbookScenario(
-                    name=self._current_name,
-                    session=self._current_session,
-                    setup=list(self._setup_steps),
-                )
-            )
-            self._setup_steps = []
-        self._current_name = context_name
-        if "agent" in context_name.lower():
-            self._current_session = self._manifest.session
-
-    def _ingest_call(self, node: ast.Call) -> None:
-        if isinstance(node.func, ast.Attribute):
-            self._ingest_attribute_call(node)
-        if self._is_expect_call(node):
-            self._record_expect(node)
-
-    def _ingest_attribute_call(self, node: ast.Call) -> None:
-        attr = node.func.attr
-        if attr in {"instruct", "instruct_use_tool"}:
-            self._record_instruct(node, attr)
-            return
-        if attr == "ai_judge":
-            self._record_judge(node)
-
-    def _record_instruct(self, node: ast.Call, attr: str) -> None:
-        prompt = self._prompt_arg(node, 0)
-        if not prompt:
-            return
-        self._setup_steps.append(
-            _RunbookStep(
-                kind=attr,
-                prompt=prompt,
-                save_as=self._assignment_target(node),
-                timeout_seconds=self._keyword_int(node, "timeout_seconds"),
-            )
-        )
-
-    def _record_judge(self, node: ast.Call) -> None:
-        output = self._expression_source(node.args[0]) if node.args else ""
-        rubric = self._prompt_arg(node, 1) or ""
-        self._collected.append(
-            _RunbookScenario(
-                name=self._current_name,
-                session=self._current_session,
-                setup=list(self._setup_steps),
-                judges=[
-                    _RunbookJudge(
-                        description=self._pending_it or "ai_judge",
-                        output=output,
-                        rubric=rubric,
-                    )
-                ],
-            )
-        )
-        self._setup_steps = []
-        self._pending_it = None
-
-    def _record_expect(self, node: ast.Call) -> None:
-        desc = self._pending_it or "assertion"
-        expression = self._expression_source(node)
-        scenario = self._scenario_for_expect()
-        scenario.assertions.append(_RunbookAssertion(description=desc, expression=expression))
-        self._pending_it = None
-
-    def _scenario_for_expect(self) -> _RunbookScenario:
-        if self._collected and self._collected[-1].name == self._current_name and not self._collected[-1].setup:
-            return self._collected[-1]
-        for scenario in self._collected:
-            if scenario.name == self._current_name:
-                return scenario
-        scenario = _RunbookScenario(
-            name=self._current_name,
-            session=self._current_session,
-            setup=list(self._setup_steps),
-        )
-        self._collected.append(scenario)
-        return scenario
-
-    def _append_remaining_setup(self) -> None:
-        if not self._setup_steps:
-            return
-        self._collected.append(
-            _RunbookScenario(
-                name=self._current_name,
-                session=self._current_session,
-                setup=list(self._setup_steps),
-            )
-        )
-
-    def _merged_scenarios(self) -> list[_RunbookScenario]:
-        by_name: dict[str, _RunbookScenario] = {}
-        for scenario in self._collected:
-            self._merge_named_scenario(by_name, scenario)
-        merged = list(by_name.values())
-        if merged or not self._manifest.session:
-            return merged
-        return [
-            _RunbookScenario(name="default", session=self._manifest.session, setup=self._setup_steps),
-        ]
-
-    def _merge_named_scenario(
-        self, by_name: dict[str, _RunbookScenario], scenario: _RunbookScenario
-    ) -> None:
-        existing = by_name.get(scenario.name)
-        if existing is None:
-            by_name[scenario.name] = scenario
-            return
-        existing.setup.extend(scenario.setup)
-        existing.assertions.extend(scenario.assertions)
-        existing.judges.extend(scenario.judges)
-        if scenario.session:
-            existing.session = scenario.session
-
-    def _with_context_name(self, node: ast.With) -> str | None:
-        for item in node.items:
-            name = self._context_call_name(item.context_expr)
-            if name is not None:
-                return name
-        return None
-
-    def _context_call_name(self, expr: ast.AST) -> str | None:
-        if not isinstance(expr, ast.Call):
-            return None
-        func = expr.func
-        named = isinstance(func, ast.Name) and func.id == "context"
-        attributed = isinstance(func, ast.Attribute) and func.attr == "context"
-        if not (named or attributed):
-            return None
-        if expr.args and isinstance(expr.args[0], ast.Constant):
-            return str(expr.args[0].value)
-        return None
-
-    def _it_description(self, node: ast.With) -> str | None:
-        for item in node.items:
-            name = self._it_call_name(item.context_expr)
-            if name is not None:
-                return name
-        return None
-
-    def _it_call_name(self, expr: ast.AST) -> str | None:
-        if not isinstance(expr, ast.Call):
-            return None
-        func = expr.func
-        if not (isinstance(func, ast.Name) and func.id == "it"):
-            return None
-        if expr.args and isinstance(expr.args[0], ast.Constant):
-            return str(expr.args[0].value)
-        return None
-
-    def _string_arg(self, node: ast.Call, index: int) -> str | None:
-        if len(node.args) <= index:
-            return None
-        arg = node.args[index]
-        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-            return arg.value
-        return None
-
-    def _prompt_arg(self, node: ast.Call, index: int) -> str | None:
-        literal = self._string_arg(node, index)
-        if literal is not None:
-            return literal
-        if len(node.args) <= index:
-            return None
-        return self._resolve_string_expr(node.args[index])
-
-    def _resolve_string_expr(self, arg: ast.AST) -> str | None:
-        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-            return arg.value
-        if isinstance(arg, ast.JoinedStr):
-            return self._joined_string(arg)
-        segment = ast.get_source_segment(self._source, arg)
-        if segment is None:
-            return None
-        if (segment.startswith('"') and segment.endswith('"')) or (
-            segment.startswith("'") and segment.endswith("'")
-        ):
-            return ast.literal_eval(segment)
-        if segment.startswith('f"') or segment.startswith("f'"):
-            return None
-        return segment
-
-    def _joined_string(self, arg: ast.JoinedStr) -> str | None:
-        parts: list[str] = []
-        for piece in arg.values:
-            if isinstance(piece, ast.Constant) and isinstance(piece.value, str):
-                parts.append(piece.value)
-                continue
-            if not isinstance(piece, ast.FormattedValue):
-                return None
-            resolved = self._resolve_formatted_value(piece)
-            if resolved is None:
-                return None
-            parts.append(resolved)
-        return "".join(parts)
-
-    def _resolve_formatted_value(self, piece: ast.FormattedValue) -> str | None:
-        value = piece.value
-        if isinstance(value, ast.Name):
-            return self._assigned_name_value(value.id)
-        if isinstance(value, ast.Constant):
-            return str(value.value)
-        return ast.get_source_segment(self._source, value)
-
-    def _assigned_name_value(self, name: str) -> str | None:
-        for stmt in self._tree.body:
-            if not isinstance(stmt, ast.Assign):
-                continue
-            for target in stmt.targets:
-                if isinstance(target, ast.Name) and target.id == name:
-                    if isinstance(stmt.value, ast.Constant):
-                        return str(stmt.value.value)
-        return None
-
-    def _keyword_int(self, node: ast.Call, name: str) -> int | None:
-        for keyword in node.keywords:
-            if keyword.arg == name and isinstance(keyword.value, ast.Constant):
-                if isinstance(keyword.value.value, int):
-                    return keyword.value.value
-        return None
-
-    def _is_expect_call(self, node: ast.Call) -> bool:
-        func = node.func
-        return isinstance(func, ast.Name) and func.id == "expect"
-
-    def _expression_source(self, node: ast.AST) -> str:
-        try:
-            return ast.get_source_segment(self._source, node) or ""
-        except (TypeError, ValueError):
-            return ""
-
-    def _assignment_target(self, call_node: ast.Call) -> str | None:
-        named = self._assign_name_for_call(call_node)
-        if named is not None:
-            return named
-        prompt = self._prompt_arg(call_node, 0) or ""
-        slug = re.sub(r"[^a-z0-9]+", "_", prompt[:40].lower()).strip("_")
-        return slug or None
-
-    def _assign_name_for_call(self, call_node: ast.Call) -> str | None:
-        self._call_node = call_node
-        self._call_line = getattr(call_node, "lineno", None)
-        if self._call_line is None:
-            return None
-        for node in ast.walk(self._tree):
-            found = self._target_if_matching_assign(node)
-            if found is not None:
-                return found
-        return None
-
-    def _target_if_matching_assign(self, node: ast.AST) -> str | None:
-        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Call):
-            return None
-        if not self._assign_matches_call(node.value):
-            return None
-        if len(node.targets) != 1:
-            return None
-        return self._name_from_assign_target(node.targets[0])
-
-    def _assign_matches_call(self, value: ast.Call) -> bool:
-        if value is self._call_node:
-            return True
-        return (
-            getattr(value, "lineno", None) == self._call_line
-            and getattr(value, "col_offset", None) == getattr(self._call_node, "col_offset", None)
-        )
-
-    def _name_from_assign_target(self, target: ast.AST) -> str | None:
-        if isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name):
-            return f"{target.value.id}.{target.attr}"
-        if isinstance(target, ast.Name):
-            return target.id
-        return None
-
-
-def build_runbook(spec_path: Path, *, workspace: Path | None = None) -> AgentSpecRunbook:
-    return AgentSpecRunbook.from_spec(spec_path, workspace)
-
+        if stripped.startswith("#") and AGENT_SPEC_MARKER in body:
+            return body.split(AGENT_SPEC_MARKER, 1)[1].strip().removeprefix(":").strip() or None
+    return None

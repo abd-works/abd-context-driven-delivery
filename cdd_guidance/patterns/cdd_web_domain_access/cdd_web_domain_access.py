@@ -1,7 +1,7 @@
 """CDD web domain access - how anything outside Python reaches the CDD domain.
 The domain stays in Python. Skills, actions, and commands reach it through MCP tools, and code in any other language
 reaches those same tools through the language adapter the installer deploys for it. TypeScript is the first
-implementation; see harness/kanban/app for the worked example."""
+implementation; see space/kanban/app for the worked example."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from harness.guidance.guidance import PracticeGuidance
 
 @agent_toolset
 class CddWebDomainAccess(PracticeGuidance):
-    """# Instructions"""
+    """How code outside Python reaches the CDD domain: through MCP tools, by a language adapter the installer deploys."""
 
     pattern = "cdd_web_domain_access"
 

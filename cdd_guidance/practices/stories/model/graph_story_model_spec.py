@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 
 from expects import contain, equal, expect
-from mamba import before, description, it
+from mamba import after, before, context, description, it
 
 _REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
@@ -13,6 +13,7 @@ if str(_REPO) not in sys.path:
 
 from harness.graph.graph import Graph  # noqa: E402
 from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel  # noqa: E402
+from cdd_guidance.practices.stories.model.source_location import SourceLocation  # noqa: E402
 from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, StepType, Story, StoryModel  # noqa: E402
 
 
@@ -66,3 +67,55 @@ with description("GraphStoryModel rule data"):
             if edge.parent is scenario
         ]
         expect(len(steps)).to(equal(3))
+
+
+def _imports_of(root: Path, file: str, text: str) -> dict:
+    """The imported modules the Story node records for a story read from file, a story test holding text."""
+    (root / file).parent.mkdir(parents=True, exist_ok=True)
+    (root / file).write_text(text, encoding="utf-8")
+    story = Story("Onboard Customer")
+    story.source = SourceLocation(file, 1, 1)
+    epic = Epic("Onboard", 1)
+    epic.append_story(story)
+    model = StoryModel()
+    model.append_epic(epic)
+    practice = Graph().practice("stories")
+    practice.source_root = str(root)
+    GraphStoryModel(model).record(practice)
+    return practice.nodes["Story"][0].get_fact("imported_modules")
+
+
+with description("a story read from a story test that imports its examples"):
+    with before.each:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+
+    with after.each:
+        self.tmp.cleanup()
+
+    with context("that is TypeScript"):
+        with it("should map each imported name to the module the import names"):
+            text = 'import { validCustomer, lapsed as lapsedCustomer } from "./examples/customers.examples";\n'
+            expect(_imports_of(self.root, "tests/onboard.story.shared.ts", text)).to(equal(
+                {"validCustomer": "./examples/customers.examples", "lapsedCustomer": "./examples/customers.examples"}
+            ))
+
+    with context("that is Python"):
+        with it("should map each imported name to its module as a folder path"):
+            text = "from .examples.customers_examples import (\n    valid_customer,\n    lapsed as lapsed_customer,\n)\n"
+            expect(_imports_of(self.root, "tests/onboard_story_test.py", text)).to(equal(
+                {"valid_customer": "./examples/customers_examples", "lapsed_customer": "./examples/customers_examples"}
+            ))
+
+    with context("that is Java"):
+        with it("should map a static import to its class file and a class import to itself"):
+            text = (
+                "import static shop.onboard.examples.CustomersExamples.validCustomer;\n"
+                "import shop.onboard.examples.LapsedExamples;\n"
+            )
+            expect(_imports_of(self.root, "tests/OnboardStoryTest.java", text)).to(equal(
+                {
+                    "validCustomer": "shop/onboard/examples/CustomersExamples",
+                    "LapsedExamples": "shop/onboard/examples/LapsedExamples",
+                }
+            ))

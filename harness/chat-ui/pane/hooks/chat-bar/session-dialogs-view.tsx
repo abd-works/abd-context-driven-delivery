@@ -8,7 +8,7 @@ import { stageIconOf } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
-// The choices the board's activation and close dialogs make first, as board.activate and ticket.close receive them.
+// The choices the board's activation and close dialogs make first, as ticket.activate and ticket.close receive them.
 const LEAVE_CHOICES = '☑ commit ☑ push'
 const OPEN_CHOICES = '☑ create branch ☑ create worktree'
 

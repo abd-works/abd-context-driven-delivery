@@ -15,7 +15,7 @@ Rules for rendering and auditing UML class diagrams in Draw.io under clean engin
 
 A good diagram comes from a good model: mark each relationship with `<< composition >>`, `<< aggregation >>`, or `<< association >>` and write `Derived : Base` on the class heading, because those are what draw the arrows.
 
-**Scanners** live under `scanners/` (`*_scanner.py`, rule slug = `RULE` / filename). Run them via the Drawio kit **scan** / **validate** after every **render**; iterate until hard violations are gone. On failure, **repair** (sub-agent) fixes the layout generator.
+**Scanners** live under `scanners/` (`*_scanner.py`, rule slug = `RULE` / filename). Run them via the Drawio toolset's **scan** / **validate** after every **render**; iterate until hard violations are gone. On failure, **repair** (sub-agent) fixes the layout generator.
 
 ---
 
@@ -52,7 +52,7 @@ An edge relates exactly two classes. Routing that cuts a third class, stacks on 
 
 ### Audit
 
-- **`run-audit-after-every-render`** — After every generate or layout change, run Drawio **scan** / `audit_diagram_report` and iterate until done. Priority:
+- **`run-audit-after-every-render`** — After every generate or layout change, run Drawio **scan** and iterate until done. Priority:
   1. class box overlap → **must be zero**
   2. **`edges-do-not-cross-classes`** → **must be zero**
   3. **`edges-do-not-overlap-edges`** / **`distinct-anchor-points`** → **must be zero**

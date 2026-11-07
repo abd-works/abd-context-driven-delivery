@@ -1,35 +1,543 @@
-<mxfile host="ooad.diagram.drawio">
-  <diagram name="OOAD Model" id="ooad-model">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+<mxfile host="CleanEngineering.diagram.drawio">
+  <diagram name="CleanEngineering Model" id="CleanEngineering-model">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="8980" pageHeight="5030" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="ooadnode" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;OoadNode&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ sequential_order: int&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ translate_from(source: OoadNode): UpdateReport&lt;br/&gt;+ update_self(source: OoadNode): None&lt;br/&gt;+ child_collections(source: OoadNode): list[ChildCollectionPair]&lt;br/&gt;- _reconcile_collection(pair: ChildCollectionPairreport: UpdateReport): None&lt;br/&gt;- _find_match(source: OoadNodecandidates: list[OoadNode]consumed_ids: set): OoadNode | None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="40" y="40" width="260" height="158" as="geometry" />
+        <mxCell id="practices-clean_engineering-model--cleanengineeringmodelfactory" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CleanEngineeringModelFactory&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ load(path: str): CleanEngineeringModel&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="8370" y="670" width="240" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="ooadclass-ooadnode" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;OoadClass : OoadNode&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ intent: str&lt;br/&gt;+ properties: list[Property]&lt;br/&gt;+ operations: list[Operation]&lt;br/&gt;+ relationships: list[Relationship]&lt;br/&gt;+ collaborators: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ update_self(source: OoadNode): None&lt;br/&gt;+ child_collections(source: OoadNode): list[ChildCollectionPair]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="320" y="40" width="260" height="158" as="geometry" />
+        <mxCell id="practices-clean_engineering-model--ooadnode" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;OoadNode&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ sequential_order: int&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ OoadNode(name: str, sequential_order: int, graph: Graph | None = None)&lt;br/&gt;+ translate_from(source: OoadNode): UpdateReport&lt;br/&gt;+ update_self(source: OoadNode): None&lt;br/&gt;+ child_collections(source: OoadNode): list[ChildCollectionPair]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2740" y="60" width="420" height="142" as="geometry" />
         </mxCell>
-        <mxCell id="ooadmodel-ooadnode" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;OoadModel : OoadNode&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ classes: list[OoadClass]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ update_self(source: OoadNode): None&lt;br/&gt;+ child_collections(source: OoadNode): list[ChildCollectionPair]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="600" y="40" width="260" height="94" as="geometry" />
+        <mxCell id="practices-clean_engineering-model--childcollectionpair" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ChildCollectionPair&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ self_children: list[OoadNode]&lt;br/&gt;+ source_children: list[OoadNode]&lt;br/&gt;+ load: Callable[[OoadNode], OoadNode]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="6010" y="80" width="240" height="94" as="geometry" />
         </mxCell>
-        <mxCell id="property" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Property&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ type_hint: str&lt;br/&gt;+ description: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="880" y="40" width="260" height="94" as="geometry" />
+        <mxCell id="practices-clean_engineering-model--updatereport" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;UpdateReport&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ changes: list[Change]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ add_exact_match(name: str): None&lt;br/&gt;+ add_new(node: OoadNode, parent_name: str | None): None&lt;br/&gt;+ add_removed(node: OoadNode, parent_name: str | None): None&lt;br/&gt;+ adds(): list[Change]&lt;br/&gt;+ removes(): list[Change]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="4990" y="4070" width="360" height="142" as="geometry" />
         </mxCell>
-        <mxCell id="operation" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Operation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ parameters: list[str]&lt;br/&gt;+ return_type: str&lt;br/&gt;+ description: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="1160" y="40" width="260" height="110" as="geometry" />
+        <mxCell id="practices-clean_engineering-model--translationerror" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;TranslationError&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="3890" y="3300" width="200" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="relationship" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Relationship&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ target: str&lt;br/&gt;+ kind: str&lt;br/&gt;+ cardinality: str&lt;br/&gt;+ description: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="40" y="210" width="260" height="110" as="geometry" />
+        <mxCell id="practices-clean_engineering-model--cleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ path: str&lt;br/&gt;+ modules: list[Module]&lt;br/&gt;+ module_type: type&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CleanEngineeringModel(name: str | Graph = &amp;quot;&amp;quot;, sequential_order: int = 1, graph: Graph | None = None)&lt;br/&gt;+ load(path: str): CleanEngineeringModel&lt;br/&gt;+ parse(text: str): CleanEngineeringModel&lt;br/&gt;+ save(): str&lt;br/&gt;+ sync(text: str, canonical: CleanEngineeringModel): UpdateReport&lt;br/&gt;+ every_class(): list[OoadClass]&lt;br/&gt;+ clone(): CleanEngineeringModel&lt;br/&gt;+ as_record(): dict&lt;br/&gt;+ load_module(source: Module): Module&lt;br/&gt;+ load_content(): None&lt;br/&gt;+ load_modules(): None&lt;br/&gt;+ has_more_module(): bool&lt;br/&gt;+ load_next_module(): Module&lt;br/&gt;+ get_next_module_from_file(): Module&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="6620" y="550" width="580" height="318" as="geometry" />
         </mxCell>
-        <mxCell id="updatereport" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;UpdateReport&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ changes: list[Change]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ add_exact_match(name: str): None&lt;br/&gt;+ add_new(node: OoadNodeparent_name: str): None&lt;br/&gt;+ add_removed(node: OoadNodeparent_name: str): None&lt;br/&gt;+ adds(): list[Change]&lt;br/&gt;+ removes(): list[Change]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="320" y="242" width="260" height="142" as="geometry" />
+        <mxCell id="practices-clean_engineering-model--module" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Module&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ description: str&lt;br/&gt;+ seam: str&lt;br/&gt;+ seam_terms: list[str]&lt;br/&gt;+ dependencies: list[str]&lt;br/&gt;+ constraint: str&lt;br/&gt;+ preamble: CodeBody&lt;br/&gt;+ modules: list[Module]&lt;br/&gt;+ classes: list[OoadClass]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Module(name: str, sequential_order: int, description: str = &amp;quot;&amp;quot;, seam: str = &amp;quot;&amp;quot;, constraint: str = &amp;quot;&amp;quot;, seam_terms: list[str] | None = None, dependencies: list[str] | None = None, graph: Graph | None = None)&lt;br/&gt;+ public_terms(): list[str]&lt;br/&gt;+ append_module(module: Module): None&lt;br/&gt;+ append_class(oclass: OoadClass): None&lt;br/&gt;+ load_module(source: Module): Module&lt;br/&gt;+ load_class(source: OoadClass): OoadClass&lt;br/&gt;+ load(): None&lt;br/&gt;+ load_source_facts(text: str, file: Path, root: Path): None&lt;br/&gt;+ import_targets(text: str, file: Path, root: Path): list[str]&lt;br/&gt;+ load_folder_facts(folder: Path): None&lt;br/&gt;+ clone(): Module&lt;br/&gt;+ as_record(): dict&lt;br/&gt;+ load_modules(): None&lt;br/&gt;+ has_more_module(): bool&lt;br/&gt;+ load_next_module(): Module&lt;br/&gt;+ get_next_module_from_file(): Module&lt;br/&gt;+ load_classes(): None&lt;br/&gt;+ has_more_class(): bool&lt;br/&gt;+ load_next_class(): OoadClass&lt;br/&gt;+ get_next_class_from_file(): OoadClass&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="3410" y="470" width="1160" height="494" as="geometry" />
         </mxCell>
-        <mxCell id="childcollectionpair" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ChildCollectionPair&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ self_children: list[OoadNode]&lt;br/&gt;+ source_children: list[OoadNode]&lt;br/&gt;+ load: Callable[[OoadNode], OoadNode]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="600" y="194" width="260" height="94" as="geometry" />
+        <mxCell id="practices-clean_engineering-model--file" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;File&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ properties: list&lt;br/&gt;+ operations: list&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2050" y="670" width="200" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="change" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Change&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ kind: ChangeKind&lt;br/&gt;+ from_name: str | None&lt;br/&gt;+ to_name: str | None&lt;br/&gt;+ node_name: str | None&lt;br/&gt;+ parent_name: str | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
-          <mxGeometry x="880" y="226" width="260" height="126" as="geometry" />
+        <mxCell id="practices-clean_engineering-model--ooadclass" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;OoadClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ intent: str&lt;br/&gt;+ stereotypes: list[str]&lt;br/&gt;+ properties: list[Property]&lt;br/&gt;+ operations: list[Operation]&lt;br/&gt;+ relationships: list[Relationship]&lt;br/&gt;+ collaborators: list[str]&lt;br/&gt;+ line: int | None&lt;br/&gt;+ end_line: int | None&lt;br/&gt;+ bases: list[str]&lt;br/&gt;+ peer_names: list[str]&lt;br/&gt;+ module_helpers: list[list]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ OoadClass(name: str, sequential_order: int, intent: str = &amp;quot;&amp;quot;, properties: list[Property] | None = None, operations: list[Operation] | None = None, relationships: list[Relationship] | None = None, collaborators: list[str] | None = None, line: int | None = None, graph: Graph | None = None)&lt;br/&gt;+ place_relationship(relationship: Relationship): None&lt;br/&gt;+ load_source_facts(class_text: str): None&lt;br/&gt;+ load_property(source: Property): Property&lt;br/&gt;+ load_operation(source: Operation): Operation&lt;br/&gt;+ load_relationship(source: Relationship): Relationship&lt;br/&gt;+ clone(): OoadClass&lt;br/&gt;+ as_record(): dict&lt;br/&gt;+ load_properties(): None&lt;br/&gt;+ has_more_property(): bool&lt;br/&gt;+ load_next_property(): Property&lt;br/&gt;+ get_next_property_from_file(): Property&lt;br/&gt;+ load_operations(): None&lt;br/&gt;+ has_more_operation(): bool&lt;br/&gt;+ load_next_operation(): Operation&lt;br/&gt;+ get_next_operation_from_file(): Operation&lt;br/&gt;+ load_relationships(): None&lt;br/&gt;+ has_more_relationship(): bool&lt;br/&gt;+ load_next_relationship(): Relationship&lt;br/&gt;+ get_next_relationship_from_file(): Relationship&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1250" width="1620" height="542" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--property" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Property&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ type_hint: str&lt;br/&gt;+ description: str&lt;br/&gt;+ access: str&lt;br/&gt;+ stereotype: str&lt;br/&gt;+ cardinality: str&lt;br/&gt;+ origin: str&lt;br/&gt;+ relationship: Relationship | None&lt;br/&gt;+ invariants: list[Invariant]&lt;br/&gt;+ callees: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Property(name: str, sequential_order: int = 0, type_hint: str = &amp;quot;&amp;quot;, description: str = &amp;quot;&amp;quot;, graph: Graph | None = None)&lt;br/&gt;+ derive_relationship(): None&lt;br/&gt;+ save(): str&lt;br/&gt;+ clone(): Property&lt;br/&gt;+ as_record(): dict&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="1810" y="1390" width="680" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--operation" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Operation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ return_type: str&lt;br/&gt;+ description: str&lt;br/&gt;+ callees: list[str]&lt;br/&gt;+ body: CodeBody&lt;br/&gt;+ invariants: list[Invariant]&lt;br/&gt;+ parameters: list[Parameter]&lt;br/&gt;+ owner: str&lt;br/&gt;+ is_property: bool&lt;br/&gt;+ is_static: bool&lt;br/&gt;+ is_classmethod: bool&lt;br/&gt;+ line: int | None&lt;br/&gt;+ end_line: int | None&lt;br/&gt;+ line_count: int | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Operation(name: str, sequential_order: int = 0, return_type: str = &amp;quot;&amp;quot;, description: str = &amp;quot;&amp;quot;, callees: list[str] | None = None, parameters: list[str] | None = None)&lt;br/&gt;+ load_span_facts(source_span: str): None&lt;br/&gt;+ save(): str&lt;br/&gt;+ load_parameter(source: Parameter): Parameter&lt;br/&gt;+ clone(): Operation&lt;br/&gt;+ as_record(): dict&lt;br/&gt;+ load_parameters(): None&lt;br/&gt;+ has_more_parameter(): bool&lt;br/&gt;+ load_next_parameter(): Parameter&lt;br/&gt;+ get_next_parameter_from_file(): Parameter&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="4700" y="510" width="940" height="414" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--invariant" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Invariant&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ text: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Invariant(text: str, sequential_order: int = 0)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="720" y="670" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--parameter" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Parameter&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ type_hint: str&lt;br/&gt;+ operation_name: str&lt;br/&gt;+ property_setter: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Parameter(name: str, sequential_order: int = 0, type_hint: str = &amp;quot;&amp;quot;)&lt;br/&gt;+ save(): str&lt;br/&gt;+ load_operation_facts(operation: Operation): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2740" y="640" width="420" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--relationship" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Relationship&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ target: str&lt;br/&gt;+ kind: str&lt;br/&gt;+ cardinality: str&lt;br/&gt;+ description: str&lt;br/&gt;+ sequential_order: int&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Relationship(target: str, kind: str = &amp;quot;&amp;quot;, cardinality: str = &amp;quot;&amp;quot;, description: str = &amp;quot;&amp;quot;, sequential_order: int = 0)&lt;br/&gt;+ translate_from(source: Relationship): UpdateReport&lt;br/&gt;+ clone(): Relationship&lt;br/&gt;+ as_record(): dict&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2620" y="2180" width="660" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--modeldescriptions" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ModelDescriptions&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ is_empty: bool&lt;br/&gt;+ model_members: dict[str, dict]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ read(model: CleanEngineeringModel, file: str): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="8330" y="3730" width="320" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--modulecontext" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ModuleContext&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;+ path: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ModuleContext(folder: Path)&lt;br/&gt;+ exists(): bool&lt;br/&gt;+ read(): str&lt;br/&gt;+ has_modules_heading(): bool&lt;br/&gt;+ model_blocks(): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2850" y="4060" width="200" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--documentedintent" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DocumentedIntent&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ stereotypes: list[str]&lt;br/&gt;+ intent: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ read(doc: str): DocumentedIntent&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="5060" y="4380" width="220" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--classhead" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClassHead&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ doc: str&lt;br/&gt;+ stereotypes: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ above(text_before_class: str): ClassHead&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="8360" y="4090" width="260" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--markdowncleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MarkdownCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ module_type: MarkdownModule&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ parse(text: str): MarkdownCleanEngineeringModel&lt;br/&gt;+ render(canonical: CleanEngineeringModel | None = None, previous: str | None = None): str&lt;br/&gt;+ from_workspace(root: Path): MarkdownCleanEngineeringModel | None&lt;br/&gt;+ load_module(source: Module): MarkdownModule&lt;br/&gt;+ load_class(source: OoadClass): MarkdownOoadClass&lt;br/&gt;+ load_content(): None&lt;br/&gt;+ has_more_module(): bool&lt;br/&gt;+ get_next_module_from_file(): MarkdownModule&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="5870" y="2180" width="520" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--markdownmodule" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MarkdownModule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ render(): str&lt;br/&gt;+ render_cards(module_level: int, card_level: int): str&lt;br/&gt;+ load_class(source: OoadClass): MarkdownOoadClass&lt;br/&gt;+ get_next_class_from_file(): MarkdownOoadClass&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="3820" y="2220" width="340" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--markdownooadclass" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MarkdownOoadClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ parse_body(name: str, body: str, sequential_order: int): MarkdownOoadClass&lt;br/&gt;+ render(known_names: list[str] | None = None): str&lt;br/&gt;+ render_card(level: int): str&lt;br/&gt;+ keep_card(card: str, heading: Match): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="1930" y="2810" width="440" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--jsoncleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JsonCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ parse(text: str): JsonCleanEngineeringModel&lt;br/&gt;+ render(canonical: CleanEngineeringModel | None = None, previous: str | None = None): str&lt;br/&gt;+ from_workspace(root: Path): JsonCleanEngineeringModel | None&lt;br/&gt;+ load_module(source: Module): JsonModule&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="7440" y="1470" width="520" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--jsonmodule" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JsonModule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_record(record: dict, sequential_order: int): JsonModule&lt;br/&gt;+ render(): str&lt;br/&gt;+ load_class(source: OoadClass): JsonOoadClass&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2770" y="1480" width="360" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--jsonooadclass" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JsonOoadClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_record(record: dict, sequential_order: int): JsonOoadClass&lt;br/&gt;+ render(): str&lt;br/&gt;+ load_property(source: Property): JsonProperty&lt;br/&gt;+ load_operation(source: Operation): JsonOperation&lt;br/&gt;+ load_relationship(source: Relationship): JsonRelationship&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="680" y="2800" width="380" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--jsonproperty" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JsonProperty&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_record(record: dict): JsonProperty&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2020" y="2240" width="260" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--jsonoperation" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JsonOperation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_record(record: dict): JsonOperation&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="6000" y="1480" width="260" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--jsonrelationship" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JsonRelationship&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_record(record: dict): JsonRelationship&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2810" y="2820" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--jsonparseerror" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JsonParseError&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="8390" y="3300" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--sketchcleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SketchCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ parse(text: str): SketchCleanEngineeringModel&lt;br/&gt;+ render(canonical: CleanEngineeringModel, previous: str | None = None): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="6690" y="2240" width="440" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--codespelling" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeSpelling&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ receiver: str&lt;br/&gt;+ construct: str&lt;br/&gt;+ statement_end: str&lt;br/&gt;+ camel_case: bool&lt;br/&gt;+ base_constructor: str&lt;br/&gt;+ base_receiver: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CodeSpelling(receiver: str, construct: str, statement_end: str, camel_case: bool, base_call: tuple)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="4880" y="3260" width="580" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--codelanguage" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeLanguage&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ line_comment: str&lt;br/&gt;+ indent: str&lt;br/&gt;+ unfinished: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CodeLanguage(name: str, line_comment: str, indent: str, unfinished: str, spelling: CodeSpelling, type_names: dict[str, str])&lt;br/&gt;+ named(name: str): CodeLanguage&lt;br/&gt;+ comment(text: str): str&lt;br/&gt;+ is_unfinished(text: str): bool&lt;br/&gt;+ identifier(name: str): str&lt;br/&gt;+ type_name(hint: str): str&lt;br/&gt;+ assignment(name: str): str&lt;br/&gt;+ interaction(callee: str): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="5770" y="3220" width="720" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--codebody" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeBody&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ text: str&lt;br/&gt;+ language: CodeLanguage | None&lt;br/&gt;+ is_empty: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CodeBody(text: str = &amp;quot;&amp;quot;, language: CodeLanguage | None = None)&lt;br/&gt;+ mentions(word: str): bool&lt;br/&gt;+ lines_in(language: CodeLanguage, indent: str, unfinished: str): list[str]&lt;br/&gt;+ in_language_of(other: CodeBody, language: CodeLanguage): CodeBody&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="4950" y="2200" width="440" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--writtenblock" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;WrittenBlock&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;+ key: str | tuple | None&lt;br/&gt;+ path: str&lt;br/&gt;+ lead: list[str]&lt;br/&gt;+ heading: list[str]&lt;br/&gt;+ inside: list[str]&lt;br/&gt;+ inline: str&lt;br/&gt;+ closing: list[str]&lt;br/&gt;+ close: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ WrittenBlock(language: CodeLanguage, key: str | tuple | None, lead: list[str], heading: list[str])&lt;br/&gt;+ is_in(language: CodeLanguage, key: str | tuple | None): bool&lt;br/&gt;+ split_inside(lines: list[str], inside: tuple[int, int], children: list[tuple[int, int]]): tuple&lt;br/&gt;+ inside_for(body: CodeBody): list[str] | None&lt;br/&gt;+ lead_body(): CodeBody&lt;br/&gt;+ closing_body(): CodeBody&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="5840" y="2720" width="580" height="286" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--callgraphentry" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CallGraphEntry&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ depth: int&lt;br/&gt;+ kind: str&lt;br/&gt;+ text: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="770" y="3730" width="200" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--codecleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ render(canonical: CleanEngineeringModel, previous: str | None = None): str&lt;br/&gt;+ operation_body(class_name: str, operation_name: str): CodeBody&lt;br/&gt;+ render_class(oclass: OoadClass, known_names: list[str], kept: CodeCleanEngineeringModel): list[str]&lt;br/&gt;+ render_operation(operation: Operation, contract: bool, previous: CodeBody): list[str]&lt;br/&gt;+ render_body(operation: Operation, previous: CodeBody): list[str]&lt;br/&gt;+ doc_text(operation: Operation): str&lt;br/&gt;+ file_header(canonical: CleanEngineeringModel, preamble: CodeBody): list[str]&lt;br/&gt;+ class_open(oclass: OoadClass, known_names: list[str]): list[str]&lt;br/&gt;+ class_doc(intent: str): list[str]&lt;br/&gt;+ class_intent(oclass: OoadClass): str&lt;br/&gt;+ stereotype_decorators(oclass: OoadClass): list[str]&lt;br/&gt;+ interface_declaration(oclass: OoadClass): list[str]&lt;br/&gt;+ implementing_declaration(oclass: OoadClass, interface: str): list[str]&lt;br/&gt;+ class_declaration(oclass: OoadClass): list[str]&lt;br/&gt;+ class_close(has_members: bool): list[str]&lt;br/&gt;+ property_line(prop: Property, contract: bool): list[str]&lt;br/&gt;+ constructor_lines(oclass: OoadClass, constructor: Operation | None, body: list[str]): list[str]&lt;br/&gt;+ constructor_parameters(oclass: OoadClass, constructor: Operation | None): list[tuple]&lt;br/&gt;+ signature(operation: Operation, contract: bool): list[str]&lt;br/&gt;+ block_close(): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="7410" y="2090" width="580" height="382" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--cfamilyparse" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CFamilyParse&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CFamilyParse(model_factory: Callable[[], CleanEngineeringModel], class_factory: Callable[..., OoadClass], language: CodeLanguage)&lt;br/&gt;+ parse(text: str): CleanEngineeringModel&lt;br/&gt;+ method_span_in_text(text: str, name: str, fallback_line: int = 1): tuple[int, int]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="7330" y="4090" width="740" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--pythoncleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PythonCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ parse(text: str): PythonCleanEngineeringModel&lt;br/&gt;+ parse_detailed(text: str): ParsedPython&lt;br/&gt;+ parse_file(path: Path): ParsedPython | None&lt;br/&gt;+ load_module(source: Module): PythonModule&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2810" y="4370" width="280" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--pythonmodule" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PythonModule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ load_source_facts(text: str, file: Path, root: Path): None&lt;br/&gt;+ import_targets(text: str, file: Path, root: Path): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="3810" y="1480" width="360" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--parsedpython" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ParsedPython&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ model: PythonCleanEngineeringModel&lt;br/&gt;+ content: str&lt;br/&gt;+ lines: list[str]&lt;br/&gt;+ tree: AST | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="3880" y="4380" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--typescriptcleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;TypeScriptCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ parse(text: str): TypeScriptCleanEngineeringModel&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="6760" y="3300" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--javascriptcleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JavaScriptCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ parse(text: str): JavaScriptCleanEngineeringModel&lt;br/&gt;+ render_class(oclass: OoadClass, known_names: list[str], kept: CodeCleanEngineeringModel): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="8200" y="2820" width="580" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--javacleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JavaCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ parse(text: str): JavaCleanEngineeringModel&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="7560" y="2820" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--diagramnode" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DiagramNode&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ geometry: Geometry&lt;br/&gt;+ cell_id: str&lt;br/&gt;+ parent_id: str&lt;br/&gt;+ group: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ height(): int&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="6810" y="4670" width="200" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--diagramclass" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DiagramClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ height(): int&lt;br/&gt;+ display_name(): str&lt;br/&gt;+ tactical_stereotypes(): list[str]&lt;br/&gt;+ extends_base_name(): str | None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="6020" y="3720" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--importedclass" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ImportedClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_module: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ key_properties(): list[Property]&lt;br/&gt;+ height(): int&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="6800" y="4090" width="220" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--diagrammodule" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DiagramModule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ nested: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ height(): int&lt;br/&gt;+ header_height(): int&lt;br/&gt;+ purpose_line(): str&lt;br/&gt;+ shown_seam_terms(): list[str]&lt;br/&gt;+ external_deps(): list[str]&lt;br/&gt;+ load_class(source: OoadClass): DiagramClass&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2010" y="3260" width="280" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--containmentforest" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ContainmentForest&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ by_name: dict[str, Module]&lt;br/&gt;+ children_of: dict[str, list[str]]&lt;br/&gt;+ roots: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ build(modules: list[Module], synthesize_parents: bool = False): ContainmentForest&lt;br/&gt;+ module_dep_depth(name: str): int&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="5890" y="4370" width="480" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--diagramcleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DiagramCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ module_type: DiagramModule&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2850" y="3300" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--geometry" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Geometry&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ x: float&lt;br/&gt;+ y: float&lt;br/&gt;+ width: float&lt;br/&gt;+ height: float&lt;br/&gt;+ center: tuple[float, float]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Geometry(x: float, y: float, width: float, height: float)&lt;br/&gt;+ overlaps(other: Geometry): bool&lt;br/&gt;+ shifted(dx: float, dy: float): Geometry&lt;br/&gt;+ moved_to(x: float, y: float): Geometry&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="5950" y="4640" width="360" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--diagramcard" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DiagramCard&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ geometry: Geometry&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ DiagramCard(cell_id: str, width: float, height: float, group: str = &amp;quot;&amp;quot;, x: float = 0, y: float = 0)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="4880" y="4700" width="580" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--diagramarrow" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DiagramArrow&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ source: str&lt;br/&gt;+ target: str&lt;br/&gt;+ kind: str&lt;br/&gt;+ label: str&lt;br/&gt;+ exit_side: str&lt;br/&gt;+ entry_side: str&lt;br/&gt;+ exit_point: tuple&lt;br/&gt;+ entry_point: tuple&lt;br/&gt;+ corners: list[tuple]&lt;br/&gt;+ routed: bool&lt;br/&gt;+ path: list[tuple]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ DiagramArrow(source: str, target: str, kind: str = &amp;quot;association&amp;quot;, label: str = &amp;quot;&amp;quot;)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="6670" y="3660" width="480" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--cardplacement" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CardPlacement&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CardPlacement(cards: list[DiagramNode | DiagramCard], arrows: list[DiagramArrow])&lt;br/&gt;+ place(): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="7460" y="4700" width="480" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--arrowrouter" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ArrowRouter&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ArrowRouter(cards: list[DiagramNode | DiagramCard], arrows: list[DiagramArrow], obstacles: list[Geometry] = ()&lt;br/&gt;+ route(): list[DiagramArrow]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="7380" y="3740" width="640" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--mirocleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MiroCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ parse(text: str): MiroCleanEngineeringModel&lt;br/&gt;+ render(canonical: CleanEngineeringModel, previous: str | None = None): str&lt;br/&gt;+ load(path: str): MiroCleanEngineeringModel&lt;br/&gt;+ save(canonical: CleanEngineeringModel | None = None, previous: str | None = None): str&lt;br/&gt;+ load_module(source: Module): MiroModule&lt;br/&gt;+ load_class(source: OoadClass): MiroClass&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2690" y="3710" width="520" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--miromodule" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MiroModule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ mermaid_id(): str&lt;br/&gt;+ mermaid_label(): str&lt;br/&gt;+ load_class(source: OoadClass): MiroClass&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2020" y="3730" width="260" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--miroclass" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MiroClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ mermaid_id(): str&lt;br/&gt;+ mermaid_lines(): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="6030" y="4100" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--miroimportedclass" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MiroImportedClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ mermaid_id(): str&lt;br/&gt;+ mermaid_lines(): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="6810" y="4390" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean_engineering-model--page" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Page&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Page(name: str)&lt;br/&gt;+ place(node: DiagramModule, mermaid: str): None&lt;br/&gt;+ svg(): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="3840" y="3720" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.881;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--cleanengineeringmodel" target="practices-clean_engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6910" y="230" />
+              <mxPoint x="3120" y="230" />
+              <mxPoint x="3120" y="240" />
+              <mxPoint x="3110" y="240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3" value="preamble" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.8017;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3409;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--module" target="practices-clean_engineering-model--codebody" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="4340" y="2130" />
+              <mxPoint x="5100" y="2130" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--module" target="practices-clean_engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3990" y="330" />
+              <mxPoint x="3020" y="330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--file" target="practices-clean_engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2150" y="250" />
+              <mxPoint x="2880" y="250" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.119;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--ooadclass" target="practices-clean_engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="870" y="780" />
+              <mxPoint x="2020" y="780" />
+              <mxPoint x="2020" y="230" />
+              <mxPoint x="2780" y="230" />
+              <mxPoint x="2780" y="290" />
+              <mxPoint x="2790" y="290" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="7" value="relationship" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6618;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--property" target="practices-clean_engineering-model--relationship" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2260" y="2140" />
+              <mxPoint x="2950" y="2140" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4524;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--property" target="practices-clean_engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2150" y="780" />
+              <mxPoint x="2710" y="780" />
+              <mxPoint x="2710" y="310" />
+              <mxPoint x="2930" y="310" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="9" value="body" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3298;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6591;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--operation" target="practices-clean_engineering-model--codebody" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5010" y="2110" />
+              <mxPoint x="5240" y="2110" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.7857;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--operation" target="practices-clean_engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5170" y="270" />
+              <mxPoint x="3070" y="270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2143;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--invariant" target="practices-clean_engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="870" y="640" />
+              <mxPoint x="30" y="640" />
+              <mxPoint x="30" y="2950" />
+              <mxPoint x="3310" y="2950" />
+              <mxPoint x="3310" y="1600" />
+              <mxPoint x="2740" y="1600" />
+              <mxPoint x="2740" y="810" />
+              <mxPoint x="3190" y="810" />
+              <mxPoint x="3190" y="350" />
+              <mxPoint x="2830" y="350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5476;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--parameter" target="practices-clean_engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2950" y="240" />
+              <mxPoint x="2970" y="240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="13" value="module_type" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--markdowncleanengineeringmodel" target="practices-clean_engineering-model--markdownmodule" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6130" y="2690" />
+              <mxPoint x="6520" y="2690" />
+              <mxPoint x="6520" y="3480" />
+              <mxPoint x="4120" y="3480" />
+              <mxPoint x="4120" y="2370" />
+              <mxPoint x="3990" y="2370" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3276;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--markdowncleanengineeringmodel" target="practices-clean_engineering-model--cleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6130" y="1590" />
+              <mxPoint x="6810" y="1590" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3966;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--markdownmodule" target="practices-clean_engineering-model--module" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3990" y="1590" />
+              <mxPoint x="3780" y="1590" />
+              <mxPoint x="3780" y="1000" />
+              <mxPoint x="3870" y="1000" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--markdownooadclass" target="practices-clean_engineering-model--ooadclass" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2150" y="2350" />
+              <mxPoint x="1140" y="2350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6724;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--jsoncleanengineeringmodel" target="practices-clean_engineering-model--cleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="7700" y="910" />
+              <mxPoint x="7010" y="910" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1983;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--jsonmodule" target="practices-clean_engineering-model--module" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2950" y="1000" />
+              <mxPoint x="3640" y="1000" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--jsonooadclass" target="practices-clean_engineering-model--ooadclass" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="870" y="1830" />
+              <mxPoint x="600" y="1830" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3382;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--jsonproperty" target="practices-clean_engineering-model--property" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2150" y="1700" />
+              <mxPoint x="2040" y="1700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6702;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--jsonoperation" target="practices-clean_engineering-model--operation" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6130" y="960" />
+              <mxPoint x="5330" y="960" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="22" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--jsonrelationship" target="practices-clean_engineering-model--relationship" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--sketchcleanengineeringmodel" target="practices-clean_engineering-model--cleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="24" value="language" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--codebody" target="practices-clean_engineering-model--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5170" y="3180" />
+              <mxPoint x="5950" y="3180" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="25" value="language" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--writtenblock" target="practices-clean_engineering-model--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="26" value="language" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3276;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--codecleanengineeringmodel" target="practices-clean_engineering-model--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="7600" y="2790" />
+              <mxPoint x="7530" y="2790" />
+              <mxPoint x="7530" y="3710" />
+              <mxPoint x="8050" y="3710" />
+              <mxPoint x="8050" y="3920" />
+              <mxPoint x="7050" y="3920" />
+              <mxPoint x="7050" y="4520" />
+              <mxPoint x="2780" y="4520" />
+              <mxPoint x="2780" y="3880" />
+              <mxPoint x="5970" y="3880" />
+              <mxPoint x="5970" y="3500" />
+              <mxPoint x="6540" y="3500" />
+              <mxPoint x="6540" y="3180" />
+              <mxPoint x="6310" y="3180" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="27" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.8276;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--codecleanengineeringmodel" target="practices-clean_engineering-model--cleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="7700" y="1610" />
+              <mxPoint x="7100" y="1610" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="28" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1724;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--pythoncleanengineeringmodel" target="practices-clean_engineering-model--codecleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2950" y="4240" />
+              <mxPoint x="5990" y="4240" />
+              <mxPoint x="5990" y="3520" />
+              <mxPoint x="7510" y="3520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="29" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6034;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--pythonmodule" target="practices-clean_engineering-model--module" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3990" y="1000" />
+              <mxPoint x="4110" y="1000" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="30" value="model" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.0;exitY=0.4545;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.4762;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--parsedpython" target="practices-clean_engineering-model--pythoncleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="31" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--typescriptcleanengineeringmodel" target="practices-clean_engineering-model--codecleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6910" y="2520" />
+              <mxPoint x="7700" y="2520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="32" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.8276;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--javascriptcleanengineeringmodel" target="practices-clean_engineering-model--codecleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="8490" y="2510" />
+              <mxPoint x="7890" y="2510" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="33" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6724;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--javacleanengineeringmodel" target="practices-clean_engineering-model--codecleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="7700" y="2570" />
+              <mxPoint x="7800" y="2570" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="34" value="geometry" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.0;exitY=0.4762;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.4737;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--diagramnode" target="practices-clean_engineering-model--geometry" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="35" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6818;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--importedclass" target="practices-clean_engineering-model--diagramclass" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6910" y="3920" />
+              <mxPoint x="6170" y="3920" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="36" value="module_type" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.0;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.5063;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--diagramcleanengineeringmodel" target="practices-clean_engineering-model--diagrammodule" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="37" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1724;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--diagramcleanengineeringmodel" target="practices-clean_engineering-model--cleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2950" y="2970" />
+              <mxPoint x="10" y="2970" />
+              <mxPoint x="10" y="30" />
+              <mxPoint x="6590" y="30" />
+              <mxPoint x="6590" y="900" />
+              <mxPoint x="6720" y="900" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="38" value="geometry" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=1.0;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.5263;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--diagramcard" target="practices-clean_engineering-model--geometry" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="39" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--mirocleanengineeringmodel" target="practices-clean_engineering-model--diagramcleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="40" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--miromodule" target="practices-clean_engineering-model--diagrammodule" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="41" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3182;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--miroclass" target="practices-clean_engineering-model--diagramclass" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6130" y="3870" />
+              <mxPoint x="6090" y="3870" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="42" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--miroimportedclass" target="practices-clean_engineering-model--importedclass" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="43" value="route" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.0;exitY=0.375;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.3361;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--arrowrouter" target="practices-clean_engineering-model--diagramarrow" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="7190" y="3770" />
+              <mxPoint x="7190" y="3740" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="44" value="place" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.0;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.5556;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--cardplacement" target="practices-clean_engineering-model--diagramnode" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="45" value="parse" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=1.0;exitY=0.4255;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.4255;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--cfamilyparse" target="practices-clean_engineering-model--classhead" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="46" value="child_collections" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=1.0;exitY=0.4225;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.4255;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--ooadnode" target="practices-clean_engineering-model--childcollectionpair" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="47" value="load" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.0;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.5031;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--cleanengineeringmodelfactory" target="practices-clean_engineering-model--cleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="48" value="CodeLanguage" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.0;exitY=0.4622;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.443;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--codelanguage" target="practices-clean_engineering-model--codespelling" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="49" value="ArrowRouter" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.0;exitY=0.625;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.6723;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean_engineering-model--arrowrouter" target="practices-clean_engineering-model--diagramarrow" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="7190" y="3790" />
+              <mxPoint x="7190" y="3820" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="inherits-diagramclass-ooadclass" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;" edge="1" source="practices-clean_engineering-model--diagramclass" target="practices-clean_engineering-model--ooadclass" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inherits-diagramclass-diagramnode" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;" edge="1" source="practices-clean_engineering-model--diagramclass" target="practices-clean_engineering-model--diagramnode" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inherits-diagrammodule-module" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;" edge="1" source="practices-clean_engineering-model--diagrammodule" target="practices-clean_engineering-model--module" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inherits-diagrammodule-diagramnode" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;" edge="1" source="practices-clean_engineering-model--diagrammodule" target="practices-clean_engineering-model--diagramnode" parent="1">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

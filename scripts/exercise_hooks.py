@@ -67,27 +67,25 @@ class HookExercise:
 
     def _ping(self) -> dict[str, Any]:
         from harness.hooks.hook_daemon import HookDaemon
-        from harness.hooks.hook_server import HookServer
 
-        address = HookDaemon().live_address(HookServer.state_path(self.repo))
+        address = HookDaemon(self.repo).live_address()
         if address is None:
             return {"ping": "down"}
-        host, port, pid = address
-        return {"ping": "pong", "host": host, "port": port, "pid": pid}
+        return {"ping": "pong", "host": address.host, "port": address.port, "pid": address.pid}
 
     def _live_injects(self) -> bool:
-        from harness.hooks.hook_server import HookServer
+        from harness.hooks.hook_daemon import HookDaemon
 
         sample = self._example_for("modules", "clean-engineering")
         if sample is None:
             return False
         try:
-            result = HookServer.ensure(self.repo).handle_stdin(
+            result = HookDaemon(self.repo).ensure().handle_stdin(
                 json.dumps(self._payload(sample)).encode("utf-8")
             )
         except Exception:
             return False
-        return "domain-nouns-only" in (result.additional_context or "")
+        return "domain-nouns-only" in (result.get("additional_context") or "")
 
     def _server(self) -> Any:
         cached = getattr(self, "_hook_server", None)
@@ -115,10 +113,10 @@ class HookExercise:
         """Every installed practice with fidelities, found the way the installer finds toolsets."""
         from harness.agent_tools.agent_tools import AgentToolSet
         from harness.guidance.guidance import PracticeGuidance
-        from harness.installation.installer import Installer
+        from harness.installation.repository_toolsets import RepositoryToolsets
 
         loaded = []
-        for ref in Installer(repo=self.repo).collect_toolsets():
+        for ref in RepositoryToolsets(self.repo).collect():
             try:
                 practice = AgentToolSet.instantiate(ref)
             except Exception:  # noqa: BLE001
@@ -189,12 +187,11 @@ class HookExercise:
         }
 
     def _fire(self, path: Path) -> tuple[str, str]:
-        from harness.hooks.session_logs import SessionLogs
+        from space.session.sessions import Sessions
 
         result = self._server().handle_stdin(json.dumps(self._payload(path)).encode("utf-8"))
         injected = result.additional_context or ""
-        logs = SessionLogs(self.repo)
-        folder = logs.session_folder(logs.active_session_name())
+        folder = Sessions(self.repo).saved.session_path
         chat = folder / "last-chat-injected-rules.md"
         remembered = folder / "chat-injections" / "hook-exercise.md"
         chat_text = chat.read_text(encoding="utf-8") if chat.is_file() else ""

@@ -11,7 +11,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import equal, expect
 from mamba import before, description, context, it
 
-from harness.mcp.restart_gate import RestartGate
+from harness.mcp.restart_gate import _RestartGate
 
 # Long enough for the other thread to reach the gate before the holder lets go.
 SETTLE_SECONDS = 0.2
@@ -31,7 +31,7 @@ def _hold(enter, events: list[str], name: str, seconds: float) -> threading.Thre
 
 with description("a restart gate") as self:
     with before.each:
-        self.gate = RestartGate()
+        self.gate = _RestartGate()
         self.events = []
 
     with context("with a tool call running"):

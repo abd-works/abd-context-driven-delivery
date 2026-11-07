@@ -97,6 +97,9 @@ class CustomerRepository {
   }
 }
 
+/**
+ * My Paradise HTTP boundary to Midtier. Midtier validates the account token and forwards customer operations to Mavenir.
+ */
 class MidtierCustomerService {
   constructor() {
   }
@@ -114,6 +117,9 @@ class MidtierCustomerService {
   }
 }
 
+/**
+ * One typed Customer failure carrying enough domain context for callers to handle and report repository and aggregate failures safely.
+ */
 class CustomerException {
   // << association >>
   operation: CustomerOperation;
@@ -176,6 +182,9 @@ class Address {
   }
 }
 
+/**
+ * Paradise wrap of ++CognitoUser++. Own aggregate: constructed through `AccountRepository.newAccount()`. Auth operations live on this object and persist through the wired repository. `verified` is Cognito confirmed / unconfirmed.
+ */
 class AccountCredentials {
   // from CognitoUser.email when constructed from CognitoUser
   email: string;
@@ -267,6 +276,9 @@ class AccountCredentials {
   }
 }
 
+/**
+ * Wraps the Cognito agent. Credentials exist before a Customer. `newAccount` is the canonical constructor: it returns AccountCredentials with the repository wired so register / activate / authenticateAccount / resendValidationCode persist.
+ */
 class AccountRepository {
   // << aggregation >>
   accountCredentials: Collection<AccountCredentials>;
@@ -306,6 +318,9 @@ class AccountRepository {
   }
 }
 
+/**
+ * Commit failures after `AccountCredentials.register` / `activate` / `AccountRepository.authenticateAccount`. Field rules are `missingRequirements()`.
+ */
 class AccountCredentialsErrors {
   register: string | null;
   signIn: string | null;
@@ -318,6 +333,9 @@ class AccountCredentialsErrors {
   }
 }
 
+/**
+ * Thrown by `AccountCredentials.resendValidationCode` when the 60-second wait has not elapsed. No Cognito call is made.
+ */
 class ValidationCodeResendWaitException {
   availableAt: Date;
 
@@ -336,6 +354,9 @@ class AccountCredentialRequirement {
   }
 }
 
+/**
+ * Catalog of rules. `missingRequirements()` returns the unmet subset.
+ */
 class AccountCredentialRequirements {
   // << association >>
   emailRequired: AccountCredentialRequirement;
@@ -369,6 +390,9 @@ class AccountCredentialRequirements {
   }
 }
 
+/**
+ * AWS Amplify Auth in My Paradise. Talks to Cognito. Not a hosted record store.
+ */
 class AmplifyService {
   constructor() {
   }
@@ -402,6 +426,10 @@ class AmplifyService {
   }
 }
 
+/**
+ * Cognito confirmed status is `confirmed`; Paradise reads it as `AccountCredentials.verified`. `AccountCredentials` `` this type.
+ */
+@Represents()
 class CognitoUser {
   email: string;
   confirmed: boolean;
@@ -437,6 +465,9 @@ class ValidationCode {
   }
 }
 
+/**
+ * Timestamped record of every initial or repeated validation-code send performed by Amplify.
+ */
 class ValidationCodeSend {
   code: string;
   sentAt: Date;
@@ -494,6 +525,9 @@ class MavenirCustomer {
   }
 }
 
+/**
+ * Mavenir `portalGateway`. Party create / read / profile. Cart, catalog, billing, and order slices live on the same service in their modules.
+ */
 class PortalGateway {
   constructor() {
   }

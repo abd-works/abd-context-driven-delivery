@@ -1,22 +1,64 @@
 """Scanner: prefer-short-routes — keep related classes close; few waypoints."""
 from __future__ import annotations
 
-from pathlib import Path
+from harness.graph.violation import Violation
 
-from _drawio_base import DrawioScanner
+from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
+    Box,
+    DrawioPage,
+    DrawioScanner,
+    cell_box,
+)
+
+SHORT_ROUTE_MAX_WAYPOINTS = 2
+SHORT_ROUTE_MAX_BOX_GAP = 320
 
 
 class PreferShortRoutesScanner(DrawioScanner):
     RULE = "prefer-short-routes"
 
-    def scan_page(self, page_root) -> list:
-        return [
-            self.violation(
-                f"[{self._scan_page_name}] {desc}: {reason}",
-                location=str(self._scan_file_path),
-            )
-            for desc, reason in self._check_prefer_short_routes(page_root)
-        ]
+    def scan_page(self, page: DrawioPage) -> list[Violation]:
+        """Edges that dog-leg across a short gap, and related boxes placed too far apart."""
+        boxes = _vertex_boxes(page)
+        violations = []
+        for edge in page.root.iter("mxCell"):
+            source, target = edge.get("source", ""), edge.get("target", "")
+            if edge.get("edge") != "1" or source not in boxes or target not in boxes:
+                continue
+            name = f"{page.class_names.get(source, source)} → {page.class_names.get(target, target)}"
+            waypoints = len(edge.findall("mxGeometry/Array/*"))
+            gap = _clear_gap(boxes[source], boxes[target])
+            if waypoints > SHORT_ROUTE_MAX_WAYPOINTS and gap <= SHORT_ROUTE_MAX_BOX_GAP:
+                violations.append(self.violation(
+                    page,
+                    f"{name}: {waypoints} waypoints across a {gap:.0f}px gap (max {SHORT_ROUTE_MAX_WAYPOINTS}) — prefer a short orthogonal route",
+                ))
+            if gap > SHORT_ROUTE_MAX_BOX_GAP:
+                violations.append(self.violation(
+                    page, f"{name}: endpoint gap {gap:.0f}px (max {SHORT_ROUTE_MAX_BOX_GAP}) — place related classes closer"
+                ))
+        return violations
+
+
+def _vertex_boxes(page: DrawioPage) -> dict[str, Box]:
+    """Every vertex with a geometry, class or not, since an edge may end on any of them."""
+    boxes: dict[str, Box] = {}
+    for cell in page.root.iter("mxCell"):
+        box = cell_box(cell) if cell.get("vertex") == "1" else None
+        if box and cell.get("id"):
+            boxes[cell.get("id")] = box
+    return boxes
+
+
+def _clear_gap(first: Box, second: Box) -> float:
+    """The empty space between two boxes; 0 when they touch or overlap."""
+    ax, ay, aw, ah = first
+    bx, by, bw, bh = second
+    across = max(0.0, ax - (bx + bw), bx - (ax + aw))
+    down = max(0.0, ay - (by + bh), by - (ay + ah))
+    if across == 0.0 or down == 0.0:
+        return across + down
+    return (across ** 2 + down ** 2) ** 0.5
 
 
 if __name__ == "__main__":

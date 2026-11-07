@@ -15,9 +15,9 @@ section: body
 
 # Story Map — Context-Driven Delivery
 
-**Sources / context:** `README.md` (install, practice plus action plus optional format, discovery / specification / implementation); `.context/principles/context-as-code-strategy.md` (sandbox, scaffold, document one slice, tests until green, human review, next increment); `cdd_guidance/agents/context.md`, `discovery.md`, `specification.md`, `implementation.md`; `.context/module-context.md` (Installer, Context Setup, Stories, Ddd, Handoff, Eval); `cdd_guidance/context_setup/.context/module-context.md`; `cdd_guidance/context_setup/.context/cdr/0001-plain-toolset-not-context-domain.md`; `cdd_guidance/context_setup/context_setup.py`; `cdd_guidance/context_setup/context_index.py`; `cdd_guidance/context_setup/context_setup_spec.py`; `cdd_guidance/context_setup/context_index_spec.py`; `space/session/session.py`; `space/session/session_spec.py`; `space/session/session-sketch.md`; `space/session/.context/session-context.md`; `space/repo/repo.py`; `space/repo/repo_spec.py`; `space/repo/.context/module-context.md`; `harness/guidance/guidance.py` (`PracticeGuidance` does not load a graph).
+**Sources / context:** `README.md` (install, practice plus action plus optional format, discovery / specification / implementation); `.context/principles/context-as-code-strategy.md` (sandbox, scaffold, document one slice, tests until green, human review, next increment); `cdd_guidance/agents/context.md`, `discovery.md`, `specification.md`, `implementation.md`; `.context/module-context.md` (Installer, Context Setup, Stories, Ddd, Handoff, Eval); `cdd_guidance/context_setup/.context/module-context.md`; `cdd_guidance/context_setup/.context/cdr/0001-plain-toolset-not-context-domain.md`; `cdd_guidance/context_setup/context_setup.py`; `cdd_guidance/context_setup/context_index.py`; `cdd_guidance/context_setup/context_setup_heavy_spec.py`; `cdd_guidance/context_setup/context_index_spec.py`; `space/session/session.py`; `space/session/session_spec.py`; `space/session/session-sketch.md`; `space/session/.context/session-context.md`; `space/repo/repo.py`; `space/repo/repo_heavy_spec.py`, `space/repo/worktree_spec.py`; `space/repo/.context/module-context.md`; `harness/guidance/guidance.py` (`PracticeGuidance` does not load a graph).
 
-**Evidence:** Install and context-setup nodes are inferred from those sources. No live capture was walked for them. Open Work Session nodes are observed from the examples in `space/session/session_spec.py` and the operations in `space/session/session.py`. `Session.practice(name)` builds the guideline and that practice's graph together on the first ask. Work With Repo Branch and Work With Repo Worktree are observed from `space/repo/repo_spec.py` and the branch, worktree, and push operations on `space.repo.repo:Repo`.
+**Evidence:** Install and context-setup nodes are inferred from those sources. No live capture was walked for them. Open Work Session nodes are observed from the examples in `space/session/session_spec.py` and the operations in `space/session/session.py`. `Session.practice(name)` builds the guideline and that practice's graph together on the first ask. Work With Repo Branch and Work With Repo Worktree are observed from `space/repo/repo_heavy_spec.py`, `space/repo/worktree_spec.py` and the branch, worktree, and push operations on `space.repo.repo:Repo`.
 
 ---
 
@@ -189,10 +189,7 @@ section: body
                 with context("whose transform tool is called")
                     with it("should delegate to CleanEngineering and return a dict")
 
-                # practices/ddd/model/transformation/ddd_transformer_spec.py
-                with description("DddTransformer")
-                    with description("a code-format build")
-                        with it("should write bounded-context.md in each context folder")
+                NA — no spec writes `.context/bounded-context.md` today; DDD reads it (`practices/ddd/graph_practice.py`)
 ###     (S) Stories --> Run Story Tests
 ####        Tests
                 NA — practices/bdd
@@ -206,12 +203,12 @@ section: body
                     with it("should require grilling to validate the sketch when one is in play")
                     with it("should batch similar questions so the loop does not run forever")
 
-                # actions/grill_context/grill_context_agent_spec.py
-                with context("when the agent explores context files")
-                    with it("should return ok from explore_context_files")
-                    with it("should identify explore_context_files as the invoked tool")
-                    with it("should return a non-empty result listing context files")
-                    with it("should judge that the result looks like a JSON array of context file objects")
+                # actions/grill_context/grill_context_spec.py
+                with context("explore_context_files tool")
+                    with context("that names no folder")
+                        with it("should scan the session's root")
+                    with context("that scans a root containing a context-named file")
+                        with it("should return that file with kind context-named")
 ###     (S) User --> Accept Stage View
 ####        Tests
                 # actions/sketch/sketch_spec.py
@@ -219,42 +216,32 @@ section: body
                     with it("should return the sketch-review marker from review_sketch")
                     with it("should expose review_sketch as a tool")
 
-                # actions/sketch_render/sketch_render_spec.py
-                with context("render_approved_sketch")
-                    with it("should be a non-blocking sub_agent in the manifest")
+                # actions/render/render_spec.py
+                with description("Render")
+                    with it("should read a sketch from a file path and leave the document body off the call")
 ###     (S) User --> Log Behavior Mistake
 ####        Tests
-                # tools/workspace/legacy/workspace_spec.py
-                with context("that records a mistake on its open turn")
-                    with it("should own the mistake on its open turn")
-                    with it("should note the artifact path on that commit")
-                    with it("should note the rule name on that commit")
-                    with it("should note what was wrong on that commit")
-                    with it("should note the original excerpt on that commit")
-                    with it("should note the tool name on that commit")
-                    with it("should note the fidelity on that commit")
+                NA — no spec; the retired workspace toolset recorded mistakes, and nothing records them today
 ###     (S) Eval --> Record Mistake Entry
 ####        Tests
-                # tools/workspace/legacy/workspace_spec.py
-                with context("that records a mistake on its open turn")
-                    with it("should own the mistake on its open turn")
+                NA — no spec; the retired workspace toolset recorded mistakes, and nothing records them today
 ###     (S) User --> Log Behavior Correction
 ####        Tests
                 NA — tools/workspace
 ###     (S) Eval --> Nest Correction Repair
 ####        Tests
                 # actions/improvement/improvement_spec.py
-                with context("when repair is expanded")
+                with context("that is expanded for repair")
                     with it("should inline the repair.md recipe")
-                    with it("should require a proposed kit change before any test")
+                    with it("should require a proposed toolset change before any test")
                     with it("should tell the agent not to list tactical diffs")
                     with it("should keep the turn open until after fail-first")
 ##  (E) Cover Remaining Behavior
 ###     (S) User --> Advance Coverage Increment
 ####        Tests
                 # actions/iterate/iterate_spec.py
-                with context("that records an iterate tick")
-                    with it("should return the iterate-tick marker")
+                with context("that marks an iterate cycle due")
+                    with it("should return the iterate-round marker")
 
                 # actions/iterate/iterate_spec.py
                 with context("that expands")
@@ -264,24 +251,24 @@ section: body
                 NA — practices/stories
 ###     (S) User --> Request Session Handoff
 ####        Tests
-                NA — space/handoff
+                NA — space/session
 ###     (S) Handoff --> Write Handoff Document
 ####        Tests
-                # space/handoff/handoff_spec.py
-                with it("should expose write_handoff tool and handoff_session action")
+                # space/session/handoff_spec.py
+                with description("a session's handoff tools")
+                    with it("should offer write_handoff as a tool")
+                    with it("should offer handoff_session as instructions")
+                    with it("should call write_handoff when running the handoff_session instructions")
 
-                # space/handoff/handoff_spec.py
-                with it("should call write_handoff when running the handoff_session action")
-
-                # space/handoff/handoff_spec.py
-                with description("write_handoff")
-                    with context("given a workspace with an active session folder")
-                        with it("should write a file named handoff-{timestamp}.md in the session folder")
+                # space/session/handoff_spec.py
+                with description("a session writing a handoff")
+                    with context("with a project whose current session is named")
+                        with it("should write a file named handoff-{timestamp}.md in that session's folder")
                         with it("should write the content verbatim")
                         with it("should return the absolute path of the written file")
-                    with context("given a workspace with no active session")
-                        with it("should create a fallback session folder and write the file there")
                         with it("should not write a handoff-latest.md")
+                    with context("with a project that has no named current session")
+                        with it("should write into the main session folder")
 
 ---
 

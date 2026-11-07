@@ -31,11 +31,11 @@ KnowledgeGraphCallSource : KnowledgeGraphSource
 
 
 def _model():
-    return SketchCleanEngineeringModel.parse(_SKETCH)
+    return SketchCleanEngineeringModel().parse(_SKETCH)
 
 
 def _graph():
-    return next(row for row in _model().modules[0].classes if row.name == "KnowledgeGraph")
+    return next(member for member in _model().modules[0].classes if member.name == "KnowledgeGraph")
 
 
 def _render() -> str:
@@ -44,23 +44,23 @@ def _render() -> str:
 
 with description("a boxed sketch class"):
     with it("should treat a single word as a property"):
-        names = [row.name for row in _graph().properties]
+        names = [member.name for member in _graph().properties]
         expect("storyModel" in names).to(equal(True))
         expect("createDatabase" in names).to(equal(True))
-        expect("createDatabase" in [row.name for row in _graph().operations]).to(equal(False))
+        expect("createDatabase" in [member.name for member in _graph().operations]).to(equal(False))
 
     with it("should treat a line with words after the name as an operation"):
-        load = next(row for row in _graph().operations if row.name == "load")
+        load = next(member for member in _graph().operations if member.name == "load")
         expect(load.return_type).to(equal("Path"))
-        expect([row.name for row in load.parameters]).to(equal(["folder"]))
+        expect([member.name for member in load.parameters]).to(equal(["folder"]))
 
     with it("should treat a single word with interactions as an operation"):
-        names = [row.name for row in _graph().operations]
+        names = [member.name for member in _graph().operations]
         expect("saveKnowledgeGraph" in names).to(equal(True))
         expect("refreshMaster" in names).to(equal(True))
 
     with it("should keep nested arrows as interactions and notes as invariants"):
-        refresh = next(row for row in _graph().operations if row.name == "refreshMaster")
+        refresh = next(member for member in _graph().operations if member.name == "refreshMaster")
         expect(refresh.callees).to(equal(["copyWorkingCopyToMaster"]))
         expect(refresh.invariants[0].text).to(equal("after the working copy is current"))
 
@@ -117,16 +117,16 @@ _UML = """
 
 with description("a sketch that names its classes in bold headings"):
     with it("should read Session and Loop from the clean engineering section"):
-        model = SketchCleanEngineeringModel.parse(_UML)
-        names = [row.name for row in model.modules[0].classes]
+        model = SketchCleanEngineeringModel().parse(_UML)
+        names = [member.name for member in model.modules[0].classes]
         expect(names).to(equal(["Session", "Loop"]))
 
     with it("should read the uml operation and its callee"):
-        model = SketchCleanEngineeringModel.parse(_UML)
-        session = next(row for row in model.modules[0].classes if row.name == "Session")
-        new = next(row for row in session.operations if row.name == "new")
+        model = SketchCleanEngineeringModel().parse(_UML)
+        session = next(member for member in model.modules[0].classes if member.name == "Session")
+        new = next(member for member in session.operations if member.name == "new")
         expect(new.return_type).to(equal("str"))
-        expect([row.save() for row in new.parameters]).to(equal([
+        expect([member.save() for member in new.parameters]).to(equal([
             "name: str",
             "workpath: Path",
             "repo_path: Path",
@@ -134,11 +134,11 @@ with description("a sketch that names its classes in bold headings"):
         expect(new.callees).to(equal(["keep_log()"]))
 
     with it("should leave prose headings out of the classes"):
-        model = SketchCleanEngineeringModel.parse(_UML)
-        names = [row.name for row in model.modules[0].classes]
+        model = SketchCleanEngineeringModel().parse(_UML)
+        names = [member.name for member in model.modules[0].classes]
         expect("Invariants" in names).to(equal(False))
         expect("Instructions" in names).to(equal(False))
 
     with it("should name the module the sketch declares"):
-        model = SketchCleanEngineeringModel.parse(_UML)
+        model = SketchCleanEngineeringModel().parse(_UML)
         expect(model.modules[0].name).to(equal("space/session"))

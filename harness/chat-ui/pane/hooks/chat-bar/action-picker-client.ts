@@ -4,7 +4,7 @@ import type { EngineInterface } from 'claude-code'
 import type { ActionPickerJson } from '../../types'
 
 // Whether the action button's ▾ menu is open, and the action picked from it. The button runs it through
-// fidelity-client.ts.
+// fidelity-progress-client.ts.
 const actionPicker = atom({ plugin: 'cdd-board', key: 'actionPicker' } as const, { isOpen: false, chosenAction: null } as ActionPickerJson)
 
 // Atom actionPicker, declared in pane/types/index.d.ts and kept in this file.

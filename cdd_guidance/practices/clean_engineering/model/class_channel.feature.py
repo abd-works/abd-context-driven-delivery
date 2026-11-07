@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from expects import equal, expect
-from harness.output_folder import OutputFolder
+from cdd_guidance.practices.output_folder import OutputFolder
 from mamba import before, context, describe, included_context, it, shared_context
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, is_interface_name
@@ -65,59 +65,36 @@ def _constructor_parameter_names(oclass) -> list:
 
 def walk(model: CleanEngineeringModel) -> list:
     """Every module, class, property, operation, parameter, and relationship, in model order."""
-    rows = []
+    return [entry for module in model.modules for entry in _module_entries(module, 0)]
 
-    def visit_module(module, depth: int) -> None:
-        rows.append(("module", depth, module.name))
-        for loaded in module.classes:
-            rows.append(("class", depth + 1, loaded.name, loaded.intent or ""))
-            for prop in loaded.properties:
-                rows.append((
-                    "property",
-                    depth + 2,
-                    prop.name,
-                    prop.type_hint,
-                    prop.description or "",
-                    prop.access,
-                    prop.stereotype,
-                    prop.cardinality,
-                    prop.origin,
-                ))
-                for invariant in prop.invariants:
-                    rows.append(("invariant", depth + 3, prop.name, invariant.sequential_order, invariant.text))
-            for operation in loaded.operations:
-                parameters = tuple((parameter.name, parameter.type_hint) for parameter in operation.parameters)
-                rows.append((
-                    "operation",
-                    depth + 2,
-                    _op_name(loaded.name, operation.name),
-                    operation.return_type,
-                    parameters,
-                    tuple(operation.callees),
-                    operation.description or "",
-                ))
-                for invariant in operation.invariants:
-                    rows.append((
-                        "invariant",
-                        depth + 3,
-                        _op_name(loaded.name, operation.name),
-                        invariant.sequential_order,
-                        invariant.text,
-                    ))
-            for relationship in loaded.relationships:
-                rows.append((
-                    "relationship",
-                    depth + 2,
-                    relationship.kind,
-                    relationship.target,
-                    relationship.cardinality,
-                ))
-        for child in module.modules:
-            visit_module(child, depth + 1)
 
-    for module in model.modules:
-        visit_module(module, 0)
-    return rows
+def _module_entries(module, depth: int) -> list:
+    entries = [("module", depth, module.name)]
+    for loaded in module.classes:
+        entries.append(("class", depth + 1, loaded.name, loaded.intent or ""))
+        entries.extend(entry for prop in loaded.properties for entry in _property_entries(prop, depth + 2))
+        entries.extend(entry for operation in loaded.operations for entry in _operation_entries(loaded, operation, depth + 2))
+        entries.extend(
+            ("relationship", depth + 2, relationship.kind, relationship.target, relationship.cardinality)
+            for relationship in loaded.relationships
+        )
+    for child in module.modules:
+        entries.extend(_module_entries(child, depth + 1))
+    return entries
+
+
+def _property_entries(prop, depth: int) -> list:
+    described = (prop.name, prop.type_hint, prop.description or "", prop.access, prop.stereotype, prop.cardinality, prop.origin)
+    invariants = [("invariant", depth + 1, prop.name, item.sequential_order, item.text) for item in prop.invariants]
+    return [("property", depth, *described), *invariants]
+
+
+def _operation_entries(loaded, operation, depth: int) -> list:
+    name = _op_name(loaded.name, operation.name)
+    parameters = tuple((parameter.name, parameter.type_hint) for parameter in operation.parameters)
+    described = (name, operation.return_type, parameters, tuple(operation.callees), operation.description or "")
+    invariants = [("invariant", depth + 1, name, item.sequential_order, item.text) for item in operation.invariants]
+    return [("operation", depth, *described), *invariants]
 
 
 def _write(path: Path, text: str) -> None:
@@ -153,53 +130,43 @@ def _drawio_path(name: str) -> str:
 
 
 def load_source(name: str) -> CleanEngineeringModel:
-    if name == "markdown":
-        return MarkdownCleanEngineeringModel().parse((EXPECTED / "class-model.md").read_text(encoding="utf-8"))
-    model = CleanEngineeringModel(name=name, sequential_order=1)
-    for module_name in _FILES:
-        if name == "drawio":
-            text = (EXPECTED / _drawio_path(module_name)).read_text(encoding="utf-8")
-            parsed = DrawIOCleanEngineeringModel().load(text)
-        else:
-            text = (EXPECTED / _code_path(module_name)).read_text(encoding="utf-8")
-            parsed = TypeScriptCleanEngineeringModel.parse(text)
-        for module in parsed.modules:
-            module.name = module_name
-            model.modules.append(module)
-    return model
+    """The expected class model, read from the files of one channel."""
+    return _read_channel(EXPECTED, name, list(_FILES), name)
 
 
 def save_channel(source_name: str, target: str, source: CleanEngineeringModel) -> CleanEngineeringModel:
+    """Write source through the target channel, then read the written files back."""
     folder = ACTUAL / f"from-{source_name}" / f"to-{target}"
     OutputFolder(folder).clear()
     folder.mkdir(parents=True)
+    _write_channel(folder, target, source)
+    return _read_channel(folder, target, [module.name for module in source.modules], source.name)
+
+
+def _write_channel(folder: Path, target: str, source: CleanEngineeringModel) -> None:
     if target == "markdown":
         _write(folder / "class-model.md", _render_markdown(source))
-        return MarkdownCleanEngineeringModel().parse((folder / "class-model.md").read_text(encoding="utf-8"))
+        return
     if target == "drawio":
-        return _save_drawio(folder, source)
-    loaded = CleanEngineeringModel(name=source.name, sequential_order=1)
+        pages = _drawio_pages(DrawIOCleanEngineeringModel(name=source.name, sequential_order=1).render(source))
+        for module in source.modules:
+            _write(folder / _drawio_path(module.name), pages[module.name])
+        return
     for module in source.modules:
         _write(folder / _code_path(module.name), _render_typescript(_one_module(module)))
-        parsed = TypeScriptCleanEngineeringModel.parse((folder / _code_path(module.name)).read_text(encoding="utf-8"))
-        for parsed_module in parsed.modules:
-            parsed_module.name = module.name
-            loaded.modules.append(parsed_module)
-    return loaded
 
 
-def _save_drawio(folder: Path, source: CleanEngineeringModel) -> CleanEngineeringModel:
-    """One page per module, with an edge for every relationship whose target is on the model."""
-    pages = _drawio_pages(DrawIOCleanEngineeringModel(name=source.name, sequential_order=1).render(source))
-    loaded = CleanEngineeringModel(name=source.name, sequential_order=1)
-    for module in source.modules:
-        text = pages[module.name]
-        _write(folder / _drawio_path(module.name), text)
-        parsed = DrawIOCleanEngineeringModel().load(text)
-        for parsed_module in parsed.modules:
-            parsed_module.name = module.name
-            loaded.modules.append(parsed_module)
-    return loaded
+def _read_channel(folder: Path, channel: str, module_names: list, model_name: str) -> CleanEngineeringModel:
+    """The class model in folder's files: one markdown file, or one file per module named after it."""
+    if channel == "markdown":
+        return MarkdownCleanEngineeringModel().parse((folder / "class-model.md").read_text(encoding="utf-8"))
+    path_of, parse = (_drawio_path, DrawIOCleanEngineeringModel().parse) if channel == "drawio" else (_code_path, TypeScriptCleanEngineeringModel().parse)
+    model = CleanEngineeringModel(name=model_name, sequential_order=1)
+    for module_name in module_names:
+        for module in parse((folder / path_of(module_name)).read_text(encoding="utf-8")).modules:
+            module.name = module_name
+            model.modules.append(module)
+    return model
 
 
 def _drawio_pages(text: str) -> dict:
@@ -243,6 +210,16 @@ def _model_edges(model: CleanEngineeringModel) -> list:
     return edges
 
 
+def _edge_kind(style: str) -> str:
+    """The relationship a Draw.io arrow style draws, read from the UML arrow ends. A dashed open arrow is a dependency:
+    the diagram draws one for a class no property reaches, at its first use in an operation."""
+    if "endFill=0" in style and "endArrow=block" in style:
+        return "inheritance"
+    if "diamondThin" in style:
+        return "composition" if "startFill=1" in style else "aggregation"
+    return "dependency" if "dashed=1" in style else "association"
+
+
 def _diagram_edges(text: str) -> list:
     """Edges written in the Draw.io file: source class, kind, target class. Import cards count."""
     root = ET.fromstring(text)
@@ -254,7 +231,6 @@ def _diagram_edges(text: str) -> list:
         match = re.search(r"<b[^>]*>([^<]+)</b>", value)
         if match:
             names[cell.get("id")] = match.group(1).strip()
-    channel = DrawIOCleanEngineeringModel()
     edges = []
     for cell in root.iter("mxCell"):
         if cell.get("edge") != "1":
@@ -263,7 +239,7 @@ def _diagram_edges(text: str) -> list:
         target = names.get(cell.get("target"))
         if not source or not target:
             continue
-        edges.append((source, channel._classify_edge(cell.get("style") or ""), target))
+        edges.append((source, _edge_kind(cell.get("style") or ""), target))
     return edges
 
 
@@ -393,7 +369,9 @@ with shared_context("a class model saved through a channel"):
         check_modules(actual.modules, expected.modules)
         if stores_relationships:
             expected_edges = sorted(_model_edges(expected))
-            expect(expected_edges).to(equal(sorted(_written_diagram_edges(self.source_name, expected))))
+            # One arrow joins a pair of classes however many properties it stands for; dependency arrows are not properties.
+            written = {edge for edge in _written_diagram_edges(self.source_name, expected) if edge[1] != "dependency"}
+            expect(sorted(set(expected_edges))).to(equal(sorted(written)))
             expect(expected_edges).to(equal(sorted(_model_edges(actual))))
 
 
@@ -517,7 +495,7 @@ with describe("a class model"):
 
     with context("that is loaded from the expected markdown"):
         with it("should include every module, class, property, and operation"):
-            kinds = {row[0] for row in self.walks["markdown"]}
+            kinds = {entry[0] for entry in self.walks["markdown"]}
             expect(kinds.issuperset({"module", "class", "property", "operation", "invariant"})).to(equal(True))
 
     with describe("from markdown"):
@@ -561,8 +539,8 @@ with describe("a class model"):
                 pass
             with context("with domain types on fields and signatures"):
                 with it("should bring those types back as relationships"):
-                    rows = [row for row in walk(self.loaded) if row[0] == "relationship"]
-                    expect(len(rows) > 0).to(equal(True))
+                    relationships = [entry for entry in walk(self.loaded) if entry[0] == "relationship"]
+                    expect(len(relationships) > 0).to(equal(True))
         with describe("to knowledge graph"):
             with before.all:
                 _open(self, "markdown", "knowledge_graph")

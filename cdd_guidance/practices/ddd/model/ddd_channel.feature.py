@@ -13,28 +13,33 @@ from expects import equal, expect
 from mamba import before, describe, included_context, it, shared_context
 
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.ddd.model.nodes import DDDModelFactory, DomainEvent, ValueObject
+from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
+from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContextMap, DomainEvent, ValueObject
 
 EXPECTED = Path(__file__).resolve().parent / "_examples" / "expected" / "bounded-context-map.md"
 ACTUAL = Path(__file__).resolve().parent / "_examples" / "actual"
 
 
-def _events(aggregate):
+def _events(aggregate: Aggregate) -> list:
     if aggregate.root is None:
         return []
     return [item for item in aggregate.root.properties if isinstance(item, DomainEvent)]
 
 
-def check_map(loaded) -> None:
+def check_map(loaded: BoundedContextMap) -> None:
     expect(len(loaded.contexts)).to(equal(2))
     sales, catalog = loaded.contexts
     expect(sales.name).to(equal("Sales"))
     expect(sales.owner).to(equal("custom"))
     expect(catalog.name).to(equal("Catalog"))
     expect(catalog.owner).to(equal("bespoke"))
-
     expect(len(sales.aggregates)).to(equal(1))
-    cart = sales.aggregates[0]
+    _check_cart(sales.aggregates[0])
+    expect(catalog.aggregates[0].name).to(equal("Product"))
+    expect(catalog.aggregates[0].root.is_root).to(equal(True))
+
+
+def _check_cart(cart: Aggregate) -> None:
     expect(cart.name).to(equal("ShoppingCart"))
     expect(cart.root.name).to(equal("ShoppingCart"))
     expect(cart.root.is_root).to(equal(True))
@@ -49,15 +54,15 @@ def check_map(loaded) -> None:
     expect(integration.direction).to(equal("downstream"))
     expect(integration.crosses).to(equal("unit price"))
     expect(integration.integration).to(equal("synchronous call to Catalog.Product.unit_price at add_item"))
+    _check_cart_event(cart)
 
+
+def _check_cart_event(cart: Aggregate) -> None:
     expect(len(_events(cart))).to(equal(1))
     event = _events(cart)[0]
     expect(event.producer).to(equal(cart))
     expect(isinstance(event.subject, Property)).to(equal(True))
     expect([item.name for item in event.consumers]).to(equal(["Product"]))
-
-    expect(catalog.aggregates[0].name).to(equal("Product"))
-    expect(catalog.aggregates[0].root.is_root).to(equal(True))
 
 
 with shared_context("a domain driven design model saved through a channel"):
@@ -69,18 +74,18 @@ with describe("a domain driven design model"):
     with describe("from markdown"):
         with describe("to markdown"):
             with before.all:
-                source = DDDModelFactory.load(str(EXPECTED))
+                source = MarkdownBoundedContextMap().load(str(EXPECTED))
                 folder = ACTUAL / "from-markdown" / "to-markdown"
                 if folder.exists():
                     shutil.rmtree(folder)
                 folder.mkdir(parents=True)
                 written = folder / "bounded-context-map.md"
                 written.write_text(source.save(), encoding="utf-8")
-                self.loaded = DDDModelFactory.load(str(written))
+                self.loaded = MarkdownBoundedContextMap().load(str(written))
             with included_context("a domain driven design model saved through a channel"):
                 pass
     with it("should load the expected map"):
-        check_map(DDDModelFactory.load(str(EXPECTED)))
+        check_map(MarkdownBoundedContextMap().load(str(EXPECTED)))
 
     with it("should return a new value object from create, clone, and mix"):
         original = ValueObject("Money", 1)

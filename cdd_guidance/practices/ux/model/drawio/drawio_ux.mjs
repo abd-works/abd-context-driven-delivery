@@ -10,9 +10,9 @@
 //   node drawio-ux.mjs open        <file.drawio>
 //   node drawio-ux.mjs clear
 //   node drawio-ux.mjs add-screen  <name> [--layout <template>] [--tab-of <parent>]
-//   node drawio-ux.mjs add-chrome  <screen> <region> [--slot <slot>] [--dimmed]
-//   node drawio-ux.mjs add-list    <screen> <region> --slot <slot> --fields "f1 · f2" --actions "a1 · a2"
-//   node drawio-ux.mjs add-form    <screen> <region> --slot <slot> --fields "f1 · f2"
+//   node drawio-ux.mjs add-chrome  <screen> <region> [--area <area>] [--dimmed]
+//   node drawio-ux.mjs add-list    <screen> <region> --area <area> --fields "f1 · f2" --actions "a1 · a2"
+//   node drawio-ux.mjs add-form    <screen> <region> --area <area> --fields "f1 · f2"
 //   node drawio-ux.mjs connect     <from> <to> --label "text" [--dashed]
 //   node drawio-ux.mjs add-callout <screen> --stories "s1 · s2" --terms "t1 · t2"
 //   node drawio-ux.mjs templates
@@ -29,7 +29,7 @@
 //   flyout       — body (65%) | panel (35%)
 //   holy-grail   — header / nav (25%) | body (50%) | aside (25%) / footer
 //
-// Slots ('header' and 'footer' are always full-width bands):
+// Areas ('header' and 'footer' are always full-width bands):
 //   stack/modal/form → body
 //   sidebar          → panel, body
 //   split-screen     → left, right
@@ -303,22 +303,22 @@ function regionH(r, estW) {
 
 // ─── Region grouping ──────────────────────────────────────────────────────────
 //
-// 'header' and 'footer' slots are always full-width bands (top / bottom).
-// All other slots are column regions. Unknown / missing slots fall back to
+// 'header' and 'footer' areas are always full-width bands (top / bottom).
+// All other areas are column regions. Unknown / missing areas fall back to
 // the first column defined in the template ('body' for single-column templates).
 
 function groupRegions(screen) {
   const tmpl       = getTemplate(screen.layout || 'stack')
-  const knownSlots = new Set(tmpl.columns.map(c => c.name))
-  const defaultSlot = tmpl.columns[0]?.name || 'body'
+  const knownAreas = new Set(tmpl.columns.map(c => c.name))
+  const defaultArea = tmpl.columns[0]?.name || 'body'
 
-  const headers   = screen.regions.filter(r => r.slot === 'header')
-  const footers   = screen.regions.filter(r => r.slot === 'footer')
+  const headers   = screen.regions.filter(r => r.area === 'header')
+  const footers   = screen.regions.filter(r => r.area === 'footer')
   const colRegions = screen.regions
-    .filter(r => r.slot !== 'header' && r.slot !== 'footer')
+    .filter(r => r.area !== 'header' && r.area !== 'footer')
     .map(r => ({
       ...r,
-      slot: (r.slot && knownSlots.has(r.slot)) ? r.slot : defaultSlot,
+      area: (r.area && knownAreas.has(r.area)) ? r.area : defaultArea,
     }))
 
   return { headers, footers, colRegions, tmpl }
@@ -340,7 +340,7 @@ function screenHeight(screen) {
   for (const col of tmpl.columns) {
     const colW  = Math.round(col.w * adjustedW) - 8
     const colH  = colRegions
-      .filter(r => r.slot === col.name)
+      .filter(r => r.area === col.name)
       .reduce((s, r) => s + regionH(r, colW), 0)
     if (colH > maxColH) maxColH = colH
   }
@@ -519,7 +519,7 @@ function generateXml(state) {
     for (const col of tmpl.columns) {
       const cw  = Math.round(col.w * adjustedW)
       let   cry = colSectionY
-      for (const r of colRegions.filter(r2 => r2.slot === col.name)) {
+      for (const r of colRegions.filter(r2 => r2.area === col.name)) {
         cry += renderRegion(r, cells, counter, sid, colX, cry, cw)
       }
       colX += cw + COL_GAP
@@ -528,7 +528,7 @@ function generateXml(state) {
     let maxColH = 0
     for (const col of tmpl.columns) {
       const colH = colRegions
-        .filter(r => r.slot === col.name)
+        .filter(r => r.area === col.name)
         .reduce((s, r) => s + regionH(r), 0)
       if (colH > maxColH) maxColH = colH
     }
@@ -790,15 +790,15 @@ switch (cmd) {
     const [screenName, regionName] = pos
     const screen = state.screens.find(s => s.name === screenName)
     if (!screen) { console.error(`Screen "${screenName}" not found`); process.exit(1) }
-    const slot = flags.slot || 'body'
+    const area = flags.area || 'body'
     screen.regions.push({
       name:   regionName,
       type:   'chrome',
-      slot,
+      area,
       dimmed: !!flags.dimmed,
     })
     persist(state)
-    const opts = [slot !== 'body' ? `slot:${slot}` : '', flags.dimmed ? 'dimmed' : ''].filter(Boolean)
+    const opts = [area !== 'body' ? `area:${area}` : '', flags.dimmed ? 'dimmed' : ''].filter(Boolean)
     console.log(`[drawio-ux] add-chrome "${regionName}" → "${screenName}"${opts.length ? ' (' + opts.join(', ') + ')' : ''}`)
     break
   }
@@ -810,12 +810,12 @@ switch (cmd) {
     screen.regions.push({
       name:    regionName,
       type:    'list',
-      slot:    flags.slot || 'body',
+      area:    flags.area || 'body',
       fields:  splitDot(flags.fields  || ''),
       actions: splitDot(flags.actions || ''),
     })
     persist(state)
-    console.log(`[drawio-ux] add-list "${regionName}" → "${screenName}" (slot: ${flags.slot || 'body'})`)
+    console.log(`[drawio-ux] add-list "${regionName}" → "${screenName}" (area: ${flags.area || 'body'})`)
     break
   }
 
@@ -826,11 +826,11 @@ switch (cmd) {
     screen.regions.push({
       name:   regionName,
       type:   'form',
-      slot:   flags.slot || 'body',
+      area:   flags.area || 'body',
       fields: splitDot(flags.fields || ''),
     })
     persist(state)
-    console.log(`[drawio-ux] add-form "${regionName}" → "${screenName}" (slot: ${flags.slot || 'body'})`)
+    console.log(`[drawio-ux] add-form "${regionName}" → "${screenName}" (area: ${flags.area || 'body'})`)
     break
   }
 
@@ -883,7 +883,7 @@ switch (cmd) {
     for (const [name, tmpl] of Object.entries(TEMPLATES)) {
       console.log(`\n${name}  —  ${tmpl.desc}`)
       console.log(tmpl.ascii.join('\n'))
-      console.log(`Slots: ${tmpl.columns.map(c => c.name).join(', ')}`)
+      console.log(`Areas: ${tmpl.columns.map(c => c.name).join(', ')}`)
     }
     break
   }
@@ -909,9 +909,9 @@ Commands:
   open        <file.drawio>
   clear
   add-screen  <name> [--layout <template>] [--tab-of <parent>]
-  add-chrome  <screen> <region> [--slot <slot>] [--dimmed]
-  add-list    <screen> <region> --slot <slot> --fields "f1 · f2" --actions "a1 · a2"
-  add-form    <screen> <region> --slot <slot> --fields "f1 · f2"
+  add-chrome  <screen> <region> [--area <area>] [--dimmed]
+  add-list    <screen> <region> --area <area> --fields "f1 · f2" --actions "a1 · a2"
+  add-form    <screen> <region> --area <area> --fields "f1 · f2"
   connect     <from> <to> --label "text" [--dashed]
   add-callout <screen> --stories "s1 · s2" --terms "t1 · t2"
   templates   (list all layout templates with ASCII diagrams)
@@ -928,7 +928,7 @@ Layout templates (--layout):
   flyout       body (65%) | panel (35%)
   holy-grail   header / nav | body | aside / footer
 
-Special slots:
+Special areas:
   header  full-width band above columns
   footer  full-width band below columns
 

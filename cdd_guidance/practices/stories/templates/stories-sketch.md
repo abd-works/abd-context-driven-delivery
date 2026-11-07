@@ -33,8 +33,12 @@ The map nests through markdown headings, so every epic, sub-epic, story, and sce
 |---|---|
 | `### {Epic verb-noun}` | an epic |
 | `#### {Sub-epic verb-noun}` | a sub-epic |
-| `##### {Actor} --> {Story verb-noun}` | a confirming story |
+| `##### {Actor} --> {Story verb-noun}` | a confirming user story |
+| `##### (S:system) {System} --> {Story verb-noun}` | a story another system performs, with no person acting |
+| `##### (S:technical) {System} --> {Story verb-noun}` | a story about the system's own technical work |
 | `###### {scenario name}` | one scenario of that story |
+
+Mark a story's kind only when it is not a user story; an unmarked story is a user story, and the mark carries the kind into every other format.
 
 Steps sit in a fenced block under the heading that owns them: `given` / `when` / `then`, `and` / `but` continuations indented beneath their step, and `//` notes. A story's shared setup is a `given` fence directly under the story heading, above its scenarios.
 

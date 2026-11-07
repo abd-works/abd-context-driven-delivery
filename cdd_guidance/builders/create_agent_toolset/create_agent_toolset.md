@@ -10,7 +10,7 @@ Every generate ends with **validate**.
 # Overview
 ## Matching by the car example
 
-- **`matching-by`** — Shape the new toolset after **`examples/car/`**. Same decorator marks, `recipe` first parameter on `@agent_instructions`, `tools(...)` / `instructions(...)` wrappers, ordinary `@property` state — not a parallel layout, not `@resource`, not bare `self.tool()` in a recipe.
+- **`matching-by`** — Shape the new toolset after **`examples/car/`**. Same decorator annotations, `recipe` first parameter on `@agent_instructions`, `tools(...)` / `instructions(...)` wrappers, ordinary `@property` state — not a parallel layout, not `@resource`, not bare `self.tool()` in a recipe.
 
 ## Recipes are walked, not run
 
@@ -31,7 +31,7 @@ Every generate ends with **validate**.
 
 ## Observable state is ordinary properties
 
-- **`resources-describe-state`** — Expose observable state as `@property`. Do not mark members `@resource`. Cross-call state lives on the live toolset instance.
+- **`resources-describe-state`** — Expose observable state as `@property`. Do not annotate members `@resource`. Cross-call state lives on the live toolset instance.
 
 ---
 # Generate

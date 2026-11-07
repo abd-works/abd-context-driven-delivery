@@ -21,12 +21,12 @@ def main() -> int:
     parser.add_argument("--path", required=True)
     parser.add_argument("--guidance", action="append", default=None)
     args = parser.parse_args()
-    from harness.agent_tools.agent_tools_probe import probe_agent_tools_standalone
-    from harness.installation.installer import Installer
+    from harness.diagnostics.agent_tools_probe import AgentToolsProbe
+    from harness.installer.installer import Installer
 
     installer = Installer(path=args.path, repo=_REPO)
-    installer.ensure_import_path()
-    report = probe_agent_tools_standalone(installer, args.guidance)
+    installer.toolsets.ensure_import_path()
+    report = AgentToolsProbe(installer, args.guidance).run()
     print(report)
     first_lines = [line.lstrip("!") for line in report.split("\n") if line.strip()]
     return 1 if any(line.startswith("red") for line in first_lines[:4]) else 0

@@ -1,47 +1,12 @@
-# catalog_generator — module context
+# harness/catalog_generator
+*Catalog* renders the CDD catalog: a set of self-contained HTML pages that show every practice, its fidelities and rules, the lifecycle actions, and the utilities, read straight from the live guidance classes and their markdown, so the pages show exactly what an agent is given. A person runs it as `catalog.generate_catalog` (also installed as a skill) or `python -m harness.catalog_generator.generate_cdd_catalog`; pages are written only under the output folder and cite source through links to the Git remote, so the folder can be published anywhere. By default the catalog is generated for the project the call acts on: a CDD checkout, such as a branch worktree, gets its own guidance in its own `cdd_guidance/catalog/`, so a branch's catalog shows that branch's practices; any other project gets the guidance these tools give its agents, in its `catalog/` folder.
+`catalog.apply_brand` lays a named brand over the generated pages without rendering them again. `catalog.configure_project_approach` asks the person which of their artifacts shows each practice at each stage, and `catalog.generate_project_approach(examples_json, project_title)` renders that project's own `cdd-approach.html` from the answer, linking source in the project's own repository.
+The practices come from *PracticeCatalogue*, the actions from *ActionCatalogue*, and the utilities are the toolsets the installer finds in `space` and `tools`; the board's columns are the approach's stages (`harness/guidance/stages.py`), with only the names the page markup gives them kept here. `@noCatalog` (harness/installation) keeps a class, fidelity, or operation out of the pages without changing what is installed.
 
-## Purpose
+- **Purpose:** Show people what CDD offers, as pages generated from the same guidance the agent follows, for CDD itself or for one project's approach.
+- **Seam (terms):** Catalog; the MCP operations `catalog.generate_catalog`, `catalog.apply_brand`, `catalog.generate_project_approach`, `catalog.configure_project_approach`; `python -m harness.catalog_generator.generate_cdd_catalog`
+- **Dependencies (one-way):** harness/agent_tools, harness/guidance (*PracticeCatalogue*, *ActionCatalogue*, *PracticeGuidance*, *FidelityGuidance*), harness/guidance/stages (*ApproachStage*, *StageScope*), harness/markdown (*MarkdownText*, *FrontMatter*), harness/installation (*RepositoryToolsets*, `@noCatalog`), harness/mcp, harness/name, harness/process (*Git*, which reads the checkout's remote and commit for source links), and at call time every practice and action class it renders. Each call makes its *Catalog* for the project it names (`Catalog.load(project=...)`); `generate_cdd_catalog` regenerates the checkout it belongs to. Nothing imports this module back, and it imports nothing above the framework.
 
-Discover-and-render primitives for the CDD HTML catalog (see `catalog/cdd-catalog-plan.md` / `catalog/cdd-catalog-sketch.md`). Wraps the real object model directly — `Toolset.tools`, `AgenticToolset.actions`, `BaseContextTool.fidelities` — there is no separate scraped schema and no parallel data hierarchy.
+## Constraint
 
-Implements all four epics from the sketch's story map: Assemble Catalog Page Data (discover), Render Self-Contained Catalog Pages (the Clean Engineering pass's six render classes), Make Catalog Output Portable, and Configure Illustrated Examples (mechanism only — see the plan's `illustrated-examples` todo for the outstanding content-authoring half).
-
-## Primary use case
-
-`generate_cdd_catalog.py` builds the six render classes over a `Catalog(...)` and calls `.generate_catalog()`. Run it from the repo root:
-
-```
-python -m harness.catalog_generator.generate_cdd_catalog
-```
-
-Defaults `--out cdd_guidance/catalog`, `--repo-url` from `git remote get-url origin`, `--ref` from current `HEAD`; all three are overridable flags.
-
-## Public API
-
-**Discover (Assemble Catalog Page Data):**
-- `load_registry() -> (list[RegistryEntry], list[RegistryEntry])` — resolves `CONTEXT_TOOL_REGISTRY` / `UTILITY_REGISTRY` to real classes; import failure is a hard fail, not a silent gap. A class marked `@noCatalog` is left out. The mark does not change install or deploy.
-- `noCatalog` — decorator on a class, fidelity, or operation. The catalog skips it (registry row, fidelity page, lifecycle action). `@Skill`, `@Command`, `@Mcp`, and `@Hook` on the same target still deploy. The utility registry classes carry `@noCatalog` until they are ready to show. `@noDeploy` is the install mark; it lives on the operation and does not change catalog inclusion.
-- Fidelity pages come from the practice's live fidelities: `practice.fidelities.entries`, less any marked `@noCatalog`. Each `FidelityGuidance` gives its `name`, `default_format`, `overview`, and `section`, its whole `### {fidelity}` block. `CatalogFidelity` holds that object rather than copies of its fields, so a page shows exactly what the guidance holds.
-- `resolve_lifecycle_actions() -> list[ActionResolution]` — walks `BaseContextTool`'s public `@action` methods in source order; peer-kit action delegates follow unique call pairs.
-- `SkillSlashName(skills_roots).resolve(module_dir_name) -> str | None` — reads the deployed SKILL.md frontmatter `name:` field from `.claude/skills/{category}-{name}/` (Claude joins the category into the folder name, e.g. `practices-stories`) or `.cursor/skills/{category}/{name}/`; tries the hyphenated form too (`clean_engineering` → `practices-clean-engineering`).
-
-**Render (Render Self-Contained Catalog Pages — Clean Engineering pass):** `CatalogTool`, `CatalogAction`, `CatalogFidelity`, `CatalogContextTool`, `CatalogUtility`, `Catalog` — each one class wrapping one real primitive one-for-one, each exposing exactly one `generate_catalog(...)` operation. `Catalog.generate_catalog(...)` is the only entry point `generate_cdd_catalog.py` calls; it writes every page under its `out_root`, including `workflow.html` rendered from `catalog/workflow.md` and linked from the hub body beneath the board.
-
-**Portability (Make Catalog Output Portable):**
-- `git_blob_url` / `git_blob_url_for_callable` — the single seam every citation goes through; never a local filesystem path.
-- `resolve_repo_remote` / `normalize_repo_url` — the CLI's zero-flag defaults.
-- `write_page` — writes one page's already-literal HTML under `out_root`; no runtime fetch back into `practices/`/`tools/`.
-- `build_run_request` / `dump_run_request_yaml` / `write_raw_manifests` — at generate time, read each context tool's live `Cls.manifest` signature and write request YAML under `manifests/{tool}/`.
-
-**Illustrated examples (Configure Illustrated Examples):**
-- `parse_illustrated_examples`, `extract_whole_file`, `extract_heading_section`, `extract_comment_tag`, `resolve_illustrated_example` (dispatches by anchor shape).
-
-## Seam
-
-`Catalog` is the deployed toolset (`harness.catalog_generator.catalog_generator:Catalog`). `Catalog.generate_catalog` carries `@prompt(name="generate-catalog")` — slash `/generate-catalog`, not a catalog skill. `CatalogAction` (and the other `generate_catalog` helpers) are page renderers, not IDE files.
-
-Reads real files/classes; `write_page` is the only place it writes, and only under `out_root`. CLI: `python -m harness.catalog_generator.generate_cdd_catalog`.
-
-## Dependencies
-
-stdlib only (`ast`, `importlib`, `inspect`, `re`, `subprocess`, `pathlib`, `dataclasses`) plus the real `practices.*` / utility classes it discovers and instantiates at call time.
+Render from the live guidance object a page is about, never from a copy of its fields, so a page cannot disagree with the guidance. Keep each fidelity's guidance as a `### {fidelity}` heading inside `## Fidelities` in the practice markdown, because that heading is how the catalog finds it. Take the project from the call (`Catalog.load(project=...)`) or the constructor, never this module's own folder, because one server answers calls for many projects and branches. Write only under the output folder, and cite source only through Git links, so the generated pages work wherever they are copied.

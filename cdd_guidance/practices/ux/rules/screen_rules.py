@@ -6,12 +6,15 @@ from harness.graph.practice_rule import PracticeGraphRule
 
 
 class ScreenStoryBudget(PracticeGraphRule):
+    """A screen shows about four stories. It counts its ``shows`` edges: the stories on the graph the screen shows,
+    each recorded with the story's ``shownOn`` edge to the screen. Scenarios and steps it shows are not counted."""
+
     slug = "screen-story-budget"
     node_types = ("Screen",)
     soft_max = 4
 
     def check(self, node, context) -> list[str]:
-        count = context.child_count(node, ("stories",))
+        count = context.child_count(node, ("shows",))
         if count <= self.soft_max:
             return []
         return [

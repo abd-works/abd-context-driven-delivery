@@ -10,9 +10,10 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional
 
-from harness.graph.bound_node import BoundChildren as _BoundChildren
-from harness.graph.bound_node import BoundNode
+from harness.graph.model_node import ModelChildren
+from harness.graph.model_node import ModelNode
 from harness.graph.graph import Graph
+from harness.name.name import Name
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock
@@ -28,7 +29,7 @@ _BELONGS = {
 }
 
 
-class StoryNode(BoundNode, ABC):
+class StoryNode(ModelNode, ABC):
     """A story-model object and the graph node for that object.
 
     Subclasses declare `_semantic_type_name` so cross-format nodes
@@ -71,10 +72,10 @@ class StoryNode(BoundNode, ABC):
         "display", "download", "draft", "drop", "edit", "email", "enable", "enter",
         "expire", "export", "extend", "extract", "fetch", "filter", "fix", "flag",
         "generate", "get", "grant", "group", "hide", "hold", "import", "index",
-        "initiate", "invite", "issue", "join", "leave", "list", "load", "lock",
+        "initiate", "invite", "issue", "join", "know", "leave", "list", "load", "lock",
         "log", "map", "match", "merge", "move", "notify", "onboard", "open",
         "order", "pause", "pay", "pick", "place", "post", "print", "provide",
-        "publish", "purchase", "queue", "read", "record", "redeem", "refresh",
+        "publish", "purchase", "query", "queue", "read", "record", "redeem", "refresh",
         "refund", "register", "reject", "release", "remove", "rename", "render",
         "reply", "report", "request", "reset", "resolve", "retry", "return",
         "revert", "review", "revoke", "route", "save", "scan", "schedule", "search",
@@ -85,10 +86,6 @@ class StoryNode(BoundNode, ABC):
     })
     _GERUND = re.compile(r"^[a-z]+ing$")
     _NOMINALISATION = re.compile(r"^[a-z]+(?:tion|sion|ment|ance|ence|ity|ness)$")
-    _GENERIC_HANDLER = re.compile(
-        r"^(Handle|Process|Manage|Perform|Do|Execute|Run)\s+[A-Z]",
-        re.IGNORECASE,
-    )
     _KEBAB_FILE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*\.(md|ts|tsx|js|jsx)$")
     _CAMEL_FILE = re.compile(r"[A-Z][a-zA-Z0-9]*(?:Story|Test|Spec)")
     _ONE_OFF = re.compile(
@@ -120,7 +117,7 @@ class StoryNode(BoundNode, ABC):
         """Fill the name, evidence, and child-count facts this node already owns."""
         self._load_opening()
         self._load_path_case()
-        self.generic_handler = bool(self._GENERIC_HANDLER.match((self.name or "").strip()))
+        self.generic_handler = self._names_generic_handler()
         self.near_duplicate = False
         self.shared_verb = ""
         self.one_time_task = bool(self._ONE_OFF.search(self.name or ""))
@@ -148,6 +145,17 @@ class StoryNode(BoundNode, ABC):
         # One word ("CartStuff") has no object to follow a verb, whatever the word is.
         single_word = bool(stripped) and len(stripped.split()) == 1
         self.opening_class = "single-word" if single_word else self._classify_opening(self.opening_token)
+
+    def opens_with_verb(self) -> bool:
+        """The name's first word is a verb the story map knows, generic or not."""
+        words = (self.name or "").split()
+        token = words[0].lower() if words else ""
+        return token in self._VERBS or token in self._GENERIC_VERBS
+
+    def _names_generic_handler(self) -> bool:
+        """A generic verb such as Handle or Process followed by its object: the name hides what happens."""
+        words = (self.name or "").split()
+        return len(words) > 1 and words[0].lower() in self._GENERIC_VERBS and words[1][:1].isalpha()
 
     def _classify_opening(self, token: str) -> str:
         if not token:
@@ -298,7 +306,7 @@ class Increment(StoryNode):
         self.slicing_notes: str = source.slicing_notes if source is not None else ""
         self.decision_prompt: str = source.decision_prompt if source is not None else ""
         self.source: Optional[SourceLocation] = source.source if source is not None else None
-        self._stories = _BoundChildren(self, "stories")
+        self._stories = ModelChildren(self, "stories")
         if source is None:
             for story in stories or []:
                 story.increment = self
@@ -364,7 +372,7 @@ class Step(StoryNode):
         self.text = text
         self.step_type = step_type
         self._keyword = (keyword or "").strip()
-        self._ands = _BoundChildren(self, "ands")
+        self._ands = ModelChildren(self, "ands")
         self.concepts: List[str] = list(concepts) if concepts is not None else []
         self.values: List[str] = list(values) if values is not None else []
         self.actor = actor
@@ -458,7 +466,7 @@ class Background(StoryNode):
             name=source.name if source is not None else name,
             sequential_order=source.sequential_order if source is not None else sequential_order,
         )
-        self._steps = _BoundChildren(self, "steps")
+        self._steps = ModelChildren(self, "steps")
         self.examples = source.examples.clone(self) if source is not None else Examples(self)
         if source is not None:
             self.take_code_from(source)
@@ -513,8 +521,8 @@ class Scenario(StoryNode):
             sequential_order=source.sequential_order if source is not None else sequential_order,
         )
         self.story_name: str = source.story_name if source is not None else story_name
-        self._backgrounds = _BoundChildren(self, "background")
-        self._steps = _BoundChildren(self, "steps")
+        self._backgrounds = ModelChildren(self, "background")
+        self._steps = ModelChildren(self, "steps")
         self.examples = source.examples.clone(self) if source is not None else Examples(self)
         self.is_outline: bool = source.is_outline if source is not None else False
         self.evidence: List[str] = list(source.evidence) if source is not None else []
@@ -599,9 +607,22 @@ class Scenario(StoryNode):
 
 
 class StoryType(str, Enum):
+    """What kind of story it is. The outline notations (story-map.md, the sketch) mark a story ``(S)`` and add the
+    kind only when it is not a user story, ``(S:system)`` or ``(S:technical)``, so a map of user stories reads as it
+    always has and the kind survives every format."""
+
     USER = "user"
     SYSTEM = "system"
     TECHNICAL = "technical"
+
+    @property
+    def outline_mark(self) -> str:
+        return "(S)" if self is StoryType.USER else f"(S:{self.value})"
+
+    @classmethod
+    def from_mark(cls, kind: Optional[str]) -> "StoryType":
+        """The kind an outline mark names; no kind is a user story."""
+        return cls((kind or cls.USER.value).strip().lower())
 
 
 class Epic(StoryNode):
@@ -615,9 +636,9 @@ class Epic(StoryNode):
             source.name if source is not None else name,
             source.sequential_order if source is not None else sequential_order,
         )
-        self._epics = _BoundChildren(self, "decomposedInto")
-        self._stories = _BoundChildren(self, "decomposedInto")
-        self.examples = Examples(self)
+        self._epics = ModelChildren(self, "decomposedInto")
+        self._stories = ModelChildren(self, "decomposedInto")
+        self.examples = source.examples.clone(self) if source is not None else Examples(self)
         if source is None:
             return
         self.estimate = source.estimate or ""
@@ -687,6 +708,14 @@ class Epic(StoryNode):
             return ""
         return verbs[0]
 
+    def every_epic(self) -> List["Epic"]:
+        """This epic and every epic nested under it, each before its own children."""
+        return [self, *(found for child in self.epics for found in child.every_epic())]
+
+    def every_story(self) -> List["Story"]:
+        """Every Story this epic and its nested epics hold, in map order."""
+        return [story for epic in self.every_epic() for story in epic.stories]
+
     def append_epic(self, epic: "Epic") -> None:
         epic.parent = self
         self.epics.append(epic)
@@ -737,17 +766,10 @@ class Epic(StoryNode):
         return any(child._has_estimate() for child in self.epics)
 
     def span_columns(self) -> int:
-        """Story-grid columns this epic occupies: its own stories, then its sub-epics. An empty epic is one column."""
+        """Story-grid columns a top-level epic occupies: its own stories, then each nested epic. An empty epic is one
+        column."""
         nested = sum(max(child.diagram_span_columns(), 1) for child in self.epics)
         return max(len(self.stories) + nested, 1)
-
-    def layout_column_count(self) -> int:
-        """Story grid columns. Named stories only. Estimates are not story cells."""
-        nested = sum(child.layout_column_count() for child in self.epics)
-        own = len(self.stories)
-        if self.epics:
-            return max(nested + own, 1)
-        return own
 
     def diagram_span_columns(self) -> int:
         """Bar width in story-pitch columns. Stories and nested epics both consume columns.
@@ -801,8 +823,8 @@ class Story(StoryNode):
         self.actors: List[str] = list(source.actors) if source is not None else []
         self.domain_terms: List[str] = list(source.domain_terms) if source is not None else []
         self.evidence: List[str] = list(source.evidence) if source is not None else []
-        self._backgrounds = _BoundChildren(self, "background")
-        self._scenarios = _BoundChildren(self, "scenarios")
+        self._backgrounds = ModelChildren(self, "background")
+        self._scenarios = ModelChildren(self, "scenarios")
         if source is None:
             return
         self.take_code_from(source)
@@ -830,7 +852,7 @@ class Story(StoryNode):
     def load_map_facts(self) -> None:
         self._load_opening()
         self._load_path_case()
-        self.generic_handler = bool(self._GENERIC_HANDLER.match((self.name or "").strip()))
+        self.generic_handler = self._names_generic_handler()
         self.one_time_task = bool(self._ONE_OFF.search(self.name or ""))
         self.shared_verb = ""
         self.scenario_count = len(self.scenarios)
@@ -888,8 +910,8 @@ class StoryModel(StoryNode):
             graph = source
             source = None
         super().__init__(name="StoryModel", sequential_order=0, graph=graph)
-        self._epics = _BoundChildren(self, "decomposedInto")
-        self._increments = _BoundChildren(self, "increments")
+        self._epics = ModelChildren(self, "decomposedInto")
+        self._increments = ModelChildren(self, "increments")
         self.examples = Examples(self)
         if isinstance(source, StoryModel):
             self._copy_map(source)
@@ -914,6 +936,7 @@ class StoryModel(StoryNode):
         self._refill(self._increments, increments)
 
     def _copy_map(self, source: "StoryModel") -> None:
+        self.examples = source.examples.clone(self)
         for epic in source.epics:
             self.append_epic(self.epic_type(epic, story_class=self.story_type))
         increment_type = getattr(type(self), "increment_type", Increment)
@@ -1011,15 +1034,13 @@ class StoryModel(StoryNode):
                     story.backgrounds = list(read.backgrounds)
                     story.scenarios = list(read.scenarios)
 
+    def every_epic(self) -> List[Epic]:
+        """Every epic and nested epic, each before its own children."""
+        return [found for epic in self.epics for found in epic.every_epic()]
+
     def every_story(self) -> List["Story"]:
         """Every Story under every epic and sub-epic, in map order."""
-        found: List[Story] = []
-        pending = list(self.epics)
-        while pending:
-            epic = pending.pop(0)
-            found.extend(epic.stories)
-            pending[:0] = list(epic.epics)
-        return found
+        return [story for epic in self.every_epic() for story in epic.stories]
 
     @classmethod
     def _story_map_file(cls, path, project, on_file=None) -> "StoryModel":
@@ -1110,20 +1131,5 @@ def is_story_map_file(path) -> bool:
     from pathlib import Path
 
     path = Path(path)
-    stem = path.stem.lower().replace("_", "-")
+    stem = Name(path.stem).title_slug
     return path.suffix.lower() in STORY_MAP_SUFFIXES and (stem == "story-map" or stem.endswith("-story-map"))
-
-
-class StoryModelFactory:
-    """Pick the channel story map from a file or a folder and return a StoryModel."""
-
-    @staticmethod
-    def load(path: str) -> StoryModel:
-        from pathlib import Path
-
-        target = Path(path)
-        if target.is_file() and target.suffix == ".drawio":
-            from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryModel
-
-            return DrawIOStoryModel().load(target.read_text(encoding="utf-8"))
-        return StoryModel.load(path)

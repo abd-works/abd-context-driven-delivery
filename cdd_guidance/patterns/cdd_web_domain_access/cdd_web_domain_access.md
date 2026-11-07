@@ -4,7 +4,7 @@ How anything outside Python reaches the **CDD domain**. The domain, its rules, a
 
 **Every MCP call is made on the server.** The cdd server is a local program the application's server starts and talks to over its standard input and output. A browser cannot start it or reach it, and exposing it to the page would bypass the application server's guard on who may act. So the browser asks the application's server, and the server calls MCP.
 
-**The language adapter is a straight conversion of the Python, and the installer writes all of it.** Everything it needs is already in the Python: the tool names, their arguments and types, what each returns, the properties each class marks as its data, and which of those names the object. Because the browser's path to the server follows one fixed rule, the installer writes both ends of it, so they match by construction:
+**The language adapter is a straight conversion of the Python, and the installer writes all of it.** Everything it needs is already in the Python: the tool names, their arguments and types, what each returns, the properties each class annotates as its data, and which of those names the object. Because the browser's path to the server follows one fixed rule, the installer writes both ends of it, so they match by construction:
 
 | Generated | Where it runs | What it is |
 |---|---|---|
@@ -14,7 +14,7 @@ How anything outside Python reaches the **CDD domain**. The domain, its rules, a
 | `{object}Routes` | Server | One route for each tool. Each reads the request against the tool's published schema and calls `{Object}Adapter`. |
 | `CddConnection` | Server | One per install. Starts one cdd server and carries calls to it. It knows no tool by name. |
 | `use{Object}(client)` | Browser | A React hook that re-renders a view whenever the client takes on new state. |
-| `FileListViewGenerated`, `SourceViewGenerated` | Browser | Shared default views over the session's file manager: a folder's files to pick from, and a file's text in Monaco with a line or range marked. Any field Python marks as a file opens in `SourceViewGenerated`. |
+| `FileListViewGenerated`, `SourceViewGenerated` | Browser | Shared default views over the session's file manager: a folder's files to pick from, and a file's text in Monaco with a line or range marked. Any field Python annotates as a file opens in `SourceViewGenerated`. |
 | `{Object}ViewGenerated`, `{Object}NewViewGenerated` | Browser | Starting-point React views: the object with each field editable where a domain operation changes it and read-only elsewhere, its other operations as buttons and forms, and a form for each operation that creates one. **Never deployed as they are**; an application composes them, or copies one and changes it. |
 
 **What the application's pattern adds.** LERN mounts `{object}Routes` on its server, subclasses `{Object}ClientGenerated` for what only the page knows, such as selecting a card or showing a toast, and builds its pages from the generated views. That subclass is LERN's `{Domain}Client`; the pages, layout, and navigation are LERN's own. A Claude Code mod reaches the tools through `$.mcp.call`, as `patterns-cdd-claude-mod` describes. Nothing in the application calls a tool, parses a request for one, or writes a path to one.
@@ -28,9 +28,9 @@ How anything outside Python reaches the **CDD domain**. The domain, its rules, a
 | Layer | File | Role |
 |---|---|---|
 | Domain | `cdd_guidance/practices/<practice>/*.py`, `cdd_guidance/patterns/<pattern>/*.py`, `cdd_guidance/actions/<action>/*.py`, `space/<domain>/*.py` | The Python classes. Every rule, decision, and piece of state lives here. |
-| Tool | The same file, marked `@mcp @agent_tool` | One operation for each thing a person or agent does. The tool reads `{object}.{operation}`. |
-| Contract | The class's properties marked `@data_field`, with their return types | The only agreement between the languages. MCP sends exactly those properties, and the language adapter writes `{Object}Data` from the same ones, so the two cannot disagree. |
-| Mark | `@language_adapter(language="typescript", identity="name")` on the class | Opts the toolset in to the language adapter for that language. `identity` names the data field that holds the object's name, so a browser object knows which object its routes act on. |
+| Tool | The same file, annotated `@mcp @agent_tool` | One operation for each thing a person or agent does. The tool reads `{object}.{operation}`. |
+| Contract | The class's properties annotated `@data_field`, with their return types | The only agreement between the languages. MCP sends exactly those properties, and the language adapter writes `{Object}Data` from the same ones, so the two cannot disagree. |
+| Annotation | `@language_adapter(language="typescript")` and `@identity("name")` on the class | `@language_adapter` opts the toolset in to the language adapter for that language. `@identity` names the data field that holds the object's name, so a browser object knows which object its routes act on, and a reference field elsewhere can name the object by it. |
 | Language adapter | `<install path>/language-adapters/<language>/<source folders>/<object>.<ext>` | Generated: `{Object}Data`, `{Object}`, `{Object}Adapter`, `{Object}ClientGenerated`, `{object}Routes`, `use{Object}`, and the starting-point views. |
 | Connection | `<install path>/language-adapters/<language>/cdd-connection.<ext>` | Generated: `CddConnection`, once per install. |
 
@@ -134,10 +134,11 @@ The route is the tool's object, then the object's identity when the tool loads o
 
 ### The language adapter is a deployment target
 
-The installer treats a language adapter as one more channel, beside skills, commands, rules, MCP, and hooks. It walks the same toolsets, reads the same marks, tracks what it writes so `clean` removes it, and reports it in `diagnostics.json`. Like the rest of the install it is generated, never edited, and not committed, so run the installer on a fresh clone before building. Each language gets its own folder under `language-adapters/`; a new language adds a writer for that folder and changes nothing in the Python domain or its tools. The TypeScript adapter below is the first.
+The installer treats a language adapter as one more channel, beside skills, commands, rules, MCP, and hooks. It walks the same toolsets, reads the same annotations, tracks what it writes so `clean` removes it, and reports it in `diagnostics.json`. Like the rest of the install it is generated, never edited, and not committed, so run the installer on a fresh clone before building. Each language gets its own folder under `language-adapters/`; a new language adds a writer for that folder and changes nothing in the Python domain or its tools. The TypeScript adapter below is the first.
 
 ```python
-@language_adapter(language="typescript", identity="name")
+@identity("name")
+@language_adapter(language="typescript")
 @agent_toolset
 class Ticket(Card):
     @property
@@ -145,8 +146,10 @@ class Ticket(Card):
     def name(self) -> str: ...
 
     @property
-    @data_field(key="column")
-    def column_name(self) -> str: ...
+    @data_field(reference=True)
+    def column(self) -> Column: ...
+        # sent as {"name": "Discovery"}: the column sends the ticket in full, so the ticket names the column by its
+        # @identity alone
 ```
 
 ```
@@ -154,7 +157,7 @@ class Ticket(Card):
 ├── cdd-connection.ts            CddConnection, using only Node's own modules
 ├── cdd-shared.ts                what every object shares and a browser can load: reading a request, the page's API, the errors
 ├── cdd-views.tsx                the inputs, buttons, and forms every generated view draws
-├── harness/kanban/
+├── space/kanban/
 │   ├── ticket.ts                every generated class: TicketData, Ticket, TicketClientGenerated, TicketAdapter, ticketRoutes
 │   ├── ticket-views.tsx         useTicket, TicketViewGenerated, TicketNewViewGenerated
 │   ├── board.ts
@@ -162,7 +165,7 @@ class Ticket(Card):
 └── space/session/...
 ```
 
-The folders mirror the toolset's source. Only marked toolsets are written, so catalog pages, rules, and guidance prose never appear here. **Mark a toolset when an application needs its results as data.** A toolset that returns prompt text for an agent to follow, as the practices and actions do, gains little from a typed adapter, so it stays unmarked.
+The folders mirror the toolset's source. Only annotated toolsets are written, so catalog pages, rules, and guidance prose never appear here. **Annotate a toolset when an application needs its results as data.** A toolset that returns prompt text for an agent to follow, as the practices and actions do, gains little from a typed adapter, so it stays unannotated.
 
 Import it through the `@cdd` path alias, which points at the install. The install sits outside every application's packages, so the adapter imports no package: the connection speaks MCP with Node's own modules, the routes are plain data any server framework can mount, and the client posts through whatever `CddApi` the page hands it. Every generated class of an object sits in one `<object>.ts`. The browser and the server both import it, and it loads nothing of Node, because it takes the connection only as a type; only the server constructs a `CddConnection` and an `{Object}Adapter`. The views sit in their own `<object>-views.tsx`, because they need JSX and React, which the server has no reason to load.
 
@@ -231,7 +234,7 @@ export const ticketRoutes: CddRoute[] = [
 - A route reads the operation's arguments from the body, checked against the tool's published schema, and raises `CddRequestError` when one is missing or the wrong type. The schema already says what each argument is, so the application writes no parsing.
 - `CddApi.post` answers `null` once the page has shown the person a failure, so a browser operation then keeps its state and returns `null`, and the page stops there.
 - Page code that knows only a name builds `{Object}ClientGenerated.named(api, name)` and acts on that object before it has read it.
-- An object without `identity`, such as the one board, has routes with no name in them.
+- An object without `@identity`, such as the one board, has routes with no name in them.
 
 ### Generated views
 
@@ -277,11 +280,11 @@ Every application ends up showing files: a ticket's outputs, a report's failing 
 | `list(folder)` | `FolderData`: the folder's entries, each a name, its path, whether it is a folder, and its size |
 | `read(path)` | `FileTextData`: the file's path and text |
 
-Both refuse a path outside every root with `PathOutsideRootsError`, because the page is open to whatever a request names, and so an application never loads files from outside the session's roots. `read` gives no text for a file that is not there, such as one deleted since a page listed it, because that is an ordinary moment on a page, not a failure. `FileManager` is marked for TypeScript, so the installer generates its adapter, its routes, and `FileManagerClientGenerated` like any other object's.
+Both refuse a path outside every root with `PathOutsideRootsError`, because the page is open to whatever a request names, and so an application never loads files from outside the session's roots. `read` gives no text for a file that is not there, such as one deleted since a page listed it, because that is an ordinary moment on a page, not a failure. `FileManager` is annotated for TypeScript, so the installer generates its adapter, its routes, and `FileManagerClientGenerated` like any other object's.
 
 **Two shared views come with it.** `FileListViewGenerated` lists a folder and opens what a person picks. `SourceViewGenerated` shows a file's text in Monaco, read-only, scrolled to a line or with a range of lines marked. As with every generated view, an application uses them, composes them, or ignores them; none writes its own file viewer.
 
-**Python marks which fields are files.** A data field whose property returns `Annotated[str, SourceFile]` holds a path from the workpath, inside the session's roots. Where the same data has `line`, or `start_line` and `end_line`, the view takes them as the line or range to mark. A generated view draws a marked field as a link that opens `SourceViewGenerated` at that file, so a report's violation, a graph node's source, and a ticket's output all open the same way.
+**Python annotates which fields are files.** A data field whose property returns `Annotated[str, SourceFile]` holds a path from the workpath, inside the session's roots. Where the same data has `line`, or `start_line` and `end_line`, the view takes them as the line or range to annotate. A generated view draws an annotated field as a link that opens `SourceViewGenerated` at that file, so a report's violation, a graph node's source, and a ticket's output all open the same way.
 
 ```python
 class Violation:
@@ -298,7 +301,7 @@ class Violation:
 
 ### Python states the contract
 
-The domain class itself states what other languages read. Mark each property that belongs in the object's data with `@data_field`, from `harness.installation.destination`, under `@property`. MCP sends an object as those properties, each object they hold as its own data, and the language adapter writes `{Object}Data` from their return types. The shape lives in one place, the class, so there is no second shape for the class to fall out of step with, and no record class that holds the fields while the domain class holds the rules.
+The domain class itself states what other languages read. Annotate each property that belongs in the object's data with `@data_field`, from `harness.installation.destination`, under `@property`. MCP sends an object as those properties, each object they hold as its own data, and the language adapter writes `{Object}Data` from their return types. The shape lives in one place, the class, so there is no second shape for the class to fall out of step with, and no record class that holds the fields while the domain class holds the rules.
 
 - **Return domain objects, not dicts.** An operation returns the object, or a list or dict of them, and its annotation names that class. A small result, such as what a load did, is still a class with its own data fields. A plain `dict[str, Any]` generates `Record<string, unknown>`, which the compiler cannot check.
 - **Use `key` when the data's name differs from the property's.** `@data_field(key="column")` on `column_name` sends the column's name as `column`, while the `column` property keeps returning the column itself for Python callers.
@@ -337,7 +340,7 @@ The Python domain keeps its own Mamba specs, and `{object}.{operation}` keeps it
 ## Generate
 
 1. Follow **session_guidance**. Start from the Python: name the classes this slice exposes, read their `.context/`, and list their `@mcp @agent_tool` operations.
-2. Add any missing domain operation and its Mamba spec first. Mark each property the application reads with `@data_field`, annotate each operation with the class it returns, and mark the class with `@language_adapter(language=..., identity=...)`: the application's language, such as `"typescript"`, and the data field that names the object.
+2. Add any missing domain operation and its Mamba spec first. Annotate each property the application reads with `@data_field`, annotate each operation with the class it returns, annotate the class with `@language_adapter(language=...)`, the application's language such as `"typescript"`, and with `@identity(...)`, the data field that names the object.
 3. Run `python scripts/install.py --ide Claude`. The language adapter follows, with the skills, commands, and MCP entry.
 4. Point the `@cdd/*` path alias at `<install path>/language-adapters/typescript/`, and alias `react` to the application's own copy so the generated views resolve it.
 5. Construct one `CddConnection` on the application's server and mount every `{object}Routes` on it. Subclass `{Object}ClientGenerated` for what only the page knows, and build pages by composing the generated views, or copying one and changing it. The application's pattern says where each lives.
@@ -366,7 +369,7 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 - **`views-are-a-starting-point`** — Compose a generated view into the application's own page, or copy it into the application's source and change it; never ship one as the page itself. It knows the object's fields and operations but nothing about the page it sits on.
 - **`edits-go-through-operations`** — A view changes a field only by calling the domain operation that changes it, and shows a field no operation changes as read-only. A view that writes a field directly decides in the browser what only Python may decide.
 - **`views-share-the-client-state`** — A view reads its object through `use{Object}(client)` and keeps no copy of the object's state. A second copy shows the old state after an operation returns.
-- **`mark-toolsets-that-return-data`** — Mark a toolset with `@language_adapter` when an application needs its results as data, and name its `identity` when a tool loads one object. Marking one that returns prompt text adds an adapter nobody can type.
+- **`annotate-toolsets-that-return-data`** — Annotate a toolset with `@language_adapter` when an application needs its results as data, and annotate its `@identity` when a tool loads one object. Annotating one that returns prompt text adds an adapter nobody can type.
 
 ### One line from adapter to domain
 
@@ -377,10 +380,10 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 
 ### Contract and failure
 
-- **`annotate-what-typescript-reads`** — Mark each property another language reads with `@data_field`, and annotate each MCP operation on a marked toolset with the domain class it returns. A plain `dict[str, Any]` generates an open record, which the compiler cannot check.
+- **`annotate-what-typescript-reads`** — Annotate each property another language reads with `@data_field`, and annotate each MCP operation on an annotated toolset with the domain class it returns. A plain `dict[str, Any]` generates an open record, which the compiler cannot check.
 - **`calls-finish-in-ten-minutes`** — Keep every operation within the ten-minute limit, and fix one that needs longer instead of raising the limit. A page that waits longer than that looks broken, and a raised limit hides the slow operation.
 - **`report-progress-on-long-calls`** — An operation that takes more than a few seconds calls `report_progress` at each step, and the page shows them with `ProgressViewGenerated`. A page with no news looks the same as one that has stopped.
-- **`read-files-through-the-file-manager`** — Show a file through the session's `FileManager` and its source view, and mark a file field `Annotated[str, SourceFile]`. A read operation or a file viewer written for one object is a second copy of what every application shares.
+- **`read-files-through-the-file-manager`** — Show a file through the session's `FileManager` and its source view, and annotate a file field `Annotated[str, SourceFile]`. A read operation or a file viewer written for one object is a second copy of what every application shares.
 - **`fail-loud-on-mcp`** — When a call fails or the server is missing, show the person what failed and how to fix it. Drawing old state as if it were current misleads them into acting on it.
 
 ### Testing

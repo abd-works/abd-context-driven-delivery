@@ -1,28 +1,31 @@
 // The engine and the cdd server beneath the chat bar, for the story tests. board.show answers `board`, the Seed a Given
 // sets. The ticket tools a press reaches change that board as the Python Ticket does, so a test reads the server's state
 // after the press rather than setting it by hand. The read tools answer from the server's state for the ticket,
-// fidelity or path asked for, as the Python Session and FidelityProgress do: `declared` files and `reports` per
-// fidelity, `texts` per path, `workspaces` per ticket. Any tool fails with the server's own text from `refusals`.
-import type { BoardData, WorkspaceData } from '@cdd/harness/kanban/board'
-import type { FidelityProgressData, FileEntryData, ReportData } from '@cdd/harness/kanban/fidelity-progress'
+// fidelity or path asked for, as the Python Ticket, Session and FidelityProgress do: `branches` per ticket, `declared`
+// files and `reports` per fidelity, `texts` per path. Any tool fails with the server's own text from `refusals`. An
+// operation Python does not have, or an argument it does not take, is refused and kept in `unknown`, which every story
+// expects empty, so a test fails when the chat bar calls a name Python dropped.
+import type { BoardData } from '@cdd/space/kanban/board'
+import type { FidelityProgressData, FileEntryData, ReportData } from '@cdd/space/kanban/fidelity-progress'
+import type { BranchData, TicketData } from '@cdd/space/kanban/ticket'
 import type { FileTextData } from '@cdd/space/session/session'
-import type { TicketData } from '@cdd/harness/kanban/ticket'
 
-import { boardOf, checkoutFlow, HEALTHY, progressOf, STAGE_ORDER, WORK_OF } from './examples/chat-bar.examples'
+import { boardOf, checkoutFlow, HEALTHY, progressOf, STAGE_ORDER } from './examples/chat-bar.examples'
 
 type Call = { tool: string; args: any }
 
 export type World = {
   board: BoardData
   calls: Call[]
+  unknown: string[]
   sent: string[]
   fills: string[]
   submits: string[]
   toasts: string[]
+  branches: Record<string, BranchData>
   declared: Record<string, Record<string, FileEntryData[]>>
   reports: Record<string, ReportData>
   texts: Record<string, string>
-  workspaces: Record<string, WorkspaceData>
   refusals: Record<string, string>
   health: unknown
   healthText: string | null
@@ -40,14 +43,16 @@ const toolText = (text: string, isError: boolean) => ({ value: { content: [{ typ
 const ticketsOf = (board: BoardData): TicketData[] => board.columns.flatMap(column => [...(column.in_progress ?? []), ...(column.tickets ?? [])])
 
 // The first fidelity of the ticket's stage, among its practices, that is not done; null once the stage is done.
-function nextOf(ticket: TicketData): string | null {
-  return (WORK_OF[ticket.column] ?? []).find(slug => ticket.session.practices[slug.slice(0, slug.indexOf('-'))]?.enabled && ticket.progress[slug]?.state !== 'done') ?? null
+function nextOf(ticket: TicketData): FidelityProgressData | null {
+  return ticket.progress.find(progress => progress.stage.name === ticket.column.name && progress.is_enabled && progress.state !== 'done') ?? null
 }
 
-function changed(world: World, ticket: TicketData, active: string | null = world.board.active): TicketData {
-  // Ticket.next_fidelity is none once the stage is done or the ticket is Complete.
-  const next = ticket.column === 'Complete' || ticket.is_done ? null : nextOf(ticket)
-  const settled = { ...ticket, next }
+const activeName = (world: World): string | null => world.board.active?.name ?? null
+
+function changed(world: World, ticket: TicketData, active: string | null = activeName(world)): TicketData {
+  // Ticket.next_fidelity is none once the stage is done or the ticket is Complete, and names its progress otherwise.
+  const progress = ticket.column.name === 'Complete' || ticket.is_done ? null : nextOf(ticket)
+  const settled = { ...ticket, next: progress && { ticket: progress.ticket, fidelity: { slug: progress.fidelity.slug } } }
   world.board = boardOf(active, ...ticketsOf(world.board).map(entry => (entry.name === settled.name ? settled : entry)))
   return settled
 }
@@ -62,24 +67,25 @@ const named = (world: World, name: string): TicketData => {
 function moveNext(world: World, { ticket }: { ticket: string }): TicketData {
   const moving = named(world, ticket)
   if (!moving.is_done) return changed(world, { ...moving, is_done: true })
-  const following = STAGE_ORDER[STAGE_ORDER.indexOf(moving.column) + 1] ?? 'Complete'
-  return changed(world, { ...moving, column: following, is_done: false })
+  const following = STAGE_ORDER[STAGE_ORDER.indexOf(moving.column.name) + 1] ?? 'Complete'
+  return changed(world, { ...moving, column: { name: following }, is_done: false })
 }
 
 // FidelityProgress.finish_review: the fidelity is reviewed and done; the stage is done once every fidelity of it is.
 function finishReview(world: World, { ticket, fidelity }: { ticket: string; fidelity: string }): FidelityProgressData {
   const reviewing = named(world, ticket)
-  const actions = { ...reviewing.progress[fidelity]!.actions, review: 'done' }
-  const reviewed = { ...reviewing, progress: { ...reviewing.progress, [fidelity]: progressOf(ticket, fidelity, 'done', actions) } }
-  return changed(world, { ...reviewed, is_done: nextOf(reviewed) === null }).progress[fidelity]!
+  const progressNamed = (entry: TicketData) => entry.progress.find(progress => progress.fidelity.slug === fidelity)!
+  const actions = { ...progressNamed(reviewing).actions, review: 'done' }
+  const reviewed = { ...reviewing, progress: reviewing.progress.map(progress => (progress.fidelity.slug === fidelity ? progressOf(ticket, fidelity, 'done', actions) : progress)) }
+  return progressNamed(changed(world, { ...reviewed, is_done: nextOf(reviewed) === null }))
 }
 
 // Ticket.close: the ticket goes to Complete and no session is active.
 function close(world: World, { ticket }: { ticket: string }): TicketData {
-  return changed(world, { ...named(world, ticket), column: 'Complete' }, world.board.active === ticket ? null : world.board.active)
+  return changed(world, { ...named(world, ticket), column: { name: 'Complete' } }, activeName(world) === ticket ? null : activeName(world))
 }
 
-// Board.activate: the ticket becomes the board's active session.
+// Ticket.activate: the ticket becomes the board's active session.
 function activate(world: World, { ticket }: { ticket: string }): TicketData {
   return changed(world, named(world, ticket), ticket)
 }
@@ -88,7 +94,7 @@ function activate(world: World, { ticket }: { ticket: string }): TicketData {
 function create(world: World, { title }: { title: string }): TicketData {
   const name = title.toLowerCase().replace(/[^a-z0-9]+/g, '-')
   const created = checkoutFlow({ title, name, column: 'Discovery', next: 'stories-story-map' })
-  world.board = boardOf(world.board.active, ...ticketsOf(world.board), created)
+  world.board = boardOf(activeName(world), ...ticketsOf(world.board), created)
   return created
 }
 
@@ -108,26 +114,20 @@ function readFile(world: World, { path }: { session: string; path: string }): Fi
   return { path, text: world.texts[path] ?? '' }
 }
 
-// Board.workspace: whether the ticket has a branch and a worktree of its own; none for a ticket that has neither.
-const workspace = (world: World, { ticket }: { ticket: string }): WorkspaceData => world.workspaces[ticket] ?? ({ has_branch: false, has_worktree: false, leaving_has_branch: false } as WorkspaceData)
-
-// Ticket.generate_commands: the generate command for the fidelities in the formats, in the ticket's session. The stub's
-// fidelities have no earlier file to render from, so no render command comes first.
-const generateCommands = (world: World, { ticket, fidelities, formats }: { ticket: string; fidelities: string[]; formats: string[] }): string[] => [
-  `/actions-generate ${fidelities.join(' ')} format=${formats.join(',')} session=${named(world, ticket).session.session_file}`,
-]
+// Ticket.branch: the ticket's own branch, named as the ticket; one the repository does not have for a ticket the story
+// gives none.
+const branch = (world: World, { ticket }: { ticket: string }): BranchData => world.branches[ticket] ?? { name: ticket, exists: false, is_checked_out: false }
 
 const TOOLS: Record<string, (world: World, args: any) => unknown> = {
-  'ticket.generate_commands': generateCommands,
+  'ticket.branch': branch,
   'ticket.move_next': moveNext,
   'fidelity-progress.finish_review': finishReview,
   'ticket.close': close,
-  'board.activate': activate,
+  'ticket.activate': activate,
   'ticket.create': create,
   'fidelity-progress.files': files,
   'fidelity-progress.report': report,
   'session.read_file': readFile,
-  'board.workspace': workspace,
 }
 
 // A tool call the agent makes on the cdd server, not the chat bar: the server's state changes and the chat bar only
@@ -136,9 +136,38 @@ export function agentCalls(world: World, tool: string, args: unknown): void {
   TOOLS[tool]!(world, args)
 }
 
+// Each cdd operation the chat bar calls, with the arguments its Python signature takes: the tool subject's, such as
+// ticket for Ticket.load, then the operation's own.
+export const OPERATIONS: Record<string, string[]> = {
+  'server-health.report': [],
+  'board.show': [],
+  'ticket.create': ['title', 'scope', 'parent', 'path'],
+  'ticket.activate': ['ticket', 'leaving', 'opening'],
+  'ticket.branch': ['ticket'],
+  'ticket.close': ['ticket', 'leaving'],
+  'ticket.move_next': ['ticket'],
+  'fidelity-progress.finish_review': ['ticket', 'fidelity'],
+  'fidelity-progress.files': ['ticket', 'fidelity'],
+  'fidelity-progress.report': ['ticket', 'fidelity'],
+  'session.read_file': ['session', 'path'],
+}
+
+// What is wrong with calling tool with args, as the server words it; empty when Python has that operation and takes them.
+function mismatchOf(tool: string, args: unknown): string {
+  const taken = OPERATIONS[tool]
+  if (!taken) return `${tool} is not a cdd operation`
+  const extra = Object.keys(args ?? {}).filter(name => !taken.includes(name))
+  return extra.length ? `${tool} takes no argument ${extra.join(', ')}` : ''
+}
+
 function answerTool(world: World, tool: string, args: unknown) {
   world.calls.push({ tool, args })
   if (world.serverLost) throw new Error('no connected MCP tool on a server named "plugin:cdd:cdd"')
+  const mismatch = mismatchOf(tool, args)
+  if (mismatch) {
+    world.unknown.push(mismatch)
+    return toolText(mismatch, true)
+  }
   if (tool === 'server-health.report') return world.healthText !== null ? toolText(world.healthText, false) : toolAnswer(world.health)
   if (world.refusals[tool]) return toolText(world.refusals[tool], true)
   if (tool === 'board.show') return toolAnswer(world.board)
@@ -162,14 +191,15 @@ export function cdd(on: any, board: BoardData = boardOf('checkout-flow', checkou
   const world: World = {
     board,
     calls: [],
+    unknown: [],
     sent: [],
     fills: [],
     submits: [],
     toasts: [],
+    branches: {},
     declared: {},
     reports: {},
     texts: {},
-    workspaces: {},
     refusals: {},
     health: HEALTHY,
     healthText: null,

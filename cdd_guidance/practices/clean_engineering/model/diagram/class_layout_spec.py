@@ -6,13 +6,18 @@ from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import 
     ArrowRouter,
     CardPlacement,
     DiagramArrow,
-    DiagramCard,
     paths_cross,
 )
+from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import DiagramClass
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
 
 
-def _card(name, group="sales"):
-    return DiagramCard(name, 200, 100, group)
+def _card(name, group="sales", box=(0, 0, 200, 100)):
+    card = DiagramClass(name=name)
+    card.cell_id = name
+    card.group = group
+    card.geometry = Geometry(*box)
+    return card
 
 
 def _hub_with_spokes():
@@ -35,6 +40,7 @@ def _laid_out():
 
 
 def _passes_through(path, card):
+    card = card.geometry
     for a, b in zip(path, path[1:]):
         if (
             min(a[0], b[0]) < card.x + card.width
@@ -57,12 +63,12 @@ with description("a class diagram page"):
             expect(overlapping).to(equal([]))
 
         with it("should put a base above what derives from it"):
-            expect(self.cards["Refund"].y).to(be_above(self.cards["Payment"].y))
+            expect(self.cards["Refund"].geometry.y).to(be_above(self.cards["Payment"].geometry.y))
 
         with it("should give the same layout every time"):
             again, _ = _laid_out()
-            expect({key: (card.x, card.y) for key, card in again.items()}).to(
-                equal({key: (card.x, card.y) for key, card in self.cards.items()})
+            expect({key: card.geometry for key, card in again.items()}).to(
+                equal({key: card.geometry for key, card in self.cards.items()})
             )
 
     with context("with arrows routed between the cards"):
@@ -107,7 +113,7 @@ with description("a class diagram page"):
         with before.each:
             self.cards = [_card("Left"), _card("Middle"), _card("Right")]
             for card, x in zip(self.cards, (60, 400, 740)):
-                card.x, card.y = x, 200
+                card.geometry = card.geometry.moved_to(x, 200)
             self.arrow = DiagramArrow("Left", "Right", "association")
             ArrowRouter(self.cards, [self.arrow]).route()
 
@@ -116,8 +122,8 @@ with description("a class diagram page"):
 
     with context("with a card a person moved off the grid"):
         with before.each:
-            self.source = DiagramCard("Source", 200, 87, x=63, y=47)
-            self.target = DiagramCard("Target", 200, 93, x=61, y=401)
+            self.source = _card("Source", box=(63, 47, 200, 87))
+            self.target = _card("Target", box=(61, 401, 200, 93))
             self.arrow = DiagramArrow("Source", "Target", "association")
             ArrowRouter([self.source, self.target], [self.arrow]).route()
 

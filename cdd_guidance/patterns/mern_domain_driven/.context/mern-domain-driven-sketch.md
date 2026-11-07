@@ -4,8 +4,9 @@ Source: `abd-skills/practices/architecture-centric-engineering/specs/mern-domain
 (old-world ABD skill: `archiecture-specification.md`, `rules/*.md` × 18,
 `scanners/typescript/*.py` × 18, `templates/`, diagrams).
 
-Decisions below are locked (see `grill-answers.md`); shapes below are draft —
-review before I scaffold with `create-practice-guidance`.
+Decisions below are locked (see `grill-answers.md`). The tool is built: the
+sections below describe it as it is in `cdd_guidance/patterns/mern_domain_driven/`.
+Where the port plan differed from what was built, the section says what was built.
 
 ---
 
@@ -27,78 +28,52 @@ implementation fidelity of the MERN stack — not a design-lifecycle tool.
 
 ## Seam
 
-`MernDomainDriven` — thin `BaseContextTool` domain. Its `generate` **inlines**
-`Stories` and `CleanEngineering` (compose-like-normal-code) rather than
-re-describing what they already do; it contributes only what's MERN-specific
-on top: naming/layering rules, the domain-module/app-server/app-client/tests
-template shape, and its own scanners.
+`MernDomainDriven` is a `PracticeGuidance` pattern (`pattern = "mern_domain_driven"`)
+in TypeScript format. It adds only what is MERN-specific — the naming and layering
+rules, the domain-module / app-server / app-client / tests template shape — on top
+of its Stories companion. Stories' `acceptance_tests` fidelity names Clean
+Engineering `code` as its companion (`clean_engineering: code` in `stories.md`), so
+the tests-then-code composition comes from Stories, not from this pattern.
 
 ```
-practices/engineering_specification/mern_domain_driven/
+cdd_guidance/patterns/mern_domain_driven/
 ├── mern_domain_driven.py
-├── mern_domain_driven.md          # § Instructions / § Contexts (rules below) / § Generate
-├── templates/                      # ported from old templates/ (domain-module, app-server, app-client, tests)
-├── scanners/typescript/            # ported scanners, on tools.scanners.Scanner contract
-└── examples/
-    └── examples.md                 # worked slice, e.g. recipients / wire-payment
+├── mern_domain_driven.md          # ## Overview, ## Guidance (the rules by theme), ## Shared rules
+├── templates/                      # {epicSlug}/ feature package and tests/{epicSlug}/ scaffold
+└── _examples/
+    ├── examples.md
+    └── wires/                      # worked slice: recipients / wire-payment
 ```
 
-## Public API (draft)
+## Public API
 
 ```python
-class MernDomainDriven(BaseContextTool):
-    default_workspace_folder = "packages"
-    context_index_key = "mern_domain_driven"
+@agent_toolset
+class MernDomainDriven(PracticeGuidance):
+    pattern = "mern_domain_driven"
 
-    def __init__(self, path=None, session=None, workspace=None): ...
+    def __init__(self) -> None:
+        # format="typescript", default_workspace_folder="packages"
 
     def _stories(self) -> Stories:
-        """Stories at acceptance_tests fidelity, typescript format."""
-        return Stories(fidelity="acceptance_tests", format="typescript",
-                        path=self._raw_path, session=self.workspace.name,
-                        workspace=self.workspace.workspace_root)
-
-    def _clean_engineering(self) -> CleanEngineering:
-        """CleanEngineering at code fidelity, typescript format."""
-        return CleanEngineering(fidelity="code", format="typescript",
-                                 path=self._raw_path, session=self.workspace.name,
-                                 workspace=self.workspace.workspace_root)
-
-    @action
-    def generate(self) -> str:
-        """1. Fill templates/ for the domain module(s) touched by this slice
-        (shared/server/client + app-server/app-client composition roots).
-        2. self._clean_engineering().generate() - production code, applying
-        the naming/layering rules below on top of CE's own OOAD rules.
-        3. self._stories().generate() - *_spec.{tier} for tier in
-        (server, client, e2e), applying the testing-architecture rules below.
-        4. Run validate (this tool's scan + both companions' validate)."""
+        """Stories companion pinned at acceptance_tests fidelity, typescript format."""
 ```
 
-**Open — `Stories.ce()` format gap:** `Stories.generate()` at
-`acceptance_tests` already calls `self.ce().generate()` internally (exactly
-the "tests → matching code" composition this tool wants) — but `ce()`
-constructs `CleanEngineering(fidelity="code", ...)` **without** passing
-`format`, so it always renders Python, never TypeScript. Two ways to close
-this gap — pick one before scaffolding:
+`generate`, `validate`, and the other actions are the shared actions run on this
+guidance; the pattern does not override them.
 
-1. Small upstream fix: `Stories.ce()` passes `format=self.format` (falls
-   back to CE's own default when `self.format` isn't a CE channel). Fixes
-   this for every TypeScript/Java/JS stack, not just MERN.
-2. `MernDomainDriven.generate()` doesn't rely on `Stories.generate()`'s
-   internal `ce()` call at all — it sequences `_clean_engineering().generate()`
-   then `_stories().generate()` itself, both pinned to `typescript`, and
-   accepts the redundant/wrong-format internal call as dead weight.
+**Resolved — the format gap.** The draft relied on `Stories.ce()` passing
+`format` to Clean Engineering. That operation no longer exists: a fidelity names
+its Clean Engineering companion (`FidelityGuidance.clean_engineering`), and
+`PracticeGuidance.clean_engineering_companion` adds that companion's instructions
+to the guidance's own.
 
-**Resolved: (1).** `Stories.ce()` will pass `format=self.format` (falling
-back to CE's own default when `self.format` isn't a CE channel) — a small
-upstream patch to `practices/stories/stories.py`, done once, ahead of
-scaffolding this tool.
+## Rules (ported 1:1 from old `rules/*.md`, same slugs)
 
-## Contexts (rule bullets — ported 1:1 from old `rules/*.md`, same slugs)
-
-Grouped by theme; each pairs with a scanner in `scanners/typescript/` (last
-column = old scanner file, ported into this tool's own `scanners/`).
+Grouped by theme under `## Guidance` and listed again under `## Shared rules` in
+`mern_domain_driven.md`. The file name in parentheses is the old scanner the rule came
+from; the scanners were not ported, so these rules are judged by the validating
+agent rather than by a graph rule.
 
 **Domain module organization**
 - `organize-by-domain-module` — `packages/<domain>/{shared,client,server}`; composition roots (`app-server`, `app-client`) present. (`domain_structure_scanner.py`)
@@ -130,10 +105,8 @@ column = old scanner file, ported into this tool's own `scanners/`).
 - `scaffold-test-scripts` — `scripts/test.sh` / `test.ps1` / `test-e2e.sh` / `test-e2e.ps1` present. (`test_scripts_scanner.py`)
 - `use-thorough-e2e-tests` — E2E tests are independent; no blanket deletes; `app-client` required. (`test_isolation_scanner.py`)
 
-18 rules ported (17 named above map 1:1 to the old `rules/*.md`; the 18th,
-`mern_scanner.py`, is the shared scanner base, not a rule — becomes this
-tool's `scanners/typescript/mern_scanner.py` base class, not a `§ Contexts`
-bullet).
+18 rules: the 17 named above map 1:1 to the old `rules/*.md`; the old
+`mern_scanner.py` was a shared scanner base, not a rule, and was not ported.
 
 ## Testing tiers (this tool's addition to `stories.acceptance_tests`)
 
@@ -155,17 +128,16 @@ CE's **Example factories** modes (`Isolated` = ctor-injected mocks,
 worth confirming server/client/e2e helpers *use* `{Type}ExampleFactory`
 rather than hand-rolled fixtures. ?
 
-## Templates (port `templates/` → this tool's `templates/`)
+## Templates
 
-Same tree as old spec, placeholders unchanged (`{{DomainName}}`,
-`{{domainName}}`, `{{EpicName}}`, `{{epicSlug}}`, `{{SubEpicName}}`,
-`{{subEpicSlug}}`):
+Placeholders unchanged from the old spec (`{{DomainName}}`, `{{domainName}}`,
+`{{EpicName}}`, `{{epicSlug}}`, `{{SubEpicName}}`, `{{subEpicSlug}}`):
 
 ```
 templates/
-├── {domainName}/{shared,server,client}/   # copy as packages/<domainNames>/
-├── app-server/  app-client/                # composition roots
-└── tests/{epicSlug}/...                    # test scaffold
+├── {epicSlug}/            # feature package: app.ts, serve.ts, main.tsx, {EpicName}View.tsx, {domainName}/
+├── tests/{epicSlug}/      # test scaffold
+├── package.json  vitest.config.ts  README.md
 ```
 
 `generate` fills these for the touched module(s), then calls the two
@@ -182,19 +154,6 @@ the touched view files — it does not call `ux`.
 ## Naming / location — resolved
 
 - Class `MernDomainDriven`, module
-  `cdd_guidance.practices.engineering_specification.mern_domain_driven.mern_domain_driven:MernDomainDriven`.
-- `engineering_specification/` is a **category folder** — `mern_domain_driven`
-  is the first of what will likely be several stack-specific implementation
-  tools; the category folder owns no code/md of its own, just siblings.
-
-## Next step
-
-Once the two `?` items above are resolved, scaffold for real via
-`create-practice-guidance`: full tree from
-`builders/create_practice_guidance/templates/` (folder is currently just
-this session — `scaffold-vs-patch` says build the full tree), port
-`rules/*.md` prose into `mern_domain_driven.md` § Contexts as written above,
-port `scanners/typescript/*.py` onto `tools.scanners.Scanner` /
-`ScannerCollection`, port `templates/`, and write one worked example under
-`examples/` (recipients or wire-payment slice, matching the old spec's
-worked example).
+  `cdd_guidance.patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven`.
+  Stack-specific implementation tools live under `cdd_guidance/patterns/`, beside
+  `lern_domain_driven`.

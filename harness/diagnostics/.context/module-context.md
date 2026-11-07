@@ -1,0 +1,16 @@
+# harness/diagnostics
+This module reports whether CDD is running and answering: the server health report says which of its long-running parts are up right now, and the probes check that what an install published answers through the live host.
+
+*ServerHealth* tells a person whether the parts of CDD that run beside the MCP server are up — the Session Board app, the graph app, and the hook server — and which port each app answers on, so the server health band in the chat can show them without anyone opening a terminal. A caller asks with the `server-health.report` MCP operation, or through its TypeScript language adapter (`@cdd/harness/diagnostics/server-health`).
+*AgentToolsProbe* checks the space, harness, and tools operations one install published, through the running MCP host; a person runs it as `agent-tools-diagnostics.agent_tools_diagnostics` (`/agent-tools-diagnostics`) and reads the result under `agent_tools` in `diagnostics.json`.
+*GuidanceProbe* checks an install's practice and fidelity instructions and calls each guidance action with probe arguments; a person runs it as `guidance-diagnostics.guidance_diagnostics` (`/guidance-diagnostics`) and reads the result under `guidance` in `diagnostics.json`.
+
+- **Purpose:** Show whether CDD is running: which of its servers and apps are up, for the chat's server health band, and whether what an install published answers through the live host, so a broken publication shows up in a report rather than in a failing chat.
+- **Seam (terms):** ServerHealth; the MCP operations `server-health.report`, `agent-tools-diagnostics.agent_tools_diagnostics`, and `guidance-diagnostics.guidance_diagnostics`; each probe reports a section whose colour is red when any probe in it failed, so the reply and `diagnostics.json` agree.
+- **Dependencies (one-way):** harness/agent_tools (*ToolCall*, which carries the call's project and the MCP host answering it), harness/installation (`@language_adapter`, `@data_field`), harness/installer (*Installer*, made for the call's project, writes the section), harness/mcp, harness/hooks (*HookDaemon*, which answers whether this checkout's hook server is running), harness/guidance, and `scripts/instances.py` (the graph app's ports). *ServerHealth* reads the board app's port as a number and imports nothing from space/kanban. A probe of a guidance action calls it in the main session of a temp project, which *ToolCall* opens. Nothing in the framework imports this module, and it imports nothing above the framework.
+
+## Constraint
+
+The server health report answers only while the MCP server is up, so it says nothing about the server itself; the band in harness/chat-ui/pane works out that the server is lost, or that tools are missing, from how its own calls fail. The band calls the report after every cdd call and every prompt, so the operation stays out of the session log (`@noSessionLog`).
+
+Run a probe through the MCP host answering the diagnostics call (`call.mcp_host`); a probe that builds its own host checks code the chats do not run. A tool that does not answer within the probe's time limit is reported red and left running, so one hung tool never hangs the report. Keep the probes here, above the modules they check, so a module never imports its own checker.

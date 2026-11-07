@@ -8,6 +8,6 @@ accessNode:
 accessHandWrittenAdapter:
   - is: class
   - path: "src/{context}/{object}/{object}-adapter"
-accessMarkedToolset:
+accessAnnotatedToolset:
   - is: class
   - path: "harness/{domain}/{object}"

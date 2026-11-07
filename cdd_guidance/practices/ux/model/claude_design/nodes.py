@@ -13,6 +13,10 @@ from typing import Dict, Iterable, List
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 
+class ClaudeDesignScreensNotReadable(NotImplementedError):
+    """Claude Design screens are placed from the UX map and edited on the canvas; they are never read back into one."""
+
+
 class ClaudeDesignUxMap(UxMap):
     """Screen boards: each prototype screen on its own canvas page, as a plain frame (not a full-window page) sized for
     a desktop screen, so the editor stays around it. The story explorer keeps the ``screens`` page."""
@@ -26,7 +30,7 @@ class ClaudeDesignUxMap(UxMap):
         return json.dumps(self.boards(ux_map.screens), indent=1, ensure_ascii=False)
 
     def parse(self, content: str) -> UxMap:
-        raise NotImplementedError("Claude Design screens are placed from the UX map; they are not read back.")
+        raise ClaudeDesignScreensNotReadable("Claude Design screens are placed from the UX map; they are not read back.")
 
     @classmethod
     def prototype_names(cls, screens: Iterable) -> List[str]:

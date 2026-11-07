@@ -3,34 +3,13 @@ MERN stack (MongoDB / Express / React / Node) on an already-designed vertical sl
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from harness.agent_tools.agent_tools import agent_toolset
-from harness.guidance.guidance import PracticeGuidance
 
-if TYPE_CHECKING:
-    from cdd_guidance.practices.stories.stories import Stories
+from cdd_guidance.patterns.domain_driven_stack import DomainDrivenStack
 
 
 @agent_toolset
-class MernDomainDriven(PracticeGuidance):
-    """# Instructions"""
+class MernDomainDriven(DomainDrivenStack):
+    """The MERN stack: MongoDB, Express, React, and Node, in TypeScript, organized by domain module."""
 
     pattern = "mern_domain_driven"
-
-    def __init__(self) -> None:
-        super().__init__(
-            format="typescript",
-            default_workspace_folder="packages",
-        )
-
-    def _stories(self) -> "Stories":
-        """Stories companion pinned at acceptance_tests fidelity, typescript format."""
-        from cdd_guidance.practices.stories.stories import Stories
-
-        instance = Stories(
-            fidelity="acceptance_tests",
-            format="typescript",
-        )
-        instance.mode = "tool"
-        return instance

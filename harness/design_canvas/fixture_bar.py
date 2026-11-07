@@ -7,7 +7,9 @@ explorer it loads the explorer's scenario, and picking another moves the explore
 moves the explorer to the next story, or lets the link open the next screen when the screen stands alone. See
 ``claude_design.md``."""
 
-BAR = '''<div style="position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; align-items: center; font: 600 12px/1 ui-monospace, Consolas, monospace; z-index: 5">
+from dataclasses import dataclass
+
+BAR ='''<div style="position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; align-items: center; font: 600 12px/1 ui-monospace, Consolas, monospace; z-index: 5">
 <a href="/Main.dc.html" aria-label="Back to the story map" style="padding: 6px 10px; border: 1px solid #2A2A2A; border-radius: 4px; background: #0B0B0B; color: #E8E8ED; text-decoration: none">← Story map</a>
 <select aria-label="Scenario" value="{{scenario}}" onChange="{{pickScenario}}" style="max-width: 520px; padding: 6px 8px; border: 1px solid #E5531A; border-radius: 4px; background: #0B0B0B; color: #E8E8ED">
 <sc-for list="{{scenarioOptions}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}">{{o.label}}</option></sc-for>
@@ -15,15 +17,23 @@ BAR = '''<div style="position: absolute; top: 12px; left: 12px; display: flex; g
 __EDIT_LINK__</div>
 '''
 
+# The fixtures bundle loads after the screen; a screen asks for it this many times, this many milliseconds apart, and
+# then shows itself without one.
+FIXTURE_TRIES = 50
+FIXTURE_WAIT_MILLISECONDS = 100
+
 # Methods every fixture-driven screen shares. The screen supplies STORY, SCENARIO, PATH, and fromFixture(repositories, scenario)
 # returning the state that scenario shows, and paste(field) mapping one pasted field into state.
 METHODS = '''fixtures() {
 return typeof CanvasFixtures !== 'undefined' ? CanvasFixtures : null;
 }
-componentDidMount() {
+whenFixtures(then) {
 let tries = 0;
-const wait = () => { if (this.fixtures() || tries++ > 50) { this.forceUpdate(); return; } setTimeout(wait, 100); };
+const wait = () => { if (this.fixtures() || tries++ >= __TRIES__) { then(this.fixtures()); return; } setTimeout(wait, __WAIT__); };
 wait();
+}
+componentDidMount() {
+this.whenFixtures(() => this.forceUpdate());
 if (this.props.scenario) this.followExplorer();
 }
 componentDidUpdate(previous) {
@@ -33,10 +43,8 @@ this.followExplorer();
 }
 }
 followExplorer() {
-let tries = 0;
 const scenario = this.props.scenario;
-const attempt = () => { if (this.fixtures()) { this.loadFromFixture(scenario); return; } if (tries++ < 50) setTimeout(attempt, 100); };
-attempt();
+this.whenFixtures((fixtures) => { if (fixtures) this.loadFromFixture(scenario); });
 }
 storyName() {
 return this.props.story || '__STORY__';
@@ -101,16 +109,47 @@ def bar(artboard: str = "") -> str:
 
 
 def methods(story: str, scenario: str, path: str) -> str:
-    return METHODS.replace('__STORY__', story).replace('__SCENARIO__', scenario).replace('__PATH__', path)
+    """The shared methods for a screen of *story*, opening on *scenario*, whose dev seed paste is the one for *path*."""
+    named = METHODS.replace("__TRIES__", str(FIXTURE_TRIES)).replace("__WAIT__", str(FIXTURE_WAIT_MILLISECONDS))
+    return named.replace("__STORY__", story).replace("__SCENARIO__", scenario).replace("__PATH__", path)
 
 
-def fixture_screen(title: str, head: str, root_class: str, body: str, story: str, scenario: str, path: str,
-                   own_methods: str, vals: str, width: int = 1600, height: int = 1100, artboard: str = "") -> str:
+@dataclass(frozen=True)
+class ScenarioSource:
+    """Where a screen's fixtures come from: its *story*, the *scenario* it opens on, and the screen *path* its dev seed
+    paste is for."""
+
+    story: str
+    scenario: str
+    path: str
+
+
+@dataclass(frozen=True)
+class FixtureScreen:
     """A whole fixture-driven screen artboard: *head* (stylesheets, the fixtures script), the bar at the top of the
     ``root_class`` element, *body* inside it, and a ``DCLogic`` class with the shared methods, *own_methods* (its
     ``fromFixture`` and ``paste``), and ``renderVals`` returning the bar's values with *vals* (JS object entries;
     ``st`` is the state). *artboard* is the screen's own canvas path, for the explorer's Edit link."""
-    return f'''<!doctype html>
+
+    title: str
+    head: str
+    root_class: str
+    body: str
+    source: ScenarioSource
+    own_methods: str
+    vals: str
+    width: int = 1600
+    height: int = 1100
+    artboard: str = ""
+
+    @property
+    def html(self) -> str:
+        title, head, root_class, body, own_methods, vals = (
+            self.title, self.head, self.root_class, self.body, self.own_methods, self.vals
+        )
+        width, height, artboard, source = self.width, self.height, self.artboard, self.source
+        story, scenario, path = source.story, source.scenario, source.path
+        return f'''<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">

@@ -13,7 +13,7 @@ import re
 from html import escape
 from typing import Dict, List, Optional, Tuple
 
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import (
     GROUP_FILL_COLORS,
     ArrowRouter,
@@ -22,7 +22,14 @@ from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import 
 )
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import EDGE_STYLES, arrow_style
+from cdd_guidance.practices.ddd.model.drawio.drawn_diagram import DrawnCell, DrawnDiagram, label_texts
 from cdd_guidance.practices.ddd.model.markdown.class_cards import ClassCard, plain_properties
+from cdd_guidance.practices.ddd.model.markdown.nodes import (
+    MarkdownAggregate,
+    MarkdownBoundedContext,
+    MarkdownEntity,
+)
+from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
 
 _CONTEXT_STYLE = (
     "rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;dashed=1;dashPattern=8 8;"
@@ -42,6 +49,18 @@ _NAME_LINE = '<p style="margin:0px;text-align:center;"><b>{}</b></p>'
 _REPOSITORY_NAME_LINE = '<p style="margin:0px;text-align:center;font-size:10px;"><b>{}</b></p>'
 _MEMBERS_LINE = '<p style="margin:0px;margin-left:4px;font-size:10px;">{}</p>'
 _RULE = '<hr size="1"/>'
+AGGREGATE_VIEW_PAGE = "page-aggregates"
+_CONTEXT_CELL = "ctx-"
+_AGGREGATE_CELL = "agg-"
+_CARD_CELL = "card-"
+_TITLE_CELL = "t-"
+_GUILLEMETS = "\u00ab\u00bb"
+_CONTEXT_TITLE_INSET = (20, 10)
+_CONTEXT_TITLE_SIZE = (300, 30)
+_AGGREGATE_TITLE_INSET = (20, 8)
+_AGGREGATE_TITLE_SIZE = (260, 30)
+# The page an empty model is drawn on.
+_EMPTY_PAGE = (800, 600)
 
 _PAD = 60
 _TITLE = 50
@@ -53,7 +72,7 @@ _TEXT_PADDING = 18
 _WIDTH_STEP = 20
 _LINE = 14
 _CARD_HEAD = 36
-_AGGREGATES_PER_ROW = 3
+_AGGREGATES_PER_TIER = 3
 _CALL = re.compile(r"^([A-Z]\w*?)(?:Repository)?\.")
 
 
@@ -99,40 +118,49 @@ class DrawIOAggregateModel:
             self._fill = GROUP_FILL_COLORS[index % len(GROUP_FILL_COLORS)]
             self._draw_context(context, layout, left, _PAD + top)
         for context, _layout, _column, _top in placed:
-            for aggregate in _aggregates(context):
+            for aggregate in context.every_aggregate:
                 self._draw_edges(aggregate)
         return self._document(model)
 
+    def contexts_in(self, diagram: DrawnDiagram) -> List[MarkdownBoundedContext]:
+        """Read the aggregate view back: each dashed context box, the aggregate boxes inside it, and their cards."""
+        return _AggregateViewReader(diagram).contexts()
+
     def _layout_context(self, context) -> Tuple[float, float, list]:
-        rows: list = []
-        for index, aggregate in enumerate(_aggregates(context)):
-            if index % _AGGREGATES_PER_ROW == 0:
-                rows.append([])
-            rows[-1].append((aggregate, _aggregate_size(aggregate)))
-        width = max((sum(size[0] for _, size in row) + _GAP * (len(row) - 1) for row in rows), default=_MIN_ROOT_WIDTH)
-        height = sum(max(size[1] for _, size in row) for row in rows) + _GAP * max(len(rows) - 1, 0)
-        return width + _PAD * 2, height + _TITLE + _PAD, rows
+        # Aggregates sit side by side, a few to a tier, tiers one below the other.
+        tiers: list = []
+        for index, aggregate in enumerate(context.every_aggregate):
+            if index % _AGGREGATES_PER_TIER == 0:
+                tiers.append([])
+            tiers[-1].append((aggregate, _aggregate_size(aggregate)))
+        width = max((sum(size[0] for _, size in tier) + _GAP * (len(tier) - 1) for tier in tiers), default=_MIN_ROOT_WIDTH)
+        height = sum(max(size[1] for _, size in tier) for tier in tiers) + _GAP * max(len(tiers) - 1, 0)
+        return width + _PAD * 2, height + _TITLE + _PAD, tiers
 
     def _draw_context(self, context, layout, left: float, top: float) -> None:
-        width, height, rows = layout
-        self._add(f"ctx-{_slug(context.name)}", "", _CONTEXT_STYLE, (left, top, width, height))
-        self._add_title(f"t-ctx-{_slug(context.name)}", context.name, (left + 20, top + 10, 300, 30))
+        width, height, tiers = layout
+        cell_id = f"{_CONTEXT_CELL}{_slug(context.name)}"
+        self._add(cell_id, "", _CONTEXT_STYLE, (left, top, width, height))
+        inset_x, inset_y = _CONTEXT_TITLE_INSET
+        self._add_title(cell_id, context.name, (left + inset_x, top + inset_y, *_CONTEXT_TITLE_SIZE))
         y = top + _TITLE
-        for row in rows:
+        for tier in tiers:
             x = left + _PAD
-            for aggregate, size in row:
+            for aggregate, size in tier:
                 self._draw_aggregate(aggregate, x, y, size)
                 x += size[0] + _GAP
-            y += max(size[1] for _, size in row) + _GAP
+            y += max(size[1] for _, size in tier) + _GAP
 
     def _draw_aggregate(self, aggregate, left: float, top: float, size: Tuple[float, float]) -> None:
-        self._add(f"agg-{_slug(aggregate.name)}", "", _AGGREGATE_STYLE, (left, top, size[0], size[1]))
-        self._add_title(f"t-agg-{_slug(aggregate.name)}", aggregate.name, (left + 20, top + 8, 260, 30))
+        cell_id = f"{_AGGREGATE_CELL}{_slug(aggregate.name)}"
+        self._add(cell_id, "", _AGGREGATE_STYLE, (left, top, size[0], size[1]))
+        inset_x, inset_y = _AGGREGATE_TITLE_INSET
+        self._add_title(cell_id, aggregate.name, (left + inset_x, top + inset_y, *_AGGREGATE_TITLE_SIZE))
         root, repository, members = _split(aggregate)
         y = top + _TITLE
         if root is not None:
             box = (left + _PAD, y, _root_width(root, repository), _card_height(root, repository))
-            cell = self._add_card(f"card-{_slug(root.node.name)}", _card_html(root, repository), box)
+            cell = self._add_card(f"{_CARD_CELL}{_slug(root.node.name)}", _card_html(root, repository), box)
             self._card_ids[root.node.name] = cell
             self._root_ids[root.node.name] = cell
             self._root_ids[aggregate.name] = cell
@@ -140,7 +168,7 @@ class DrawIOAggregateModel:
         width = _members_width(members)
         for member in members:
             height = _card_height(member, None)
-            cell = self._add_card(f"card-{_slug(aggregate.name)}-{_slug(member.node.name)}", _card_html(member, None),
+            cell = self._add_card(f"{_CARD_CELL}{_slug(aggregate.name)}-{_slug(member.node.name)}", _card_html(member, None),
                                   (x, y, width, height))
             self._card_ids.setdefault(member.node.name, cell)
             y += height + _GAP
@@ -164,9 +192,8 @@ class DrawIOAggregateModel:
             for target, label in _dependencies(card, local):
                 self._edge(card.node.name, target, "association", self._root_ids, label)
         for integration in aggregate.integrations:
-            target = _integration_root(integration)
-            if target:
-                self._edge(root.node.name, target, "association", self._root_ids)
+            if integration.target_name:
+                self._edge(root.node.name, integration.target_name, "association", self._root_ids)
 
     def _edge(self, source: str, target: str, kind: str, targets: Dict[str, str], label: str = "") -> None:
         source_id = self._card_ids.get(source)
@@ -179,8 +206,8 @@ class DrawIOAggregateModel:
         self._cells.append(_Cell(cell_id, value, style, box))
         return cell_id
 
-    def _add_title(self, cell_id: str, title: str, box) -> None:
-        self._add(cell_id, title, _TITLE_STYLE, box)
+    def _add_title(self, container_id: str, title: str, box) -> None:
+        self._add(f"{_TITLE_CELL}{container_id}", title, _TITLE_STYLE, box)
         self._titles.append(Geometry(*box))
 
     def _add_card(self, cell_id: str, value: str, box) -> str:
@@ -203,13 +230,13 @@ class DrawIOAggregateModel:
         )
 
     def _document(self, model) -> str:
-        width = max((cell.box[0] + cell.box[2] for cell in self._cells), default=800) + _PAD
-        height = max((cell.box[1] + cell.box[3] for cell in self._cells), default=600) + _PAD
+        width = max((cell.box[0] + cell.box[2] for cell in self._cells), default=_EMPTY_PAGE[0]) + _PAD
+        height = max((cell.box[1] + cell.box[3] for cell in self._cells), default=_EMPTY_PAGE[1]) + _PAD
         cells = "".join(cell.xml() for cell in self._cells) + self._arrow_cells()
         title = escape(getattr(model, "title", "") or "Aggregates + operations")
         return (
             '<mxfile host="cdd">'
-            f'<diagram name="{title}" id="page-aggregates">'
+            f'<diagram name="{title}" id="{AGGREGATE_VIEW_PAGE}">'
             f'<mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" '
             f'pageScale="1" pageWidth="{int(width)}" pageHeight="{int(height)}" math="0" shadow="0">'
             f'<root><mxCell id="0"/><mxCell id="1" parent="0"/>{cells}</root>'
@@ -217,23 +244,70 @@ class DrawIOAggregateModel:
         )
 
 
-def has_class_cards(model) -> bool:
-    return any(getattr(aggregate, "cards", None) for context in model.contexts for aggregate in _aggregates(context))
+class _AggregateViewReader:
+    """Reads the aggregate view's boxes back into contexts, aggregates, and class cards, by which box holds which."""
+
+    def __init__(self, diagram: DrawnDiagram) -> None:
+        self.diagram = diagram
+        self.boxes = diagram.boxes_in()
+
+    def contexts(self) -> List[MarkdownBoundedContext]:
+        contexts = [self._context(box, order) for order, box in enumerate(self._boxes(_CONTEXT_CELL), start=1)]
+        aggregates = [self._aggregate(box, contexts) for box in self._boxes(_AGGREGATE_CELL)]
+        for card in self._boxes(_CARD_CELL):
+            holder = next((aggregate for box, aggregate in aggregates if box.holds(card)), None)
+            if holder is not None:
+                holder.cards.extend(_cards_drawn_in(card))
+        for _box, aggregate in aggregates:
+            aggregate.take_root_card()
+            if aggregate.root is None:
+                aggregate.take_root(MarkdownEntity(aggregate.name, 1))
+        return [context for _box, context in contexts]
+
+    def _boxes(self, prefix: str) -> List[DrawnCell]:
+        return [box for box in self.boxes if box.cell_id.startswith(prefix)]
+
+    def _title(self, box: DrawnCell) -> str:
+        title = self.diagram.cell(f"{_TITLE_CELL}{box.cell_id}")
+        return title.value if title is not None else ""
+
+    def _context(self, box: DrawnCell, order: int) -> Tuple[DrawnCell, MarkdownBoundedContext]:
+        return box, MarkdownBoundedContext(self._title(box), order)
+
+    def _aggregate(self, box: DrawnCell, contexts) -> Tuple[DrawnCell, MarkdownAggregate]:
+        context = next(context for context_box, context in contexts if context_box.holds(box))
+        aggregate = MarkdownAggregate(self._title(box), len(context.aggregates) + 1)
+        context.append_aggregate(aggregate)
+        return box, aggregate
 
 
-def _aggregates(context) -> list:
-    found = list(context.aggregates)
-    for child in context.contexts:
-        found.extend(_aggregates(child))
-    return found
+def _cards_drawn_in(box: DrawnCell) -> List[ClassCard]:
+    """A drawn card: its stereotypes, name, properties, and operations, then the repository the root card carries."""
+    sections = box.value.split(_RULE)
+    cards = [_card_drawn(sections[0], sections[1:3])]
+    if len(sections) >= 5:
+        cards.append(_card_drawn(sections[3], sections[4:5], as_repository=True))
+    return cards
 
 
-def _split(aggregate) -> Tuple[Optional[ClassCard], Optional[ClassCard], List[ClassCard]]:
-    cards = list(getattr(aggregate, "cards", []) or [])
-    root = next((card for card in cards if card.is_root), None)
-    repository = next((card for card in cards if card.is_repository), None)
-    members = [card for card in cards if card is not root and card is not repository]
-    return root, repository, members
+def _card_drawn(heading: str, members: List[str], as_repository: bool = False) -> ClassCard:
+    # The repository part of a root card holds only operations; a card holds properties, then operations.
+    texts = label_texts(heading)
+    card = ClassCard.from_name(texts[-1], [text.strip(_GUILLEMETS) for text in texts[:-1]])
+    sections = ([""] if as_repository else []) + members
+    for line in label_texts(sections[0]):
+        card.add_member(line, as_operation=False)
+    for line in label_texts(sections[1] if len(sections) > 1 else ""):
+        card.add_member(line, as_operation=True)
+    return card
+
+
+def has_class_cards(model: BoundedContextMap) -> bool:
+    return any(isinstance(aggregate, MarkdownAggregate) and aggregate.cards for aggregate in model.every_aggregate)
+
+
+def _split(aggregate: MarkdownAggregate) -> Tuple[Optional[ClassCard], Optional[ClassCard], List[ClassCard]]:
+    return aggregate.root_card, aggregate.repository, aggregate.member_cards
 
 
 def _aggregate_size(aggregate) -> Tuple[float, float]:
@@ -321,14 +395,6 @@ def _dependencies(card: ClassCard, local: set[str]) -> List[Tuple[str, str]]:
         if getattr(prop, "stereotype", "") == "association" and target and target[0].isupper() and target not in local:
             found.append((target, prop.name))
     return found
-
-
-def _integration_root(integration) -> str:
-    target = (integration.target or "").replace("→", "").replace("->", "")
-    parts = [part.strip() for part in re.split(r"[·•]", target) if part.strip()]
-    if not parts:
-        return ""
-    return parts[-1].split("(", 1)[0].strip()
 
 
 def _slug(name: str) -> str:

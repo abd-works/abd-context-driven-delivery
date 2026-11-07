@@ -1,4 +1,1 @@
-"""iterate — Iterate toolset."""
-from iterate.iterate import Iterate
-
-__all__ = ["Iterate"]
+"""The Iterate action. Import its classes from their modules, such as cdd_guidance.actions.iterate.iterate."""

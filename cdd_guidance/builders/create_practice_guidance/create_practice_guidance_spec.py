@@ -26,7 +26,7 @@ with description("CreatePracticeGuidance meta generator"):
 
     with context("that has been created"):
         with it("should key the index from the install folder name"):
-            expect(self.generator.context_index_key).to(equal("create_practice_guidance"))
+            expect(self.generator.key).to(equal("create_practice_guidance"))
 
         with it("should default the workspace folder to the repo root"):
             expect(type(self.generator).default_workspace_folder).to(equal("."))

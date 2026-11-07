@@ -53,7 +53,7 @@ class LatestRelease:
 
     def _publish_screenshots(self) -> None:
         """One commit with no parent, holding only this release's screenshots, force-pushed over the last one."""
-        folder = f".sessions/{self.release}/{E2E_RESULTS_FOLDER}"
+        folder = self._repository.path_from_top(self._results(self.release))
         with tempfile.TemporaryDirectory() as scratch:
             index = {"GIT_INDEX_FILE": str(Path(scratch) / "index")}
             self._git("add", "--force", "--", f":(glob){folder}/**/*.png", env=index)
@@ -75,7 +75,7 @@ class LatestRelease:
         return older
 
     def _commit_removal(self, older: list[str]) -> None:
-        folders = [f".sessions/{release}/{E2E_RESULTS_FOLDER}" for release in older]
+        folders = [self._repository.path_from_top(self._results(release)) for release in older]
         self._git("rm", "-r", "--cached", "--quiet", "--ignore-unmatch", "--", *folders)
         if not self._git("status", "--porcelain", "--", *folders):
             return
@@ -83,4 +83,4 @@ class LatestRelease:
         self._git("push", "origin", "HEAD")
 
     def _git(self, *args: str, env: dict[str, str] | None = None) -> str:
-        return type(self._repository).git(self._repository.root, *args, env=env, timeout=_LARGE_TRANSFER_SECONDS)
+        return self._repository.git.run(*args, env=env, timeout=_LARGE_TRANSFER_SECONDS)

@@ -1,21 +1,12 @@
-# Drawio (class_model/drawio)
+# cdd_guidance/practices/clean_engineering/model/drawio
+*Drawio* turns a Clean Engineering class model into a draw.io diagram — a modules view or a class view, chosen from what the model holds — and checks the diagram against the layout rules in `drawio.md`. `create_diagram(content, path)` writes the diagram; `render(content, path)` creates it, scans it, and, when definite layout failures remain, has the layout generator repaired by a sub-agent; `scan(paths)` reports layout rule violations on existing `.drawio` files. *CleanEngineering* is given a *Drawio* and uses it whenever its format is draw.io.
 
-## Purpose
+*DrawIOCleanEngineeringModel* is the draw.io format of the class model: it loads a diagram into the same modules and classes every other format reads, and saves them back. With `keep_positioning`, an updated diagram keeps the positions of the classes and the routes of the relationships already drawn, and lays out only what is new, so a person's arrangement survives regeneration. The diagram's own model is in [drawio-model.md](drawio-model.md).
 
-Miniature kit for Clean Engineering Draw.io class / modules diagrams: create the diagram, scan layout rules from `drawio.md`, and repair the layout generator on definitive failures. Also hosts the `DrawIOCleanEngineeringModel` parse/render channel.
-
-## Seam
-
-`Drawio.render` (create → validate/scan → repair sub-agent); `Drawio.create_diagram(..., keep_positioning=False)`; `Drawio.scan` / `validate` / `repair`; channel `DrawIOCleanEngineeringModel.parse` / `.render(..., keep_positioning=False)`.
-
-## Public API
-
-`Drawio`, `DrawIOCleanEngineeringModel`; `keep_positioning` on render/create_diagram (existing class positions and relationship routing stay put; new classes use `CardPlacement` and new arrows `ArrowRouter`, both in `model/diagram/class_layout.py`); layout scanners under `scanners/` (`*_scanner.py`); fixtures under `examples/evals/<case>/{faultyAsset,repairedAsset}.drawio`.
+- **Purpose:** Draw the class model as a readable draw.io diagram, and keep the diagram generator honest against its layout rules.
+- **Seam (terms):** Drawio, DrawIOCleanEngineeringModel, `create_diagram`, `render`, `scan`, `keep_positioning`
+- **Dependencies (one-way):** `cdd_guidance/practices/clean_engineering/model` (the class model and its shared diagram layout), `harness/graph` (its scanners and rules are graph rules), `harness/installation`, `harness/agent_tools`, `harness/markdown`. The class model does not import it back.
 
 ## Constraint
 
-Judgment rules in `drawio.md` (e.g. `module-spatial-cohesion`, `ull-bullets-become-rows`, `aggregate-layout-cohesion`) have no scanner — validate covers them as critical-judge prose. `stereotype-above-class-name` is mechanical and has a scanner.
-
-## Dependencies
-
-`harness.agent_tools` (`@action` / `@agentic_toolset`); `DrawioScanner` in `model/drawio/scanners/_drawio_base.py`; `cdd_guidance.practices.actions.repair` (`Repair`); stdlib XML via `drawio_tools`.
+Callers ask *Drawio* to create or scan a path; they never write mxCell attributes, waypoints, or HTML themselves. A layout failure is fixed in the layout generator, not by editing one diagram. Rules in `drawio.md` with no scanner, such as `module-spatial-cohesion`, are judged by validate as written rules.

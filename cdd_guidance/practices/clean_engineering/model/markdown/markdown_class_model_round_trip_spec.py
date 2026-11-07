@@ -70,7 +70,7 @@ with description("a domain model Markdown document") as self:
     with context("with a new operation on one class"):
         with before.each:
             card = self.parsed.modules[1].classes[2]
-            from cdd_guidance.practices.clean_engineering.model.base_class_model import Operation
+            from cdd_guidance.practices.clean_engineering.model.operation import Operation
             card.operations.append(Operation(name="retire", parameters=["plan: Plan"], return_type="void"))
             self.rendered = MarkdownCleanEngineeringModel().render(self.parsed)
 

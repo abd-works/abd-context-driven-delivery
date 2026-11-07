@@ -3,6 +3,8 @@
 /**
  * Paradise *Plan* `<<represents>>` ++MavenirProductOffering++.
  */
+@AggregateRoot()
+@Entity()
 class Plan {
   id: string;
   // after Midtier map
@@ -24,6 +26,7 @@ class Plan {
 /**
  * Maps `PortalGateway` catalog rows to Paradise *Plan*. Midtier maps; it is not a type.
  */
+@Repository()
 class PlanRepository {
   // << aggregation >>
   plans: Collection<Plan>;
@@ -51,6 +54,8 @@ class PlanRepository {
   }
 }
 
+@System()
+@Entity()
 class MavenirProductOffering {
   id: string;
   name: string;
@@ -70,6 +75,8 @@ class MavenirProductOffering {
 /**
  * Mavenir `portalGateway` catalog. `productOfferings/100000000?channelName=CRM`.
  */
+@Service()
+@System()
 class PortalGateway {
   constructor() {
   }

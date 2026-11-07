@@ -19,13 +19,10 @@ export async function filledPrompt($: EngineInterface, text: string): Promise<st
   return answer.isFilled ? '' : `the prompt box did not take it (${answer.refusal ?? 'refused by a hook'})`
 }
 
-// Puts slash commands in the prompt box the moment a button is pressed, as the handoff button does, and the person
-// presses Enter to send them. Running them straight away waits until the chat is idle, so a press showed nothing for a
-// long time. A prompt holds one slash command, so the first goes in the box and the person is told the rest.
-export async function promptCommands($: EngineInterface, commands: string[]): Promise<void> {
-  const [first, ...rest] = commands
-  if (!first) return
-  const unfilled = await filledPrompt($, first).catch(reasonOf)
-  if (unfilled) return $.ui.toast(`${first} could not go in the prompt box: ${unfilled}`)
-  if (rest.length) $.ui.toast(`After ${first}, send ${rest.join(', then ')}`)
+// Puts a slash command in the prompt box the moment a button is pressed, as the handoff button does, and the person
+// presses Enter to send it. Running it straight away waits until the chat is idle, so a press showed nothing for a
+// long time.
+export async function promptCommand($: EngineInterface, command: string): Promise<void> {
+  const unfilled = await filledPrompt($, command).catch(reasonOf)
+  if (unfilled) $.ui.toast(`${command} could not go in the prompt box: ${unfilled}`)
 }

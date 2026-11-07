@@ -1,159 +1,43 @@
-"""In-chat agent BDD harness - fulfills instruct steps via inbox response files."""
+"""In-chat agent BDD harness - the agent answers each step through inbox files a chat subagent fills."""
 from __future__ import annotations
 
-import sys
 import time
-from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
 
-import agent_bdd.conf  # noqa: F401 - secrets + import paths
-
-from agent_bdd.agent_bdd_common import (
-    AgentHarnessError,
-    AgentJudgeError,
-    AgentResult,
-    ChatInboxPending,
-    HarnessLog,
-    INBOX_POLL_SECONDS,
-    JUDGE_LAUNCH,
-    JUDGE_TASK,
-    JudgeResult,
-    RunResponse,
-    ToolsRunYaml,
-    _ShellCapture,
-    yaml_from_prompt,
-)
-from agent_bdd.yaml_fence import YamlFence
+from cdd_guidance.practices.agent_bdd.agent_bdd_common import INBOX_POLL_SECONDS, AgentResult, ChatInboxPending
+from cdd_guidance.practices.agent_bdd.agent_block import AgentBlock
 
 
-class _ChatAgentBlock:
-    """Agent session backed by inbox files for Cursor chat subagents."""
+class ChatAgentBlock(AgentBlock):
+    """An agent session backed by inbox files for Cursor chat subagents: each prompt is written to the inbox, and the
+    answer is the response file a subagent writes beside it."""
 
-    def __init__(self, workspace: Path, session_file: Path) -> None:
-        self._workspace = workspace.resolve()
-        self._session_file = session_file
-        self._yaml = YamlFence()
-        self._log = HarnessLog("agent_chat_bdd")
-        self._log_dir = session_file.parent / "logs" / session_file.stem
-        self._instruct_count = 0
-        self.last_shell_captures: list[_ShellCapture] = []
-        self.session_shell_captures: list[_ShellCapture] = []
+    log_name = "agent_chat_bdd"
 
-    def _write_artifact(self, name: str, content: str) -> Path:
-        self._log_dir.mkdir(parents=True, exist_ok=True)
-        path = self._log_dir / name
-        path.write_text(content, encoding="utf-8")
-        return path
+    def _answer(self, prefix: str, prompt: str, timeout_seconds: int) -> AgentResult:
+        return AgentResult(exit_code=0, text=self._wait_for_inbox(prefix, prompt, timeout_seconds), stderr="", elapsed_seconds=0.0)
 
-    def _next_instruct_prefix(self, label: str) -> str:
-        self._instruct_count += 1
-        return f"instruct-{self._instruct_count:03d}-{label}"
+    def _judge_answer(self, launch_prompt: str, timeout_seconds: int) -> AgentResult:
+        judge = ChatAgentBlock(self._workspace, self._session_file.with_name(f"{self._session_file.stem}-judge.json"))
+        return judge._answer("judge", launch_prompt, timeout_seconds)
 
-    def assert_authenticated(self) -> None:
-        return None
-
-    def instruct(self, prompt: str, *, timeout_seconds: int = 300) -> AgentResult:
-        prefix = self._next_instruct_prefix("setup")
-        self._log.write(f"{prefix} prompt: {prompt[:120]}{'...' if len(prompt) > 120 else ''}")
-        self._write_artifact(f"{prefix}-prompt.txt", prompt)
-        stdout = self._wait_for_inbox(prefix, prompt, timeout_seconds=timeout_seconds)
-        self._write_artifact(f"{prefix}-response.txt", stdout)
-        return AgentResult(exit_code=0, text=stdout, stderr="", elapsed_seconds=0.0)
-
-    def instruct_use_tool(
-        self,
-        prompt: str,
-        *,
-        timeout_seconds: int = 300,
-        require_agent_shell: bool = False,
-    ) -> RunResponse:
-        _ = timeout_seconds, require_agent_shell
-        request_yaml = yaml_from_prompt(prompt)
-        if not request_yaml:
-            raise AgentHarnessError("prompt must contain a toolset: run request block")
-        prefix = self._next_instruct_prefix("run")
-        self._write_artifact(f"{prefix}-prompt.txt", prompt)
-        self._write_artifact(f"{prefix}-stdin.yaml", request_yaml)
-        cli_output = ToolsRunYaml(self._workspace, prefix).run_request(request_yaml)
-        return self._finalize_run_response(prefix, cli_output)
-
-    def instruct_run(self, prompt: str, *, timeout_seconds: int = 300) -> RunResponse:
-        """Back-compat alias for ``instruct_use_tool``."""
-        return self.instruct_use_tool(prompt, timeout_seconds=timeout_seconds)
-
-    def ai_judge(self, output: str, rubric: str, *, timeout_seconds: int = 180) -> JudgeResult:
-        self._log.write("judge rubric:")
-        sys.__stdout__.write(rubric + "\n")
-        sys.__stdout__.flush()
-        self._write_artifact("judge-rubric.txt", rubric)
-        self._write_artifact("judge-output.txt", output)
-        task_text = JUDGE_TASK.format(rubric=rubric, output=output)
-        task_path = self._write_artifact("judge-prompt.txt", task_text)
-        launch_prompt = JUDGE_LAUNCH.format(path=task_path.relative_to(self._workspace).as_posix())
-        self._write_artifact("judge-launch.txt", launch_prompt)
-        judge_session = self._session_file.with_name(f"{self._session_file.stem}-judge.json")
-        judge_block = _ChatAgentBlock(self._workspace, judge_session)
-        judge_stdout = judge_block._wait_for_inbox("judge", launch_prompt, timeout_seconds=timeout_seconds)
-        self._write_artifact("judge-response.txt", judge_stdout)
-        parsed = JudgeResult.from_stdout(judge_stdout)
-        self._write_artifact("judge-verdict.txt", f"{parsed.verdict}\n\n{parsed.reason}\n")
-        if parsed.verdict == "ERROR":
-            raise AgentJudgeError(
-                f"judge returned no parseable JSON verdict: {parsed.reason}",
-                prefix="judge",
-                stdout=judge_stdout,
-                log_dir=self._log_dir,
-            )
-        self._log.write(f"judge verdict: {parsed.verdict} - {parsed.reason}")
-        return parsed
-
-    def _finalize_run_response(self, prefix: str, cli_output: str) -> RunResponse:
-        self._write_artifact(f"{prefix}-cli-output.yaml", cli_output)
-        ai_response = RunResponse.from_cli_output(cli_output)
-        self._write_artifact(
-            f"{prefix}-ai-response.yaml",
-            self._yaml.dump_manifest(
-                {k: v for k, v in {
-                    "ok": ai_response.ok,
-                    "toolset": ai_response.toolset,
-                    "tool": ai_response.tool,
-                    "action": ai_response.action,
-                    "result": ai_response.result,
-                    "instructions": ai_response.instructions,
-                    "tools": ai_response.tools,
-                    "arguments": ai_response.arguments,
-                    "resources": ai_response.resources,
-                }.items() if v is not None}
-            ),
-        )
-        return ai_response
-
-    def _wait_for_inbox(self, prefix: str, prompt: str, *, timeout_seconds: int) -> str:
+    def _wait_for_inbox(self, prefix: str, prompt: str, timeout_seconds: int) -> str:
         response_path = self._prepare_inbox(prefix, prompt)
         text = self._poll_inbox_response(response_path, timeout_seconds)
         if text:
             return text
-        raise ChatInboxPending(
-            f"timed out waiting for inbox response at {response_path}",
-            prefix=prefix,
-            log_dir=self._log_dir,
-        )
+        raise ChatInboxPending(f"timed out waiting for inbox response at {response_path}", prefix=prefix, log_dir=self._log_dir)
 
     def _prepare_inbox(self, prefix: str, prompt: str) -> Path:
         inbox_dir = self._log_dir / "inbox"
         inbox_dir.mkdir(parents=True, exist_ok=True)
         slug = prefix.replace("/", "-")
-        prompt_path = inbox_dir / f"{slug}-prompt.txt"
         response_path = inbox_dir / f"{slug}-response.txt"
         ready_path = inbox_dir / f"{slug}-ready.txt"
-        prompt_path.write_text(prompt, encoding="utf-8")
+        (inbox_dir / f"{slug}-prompt.txt").write_text(prompt, encoding="utf-8")
         if response_path.is_file():
             response_path.unlink()
-        ready_path.write_text(
-            f"Write agent response to:\n{response_path}\n",
-            encoding="utf-8",
-        )
+        ready_path.write_text(f"Write agent response to:\n{response_path}\n", encoding="utf-8")
         self._log.write(f"inbox ready: {ready_path}")
         return response_path
 
@@ -166,10 +50,3 @@ class _ChatAgentBlock:
                     return text
             time.sleep(INBOX_POLL_SECONDS)
         return ""
-
-
-    @classmethod
-    @contextmanager
-    def opened(cls, workspace: Path, session_file: Path) -> Iterator["_ChatAgentBlock"]:
-        """Establish one in-chat agent session backed by inbox files."""
-        yield cls(workspace, session_file)

@@ -7,11 +7,12 @@ import re
 import sys
 from pathlib import Path
 
-_REPO = Path(__file__).resolve().parents[2]
+# The repository root, so this script imports the stories model by its one package name, as every other caller does.
+_REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from cdd_guidance.practices.stories.model.javascript.spec_file import render_story_spec_file
+from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptStory
 from cdd_guidance.practices.stories.model.story_model import Example, StepType, Scenario, Step, Story
 
 
@@ -50,9 +51,9 @@ def dict_to_story(data: dict) -> Story:
             scenario.steps.append(Step(text, StepType.THEN, order))
     if flow.get("examples"):
         scenario.is_outline = True
-        for index, row in enumerate(flow["examples"], start=1):
-            label = str(row.get("example") or row.get("name") or f"example-{index}")
-            scenario.examples.append(Example(label, index, dict(row)))
+        for index, example in enumerate(flow["examples"], start=1):
+            label = str(example.get("example") or example.get("name") or f"example-{index}")
+            scenario.examples.append(Example(label, index, dict(example)))
     story.scenarios.append(scenario)
     return story
 
@@ -64,7 +65,7 @@ def emit_story_javascript(
 ) -> Path:
     """Write `<stem>.js` next to a Python story-dict file using the Stories JS renderer."""
     story = dict_to_story(load_story_dict(path))
-    body = render_story_spec_file(story, relative_types_path=relative_types_path)
+    body = JavaScriptStory.create(story, relative_types_path=relative_types_path)
     body += f"\nexport const storyNames = ['{story.name}']\n"
     out = path.with_suffix(".js")
     out.write_text(body, encoding="utf-8")

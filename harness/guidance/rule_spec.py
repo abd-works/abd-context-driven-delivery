@@ -16,6 +16,7 @@ from mamba import before, context, description, it
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
+from harness.hooks.hook_server import HookPayload
 
 
 with description("a shared rules section containing rule bullets") as self:
@@ -26,23 +27,21 @@ with description("a shared rules section containing rule bullets") as self:
         with it("should parse bullets into a rules collection"):
             expect("sample-rule-one" in self.guidance.rules.entries).to(equal(True))
 
-        with it("should expose appliesTo from the rules yaml fence"):
-            expect(self.guidance.rules.appliesTo.always_apply).to(equal(False))
-            expect(self.guidance.rules.appliesTo.globs).to(contain("**/*sample*"))
+        with it("should say which files the rules apply to from the rules yaml fence"):
+            expect(self.guidance.rules.applies_to.always_apply).to(equal(False))
+            expect(self.guidance.rules.applies_to.globs).to(contain("**/*sample*"))
 
-        with it("should bind globs from the yaml fence onto glob"):
-            expect(self.guidance.rules.glob).to(contain("**/*sample*"))
 
         with it("should match a path against glob"):
-            expect(self.guidance.rules.matches("pkg/foo_sample_bar.py")).to(equal(True))
-            expect(self.guidance.rules.matches("pkg/other.py")).to(equal(False))
+            expect(self.guidance.rules.applies_to.matches("pkg/foo_sample_bar.py")).to(equal(True))
+            expect(self.guidance.rules.applies_to.matches("pkg/other.py")).to(equal(False))
 
         with it("should match any file when always_apply and the bag has no glob"):
             from harness.guidance.rule import AppliesTo, RulesCollection
 
             bag = RulesCollection(applies_to=AppliesTo(always_apply=True))
-            expect(bag.matches("pkg/notes.md")).to(equal(True))
-            expect(bag.matches("C:/dev/repo/src/app.py")).to(equal(True))
+            expect(bag.applies_to.matches("pkg/notes.md")).to(equal(True))
+            expect(bag.applies_to.matches("C:/dev/repo/src/app.py")).to(equal(True))
 
         with it("should not treat a trailing directory ** as every filename"):
             from harness.guidance.rule import AppliesTo, RulesCollection
@@ -50,8 +49,8 @@ with description("a shared rules section containing rule bullets") as self:
             bag = RulesCollection(
                 applies_to=AppliesTo(globs="**/*agent_spec*,**/.agent_bdd_sessions/**")
             )
-            expect(bag.matches("harness/guidance/rule.py")).to(equal(False))
-            expect(bag.matches("foo/bar_agent_spec.py")).to(equal(True))
+            expect(bag.applies_to.matches("harness/guidance/rule.py")).to(equal(False))
+            expect(bag.applies_to.matches("foo/bar_agent_spec.py")).to(equal(True))
 
         with it("should not match by filename alone when the glob names a path prefix"):
             from harness.guidance.rule import AppliesTo, RulesCollection
@@ -59,35 +58,35 @@ with description("a shared rules section containing rule bullets") as self:
             bag = RulesCollection(
                 applies_to=AppliesTo(globs="packages/**/*-server.ts")
             )
-            expect(bag.matches("packages/onboard/carts/cart-server.ts")).to(equal(True))
-            expect(bag.matches("src/customer/customer-server.ts")).to(equal(False))
+            expect(bag.applies_to.matches("packages/onboard/carts/cart-server.ts")).to(equal(True))
+            expect(bag.applies_to.matches("src/customer/customer-server.ts")).to(equal(False))
 
         with it("should not inject AgentBdd rules for a production python file"):
             from cdd_guidance.practices.agent_bdd.agent_bdd import AgentBdd
 
             result = AgentBdd().rules.inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Write",
                     "tool_input": {"path": "harness/guidance/rule.py"},
-                }
+                })
             )
             expect(result).to(equal({}))
 
         with it("should inject rules markdown when the written path matches"):
             result = self.guidance.rules.inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Write",
                     "tool_input": {"path": "pkg/foo_sample_bar.py"},
-                }
+                })
             )
             expect(result).to(equal({}))
 
         with it("should ask the agent to check an edit it just made"):
             result = self.guidance.rules.inject_rules(
-                {
+                HookPayload({
                     "hook_event_name": "afterFileEdit",
                     "file_path": "pkg/foo_sample_bar.py",
-                }
+                })
             )
             expect(result).to(equal({}))
 
@@ -99,12 +98,12 @@ with description("a shared rules section containing rule bullets") as self:
             try:
                 with TemporaryDirectory() as tmp:
                     self.guidance.rules.inject_rules(
-                        {
+                        HookPayload({
                             "hook_event_name": "afterFileEdit",
                             "file_path": "pkg/foo_sample_bar.py",
                             "conversation_id": "chat-a",
                             "workspace_roots": [tmp],
-                        }
+                        })
                     )
                     expect((Path(tmp) / ".cursor" / "prompt-notify-toast.json").is_file()).to(
                         equal(False)
@@ -119,26 +118,26 @@ with description("a shared rules section containing rule bullets") as self:
             notice = _REPO_ROOT / ".cursor" / "prompt-notify-toast.json"
             before = notice.read_text(encoding="utf-8") if notice.is_file() else ""
             self.guidance.rules.inject_rules(
-                {
+                HookPayload({
                     "hook_event_name": "afterFileEdit",
                     "file_path": "pkg/foo_sample_bar.py",
-                }
+                })
             )
             after = notice.read_text(encoding="utf-8") if notice.is_file() else ""
             expect(after).to(equal(before))
 
         with it("should not inject rules when the tool only reads the file"):
             result = self.guidance.rules.inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Read",
                     "tool_input": {"path": "pkg/foo_sample_bar.py"},
-                }
+                })
             )
             expect(result).to(equal({}))
 
         with it("should not inject when the payload has a path and no edit"):
             result = self.guidance.rules.inject_rules(
-                {"tool_input": {"path": "pkg/foo_sample_bar.py"}}
+                HookPayload({"tool_input": {"path": "pkg/foo_sample_bar.py"}})
             )
             expect(result).to(equal({}))
 
@@ -146,10 +145,10 @@ with description("a shared rules section containing rule bullets") as self:
             from harness.guidance.rule import RulesCollection
 
             result = RulesCollection().inject_rules(
-                {
+                HookPayload({
                     "tool_name": "Write",
                     "tool_input": {"path": "cdd_guidance/actions/validate/validate.py"},
-                }
+                })
             )
             expect(result).to(equal({}))
 
@@ -191,3 +190,28 @@ with description("a shared rules section containing rule bullets") as self:
             from cdd_guidance.practices.bdd.bdd import Bdd
 
             expect(Bdd(fidelity="behavior").rules.markdown_block).not_to(contain(".ql"))
+
+
+with description("a rules collection a session log names"):
+    with context("that holds one fidelity's rules"):
+        with it("should name its practice"):
+            from cdd_guidance.practices.bdd.bdd import Bdd
+
+            expect(Bdd().fidelities["development"].rules.practice_key).to(equal("bdd"))
+
+        with it("should name that fidelity"):
+            from cdd_guidance.practices.bdd.bdd import Bdd
+
+            expect(Bdd(fidelity="behavior").fidelities["development"].rules.fidelity_name).to(equal("development"))
+
+    with context("that holds a practice's shared rules"):
+        with it("should name the fidelity the practice is working at"):
+            from cdd_guidance.practices.bdd.bdd import Bdd
+
+            expect(Bdd(fidelity="realization").rules.fidelity_name).to(equal("realization"))
+
+    with context("that belongs to no practice"):
+        with it("should name no practice"):
+            from harness.guidance.rule import RulesCollection
+
+            expect(RulesCollection().practice_key).to(equal(""))

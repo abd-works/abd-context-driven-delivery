@@ -26,7 +26,7 @@ section: body
 | ++Delete Ticket name++ | Stories | verb-noun-format | harness/.context/story-map.md | 90 to 92 |
 | ++Move Ticket size++ | Stories | right-size-story-nodes | harness/.context/story-map.md | 148 to 150 |
 | ++Ticket details budget++ | UX | screen-story-budget | harness/.context/information-architecture.drawio | 8 to 10 |
-| ++Activate Ticket name++ | Clean Engineering | use-intention-revealing-names | harness/kanban/ticket.py | 212 to 213 |
+| ++Activate Ticket name++ | Clean Engineering | use-intention-revealing-names | space/kanban/ticket.py | 212 to 213 |
 
 ## Story: Refresh Graph After Generate
 
@@ -131,7 +131,7 @@ section: body
 | scope | fixed | left |
 | --- | --- | --- |
 | the rule verb-noun-format | Ticket Archive name and Delete Ticket name | 3 |
-| the file harness/kanban/ticket.py | Activate Ticket name | 4 |
+| the file space/kanban/ticket.py | Activate Ticket name | 4 |
 | the Move Ticket size violation | Move Ticket size | 4 |
 
 #### Scenario: Fix with no violations does nothing

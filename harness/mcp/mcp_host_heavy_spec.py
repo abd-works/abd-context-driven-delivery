@@ -1,4 +1,4 @@
-"""BDD spec for MCP host JSON Schema binding of Python parameter types."""
+"""BDD spec for MCP host JSON Schema of Python parameter types."""
 import json
 import os
 import re
@@ -19,19 +19,20 @@ from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.parameter_schema import ParameterSchema
-from harness.installation.installer import Installer
+from harness.installer.installer import Installer
 from harness.mcp._examples.parameter_types.parameter_types import ParameterTypes
+from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.mcp_server import McpHost, McpInstallation
 from harness.mcp.spec_support import UserHome
-from cdd_guidance.actions.iterate.iterate import Iterate
+from harness.graph.graph import Graph
 from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
 from harness.mcp._examples.illegitimate_name.illegitimate_name import (
     IllegitimateName,
 )
 from space.repo.repo import Commit, DefaultBranchError
-from space.session import Session
-from space.work_state import working_on
+from space.session import Sessions
+from space.work_state import WorkState
 
 
 def _moved(stage: "str", done: "bool" = False) -> "ImportedOnlyForTypeChecking":
@@ -315,11 +316,11 @@ with description("an MCP host input schema"):
                     )
                 )
 
-    with context("that has been derived from iterate.iterate"):
-        with context("with a tools list parameter"):
+    with context("that has been derived from the graph's set_overlays operation"):
+        with context("with an overlays list parameter"):
             with it("should advertise JSON Schema array of string"):
-                schema = ParameterSchema(Iterate.iterate).json_schema
-                expect(schema["properties"]["tools"]).to(
+                schema = ParameterSchema(Graph.set_overlays).json_schema
+                expect(schema["properties"]["overlays"]).to(
                     equal({"type": "array", "items": {"type": "string"}})
                 )
 
@@ -327,31 +328,27 @@ with description("an MCP host input schema"):
 with description("an MCP host tool result") as self:
     with context("that is a named session"):
         with before.each:
-            Session.forget_current()
             self.repo = Path(tempfile.mkdtemp())
             self.work = self.repo / "work"
             self.work.mkdir()
-            Session.new("alpha", self.work, self.repo)
+            Sessions(self.repo).switch("alpha", self.work)
             self.host = McpHost.from_refs((), repo=str(self.repo), project=str(self.repo))
-            self.blocks = self.host._content_blocks(Session.current(self.repo))
+            self.blocks = self.host._content_blocks(Sessions(self.repo).current())
             self.payload = json.loads(self.blocks[0].text)
 
         with after.each:
-            Session.forget_current()
+            shutil.rmtree(self.repo, ignore_errors=True)
 
         with it("should expose the session name as JSON"):
             expect(self.payload["name"]).to(equal("alpha"))
 
-        with it("should expose practice root folder paths"):
-            expect("stories" in self.payload["practice_roots"]).to(equal(True))
-            expect(self.payload["practice_roots"]["stories"][0][0]).to(
-                equal(str((self.work / "tests").resolve()))
-            )
+        with it("should expose each practice's root folder as a path from the project"):
+            expect(self.payload["practices"]["stories"]["root"]).to(equal("work/tests"))
 
     with context("that is a commit"):
         with before.each:
             self.host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
-            commit = Commit.from_message("abc123", "push: checkpoint\nReviewed-By: human")
+            commit = Commit("abc123", "push: checkpoint\nReviewed-By: human")
             self.payload = json.loads(self.host._content_blocks(commit)[0].text)
 
         with it("should expose the commit sha as JSON"):
@@ -364,13 +361,13 @@ with description("an MCP host tool result") as self:
             expect(self.payload["message"]).to(equal("push: checkpoint\nReviewed-By: human"))
 
         with it("should expose the commit trailers as JSON"):
-            expect(self.payload["data"]).to(equal({"Reviewed-By": "human"}))
+            expect(self.payload["trailers"]).to(equal({"Reviewed-By": "human"}))
 
 
 with description("an MCP host") as self:
     with context("that has stood up over this checkout's toolsets"):
         with before.each:
-            self.host = McpHost.standup(repo=_REPO_ROOT)
+            self.host = McpHost.from_repo(_REPO_ROOT)
 
         with it("should answer ping with pong"):
             expect(self.host.diagnose()["ping"]).to(equal("pong"))
@@ -396,7 +393,7 @@ with description("an MCP host") as self:
             expect("repo.push" in tools).to(equal(False))
 
         with it("should resolve Cursor underscore aliases to enrolled names"):
-            expect(self.host._runtime.resolve_call_name("repo_push_commit")).to(
+            expect(self.host.checkout_server.resolve_call_name("repo_push_commit")).to(
                 equal("repo.push_commit")
             )
 
@@ -405,29 +402,25 @@ with description("an MCP host") as self:
                 lambda: self.host.dispatch("repo.close_branch", {"name": "main"})
             ).to(raise_error(DefaultBranchError))
 
-    with context("that has enrolled the session toolset"):
+    with context("that has enrolled the sessions toolset on a project"):
         with before.each:
+            self.project = Path(tempfile.mkdtemp())
             self.host = McpHost.from_refs(
-                ("space.session.session:Session",),
+                ("space.session.sessions:Sessions",),
                 repo=str(_REPO_ROOT),
-                project=str(_REPO_ROOT),
+                project=str(self.project),
             )
 
-        with it("should expose session.switch as the one way to open a session"):
-            tools = self.host.diagnose()["tools"]
-            expect(tools).to(contain("session.switch"))
+        with after.each:
+            shutil.rmtree(self.project, ignore_errors=True)
 
-        with it("should run session.switch with string repo_path"):
-            repo = Path(tempfile.mkdtemp())
-            try:
-                result = self.host.dispatch(
-                    "session.switch",
-                    {"name": "mcp-host-spec-session", "repo_path": str(repo)},
-                )
-                expect(str(result)).not_to(equal(""))
-            finally:
-                Session.forget_current()
-                shutil.rmtree(repo, ignore_errors=True)
+        with it("should expose sessions.switch as the one way to open a session"):
+            tools = self.host.diagnose()["tools"]
+            expect(tools).to(contain("sessions.switch"))
+
+        with it("should open the named session in that project through sessions.switch"):
+            self.host.dispatch("sessions.switch", {"name": "mcp-host-spec-session"}, project=self.project)
+            expect(WorkState(self.project).session).to(equal("mcp-host-spec-session"))
 
     with context("that has stood up with a published tool whose MCP name is illegitimate"):
         with before.each:
@@ -441,15 +434,15 @@ with description("an MCP host") as self:
             expect(self.host.diagnose()["ping"]).to(equal("pong"))
 
         with it("should omit that tool from advertised tools"):
-            expect(self.host.diagnose()["tools"]).not_to(contain("bad name.report"))
+            expect(self.host.diagnose()["tools"]).not_to(contain("illegitimate-name.résumé"))
 
         with it("should diagnose the skipped tool as an exception"):
             expect(self.host.diagnose()["exceptions"][0]["tool"]).to(
-                equal("bad name.report")
+                equal("illegitimate-name.résumé")
             )
 
         with it("should keep a chat notice naming the skipped tool"):
-            expect(self.host.diagnose()["notice"]).to(contain("bad name.report"))
+            expect(self.host.diagnose()["notice"]).to(contain("illegitimate-name.résumé"))
 
     with context("that has stood up with a toolset that cannot be loaded"):
         with before.each:
@@ -475,7 +468,7 @@ with description("an MCP host") as self:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
             Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([SampleMcpOps()])
-            self.host = McpHost.standup(repo=_REPO_ROOT)
+            self.host = McpHost.from_repo(_REPO_ROOT)
 
         with after.each:
             shutil.rmtree(self._tmp, ignore_errors=True)
@@ -496,28 +489,24 @@ with description("an MCP host") as self:
             )
             self.first = Path(tempfile.mkdtemp(prefix="mcp-host-first-"))
             self.second = Path(tempfile.mkdtemp(prefix="mcp-host-second-"))
-            with working_on(self.first):
-                self.host.dispatch("hosting-demo.increment", {"step": 3})
+            self.host.dispatch("hosting-demo.increment", {"step": 3}, self.first)
 
         with after.each:
             shutil.rmtree(self.first, ignore_errors=True)
             shutil.rmtree(self.second, ignore_errors=True)
 
         with it("should keep one project's toolset state for that project"):
-            with working_on(self.first):
-                expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(3))
+            expect(self.host.dispatch("hosting-demo.read_count", {}, self.first)).to(equal(3))
 
         with it("should start the other project's toolsets fresh"):
-            with working_on(self.second):
-                expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(0))
+            expect(self.host.dispatch("hosting-demo.read_count", {}, self.second)).to(equal(0))
 
         with context("that has been restarted"):
             with before.each:
                 self.host.dispatch("cdd.restart", {})
 
             with it("should start every project's toolsets again on the code as it is now"):
-                with working_on(self.first):
-                    expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(0))
+                expect(self.host.dispatch("hosting-demo.read_count", {}, self.first)).to(equal(0))
 
 
 with description("an MCP host tool ping") as self:
@@ -536,7 +525,7 @@ with description("an MCP host tool ping") as self:
         expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(0))
 
     with it("should leave ping out of the tool schema"):
-        schema = self.host._runtime.tools["hosting-demo.increment"].input_schema
+        schema = self.host.checkout_server.tools["hosting-demo.increment"].input_schema
         expect("ping" in schema["properties"]).to(equal(False))
 
     with it("should still run a tool when ping is absent"):
@@ -576,7 +565,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
             expect("miro-mcp" in self.servers).to(equal(True))
 
         with it("should point at the one cdd server"):
-            expect(self.servers["cdd"]["url"]).to(equal(McpDaemon().url))
+            expect(self.servers["cdd"]["url"]).to(equal(McpDaemon(CddHome()).url))
 
         with it("should name the open project on every request"):
             expect(self.servers["cdd"]["headers"]).to(equal({"X-CDD-Project": "${workspaceFolder}"}))
@@ -584,7 +573,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
     with context("for Claude Code"):
         with before.each:
             self.config = self.root / ".claude.json"
-            old_entry = {"type": "http", "url": McpDaemon().url, "headersHelper": "python connect.py"}
+            old_entry = {"type": "http", "url": McpDaemon(CddHome()).url, "headersHelper": "python connect.py"}
             self.config.write_text(
                 json.dumps({"projects": {"x": {}}, "mcpServers": {"cdd": old_entry, "miro-mcp": {"url": "https://example"}}}),
                 encoding="utf-8",
@@ -609,7 +598,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
             expect([plugin["name"] for plugin in marketplace["plugins"]]).to(equal(["cdd"]))
 
         with it("should point the plugin's cdd server at the one cdd server over HTTP"):
-            expect(self.server["url"]).to(equal(McpDaemon().url))
+            expect(self.server["url"]).to(equal(McpDaemon(CddHome()).url))
 
         with it("should run the connect script in ~/.cdd"):
             expect(self.server["headersHelper"]).to(contain(str(self.root / ".cdd" / "connect.py")))

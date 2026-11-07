@@ -40,8 +40,8 @@ with description("Build Git-URL Source Citation For Every Reference"):
             expect(url.startswith("https://github.com/org/repo/blob/abc123/harness/catalog_generator/")).to(be_true)
 
         with it("normalizes an SSH remote and a trailing .git into a plain https URL"):
-            expect(GitCitation.normalize("git@github.com:org/repo.git")).to(equal("https://github.com/org/repo"))
-            expect(GitCitation.normalize("https://github.com/org/repo.git")).to(equal("https://github.com/org/repo"))
+            expect(GitCitation("git@github.com:org/repo.git").repo_url).to(equal("https://github.com/org/repo"))
+            expect(GitCitation("https://github.com/org/repo.git").repo_url).to(equal("https://github.com/org/repo"))
 
 
 with description("Embed Local Assets And Content Into Generated HTML"):

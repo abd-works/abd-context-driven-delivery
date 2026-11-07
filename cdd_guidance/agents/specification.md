@@ -22,7 +22,7 @@ Load the umbrella skill for each selected lens to establish shared vocabulary an
 - `stories-scenarios` for concrete Given-When-Then behavior scenarios and example data tables.
 - `ddd-model` for the aggregate view: each root with its members, repository, and domain operations, how aggregates depend on one another across contexts, and synchronization rules.
 - `ux-mockup` for concrete UI controls, user interactions, data placement, transitions, and runnable greybox screens.
-- `clean_engineering-model` for typed class participants, operations, relationships, public module interfaces, and explicit constructor dependencies without production method bodies.
+- `clean-engineering-model` for typed class participants, operations, relationships, public module interfaces, and explicit constructor dependencies without production method bodies.
 - `bdd-behavior` for executable describe/it test hierarchies containing behavior signatures without test implementation code.
 
 Run the `generate` action skill for each practice. When complete run the `get_fix_violation_instructions` for each practice and fix any returned violations.
@@ -37,7 +37,7 @@ Output persistence is mandatory. Create and update at least one markdown artifac
 
 ## Handoff
 
-Run `handoff` when the specification role is complete. State whether the handoff is for a new specification session or for the implementation agent.
+Run the `space-session-handoff-session` skill when the specification role is complete. State whether the handoff is for a new specification session or for the implementation agent.
 
 Include the exact implementation scope and exclusions, source and specification artifact paths, authoritative domain terms, Given-When-Then scenarios with example data, UI interaction decisions, domain invariants and stereotypes, public module interfaces and object contracts, BDD test signature locations, suggested build order, question-and-answer log, assumptions, risks, and deferred implementation questions.
 

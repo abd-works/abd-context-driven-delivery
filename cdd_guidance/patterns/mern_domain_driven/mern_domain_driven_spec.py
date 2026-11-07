@@ -19,6 +19,7 @@ from cdd_guidance.patterns.mern_domain_driven.mern_domain_driven import (
 )
 from cdd_guidance.practices.stories.stories import Stories
 from harness.guidance.rule import RulesCollection
+from harness.hooks.hook_server import HookPayload
 
 _MODULE_DIR = Path(__file__).resolve().parent
 
@@ -55,7 +56,7 @@ with description("a MernDomainDriven generator"):
             expect(self.tool.default_workspace_folder).to(equal("packages"))
 
         with it("should key context_index on mern_domain_driven"):
-            expect(self.tool.context_index_key).to(equal("mern_domain_driven"))
+            expect(self.tool.key).to(equal("mern_domain_driven"))
 
         with it("should resolve module_dir to this package"):
             expect(self.tool.module_dir).to(equal(_MODULE_DIR))
@@ -79,9 +80,9 @@ with description("a MernDomainDriven generator"):
 
         with it("should carry that format through to the Clean Engineering companion"):
             companion = self.stories.fidelities.current.clean_engineering
-            expect(companion.practice_guidance.format).to(equal("typescript"))
+            expect(companion.format).to(equal("typescript"))
 
-    with context("whose contexts slot is expanded"):
+    with context("whose contexts section is expanded"):
         with before.each:
             self.rendered = self.tool.scoped_markdown()
 
@@ -95,26 +96,26 @@ with description("a MernDomainDriven generator"):
     with context("whose rules collection injects on matching package paths"):
         with before.each:
             self.rules = self.tool.rules
-            self.payload = {
+            self.payload = HookPayload({
                 "tool_name": "Write",
                 "tool_input": {"path": "packages/onboard-a-customer/carts/cart-server.ts"},
-            }
+            })
 
         with it("should load shared rules as a RulesCollection"):
             expect(self.rules).to(be_a(RulesCollection))
             expect(len(list(self.rules))).to(equal(len(_ALL_RULE_SLUGS)))
 
         with it("should scope inject globs to packages feature layout"):
-            expect("packages/" in self.rules.glob).to(equal(True))
-            expect("src/" in self.rules.glob).to(equal(False))
+            expect("packages/" in self.rules.applies_to.globs).to(equal(True))
+            expect("src/" in self.rules.applies_to.globs).to(equal(False))
 
         with it("should match domain-module server files under packages"):
-            expect(self.rules.matches("packages/onboard-a-customer/carts/cart-server.ts")).to(
+            expect(self.rules.applies_to.matches("packages/onboard-a-customer/carts/cart-server.ts")).to(
                 equal(True)
             )
 
         with it("should not match legacy flat src server files"):
-            expect(self.rules.matches("src/customer/customer-server.ts")).to(equal(False))
+            expect(self.rules.applies_to.matches("src/customer/customer-server.ts")).to(equal(False))
 
         with it("should inject rules markdown when a matching package file is written"):
             result = self.rules.inject_rules(self.payload)

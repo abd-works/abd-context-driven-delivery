@@ -27,10 +27,10 @@ from harness.mcp.spec_support import SpecServer
 
 _LINGER_SECONDS = 1
 _HOSTING_DEMO = "harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo"
-_ECHO = "echo_instructions.echo_instructions:EchoInstructions"
+_ECHO = "tools.echo.echo:Echo"
 _PARAMETER_TYPES = "harness.mcp._examples.parameter_types.parameter_types:ParameterTypes"
 _RENDER = "cdd_guidance.actions.render.render:Render"
-_SESSION = "space.session.session:Session"
+_SESSION = "space.session.sessions:Sessions"
 _TOOLSETS = (_HOSTING_DEMO, _ECHO, _PARAMETER_TYPES, _RENDER, _SESSION)
 _ECHO_ARGUMENTS = {
     "text": "parcel",
@@ -198,7 +198,7 @@ with description("the cdd server") as self:
         with context("that has invoked a real @agent_tool through the MCP wire"):
             with it("should return what the tool returned"):
                 result = self.chat.run(
-                    lambda session: session.call_tool("echo-instructions.fence", arguments={"body": "hello mcp"})
+                    lambda session: session.call_tool("echo.fence", arguments={"body": "hello mcp"})
                 )
                 expect("hello mcp" in _text(result)).to(equal(True))
 
@@ -252,15 +252,15 @@ with description("the cdd server") as self:
         with before.each:
             self.worktrees = TwoWorktrees()
             self.worktrees.create()
-            self.chat.run(lambda session: session.call_tool("session.switch", arguments={"name": "alpha"}), self.worktrees.first)
-            self.chat.run(lambda session: session.call_tool("session.switch", arguments={"name": "beta"}), self.worktrees.second)
+            self.chat.run(lambda session: session.call_tool("sessions.switch", arguments={"name": "alpha"}), self.worktrees.first)
+            self.chat.run(lambda session: session.call_tool("sessions.switch", arguments={"name": "beta"}), self.worktrees.second)
 
         with after.each:
             self.worktrees.remove()
 
         with it("should answer both chats from the one server process"):
-            projects = self.server.daemon.ping["projects"]
-            expect(self.server.daemon.ping["pid"]).to(equal(self.started["pid"]))
+            projects = self.server.daemon.ping()["projects"]
+            expect(self.server.daemon.ping()["pid"]).to(equal(self.started["pid"]))
             expect(projects).to(contain(str(self.worktrees.first), str(self.worktrees.second)))
 
         with it("should save each chat's session in its own worktree"):
@@ -269,7 +269,7 @@ with description("the cdd server") as self:
 
         with it("should give each chat its own worktree's session"):
             def current(worktree: Path) -> str:
-                result = self.chat.run(lambda session: session.call_tool("session.current", arguments={}), worktree)
+                result = self.chat.run(lambda session: session.call_tool("sessions.current", arguments={}), worktree)
                 return json.loads(_text(result))["name"]
 
             expect((current(self.worktrees.first), current(self.worktrees.second))).to(equal(("alpha", "beta")))
@@ -300,7 +300,7 @@ with description("the cdd server") as self:
 
         with it("should still be the same process"):
             self.chat.run(self.chat.restart_then_ping)
-            expect(self.server.daemon.ping["pid"]).to(equal(self.started["pid"]))
+            expect(self.server.daemon.ping()["pid"]).to(equal(self.started["pid"]))
 
 
 with description("the cdd connect script") as self:
@@ -325,7 +325,7 @@ with description("the cdd connect script") as self:
             self.headers = json.loads(done.stdout)
 
         with it("should start the server"):
-            expect(self.server.daemon.is_running).to(equal(True))
+            expect(self.server.daemon.is_running()).to(equal(True))
 
         with it("should name the chat's folder as the project"):
             expect(self.headers).to(equal({"X-CDD-Project": str(self.project)}))

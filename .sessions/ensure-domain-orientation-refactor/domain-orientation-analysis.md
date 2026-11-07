@@ -138,6 +138,7 @@ A command then reads `session.practices.stories.fidelities.story_map.actions.gen
 7. `Generate._where_outputs_go` uses `Session.current()`, so it can write into a different session than the action is acting for. (A-F6)
 8. The edge kind order has drifted between working_copy and the schema/BoundNode (`invokes` is 12 in one and 5 in the other). (R-G10)
 9. `FidelityGuidance.instructions` swaps `practice.fidelities.current` and `format` and swaps them back, which is not thread-safe under the MCP threads. (A-F11)
+10. A board command carries the ticket's session only in its `session=` word, so an action started inside another (Satisfy, Sketch, Iterate, AgentBdd), the failure record, and the action's log line fall back to `Session.current()` and can save to, or log in, a different session from the ticket's. (P-2, P-15)
 
 ## 3. Dead code and legacy aliases (breaks `no-legacy-api-after-refactor`)
 - `space/repo/worktree.py` and `space/repo/push.py` have no importers and copy Worktree, Branch, and Commit methods. (K-F11)
@@ -313,27 +314,72 @@ Ids: **K** kanban/session/repo, **A** guidance/actions, **I** installation/MCP, 
 | S4 | low | scripts/exercise_hooks.py | Repeats practice discovery and rule flattening |
 | A1 | low | graph app overlay-labels.ts | LERN node-type lists repeat the overlay schema |
 
+### P — state passed around as parameters (root cause 1.12)
+The search read the working tree on 2026-11-06 and found 37 instances: 10 high, 16 medium, 11 low.
+
+| Id | Sev | Where | What |
+|---|---|---|---|
+| P-1 | high | agent_tools.py:1191 `log_session_invocation`, :1260 `_expanded_reply`; guidance_actions.py:147 `_bind_guidance`; generate.py:20-34; validate.py:52-91 | One `guidance` argument is handed down five layers and stored again at each; the action should be made for its session, practice, and fidelity once and read them from there |
+| P-2 | high | ticket.py:264 `generate_commands`; ticket-client.tsx:243 `actionCommand`; guidance_actions.py:173 `_bind_guidance_string`, :277 `acting_session` | The ticket's session travels as a `session=` word in the command text, is parsed back, and is loaded again on every call, while `run` and `_log_running_action` still use `Session.current()` (overlaps T-CU4, KB-3) |
+| P-3 | high | tile-formats.ts:23 → tile-actions-client.ts:106 → ticket.py:259 → guidance_actions.py:180,189 → agent_tools.py:750 → validate.py:173; session.py:1558 `last_generated_format` | The chosen format passes through six layers and is finally read back by parsing session.log; the fidelity should save the format chosen for it (overlaps A-F4) |
+| P-4 | high | ticket.py:259 `generate_commands`, :124 `progress_of(slug)`; fidelity-client.ts:352, tile-actions-client.ts:107, ticket-client.tsx:271 | Callers that hold a fidelity's progress pass its slug and the ticket's name so `progress_of` can find it again; this should be `progress.actions.generate(format)` |
+| P-5 | high | session.py:713 `practice_root`, :1470 `fidelity_outputs`, :592 `files_declared_by`, :601 `has_declared_output`, :1237 `log_validation`, :1189 `log_guidance_action` | Session is handed a guidance or fidelity it already holds as `session.practices[key].fidelities[name]`; the practice and fidelity should answer their own outputs, root, and log lines |
+| P-6 | high | session.py:272-344 `PracticeSessionOutput` → `_guidance_for`, `_default_output_paths`, `choose_practice_root`, `remember_parent_folders` → context_config.py:81 | PracticeSessionOutput passes its own name and guideline back into Session's private methods four layers deep; its root, folders, and graph should be its own state |
+| P-7 | high | render.py:35-43 → guidance.py:434 `render` → :450, :514 `_call_render` → ddd.py:78 → format adapter | `format`, `source`, `previous`, `keep_positioning`, and `workspace` pass through four layers, although the practice holds its format and its session's folder |
+| P-8 | high | ticket-client.tsx:84,88; ticket.ts:10,17; files-panel-client.ts:79; side-panel-client.ts:44; tile-actions-client.ts:107,133; activation-client.ts:80 | Clients rebuild generated clients with `.named(api, ticketName, slug)` although the TicketClient already holds that data (overlaps KB-8) |
+| P-9 | high | board-store `Tile.ticket`, `ReportPanel.ticket`, `FilesPanel.ticket`, `Activation.ticket`, `RootChoice.ticket`; board-page.ts:85-101; tile-client.ts:200 | Page state keeps the ticket's name, and every action searches `board.tickets` for it again; each panel or tile should hold its TicketClient (overlaps KB-7) |
+| P-10 | high | chat-ui fidelity-client.ts:347-374; fidelity-files-client.ts:474,487; chat-bar-client.ts:190,201; session-client.ts:401-450 | Free functions take the engine and a client, read the chat bar again, and send `{ticket, fidelity}` strings; they should be methods on the client that holds the ticket |
+| P-11 | med | kanban chat-client.tsx:62-134; ticket-client.tsx:177-269 | Every chat call is given `(this.name, this.worktree)`; the ticket should own its chat (overlaps KB-9) |
+| P-12 | med | board.py:187 `activate`, :213 `open_worktree`, :222 `workspace`, :200 `leave`, :110 `worktree_of` | Board operations take a ticket's name and do the ticket's work; they belong on Ticket (overlaps K-F7) |
+| P-13 | med | ticket.py:75 `Ticket.load`, :360 `FidelityProgress.load`; session.py:252, :514 | Every MCP call carries name strings, and the loader rebuilds the whole board to find the one object the client had |
+| P-14 | med | validate.py:115 `_fidelity_in`; ticket.py:490, :528, :391 | A fidelity in hand is looked up again by key and name, because the action's and the board's practices are separate instances; there should be one fidelity object per session |
+| P-15 | med | satisfy.py:212-220; sketch.py:130; iterate.py:180; agent_bdd.py:21,28; generate.py:34 | An action builds fresh actions and passes the guidance on; the new action has no session, so its report goes to the current session (bug 10) |
+| P-16 | med | sketch.py:27, :67, :89 | The agent passes the session's folder and the slug, which a Sketch made for its session and practice would hold |
+| P-17 | med | grill_context.py:17, :43, :77 | The session's workpath is passed as `root` on every call |
+| P-18 | med | partition.py:149-172 → :122 `partition_corpus` → :96 `index`, :113 `segment`; :70 `_scaffold_of` | Output folder, slug, and scaffold are pulled off the guidance and passed down three calls; `_scaffold_of` does the fidelity's own work |
+| P-19 | med | validate.py:151, :237, :241, :275, :112 | Validate hands the session's folders to free functions and to Graph, which should get them from the session |
+| P-20 | med | session.py:1427 `_graph_for`; graph.py:1153 `load_working_copy`, :1187 `load_files` | Session writes a folder and practice roots into Graph's private fields; the session's practice should own its graph |
+| P-21 | med | session.py:1202 `log_guidance_action` → `opened.guideline = item` → `_attach_workspace` | Each action replaces the shared session's practice with its own guidance and never restores it; later readers see the last action's fidelity and format (overlaps A-F20) |
+| P-22 | med | ticket.py:542 `_report_file` → report.py:165-232 | The report is built from the session's repo and workpath, then progress and superseded reports pass through four private methods; the fidelity should own its reports |
+| P-23 | med | repo.py:1896 `_bind`, :1910 `_at`, :1928-2011 switch/close branch and worktree | Repo tools take a path to another clone and forward to it; `_bind` sets `_agent_active` on the shared toolset (overlaps K-F8) |
+| P-24 | med | session.py:785 `mark_loop`, :827 `append_log`, :1033; chat_context.py:21,92,102; mcp_server.py:827; agent_tools.py:1031,1189 | Three chat strings are popped from every call, set in context variables, applied to the session, then cleared; the session's turn should hold a chat pointer object (overlaps K-F19) |
+| P-25 | med | rule.py:155 → session.py:1228 → :1415 → :931; :1213 | Guidance and its rule groups pass four calls deep and end as a tuple of strings; Session reaches into the rules' private methods |
+| P-26 | med | agent_tools_probe.py:83-520; guidance.py:771-860 | About 15 free functions take the Installer first and do its work; they belong on the Installer or a probe object (extends A-F17) |
+| P-27 | low | board.py:243 `set_wip_limit`, :272 `wip_limit`; board-client.tsx `submitWipLimit` | A stage's name is passed so Board can look up a limit that Stage owns |
+| P-28 | low | board.py:259 `help(practice, fidelity)`; side-panel-client.ts:154; tile-view.tsx:33 | TypeScript splits the slug so Board can find the fidelity the tile already showed (overlaps K-F20) |
+| P-29 | low | session.py:451 `repo_from_session(repo_path)`, :746 `switch` → :945 `resolve`; board.py:197 | Four location values are threaded from `switch` to `resolve`, and an instance method takes a repo path it holds (overlaps K-F5) |
+| P-30 | low | handoff.py:35; record_decisions.py:23; ticket-client.tsx:256; chat-bar-client.ts:202 | The ticket's name is passed only as prose while the tools write to the current session (overlaps H1, K-F5) |
+| P-31 | low | guidance.py:209 `files(stage)`; session.py:567 `files(stage)` | A stage name passes two layers down and is compared to each fidelity's stage string |
+| P-32 | low | project_rules.py:19 `load_project_rules(root, practice, fidelities)` | A free function is given the practice's folder, key, and fidelity names; it belongs on PracticeGuidance |
+| P-33 | low | practice_catalogue.py:79 `key_of(guidance)`; 7 callers | A classmethod takes a practice and returns its own `key` |
+| P-34 | low | guidance.py:672-674 `FidelityGuidance.clean_engineering` | The host practice's format is copied onto the companion's practice instead of the companion reading it from the fidelity |
+| P-35 | low | agent_tools.py:1821-1850 | The instruction expander sets and restores loop state on itself instead of passing the loop item |
+| P-36 | low | agent_tools.py:1018, 1172 `log_session_invocation(repo_path=)` | No caller passes `repo_path`, and the method uses `Session.current()` |
+| P-37 | low | catalog_generator.py:132-164 | Entries set `_current_*` fields on the shared Catalog and never reset them (overlaps C6) |
+
+Groups: actions take guidance, session, format, and paths instead of being made for a session (9); Session does its practices' and fidelities' work (8); clients pass ticket names, session files, and slugs (7); Board does its tickets' and stages' work (2); objects in hand looked up again by name (2); paths and the current session used instead of objects (4); context threaded through calls or left set on shared objects (4); free functions that take their owner first (1).
+
 Other duplicates noted across modules: process liveness is checked in three places (hook_server, hook_daemon, scripts/instances). `GraphStoryModel` copies the parsed story nodes into flat records, the same pattern as G1. About eight slug helpers live in practice files. `space/repo/.context/module-context.md` still describes `space/git`, `GitRepo`, and `WorkSession`.
 
 ---
 
 ## Progress
 
-Updated 2026-11-06 on `ensure-domain-orientation-refactor`. ✅ done, ◐ partly done, ⬜ not started. Each line names the commit that holds the work.
+Updated 2026-11-06 on `ensure-domain-orientation-refactor`, after the seven refactor branches merged (`d6c41b23`). ✅ done, ◐ partly done, ⬜ not started. Each line names the commit that holds the work.
 
 ### Root causes
 - ✅ **1.1 Practice catalogue.** `PracticeCatalogue` in `harness/guidance/practice_catalogue.py` replaces every Python practice list (`54fd3c3f3`). The TypeScript lists `PRACTICES` and `PRACTICE_COLOURS` are left for 1.3.
 - ◐ **1.2 FidelityProgress as data.** Ticket sends one `FidelityProgress` per fidelity, with its state, its actions, and `allowed_actions`; the six dicts are gone (session-board merge `0b1024083`). Bug 5's TypeScript rule is deleted (`6f6370fcd`). Left: the chat bar's `FidelityJson` and its `validated` state (CU-1), the `ActionStates` default copied in TypeScript, and the reviewed/done naming.
-- ⬜ **1.3 Domain rules in TypeScript.** Not started. Commands wait on 1.12, so they are built from the session's practice, fidelity, and action rather than on `Ticket`. The chat bar's findings wait until the cdd-chat-ui work lands, so the two changes do not collide.
-- ◐ **1.4 Graph second model.** Mode A is done: each node holds its parsed object as `Node.model`, and the re-parse helpers and `story_model_lookup.py` are deleted. Edge order, the schema reader, and the explorer copies are fixed too (`d351aeed1`). Left: the graph still builds its own `Node`s rather than registering the parsed `BoundNode`s (Mode B), and G3, G4, G13, and G14 are only partly done.
-- ◐ **1.5 AgentTool is the only operation model.** `McpOperationDefinition` is gone, and MCP and the language adapter read `AgentTool` (`651c7cb30`). Left: `HookHandler` still copies the tool (I-F8).
-- ◐ **1.6 One serializer.** `data_of` is the only serializer, and `McpHost._json_default` is gone (`651c7cb30`). Left: `Commit.to_mcp_result` is still read by a branch in `data_of`; `@data_field` on Commit would remove both.
-- ⬜ **1.7 Catalog renders live guidance.** `CatalogFidelity` still scrapes the practice markdown.
+- ◐ **1.3 Domain rules in TypeScript.** A fidelity's progress builds its own commands (`FidelityProgress.commands`, `745a42dd`), the board receives `Board.practices`, `is_closed`, `is_active`, and `drop_targets` as data instead of working them out, and "reviewed" is "done" in the board app (`ab78a2a1`, `279ed2f2`). Left: TypeScript `actionCommand` still adds `session=` for validate, satisfy, and render (P-2), and the board still chooses the format (P-3); moving them into Python needs new MCP operations and a decision. The handoff prompt, file tab order, and board events are still written in TypeScript. The chat bar's findings wait until the cdd-chat-ui work lands.
+- ◐ **1.4 Graph second model.** Mode A is done: each node holds its parsed object as `Node.model`, and the re-parse helpers and `story_model_lookup.py` are deleted. Edge order, the schema reader, and the explorer copies are fixed too (`d351aeed1`). G3, G4, G13, and G14 are done: Step owns its keyword and phase, `Operation.owner` replaces four id-splitting helpers, bounded-context and aggregate nodes hold DDD objects, and `ModelDescriptions` holds the described members (`739ea3007`). Left: the graph still builds its own `Node`s rather than registering the parsed `BoundNode`s (Mode B). Mode B takes four steps: one source type for every practice, a model's container link kept apart from its tree parent, a node whose name and type may differ from its model's, then `PracticeGraph.register`. `Graph.of_practice` is done (`ed4f1889`).
+- ✅ **1.5 AgentTool is the only operation model.** `McpOperationDefinition` is gone, and MCP and the language adapter read `AgentTool` (`651c7cb30`). `HookHandler` keeps the `AgentTool` it is given and calls its callable; `AgentTool.hook_event` replaces `_hook_name`, and the install-time `_omit_inject_rules` filter is deleted (I-F8, `2d85e29fd`). One set, `AgentToolSet.HOSTED_ONLY_CLASS_NAMES`, replaces three skip lists (I-F9). Mark names: `MARK_FLAGS` is the one mark list, and `Hook` and `Destination` read their own marks; the other marks are still read by string (I-F7 partly, I-F16 not started).
+- ✅ **1.6 One serializer.** `data_of` is the only serializer, and `McpHost._json_default` is gone (`651c7cb30`). `Commit` is a plain class whose `sha`, `subject`, `message`, and `data` are `@data_field` properties; `to_mcp_result` and its branch in `data_of` are deleted (`2d85e29fd`).
+- ✅ **1.7 Catalog renders live guidance.** C8 and C9 are done: the fidelity page and the approach panel both find examples by the fidelity's declared outputs, and `_PATH_HINTS` is deleted (`ed4f1889`). Before that: The catalog renders the live `FidelityGuidance`, and its output is byte-identical (78 files). `STAGE_COLUMNS`, `LIFECYCLE_ACTIONS`, and `catalog_practices()` replace the copied stage, action, and practice lists, and the renderers keep no state between pages (C1–C7, `e72ec7cc0`). Left: the fidelity page and the approach panel still find example files by different rules (C8), and the `_PATH_HINTS` regexes stay because they disagree with `FidelityGuidance.outputs` (C9).
 - ✅ **1.8 Session-folder facts.** Session owns `log_path`, `error_path`, `reports_folder`, `latest_handoff`, and `new_handoff_path`; Generate reads `acting_session()` (`53d1349e2`).
-- ◐ **1.9 Git concepts as objects.** Branch and Worktree are objects, and the board's backlog folder and board file are on Repo (`a0b8dc28c`). Left: `Workspace` is still built from three booleans, and `Session.active_name(repo_path)` is still a classmethod.
+- ✅ **1.9 Git concepts as objects.** Branch and Worktree are objects, and the board's backlog folder and board file are on Repo (`a0b8dc28c`). `Workspace` reads the ticket's `Branch` objects (`exists`, `is_checked_out`) instead of three booleans (K-F7); `Repo.current_session` and `Repo.session_folder` replace `Session.active_name`, `current_folder`, `_session_folder`, and `sessions_dir` (K-F5); `work_state.py` already used `Branch` and `Worktree` (K-F14) (`01c38abd6`).
 - ✅ **1.10 Slugs, formats, and names.** `FidelityGuidance.slug` everywhere, one `Name` converter, one `Format` vocabulary, and `FidelityGuidance` keeps `name` and `practice_guidance` (`df4361395`). Left: K-F21's `*_name` data fields and some prose in `cdd_guidance` that still writes slugs like `ddd-bounded_context`.
-- ⬜ **1.11 Classes that only read their collaborators.** Not started; `ChatPointer` does not exist yet.
-- ⬜ **1.12 State passed around as parameters.** Recorded today; the search for every instance is running, and its findings go in appendix area P.
+- ◐ **1.11 Classes that only read their collaborators.** `ChatPointer`, `GuidanceProbe`, `AgentToolsProbe`, and one `RunningProcess` exist (`92befdae`); `TicketClient` owns its clients and `TicketChat` the chat calls, and `Tile.ticket` holds a `TicketClient` (`ab78a2a1`). Left: Repo's `ProjectTicket` dicts (K-F13), `Ticket`'s size, and K-F21 (chat-ui reads `board.active`, which a data field cannot hold as an object).
+- ◐ **1.12 State passed around as parameters.** Most of the 37 places in appendix area P are done. Actions are made for their call (`GuidanceAction.start_call`/`call_session`) and read the session's fidelities (P-1, P-4, P-14, P-15, P-36, `745a42dd`); practices answer their own root, outputs, files, and log lines (P-5, P-6, P-29, P-31, `70f3f6ee`); the graph, repo tools, handoff, and record-decisions act on the called project (P-20, P-23, P-30, `ed4f1889`); chat and probes hold their own state (P-24, P-26, P-35, `92befdae`); render reads its practice (P-7, P-32, P-33, P-34, `80aee98a`); actions read folders from their session (P-16, P-17, P-18, P-19, P-25, `da681b32`); Ticket and Stage do their own work (`d6c41b23`). Left: P-2 and P-3 (see 1.3); P-19's `_edited_graph_json` still calls `Graph.load_files`, and `refresh_stale_limit_operation_parameter_messages` is a free function; `PracticeSessionOutput.output_paths_of`, `files_of`, and `has_output_of` take a fidelity; I-F16's `data_fields_of`, `omitted_from_catalog`, and `omitted_from_deploy` are free functions.
 
 ### Bugs
 - ✅ 1. `language_adapter.py` no longer splits `mcp_name` (`651c7cb30`).
@@ -345,6 +391,9 @@ Updated 2026-11-06 on `ensure-domain-orientation-refactor`. ✅ done, ◐ partly
 - ✅ 7. Generate's output paths come from the session the command names (`53d1349e2`).
 - ✅ 8. Edge order is defined once, in `graph.py` (`d351aeed1`).
 - ✅ 9. `FidelityGuidance.instructions` reads its own template without swapping the practice's fidelity, with a 20-thread spec (`f5c0a030f`).
+- ✅ 10. Actions started inside another action, the failure record, and the action's log line use the call's session (`GuidanceAction.call_session`, `745a42dd`).
+- ✅ 11. Specs wrote into the real session and rewrote `.context/graph.json`: every spec that runs an action now works on its own `ThrowawayProject` (`eb7f826a`).
+- ✅ 12. On Windows `os.kill(pid, 0)` ended the process it was checking; `RunningProcess` checks liveness without signalling (`92befdae`).
 
 ### Dead code and legacy aliases
 - ✅ `space/repo/worktree.py` and `space/repo/push.py` are deleted.
@@ -353,9 +402,10 @@ Updated 2026-11-06 on `ensure-domain-orientation-refactor`. ✅ done, ◐ partly
 - ✅ `AgentToolSet.agent_tools`, `AgentInstructions.tool_steps`, `ToolsetManifest`, `toolsetCollection`, and `deferred_tools`/`deferred_prompt` are deleted.
 - ✅ `Graph.load_nodes`/`load_edges`, `RuleResult`, and `prompt_only` are deleted.
 - ✅ `Source.expand` and the Python folds are deleted (`d351aeed1`).
-- ⬜ `tools/echo` and `tools/echo_instructions`: both still deployed; waiting on your decision.
+- ✅ `tools/echo_instructions` is deleted; `tools/echo` is the one echo toolset.
 - ✅ `rule.py format_rules` is deleted (`f5c0a030f`).
 
 ### Not yet checked
 - **TypeScript runtime tests:** the board's vitest setup hangs starting a cdd server, and the chat bar has no plugin manifest, so the TypeScript changes are type-checked only.
-- **Python story tests (`*_story.test.py`):** they fail the same way on the base branch, so they are not counted in the 2645 passing specs.
+- **Python story tests (`*_story.test.py`):** they fail the same way on the base branch, so they are not counted in the 2703 passing specs (`d6c41b23`).
+- **Clean Engineering validation after the refactor:** under way; the integrated report and task list will sit beside this file.

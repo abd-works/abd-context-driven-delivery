@@ -1,15 +1,1 @@
-from partition.partition_index import PartitionIndex
-from partition.partition import Partition
-from partition.segment import (
-    Segment,
-    SegmentCompletenessConfig,
-    SegmentEntry,
-)
-
-__all__ = [
-    "PartitionIndex",
-    "Partition",
-    "Segment",
-    "SegmentCompletenessConfig",
-    "SegmentEntry",
-]
+"""The Partition action, its index, and its segments. Import its classes from their modules, such as cdd_guidance.actions.partition.partition."""

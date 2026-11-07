@@ -9,9 +9,9 @@ from mamba import before, context, description, it
 from harness.graph.graph import Graph
 
 _FAULTY_ROUTE = "routes.post('/x', async () => { await cdd.call('ticket.move_next', {}) })\n"
-_FAULTY_NODE = "import { TicketAdapter } from '@cdd/harness/kanban/ticket'\nimport { Low } from 'lowdb'\nexport class TicketNode extends TicketAdapter {\n  go() { return this.cdd.call<string>('ticket.close', {}) }\n}\n"
+_FAULTY_NODE = "import { TicketAdapter } from '@cdd/space/kanban/ticket'\nimport { Low } from 'lowdb'\nexport class TicketNode extends TicketAdapter {\n  go() { return this.cdd.call<string>('ticket.close', {}) }\n}\n"
 _FAULTY_CONNECTION = "export class CddConnectionNode {\n  call(tool: string) { return this.client.callTool({ name: tool }) }\n}\n"
-_FAULTY_ADAPTER = "import type { TicketData } from '@cdd/harness/kanban/ticket'\nexport class TicketAdapter {}\n"
+_FAULTY_ADAPTER = "import type { TicketData } from '@cdd/space/kanban/ticket'\nexport class TicketAdapter {}\n"
 _REPAIRED_ROUTE = "app.use('/api', cddRoutes(cdd, [...ticketRoutes]))\n"
 _FAULTY_PYTHON = "@language_adapter(language=\"typescript\")\n@agent_toolset\nclass Thing:\n    @mcp\n    @agent_tool\n    def show(self) -> dict[str, Any]:\n        return {}\n"
 _FAULTY_SHARED = "import { TicketNode } from '@src/kanban/ticket/ticket-node'\n"
@@ -35,8 +35,8 @@ def _violations(files):
     found = {}
     for practice in ("ddd", "bdd"):
         for node in graph.practice(practice).by_id.values():
-            for slug, message in node.rules.violations:
-                found.setdefault(slug, []).append(message)
+            for violation in node.rules.violations:
+                found.setdefault(violation.rule, []).append(violation.message)
     return found
 
 
@@ -62,7 +62,7 @@ with description("the cdd_web_domain_access pattern rules"):
         with it("should flag a node that extends a generated adapter, an adapter written by hand, and a connection written by hand"):
             expect(len(self.found["adapter-is-generated"])).to(equal(3))
 
-        with it("should flag an open result on a marked toolset"):
+        with it("should flag an open result on an annotated toolset"):
             expect(self.found).to(have_key("annotate-what-typescript-reads"))
 
         with it("should run the shared behavior rules through the same graph"):
@@ -105,7 +105,7 @@ with description("the cdd_web_domain_access pattern rules"):
         with before.all:
             self.found = _violations({
                 "src/kanban/ticket/ticket-routes.ts": _REPAIRED_ROUTE,
-                "src/kanban/ticket/ticket-client.tsx": "import type { TicketData } from '@cdd/harness/kanban/ticket'\nexport class TicketClient {}\n",
+                "src/kanban/ticket/ticket-client.tsx": "import type { TicketData } from '@cdd/space/kanban/ticket'\nexport class TicketClient {}\n",
             })
 
         with it("should find no access rule broken"):

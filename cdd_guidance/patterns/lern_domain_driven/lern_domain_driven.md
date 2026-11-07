@@ -545,7 +545,7 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 - **`playwright-tests-browser-interaction`** — Playwright tests interaction the domain spec and the server spec cannot see: a rendered screen, navigation, and controls the user operates in the browser. The file is optional. It states its own screen story. It leaves the shared story to the domain spec and the server spec.
 - **`tier-bound-repository-accessor`** — Shared stories reach repositories through the accessor each tier binds (`repositories.subscriptions`, …), never by casting the story context (`ctx.x as X`).
 - **`no-expect-in-given`** — A Given sets up state; it does not assert. Checks belong in a Then.
-- **`outline-rows-loop-over-examples`** — A Scenario Outline runs as `examples.forEach(row => scenario(`Name: ${row.example}`, …))` over its examples export, in the shared story and in the Playwright screen story alike. Never hand-write one `scenario('Name: row', …)` per row: a hand-written row drops the other rows silently.
+- **`outline-entries-loop-over-examples`** — A Scenario Outline runs as `examples.forEach(row => scenario(`Name: ${row.example}`, …))` over its examples export, in the shared story and in the Playwright screen story alike. Never hand-write one `scenario('Name: entry', …)` per example entry: a hand-written entry drops the other entries silently.
 - **`reset-every-repository`** — Every exported repository instance, in-memory and node, is reset before each story, so no story sees another's state.
 
 ### Testing with BDD

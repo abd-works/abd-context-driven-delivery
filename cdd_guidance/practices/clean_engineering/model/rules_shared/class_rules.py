@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from harness.graph.practice_rule import PracticeGraphRule
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
 
 _CLASS_BUDGET = 9
 
@@ -31,7 +37,7 @@ class KeepClassesSingleResponsibility(PracticeGraphRule):
     slug = "keep-classes-single-responsibility"
     node_types = ("OoadClass",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if not node.has_fact("operation_shapes"):
             return []
         public_ops = _public_operations_for_budget(node.get_fact("operation_shapes"))

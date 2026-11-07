@@ -1,10 +1,12 @@
 """BDD spec for Ux generator - fidelity defaults, transform, ensure_javascript."""
 
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
-from expects import be_true, equal, expect, raise_error
-from mamba import before, context, description, it
+from expects import be, be_true, equal, expect, raise_error
+from mamba import after, before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
@@ -16,9 +18,10 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 
 import cdd_guidance.practices  # noqa: F401
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
-from cdd_guidance.practices.ux.ux import Ux
+from cdd_guidance.practices.ux.ux import NoJavascriptPractice, Ux
 from cdd_guidance.practices.ux.model.nodes import Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
+from space.session.sessions import Sessions
 
 
 class UxJsonSample:
@@ -92,15 +95,29 @@ with description("Ux transform tool"):
 
 
 with description("Ux ensure_javascript tool"):
-    with context("an unsupported generator name"):
-        with it("should raise ValueError"):
+    with context("a practice that writes no mockup JavaScript"):
+        with it("should refuse it as a practice with no JavaScript"):
             expect(
-                lambda: Ux().ensure_javascript("unknown", "markdown", "")
-            ).to(raise_error(ValueError))
+                lambda: Ux().ensure_javascript("ddd", "markdown", "")
+            ).to(raise_error(NoJavascriptPractice))
+
+    with context("with Ux working in a session"):
+        with before.each:
+            self.project = Path(tempfile.mkdtemp(prefix="cdd-ux-"))
+            (self.project / ".git").mkdir()
+            sessions = Sessions(self.project)
+            self.session = sessions.open(sessions.create("alpha", self.project))
+            self.ux = self.session.practices["ux"].guideline
+
+        with after.each:
+            shutil.rmtree(self.project, ignore_errors=True)
+
+        with it("should get the JavaScript from that session's own Stories practice"):
+            expect(self.ux.javascript_practice("stories")).to(be(self.session.practices["stories"].guideline))
 
 
 with description("Ux contexts instruction"):
-    with context("the contexts slot is expanded"):
+    with context("the contexts section is expanded"):
         with before.each:
             self.ux = Ux(fidelity="ia")
             self.contexts = self.ux.scoped_markdown()

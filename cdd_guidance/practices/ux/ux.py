@@ -6,6 +6,11 @@ from typing import Any
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.practice_catalogue import PracticeCatalogue
+
+
+class NoJavascriptPractice(ValueError):
+    """ensure_javascript was asked for JavaScript from a practice that does not write the JavaScript a mockup imports."""
 
 
 @agent_toolset
@@ -13,6 +18,8 @@ class Ux(PracticeGuidance):
     """# Instructions"""
 
     sketch_titles = ("ux:", "user experience:")
+    SHORT_NAME = "UX"
+    COLOUR = "#E84393"
 
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {
@@ -35,26 +42,25 @@ class Ux(PracticeGuidance):
             fidelity=fidelity,
             default_workspace_folder="ux",
             formats={
-                "drawio": ("ux.model.drawio.nodes", "DrawioUxMap"),
-                "html": ("ux.model.html.nodes", "HtmlUxMap"),
-                "markdown": ("ux.model.markdown.nodes", "MarkdownUxMap"),
-                "json": ("ux.model.json.nodes", "JsonUxMap"),
-                "claude_design": ("ux.model.claude_design.nodes", "ClaudeDesignUxMap"),
+                "drawio": ("cdd_guidance.practices.ux.model.drawio.nodes", "DrawioUxMap"),
+                "html": ("cdd_guidance.practices.ux.model.html.nodes", "HtmlUxMap"),
+                "markdown": ("cdd_guidance.practices.ux.model.markdown.nodes", "MarkdownUxMap"),
+                "json": ("cdd_guidance.practices.ux.model.json.nodes", "JsonUxMap"),
+                "claude_design": ("cdd_guidance.practices.ux.model.claude_design.nodes", "ClaudeDesignUxMap"),
             },
         )
 
     @agent_tool
-    def ensure_javascript(self, generator: str, source_format: str, content: Any) -> dict:
-        """Ensure Stories or Clean Engineering JS exists - transform via that generator if needed.
-        generator: 'stories' | 'clean_engineering'. Returns {format: javascript, content: ...}."""
-        if generator == "stories":
-            from cdd_guidance.practices.stories.stories import Stories
+    def ensure_javascript(self, practice: str, source_format: str, content: Any) -> dict:
+        """Ensure Stories or Clean Engineering JS exists - transform via that practice if needed.
+        practice: 'stories' | 'clean_engineering', the practice's catalogue key: story steps come from Stories, the
+        object model from Clean Engineering. Returns {format: javascript, content: ...}."""
+        return self.javascript_practice(practice).render("javascript", content, source=source_format)
 
-            return Stories().render("javascript", content, source=source_format)
-        if generator == "clean_engineering":
-            from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-
-            return CleanEngineering().render("javascript", content, source=source_format)
-        raise ValueError(
-            f"Unsupported generator {generator!r}. Choose from: stories, clean_engineering"
-        )
+    def javascript_practice(self, key: str) -> PracticeGuidance:
+        """The practice key, which writes the JavaScript a mockup imports: this session's own copy of it, made for the
+        session, or a new copy while Ux works in no session."""
+        practice = self.session.practices[key].guideline if self.session is not None else PracticeCatalogue.create(key)
+        if "javascript" not in practice.formats:
+            raise NoJavascriptPractice(f"Practice {key!r} writes no JavaScript; Stories and Clean Engineering do.")
+        return practice

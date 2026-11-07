@@ -8,7 +8,7 @@ import { scenario, story } from '../../../story-test'
 // Epic: Move Work Forward From Chat Bar
 // Sub-epic: Steer Sessions
 // Map: ../../../../../.context/story-map.md#s-person----create-new-session
-// Model: ../../../../../../kanban/.context/kanban-model.md
+// Model: ../../../../../../../space/kanban/.context/kanban-model.md
 // Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
 
 // (S) Person --> Create New Session
@@ -18,7 +18,7 @@ story('Create New Session', CHAT_BAR, () => {
     given('the session list box is open on the Chat Bar', async ($, on, scene) => {
       await scene.ui.press({ key: 'session-list-button' })
     })
-    when('the Person creates the [session](../../../../../../kanban/.context/kanban-model.md#session) payment-retry', async ($, on, scene) => {
+    when('the Person creates the [session](../../../../../../../space/kanban/.context/kanban-model.md#session) payment-retry', async ($, on, scene) => {
       await scene.ui.input({ key: 'new-session', text: NEW_SESSION_NAME })
     })
     // session list field -> createSession($, 'payment-retry') -> $.mcp.call('ticket.create', { title: 'payment-retry' }) -> Ticket.create()

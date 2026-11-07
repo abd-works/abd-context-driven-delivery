@@ -2,21 +2,13 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from harness.graph.practice_rule import PracticeGraphRule
 
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
 
-class _DrawioDiscovery(DrawioScanner):
-    def scan_file(self, root: Path, file_path: Path) -> list:
-        return []
-
-
 def _scanner_types() -> dict[str, type]:
-    helper = _DrawioDiscovery()
-    return helper.discover()
+    return DrawioScanner().discover()
 
 
 class _DrawioScannerRule(PracticeGraphRule):

@@ -4,31 +4,23 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-import sys
 import threading
-from contextlib import contextmanager
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
-import agent_bdd.conf  # noqa: F401 - secrets + import paths
-
-from agent_bdd.agent_bdd_common import (
+from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     CMDLINE_SAFE,
-    JUDGE_LAUNCH,
-    JUDGE_TASK,
     AgentHarnessError,
-    AgentJudgeError,
     AgentResult,
     AgentSession,
-    HarnessLog,
-    JudgeResult,
-    RunResponse,
     ToolsRunYaml,
     _ShellCapture,
-    yaml_from_prompt,
 )
-from agent_bdd.yaml_fence import YamlFence
+from cdd_guidance.practices.agent_bdd.agent_block import AgentBlock
+from cdd_guidance.practices.agent_bdd.cursor_cli import CursorAgentNotFound, CursorCli
+
+# How long `cursor-agent status` may take to say whether the agent is signed in.
+_STATUS_TIMEOUT_SECONDS = 30
 
 _TOOLS_RUN = re.compile(
     r"(?:python\s+-m\s+tools\s+run|tools\.ps1\s+run|tools\s+run\b)",
@@ -267,173 +259,48 @@ class _StreamBuckets:
         return None
 
 
-class _ToolAgentBlock:
-    """One cursor-agent session - multiple instructs share the same chat."""
+class CliAgentBlock(AgentBlock):
+    """One cursor-agent session: every instruct in the block resumes the same chat, and the judge runs in a fresh one."""
+
+    log_name = "agent_cli_bdd"
 
     def __init__(self, workspace: Path, session_file: Path) -> None:
-        self._workspace = workspace.resolve()
-        self._session_file = session_file
+        super().__init__(workspace, session_file)
         self._session: AgentSession | None = None
-        self._yaml = YamlFence()
-        self._log = HarnessLog("agent_cli_bdd")
-        self._log_dir = session_file.parent / "logs" / session_file.stem
-        self._instruct_count = 0
-        self.last_shell_captures: list[_ShellCapture] = []
-        self.session_shell_captures: list[_ShellCapture] = []
 
-    def _write_artifact(self, name: str, content: str) -> Path:
-        self._log_dir.mkdir(parents=True, exist_ok=True)
-        path = self._log_dir / name
-        path.write_text(content, encoding="utf-8")
-        return path
+    def _open(self) -> None:
+        self._assert_authenticated()
+        self._session = AgentSession.from_workspace(self._session_file, self._workspace, fresh=False)
 
-    def _next_instruct_prefix(self, label: str) -> str:
-        self._instruct_count += 1
-        return f"instruct-{self._instruct_count:03d}-{label}"
-
-    def assert_authenticated(self) -> None:
-        exe = AgentSession.launcher()
+    def _assert_authenticated(self) -> None:
+        exe = CursorCli().launcher
         if exe is None:
-            raise RuntimeError("cursor-agent not found on PATH")
-        completed = subprocess.run([exe, "status"], capture_output=True, text=True, timeout=30)
+            raise CursorAgentNotFound()
+        completed = subprocess.run([exe, "status"], capture_output=True, text=True, timeout=_STATUS_TIMEOUT_SECONDS)
         if completed.returncode != 0:
             raise RuntimeError("cursor-agent not authenticated - run `cursor-agent login` first")
 
-    def instruct(self, prompt: str, *, timeout_seconds: int = 300) -> AgentResult:
-        prefix = self._next_instruct_prefix("setup")
-        self._log.write(f"{prefix} prompt: {prompt[:120]}{'...' if len(prompt) > 120 else ''}")
-        self._write_artifact(f"{prefix}-prompt.txt", prompt)
-        session = self._require_session()
-        capture = self._run_capture(
-            session, prompt, timeout_seconds=timeout_seconds, prefix=prefix
-        )
-        result = capture.agent_result
-        self.last_shell_captures = list(capture.shell_captures)
-        self.session_shell_captures.extend(capture.shell_captures)
-        self._write_artifact(f"{prefix}-response.txt", result.text)
-        if result.stderr.strip():
-            self._write_artifact(f"{prefix}-stderr.txt", result.stderr)
-        for index, shell in enumerate(capture.shell_captures, start=1):
+    def _answer(self, prefix: str, prompt: str, timeout_seconds: int) -> AgentResult:
+        buckets = self._run(prompt, timeout_seconds, prefix)
+        self.last_shell_captures = list(buckets.shell_captures)
+        self.session_shell_captures.extend(buckets.shell_captures)
+        for index, shell in enumerate(buckets.shell_captures, start=1):
             self._write_artifact(f"{prefix}-shell-{index:02d}-cmd.txt", shell.command)
             self._write_artifact(f"{prefix}-shell-{index:02d}-out.txt", shell.output)
-        self._log.write(f"{prefix} response: {len(result.text)} chars -> {self._log_dir / f'{prefix}-response.txt'}")
-        return result
+        self._log.write(f"{prefix} response: {len(buckets.stdout)} chars -> {self._log_dir / f'{prefix}-response.txt'}")
+        return AgentResult(exit_code=buckets.exit_code, text=buckets.stdout, stderr=buckets.stderr, elapsed_seconds=0.0)
 
-    def instruct_use_tool(
-        self,
-        prompt: str,
-        *,
-        timeout_seconds: int = 300,
-        require_agent_shell: bool = False,
-    ) -> RunResponse:
-        _ = timeout_seconds, require_agent_shell
-        request_yaml = yaml_from_prompt(prompt)
-        if not request_yaml:
-            raise AgentHarnessError(
-                "prompt must contain a toolset: run request block",
-            )
-        prefix = self._next_instruct_prefix("run")
-        self._write_artifact(f"{prefix}-prompt.txt", prompt)
-        self._write_artifact(f"{prefix}-stdin.yaml", request_yaml)
-        cli_output = ToolsRunYaml(self._workspace, prefix).run_request(request_yaml)
-        return self._finalize_run_response(prefix, None, cli_output)
+    def _judge_answer(self, launch_prompt: str, timeout_seconds: int) -> AgentResult:
+        judge_file = self._session_file.with_name(f"{self._session_file.stem}-judge.json")
+        judge_session = AgentSession.from_workspace(judge_file, self._workspace, fresh=True)
+        return judge_session.run(launch_prompt, self._workspace, timeout_seconds=timeout_seconds)
 
-    def instruct_run(self, prompt: str, *, timeout_seconds: int = 300) -> RunResponse:
-        """Back-compat alias for ``instruct_use_tool``."""
-        return self.instruct_use_tool(prompt, timeout_seconds=timeout_seconds)
-
-    def _finalize_run_response(
-        self,
-        prefix: str,
-        capture: _AgentRunCapture | None,
-        cli_output: str,
-    ) -> RunResponse:
-        self._write_artifact(f"{prefix}-cli-output.yaml", cli_output)
-        ai_response = RunResponse.from_cli_output(cli_output)
-        if capture is not None:
-            self.last_shell_captures = list(capture.shell_captures)
-            self.session_shell_captures.extend(capture.shell_captures)
-        self._write_artifact(
-            f"{prefix}-ai-response.yaml",
-            self._yaml.dump_manifest(
-                {k: v for k, v in {
-                    "ok": ai_response.ok,
-                    "toolset": ai_response.toolset,
-                    "tool": ai_response.tool,
-                    "action": ai_response.action,
-                    "result": ai_response.result,
-                    "instructions": ai_response.instructions,
-                    "tools": ai_response.tools,
-                    "arguments": ai_response.arguments,
-                    "resources": ai_response.resources,
-                }.items() if v is not None}
-            ),
-        )
-        return ai_response
-
-    def ai_judge(self, output: str, rubric: str, *, timeout_seconds: int = 180) -> JudgeResult:
-        self._log.write("judge rubric:")
-        sys.__stdout__.write(rubric + "\n")
-        sys.__stdout__.flush()
-        self._log.write("judge output:")
-        sys.__stdout__.write(output + "\n")
-        sys.__stdout__.flush()
-        self._write_artifact("judge-rubric.txt", rubric)
-        self._write_artifact("judge-output.txt", output)
-        task_text = JUDGE_TASK.format(rubric=rubric, output=output)
-        task_path = self._write_artifact("judge-prompt.txt", task_text)
-        launch_prompt = JUDGE_LAUNCH.format(path=task_path.relative_to(self._workspace).as_posix())
-        self._write_artifact("judge-launch.txt", launch_prompt)
-        judge_session = AgentSession.from_workspace(
-            self._session_file.with_name(f"{self._session_file.stem}-judge.json"),
-            self._workspace,
-            fresh=True,
-        )
-        result = judge_session.run(
-            launch_prompt, self._workspace, timeout_seconds=timeout_seconds
-        )
-        self._write_artifact("judge-response.txt", result.text)
-        if result.stderr.strip():
-            self._write_artifact("judge-stderr.txt", result.stderr)
-        if result.exit_code != 0:
-            raise AgentHarnessError(
-                f"judge cursor-agent exited {result.exit_code}",
-                prefix="judge",
-                exit_code=result.exit_code,
-                stdout=result.text,
-                stderr=result.stderr,
-                log_dir=self._log_dir,
-            )
-        parsed = JudgeResult.from_stdout(result.text, result.elapsed_seconds)
-        self._write_artifact("judge-verdict.txt", f"{parsed.verdict}\n\n{parsed.reason}\n")
-        if parsed.verdict == "ERROR":
-            raise AgentJudgeError(
-                f"judge returned no parseable JSON verdict: {parsed.reason}",
-                prefix="judge",
-                stdout=result.text,
-                stderr=result.stderr,
-                log_dir=self._log_dir,
-            )
-        self._log.write(f"judge verdict: {parsed.verdict} - {parsed.reason}")
-        return parsed
-
-    def _require_session(self) -> AgentSession:
+    def _run(self, prompt: str, timeout_seconds: int, prefix: str) -> _StreamBuckets:
         if self._session is None:
             raise RuntimeError("agent session not started - use `with agent(...)`")
-        return self._session
-
-    def _run_capture(
-        self,
-        session: AgentSession,
-        prompt: str,
-        *,
-        timeout_seconds: int,
-        prefix: str = "",
-    ) -> "_AgentRunCapture":
-        args = self._build_agent_args(session, prompt)
         buckets = _StreamBuckets()
         proc = subprocess.Popen(
-            args,
+            self._agent_command(self._session, prompt),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -441,90 +308,14 @@ class _ToolAgentBlock:
             errors="replace",
             bufsize=1,
         )
-        stdout, stderr, exit_code = buckets.drain(proc, timeout_seconds)
+        buckets.drain(proc, timeout_seconds)
         buckets.raise_if_failed(prefix, self._log_dir)
-        return _AgentRunCapture(
-            agent_result=AgentResult(
-                exit_code=exit_code, text=stdout, stderr=stderr, elapsed_seconds=0.0
-            ),
-            shell_captures=buckets.shell_captures,
-            raw_lines=buckets.raw_lines,
-            workspace=self._workspace,
-        )
+        return buckets
 
-    def _build_agent_args(self, session: AgentSession, prompt: str) -> list[str]:
-        from cli_agent.cli_agent import CursorCli
-
+    def _agent_command(self, session: AgentSession, prompt: str) -> list[str]:
         if len(prompt) > CMDLINE_SAFE:
-            prompt_path = self._log_dir / f"prompt-{self._instruct_count + 1:03d}.txt"
+            prompt_path = self._log_dir / f"prompt-{self._instruct_count:03d}.txt"
             prompt_path.parent.mkdir(parents=True, exist_ok=True)
             prompt_path.write_text(prompt, encoding="utf-8")
-            relative = prompt_path.relative_to(self._workspace).as_posix()
-            prompt = f"Read and follow the instructions in {relative}"
-        return CursorCli(resume=session.chat_id, print_mode=True).command(
-            prompt, str(self._workspace)
-        )
-
-    @classmethod
-    @contextmanager
-    def opened(cls, workspace: Path, session_file: Path) -> Iterator["_ToolAgentBlock"]:
-        """Establish one cursor-agent session for nested agent-instruct calls."""
-        block = cls(workspace, session_file)
-        block.assert_authenticated()
-        block._session = AgentSession.from_workspace(
-            block._session_file, block._workspace, fresh=False
-        )
-        yield block
-
-
-@dataclass
-class _AgentRunCapture:
-    agent_result: AgentResult
-    shell_captures: list[_ShellCapture]
-    raw_lines: list[str]
-    workspace: Path
-
-    def tools_run_output(self) -> str | None:
-        from_shell = self._output_from_shell_captures()
-        if from_shell:
-            return from_shell
-        from_text = self._output_from_agent_text()
-        if from_text:
-            return from_text
-        return self._output_from_raw_lines()
-
-    def _output_from_shell_captures(self) -> str | None:
-        yaml_run = ToolsRunYaml(self.workspace)
-        for shell in reversed(self.shell_captures):
-            found = self._output_from_shell(yaml_run, shell)
-            if found:
-                return found
-        return None
-
-    def _output_from_shell(self, yaml_run: ToolsRunYaml, shell: _ShellCapture) -> str | None:
-        if yaml_run.looks_like_tools_run_output(shell.output):
-            return shell.output
-        for candidate in (shell.command, shell.output):
-            if not _TOOLS_RUN.search(candidate):
-                continue
-            replayed = yaml_run.replay(candidate)
-            if replayed:
-                return replayed
-        return None
-
-    def _output_from_agent_text(self) -> str | None:
-        yaml_run = ToolsRunYaml(self.workspace)
-        for text in (self.agent_result.text, "".join(self.raw_lines)):
-            found = yaml_run.fenced_yaml_from_text(text)
-            if found:
-                return found
-        return None
-
-    def _output_from_raw_lines(self) -> str | None:
-        yaml_run = ToolsRunYaml(self.workspace)
-        for raw in reversed(self.raw_lines):
-            found = yaml_run.fenced_yaml_from_text(raw)
-            if found:
-                return found
-        return None
-
+            prompt = f"Read and follow the instructions in {prompt_path.relative_to(self._workspace).as_posix()}"
+        return CursorCli(resume=session.chat_id, print_mode=True).command(prompt, str(self._workspace))

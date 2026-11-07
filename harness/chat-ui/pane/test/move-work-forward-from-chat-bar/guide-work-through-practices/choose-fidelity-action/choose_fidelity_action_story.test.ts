@@ -6,7 +6,7 @@ import { scenario, story } from '../../../story-test'
 // Epic: Move Work Forward From Chat Bar
 // Sub-epic: Guide Work Through Practices
 // Map: ../../../../../.context/story-map.md#s-person----choose-fidelity-action
-// Model: ../../../../../../kanban/.context/kanban-model.md
+// Model: ../../../../../../../space/kanban/.context/kanban-model.md
 // Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
 
 // (S) Person --> Choose Fidelity Action
@@ -36,14 +36,15 @@ story('Choose Fidelity Action', CHAT_BAR, () => {
       expect(textOf(await markOf(scene.ui, 'next-action-mark'))).toBe('↻')
       expect(await tipOf(scene.ui, 'action')).toBe('iterate ux-mockup')
       expect(await drawn(scene.ui, 'picker')).toBeUndefined()
-      expect(scene.world.fills).not.toContain('/actions-iterate ux-mockup')
+      expect(scene.world.fills).toEqual([])
     })
     when('the Person runs the action', async ($, on, scene) => {
       await scene.ui.press({ key: 'next-action' })
     })
-    // action button press -> runAction($, fidelity, 'iterate') -> promptCommands -> $.prompt.fill({ text: '/actions-iterate ux-mockup', mode: 'append' })
-    then('/actions-iterate ux-mockup waits in the prompt box for the Person to send, and the button shows the next action again', async ($, on, scene) => {
-      expect(scene.world.fills).toContain('/actions-iterate ux-mockup')
+    // action button press -> runAction($, fidelity, 'iterate') -> promptCommand -> $.prompt.fill({ text: '/actions-iterate ux-mockup session=...', mode: 'append' })
+    then("/actions-iterate ux-mockup in checkout-flow's session waits in the prompt box for the Person to send, and the button shows the next action again", async ($, on, scene) => {
+      expect(scene.world.fills).toEqual(['/actions-iterate ux-mockup session=.sessions/checkout-flow/session.json'])
+      expect(scene.world.sent).toEqual([])
       expect(await tipOf(scene.ui, 'action')).not.toBe('iterate ux-mockup')
     })
   })

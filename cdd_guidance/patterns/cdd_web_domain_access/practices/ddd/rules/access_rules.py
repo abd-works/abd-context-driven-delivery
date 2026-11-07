@@ -39,7 +39,7 @@ class AdapterIsGenerated(PracticeGraphRule):
 
     def check(self, node, context) -> list[str]:
         if node.type == "AccessHandWrittenAdapter":
-            return [f"{node.source.file}: is an adapter or connection written by hand; mark the toolset with @language_adapter and install."]
+            return [f"{node.source.file}: is an adapter or connection written by hand; annotate the toolset with @language_adapter and install."]
         if node.get_fact("extends_adapter", False):
             return [f"{node.source.file}: extends a generated adapter; use {{Object}}Adapter and its {{operation}}Requested directly."]
         return []
@@ -49,10 +49,10 @@ class AnnotateWhatTypeScriptReads(PracticeGraphRule):
     """An open result generates `Record<string, unknown>`, which the compiler cannot check."""
 
     slug = "annotate-what-typescript-reads"
-    node_types = ("AccessMarkedToolset",)
+    node_types = ("AccessAnnotatedToolset",)
 
     def check(self, node, context) -> list[str]:
         return [
-            f"{node.source.file}:{line}: `{operation}` returns dict[str, Any]; return a domain object whose properties are marked with @data_field."
+            f"{node.source.file}:{line}: `{operation}` returns dict[str, Any]; return a domain object whose properties are annotated with @data_field."
             for line, operation in node.get_fact("open_results", [])
         ]

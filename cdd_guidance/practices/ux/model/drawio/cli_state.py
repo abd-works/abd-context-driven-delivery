@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict
 
-from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen
+from cdd_guidance.practices.ux.model.nodes import Region, Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 # Layouts the CLI templates understand (alias -> CLI id).
@@ -24,37 +24,32 @@ _CLI_LAYOUTS = {
 
 def ux_map_to_cli_state(ux_map: UxMap, target: str = "") -> Dict[str, Any]:
     """Build the JSON state shape consumed by drawio_ux.mjs."""
-    screens: List[Dict[str, Any]] = []
-    for index, screen in enumerate(ux_map.screens):
-        entry = {
-            "name": screen.name,
-            "layout": _cli_layout(screen.layout),
-            "tabOf": screen.chrome_of or None,
-            "col": index,
-            "row": 0,
-            "regions": [_region_to_cli(region) for region in screen.regions],
-            "stories": list(screen.story_names),
-            "terms": list(screen.domain_terms or screen.domain_concepts),
-        }
-        if screen.inactive_tabs:
-            # Sibling chrome hint - kept as callout note via terms if needed.
-            pass
-        screens.append(entry)
-
-    connections = [
-        {
-            "from": transition.from_screen,
-            "to": transition.to_screen,
-            "label": transition.trigger or transition.name,
-            "dashed": transition.nav_type == "tab",
-        }
-        for transition in ux_map.transitions
-    ]
     return {
         "target": target,
-        "screens": screens,
-        "connections": connections,
+        "screens": [_screen_to_cli(screen, index) for index, screen in enumerate(ux_map.screens)],
+        "connections": [
+            {
+                "from": transition.from_screen.name if transition.from_screen else "",
+                "to": transition.to_screen.name if transition.to_screen else "",
+                "label": transition.trigger or transition.name,
+                "dashed": transition.nav_type == "tab",
+            }
+            for transition in ux_map.transitions
+        ],
         "scope": ux_map.scope,
+    }
+
+
+def _screen_to_cli(screen: Screen, column: int) -> Dict[str, Any]:
+    return {
+        "name": screen.name,
+        "layout": _cli_layout(screen.layout),
+        "tabOf": screen.chrome_of.name if screen.chrome_of else None,
+        "col": column,
+        "row": 0,
+        "regions": [_region_to_cli(region) for region in screen.regions],
+        "stories": screen.story_keys,
+        "terms": list(screen.domain_terms or screen.domain_concepts),
     }
 
 
@@ -64,32 +59,31 @@ def _cli_layout(layout_id: str) -> str:
 
 
 def _region_to_cli(region: Region) -> Dict[str, Any]:
-    slot = region.slot or "body"
+    area = region.area or "body"
     controls = list(region.controls)
     if not controls:
-        return {"name": region.name, "type": "chrome", "slot": slot, "dimmed": False}
+        return {"name": region.name, "type": "chrome", "area": area, "dimmed": False}
 
     buttons = [c for c in controls if c.control_type == "button"]
     fields = [c for c in controls if c.control_type in {"text", "dropdown", "checkbox"}]
-    rows = [c for c in controls if c.control_type in {"list", "tree"}]
+    list_controls = [c for c in controls if c.control_type in {"list", "tree"}]
 
-    if fields and not rows:
+    if fields and not list_controls:
         return {
             "name": region.name,
             "type": "form",
-            "slot": slot,
-            "fields": [_field_label(c) for c in fields]
-            + ([f"[{c.label}]" for c in buttons] if buttons else []),
+            "area": area,
+            "fields": [c.label for c in fields] + [f"[{c.label}]" for c in buttons],
         }
 
-    if rows or buttons:
-        field_labels = [_field_label(c) for c in rows] or [
-            c.label for c in controls if c.control_type not in {"button"}
+    if list_controls or buttons:
+        field_labels = [c.label for c in list_controls] or [
+            c.label for c in controls if c.control_type != "button"
         ]
         return {
             "name": region.name,
             "type": "list",
-            "slot": slot,
+            "area": area,
             "fields": field_labels or [region.name],
             "actions": [c.label for c in buttons],
         }
@@ -97,10 +91,6 @@ def _region_to_cli(region: Region) -> Dict[str, Any]:
     return {
         "name": region.name,
         "type": "chrome",
-        "slot": slot,
+        "area": area,
         "dimmed": False,
     }
-
-
-def _field_label(control: Control) -> str:
-    return control.label or control.name

@@ -46,6 +46,8 @@ class ServiceStart:
 
     def graph_web(self) -> int:
         env = os.environ.copy()
+        # The explorer's server names the project it explores on every cdd call; by default this checkout.
+        env.setdefault("GRAPH_PROJECT", str(self.repo))
         python = self.repo / ".venv" / "Scripts" / "python.exe"
         if python.is_file():
             env["PYTHON"] = str(python)
@@ -61,20 +63,18 @@ class ServiceStart:
 
     def hook(self) -> int:
         from harness.hooks.hook_daemon import HookDaemon
-        from harness.hooks.hook_server import HookServer
 
         stopped = self._stop(self._hook_command)
-        daemon = HookDaemon()
-        state = HookServer.state_path(self.repo)
-        daemon.spawn(self.repo, state)
+        daemon = HookDaemon(self.repo)
+        daemon.spawn()
         deadline = time.time() + 30
         address = None
         while time.time() < deadline:
-            address = daemon.live_address(state)
+            address = daemon.live_address()
             if address is not None:
                 break
             time.sleep(0.25)
-        host, port, pid = address if address is not None else (None, None, None)
+        host, port, pid = (address.host, address.port, address.pid) if address is not None else (None, None, None)
         ok = address is not None
         return PingReport().emit(
             {
@@ -179,10 +179,10 @@ class ServiceStart:
             "close_fds": True,
         }
         if sys.platform == "win32":
-            from harness.hooks.process import detached_creationflags, hidden_process_startupinfo
+            from harness.process.process import BackgroundStart
 
-            kwargs["creationflags"] = detached_creationflags()
-            kwargs["startupinfo"] = hidden_process_startupinfo()
+            kwargs["creationflags"] = BackgroundStart().creationflags
+            kwargs["startupinfo"] = BackgroundStart().startupinfo
         else:
             kwargs["start_new_session"] = True
         subprocess.Popen(**kwargs)

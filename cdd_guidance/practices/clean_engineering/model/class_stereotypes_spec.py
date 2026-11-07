@@ -1,0 +1,87 @@
+"""A class's stereotypes are data on the class model: each code channel writes them and reads them back."""
+
+import sys
+from pathlib import Path
+
+from expects import contain, equal, expect
+from mamba import context, description, it
+
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass  # noqa: E402
+from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import (  # noqa: E402
+    JavaScriptCleanEngineeringModel,
+)
+from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel  # noqa: E402
+from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import (  # noqa: E402
+    TypeScriptCleanEngineeringModel,
+)
+
+
+def _cart_model() -> CleanEngineeringModel:
+    """A model with one class, Cart, an Aggregate Root and Entity that holds a shopper's lines."""
+    cart = OoadClass("Cart", 1, intent="A shopper's cart.")
+    cart.stereotypes = ["Aggregate Root", "Entity"]
+    module = Module("cart", 1)
+    module.classes.append(cart)
+    model = CleanEngineeringModel("model", 1)
+    model.modules.append(module)
+    return model
+
+
+def _round_trip(channel):
+    """The Cart class after the channel writes the model and reads its own code back."""
+    parsed = channel.parse(channel.render(_cart_model()))
+    return next(oclass for oclass in parsed.every_class() if oclass.name == "Cart")
+
+
+def _read(channel, code: str) -> OoadClass:
+    return channel.parse(code).every_class()[0]
+
+
+with description("a class that carries stereotypes"):
+    with context("written as python"):
+        with it("should write each stereotype as a decorator with no arguments"):
+            expect(PythonCleanEngineeringModel().render(_cart_model())).to(contain("@aggregate_root\n@entity\nclass Cart:"))
+
+        with it("should read the same stereotypes back"):
+            expect(_round_trip(PythonCleanEngineeringModel()).stereotypes).to(equal(["Aggregate Root", "Entity"]))
+
+        with it("should keep the intent without the stereotypes"):
+            expect(_round_trip(PythonCleanEngineeringModel()).intent).to(equal("A shopper's cart."))
+
+    with context("written as typescript"):
+        with it("should write each stereotype as a decorator call"):
+            expect(TypeScriptCleanEngineeringModel().render(_cart_model())).to(contain("@AggregateRoot()\n@Entity()\nclass Cart {"))
+
+        with it("should read the same stereotypes back"):
+            expect(_round_trip(TypeScriptCleanEngineeringModel()).stereotypes).to(equal(["Aggregate Root", "Entity"]))
+
+        with it("should keep the intent from the doc comment"):
+            expect(_round_trip(TypeScriptCleanEngineeringModel()).intent).to(equal("A shopper's cart."))
+
+    with context("written as javascript, which has no decorators"):
+        with it("should mark the stereotypes in the doc comment"):
+            expect(JavaScriptCleanEngineeringModel().render(_cart_model())).to(contain("/** <<Aggregate Root>> <<Entity>> A shopper's cart. */"))
+
+        with it("should read the same stereotypes back"):
+            expect(_round_trip(JavaScriptCleanEngineeringModel()).stereotypes).to(equal(["Aggregate Root", "Entity"]))
+
+
+with description("hand-written code that marks a class's stereotype"):
+    with context("in a typescript doc comment"):
+        with it("should read the mark as the stereotype and the rest as the intent"):
+            oclass = _read(TypeScriptCleanEngineeringModel(), "/** <<Value Object>> Card authorization fields. */\nexport class CardAuthorization {\n  amount: number;\n}\n")
+            expect((oclass.stereotypes, oclass.intent)).to(equal((["Value Object"], "Card authorization fields.")))
+
+    with context("in a python comment line above the class"):
+        with it("should read the mark as the stereotype"):
+            oclass = _read(PythonCleanEngineeringModel(), "import os\n\n# <<Entity>>\nclass Account:\n    id: str\n")
+            expect(oclass.stereotypes).to(equal(["Entity"]))
+
+    with context("with a decorator that takes arguments"):
+        with it("should not read it as a stereotype"):
+            oclass = _read(PythonCleanEngineeringModel(), "@dataclass(frozen=True)\n@value_object\nclass Money:\n    amount: int\n")
+            expect(oclass.stereotypes).to(equal(["Value Object"]))

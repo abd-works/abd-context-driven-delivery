@@ -1,13 +1,10 @@
-# diagnose — module context
+# cdd_guidance/actions/diagnose
+*Diagnose* is a disciplined hunt for a hard bug or performance regression, run by a background sub-agent so the chat can keep working: build a fast pass/fail feedback loop, reproduce, minimise, form hypotheses, instrument, fix, and add a regression test. Calling `diagnose.diagnose(guidance)` (slash `/diagnose`) with no guidance runs the six phases alone; passing practice guidance, such as `bdd` or `clean-engineering`, applies that practice's rules while fixing and while writing the regression test.
 
-## Purpose
-Runs the six-phase bug hunt as a non-blocking sub-agent. Call `diagnose()` for the phases alone. Pass practice guidance when the fix and the regression test should follow that practice.
-
-## Seam
-`Diagnose.diagnose(guidance=None)`. Slash `/diagnose`. `guidance` is a practice toolset ref, a guidance slug such as `bdd`, `clean-engineering`, or `stories`, or a list of those.
+- **Purpose:** Find the root cause of a stubborn failure and prove the fix with a test, without blocking the conversation that hit it.
+- **Seam (terms):** Diagnose, `diagnose.diagnose`
+- **Dependencies (one-way):** `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*), `harness/agent_tools` (`@subAgent`), `harness/installation`, `harness/mcp`
 
 ## Constraint
-Omit `guidance` and the six phases are the whole prompt. Pass guidance and that practice's rules are appended for the fix and the regression test.
 
-## Dependencies
-`harness/guidance_actions`
+Build the feedback loop before guessing at a cause; skip a phase only with a stated reason. Pass guidance only when the fix and its test should follow that practice. The work runs in a sub-agent, so do not wait on its result in the same turn.

@@ -3,6 +3,7 @@
 /**
  * The phone line on a Cart or Subscription. Owns number, SIM type, ICCID, and portability.
  */
+@Entity()
 class Line {
   msisdn: string | null;
   // << association >>
@@ -53,6 +54,8 @@ class Line {
 /**
  * Paradise view of one line. Self-care: `{ id, bundle, number, simType, status, usage }`. Onboarding thinner: `{ type, number, status }` until agreement is live. `<<represents>>` ++MavenirAgreement++ (`agreementManagement/agreement`).
  */
+@AggregateRoot()
+@Entity()
 class Subscription {
   // MavenirAgreement.id
   id: string;
@@ -99,6 +102,7 @@ class Subscription {
 /**
  * Local / roaming data on the line. Loaded with the subscription (`getUsageRequest`).
  */
+@Entity()
 class Usage {
   constructor() {
   }
@@ -107,6 +111,7 @@ class Usage {
 /**
  * Owns `Collection<Subscription>`. Associates to `PortalGateway` for agreements / product order. Associates to `CcsGateway` for usage.
  */
+@Repository()
 class SubscriptionRepository {
   // << aggregation >>
   subscriptions: Collection<Subscription>;
@@ -135,6 +140,8 @@ class SubscriptionRepository {
 /**
  * `agreementManagement/agreement?customerId=&productValues=true`. The wrap does not know Subscription.
  */
+@System()
+@Entity()
 class MavenirAgreement {
   id: string;
   status: string;
@@ -158,6 +165,8 @@ class MavenirAgreement {
 /**
  * Product on the agreement. Latest `orderDate` is Paradise *Bundle* (`productOffering.id` is Plan.id).
  */
+@System()
+@Entity()
 class MavenirAgreementProduct {
   id: string;
   name: string;
@@ -177,6 +186,8 @@ class MavenirAgreementProduct {
 /**
  * Cook: PATCH shoppingCart with billingAccount then `POST v2/productOrderFromCart`. Created by `Cart.createOrder`. Lives with the line after cook. The wrap does not know Cart.
  */
+@System()
+@Entity()
 class MavenirProductOrder {
   id: string;
 
@@ -188,6 +199,8 @@ class MavenirProductOrder {
 /**
  * CCS `subscriber/serviceUsage/.../subscribers/{msisdn}`.
  */
+@System()
+@Entity()
 class MsisdnDataUsage {
   constructor() {
   }
@@ -196,6 +209,8 @@ class MsisdnDataUsage {
 /**
  * Agreements and product order on the Mavenir party. Party create / read / profile live in `# Customer`. Billing commits live in `# Billing`. Cart shopping-cart slice lives in `# Cart`.
  */
+@Service()
+@System()
 class PortalGateway {
   constructor() {
   }
@@ -234,6 +249,8 @@ class PortalGateway {
 /**
  * Usage on the MSISDN. Midtier maps; it is not a type.
  */
+@Service()
+@System()
 class CcsGateway {
   constructor() {
   }
@@ -247,6 +264,8 @@ class CcsGateway {
 /**
  * Vouchera redeem at cook. Written on Subscription. Cart.voucher is the code.
  */
+@System()
+@Entity()
 class VoucherRedemption {
   // flagged 5xx: false; cook continues
   success: boolean;

@@ -1,36 +1,70 @@
 """GraphStoryModel accepts a loaded story model and records it on a practice graph.
 
-Each node holds the story object it was written from as ``Node.model``; rules read the scenario, its steps, and
-its story from there. The node records only what the object does not know, such as a story file's exports.
+Each story object is its own graph node: the epic, story, background, scenario, and step the model read are added to
+the practice graph as they are, so rules read the scenario, its steps, and its story straight from them. A node keeps
+as its own facts only what the object does not know, such as the exports of the file its story was read from.
 """
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
+from typing import Callable, Optional
 
-from harness.graph.graph import edge_order
-from harness.graph.node_data import encode_node_data
+from harness.graph.graph import Node, Source
 
 from cdd_guidance.practices.stories.model.source_location import SourceLocation
-from cdd_guidance.practices.stories.model.story_model import Epic, Step, StepType, Story, StoryModel
+from cdd_guidance.practices.stories.model.story_model import Background, Epic, Scenario, Step, Story, StoryModel
 
 _EXPORT_CONST = re.compile(r"export const (\w+)")
 _DOMAIN_CLASS = re.compile(r"\bclass\s+([A-Z]\w*)\b")
 _ORCHESTRATION_EXPORT = re.compile(r"export function (?:activate|handle|process)\w*\s*\(")
 _NAMED_IMPORT = re.compile(r"import\s*(?:type\s*)?\{(?P<names>[^}]+)\}\s*from\s*['\"](?P<module>[^'\"]+)['\"]")
+# Python `from .examples.customers_examples import valid_customer, (a as b)`.
+_PYTHON_FROM_IMPORT = re.compile(r"^\s*from\s+(?P<module>\.*[\w.]*)\s+import\s+(?P<names>\([^)]*\)|[^#\r\n]+)", re.M)
+# Java `import static shop.onboard.examples.CustomersExamples.validCustomer;` or `import shop.onboard.examples.CustomersExamples;`.
+_JAVA_IMPORT = re.compile(r"^\s*import\s+(?P<static>static\s+)?(?P<path>[\w.]+)\s*;", re.M)
 
 
 def _imported_modules(text: str) -> dict[str, str]:
-    """Each name the story file imports, mapped to the module it comes from."""
+    """Each name the story file imports, mapped to the module it comes from, written as a path without its extension
+    the way the story test's language names it: TypeScript and JavaScript as the import says, Python and Java with
+    their dots turned into folders."""
     imported: dict[str, str] = {}
-    for match in _NAMED_IMPORT.finditer(text):
-        for part in match.group("names").split(","):
-            name = part.strip().split(" as ")[-1].removeprefix("type ").strip()
-            if name:
-                imported.setdefault(name, match.group("module"))
+    for name, module in [*_script_imports(text), *_python_imports(text), *_java_imports(text)]:
+        if name and name != "*":
+            imported.setdefault(name, module)
     return imported
+
+
+def _script_imports(text: str) -> list[tuple[str, str]]:
+    return [
+        (part.strip().split(" as ")[-1].removeprefix("type ").strip(), match.group("module"))
+        for match in _NAMED_IMPORT.finditer(text)
+        for part in match.group("names").split(",")
+    ]
+
+
+def _python_imports(text: str) -> list[tuple[str, str]]:
+    found = []
+    for match in _PYTHON_FROM_IMPORT.finditer(text):
+        dotted = match.group("module")
+        level = len(dotted) - len(dotted.lstrip("."))
+        folders = dotted.lstrip(".").replace(".", "/")
+        module = folders if level == 0 else ("./" if level == 1 else "../" * (level - 1)) + folders
+        for part in match.group("names").strip("()").split(","):
+            found.append((part.strip().split(" as ")[-1].strip(), module))
+    return found
+
+
+def _java_imports(text: str) -> list[tuple[str, str]]:
+    """A static import names a member of a class file; any other import names the class file itself."""
+    found = []
+    for match in _JAVA_IMPORT.finditer(text):
+        parts = match.group("path").split(".")
+        file_parts = parts[:-1] if match.group("static") else parts
+        found.append((parts[-1], "/".join(file_parts)))
+    return found
 
 
 _EVIDENCE_LINE = re.compile(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)")
@@ -51,146 +85,16 @@ class GraphStoryModel:
 
     def __init__(self, model: StoryModel) -> None:
         self.model = model
-        self._models: dict = {}
         self._lines: dict[str, list[str]] = {}
         self._cursor: dict[str, int] = {}
-        self._on_node = None
-        self._node_at = 0
-        self._node_total = 0
 
-    def record(self, practice, *, on_node=None) -> None:
-        nodes: list[list] = []
-        edges: list[list] = []
-        root_id = practice.root_node.node_id
-        self._on_node = on_node
-        self._models = {}
-        self._node_at = 0
-        self._node_total = sum(self._story_count(epic) for epic in self.model.epics)
-        try:
-            with self.model.batch_schema_sync():
-                for epic in self.model.epics:
-                    self._epic(practice.source_root, root_id, epic, True, nodes, edges)
-            practice.apply_nodes(nodes, self._models)
-            practice.apply_edges(edges)
-            practice.loaded = ["nodes", "edges", "rules"]
-        finally:
-            self._on_node = None
-
-    def _story_count(self, epic: Epic) -> int:
-        return len(epic.stories) + sum(self._story_count(child) for child in epic.epics)
-
-    def _epic(self, root: str, parent_id: str, epic: Epic, top: bool, nodes: list, edges: list) -> None:
-        story_file = self._file_under(epic) or self._file(epic)
-        folder = self._folder(story_file, up=1 if top and epic.epics else 0)
-        semantic = "Epic" if top else "SubEpic"
-        node_id = f"stories:{semantic}:{folder}:{epic.name}"
-        source_file, line, end = self._name_span(root, story_file, epic.name, folder)
-        epic.source = SourceLocation(source_file, line, end)
-        epic.load_map_facts()
-        epic.evidence = self._epic_evidence(root, story_file, epic, top)
-        nodes.append(self._row(node_id, epic.name, semantic, source_file, line, end, epic))
-        edges.append([parent_id, node_id, "decomposedInto", edge_order("decomposedInto"), "direct"])
-        for child in epic.epics:
-            self._epic(root, node_id, child, False, nodes, edges)
-        for story in epic.stories:
-            self._story(root, node_id, story, nodes, edges)
-
-    def _story(self, root: str, parent_id: str, story: Story, nodes: list, edges: list) -> None:
-        self._node_at += 1
-        if self._on_node is not None:
-            self._on_node(f"{self._node_at}/{self._node_total} · {story.name}")
-        file = self._file(story)
-        node_id = f"stories:Story:{file}:{story.name}"
-        line, end = self._source_span(story, root, file)
-        story.load_map_facts()
-        nodes.append(self._row(node_id, story.name, "Story", file or ".", line, end, story, self._file_facts(root, file)))
-        edges.append([parent_id, node_id, "decomposedInto", edge_order("decomposedInto"), "direct"])
-        for background in story.backgrounds:
-            self._background(root, file, node_id, background, nodes, edges)
-        scoped = [name for background in story.backgrounds for name in background.examples]
-        for scenario in story.scenarios:
-            self._scenario(root, file, node_id, scenario, nodes, edges, scoped)
-
-    def _background(self, root: str, file: str, parent_id: str, background, nodes: list, edges: list) -> None:
-        label = background.name or "background"
-        node_id = f"stories:Background:{file}:{label}"
-        line, end = self._source_span(background, root, file)
-        self._ensure_source(background, file, line, end)
-        background.load_map_facts()
-        nodes.append(self._row(node_id, label, "Background", file or ".", line, end, background))
-        edges.append([parent_id, node_id, "background", edge_order("background"), "direct"])
-        for step in background.steps:
-            self._step(root, file, node_id, step, nodes, edges, edge_kind="steps")
-
-    def _scenario(self, root: str, file: str, parent_id: str, scenario, nodes: list, edges: list, scoped: list[str] = ()) -> None:
-        """Record the scenario with its own examples and those its story's Background scopes. A scenario read from a
-        story test sits in that file, not in the story map its Story came from."""
-        file = self._file(scenario) or file
-        node_id = f"stories:Scenario:{file}:{scenario.name}"
-        line, end = self._source_span(scenario, root, file)
-        self._ensure_source(scenario, file, line, end)
-        scenario.load_map_facts()
-        nodes.append(
-            self._row(
-                node_id,
-                scenario.name,
-                "Scenario",
-                file or ".",
-                line,
-                end,
-                scenario,
-                {
-                    "is_outline": bool(getattr(scenario, "is_outline", False)),
-                    "story_name": getattr(scenario, "story_name", "") or "",
-                },
-            )
-        )
-        edges.append([parent_id, node_id, "scenarios", edge_order("scenarios"), "direct"])
-        for step in scenario.steps:
-            self._step(root, file, node_id, step, nodes, edges, edge_kind="steps")
-        for name in dict.fromkeys([*scenario.examples, *scoped]):
-            example_id = f"stories:Example:{file}:{name}"
-            nodes.append([example_id, name, "Example", "stories", file or ".", line, end])
-            edges.append([node_id, example_id, "examples", edge_order("examples"), "direct"])
-
-    def _step(
-        self,
-        root: str,
-        file: str,
-        parent_id: str,
-        step: Step,
-        nodes: list,
-        edges: list,
-        *,
-        edge_kind: str = "steps",
-    ) -> None:
-        semantic = _step_semantic(step)
-        label = f"{step.keyword.lower()} {step.text}".strip()
-        line, end = self._source_span(step, root, file, fallback_text=step.text)
-        node_id = f"stories:{semantic}:{file}:{line}:{hash(label) & 0xFFFFFF}"
-        nodes.append([node_id, label, semantic, "stories", file or ".", line, end])
-        self._models[node_id] = step
-        edges.append([parent_id, node_id, edge_kind, edge_order(edge_kind), "direct"])
-        for continuation in step.ands:
-            self._step(root, file, node_id, continuation, nodes, edges, edge_kind="ands")
-
-    def _row(
-        self,
-        node_id: str,
-        name: str,
-        semantic: str,
-        file: str,
-        line: int,
-        end: int,
-        node,
-        extra: dict | None = None,
-    ) -> list:
-        self._models[node_id] = node
-        payload = encode_node_data(extra or {})
-        row = [node_id, name, semantic, "stories", file, line, end]
-        if payload:
-            row.extend(["", payload])
-        return row
+    def record(self, practice, *, on_node: Optional[Callable[[str], None]] = None) -> None:
+        """Write the model's epics, stories, backgrounds, scenarios, steps, and examples onto *practice*. *on_node*
+        hears each story as it is written."""
+        recording = _StoryGraphRecording(self, practice, on_node)
+        with self.model.batch_schema_sync():
+            recording.write()
+        practice.loaded = ["nodes", "edges", "rules"]
 
     def _epic_evidence(self, root: str, story_file: str, epic: Epic, top: bool) -> list[str]:
         """What the epic declares, else the sub-epic file's opening docblock, else the labels its children carry."""
@@ -208,15 +112,8 @@ class GraphStoryModel:
         return list(dict.fromkeys(labels))
 
     def _file_under(self, epic: Epic) -> str:
-        for story in epic.stories:
-            file = self._file(story)
-            if file:
-                return file
-        for child in epic.epics:
-            file = self._file_under(child)
-            if file:
-                return file
-        return ""
+        """The first file any story under the epic was read from."""
+        return next((file for story in epic.every_story() for file in [self._file(story)] if file), "")
 
     def _file(self, node) -> str:
         """The file the node was read from; empty while it only holds the placeholder a new node starts with."""
@@ -292,19 +189,113 @@ class GraphStoryModel:
         return 1
 
 
-def _step_semantic(step: Step) -> str:
-    if step.step_type == StepType.GIVEN:
-        return "Given"
-    if step.step_type == StepType.WHEN:
-        return "When"
-    if step.step_type == StepType.THEN:
-        return "Then"
-    keyword = (step.keyword or "").casefold()
-    if keyword == "given":
-        return "Given"
-    if keyword == "when":
-        return "When"
-    if keyword == "then":
-        return "Then"
-    return "Step"
+class _StoryGraphRecording:
+    """One recording of a story model onto a practice, and how many stories it has announced."""
 
+    def __init__(self, story_graph: GraphStoryModel, practice, on_node: Optional[Callable[[str], None]]) -> None:
+        self.story_graph = story_graph
+        self.practice = practice
+        self.root = practice.source_root
+        self.on_node = on_node
+        self.story_at = 0
+        self.story_total = len(story_graph.model.every_story())
+
+    def write(self) -> None:
+        for epic in self.story_graph.model.epics:
+            self._epic(self.practice.root_node, epic, True)
+
+    def _epic(self, parent: Node, epic: Epic, top: bool) -> None:
+        graph = self.story_graph
+        story_file = graph._file_under(epic) or graph._file(epic)
+        folder = graph._folder(story_file, up=1 if top and epic.epics else 0)
+        semantic = "Epic" if top else "SubEpic"
+        node_id = f"stories:{semantic}:{folder}:{epic.name}"
+        source_file, line, end = graph._name_span(self.root, story_file, epic.name, folder)
+        epic.source = SourceLocation(source_file, line, end)
+        epic.load_map_facts()
+        epic.evidence = graph._epic_evidence(self.root, story_file, epic, top)
+        node = self._add_node(node_id, epic.name, semantic, source_file, line, end, epic)
+        self.practice.link("decomposedInto", parent, node)
+        for child in epic.epics:
+            self._epic(node, child, False)
+        for story in epic.stories:
+            self._story(node, story)
+
+    def _story(self, parent: Node, story: Story) -> None:
+        self._announce(story)
+        graph = self.story_graph
+        file = graph._file(story)
+        node_id = f"stories:Story:{file}:{story.name}"
+        line, end = graph._source_span(story, self.root, file)
+        story.load_map_facts()
+        facts = graph._file_facts(self.root, file)
+        node = self._add_node(node_id, story.name, "Story", file or ".", line, end, story, facts)
+        self.practice.link("decomposedInto", parent, node)
+        for background in story.backgrounds:
+            self._background(file, node, background)
+        scoped = [name for background in story.backgrounds for name in background.examples]
+        for scenario in story.scenarios:
+            self._scenario(file, node, scenario, scoped)
+
+    def _announce(self, story: Story) -> None:
+        self.story_at += 1
+        if self.on_node is not None:
+            self.on_node(f"{self.story_at}/{self.story_total} · {story.name}")
+
+    def _background(self, file: str, parent: Node, background: Background) -> None:
+        label = background.name or "background"
+        node_id = f"stories:Background:{file}:{label}"
+        line, end = self.story_graph._source_span(background, self.root, file)
+        self.story_graph._ensure_source(background, file, line, end)
+        background.load_map_facts()
+        node = self._add_node(node_id, label, "Background", file or ".", line, end, background)
+        self.practice.link("background", parent, node)
+        for step in background.steps:
+            self._step(file, node, step, "steps")
+
+    def _scenario(self, file: str, parent: Node, scenario: Scenario, scoped: list[str]) -> None:
+        """Record the scenario with its own examples, those its own Background holds, and those its story's Background
+        scopes. A scenario read from a story test sits in that file, not in the story map its Story came from."""
+        file = self.story_graph._file(scenario) or file
+        node_id = f"stories:Scenario:{file}:{scenario.name}"
+        line, end = self.story_graph._source_span(scenario, self.root, file)
+        self.story_graph._ensure_source(scenario, file, line, end)
+        scenario.load_map_facts()
+        facts = {"is_outline": bool(scenario.is_outline), "story_name": scenario.story_name or ""}
+        node = self._add_node(node_id, scenario.name, "Scenario", file or ".", line, end, scenario, facts)
+        self.practice.link("scenarios", parent, node)
+        for step in scenario.steps:
+            self._step(file, node, step, "steps")
+        own_background = [name for background in scenario.backgrounds for name in background.examples]
+        for name in dict.fromkeys([*scenario.examples, *own_background, *scoped]):
+            source = Source(file or ".", line, end, self.root)
+            example = self.practice.add_named("Example", f"stories:Example:{file}:{name}", name, source)
+            self.practice.link("examples", node, example)
+
+    def _step(self, file: str, parent: Node, step: Step, edge_kind: str) -> None:
+        semantic = _step_semantic(step)
+        label = f"{step.keyword.lower()} {step.text}".strip()
+        line, end = self.story_graph._source_span(step, self.root, file, fallback_text=step.text)
+        node_id = f"stories:{semantic}:{file}:{line}:{hash(label) & 0xFFFFFF}"
+        continuations = list(step.ands)
+        node = self._add_node(node_id, label, semantic, file or ".", line, end, step)
+        self.practice.link(edge_kind, parent, node)
+        for continuation in continuations:
+            self._step(file, node, continuation, "ands")
+
+    def _add_node(self, node_id: str, name: str, semantic: str, file: str, line: int, end: int, story_object, facts=None) -> Node:
+        """The story object added as the graph node node_id, called name, of type semantic, with the facts it does not
+        hold itself; the node already called node_id when two objects share it."""
+        if node_id not in self.practice.by_id:
+            story_object.name = name
+            story_object.type = semantic
+        node = self.practice.add(story_object, node_id, file, line, end)
+        for key, value in (facts or {}).items():
+            node.set_fact(key, value)
+        return node
+
+
+def _step_semantic(step: Step) -> str:
+    """Given, When, or Then from the step's phase, else from its keyword; a step with neither is a Step."""
+    phase = step.phase or (step.keyword or "").casefold()
+    return phase.capitalize() if phase in ("given", "when", "then") else "Step"

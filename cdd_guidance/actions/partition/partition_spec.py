@@ -1,4 +1,4 @@
-"""BDD spec for Partition - kit prose on PracticeGuidance."""
+"""BDD spec for the Partition action, its index, and its segments."""
 
 import re
 import sys
@@ -14,31 +14,43 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_false, be_none, be_true, equal, expect, start_with
+from expects import be_false, be_none, be_true, contain, equal, expect, start_with
 from mamba import after, before, context, description, it
 
-from partition.partition_index import PartitionIndex
-from partition.partition import Partition
-from partition.segment import Segment, SegmentCompletenessConfig, SegmentEntry
+from cdd_guidance.actions.partition.partition_index import PartitionIndex
+from cdd_guidance.actions.partition.partition import Partition
+from cdd_guidance.actions.partition.segment import Segment, SegmentCompletenessConfig, SegmentEntry
 
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.markdown import Markdown
 from space.session.throwaway_project import ThrowawayProject
 from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.tool_call import ToolCall
 
-_KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_TOOLSET = (
-    "cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle"
+    "cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _STORIES_TOOLSET = "cdd_guidance.practices.stories.stories:Stories"
 _DEFAULT_PARTITION_SNIPPET = "Hard fail"
+
+
+def _session_of(project: Path):
+    """The session open in project, as a call on that project works in it."""
+    return ToolCall(project=project).session
 
 
 def _section(name: str) -> str:
     return Markdown.from_label(Partition(), name).extract()
 
 
-with description("Partition kit prose"):
+with description("the partition action's guidance"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with it("should document partition, index (Step 1), and segment (Step 2) in partition.md"):
         content = _section("partition")
         expect(content.startswith("# Partition")).to(be_true)
@@ -46,7 +58,14 @@ with description("Partition kit prose"):
         expect("# Step 2 \u2014 Segment" in content).to(be_true)
 
 
-with description("Partition kit on hosts"):
+with description("a practice guidance beside the partition action"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with it("should not expose partition on practice Guidance"):
         cls = type(AgentToolSet.instantiate(_CAR_CHRONICLE_TOOLSET))
         practice = cls()
@@ -54,6 +73,13 @@ with description("Partition kit on hosts"):
 
 
 with description("a partition action"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        self.project = ThrowawayProject().root
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that expands"):
         with it("should include the partition_corpus body in partition"):
             body = AgentInstructions.for_callable(
@@ -65,8 +91,78 @@ with description("a partition action"):
 
     with context("that runs on a practice"):
         with it("should finish partitioning the corpus for that practice"):
-            result = Partition().partition("stories", paths="README.md")
+            result = Partition(session=_session_of(self.project)).partition("stories", paths="README.md")
             expect(result).to(start_with("Partition of README.md finished"))
+
+    with context("that an agent calls on a fidelity"):
+        with before.each:
+            operation = Partition()._discover_instruction_members()["partition"]
+            arguments = {"guidance": "stories-story-map", "paths": "README.md", "context": "", "mode": "one_go", "out_root": None}
+            self.reply = operation.invoke(arguments, project=self.project)
+            self.root = _session_of(self.project).root.as_posix()
+
+        with it("should name what the index lists from that fidelity's Scaffold subsection"):
+            expect("verb-noun Epic, Sub-Epic, and Story names" in self.reply).to(be_true)
+
+        with it("should name that practice's own file"):
+            expect("`stories.md` cited" in self.reply).to(be_true)
+
+        with it("should name no partition guidance placeholder"):
+            expect("{{" in self.reply).to(be_false)
+
+        with it("should write under the session's root"):
+            expect(f"docs under {self.root}/.context/" in self.reply).to(be_true)
+
+    with context("that names an out_root"):
+        with it("should index the corpus under that folder"):
+            folder = Path(tempfile.mkdtemp())
+            reply = Partition().index(paths="README.md", out_root=str(folder))
+            expect(f"under {folder.resolve().as_posix()}/.context/" in reply).to(be_true)
+
+    with context("that names an out_root from the project's root"):
+        with it("should index the corpus under that folder in the session's project"):
+            reply = Partition(session=_session_of(self.project)).index(paths="README.md", out_root="docs")
+            expect(f"under {(self.project / 'docs').resolve().as_posix()}/.context/" in reply).to(be_true)
+
+    with context("that checks a segment named from the project's root"):
+        with it("should read the segment in the session's project"):
+            segment = self.project / "docs" / "heroes-segment.md"
+            segment.parent.mkdir(parents=True, exist_ok=True)
+            segment.write_text(_SEGMENT_ALL_OK, encoding="utf-8")
+            report = Partition(session=_session_of(self.project)).verify_segment_completeness("docs/heroes-segment.md")
+            expect(report).to(contain("completeness: PASS"))
+
+    with context("that checks a segment against an index named from the project's root"):
+        with it("should read that index's config in the session's project"):
+            (self.project / "docs").mkdir(parents=True, exist_ok=True)
+            (self.project / "docs" / "heroes-segment.md").write_text(_SEGMENT_WITH_STUB, encoding="utf-8")
+            (self.project / "docs" / "test-index.md").write_text(_INDEX_WITH_SHORT_MINIMUM, encoding="utf-8")
+            report = Partition(session=_session_of(self.project)).verify_segment_completeness(
+                "docs/heroes-segment.md", index_path="docs/test-index.md"
+            )
+            expect(report).to(contain("completeness: PASS"))
+
+    with context("that an agent calls on a fidelity with an out_root"):
+        with before.each:
+            self.folder = Path(tempfile.mkdtemp()).resolve().as_posix()
+            operation = Partition()._discover_instruction_members()["partition"]
+            arguments = {"guidance": "stories-story-map", "paths": "README.md", "context": "", "mode": "one_go", "out_root": self.folder}
+            self.reply = operation.invoke(arguments, project=self.project)
+
+        with it("should index the named corpus under that folder"):
+            expect(f"Index the corpus at README.md under {self.folder}/.context/" in self.reply).to(be_true)
+
+        with it("should write the segments under that folder"):
+            expect(f"Verbatim source chunks written under {self.folder}/" in self.reply).to(be_true)
+
+    with context("that an agent calls on two practices"):
+        with before.each:
+            operation = Partition()._discover_instruction_members()["partition"]
+            arguments = {"guidance": "stories-story-map ddd-bounded-context", "paths": "README.md", "context": "", "mode": "one_go", "out_root": None}
+            self.reply = operation.invoke(arguments, project=self.project)
+
+        with it("should name what each practice's index lists from its own file"):
+            expect(("`stories.md` cited" in self.reply, "`ddd.md` cited" in self.reply)).to(equal((True, True)))
 
 
 # ---------------------------------------------------------------------------
@@ -124,6 +220,14 @@ min-body-chars: 80
 -->
 """
 
+_INDEX_WITH_SHORT_MINIMUM = """\
+# Test Index
+
+<!-- partition-config
+min-body-chars: 3
+-->
+"""
+
 _INDEX_NO_CONFIG = """\
 # Test Index
 
@@ -136,6 +240,13 @@ No partition-config block present in this document.
 # ---------------------------------------------------------------------------
 
 with description("a SegmentCompletenessConfig"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that uses all defaults"):
         with before.each:
             self.config = SegmentCompletenessConfig()
@@ -155,6 +266,13 @@ with description("a SegmentCompletenessConfig"):
 # ---------------------------------------------------------------------------
 
 with description("a SegmentEntry"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that has no body"):
         with before.each:
             self.entry = SegmentEntry("Hero", None, SegmentCompletenessConfig())
@@ -220,6 +338,13 @@ with description("a SegmentEntry"):
 # ---------------------------------------------------------------------------
 
 with description("a Segment"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that is built from text with no expected-entries marker"):
         with before.each:
             self.segment = Segment.from_text(
@@ -304,6 +429,13 @@ with description("a Segment"):
 # ---------------------------------------------------------------------------
 
 with description("a PartitionIndex"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that is built from text with a partition-config block"):
         with before.each:
             self.index = PartitionIndex.from_text(
@@ -311,17 +443,14 @@ with description("a PartitionIndex"):
             )
 
         with it("should parse min_body_chars from the config block"):
-            expect(self.index.min_body_chars).to(equal(80))
+            expect(self.index.completeness.min_body_chars).to(equal(80))
 
         with it("should parse non_entry_headers from the config block"):
-            expect("NAME" in self.index.non_entry_headers).to(be_true)
-            expect("COST" in self.index.non_entry_headers).to(be_true)
+            expect("NAME" in self.index.completeness.non_entry_headers).to(be_true)
+            expect("COST" in self.index.completeness.non_entry_headers).to(be_true)
 
         with it("should parse short_body_pattern from the config block"):
-            expect(self.index.short_body_pattern).not_to(be_none)
-
-        with it("should expose the completeness config"):
-            expect(self.index.completeness.min_body_chars).to(equal(80))
+            expect(self.index.completeness.short_body_pattern).not_to(be_none)
 
         with it("should expose the path"):
             expect(self.index.path).to(equal(Path("/fake/index.md")))
@@ -336,7 +465,7 @@ with description("a PartitionIndex"):
             )
 
         with it("should use the default min_body_chars of 120"):
-            expect(self.index.min_body_chars).to(equal(120))
+            expect(self.index.completeness.min_body_chars).to(equal(120))
 
     with context("with resolve_near called"):
         with context("that finds an index in a parent .context directory"):
@@ -372,10 +501,17 @@ with description("a PartitionIndex"):
 # ---------------------------------------------------------------------------
 
 with description("Partition verifying segment completeness"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that segment path does not exist"):
         with it("should return completeness FAIL with file-not-found error"):
             result = Partition().verify_segment_completeness(
-                segment_path="/nonexistent/path/segment.md"
+                segment_path=str(Path(tempfile.gettempdir()) / "nonexistent" / "segment.md")
             )
             expect("completeness: FAIL" in result).to(be_true)
             expect("segment not found" in result).to(be_true)
@@ -431,6 +567,6 @@ with description("a partition that is given files") as self:
         folder = Path(tempfile.mkdtemp())
         corpus = folder / "corpus.md"
         corpus.write_text("a very long corpus that must stay on disk\n", encoding="utf-8")
-        result = Partition().partition("corpus note", paths=str(corpus))
+        result = Partition(session=_session_of(self.throwaway.root)).partition("corpus note", paths=str(corpus))
         expect(str(corpus) in result).to(equal(True))
         expect("must stay on disk" in result).to(equal(False))

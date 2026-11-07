@@ -11,19 +11,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import Ooad
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     DiagramClass,
     DiagramModule,
-    DiagramNode,
-    ImportedClass as SharedImportedClass,
-)
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import (
-    CELL_MIN_HEIGHT,
-    CELL_WIDTH,
-    Geometry,
-    MODULE_CELL_MIN_HEIGHT,
-    MODULE_CELL_WIDTH,
-    MODULE_HEADER_HEIGHT,
-    MODULE_LINE_HEIGHT,
-    MODULE_MAX_SEAM_BULLETS,
-    MODULE_PURPOSE_MAX_CHARS,
+    ImportedClass,
 )
 
 CLASS_STYLE = (
@@ -49,31 +37,26 @@ CARD_MIN_WIDTH = 200
 CARD_WIDTH_STEP = 20
 
 
-class Page:
-    """One mxGraphModel root that writes DiagramNode cells as mxCell."""
+class DrawioVertex:
+    """A placed node written as one Draw.io vertex cell: its HTML label, its style, and its box."""
 
-    def __init__(self, name: str, root_el: ET.Element) -> None:
-        self.name = name
-        self._root_el = root_el
-
-    def place(self, node: DiagramNode) -> ET.Element:
-        node.geometry = node.keep_or_place(node.geometry)
-        cell = ET.SubElement(self._root_el, 'mxCell')
-        cell.set('id', node.cell_id)
-        cell.set('value', node.html())
-        cell.set('style', node.style())
+    def append_to(self, root_el: ET.Element) -> ET.Element:
+        cell = ET.SubElement(root_el, 'mxCell')
+        cell.set('id', self.cell_id)
+        cell.set('value', self.html())
+        cell.set('style', self.style())
         cell.set('vertex', '1')
-        cell.set('parent', node.parent_id)
+        cell.set('parent', self.parent_id)
         geo = ET.SubElement(cell, 'mxGeometry')
-        geo.set('x', str(int(node.geometry.x)))
-        geo.set('y', str(int(node.geometry.y)))
-        geo.set('width', str(int(node.geometry.width)))
-        geo.set('height', str(int(node.geometry.height)))
+        geo.set('x', str(int(self.geometry.x)))
+        geo.set('y', str(int(self.geometry.y)))
+        geo.set('width', str(int(self.geometry.width)))
+        geo.set('height', str(int(self.geometry.height)))
         geo.set('as', 'geometry')
         return cell
 
 
-class DrawIOClass(DiagramClass):
+class DrawIOClass(DiagramClass, DrawioVertex):
     """Draw.io UML class cell."""
 
     fill_color = ''
@@ -86,7 +69,7 @@ class DrawIOClass(DiagramClass):
         return max(CARD_MIN_WIDTH, math.ceil(wanted / CARD_WIDTH_STEP) * CARD_WIDTH_STEP)
 
     def html(self) -> str:
-        name_html = html.escape(self.display_name())
+        name_html = html.escape(self.name)
         stereo = self._stereotype_html()
         return (
             f'<p style="margin:0px;margin-top:4px;text-align:center;">'
@@ -97,9 +80,10 @@ class DrawIOClass(DiagramClass):
         )
 
     def style(self) -> str:
-        if not self.fill_color:
-            return CLASS_STYLE
-        return f'{CLASS_STYLE}fillColor={self.fill_color};strokeColor=#666666;module={self.owning_module};'
+        """The class style, with the owning module recorded so parse puts the class back in it."""
+        fill = f'fillColor={self.fill_color};strokeColor=#666666;' if self.fill_color else ''
+        module = f'module={self.owning_module};' if self.owning_module else ''
+        return f'{CLASS_STYLE}{fill}{module}'
 
     def _property_lines(self) -> List[str]:
         return [f"+ {p.name}{(': ' + p.type_hint if p.type_hint else '')}" for p in self.properties]
@@ -113,7 +97,7 @@ class DrawIOClass(DiagramClass):
         ]
 
     def _member_lines(self) -> List[str]:
-        return [self.display_name()] + self._property_lines() + self._operation_lines()
+        return [self.name] + self._property_lines() + self._operation_lines()
 
     def _properties_html(self) -> str:
         return ''.join(f'{html.escape(line)}<br/>' for line in self._property_lines()) or '<br/>'
@@ -122,18 +106,18 @@ class DrawIOClass(DiagramClass):
         return ''.join(f'{html.escape(line)}<br/>' for line in self._operation_lines()) or '<br/>'
 
     def _stereotype_html(self) -> str:
-        stereotypes = self.tactical_stereotypes()
-        if not stereotypes:
+        """The class's stereotypes as `<<Mark>>`s in small italics above its name, where parse reads them back."""
+        if not self.stereotypes:
             return ''
-        label = ' '.join(stereotypes)
+        label = ' '.join(f'<<{item}>>' for item in self.stereotypes)
         return f'<i style="font-size:9px;color:#888;">{html.escape(label)}</i><br/>'
 
 
-class ImportedClass(SharedImportedClass, DrawIOClass):
+class DrawIOImportedClass(ImportedClass, DrawIOClass):
     """Dashed Draw.io card for a class owned by another aggregate."""
 
     def html(self) -> str:
-        name_html = html.escape(self.display_name())
+        name_html = html.escape(self.name)
         from_html = html.escape(f'«from: {self.from_module}»')
         props_html = ''.join(
             (
@@ -157,12 +141,12 @@ class ImportedClass(SharedImportedClass, DrawIOClass):
         return IMPORTED_CLASS_STYLE
 
 
-class DrawIOModule(DiagramModule):
+class DrawIOModule(DiagramModule, DrawioVertex):
     """Draw.io rounded modules-view cell."""
 
     def load_class(self, source: OoadClass) -> DrawIOClass:
         loaded = DrawIOClass(name=source.name, sequential_order=source.sequential_order)
-        loaded.update_self(source)
+        loaded.translate_from(source)
         return loaded
 
     def html(self) -> str:

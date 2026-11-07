@@ -1,17 +1,19 @@
 """Filter, stage, passing rules, and packages on a graph."""
 
-import sys
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 from expects import contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import before, context, description, it
 
-from graph import Graph, Node, PracticeGraph, Source
+from harness.graph.graph import EdgeType, Graph, Node, PracticeGraph, Source
+from harness.graph.saved_graph import SavedPractice
+
+
+def _saved_node(node_id: str, name: str, type: str, file: str, end_line: int, stage: str) -> dict:
+    return {"node_id": node_id, "name": name, "type": type, "practice": "clean_engineering", "file": file, "line": 1, "end_line": end_line, "stage": stage}
 
 
 with description("a graph"):
@@ -29,8 +31,8 @@ with description("a graph"):
             )
             root = self.practice.root_node
             root.children.extend([self.failure, self.register])
-            self.practice.bind_rule("limit-operation-parameters", ["Operation"])
-            self.practice.bind_rule("keep-operations-small-focused", ["Operation"])
+            self.practice.apply_rule("limit-operation-parameters", ["Operation"])
+            self.practice.apply_rule("keep-operations-small-focused", ["Operation"])
             self.graph.filter.select_rules(["limit-operation-parameters"])
             self.graph.filter.select_violations()
 
@@ -60,11 +62,7 @@ with description("a graph"):
             self.class_node.stage = "implementation"
             root = self.practice.root_node
             root.children.extend([self.module, self.class_node, self.other])
-            self.practice.record(
-                {"kind": "owns", "order": 2, "display": "direct"},
-                self.module,
-                self.class_node,
-            )
+            self.practice.record(EdgeType("owns", 2, "direct"), self.module, self.class_node)
             self.graph.filter.select_relationships(["owns"])
 
         with it("should keep the stage from the query on the node"):
@@ -79,13 +77,12 @@ with description("a graph"):
             returned = {node["name"] for node in data_of(self.graph.return_nodes())}
             expect(returned).to(equal({"account-credentials", "AccountCredentials"}))
 
-    with context("with a query row that carries a stage"):
+    with context("with a saved node that carries a stage"):
         with before.all:
             self.practice = PracticeGraph("clean_engineering")
-            self.node = Node.from_fact(
-                self.practice,
-                Node.fact(["id", "AccountCredentials", "OoadClass", "clean_engineering", "account.ts", "1", "4", "implementation"]),
-            )
+            saved = {"nodes": [_saved_node("id", "AccountCredentials", "OoadClass", "account.ts", 4, "implementation")]}
+            self.practice.restore(SavedPractice.from_record("clean_engineering", saved))
+            self.node = self.practice.by_id["id"]
 
         with it("should store the stage on the node"):
             expect(self.node.stage).to(equal("implementation"))
@@ -94,16 +91,22 @@ with description("a graph"):
         with before.all:
             self.practice = PracticeGraph("clean_engineering")
             self.practice.by_id[self.practice.root_node.node_id] = self.practice.root_node
-            self.practice.apply_nodes([
-                ["clean_engineering:Module:src/domain:domain", "domain", "Module", "clean_engineering", "src/domain", "1", "1", "discovery"],
-                ["clean_engineering:Package:src/domain/customer:customer", "customer", "Package", "clean_engineering", "src/domain/customer", "1", "1", "discovery"],
-                ["clean_engineering:OoadClass:src/domain/customer/Customer.ts:Customer", "Customer", "OoadClass", "clean_engineering", "src/domain/customer/Customer.ts", "1", "3", "implementation"],
-            ])
-            self.practice.apply_edges([
-                [self.practice.root_node.node_id, "clean_engineering:Module:src/domain:domain", "owns", "1", "direct"],
-                ["clean_engineering:Module:src/domain:domain", "clean_engineering:Package:src/domain/customer:customer", "owns", "2", "direct"],
-                ["clean_engineering:Package:src/domain/customer:customer", "clean_engineering:OoadClass:src/domain/customer/Customer.ts:Customer", "owns", "2", "direct"],
-            ])
+            module, package = "clean_engineering:Module:src/domain:domain", "clean_engineering:Package:src/domain/customer:customer"
+            customer = "clean_engineering:OoadClass:src/domain/customer/Customer.ts:Customer"
+            saved = SavedPractice.from_record("clean_engineering", {
+                "nodes": [
+                    _saved_node(module, "domain", "Module", "src/domain", 1, "discovery"),
+                    _saved_node(package, "customer", "Package", "src/domain/customer", 1, "discovery"),
+                    _saved_node(customer, "Customer", "OoadClass", "src/domain/customer/Customer.ts", 3, "implementation"),
+                ],
+                "edges": [
+                    {"parent": self.practice.root_node.node_id, "child": module, "kind": "owns", "order": 1, "display": "direct"},
+                    {"parent": module, "child": package, "kind": "owns", "order": 2, "display": "direct"},
+                    {"parent": package, "child": customer, "kind": "owns", "order": 2, "display": "direct"},
+                ],
+            })
+            self.practice.restore(saved)
+            self.practice.restore_links(saved)
             self.practice.root_node.populate()
             self.tree = data_of(self.practice.root_node.serialize())
 

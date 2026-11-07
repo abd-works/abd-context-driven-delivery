@@ -16,13 +16,15 @@ _EXPECTED_INLINE = re.compile(
 )
 _HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _ALL_CAPS = re.compile(r"^[A-Z][A-Z0-9 /'\-]{1,60}$")
+# An entry body shorter than this reads as a stub unless the index names a short-body pattern it matches.
+MIN_ENTRY_BODY_CHARS = 120
 
 
 @dataclass(frozen=True)
 class SegmentCompletenessConfig:
-    """Completeness knobs loaded from the partition root index (not kit defaults)."""
+    """Completeness settings loaded from the partition root index; the defaults apply when the index names none."""
 
-    min_body_chars: int = 120
+    min_body_chars: int = MIN_ENTRY_BODY_CHARS
     non_entry_headers: frozenset[str] = field(default_factory=frozenset)
     short_body_pattern: re.Pattern[str] | None = None
 
@@ -146,7 +148,7 @@ class Segment:
         incomplete = total - ok_count
         overall = "PASS" if incomplete == 0 and total > 0 else "FAIL"
         lines = self._report_header(overall, ok_count, total, incomplete)
-        lines.extend(self._report_rows(entries, incomplete, total))
+        lines.extend(self._report_table_lines(entries, incomplete, total))
         if overall == "FAIL":
             lines.extend(self._fail_footer())
         return "\n".join(lines) + "\n"
@@ -207,20 +209,20 @@ class Segment:
             return False
         return True
 
-    def _report_rows(
+    def _report_table_lines(
         self, entries: list[SegmentEntry], incomplete: int, total: int
     ) -> list[str]:
-        rows = [
+        table_lines = [
             f"| {entry.name} | {entry.status} | {entry.body_chars} |"
             for entry in entries
             if not entry.is_complete
         ]
         if incomplete == 0 and total > 0:
-            rows.append(
+            table_lines.append(
                 f"| - | (all expected entries) | OK | "
                 f">={self._config.min_body_chars} |"
             )
-        return rows
+        return table_lines
 
     @classmethod
     def _names_from_marker(cls, text: str) -> list[str]:

@@ -2,11 +2,11 @@
 
 A story file is one file. Do not track a tier, a test suite, or a test case as a node.
 
-`StoryMap.load` reads the story map from a folder. There is no scanner object beside the map.
+A story map is a `StoryModel`. Each format adapter reads it from a folder (`from_workspace`); there is no scanner object beside the map.
 
 A scenario's Given, When, and Then lines are its `Step` nodes. A step's type is `step_type`. An and or a but is a step in that step's `ands`, with its own order. Do not copy those lines into a second list.
 
-A story map in every format is a `StoryMap`. It loads and saves epics, stories, and the rest of that tree. Do not wrap the tree in a second object for a file format.
+A story map in every format is a `StoryModel`. It loads and saves epics, stories, and the rest of that tree. Do not wrap the tree in a second object for a file format.
 
 A story file is `story`, `background`, `scenario`, and the step calls `given`, `when`, `then`, and `and`. Do not emit a helper protocol, a `create_*_story` factory, or a file per tier.
 

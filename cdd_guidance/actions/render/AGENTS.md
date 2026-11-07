@@ -1,4 +1,4 @@
 # render
 
-- Bind hosts and convert. Do not call `run`, `begin`, or `end` — no session open and no `Turn.turn` commit.
-- Forward `source` into `PracticeGuidance.render`. Host `format` is the parse channel only when `source` is omitted.
+- Render only converts. Do not call `run`, `begin`, or `end`: it opens no session and commits nothing.
+- Pass `source` through to `PracticeGuidance.render`. When `source` is omitted, the content is read as the guidance's current format.

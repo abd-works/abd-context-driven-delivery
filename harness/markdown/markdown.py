@@ -8,19 +8,20 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Literal, TypeVar, get_args, get_origin, get_type_hints
 
-from harness.agent_tools.name import Name
-from harness.markdown.format import Format
+from harness.name.name import Name
+from harness.annotations.annotation import annotation_kinds
+from harness.markdown.format import TEMPLATE_FOLDER_NAMES, Format
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 
-class MarkdownSlot(str):
+class ExtractedMarkdown(str):
     """Extracted markdown that still answers ``expand()`` and ``templates()``."""
 
-    def expand(self) -> "MarkdownSlot":
+    def expand(self) -> "ExtractedMarkdown":
         return self
 
-    def __call__(self) -> "MarkdownSlot":
+    def __call__(self) -> "ExtractedMarkdown":
         return self
 
 
@@ -81,6 +82,17 @@ class MarkdownText:
 
     def __init__(self, text: str) -> None:
         self._text = text
+
+    @property
+    def yaml_fields(self) -> dict[str, Any]:
+        """The fields of every ```yaml block in the document, merged in order, so a section keeps its settings beside
+        its prose."""
+        return YamlFields().yaml_fields(self._text)
+
+    @property
+    def without_yaml(self) -> str:
+        """The document with its ```yaml blocks taken out: the prose an agent reads and an installed file holds."""
+        return _YAML_FENCE.sub("", self._text).strip()
 
     def _fence_update(self, fence: str | None, bare: str) -> tuple[str | None, bool]:
         fence_match = re.match(r"^\s*(```|~~~)", bare)
@@ -184,9 +196,13 @@ class MarkdownText:
             return []
         return self.child_blocks(headings[0][3])
 
+    def fidelity_blocks(self) -> list[tuple[str, str]]:
+        """Each ``### fidelity`` block under a practice document's ``## Fidelities``, by name, in document order."""
+        return [(name, body) for name, body in self.child_blocks("Fidelities") if name.casefold() != "fidelities"]
+
     def fidelity_block(self, fidelity_name: str) -> str:
         wanted = fidelity_name.casefold()
-        for name, body in Markdown(None, "").fidelity_blocks(self._text):
+        for name, body in self.fidelity_blocks():
             if name.casefold() == wanted:
                 return body
         return ""
@@ -323,7 +339,7 @@ class AssetLocation:
         wanted = self._format_dir_name()
         if not wanted:
             return False
-        return name.casefold() in Format.template_folder_names() and name.casefold() != wanted
+        return name.casefold() in TEMPLATE_FOLDER_NAMES and name.casefold() != wanted
 
     def _format_dir_name(self) -> str:
         return Format(self.format).template_folder
@@ -335,17 +351,12 @@ class AssetLocation:
         return path.suffix.lower() != allowed
 
     def _skip_fidelity_file(self, path: Path) -> bool:
-        stem = path.stem.casefold().replace("_", "-")
-        if self.label == "examples" and (
-            "thin-slice" in stem
-            or stem.startswith("scenario-")
-            or (stem == "examples" and (self.fidelity or "").casefold().replace("_", "-") in {"story-map", ""})
-        ):
-            fidelity = (self.fidelity or "").casefold().replace("_", "-")
-            if fidelity in {"story-map", ""}:
-                return True
-        fidelity = (self.fidelity or "").casefold().replace("_", "-")
-        if fidelity not in {"story-map"}:
+        stem = Name(path.stem).kebab
+        fidelity = Name(self.fidelity or "").kebab
+        whole_map_example = "thin-slice" in stem or stem.startswith("scenario-") or stem == "examples"
+        if self.label == "examples" and fidelity in {"story-map", ""} and whole_map_example:
+            return True
+        if fidelity != "story-map":
             return False
         if "scenario" in stem or stem == "thin-slice":
             return True
@@ -569,10 +580,9 @@ class AssetLocator:
                 for slug in Name(name).spellings
                 for extra in (slug, f"{slug}-templates", f"{slug}-template")
             ]
-        self._template_stems = stems
-        self._template_ext = Format(self._active_format).template_extension
+        extension = Format(self._active_format).template_extension
         for folder in self._template_folders():
-            located = self._template_in_folder(folder)
+            located = self._template_in_folder(folder, stems, extension)
             if located is not None:
                 return located
         return None
@@ -586,36 +596,22 @@ class AssetLocator:
         folders.append(shared)
         return folders
 
-    def _template_in_folder(self, folder: Path) -> AssetLocation | None:
+    def _template_in_folder(self, folder: Path, stems: list[str], extension: str) -> AssetLocation | None:
+        """The first template named by one of stems in folder, with extension when the format has one."""
         if not folder.is_dir():
             return None
-        if self._template_ext:
-            return self._template_with_ext(folder)
-        return self._template_any_ext(folder)
-
-    def _template_with_ext(self, folder: Path) -> AssetLocation | None:
-        for stem in self._template_stems:
-            path = folder / f"{stem}{self._template_ext}"
-            if path.is_file() and "sketch" not in path.stem.casefold():
-                return AssetLocation(
-                    "file", self._module_dir, self._domain_slug, path=path.resolve()
-                )
-        return None
-
-    def _template_any_ext(self, folder: Path) -> AssetLocation | None:
-        for stem in self._template_stems:
-            for path in sorted(folder.glob(f"{stem}.*")):
-                if path.is_file() and "sketch" not in path.stem.casefold():
-                    return AssetLocation(
-                        "file", self._module_dir, self._domain_slug, path=path.resolve()
-                    )
+        for stem in stems:
+            candidates = [folder / f"{stem}{extension}"] if extension else sorted(folder.glob(f"{stem}.*"))
+            path = next((path for path in candidates if path.is_file() and "sketch" not in path.stem.casefold()), None)
+            if path is not None:
+                return AssetLocation("file", self._module_dir, self._domain_slug, path=path.resolve())
         return None
 
 
 _YAML_FENCE = re.compile(r"```ya?ml\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
 
 
-class YamlBinder:
+class YamlFields:
     """Parse YAML fences and assign matching fields onto an instance."""
 
     def __init__(self, instance: Any | None = None) -> None:
@@ -684,10 +680,6 @@ class YamlBinder:
             if isinstance(leftovers, dict):
                 leftovers[Name(attr).snake] = self.as_string(value)
             return
-        if stored == "default_format" and isinstance(value, str):
-            value = Format(value.split()[0].strip("()`")).name
-        elif stored == "clean_engineering" and isinstance(value, str):
-            value = Name(value.split()[0].strip("()`")).snake
         setattr(self._instance, stored, value)
 
     def as_string(self, value: Any) -> str:
@@ -714,7 +706,7 @@ class YamlBinder:
             merged.update(self.mapping(match.group(1)))
         return merged
 
-    def bind_yaml_mapping(self, fields: dict[str, Any]) -> None:
+    def assign_yaml_mapping(self, fields: dict[str, Any]) -> None:
         leftovers: dict[str, str] = {}
         for key, value in fields.items():
             attr = self.matching_attr(key)
@@ -722,24 +714,18 @@ class YamlBinder:
                 leftovers[Name(key).snake] = self.as_string(value)
                 continue
             current = getattr(self._instance, attr, None)
-            if isinstance(value, dict) and _is_bindable(current):
-                YamlBinder(current).bind_yaml_mapping(value)
+            if isinstance(value, dict) and self._holds_own_fields(current):
+                YamlFields(current).assign_yaml_mapping(value)
                 continue
             self.assign(attr, value)
         self.merge_map(leftovers)
 
-    def bind_yaml(self, text: str) -> None:
-        self.bind_yaml_mapping(self.yaml_fields(text))
+    def assign_yaml(self, text: str) -> None:
+        self.assign_yaml_mapping(self.yaml_fields(text))
 
-
-def strip_yaml_fences(text: str) -> str:
-    return _YAML_FENCE.sub("", text).strip()
-
-
-def _is_bindable(current: Any) -> bool:
-    return current is not None and not isinstance(
-        current, (str, int, float, bool, list, tuple, bytes, dict)
-    )
+    def _holds_own_fields(self, current: Any) -> bool:
+        """True when current is an object a nested YAML mapping is assigned onto field by field, not a plain value."""
+        return current is not None and not isinstance(current, (str, int, float, bool, list, tuple, bytes, dict))
 
 
 class MarkdownCollection:
@@ -783,37 +769,28 @@ class MarkdownCollection:
             entry = cls.child(name, body)
             if entry is None:
                 continue
-            YamlBinder(entry).bind_yaml(body)
+            YamlFields(entry).assign_yaml(body)
             entries[name] = entry
         collection = cls(entries, parent=parent)
         collection.markdown = text
         return collection
 
     @classmethod
-    def coerce(cls, markdown: Markdown, return_type: Any, parent: Any = None) -> Any:
+    def from_section(cls, markdown: Markdown, return_type: Any, parent: Any = None) -> Any:
+        """The collection a property's section holds, as return_type reads it: a list type as this collection's
+        entries, a type with its own ``from_markdown`` through that, keeping the section's text."""
         text = markdown.raw()
-        origin = get_origin(return_type) or return_type
-        if origin is list:
-            return cls.from_list(markdown)
+        if (get_origin(return_type) or return_type) is list:
+            return cls.from_markdown(markdown.extract())
         builder = getattr(return_type, "from_markdown", None)
-        if callable(builder) and return_type is not cls:
-            try:
-                result = builder(text, parent=parent)
-            except TypeError:
-                result = builder(text)
-            holder = cls(parent=parent)
-            holder.markdown = text
-            holder.keep_extract(result)
-            return result
-        return cls.from_markdown(text, parent=parent)
+        if not callable(builder) or return_type is cls:
+            return cls.from_markdown(text, parent=parent)
+        result = markdown.built_by(builder, text, parent)
+        if result is not None:
+            result.markdown = text
+        return result
 
-    @classmethod
-    def from_list(cls, markdown: Markdown) -> MarkdownCollection:
-        collection = cls.from_markdown(markdown.extract())
-        # EXTEND: one entry per section bullet or folder file
-        return collection
-
-    def bind(self, instance: Any, name: str | None = None) -> None:
+    def attach(self, instance: Any, name: str | None = None) -> None:
         self.parent = instance
         previous = vars(instance).get(name) if name else None
         if name is not None:
@@ -821,43 +798,28 @@ class MarkdownCollection:
         for attr, value in list(vars(instance).items()):
             if value is self:
                 continue
-            if value is previous or (name is None and type(value) is type(self)):
+            if (previous is not None and value is previous) or (name is None and type(value) is type(self)):
                 vars(instance)[attr] = self
 
-    def keep_extract(self, result: Any) -> None:
-        if result is None:
-            return
-        result.markdown = self._markdown
-
     def as_property(self, fn: _F) -> property:
-        prop_label = self._label if hasattr(self, "_label") else fn.__name__
-        return self._collection_property(fn, prop_label)
+        """A property reading the collection under this holder's label, or the operation's own name, once per owner:
+        the collection is kept on the owner it is read for."""
+        label = self._label if hasattr(self, "_label") else fn.__name__
 
-    def _collection_property(self, fn: _F, prop_label: str) -> property:
-        def getter(owner: Any) -> Any:
-            name = fn.__name__
-            bound = vars(owner).get(name)
-            if bound is not None:
-                return bound
-            md = Markdown.from_label(owner, prop_label)
-            hints = md._return_hints(fn)
-            return_type = hints.get("return", MarkdownCollection)
-            raw = md.raw()
-            YamlBinder(owner).bind_yaml(raw)
-            result = MarkdownCollection.coerce(md, return_type, parent=owner)
-            YamlBinder(result).bind_yaml(raw)
-            bind = getattr(result, "bind", None)
-            if callable(bind):
-                bind(owner, name)
+        def read(owner: Any) -> Any:
+            kept = vars(owner).get(fn.__name__)
+            if kept is not None:
+                return kept
+            section = Markdown.from_label(owner, label)
+            result = section.read_into(section.return_type_of(fn, MarkdownCollection), MarkdownCollection.from_section)
+            attach = getattr(result, "attach", None)
+            if callable(attach):
+                attach(owner, fn.__name__)
             else:
-                vars(owner)[name] = result
+                vars(owner)[fn.__name__] = result
             return result
 
-        getter.__doc__ = fn.__doc__
-        getter.__name__ = fn.__name__
-        getter.__annotations__ = dict(getattr(fn, "__annotations__", {}))
-        _copy_marks(fn, getter)
-        return property(getter)
+        return MarkdownProperty(fn).reading(read)
 
     def markdown_collection(
         self, fn: _F | str | None = None, *, label: str | None = None
@@ -871,6 +833,16 @@ class MarkdownCollection:
             return holder.as_property(inner)
 
         return decorator
+
+
+class MarkdownTypeUnresolved(TypeError):
+    """A markdown property's annotations name a type its module cannot resolve, so the property cannot tell what to
+    turn its section's text into. Reading the annotation as a bare string would coerce the text into the wrong shape."""
+
+    def __init__(self, fn: Callable[..., Any], cause: BaseException) -> None:
+        self.property_name = fn.__qualname__
+        self.annotations = dict(getattr(fn, "__annotations__", {}) or {})
+        super().__init__(f"{self.property_name}: annotations {self.annotations!r} do not resolve: {cause}")
 
 
 class Markdown:
@@ -892,8 +864,8 @@ class Markdown:
 
     def extract(self) -> str:
         text = self.raw()
-        YamlBinder(self._instance).bind_yaml(text)
-        return strip_yaml_fences(text)
+        YamlFields(self._instance).assign_yaml(text)
+        return MarkdownText(text).without_yaml
 
     def expand_docstring(self, docstring: str | None) -> str:
         """Plain docstring text, or the markdown section when the docstring is one word."""
@@ -907,147 +879,101 @@ class Markdown:
         return HTML.from_markdown(self.extract())
 
     def coerce(self, text: str, return_type: Any) -> Any:
-        origin = get_origin(return_type) or return_type
-        if return_type is HTML or origin is HTML:
+        """text as return_type reads it: HTML, extracted markdown for a string, the templates by format for a dict,
+        or the type's own ``from_markdown``; the text as it is for a type that reads no markdown."""
+        if self._reads_html(return_type):
             return HTML.from_markdown(text)
-        if return_type is str or return_type is inspect.Signature.empty or return_type is None:
-            return MarkdownSlot(text)
-        if origin is dict:
+        if self._reads_text(return_type):
+            return ExtractedMarkdown(text)
+        if (get_origin(return_type) or return_type) is dict:
             return self.templates_path_map()
-        from harness.guidance.rule import RulesCollection
-
-        if return_type is RulesCollection:
-            return RulesCollection.from_markdown(text, parent=self._instance)
         from_markdown = getattr(return_type, "from_markdown", None)
-        if callable(from_markdown):
-            return from_markdown(text)
-        return text
+        return self.built_by(from_markdown, text, self._instance) if callable(from_markdown) else text
 
-    def _format_key_for_template(self, path: Path) -> str:
-        parts = path.relative_to(self._templates_folder).parts
-        if len(parts) > 1:
-            folder = Format(parts[0])
-            if folder.is_known:
-                return folder.name
-        return Format.from_extension(path.suffix).name
+    def built_by(self, from_markdown: Callable[..., Any], text: str, parent: Any) -> Any:
+        """What from_markdown makes of text. A type read with the object it belongs to, such as a practice's rules,
+        takes that object as its parent."""
+        if "parent" in inspect.signature(from_markdown).parameters:
+            return from_markdown(text, parent=parent)
+        return from_markdown(text)
+
+    def read_into(self, return_type: Any, build: Callable[..., Any] | None = None) -> Any:
+        """This section read as return_type: its YAML fields go onto the instance it is read for, and onto the object
+        it becomes. ``build(markdown, return_type, parent)`` makes that object when given; else ``coerce`` does, from
+        the text without its YAML for HTML, a string, or a dict."""
+        raw = self.raw()
+        YamlFields(self._instance).assign_yaml(raw)
+        if build is None and self._reads_plain_text(return_type):
+            return self.coerce(MarkdownText(raw).without_yaml, return_type)
+        result = build(self, return_type, self._instance) if build is not None else self.coerce(raw, return_type)
+        YamlFields(result).assign_yaml(raw)
+        return result
+
+    def _reads_html(self, return_type: Any) -> bool:
+        origin = get_origin(return_type) or return_type
+        return return_type is HTML or origin is HTML or get_args(return_type)[:1] == (HTML,)
+
+    def _reads_text(self, return_type: Any) -> bool:
+        return return_type is str or return_type is inspect.Signature.empty or return_type is None
+
+    def _reads_plain_text(self, return_type: Any) -> bool:
+        return self._reads_html(return_type) or self._reads_text(return_type) or get_origin(return_type) is dict
 
     def templates_path_map(self) -> dict[str, str]:
+        """Each format's template file under the class's ``templates`` folder, by format name, as a path from the
+        class's folder."""
         class_dir = AssetLocator(self._instance, self._label).class_file_directory()
-        self._templates_folder = class_dir / "templates"
+        templates = class_dir / "templates"
+        if not templates.is_dir():
+            return {}
         mapping: dict[str, str] = {}
-        if not self._templates_folder.is_dir():
-            return mapping
-        for path in sorted(self._templates_folder.rglob("*")):
-            if not path.is_file() or path.name.startswith("."):
-                continue
-            rel = path.relative_to(class_dir).as_posix()
-            key = self._format_key_for_template(path)
-            if not key:
-                continue
-            mapping[key] = rel
+        for path in sorted(templates.rglob("*")):
+            key = self._template_format(path, templates) if path.is_file() and not path.name.startswith(".") else ""
+            if key:
+                mapping[key] = path.relative_to(class_dir).as_posix()
         return mapping
 
+    def _template_format(self, path: Path, templates: Path) -> str:
+        parts = path.relative_to(templates).parts
+        if len(parts) > 1 and Format(parts[0]).is_known:
+            return Format(parts[0]).name
+        return Format.from_extension(path.suffix).name
+
     def as_property(self, fn: _F) -> property:
-        prop_label = self._label
-        def getter(owner: Any) -> Any:
-            md = Markdown.from_label(owner, prop_label)
-            hints = md._return_hints(fn)
-            return_type = hints.get("return", str)
-            raw = md.raw()
-            YamlBinder(owner).bind_yaml(raw)
-            text = strip_yaml_fences(raw)
-            if return_type is HTML:
-                return HTML.from_markdown(text)
-            origin = get_origin(return_type)
-            if origin is not None:
-                args = get_args(return_type)
-                if origin is dict:
-                    return md.coerce(text, return_type)
-                if args and args[0] is HTML:
-                    return HTML.from_markdown(text)
-            if return_type is str or return_type is inspect.Signature.empty or return_type is None:
-                return MarkdownSlot(text)
-            result = md.coerce(raw, return_type)
-            YamlBinder(result).bind_yaml(raw)
-            return result
+        label = self._label
 
-        getter.__doc__ = fn.__doc__
-        getter.__name__ = fn.__name__
-        getter.__annotations__ = dict(getattr(fn, "__annotations__", {}))
-        _copy_marks(fn, getter)
-        return property(getter)
+        def read(owner: Any) -> Any:
+            section = Markdown.from_label(owner, label)
+            return section.read_into(section.return_type_of(fn, str))
 
-    def _return_hints(self, fn: Callable[..., Any]) -> dict[str, Any]:
+        return MarkdownProperty(fn).reading(read)
+
+    def return_type_of(self, fn: Callable[..., Any], default: Any) -> Any:
+        """The type fn's annotations say it returns; default when they name none."""
         try:
-            return get_type_hints(fn, globalns=getattr(fn, "__globals__", None))
-        except Exception:
-            annot = getattr(fn, "__annotations__", {}) or {}
-            return dict(annot)
-
-    def fidelity_blocks(self, text: str) -> list[tuple[str, str]]:
-        return [
-            (name, body)
-            for name, body in MarkdownText(text).child_blocks("Fidelities")
-            if name.casefold() != "fidelities"
-        ]
-
-    def fidelity_stage(self, body: str) -> str:
-        stage = YamlBinder().yaml_fields(body).get("stage")
-        if isinstance(stage, str) and stage.strip():
-            return stage.strip().strip("`")
-        match = re.search(r"(?im)^\*\*Stage:\*\*\s*`?(\S+?)`?\s*$", body)
-        if match:
-            return match.group(1)
-        match = re.search(r"(?im)^stage:\s*`?(\S+?)`?\s*$", body)
-        return match.group(1) if match else ""
-
-    def _fidelity_labeled_line(self, body: str, label: str) -> str:
-        match = re.search(
-            rf"(?im)^\*\*{re.escape(label)}:\*\*\s*(.+?)\s*$",
-            body,
-        )
-        return match.group(1).strip().strip("`") if match else ""
-
-    def fidelity_format(self, body: str) -> str:
-        fields = YamlBinder().yaml_fields(body)
-        token = fields.get("default_format") or fields.get("defaultFormat")
-        if isinstance(token, str) and token.strip():
-            return Format(token.split()[0].strip("()`")).name
-        rest = self._fidelity_labeled_line(body, "Default format")
-        if not rest:
-            return ""
-        return Format(rest.split()[0].strip("()`")).name
-
-    def fidelity_clean_engineering(self, body: str) -> str:
-        fields = YamlBinder().yaml_fields(body)
-        token = fields.get("clean_engineering") or fields.get("cleanEngineering")
-        if isinstance(token, str) and token.strip():
-            return Name(token.split()[0].strip("()`")).snake
-        rest = self._fidelity_labeled_line(body, "Clean Engineering")
-        if not rest:
-            return ""
-        return Name(rest.split()[0].strip("()`")).snake
+            hints = get_type_hints(fn, globalns=getattr(fn, "__globals__", None))
+        except Exception as exc:  # noqa: BLE001 - every annotation that fails to resolve is raised as one named failure
+            raise MarkdownTypeUnresolved(fn, exc) from exc
+        return hints.get("return", default)
 
 
-_MARK_ATTRS = (
-    "_skill",
-    "_command",
-    "_rules",
-    "_mcp",
-    "_hook",
-    "_is_agent_instructions",
-    "_is_agent_tool",
-    "_is_toolset_collection",
-    "_skill_name",
-    "_command_name",
-    "_hook_name",
-)
+class MarkdownProperty:
+    """A property made from an operation whose body is empty: its value is read from markdown, and it carries the
+    operation's name, docstring, annotations, and copied annotations, so it installs the way the operation would."""
 
+    def __init__(self, operation: Callable[..., Any]) -> None:
+        self._operation = operation
 
-def _copy_marks(src: Any, dest: Any) -> None:
-    for attr in _MARK_ATTRS:
-        if hasattr(src, attr):
-            setattr(dest, attr, getattr(src, attr))
+    def reading(self, read: Callable[[Any], Any]) -> property:
+        """A property whose getter is read, wrapped to look like the operation."""
+        def getter(owner: Any) -> Any:
+            return read(owner)
+
+        getter.__doc__ = self._operation.__doc__
+        getter.__name__ = self._operation.__name__
+        getter.__annotations__ = dict(getattr(self._operation, "__annotations__", {}))
+        annotation_kinds.copy_annotations(self._operation, getter)
+        return property(getter)
 
 
 def markdown(

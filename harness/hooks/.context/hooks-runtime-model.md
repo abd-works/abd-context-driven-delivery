@@ -1,115 +1,155 @@
 # Hooks — object model (model fidelity)
 
-Markdown channel for **`harness/hooks`**. Requirements are the live install mark, `HookInstallation` artifacts, and the Cursor process (`hook_server.py`). Partition: [module-context.md](module-context.md). *PromptNotify* types stay in [prompt-notify-model.md](../../tools/prompt_notify/.context/prompt-notify-model.md).
+Markdown channel for **`harness/hooks`**. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet*, *AgentTool*, *ToolCall*, and *InstallDestination* belong to `harness/agent_tools`, *Destination* to `harness/annotations`, *Installation*, *RepositoryToolsets*, and *ContextConfig* to `harness/installation`, *RunningProcess*, *StoppableProcess*, and *ProcessNotStopped* to `harness/process`, and *Session* to `space/session`; they appear here only as names this module uses. *PromptLog* (`tools/prompt_log`) is one toolset whose members are hooks; it keeps its own model.
 
-**Install** writes files. **Runtime** is Cursor launching `hook_server.py` with stdin JSON. `@Hook` and `@mcp` on the same operation remain two independent installs.
+**Install** writes files. **Runtime** is the IDE running `hook_server.py` with the event's JSON on stdin; that script finds or starts one long-running *HookServer* per repository through *HookDaemon* and passes the event to it. `@Hook` and `@mcp` on the same operation remain two independent installs.
 
 ## Language companion                                             <!-- L -->
 
-*Hook* is a *Destination* on an `AgentToolSet` member. The event name is the identity Cursor uses (`sessionStart`, `beforeSubmitPrompt`, `afterAgentResponse`, …). The operation receives the event payload and returns the fields Cursor understands.
+*Hook* is a *Destination* on an `AgentToolSet` member. The event name is the identity the IDE uses (`sessionStart`, `beforeSubmitPrompt`, `afterAgentResponse`, …). The operation receives the event payload and returns the fields the IDE understands.
 
-*Dispatch* is the Cursor process: read stdin, find every enabled hook for that event, run them, merge their results, print one JSON object. It is not an MCP client.
+*HookServer* is the long-running process for one repository: it takes each event's stdin, finds every enabled hook for that event, runs them, merges their results, and returns one JSON object. It is not an MCP client.
+
+A hook's result can carry a `toast`, a short notice the person sees beside the chat. It is not sent to the IDE: the hook server hands the merged toast to the notifier registered with `HookServer.show_toasts_with` (`tools/prompt_notify` registers when it is loaded). `rules_toast(source, labels)` writes the toast for injected rules, and `TOAST_ARROW` separates a toast's source from the rest.
 
 ---
 
-# harness/hooks                                                <!-- Mu -->
-
-- **Purpose:** Mark a member `@Hook("event")` so Cursor stdin events run that Python and return one merged result. <!-- Mu -->
-- **Seam (terms):** Hook, Hooks, HookInstallation, HookServer <!-- Mu -->
-- **Dependencies (one-way):** installation (Destination, Installation), harness/agent_tools (AgentToolSet) <!-- Mu -->
-
 ## Hook : Destination                                             <!-- Md -->
 
-The `@Hook` decorator on an operation. Event is required and must be a Cursor event name.
+The `@Hook` decorator on an operation. Event is required and must be an IDE event name.
 
-+ Hook(event: str)
++ Hook(event: str, disabled: bool = false)
 	// event is one of Hook.EVENTS; unknown names are rejected at decoration
+	// channel is InstallDestination.HOOK
 ------
 + name: str
-	// identity Cursor sends as hook_event_name
+	// identity the IDE sends as hook_event_name
++ disabled: bool
 + EVENTS: frozenset[str]
 ----
 + annotate(operation): operation
-	// sets _hook, _hook_name = event
-+ normalize_event(event: str): str
+	// sets the hook annotation; disabled sets _hook_disabled
++ companion_flags(): tuple[str, ...]
+	// the destination's flags plus _hook_disabled
++ disabled_on(operation): bool
+	// the one reader of the disabled annotation
 	// sessionStart → session_start
 
 ## Hooks                                                          <!-- Md -->
 
-Class annotation. Turns off every hook on that toolset.
+Class annotation. Turns off, or keeps out of the install, every hook on that toolset.
 
-+ Hooks(disabled: bool = false)
++ Hooks(disabled: bool = false, deploy: bool = true)
 ------
 + disabled: bool
++ deploy: bool
+	// false keeps the toolset's hooks out of hook-handlers.json
 ----
 + annotate(toolset): toolset
-	// sets _hooks_disabled
-	// write `@Hooks(disabled=True)` above `@agent_toolset` so the mark stays on the registered type
+	// sets _hooks_disabled and _hooks_deploy
+	// write `@Hooks(disabled=True)` above `@agent_toolset` so the annotation stays on the registered type
 
 ## HookInstallation : Installation                                <!-- Md -->
 
 Install-time writer for hook artifacts. Same walk as markdown and MCP; only the leaf writes differ.
 
-+ HookInstallation(ide: str, path: Path)
++ HookInstallation(ide: str, path: Path, *, python: str | None = None, repo: Path | None = None)
 ------
 + python: str
-+ << composition >> handlers: list
++ server: HookServer | None
++ diagnosis: dict | None
++ dispatch_command: str
+	// "{console python} -u {this folder}/hook_server.py"; the hook command sits beside hooks.py
++ << composition >> handlers_file: HookHandlersFile
++ << composition >> manifest: HooksManifest
++ registered_events: list[str]
+	-> HooksManifest.registered_events
++ registered_operations: list[str]
+	-> HookHandlersFile.operation_names
 ----
 + write(tool: AgentTool): None
-	// skip unless tool.install_to_hook and the member has _hook_name
-	// skip inject_rules on RulesCollection and FidelityGuidance hosts, and on fidelity bags rehosted onto a practice
-	// enroll inject_rules once per (event, operation, ref) so the practice is the host
-	-> append { event, operation, ref }
+	// skip unless tool.install_to_hook, the toolset class is not @Hooks(deploy=False), and tool.hook_event is set
+	// enroll each (event, operation, ref) once
 	-> write_hooks_manifest()
 	-> write_handlers()
 + write_handlers(): None
-	// hook-handlers.json is { handlers: [{ event, operation, ref }] }
+	-> HookHandlersFile.write
 + write_hooks_manifest(): None
-	// Cursor hooks.json version 1; one hook_server.py command per distinct event
-	// afterAgentResponse holds only the dispatch command — Cursor runs the first entry only
-	// other events keep non-dispatch commands already in the file
+	// one dispatch command per distinct event; postToolUse also installs afterFileEdit, stop, and subagentStop
+	// afterAgentResponse holds only the dispatch command — the IDE runs the first entry only
+	// every other command the file holds stays
+	-> HooksManifest.hooks
+	-> HooksManifest.write
 + standup(): HookServer
 	-> HookServer.from_handlers
 + diagnose(): dict
 	-> HookServer.diagnose
 
-## CursorEvent                                                    <!-- Md -->
+## HooksManifest                                                  <!-- Md -->
 
-Named Cursor hook moment. Identity is the event string.
+`hooks.json`: the command an IDE runs for each hook event, beside the person's own hooks.
 
-+ CursorEvent(name: str)
-	// name is a Hook.EVENTS value
++ HooksManifest(path: Path)
 ------
-+ name: str
++ hooks: dict[str, list[dict]]
+	// a file that is not a JSON object raises HooksFileUnreadable; an install never writes over it
++ registered_events: list[str]
 ----
-+ normalize(): str
-	// sessionStart → session_start
-	-> Hook.normalize_event
++ write(hooks: dict): None
 
-## HookPayload                                                    <!-- Md -->
+## HookHandlersFile                                               <!-- Md -->
 
-Cursor stdin JSON for one firing.
+`hook-handlers.json`: the hook operations an install registered. The one reader and writer of the file.
 
++ HookHandlersFile(path: Path)
+------
++ handlers: list[dict]
+	// { event, operation, ref } each; a malformed file raises HooksFileUnreadable
++ refs: tuple[str, ...]
++ operation_names: list[str]
+----
++ write(handlers: list[dict]): None
+
+## HooksFileUnreadable : Exception                                <!-- Md -->
+
+A hooks file is not the JSON object it should be; the install stops and names the file.
+
++ HooksFileUnreadable(path: Path, cause: Exception)
+
+## HookPayload : Mapping[str, Any]                                <!-- Md -->
+
+The stdin JSON for one firing. Handlers read it through the named properties; it also reads as a mapping of every field the IDE sent.
+
++ HookPayload(fields: Mapping)
 + HookPayload.from_stdin(raw: bytes): HookPayload
-	// strip UTF-8 BOM; empty or unreadable raw → allow-only result at HookServer.run, not here
+	// strips UTF-8 BOMs; empty or unreadable raw → allow-only result at HookServer.handle_stdin, not here
 ------
 + hook_event_name: str
 	// empty name means no handlers run; result is permission allow
 + conversation_id: str
++ chat_id: str
+	// the chat an injection belongs to: a subagent's own transcript for subagentStop, else the conversation
++ generation_id: str
++ tool_name: str
+	// empty for an event about no tool
++ tool_input: dict
+	// empty when the IDE sent none or sent text that is not a JSON object
++ workspace_roots: list[Path]
++ project: Path | None
+	// the first workspace root, else the folder Claude Code ran in
 ----
-+ as_dict(): dict
-	// remaining Cursor keys (tool_name, tool_input, prompt, …) stay on the payload for the handler
++ edited_path(): str
+	// file_path, path, or uri; else the path inside tool_input
 
 ## HookResult                                                     <!-- Md -->
 
-Fields Cursor reads back from the hook process.
+Fields the IDE reads back from the hook process.
 
-+ HookResult(permission: str = "allow")
-	// default permission is allow
++ HookResult(permission: str = "allow", continue_flag: bool | None = None, user_message, agent_message, followup_message, additional_context, toast)
 ------
 + permission: str
 	// deny wins when any handler returns deny
-+ continue: bool | None
++ continue_flag: bool | None
 	// false wins when any handler returns continue false
 + user_message: str | None
 + agent_message: str | None
@@ -117,71 +157,63 @@ Fields Cursor reads back from the hook process.
 	// last non-empty followup_message wins
 + additional_context: str | None
 	// unique parts join with blank lines
++ toast: str | None
+	// shown beside the chat, never sent to the IDE; toasts join with newlines
++ followup_only: bool
+	// as_dict returns only followup_message
 ----
 + from_handler(raw: dict | None): HookResult
 + with_description(description: str): HookResult
-	// prepends tool docstring onto agent_message
+	// prepends the tool docstring onto agent_message
 + merge(other: HookResult): HookResult
-	// deny and continue false win; user_message and agent_message concatenate with newlines
-	// unique additional_context parts join with blank lines; last followup_message wins
+	// deny and continue false win; user_message, agent_message, and toast join with newlines
 + as_dict(): dict
+	// the fields the IDE reads; the toast is left out
 
 ## HookHandler                                                    <!-- Md -->
 
-One marked operation that may run for an event.
+One annotated operation that may run for an event.
 
-+ HookHandler(tool: AgentTool, event: CursorEvent, repo_root: Path)
++ HookHandler(tool: AgentTool, repo_root: Path)
 ------
-+ event: CursorEvent
-+ operation: str
-	// tool.name
-+ owner: type
-	// type(tool.toolset)
 + << association >> tool: AgentTool
+	// name, toolset, callable, hook_event, and docstring are read from the tool, never copied
++ repo_root: Path
++ label: str
+	// {toolset class}.{tool.name}, for the dispatch log and skipped handlers
 ----
-+ is_enabled(): bool
-	// false when owner._hooks_disabled is true
++ is_enabled(payload: HookPayload | None = None): bool
+	// false when the toolset class is annotated @Hooks(disabled=True)
+	// a toolset with a `pattern` runs only where that guideline is enabled for the edited file
+	-> ContextConfig.guideline
 + invoke(payload: HookPayload): HookResult
-	// call the bound operation with payload.as_dict()
-	// inject_rules uses the toolset's own hook method when the class defines one (listed Guidance on an action); otherwise RulesCollection.inject_rules
+	// call tool.callable with the payload
 	// agent_message includes tool.docstring unless additional_context is already set
 	-> HookResult.from_handler
 	-> HookResult.with_description
 
 ## HandlerCatalog                                                 <!-- Md -->
 
-Installed list of hook handlers. File is next to Cursor config: `{Installer.path}/hook-handlers.json`.
+The toolsets whose hooks the server runs.
 
 + HandlerCatalog(toolsets: list | None = None, repo_root: Path | None = None, handlers: Path | None = None)
-	// given handlers file, given toolsets, or repo hook-handlers.json, or _collect_refs
+	// given handlers file, given toolsets, else .cursor/hook-handlers.json, else RepositoryToolsets.collect
+	-> HookHandlersFile.refs
 ------
 + << composition >> toolsets: list[AgentToolSet]
+	// skips toolsets named in AgentToolSet.HOSTED_ONLY_CLASS_NAMES
 + repo_root: Path | None
-+ failures: list
++ failures: list[tuple[str, BaseException]]
+	// a reference that does not load (bad reference, missing module or class, not a toolset, constructor mismatch)
++ event_names: list[str]
 ----
-+ refs_from_handlers(handlers: Path): tuple
 + ref_label(item): str
-- _refs_from_file(): list[str]
-	// .cursor/hook-handlers.json
-- _collect_refs(): list[str]
-	// Installer.collect_toolsets
-+ for_event(event: CursorEvent): list[HookHandler]
-	// tools_for(HOOK) whose _hook_name matches the event
++ for_event(event_name: str): list[HookHandler]
+	// tools_for(InstallDestination.HOOK) whose hook_event matches; inject_rules annotated postToolUse also serves afterFileEdit
 
-## HookStandupFailed                                              <!-- Md -->
+## HookIllegitimateHandler : Exception                            <!-- Md -->
 
-The hook server could not stand up or failed diagnose.
-
-+ HookStandupFailed(operation: str, server: HookServer | None, message: str, cause: BaseException | None = None)
-------
-+ operation: str
-+ server: HookServer | None
-+ cause: BaseException | None
-----
-
-## HookIllegitimateHandler                                        <!-- Md -->
-
-One hook handler was skipped so the hook server could finish standup.
+One hook handler was skipped: its toolset did not load, or it raised while answering an event. The other handlers keep answering.
 
 + HookIllegitimateHandler(tool: str, reason: str, cause: BaseException | None = None)
 ------
@@ -190,86 +222,108 @@ One hook handler was skipped so the hook server could finish standup.
 + cause: BaseException | None
 ----
 
+## ChatInjections                                                 <!-- Md -->
+
+The rules a hook gave each chat of one session, so the next prompt in the same chat gets them again and no other chat does.
+
++ ChatInjections(session: Session, repo_root: Path)
+------
+----
++ path_for(chat_id: str): Path
+	// {session}/chat-injections/{chat}.md
++ keep(result: HookResult, payload: HookPayload): None
+	// writes the chat's injection and the session's last-chat-injected-rules.md
++ replay(payload: HookPayload, result: HookResult): HookResult
+	// on beforeSubmitPrompt with no rules of its own; a saved edit-rules dump is dropped, not replayed
++ is_rules_dump(body: str): bool
+
 ## HookServer                                                     <!-- Md -->
 
-Cursor process for every hooked event. `hook_server.py` constructs `HookServer` and calls `run`.
+The hooks of one checkout, loaded once in its hook daemon. It runs the enabled handlers for each event and merges their answers.
 
-+ HookServer(repo_root: Path, catalog: HandlerCatalog | None = None)
++ HookServer(repo_root: Path, catalog: HandlerCatalog)
 ------
 + << association >> catalog: HandlerCatalog
 + exceptions: list[HookIllegitimateHandler]
++ session: Session | None
+	// the session open in .sessions/session.json (main when none), read for each event the way every tool call reads it
+	-> ToolCall(project=repo_root).session
++ chat_injections: ChatInjections | None
+	// none when no sessions are registered; the event is still answered
 ----
-+ run(): None
-	// ensure main session; read stdin; print JSON HookResult
++ show_toasts_with(show: Callable[[str, list[Path]], Any]): None
+	// the notifier registers itself when it is loaded, so a hook names its toast and never the notifier
++ from_toolsets(repo_root: Path, toolsets: list | None = None): HookServer
++ from_handlers(handlers: Path, repo: Path): HookServer
+	-> notify_exceptions()
++ handle_stdin(raw: bytes): HookResult
+	// empty or unreadable raw → permission allow
 	-> HookPayload.from_stdin
 	-> dispatch(payload)
+	-> ChatInjections.keep
+	-> ChatInjections.replay
 + dispatch(payload: HookPayload): HookResult
 	// no event → permission allow
 	-> HandlerCatalog.for_event
 	-> HookHandler.is_enabled
 	-> HookHandler.invoke
 	-> HookResult.merge
-+ from_toolsets(repo_root: Path, toolsets: list | None = None): HookServer
-	-> HandlerCatalog
-+ from_handlers(handlers: Path, repo: Path | None = None): HookServer
-+ standup(): HookServer
-	// notify skipped handlers
+	// then hands the merged toast to the registered notifier
++ skip(tool: str, error: BaseException): None
+	// records a HookIllegitimateHandler; a failing handler never stops the others
 + diagnose(): dict
-	-> ping()
 	-> dispatch
-+ ping(): str
-	// "pong"
+	-> HandlerCatalog.event_names
++ notice(): str
++ notify_exceptions(): None
 - _append_debug(message: str): None
-	// dispatch.debug under the session logs folder
-
-## SessionLogs                                                    <!-- Md -->
-
-Active session name and hook log files under ``.sessions/{name}/logs/``.
-
-+ SessionLogs(repo_root: Path)
-------
-+ repo_root: Path
-----
-+ write_active_session(name: str): None
-+ clear_active_session(): None
-+ active_session_name(): str
-+ session_folder(name: str): Path
-+ ensure_default_session(): Path
-+ session_logs_dir(): Path
-+ session_log_path(filename: str): Path
-+ consolidate_logs_for_close(session_name: str): None
+	// dispatch.debug in the open session's logs folder
+	-> Session.hook_log
 
 ## HookDaemon                                                     <!-- Md -->
 
-Local process that holds one HookServer and answers stdin over a socket.
+The hook daemon of one checkout: it listens on the one port the checkout's daemon may hold, publishes its address, and serves every hook command with one loaded HookServer. `hook_server.py` runs `HookDaemon(checkout).ensure().handle_stdin(raw)`.
 
-+ HookDaemon(host: str = "127.0.0.1", port: int | None = None)
++ HookDaemon(repo: Path, port: int | None = None)
+------
++ HOST: str
+	// "127.0.0.1"
++ repo: Path
++ state_path: Path
+	// .cursor/hook-server.json, the running daemon's address
++ port: int
+	// the one port this checkout's daemon may listen on, from the checkout's path
++ source_stamp: str
+	// identity of the hook code the checkout holds now
+----
++ live_address(): HookDaemonAddress | None
+	// the published address when a daemon answers a ping there
++ is_running(): bool
++ ensure(): HookDaemonAddress
+	// replace a daemon on older code, then the live one, or start one (one hook command at a time) and wait for it
+	-> replace_stale
+	-> spawn
++ replace_stale(): None
+	-> StoppableProcess.stop
++ spawn(): None
+	// the daemon imports from the checkout, through RepositoryToolsets.pythonpath and pycache_prefix
++ serve(server: HookServer | None = None): None
+	// with no server, imports every toolset module the repository defines first, so their registrations hold here
+	-> RepositoryToolsets.import_modules
+	-> HookServer.from_toolsets
+
+## HookDaemonAddress                                              <!-- Md -->
+
+Where a running hook daemon answers.
+
++ HookDaemonAddress(host: str, port: int, pid: int | None = None)
 ------
 + host: str
-+ port: int | None
++ port: int
++ pid: int | None
 ----
-+ live_address(path: Path): tuple | None
-+ call_handle_stdin(raw: bytes): dict
-+ spawn(repo: Path, path: Path): None
-+ serve(repo: Path, inner: HookServer | None = None): None
-
-## PromptLog                                                      <!-- Md -->
-
-Audit what Cursor sent the model. Off while `@Hooks(disabled=True)` stays on the class.
-
-+ PromptLog()
-------
-----
-+ before_submit_prompt(payload: HookPayload): HookResult
-	// @Hook("beforeSubmitPrompt") — appends to the session prompt-log.txt; returns continue true
-+ before_read_file(payload: HookPayload): HookResult
-	// @Hook("beforeReadFile")
-+ pre_tool_use(payload: HookPayload): HookResult
-	// @Hook("preToolUse")
-+ subagent_start(payload: HookPayload): HookResult
-	// @Hook("subagentStart")
-+ after_agent_response(payload: HookPayload): HookResult
-	// @Hook("afterAgentResponse")
++ answers(): bool
++ handle_stdin(raw: bytes): dict
 
 ---
 
@@ -277,7 +331,9 @@ Audit what Cursor sent the model. Off while `@Hooks(disabled=True)` stays on the
 
 ```
 {Installer.path}/                 typically .cursor/
-  hooks.json                      CursorEvent → hook_server.py command
-  hook-handlers.json              HandlerCatalog
+  hooks.json                      HooksManifest — event → hook_server.py command
+  hook-handlers.json              HookHandlersFile
+  hook-server.json                HookDaemon.state_path — the running daemon's address
 .sessions/{name}/logs/            dispatch.debug, prompt-log.txt
+.sessions/{name}/chat-injections/ ChatInjections
 ```

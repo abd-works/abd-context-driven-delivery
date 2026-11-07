@@ -33,12 +33,12 @@
       display: grid; grid-template-columns: 8rem 1fr 8rem;
       grid-template-areas: "header header header" "nav body aside" "footer footer footer";
     }
-    .screen[data-layout="holy-grail"] .region[data-slot="header"] { grid-area: header; }
-    .screen[data-layout="holy-grail"] .region[data-slot="nav"] { grid-area: nav; }
-    .screen[data-layout="holy-grail"] .region[data-slot="body"] { grid-area: body; }
-    .screen[data-layout="holy-grail"] .region[data-slot="aside"] { grid-area: aside; }
-    .screen[data-layout="holy-grail"] .region[data-slot="footer"] { grid-area: footer; }
-    .screen[data-layout="tabbed"] .region[data-slot="tab-bar"] { background: #e8e8e8; }
+    .screen[data-layout="holy-grail"] .region[data-area="header"] { grid-area: header; }
+    .screen[data-layout="holy-grail"] .region[data-area="nav"] { grid-area: nav; }
+    .screen[data-layout="holy-grail"] .region[data-area="body"] { grid-area: body; }
+    .screen[data-layout="holy-grail"] .region[data-area="aside"] { grid-area: aside; }
+    .screen[data-layout="holy-grail"] .region[data-area="footer"] { grid-area: footer; }
+    .screen[data-layout="tabbed"] .region[data-area="tab-bar"] { background: #e8e8e8; }
     .region { margin: 0; padding: 0.5rem; border: 1px solid #ddd; background: var(--wash); }
     .region h3 { margin: 0 0 0.5rem; font-size: 0.9rem; }
     .control { display: block; margin: 0.35rem 0; }

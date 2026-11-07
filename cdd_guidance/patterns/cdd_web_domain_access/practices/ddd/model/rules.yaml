@@ -10,6 +10,6 @@ accessNode:
 accessHandWrittenAdapter:
   rules:
     - adapter-is-generated
-accessMarkedToolset:
+accessAnnotatedToolset:
   rules:
     - annotate-what-typescript-reads

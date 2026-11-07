@@ -17,10 +17,10 @@ If the user names the practice lenses to use, follow their choice unless it conf
 
 Load the umbrella skill for each selected lens to establish shared vocabulary and rules:
 
-- `stories-acceptance_tests` for executable acceptance tests derived from locked Given-When-Then scenarios.
+- `stories-acceptance-tests` for executable acceptance tests derived from locked Given-When-Then scenarios.
 - `ddd-tactics` for production domain models, repositories, domain events, factories, services, and infrastructure integrations that preserve the domain model.
-- `ux-front_end_code` for the production frontend connected to backend services while honoring information architecture and mockup decisions.
-- `clean_engineering-code` for production modules, real collaborator wiring, clean code practices, and maintained public module interfaces.
+- `ux-front-end-code` for the production frontend connected to backend services while honoring information architecture and mockup decisions.
+- `clean-engineering-code` for production modules, real collaborator wiring, clean code practices, and maintained public module interfaces.
 - `bdd-development` for driving production code through red-green-refactor one test signature at a time until all tests pass.
 
 Run the `generate` action skill for each practice. When complete run the `get_fix_violation_instructions` for each practice and fix any returned violations.
@@ -35,7 +35,7 @@ Execute relevant automated tests and validation commands after each small behavi
 
 ## Handoff
 
-Run `handoff` when the implementation role or session is complete. State whether the handoff is for a new implementation session or for a downstream code review or release activity.
+Run the `space-session-handoff-session` skill when the implementation role or session is complete. State whether the handoff is for a new implementation session or for a downstream code review or release activity.
 
 Include implemented and excluded scope, specification artifact paths, changed production and test files, decisions made during coding, question-and-answer log, database or configuration effects, test execution commands and results, remaining risks, unresolved questions with owners, and the next exact behavior or release step.
 

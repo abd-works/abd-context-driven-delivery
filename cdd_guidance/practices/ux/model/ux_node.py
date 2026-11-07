@@ -4,89 +4,30 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from harness.graph.bound_node import BoundNode
+from harness.graph.model_node import ModelNode
 from harness.graph.graph import Graph
 
-from .update_report import ChildCollectionPair, TranslationError, UpdateReport
 
-
-class UxNode(BoundNode):
-    """Subclasses declare `_semantic_type_name` so cross-format nodes translate cleanly."""
+class UxNode(ModelNode):
+    """Subclasses declare `_semantic_type_name`, the node type the graph records, and each child belongs to its owner."""
 
     _graph_practice = "ux"
     _semantic_type_name: str = "UxNode"
-    _belongs = {("Screen", "UxMap")}
+    _belongs = {
+        ("Screen", "UxMap"),
+        ("Transition", "UxMap"),
+        ("ContentType", "UxMap"),
+        ("NavComponent", "UxMap"),
+        ("UxContext", "UxMap"),
+        ("Region", "Screen"),
+        ("Control", "Region"),
+        ("StoryDemoControl", "Region"),
+        ("Interaction", "Control"),
+        ("Interaction", "StoryDemoControl"),
+    }
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
-
-    def translate_from(self, source: "UxNode") -> UpdateReport:
-        if self.semantic_type() != source.semantic_type():
-            raise TranslationError(
-                f"Cannot translate from {source.semantic_type()} into {self.semantic_type()}"
-            )
-        report = UpdateReport()
-        self.update_self(source)
-        for pair in self.child_collections(source):
-            self._reconcile_collection(pair, report)
-        return report
-
-    def update_self(self, source: "UxNode") -> None:
-        raise NotImplementedError(f"{type(self).__name__} must implement update_self")
-
-    def child_collections(self, source: "UxNode") -> List[ChildCollectionPair]:
-        raise NotImplementedError(f"{type(self).__name__} must implement child_collections")
-
-    def children(self) -> List["UxNode"]:
-        result: List[UxNode] = []
-        try:
-            for pair in self.child_collections(self):
-                result.extend(pair.self_children)
-        except NotImplementedError:
-            pass
-        return result
-
-    def snapshot_fields(self) -> dict:
-        return {}
-
-    def _reconcile_collection(self, pair: ChildCollectionPair, report: UpdateReport) -> None:
-        self._consumed_ids: set = set()
-        reconciled: List[UxNode] = []
-
-        for source_child in pair.source_children:
-            match = self._find_match(source_child, pair.self_children)
-            if match is not None:
-                self._consumed_ids.add(id(match))
-                match.translate_from(source_child)
-                reconciled.append(match)
-                report.add_exact_match(match.name)
-            else:
-                new_child = pair.load(source_child)
-                new_child.translate_from(source_child)
-                reconciled.append(new_child)
-                report.add_new(new_child, parent_name=self.name)
-
-        for existing in pair.self_children:
-            if id(existing) not in self._consumed_ids:
-                report.add_removed(existing, parent_name=self.name)
-
-        pair.self_children[:] = reconciled
-
-    def _find_match(
-        self,
-        source: "UxNode",
-        candidates: List["UxNode"],
-    ) -> Optional["UxNode"]:
-        for candidate in candidates:
-            if id(candidate) not in self._consumed_ids and candidate.name == source.name:
-                return candidate
-        for candidate in candidates:
-            if (
-                id(candidate) not in self._consumed_ids
-                and candidate.sequential_order == source.sequential_order
-            ):
-                return candidate
-        return None
 
     def _renumber(self, nodes: List["UxNode"]) -> None:
         for index, node in enumerate(nodes):

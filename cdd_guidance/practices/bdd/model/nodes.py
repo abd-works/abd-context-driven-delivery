@@ -1,15 +1,15 @@
-"""BDD node types — specialise the Stories StoryNode base."""
+"""BDD node types: the describe tree a spec is read into, each node bound to the graph."""
 
 from __future__ import annotations
 
 import re
-from typing import List
+from typing import List, Optional
 
-from harness.graph.bound_node import BoundChildren
+from harness.graph.model_node import ModelChildren, ModelNode
+from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock
-from cdd_guidance.practices.stories.model.story_model import StoryNode
 
 
 _EXPECT_PRIVATE = re.compile(r"(?:expect\s*\([^)]*\._\w+|expect\([^)]*\)\.to\([^)]*\._\w+)")
@@ -34,15 +34,26 @@ def private_probe_in_text(text: str, start_line: int) -> dict:
     return {}
 
 
-class BehaviorNode(StoryNode):
-    """A describe-tree node read from spec code. Knows its own source lines and loads the facts BDD rules read."""
+class BehaviorNode(ModelNode):
+    """A describe-tree node read from spec code. Knows its own source lines and loads the facts BDD rules read.
 
+    `written` is how the block was spelled in the language it was read from, and `setup` the code above its first
+    child, so a render into the same language can write both back."""
+
+    _graph_practice = "bdd"
     graph_facts = ("expect_count", "has_implementation", "private_probe")
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, name: str, sequential_order: int = 1, graph: Optional[Graph] = None) -> None:
+        super().__init__(name, sequential_order, graph)
         self.line = 0
         self.end_line = 0
+        self.written: Optional[WrittenBlock] = None
+        self.setup = CodeBody()
+
+    def take_code_from(self, source: "BehaviorNode") -> None:
+        """Keep the code the source was read with, so a copy in another format can still write it back."""
+        self.written = source.written
+        self.setup = source.setup
 
     def load_span_facts(self, span: str) -> None:
         """Fill the facts this node's own source lines carry."""
@@ -53,14 +64,13 @@ class BehaviorNode(StoryNode):
 
 class Description(BehaviorNode):
     _semantic_type_name = "Description"
-    _graph_practice = "bdd"
     _belongs = {("Context", "Description"), ("Observation", "Description"), ("Description", "Spec")}
 
     def __init__(self, name: str, sequential_order: int = 1) -> None:
         super().__init__(name=name, sequential_order=sequential_order)
-        self.contexts = BoundChildren(self, "contexts")
+        self.contexts = ModelChildren(self, "contexts")
         # Spec code often puts `it` straight under the outermost describe.
-        self.observations = BoundChildren(self, "observations")
+        self.observations = ModelChildren(self, "observations")
 
     def clone(self) -> "Description":
         cloned = type(self)(self.name, self.sequential_order)
@@ -77,13 +87,12 @@ class Description(BehaviorNode):
 
 class Context(BehaviorNode):
     _semantic_type_name = "Context"
-    _graph_practice = "bdd"
     _belongs = {("Observation", "Context"), ("Context", "Context"), ("Context", "Description")}
 
     def __init__(self, name: str, sequential_order: int = 1) -> None:
         super().__init__(name=name, sequential_order=sequential_order)
-        self.observations = BoundChildren(self, "observations")
-        self.contexts = BoundChildren(self, "contexts")
+        self.observations = ModelChildren(self, "observations")
+        self.contexts = ModelChildren(self, "contexts")
 
     def clone(self) -> "Context":
         cloned = type(self)(self.name, self.sequential_order)
@@ -103,13 +112,16 @@ class Context(BehaviorNode):
 
 class Observation(BehaviorNode):
     _semantic_type_name = "Observation"
-    _graph_practice = "bdd"
 
     def __init__(self, name: str, sequential_order: int = 1, graph=None) -> None:
         super().__init__(name=name, sequential_order=sequential_order, graph=graph)
         self.call_graph: List[CallGraphEntry] = []
         self.surface_lines: List[str] = []
         self.body = CodeBody()
+
+    def take_code_from(self, source: "Observation") -> None:
+        super().take_code_from(source)
+        self.body = source.body
 
     def clone(self) -> "Observation":
         cloned = type(self)(self.name, self.sequential_order)

@@ -139,7 +139,7 @@ p.small, .text-sm { font-size: var(--text-sm); }
 .btn.danger { background: transparent; border-color: var(--error); color: var(--error); }
 
 /* -- Cards / panels / regions (Step 6) -------------------------------------
-   Every IA slot renders as one of these - border is the only depth signal,
+   Every IA area renders as one of these - border is the only depth signal,
    no drop shadows. */
 
 .card {
@@ -184,7 +184,7 @@ p.small, .text-sm { font-size: var(--text-sm); }
 }
 
 /* -- Layout grid ------------------------------------------------------------
-   One .layout per page; .band spans full width (header/footer-style slots),
+   One .layout per page; .band spans full width (header/footer-style areas),
    .columns holds side-by-side .card regions sized by inline --w from the
    matching specifications/generic/<id>.drawio geometry. */
 

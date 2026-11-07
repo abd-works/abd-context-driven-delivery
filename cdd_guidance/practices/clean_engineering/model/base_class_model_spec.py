@@ -12,19 +12,17 @@ if str(_REPO_ROOT) not in sys.path:
 
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.clean_engineering.model.operation import Operation
-from cdd_guidance.practices.clean_engineering.model.property import bind_property_relationship
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
-    Operation,
-    Property,
-    Relationship,
     base_type_name_for,
     companion_interface_name,
     example_extension_kind,
 )
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.call_graph import (
     CallGraphEntry,
     callees_to_call_graph,
@@ -116,7 +114,7 @@ def _order_property() -> Property:
     prop = Property(name="order", type_hint="Order")
     prop.stereotype = "association"
     prop.cardinality = "0..1"
-    bind_property_relationship(prop)
+    prop.derive_relationship()
     return prop
 
 
@@ -125,7 +123,7 @@ with description("a property type"):
         customers = Property(name="customers", type_hint="Collection<Customer>")
         customers.stereotype = "aggregation"
         customers.cardinality = "0..*"
-        bind_property_relationship(customers)
+        customers.derive_relationship()
         expect(customers.relationship.target).to(equal("Customer"))
         expect(customers.relationship.kind).to(equal("aggregation"))
         expect(customers.relationship.cardinality).to(equal("0..*"))
@@ -133,8 +131,8 @@ with description("a property type"):
     with it("should leave a primitive and a third-party type without a relationship"):
         identifier = Property(name="id", type_hint="string")
         cause = Property(name="cause", type_hint="Error")
-        bind_property_relationship(identifier)
-        bind_property_relationship(cause)
+        identifier.derive_relationship()
+        cause.derive_relationship()
         expect(identifier.relationship).to(equal(None))
         expect(cause.relationship).to(equal(None))
 
@@ -193,22 +191,25 @@ with description("OoadClass"):
         with it("should store collaborators"):
             expect(self.cls.collaborators).to(equal(["Order", "LineItem"]))
 
-    with context("update_self called from a source OoadClass"):
+    with context("translated from a source OoadClass"):
         with before.each:
             self.cls = OoadClass(name="Cart", sequential_order=1)
-            source = OoadClass(
+            self.source = OoadClass(
                 name="Cart",
                 sequential_order=1,
                 intent="Updated intent.",
                 properties=[Property(name="items", type_hint="list")],
             )
-            self.cls.update_self(source)
+            self.cls.translate_from(self.source)
 
         with it("should copy intent from source"):
             expect(self.cls.intent).to(equal("Updated intent."))
 
-        with it("should copy properties from source"):
-            expect(self.cls.properties).to(have_len(1))
+        with it("should take the source's properties"):
+            expect([(prop.name, prop.type_hint) for prop in self.cls.properties]).to(equal([("items", "list")]))
+
+        with it("should hold its own copy of each property"):
+            expect(self.cls.properties[0] is self.source.properties[0]).to(equal(False))
 
 
 with description("Module"):
@@ -297,7 +298,7 @@ with description("CleanEngineeringModel"):
             expect(self.model.name).to(equal("checkout"))
 
         with it("should default classes to empty list"):
-            expect(self.model.classes).to(equal([]))
+            expect(self.model.every_class()).to(equal([]))
 
     with context("translate_from with a source that has one new class"):
         with before.each:
@@ -308,9 +309,9 @@ with description("CleanEngineeringModel"):
             source.modules.append(module)
             self.report = self.model.translate_from(source)
 
-        with it("should add the new class to model.classes"):
-            expect(self.model.classes).to(have_len(1))
-            expect(self.model.classes[0].name).to(equal("Cart"))
+        with it("should add the new class to model.every_class()"):
+            expect(self.model.every_class()).to(have_len(1))
+            expect(self.model.every_class()[0].name).to(equal("Cart"))
 
         with it("should record an ADD in the report"):
             expect(len(self.report.adds())).to(equal(1))
@@ -324,8 +325,8 @@ with description("CleanEngineeringModel"):
             source = CleanEngineeringModel(name="checkout", sequential_order=1)
             self.report = self.model.translate_from(source)
 
-        with it("should remove the class from model.classes"):
-            expect(self.model.classes).to(equal([]))
+        with it("should remove the class from model.every_class()"):
+            expect(self.model.every_class()).to(equal([]))
 
         with it("should record a REMOVE in the report"):
             expect(len(self.report.removes())).to(equal(1))
@@ -345,7 +346,7 @@ with description("CleanEngineeringModel"):
             self.model.translate_from(source)
 
         with it("should update the existing class in place"):
-            expect(self.model.classes[0].intent).to(equal("new intent"))
+            expect(self.model.every_class()[0].intent).to(equal("new intent"))
 
 
 with description("interface naming"):

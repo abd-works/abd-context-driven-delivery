@@ -13,6 +13,12 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable, NamedTuple
 
+_REPO = Path(__file__).resolve().parents[1]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+
+from harness.process.running_process import RunningProcess  # noqa: E402
+
 GRAPH_WEB_PORTS: tuple[int, ...] = (3000,)
 GRAPH_APP_PORTS: tuple[int, ...] = (5173, 5174, 5175, 5176)
 
@@ -75,21 +81,8 @@ class RepoProcesses:
             heard.update(ports.get(item, []))
         return sorted(heard)
 
-    def alive(self, pid: int) -> bool:
-        if pid <= 0:
-            return False
-        if sys.platform == "win32":
-            return self._windows_alive(pid)
-        try:
-            os.kill(pid, 0)
-        except PermissionError:
-            return True
-        except OSError:
-            return False
-        return True
-
     def stop(self, pid: int) -> None:
-        if pid <= 0 or pid == os.getpid() or not self.alive(pid):
+        if pid <= 0 or pid == os.getpid() or not RunningProcess(pid).alive:
             return
         if sys.platform == "win32":
             subprocess.run(
@@ -193,7 +186,7 @@ class RepoProcesses:
             timeout=60,
             check=False,
         )
-        return self._rows_from_json(completed.stdout)
+        return self._processes_from_json(completed.stdout)
 
     def _posix_processes(self) -> list[Process]:
         completed = subprocess.run(
@@ -215,7 +208,7 @@ class RepoProcesses:
             found.append(Process(int(pid_text), int(ppid_text), command.strip()))
         return found
 
-    def _rows_from_json(self, raw: str) -> list[Process]:
+    def _processes_from_json(self, raw: str) -> list[Process]:
         text = (raw or "").lstrip("\ufeff").strip()
         if not text:
             return []
@@ -223,14 +216,14 @@ class RepoProcesses:
             data = json.loads(text)
         except json.JSONDecodeError:
             return []
-        rows = data if isinstance(data, list) else [data]
+        entries = data if isinstance(data, list) else [data]
         found: list[Process] = []
-        for row in rows:
-            if not isinstance(row, dict):
+        for entry in entries:
+            if not isinstance(entry, dict):
                 continue
-            command = str(row.get("CommandLine") or "").strip()
-            pid = row.get("ProcessId")
-            ppid = row.get("ParentProcessId")
+            command = str(entry.get("CommandLine") or "").strip()
+            pid = entry.get("ProcessId")
+            ppid = entry.get("ParentProcessId")
             if not command or not isinstance(pid, int):
                 continue
             parent = ppid if isinstance(ppid, int) and ppid > 0 else 0
@@ -273,15 +266,6 @@ class RepoProcesses:
             ports.setdefault(int(pid_match.group(1)), set()).add(int(port_match.group(1)))
         return {pid: sorted(values) for pid, values in ports.items()}
 
-    def _windows_alive(self, pid: int) -> bool:
-        import ctypes
-
-        handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
-        if not handle:
-            return False
-        ctypes.windll.kernel32.CloseHandle(handle)
-        return True
-
 
 class PingReport:
     """Print one JSON ping result and return a process exit code."""
@@ -300,15 +284,14 @@ class HookPing:
 
     def run(self) -> int:
         from harness.hooks.hook_daemon import HookDaemon
-        from harness.hooks.hook_server import HookServer
 
         found = self._daemons()
-        state = HookServer.state_path(self.processes.repo)
-        recorded = self._recorded_pid(state)
+        daemon = HookDaemon(self.processes.repo)
+        recorded = self._recorded_pid(daemon.state_path)
         keeper, stopped = self.processes.collapse(found, recorded)
-        address = HookDaemon().live_address(state)
+        address = daemon.live_address()
         ok = address is not None
-        host, port, pid = address if address is not None else (None, None, keeper)
+        host, port, pid = (address.host, address.port, address.pid) if address is not None else (None, None, keeper)
         return PingReport().emit(
             {
                 "ok": ok,

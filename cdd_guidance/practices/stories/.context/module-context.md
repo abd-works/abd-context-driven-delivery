@@ -1,11 +1,12 @@
-# Stories (generator)
+# cdd_guidance/practices/stories
+*Stories* maps user interactions to system behaviours, then defines each behaviour through executable specifications. Its fidelities deepen one hierarchy: the *story map* (epics, sub-epics, and stories; `stories-story-map`), *scenarios* with concrete examples for each story (`stories-scenarios`), and *acceptance tests* that run those scenarios against production code (`stories-acceptance-tests`). `stories.instructions` is the practice's guidance at its current fidelity.
 
-**Purpose:** Multi-fidelity story-map generator — discovery / exploration / engineering over peer format channels (markdown, JSON, DrawIO, Miro, Python, TypeScript, Java, JavaScript).
+The same story model is written in many formats — sketch, markdown, JSON, draw.io, Miro, Claude Design, Python, TypeScript, Java, and JavaScript — and `render(format, content)` turns a story map or its tests from one format into another without losing the hierarchy.
 
-**Seam:** `Stories` toolset (`cdd_guidance.practices.stories.stories:Stories`)
+- **Purpose:** Keep one Epic → Story → Scenario hierarchy that discovery, specification, and tests all read, so scope and behaviour stay traceable from the map to the code.
+- **Seam (terms):** Stories, `stories.instructions`, `stories-story-map`, `stories-scenarios`, `stories-acceptance-tests`, `render`
+- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `harness/markdown`, `harness/name`, `cdd_guidance/actions/sketch` (*SketchOutline*), `cdd_guidance/practices/clean_engineering` (its class model, for code formats). `cdd_guidance/practices/ux` depends on Stories: its screens show the stories, and it draws the Claude Design story canvas from the story model. Stories imports neither UX nor anything that imports it back.
 
-**Public API:** fidelity/format construction; `guidance` (domain generate prose + CleanEngineering companion as a separate tools run); `transform`; `render(format, content)` (calls `transform` from the current format); `diagnostic()` Diagnose companion; `ce()` CleanEngineering companion; `contexts` instruction. Lifecycle generate / validate / satisfy / iterate live on kits under `actions/` — pass this Guidance in (`Generate().generate(tools=[stories])`). Catalog fidelity YAML must invoke that kit, not `action: generate` on this class.
+## Constraint
 
-**Dependencies:** `BaseContextTool`; format channel classes under `document` / `diagram` / `code`; `cdd_guidance.actions.diagnose.Diagnose` (via `diagnostic()`)
-
-**Mechanism:** `guidance` calls `super().guidance()` then `ce()` (CleanEngineering companion, tool mode) so wrap classes stay a separate tools run, not inlined. Format moves go through peer `parse` / `render` on channel StoryMaps.
+Run lifecycle steps through the actions with this practice as guidance — `generate.generate(guidance=["stories-story-map"])` — not as methods on *Stories*. Write only stories the source describes or the user asks for. Convert between formats with `render`, never by rewriting a format by hand, so every format keeps the same hierarchy.

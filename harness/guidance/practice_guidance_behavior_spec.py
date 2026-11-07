@@ -23,9 +23,9 @@ from harness.agent_tools.agent_tools import AgentInstructions
 from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.ddd.ddd import Ddd
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import ToolsetReference
 
-Car = AgentToolSet._load("cdd_guidance.practices._examples.car.car:Car")
+Car = ToolsetReference("cdd_guidance.practices._examples.car.car:Car").toolset_class
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
 from cdd_guidance.practices.stories.stories import Stories
 
@@ -220,9 +220,10 @@ with description("a practice"):
                     "Story: Browse Product Catalog\nActor: Customer\n",
                     encoding="utf-8",
                 )
+                from space.session.session import Session
+
                 self.tool = Stories(fidelity="story_map", format="python")
-                self.tool.path = str(self.root)
-                self.tool.workspace = type("WorkspacePath", (), {"path": str(self.root)})()
+                Session(self.root).practice("stories").guideline = self.tool
                 self.result = self.tool.render("markdown", self.tool)
 
             with it("should instantiate the object model from that code"):

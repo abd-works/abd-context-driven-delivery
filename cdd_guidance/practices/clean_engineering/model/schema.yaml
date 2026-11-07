@@ -39,6 +39,7 @@ module:
     - missing-module-context
     - language-modules-one-section
     - modules-not-model-blocks
+    - source-parses
 
 package:
   fidelity: modules

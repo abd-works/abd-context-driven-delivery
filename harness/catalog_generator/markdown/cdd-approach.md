@@ -21,10 +21,6 @@ Parse code, instrument systems, and orchestrate running tests. Categorize and in
 ### Discovery
 
 id: discovery
-board_key: discovery
-shape: solution
-scope_name: Whole solution
-scope_width: wide / shallow
 items: Outcome | Experience | Architecture
 example: story_map.png
 
@@ -37,10 +33,6 @@ Define enough structure to establish how domain boundaries and technology module
 ### Specification
 
 id: specification
-board_key: spec
-shape: sprint
-scope_name: Sprint
-scope_width: narrow / deeper
 items: Increment | Prototype | Reference
 example: scenarios.md
 
@@ -53,10 +45,6 @@ Write example-driven scenarios backed by domain-driven operations, and generate 
 ### Implement
 
 id: implementation
-board_key: engineer
-shape: story
-scope_name: Story
-scope_width: narrowest / deep
 items: Tests | Interface | Solution
 example: acceptance_tests.ts
 

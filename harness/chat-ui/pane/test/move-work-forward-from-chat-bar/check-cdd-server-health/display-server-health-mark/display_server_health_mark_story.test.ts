@@ -7,7 +7,7 @@ import { scenario, story } from '../../../story-test'
 // Epic: Move Work Forward From Chat Bar
 // Sub-epic: Check CDD Server Health
 // Map: ../../../../../.context/story-map.md#s-chat-bar----display-server-health-mark
-// Model: ../../../../../../kanban/.context/kanban-model.md
+// Model: ../../../../../../../space/kanban/.context/kanban-model.md
 // Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
 
 // (S) Chat Bar --> Display Server Health Mark
@@ -18,7 +18,7 @@ story('Display Server Health Mark', CHAT_BAR, () => {
       scene.world.health = HEALTHY
       scene.world.toolCount = 116
     })
-    when('the Chat Bar draws the active [session](../../../../../../kanban/.context/kanban-model.md#session) checkout-flow')
+    when('the Chat Bar draws the active [session](../../../../../../../space/kanban/.context/kanban-model.md#session) checkout-flow')
     // Boot ui.render -> ChatBarView($, chatBar) -> ServerHealthBandView(elements, band)
     // refreshHealth($) -> $.mcp.call('server-health.report')
     then('a green ✓ sits left of checkout-flow', async ($, on, scene) => {

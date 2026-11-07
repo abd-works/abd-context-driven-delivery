@@ -8,90 +8,56 @@ from typing import Any
 
 from harness.guidance.rule import Rule
 
-from validate.graph_json_reader import violations_by_rule
-from validate.validation_report_formatter import ValidationReportFormatter
+from cdd_guidance.actions.validate.graph_json_reader import violations_by_rule
+from cdd_guidance.actions.validate.validation_report_formatter import ValidationReportFormatter
 
 
-def build_graph_json_report(
-    violations: list[dict[str, Any]],
-    *,
-    workspace_directory: Path,
-    title: str = "Validation Report",
-    graph_sources: list[str] | None = None,
-    link_from_directory: Path | None = None,
-) -> str:
-    formatter = ValidationReportFormatter(
-        workspace_directory,
-        link_from_directory=link_from_directory,
-    )
-    grouped = violations_by_rule(violations)
-    total = len(violations)
-    lines = [
-        f"# {title}",
-        "",
-        f"**Generated:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
-        f"**Project:** {workspace_directory.name}",
-        f"**Action:** validate (graph JSON)",
-        "",
-    ]
-    if graph_sources:
-        lines.append("**Graph sources:**")
-        for source in graph_sources:
-            lines.append(f"- `{source}`")
+class ValidationReport:
+    """The validation report of one session: it names files by their path from the session's root and links to them
+    from the session's folder, where the report is saved, so a link opens the file from wherever the report is read."""
+
+    def __init__(self, session: Any) -> None:
+        self._session = session
+
+    def of_graph_and_ai_rules(
+        self,
+        violations: list[dict[str, Any]],
+        rules: list[Rule],
+        *,
+        graph_sources: list[str] | None = None,
+        rule_bodies: dict[str, str] | None = None,
+    ) -> str:
+        """Graph hits and AI judgment prompts in one section per rule (description under each heading)."""
+        grouped = violations_by_rule(violations)
+        total = len(violations)
+        lines = [
+            "# Graph rule validation",
+            "",
+            f"**Generated:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
+            f"**Project:** {self._session.root.name}",
+            f"**Action:** validate (graph JSON + AI rules)",
+            "",
+        ]
+        if graph_sources:
+            lines.append("**Graph sources:**")
+            for source in graph_sources:
+                lines.append(f"- `{source}`")
+            lines.append("")
+        lines.extend(["## Summary", ""])
+        if total == 0:
+            lines.append("**No graph rule violations.** All scanned graph rules passed.")
+        else:
+            lines.append(f"**Total graph violations:** {total}")
+            lines.append(f"**Rules with graph hits:** {len(grouped)}")
+        lines.append(f"**AI rules in scope:** {len(rules)}")
         lines.append("")
-    lines.extend(["## Summary", ""])
-    if total == 0:
-        lines.append("**No graph rule violations.** All scanned rules passed.")
-        lines.append("")
+        lines.extend(_rule_by_rule_sections(grouped, rules, self._formatter, rule_bodies or {}))
         return "\n".join(lines)
-    lines.append(f"**Total graph violations:** {total}")
-    lines.append(f"**Rules with hits:** {len(grouped)}")
-    lines.append("")
-    lines.extend(_violations_section(grouped, formatter))
-    return "\n".join(lines)
 
-
-def build_graph_and_ai_rule_report(
-    violations: list[dict[str, Any]],
-    rules: list[Rule],
-    *,
-    workspace_directory: Path,
-    title: str = "Graph rule validation",
-    graph_sources: list[str] | None = None,
-    link_from_directory: Path | None = None,
-    rule_bodies: dict[str, str] | None = None,
-) -> str:
-    """Graph hits and AI judgment prompts in one section per rule (description under each heading)."""
-    formatter = ValidationReportFormatter(
-        workspace_directory,
-        link_from_directory=link_from_directory,
-    )
-    grouped = violations_by_rule(violations)
-    total = len(violations)
-    lines = [
-        f"# {title}",
-        "",
-        f"**Generated:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
-        f"**Project:** {workspace_directory.name}",
-        f"**Action:** validate (graph JSON + AI rules)",
-        "",
-    ]
-    if graph_sources:
-        lines.append("**Graph sources:**")
-        for source in graph_sources:
-            lines.append(f"- `{source}`")
-        lines.append("")
-    lines.extend(["## Summary", ""])
-    if total == 0:
-        lines.append("**No graph rule violations.** All scanned graph rules passed.")
-    else:
-        lines.append(f"**Total graph violations:** {total}")
-        lines.append(f"**Rules with graph hits:** {len(grouped)}")
-    lines.append(f"**AI rules in scope:** {len(rules)}")
-    lines.append("")
-    bodies = rule_bodies or {}
-    lines.extend(_rule_by_rule_sections(grouped, rules, formatter, bodies))
-    return "\n".join(lines)
+    @property
+    def _formatter(self) -> ValidationReportFormatter:
+        folder = self._session.session_path
+        return ValidationReportFormatter(self._session.root, link_from_directory=Path(folder) if folder else None)
 
 
 def _rule_by_rule_sections(
@@ -140,28 +106,10 @@ def _one_rule_section(
         lines.append("")
         for violation in sorted(
             graph_hits,
-            key=lambda v: (str(v.get("location")), v.get("line_number") or 0),
+            key=lambda violation: (violation.location, violation.line or 0),
         ):
             lines.extend(formatter.format_violation_line(violation))
         lines.append("")
     lines.append(f"Evaluate the current context against this rule ({rule.slug}):")
     lines.append("")
-    return lines
-
-
-def _violations_section(
-    grouped: dict[str, list[dict[str, Any]]],
-    formatter: ValidationReportFormatter,
-) -> list[str]:
-    lines = ["## Violations Found (graph rules)", "", "Each item was detected by the practice graph scanner (`graph_rule: true`).", ""]
-    for rule in sorted(grouped.keys(), key=lambda r: (-len(grouped[r]), r)):
-        hits = grouped[rule]
-        lines.append(f"### {rule}: {len(hits)} violation(s)")
-        lines.append("")
-        for violation in sorted(
-            hits,
-            key=lambda v: (str(v.get("location")), v.get("line_number") or 0),
-        ):
-            lines.extend(formatter.format_violation_line(violation))
-        lines.append("")
     return lines

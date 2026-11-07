@@ -837,6 +837,7 @@ html[data-abd-theme="executive"] .catalog-garden-name--foundational a:hover {
   --fam-ddd: #6c5ce7;
   --fam-uxd: #e84393;
   --fam-arc: #4fc3f7;
+  --fam-bdd: #00b894;
   --fam-idea: var(--accent);
   --abd-accent: var(--accent);
   --abd-accent-glow: var(--accent-soft, var(--accent));
@@ -2305,6 +2306,7 @@ body:has(.approach-wrap) .catalog-body {
   --fam-uxd: #e84393;
   --fam-arc: #4fc3f7;
   --fam-ctx: #00b894;
+  --fam-bdd: #00b894;
   --fam-stage: #fdcb6e;
   --fam-delivery: #e5531a;
   --foundry-skills-ease: cubic-bezier(0.33, 1, 0.68, 1);
@@ -2584,7 +2586,7 @@ html[data-theme="engineering"] .foundry-kanban-surface {
 .foundry-guide__perspective-row--ddd .foundry-guide__perspective-name { color: var(--fam-ddd); }
 .foundry-guide__perspective-row--uxd .foundry-guide__perspective-name { color: var(--fam-uxd); }
 .foundry-guide__perspective-row--arc .foundry-guide__perspective-name { color: var(--fam-arc); }
-.foundry-guide__perspective-row--bdd .foundry-guide__perspective-name { color: var(--fam-ctx, #00b894); }
+.foundry-guide__perspective-row--bdd .foundry-guide__perspective-name { color: var(--fam-bdd, #00b894); }
 .foundry-guide__perspective-desc { flex: 1; color: var(--text); }
 
 .foundry-guide__executable {
@@ -2626,7 +2628,7 @@ html[data-theme="engineering"] .foundry-kanban-surface {
 .foundry-guide__executable-row--ddd { border-left: 3px solid var(--fam-ddd); }
 .foundry-guide__executable-row--uxd { border-left: 3px solid var(--fam-uxd); }
 .foundry-guide__executable-row--arc { border-left: 3px solid var(--fam-arc); }
-.foundry-guide__executable-row--bdd { border-left: 3px solid var(--fam-ctx, #00b894); }
+.foundry-guide__executable-row--bdd { border-left: 3px solid var(--fam-bdd, #00b894); }
 
 .foundry-guide__executable-name {
   flex: 0 0 108px;
@@ -2640,7 +2642,7 @@ html[data-theme="engineering"] .foundry-kanban-surface {
 .foundry-guide__executable-row--ddd .foundry-guide__executable-name { color: var(--fam-ddd); }
 .foundry-guide__executable-row--uxd .foundry-guide__executable-name { color: var(--fam-uxd); }
 .foundry-guide__executable-row--arc .foundry-guide__executable-name { color: var(--fam-arc); }
-.foundry-guide__executable-row--bdd .foundry-guide__executable-name { color: var(--fam-ctx, #00b894); }
+.foundry-guide__executable-row--bdd .foundry-guide__executable-name { color: var(--fam-bdd, #00b894); }
 
 .foundry-guide__executable-desc { flex: 1; color: var(--text); }
 
@@ -2663,7 +2665,7 @@ html[data-theme="engineering"] .foundry-kanban-surface {
 .foundry-guide__change-row--ddd { border-left: 3px solid var(--fam-ddd); }
 .foundry-guide__change-row--uxd { border-left: 3px solid var(--fam-uxd); }
 .foundry-guide__change-row--arc { border-left: 3px solid var(--fam-arc); }
-.foundry-guide__change-row--bdd { border-left: 3px solid var(--fam-ctx, #00b894); }
+.foundry-guide__change-row--bdd { border-left: 3px solid var(--fam-bdd, #00b894); }
 .foundry-guide__change-row--team { border-left: 3px solid var(--fam-delivery); }
 
 .foundry-guide__change-name {
@@ -2680,7 +2682,7 @@ html[data-theme="engineering"] .foundry-kanban-surface {
 .foundry-guide__change-row--ddd .foundry-guide__change-name { color: var(--fam-ddd); }
 .foundry-guide__change-row--uxd .foundry-guide__change-name { color: var(--fam-uxd); }
 .foundry-guide__change-row--arc .foundry-guide__change-name { color: var(--fam-arc); }
-.foundry-guide__change-row--bdd .foundry-guide__change-name { color: var(--fam-ctx, #00b894); }
+.foundry-guide__change-row--bdd .foundry-guide__change-name { color: var(--fam-bdd, #00b894); }
 .foundry-guide__change-row--team .foundry-guide__change-name { color: var(--fam-delivery); }
 
 .foundry-guide__change-bullets {
@@ -3723,6 +3725,15 @@ html.foundry-scroll-pending {
 .kb-ticket.aad-fam-uxd { border-left-color: var(--fam-uxd); }
 .kb-ticket.aad-fam-arc { border-left-color: var(--fam-arc); }
 .kb-ticket.aad-fam-ctx { border-left-color: var(--fam-ctx); }
+/* BDD has its own colour, so its tickets and rows are not read as Stories. */
+.kb-ticket.aad-fam-bdd,
+.aad-fam-bdd.kb-ticket.aad-skill,
+.aad-delivery-crosscut-row-label.aad-fam-bdd,
+.aad-delivery-leaf.aad-fam-bdd,
+.skill-kanban-nav .kb-ticket.aad-fam-bdd,
+.page-hero__cell--practice .kanban-legend-cards .kb-ticket.aad-skill.aad-fam-bdd { border-left-color: var(--fam-bdd, #00b894); }
+.skill-kanban-nav .aad-crosscut-row-title.aad-fam-bdd,
+.foundry-kanban-surface .aad-crosscut-row-title.aad-fam-bdd { border-left-color: var(--fam-bdd, #00b894); color: var(--fam-bdd, #00b894); }
 .kb-ticket.aad-fam-delivery { border-left-color: var(--fam-delivery); }
 
 /* Hub embed: show tickets immediately (bootcamp deck CSS hides until .shown) */
@@ -4725,8 +4736,8 @@ a.approach-stage__label {
 }
 
 .approach-refine-row .approach-window__stage--context.approach-grid__label--bdd {
-  color: var(--fam-sdd, #6bcb77);
-  border-left-color: var(--fam-sdd, #6bcb77);
+  color: var(--fam-bdd, #00b894);
+  border-left-color: var(--fam-bdd, #00b894);
 }
 
 .approach-refine-row .approach-window__stage--context.approach-grid__label--ddd {
@@ -5439,7 +5450,7 @@ a.approach-grid__label:hover {
 .approach-grid__label--sdd { border-left-color: var(--fam-sdd, #6bcb77); color: var(--fam-sdd, #6bcb77); }
 .approach-grid__label--arc { border-left-color: var(--fam-arc, #4fc3f7); color: var(--fam-arc, #4fc3f7); }
 .approach-grid__label--uxd { border-left-color: var(--fam-uxd, #e84393); color: var(--fam-uxd, #e84393); }
-.approach-grid__label--bdd { border-left-color: var(--fam-sdd, #6bcb77); color: var(--fam-sdd, #6bcb77); }
+.approach-grid__label--bdd { border-left-color: var(--fam-bdd, #00b894); color: var(--fam-bdd, #00b894); }
 .approach-grid__label--ddd { border-left-color: var(--fam-ddd, #6c5ce7); color: var(--fam-ddd, #6c5ce7); }
 .approach-grid__label--cdd { border-left-color: #e5531a; color: #e5531a; }
 .approach-grid__label--customer-discovery { border-left-color: #F59E0B; color: #F59E0B; }
@@ -5541,8 +5552,8 @@ a.approach-grid__label:hover {
   font-weight: 600;
   text-decoration: none;
 }
-.approach-grid__ticket--sdd,
-.approach-grid__ticket--bdd { border-left-color: var(--fam-sdd, #6bcb77); }
+.approach-grid__ticket--sdd { border-left-color: var(--fam-sdd, #6bcb77); }
+.approach-grid__ticket--bdd { border-left-color: var(--fam-bdd, #00b894); }
 .approach-grid__ticket--arc { border-left-color: var(--fam-arc, #4fc3f7); }
 .approach-grid__ticket--uxd { border-left-color: var(--fam-uxd, #e84393); }
 .approach-grid__ticket--ddd { border-left-color: var(--fam-ddd, #6c5ce7); }

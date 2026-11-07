@@ -1,23 +1,12 @@
-# Class model
+# cdd_guidance/practices/clean_engineering/model
+*CleanEngineeringModel* is the object-oriented analysis and design (OOAD) model behind every Clean Engineering artifact: *Module*s holding *OoadClass*es, each with *Property*s, *Operation*s and their *Parameter*s, and *Relationship*s to other classes. One model is read from and written to every format — markdown, JSON, sketch, Python, TypeScript, Java, JavaScript, and draw.io — so a module map, a class diagram, and the code always say the same classes, the bases each class extends, and the stereotypes it carries. The practice names each format in `CleanEngineering(...).formats`; each format is one class, such as *MarkdownCleanEngineeringModel*, that parses and renders the same nodes. Text a format cannot read, such as Python that does not parse or a draw.io file that is not XML, raises *UnreadableSource* instead of reading as an empty model a sync would then apply. How the model reads a path is written in [ooad-model.md](ooad-model.md).
 
-## Purpose
+*CodeBody* is an operation's body as it was read. Rendered in the same language it comes back as written; rendered in another language it comes back commented out above a statement that fails until someone writes it, so moving a model between languages never silently drops code. Stories and BDD use *CodeBody* for their own code formats.
 
-Canonical OOAD model (`OoadNode` / `OoadClass` / `Module` / `CleanEngineeringModel`) and channel adapters that parse and render that model across markdown, JSON, languages, and draw.io.
+- **Purpose:** Keep one class model that every format and every practice reads, so converting between formats never changes the classes.
+- **Seam (terms):** CleanEngineeringModel, UnreadableSource, Module, OoadClass, Property, Operation, Parameter, Relationship, CodeBody
+- **Dependencies (one-way):** `harness/graph` (the model's nodes are graph nodes), `cdd_guidance/actions/sketch` (*SketchOutline*, for the sketch format), `cdd_guidance/practices/clean_engineering` (its per-language rule packages import the practice's rules, `BY_SLUG` and `RULES`). The practice imports this module back, so the two depend on each other — the one cycle left, tracked in `.sessions/_backlog/break-module-dependency-cycles.md`; the draw.io format (`model/drawio`) imports this module and nothing here imports it, and nothing in harness imports it. About 39 of its 89 classes are named outside it (43%): the rule classes the practice's `rules` package lists, the per-language models Stories, DDD, and BDD build on, and the diagram layout classes `model/drawio` draws with.
 
-## Seam
+## Constraint
 
-Each channel class exposes `parse(text) -> CleanEngineeringModel` and `render(model) -> str`. DrawIO auto-selects modules view vs UML class view from model content.
-
-Every code channel (Python, TypeScript, JavaScript, Java) renders through `CodeCleanEngineeringModel.render(canonical, previous)`. An operation keeps the body it was read with (`Operation.body`, a `CodeBody`). Rendered in the same language, the body comes back as written. Rendered in another language, it comes back commented out above a statement that fails until someone writes it. Pass the previous file as `previous` to keep its bodies when the canonical model came from markdown or a diagram. Stories and BDD code channels use the same `CodeBody` and `CodeLanguage`.
-
-The walk is `practices/clean_engineering/.context/ooad-model.md`, written to `practices/stories/model/.context/practice-model.md`. Channel subclasses load and save. The code in this folder still exposes `parse` and `render`.
-
-## Public API
-
-`CleanEngineeringModel`, `Module`, `OoadClass`, `Property`, `Operation`, `Parameter`, `Relationship`, `UpdateReport`; channel classes (`MarkdownCleanEngineeringModel`, `PythonCleanEngineeringModel`, `DrawIOCleanEngineeringModel`, …). Each node clones itself. A channel loads with `load` and writes with `save`.
-
-Draw.io lives under `class_model/drawio/` and Miro under `class_model/miro/`. Shared positioning, ordering, and layout live in `class_model/diagram/` (`Geometry`, `DiagramNode`, `DiagramClass`, `DiagramModule`, `ContainmentForest`). Each channel only writes its format (mxCell vs Mermaid/SVG).
-
-## Dependencies
-
-`update_report` (translation / reconcile); stdlib XML/HTML for draw.io; Drawio kit depends on Scan + Repair. Layout scanners do not depend on OO code scanners.
+Callers work with the base nodes and reach a format through the practice's `formats`; they never pick a format's internals or parse text themselves. Pass the previous file when rendering code from a model that came from markdown or a diagram, so the operation bodies already written are kept.

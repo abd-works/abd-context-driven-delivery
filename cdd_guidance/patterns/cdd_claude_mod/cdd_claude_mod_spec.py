@@ -35,7 +35,7 @@ with description("a Claude Code mod pattern"):
             expect(self.tool.default_workspace_folder).to(equal("harness"))
 
         with it("should key context_index on cdd_claude_mod"):
-            expect(self.tool.context_index_key).to(equal("cdd_claude_mod"))
+            expect(self.tool.key).to(equal("cdd_claude_mod"))
 
         with it("should resolve module_dir to this package"):
             expect(self.tool.module_dir).to(equal(_MODULE_DIR))
@@ -80,10 +80,10 @@ with description("a Claude Code mod pattern"):
             expect(len(list(self.rules))).to(equal(len(_RULE_SLUGS)))
 
         with it("should match a mod's hooks"):
-            expect(self.rules.matches("harness/report/pane/hooks/register.tsx")).to(be_true)
+            expect(self.rules.applies_to.matches("harness/report/pane/hooks/register.tsx")).to(be_true)
 
         with it("should not match Python outside a mod"):
-            expect(self.rules.matches("harness/kanban/board.py")).to(equal(False))
+            expect(self.rules.applies_to.matches("space/kanban/board.py")).to(equal(False))
 
     with context("whose graph overlay has been read"):
         with before.each:

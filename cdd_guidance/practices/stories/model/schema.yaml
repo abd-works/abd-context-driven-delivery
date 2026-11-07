@@ -62,7 +62,7 @@ story:
     - story-name-captures-system-mechanic
     - right-size-story-nodes
     - behaviours-not-one-time-tasks
-    - story-scenarios-one-to-four
+    - story-scenarios-at-most-seven
 
 scenario:
   fidelity: scenarios
@@ -75,7 +75,7 @@ scenario:
   where:
     - id is the text slugs from the root to this node, joined by dots
     - steps match given+ (when then+)+
-    - shownOn is the screen whose scenario names hold this scenario as Story › Scenario; with none, the scenario shows its story's screen
+    - shownOn is the screen whose showsScenarios holds this scenario; with none, the scenario shows its story's screen
     - outline when examples count > 2
     - a later then names the next story
     - examples cover every domain concept the steps name
@@ -100,7 +100,7 @@ step:
   where:
     - id is the text slugs from the root to this node, joined by dots
     - ands continue the step they follow
-    - shownOn is the screen whose step names hold this step as Story › Scenario › Step
+    - shownOn is the screen whose showsSteps holds this step
     - but marks a missing state
   rules:
     - plain-english-gwt-steps

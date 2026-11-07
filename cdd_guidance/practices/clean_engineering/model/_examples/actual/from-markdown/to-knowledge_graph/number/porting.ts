@@ -3,6 +3,8 @@
 /**
  * Donor / account / device / verified live here. Cart **links** this type (`<< association >>`). `planSelected` is the cart bundle name.
  */
+@AggregateRoot()
+@Entity()
 class Portability {
   donorOperator: string;
   portNumber: string;
@@ -49,6 +51,8 @@ class Portability {
 /**
  * Twilio Verify. Port-in SMS.
  */
+@Service()
+@System()
 class TwilioService {
   constructor() {
   }
@@ -62,6 +66,7 @@ class TwilioService {
   }
 }
 
+@System()
 class PortingSmsCode {
   code: string;
 

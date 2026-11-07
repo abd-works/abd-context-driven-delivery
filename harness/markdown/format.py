@@ -27,11 +27,6 @@ class Format:
         """The format of a file with this extension, written with or without its dot: `.py` is `python`."""
         return cls(extension.lstrip("."))
 
-    @classmethod
-    def template_folder_names(cls) -> frozenset[str]:
-        """The folder names a practice's templates are kept under, one for each templated format: `md`, `py`, ..."""
-        return frozenset(cls(name).short for name in cls.TEMPLATED)
-
     @property
     def name(self) -> str:
         """The format's own name, `markdown` for `md`; empty when no format was given."""
@@ -70,3 +65,7 @@ class Format:
     def template_extension(self) -> str:
         """The extension this format's templates end with; empty for a format whose template is found by name."""
         return self.extension if self.is_templated else ""
+
+
+# The folder names a practice's templates are kept under, one for each templated format: `md`, `py`, ...
+TEMPLATE_FOLDER_NAMES = frozenset(Format(name).short for name in Format.TEMPLATED)

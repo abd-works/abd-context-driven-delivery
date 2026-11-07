@@ -11,12 +11,8 @@ from cdd_guidance.practices.stories.model.story_model import Epic, Story
 
 class JavaStoryModel(CodeStoryModel):
     LEAF_EXTENSION = "Story.java"
-    LANGUAGE_LINE_COMMENT = "//"
     epic_type = JavaEpic
     story_type = JavaStory
-
-    def save(self) -> Dict[str, str]:
-        return self.write_epics({})
 
     def file_name(self, epic: Epic) -> str:
         return f"{epic.pascal()}Story.java"
@@ -26,10 +22,7 @@ class JavaStoryModel(CodeStoryModel):
 
     def story_lines(self, story: Story) -> List[str]:
         """A Java story is a doc comment: names and steps, no code, so there is no body to carry."""
-        actor = (story.actors[0] if story.actors else "").strip()
-        lines = [f"/** Story: {story.name}"]
-        if actor:
-            lines.append(f" * Actor: {actor}")
+        lines = [f"/** Story: {story.name}", *self.description_lines(story, " * ")]
         example_line = self.story_type.background_example_line(story, " * ")
         if example_line:
             lines.append(example_line)

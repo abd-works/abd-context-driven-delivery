@@ -4,7 +4,7 @@ share:
     - tier-bound-repository-accessor
     - no-expect-in-given
     - domain-operations-inline-in-steps
-    - outline-rows-loop-over-examples
+    - outline-entries-loop-over-examples
     - scaffold-test-scripts
     - ask-cross-aggregate-sync
 domain:
@@ -18,7 +18,7 @@ server:
     - standard-mutation-response
 playwright:
   rules:
-    - outline-rows-loop-over-examples
+    - outline-entries-loop-over-examples
     - domain-operations-inline-in-steps
     - playwright-tests-browser-interaction
     - reduce-story-overlap

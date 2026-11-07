@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
 
 _MIN_SHARED_WORDS = 2
 _BRANCH_SUFFIX = re.compile(r"^(registered|with|that)\b", re.I)
@@ -53,5 +58,5 @@ class SharedDescribeSubject(PracticeGraphRule):
     slug = "shared-describe-subject"
     node_types = ("Spec",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         return branched_top_level_describes(node.get_fact("top_level_describes", []))[:5]

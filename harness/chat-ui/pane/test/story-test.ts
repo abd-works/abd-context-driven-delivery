@@ -13,10 +13,12 @@ type StepWords = {
 }
 
 // The infrastructure every scenario of a story runs on, kept out of its steps: wire stubs the engine and the systems
-// beneath the pane, before any step; mount opens the pane a person sees, once the Givens have seeded those systems.
+// beneath the pane, before any step; mount opens the pane a person sees, once the Givens have seeded those systems;
+// check asserts what every scenario of the story leaves true, once its steps have passed.
 export type Lifecycle = {
   wire: (on: any, scene: any) => void
   mount: ($: any) => Promise<any>
+  check?: (scene: any) => void
 }
 
 type Word = keyof StepWords
@@ -35,7 +37,7 @@ export function story(name: string, lifecycle: Lifecycle, build: () => void): vo
 export function scenario(name: string, build: (words: StepWords) => void): void {
   const lifecycle = storyLifecycle
   const steps: { word: Word; run: Step }[] = []
-  const words = Object.fromEntries((['given', 'when', 'then', 'and', 'but'] as Word[]).map(word => [word, (_text: string, run: Step = () => undefined) => steps.push({ word, run })]))
+  const words = Object.fromEntries((['given', 'when', 'then', 'and', 'but'] as Word[]).map(word => [word, (_text: string, run: Step = () => undefined) => void steps.push({ word, run })]))
   build(words as StepWords)
   test(`${storyName} › ${name}`, async ($, on) => {
     let mounted: any
@@ -51,6 +53,7 @@ export function scenario(name: string, build: (words: StepWords) => void): void 
         if (ACTING.includes(word)) await open()
         await run($, on, scene)
       }
+      lifecycle.check?.(scene)
     } finally {
       await mounted?.unmount()
     }

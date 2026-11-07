@@ -135,9 +135,9 @@ with description("a TypeScript runnable-story Story Map") as self:
                 Step("prices are shown", StepType.THEN, 4),
             ]
             story.scenarios.append(sc)
-            from cdd_guidance.practices.stories.model.typescript.story_file import render_story_file
+            from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptStory
 
-            src = render_story_file(story)
+            src = TypeScriptStory.create(story)
             expect(".and(" in src).to(be_true)
             expect(src.count("then(")).to(equal(1))
 

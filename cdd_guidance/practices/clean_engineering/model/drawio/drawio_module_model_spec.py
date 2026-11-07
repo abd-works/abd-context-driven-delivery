@@ -1,6 +1,5 @@
 """BDD specs for a Draw.io modules diagram and a Draw.io class diagram."""
 import re
-import sys
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -9,27 +8,19 @@ from typing import Tuple
 from expects import be_false, be_true, contain, equal, expect, have_len
 from mamba import before, context, description, it
 
-_REPO_ROOT = Path(__file__).resolve().parents[5]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ('tools', 'cdd_guidance/practices', 'cdd_guidance/actions'):
-    _p = str(_REPO_ROOT / _cat)
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
-
-from cdd_guidance.practices.clean_engineering.model.base_class_model import (  # noqa: E402
+from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
-    Operation,
-    Property,
-    Relationship,
 )
-from cdd_guidance.practices.clean_engineering.model.drawio.drawio import Drawio  # noqa: E402
-from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import (  # noqa: E402
+from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio import Drawio
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import (
     DrawIOCleanEngineeringModel,
 )
-from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (  # noqa: E402
+from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (
     MarkdownCleanEngineeringModel,
 )
 
@@ -37,6 +28,8 @@ _MODULES_MD = '# checks\n\nFoundation check resolution.\n\n- **Purpose:** Resolv
 _NESTED_POWERS_MD = '# powers\n\nOwns Effect shared base.\n\n- **Purpose:** Shared Effect seam on the parent.\n- **Seam (terms):** Effect\n- **Dependencies (one-way):** character, checks\n\n# powers/attack\n\nAttack-typed effects.\n\n- **Purpose:** Specialize Effect for attack-type powers.\n- **Seam (terms):** AttackEffect\n- **Dependencies (one-way):** powers, checks\n\n# checks\n\nFoundation.\n\n- **Purpose:** Resolve checks.\n- **Seam (terms):** Trait, Check\n- **Dependencies (one-way):** *(none)*\n\n# character\n\nSheet.\n\n- **Purpose:** Sheet ownership.\n- **Seam (terms):** Character, ISource\n- **Dependencies (one-way):** checks\n'
 _NESTED_MODULE_CONTEXT_MD = '# powers/effect\n\nShared base for all power effects.\n\n## Modules fidelity\n\n### Module `powers/effect`\n\n- **Purpose:** Own the shared Effect seam.\n- **Seam (terms):** Effect\n- **Dependencies (one-way):** `character`, `checks`\n- **Build order:** see module-build-order.md\n'
 
+
+_TEMPLATES = Path(__file__).resolve().parents[2] / 'templates'
 
 # A class cell is named for the module that owns it, so two modules can both hold a Cart.
 _CART = 'shop--cart'
@@ -139,10 +132,10 @@ def _render_kept(model, previous):
 
 
 def _create_kept(content, path):
-    kit = Drawio()
-    kit.source_format = 'markdown'
-    kit.keep_positioning = True
-    return kit.create_diagram(content, path)
+    toolset = Drawio()
+    toolset.source_format = 'markdown'
+    toolset.keep_positioning = True
+    return toolset.create_diagram(content, path)
 
 
 with description('a Draw.io modules diagram'):
@@ -231,7 +224,7 @@ with description('a Draw.io modules diagram'):
 
     with context('that was parsed from the AI template modules.drawio'):
         with before.each:
-            path = _REPO_ROOT / 'cdd_guidance' / 'practices' / 'clean_engineering' / 'templates' / 'modules.drawio'
+            path = _TEMPLATES / 'modules.drawio'
             self.model = DrawIOCleanEngineeringModel().parse(path.read_text(encoding='utf-8'))
 
         with it('should parse five placeholder modules'):

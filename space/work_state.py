@@ -4,69 +4,17 @@ from __future__ import annotations
 import json
 import os
 import threading
-from collections.abc import Iterator
-from contextlib import contextmanager
-from contextvars import ContextVar
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from space.repo.repo import Branch, Repo, Worktree
 
 SESSIONS_FOLDER = ".sessions"
 STATE_NAME = "session.json"
-DESIGN_CANVAS_FOLDER = "design-canvas"
 E2E_RESULTS_FOLDER = "e2e-test-results"
-_LEGACY_SESSION_KEY = "current"
-# One cdd server answers every chat, so the project belongs to the call, not to the process.
-_called_project: ContextVar[Path | None] = ContextVar("cdd_called_project", default=None)
-
-
-def _repo_at(folder: Path | str) -> Repo:
-    # WHY: space.repo.repo saves its branch and worktree through WorkState, so it is imported when first used.
-    from space.repo.repo import Repo
-
-    return Repo(folder)
-
-
-def project_folder() -> Path:
-    """The folder of the project being worked on: the one the running call names, else ``CDD_PROJECT``, else the
-    current folder.
-
-    ``CDD_REPO`` names the CDD checkout that serves the tools, not the project, so it never picks the project."""
-    called = _called_project.get()
-    if called is not None:
-        return called
-    named = os.environ.get("CDD_PROJECT")
-    return Path(named).resolve() if named else Path.cwd().resolve()
-
-
-def project_checkout() -> Path:
-    """The checkout holding the project being worked on. Sessions, the board, and every tool that finds
-    ``.sessions/`` start here, so they all find the same one."""
-    return _repo_at(project_folder()).checkout_folder
-
-
-def board_checkout() -> Path:
-    """The checkout whose ``.sessions/`` holds the board. A ticket's worktree is a linked worktree of the project, so
-    a chat working there reads the same board as one in the main checkout."""
-    return _repo_at(project_checkout()).primary_root()
-
-
-@contextmanager
-def working_on(project: Path | str) -> Iterator[Path]:
-    """Run one call on ``project``: inside it, ``project_folder()`` is that folder and ``project_checkout()`` the
-    checkout holding it. Each thread and each task keeps its own, so calls from different chats never see each other's
-    project."""
-    token = _called_project.set(Path(project).resolve())
-    try:
-        yield project_checkout()
-    finally:
-        _called_project.reset(token)
 
 
 class WorkState:
-    """The open branch, worktree, and session, shared by the repo and session commands."""
+    """The open branch, worktree, and session of one checkout, saved by name in its ``.sessions/session.json`` and
+    shared by the repo and session commands. It keeps names only: the repository turns a branch name into its *Branch*
+    and a worktree's folder into its *Worktree*."""
 
     def __init__(self, repo_root: Path | str) -> None:
         self.root = Path(repo_root).resolve()
@@ -80,28 +28,23 @@ class WorkState:
         return self.sessions_folder / STATE_NAME
 
     @property
-    def branch(self) -> Branch | None:
-        """The branch saved as open, on this checkout; none when no branch is saved."""
-        name = self._value("branch")
-        return _repo_at(self.root).branch_named(name) if name else None
+    def branch_name(self) -> str:
+        """The name of the branch saved as open on this checkout; empty when none is saved."""
+        return self._value("branch")
 
-    @branch.setter
-    def branch(self, branch: Branch | None) -> None:
-        self._store("branch", branch.name if branch is not None else "")
+    @branch_name.setter
+    def branch_name(self, name: str) -> None:
+        self._store("branch", name)
 
     @property
-    def worktree(self) -> Worktree | None:
-        """The worktree saved as open, with the saved branch; none when no worktree is open."""
+    def worktree_folder(self) -> Path | None:
+        """The folder of the worktree saved as open; none when no worktree is open."""
         path = self._value("worktree")
-        if not path:
-            return None
-        from space.repo.repo import Worktree
+        return Path(path) if path else None
 
-        return Worktree.from_checkout(Path(path), self._value("branch"))
-
-    @worktree.setter
-    def worktree(self, worktree: Worktree | None) -> None:
-        self._store("worktree", str(worktree.path) if worktree is not None else "")
+    @worktree_folder.setter
+    def worktree_folder(self, folder: Path | None) -> None:
+        self._store("worktree", str(folder) if folder is not None else "")
 
     @property
     def session(self) -> str:
@@ -111,25 +54,12 @@ class WorkState:
     def session(self, name: str) -> None:
         self._store("session", name)
 
-    @property
-    def release(self) -> str:
-        """The release this checkout's work belongs to: the open session, else the branch, else ``main``."""
-        return self.session or self._value("branch") or "main"
-
-    def release_folder(self, release: str = "") -> Path:
-        """``.sessions/<release>/``: the release's session files, its design canvas, and its end-to-end results."""
-        return self.sessions_folder / (release or self.release)
-
     def load(self) -> dict[str, str]:
         if not self.path.is_file():
             return {}
         data = json.loads(self.path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             return {}
-        # Files written before the branch and worktree keys named the session "current".
-        legacy = data.pop(_LEGACY_SESSION_KEY, None)
-        if legacy and not data.get("session"):
-            data["session"] = legacy
         return {str(key): str(value) for key, value in data.items() if str(value).strip()}
 
     def _value(self, key: str) -> str:

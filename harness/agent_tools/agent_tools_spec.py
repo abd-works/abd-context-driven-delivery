@@ -13,8 +13,9 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 sys.modules.pop("actions", None)
 
 import yaml
-from expects import be_true, contain, equal, expect, have_key
-from mamba import before, context, description, it
+from expects import be_true, contain, equal, expect, have_key, raise_error
+from mamba import after, before, context, description, it
+from space.session.throwaway_project import ThrowawayProject
 
 from harness.agent_tools.agent_tools import (
     AgentInstructions,
@@ -22,6 +23,7 @@ from harness.agent_tools.agent_tools import (
     tools,
     instructions,
     AgentToolValidationError,
+    CallNamesNoProject,
     AgentToolSet,
     InstallDestination,
     ToolSetCollection,
@@ -31,7 +33,8 @@ from harness.agent_tools.agent_tools import (
 )
 from harness.hooks.hooks import hook
 from harness.mcp.mcp_server import mcp
-from harness.agent_tools.agent_tools import AgentInstructions
+from harness.agent_tools.agent_tools import AgentInstructions, ToolSetCollectionAnnotation
+from harness.agent_tools.recipe import RecipeLineFailed, RecipePlaceholders
 from cdd_guidance.actions._examples.car_story.car_story import CarStory
 from harness.agent_tools._examples.super_delegation.super_delegation_demo import (
     EmptySuperChild,
@@ -39,10 +42,10 @@ from harness.agent_tools._examples.super_delegation.super_delegation_demo import
     ExplicitSuperChild,
     SuperBase,
 )
-from agent_bdd.yaml_fence import load_fenced
-from harness.agent_tools.agent_tools import AgentToolSet, agent_tool as _tool, tool_subject, tools, instructions
+from cdd_guidance.practices.agent_bdd.yaml_fence import load_fenced
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference, agent_tool as _tool, tool_subject, tools, instructions
 
-Car = AgentToolSet._load("cdd_guidance.practices._examples.car.car:Car")
+Car = ToolsetReference("cdd_guidance.practices._examples.car.car:Car").toolset_class
 
 
 class CarInstance:
@@ -186,6 +189,13 @@ _CAR_STORY_TOOLSET = "cdd_guidance.actions._examples.car_story.car_story:CarStor
 
 
 with description("a class"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("with a toolset that declares @agent_instructions members"):
         with context("the travelTo action"):
             with it("should expose travelTo as an @agent_instructions member"):
@@ -208,7 +218,7 @@ with description("a class"):
                     "destination": "Hazzard County courthouse",
                     "conditions": "muddy back roads",
                 }
-                response = CarStory().instructions["travelTo"].expand({}, arguments)
+                response = CarStory().instructions["travelTo"].expand(arguments)
                 expect(response.result).to(
                     equal("Instructions for traveling to Hazzard County courthouse")
                 )
@@ -223,40 +233,35 @@ with description("a class"):
                 from harness.agent_tools._examples.logged_probe import LoggedProbe
 
                 response = LoggedProbe().instructions["narrate"].expand(
-                    {},
                     {"message": "hello"},
                 )
                 expect(response.tools).to(equal(["ping"]))
 
 
 with description("an action"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that has instructions with templating"):
         with context("with templated placeholders for a parameter"):
             with it("should put argument values into those instructions where {{param}} appears"):
-                rendered = AgentInstructions.substitute_template(
-                    "Go to {{destination}}",
-                    {"destination": "town"},
-                    {"destination"},
-                )
+                rendered = RecipePlaceholders({"destination": "town"}, {"destination"}).filled("Go to {{destination}}")
                 expect(rendered).to(equal("Go to town"))
 
         with context("with templated placeholders for an instance value"):
             with it("should put instance values into those instructions where {{self.attr}} appears"):
                 car = Car(make="Dodge", model="Charger", year=1969, personality="General Lee")
-                rendered = AgentInstructions.substitute_template(
-                    "Drive the {{self.make}}",
-                    {},
-                    set(),
-                    instance=car,
-                )
+                rendered = RecipePlaceholders({}, set(), car).filled("Drive the {{self.make}}")
                 expect(rendered).to(equal("Drive the Dodge"))
 
         with context("with {} single-brace placeholders"):
             with it("should leave single-brace {Placeholder} text unchanged"):
-                rendered = AgentInstructions.substitute_template(
-                    "Fill {Placeholder} then go {{destination}}",
-                    {"destination": "town"},
-                    {"destination"},
+                rendered = RecipePlaceholders({"destination": "town"}, {"destination"}).filled(
+                    "Fill {Placeholder} then go {{destination}}"
                 )
                 expect(rendered).to(equal("Fill {Placeholder} then go town"))
 
@@ -264,7 +269,7 @@ with description("an action"):
             with it("should fail expand/run"):
                 raised = False
                 try:
-                    AgentInstructions.substitute_template("Go to {{destination}}", {}, {"destination"})
+                    RecipePlaceholders({}, {"destination"}).filled("Go to {{destination}}")
                 except ValueError as error:
                     raised = True
                     expect("destination" in str(error)).to(be_true)
@@ -277,7 +282,6 @@ with description("an action"):
             from harness.agent_tools._examples.templated_md import TemplatedMdDemo
 
             response = TemplatedMdDemo(label="Desk").instructions["greet"].expand(
-                {},
                 {"name": "Pat"},
             )
             expect("Greet Pat on behalf of Desk" in response.instructions).to(be_true)
@@ -285,6 +289,13 @@ with description("an action"):
 
 
 with description("super() delegation in action bodies"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("a child class that calls super().generate() explicitly"):
         with it("should inline the parent's prose in the child expansion"):
             child = ExplicitSuperChild()
@@ -299,6 +310,13 @@ with description("super() delegation in action bodies"):
 
 
 with description("empty-body auto-super in action bodies"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("a child whose generate body is only Ellipsis"):
         with it("should inline the parent's prose"):
             child = EmptySuperChild()
@@ -329,17 +347,24 @@ with description("empty-body auto-super in action bodies"):
 
 
 with description("AgentToolSet"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("on a live Car example instance"):
         with context("with a class-level description"):
             with it("should expose description matching the class docstring"):
                 car = CarInstance()
                 expect("Example context tool" in car.description).to(be_true)
 
-        with context("with methods marked as @agent_tool"):
+        with context("with methods annotated as @agent_tool"):
             with before.each:
                 self.car = CarInstance()
 
-            with it("should register every marked method in operations"):
+            with it("should register every annotated method in operations"):
                 expect(set(self.car.operations.keys())).to(
                     equal(
                         {
@@ -376,7 +401,7 @@ with description("AgentToolSet"):
                 expect(car.personality).to(equal("cheerful companion named Sunny"))
                 expect(car.running).to(equal(False))
 
-    with context("when a marked @agent_tool is invoked"):
+    with context("when an annotated @agent_tool is invoked"):
         with it("should invoke start on a constructed Car"):
             car = CarInstance()
             car.operations["start"].invoke({})
@@ -668,12 +693,19 @@ class _BrokenProvider:
 
     @agent_instructions
     def wrap(self) -> str:
-        """BROKEN_PROVIDER_MARKER: still list the named tool."""
+        """BROKEN_PROVIDER_MARKER: a provider that raises fails its line."""
         tools(self.missing().finish_turn())
         return ""
 
 
 with description("a for-each action over companion toolsets"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("when each companion is flipped to tool mode in the loop"):
         with before.each:
             self.body = AgentInstructions.for_callable(
@@ -763,7 +795,28 @@ class _NestedRulesCaller:
         return "sketched"
 
 
+@agent_toolset
+class _EmptyListCaller:
+    def listed(self) -> list:
+        return []
+
+    @agent_instructions
+    def sketchish(self) -> str:
+        """Walk listed practices."""
+        "EMPTY_CALLER_MARKER: walk listed practices."
+        for item in self.listed():
+            instructions(item.rules.markdown_block)
+        return "sketched"
+
+
 with description("a for-each action over nested instruction properties"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("when the loop names item.rules.markdown_block"):
         with before.each:
             self.body = AgentInstructions.for_callable(
@@ -777,6 +830,11 @@ with description("a for-each action over nested instruction properties"):
         with it("should inline the nested markdown_block"):
             expect("NESTED_RULES_MARKER" in self.joined).to(be_true)
             expect("NESTED_RULES_BODY" in self.joined).to(be_true)
+
+    with context("with nothing listed"):
+        with it("should expand the rest of the recipe without reading an item"):
+            body = AgentInstructions.for_callable(_EmptyListCaller.sketchish, _EmptyListCaller())
+            expect(" ".join(body.prompt)).to(contain("EMPTY_CALLER_MARKER"))
 
 
 @agent_toolset
@@ -806,6 +864,13 @@ class _ExecBodyAgent:
 
 
 with description("an @agent_instructions body that runs unwrapped Python"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("when a conditional branch is taken"):
         with before.each:
             self.agent = _ExecBodyAgent()
@@ -833,15 +898,81 @@ with description("an @agent_instructions body that runs unwrapped Python"):
             expect("ELSE_MARKER" in self.joined).to(be_true)
 
 
+@agent_toolset
+class _BrokenLineAgent:
+    """A recipe whose lines read an attribute the toolset does not have."""
+
+    @agent_instructions
+    def branch_on_missing(self) -> str:
+        """Branch on a flag the toolset does not have."""
+        if self.missing_flag:
+            "TAKEN_MARKER"
+        else:
+            "ELSE_MARKER"
+        return "done"
+
+    @agent_instructions
+    def return_missing(self) -> str:
+        """Return text the toolset does not have."""
+        return self.missing_text
+
+
+with description("an @agent_instructions body with a line that fails"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
+    with context("with an if test that fails"):
+        with before.each:
+            self.body = AgentInstructions.for_callable(_BrokenLineAgent.branch_on_missing, _BrokenLineAgent())
+
+        with it("should stop the expansion with a failed recipe line instead of taking the else branch"):
+            expect(lambda: self.body.prompt).to(raise_error(RecipeLineFailed))
+
+        with it("should name the recipe and the failing line's source"):
+            expect(lambda: self.body.prompt).to(
+                raise_error(RecipeLineFailed, contain("_BrokenLineAgent.branch_on_missing", "self.missing_flag"))
+            )
+
+        with it("should name the file line the failing line is on"):
+            source_line = next(
+                number for number, text in enumerate(Path(__file__).read_text(encoding="utf-8").splitlines(), 1)
+                if text.strip() == "if self.missing_flag:"
+            )
+            expect(lambda: self.body.prompt).to(raise_error(RecipeLineFailed, contain(f":{source_line} ")))
+
+    with context("with a return that fails"):
+        with it("should stop the expansion instead of sending the return's source as instructions"):
+            body = AgentInstructions.for_callable(_BrokenLineAgent.return_missing, _BrokenLineAgent())
+            expect(lambda: body.expand({})).to(raise_error(RecipeLineFailed, contain("self.missing_text")))
+
+
 with description("a cross-instance call whose provider cannot resolve"):
-    with it("should still list the named tool"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
+    with it("should fail the recipe line, naming the provider and its failure"):
         body = AgentInstructions.for_callable(
             _BrokenProvider.wrap, _BrokenProvider()
         )
-        expect("finish_turn" in body.tools).to(be_true)
+        expect(lambda: body.tools).to(raise_error(RecipeLineFailed, contain("self.missing().finish_turn()", "no session")))
 
 
 with description("AgentToolValidationError"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("when constructed without a line number"):
         with it("should format the message as class.action - message"):
             err = AgentToolValidationError(
@@ -875,6 +1006,13 @@ with description("AgentToolValidationError"):
 
 
 with description("AgentInstructions"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("the description property"):
         with it("should return the docstring text from the instruction callable"):
             story = CarStory()
@@ -909,10 +1047,17 @@ class _DestinationFixture:
 
 
 with description("AgentToolSet destination catalog"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
 
     with context("tools_for a destination"):
 
-        with it("should return only members marked for that destination"):
+        with it("should return only members annotated for that destination"):
             toolset = _DestinationFixture()
             expect([tool.name for tool in toolset.tools_for(InstallDestination.MCP)]).to(
                 equal(["ping"])
@@ -958,38 +1103,38 @@ class _NestedChild:
 
 
 @toolset_collection
-class _MarkedBag:
+class _AnnotatedBag:
     pass
 
 
 @agent_toolset
 class _NestedParent:
     def __init__(self) -> None:
-        self._kids = _MarkedBag()
+        self._kids = _AnnotatedBag()
         self._kids.entries["code"] = _NestedChild()
 
     @toolset_collection
     @property
-    def kids(self) -> _MarkedBag:
+    def kids(self) -> _AnnotatedBag:
         return self._kids
 
 
 @agent_toolset
 class _TwoCollections:
     def __init__(self) -> None:
-        self._alpha = _MarkedBag()
+        self._alpha = _AnnotatedBag()
         self._alpha.entries["code"] = _NestedChild()
-        self._beta = _MarkedBag()
+        self._beta = _AnnotatedBag()
         self._beta.entries["extra"] = _NestedChild()
 
     @toolset_collection
     @property
-    def alpha(self) -> _MarkedBag:
+    def alpha(self) -> _AnnotatedBag:
         return self._alpha
 
     @toolset_collection
     @property
-    def beta(self) -> _MarkedBag:
+    def beta(self) -> _AnnotatedBag:
         return self._beta
 
 
@@ -1017,23 +1162,35 @@ class _CollectBag:
 
 
 with description("a class annotated as a toolset collection"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with it("should be a ToolSetCollection without subclassing it"):
-        bag = _MarkedBag()
+        bag = _AnnotatedBag()
         bag.entries["code"] = object()
         expect(isinstance(bag, ToolSetCollection)).to(equal(True))
-        expect(getattr(type(bag), "_is_toolset_collection", False)).to(equal(True))
+        expect(ToolSetCollectionAnnotation.annotates(type(bag))).to(equal(True))
 
-    with it("should bind the collection onto the instance"):
+    with it("should attach the collection to the instance"):
         host = type("Host", (), {})()
-        host.bag = _MarkedBag()
-        replacement = _MarkedBag()
-        replacement.bind(host)
+        host.bag = _AnnotatedBag()
+        replacement = _AnnotatedBag()
+        replacement.attach(host)
         expect(host.bag is replacement).to(equal(True))
         expect(replacement.parent).to(equal(host))
 
 
 with description("a toolset collection with collected child properties"):
+    with after.each:
+        ThrowawayProject.close_all()
+
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
+        ThrowawayProject()
         self.bag = _CollectBag()
         self.bag.entries["one"] = _CollectChild("one", "first overview", {"a": 1})
         self.bag.entries["two"] = _CollectChild("two", "second overview", {"b": 2})
@@ -1045,11 +1202,18 @@ with description("a toolset collection with collected child properties"):
         expect(self.bag.bag.entries["one"]).to(equal({"a": 1}))
         expect(self.bag.bag.parent).to(equal(self.bag))
 
-    with it("should keep other marks on the collected property"):
+    with it("should keep other annotations on the collected property"):
         expect("overview" in self.bag.tools).to(equal(True))
 
 
 with description("a toolset that exposes annotated properties and child collections"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("with an @agent_instructions property"):
         with it("should enroll the property getter on tools"):
             expect("instructions" in _PropertyHost().tools).to(equal(True))
@@ -1064,8 +1228,8 @@ with description("a toolset that exposes annotated properties and child collecti
         with it("should prefix the nested collection tools with the nest key"):
             expect("code.ping" in _NestedParent().tools).to(equal(True))
 
-    with context("with properties marked as toolset collections"):
-        with it("should treat each marked property as its own collection"):
+    with context("with properties annotated as toolset collections"):
+        with it("should treat each annotated property as its own collection"):
             host = _TwoCollections()
             expect(host.toolset_collections).to(equal([host.alpha, host.beta]))
             expect(list(host.child_toolsets())).to(
@@ -1099,8 +1263,38 @@ class Parcel:
         return f"{self.label} from {self.depot} to {destination}"
 
 
+@agent_toolset
+class Crate:
+    """A crate in the project a call works on."""
+
+    def __init__(self, label: str, project: Path) -> None:
+        self.label = label
+        self.project = project
+
+    @classmethod
+    @tool_subject
+    def load(cls, crate: str, *, project: Path) -> "Crate":
+        return cls(crate, Path(project))
+
+    @classmethod
+    @_tool
+    def pack(cls, label: str, *, project: Path) -> str:
+        return f"{label} packed in {Path(project).name}"
+
+    @_tool
+    def ship(self) -> str:
+        return f"{self.label} shipped from {self.project.name}"
+
+
 with description("a domain class whose constructor takes collaborators"):
-    with context("that marks a @tool_subject loader"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
+    with context("that annotates a @tool_subject loader"):
         with it("should build as a toolset with no arguments"):
             expect(AgentToolSet.instantiate(Parcel).tools).to(have_key("forward"))
 
@@ -1115,3 +1309,29 @@ with description("a domain class whose constructor takes collaborators"):
         with it("should leave a classmethod tool to take only its own arguments"):
             receive = AgentToolSet.instantiate(Parcel).tools["receive"]
             expect(list(receive.parameters)).to(equal(["label"]))
+
+    with context("whose loader takes the project the call works on"):
+        with before.each:
+            self.project = ThrowawayProject().root
+
+        with it("should leave the project out of the tool's arguments, since no caller passes it"):
+            ship = AgentToolSet.instantiate(Crate).tools["ship"]
+            expect(list(ship.parameters)).to(equal(["crate"]))
+
+        with it("should load the object from the project the call works on"):
+            ship = AgentToolSet.instantiate(Crate).tools["ship"]
+            expect(ship.invoke({"crate": "crate-1"}, project=self.project)).to(equal(f"crate-1 shipped from {self.project.name}"))
+
+        with context("with a call that names no project"):
+            with it("should refuse to load the object"):
+                ship = AgentToolSet.instantiate(Crate).tools["ship"]
+                expect(lambda: ship.invoke({"crate": "crate-1"})).to(raise_error(CallNamesNoProject))
+
+        with context("with a classmethod tool that takes the project too"):
+            with it("should leave the project out of its arguments"):
+                pack = AgentToolSet.instantiate(Crate).tools["pack"]
+                expect(list(pack.parameters)).to(equal(["label"]))
+
+            with it("should hand it the project the call works on"):
+                pack = AgentToolSet.instantiate(Crate).tools["pack"]
+                expect(pack.invoke({"label": "crate-2"}, project=self.project)).to(equal(f"crate-2 packed in {self.project.name}"))

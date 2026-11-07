@@ -31,14 +31,11 @@ class McpSanity:
             )
         working: list[dict[str, str]] = []
         broken: list[dict[str, str]] = []
-        failed = {item.tool for item in host._runtime.exceptions}
-        for item in host._runtime.exceptions:
-            broken.append({"tool": item.tool, "error": item.reason})
-        names = [
-            "cdd.ping",
-            *sorted(host._runtime.tools),
-            *sorted(host._runtime.prompts),
-        ]
+        server = host.checkout_server
+        failed = {item["tool"] for item in server.skipped}
+        for item in server.skipped:
+            broken.append({"tool": item["tool"], "error": item["reason"]})
+        names = ["cdd.ping", *sorted(server.tools), *sorted(server.prompts)]
         for name in names:
             if name in failed:
                 continue
@@ -55,11 +52,11 @@ class McpSanity:
         )
 
     def _host(self) -> Any:
-        from harness.installation.installer import Installer
+        from harness.installer.installer import Installer
         from harness.mcp.mcp_server import McpHost
 
         installer = Installer(repo=self.repo)
-        refs = tuple(installer.collect_toolsets())
+        refs = tuple(installer.toolsets.collect())
         return McpHost.from_refs(refs, repo=str(self.repo), project=str(self.repo))
 
     def _ping(

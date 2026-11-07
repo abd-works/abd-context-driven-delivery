@@ -58,7 +58,7 @@ def main() -> int:
         classes = sum(len(module.classes) for module in model.modules)
         print(f"sync {target}: {len(model.modules)} module(s), {classes} class(es)")
 
-    from validate.validate import Validate
+    from cdd_guidance.actions.validate.validate import Validate
 
     report = Validate().validate(args.guidance)
     print(report)

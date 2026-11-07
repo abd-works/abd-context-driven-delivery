@@ -1,141 +1,60 @@
 # PromptNotify — class model (model fidelity)
 
-Markdown channel for *Echo* and *PromptNotify*. Same types as `prompt-notify-model.py`.
-
-**Out of scope:** putting `@echo` on every kit method now.
+Markdown channel for *PromptNotify*. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *Toast* belongs to `harness/annotations`; *Hook*, *HookPayload*, and *HookServer* to `harness/hooks`; *PracticeCatalogue* and *ActionCatalogue* to `harness/guidance`; *GuidanceAction* to `harness/guidance_actions`. They appear here only as names this module uses.
 
 ---
 
 ## Language
 
-*Echo* is a *Destination* mark. It sets `_echo` on the callable. *AgentOperation* and *AgentInstructions* both accept it — `begin` and `instructions` are *AgentInstructions*.
+*Toast* is the annotation an author puts on an `@agent_tool` or `@agent_instructions` member so that an agent's call to that member shows an IDE toast naming it. `harness/guidance_actions` annotates `GuidanceAction.begin`, the step every guidance action starts with, so each action toasts as **Action →** its name without its own annotation.
 
-*PromptNotify* is the `preToolUse` *Hook*. It toasts the invoked member when that callable has `_echo`. If not, and the toolset inherits `begin` with `_echo`, it toasts **Action →** the kit name. *catalog* names action, practice, fidelity, and guideline tokens for path and MCP matching when no Echo mark hits.
+*PromptNotify* is the `preToolUse` *Hook*. It looks at the invoked member first, then at a toolset's inherited `begin`, then at its *catalog* of action, practice, fidelity, and guideline names, and writes the first match as a toast notice into each workspace folder. When the module is loaded it registers `PromptNotify.show_toast` with `HookServer.show_toasts_with`, so the toast any hook gives in its result is shown here.
 
-### echo
-
-- `@echo` on a member — that invoke toasts.
-- `@echo` on `GuidanceAction.begin` — every kit invoke toasts as Action, because every kit runs `begin`.
-- **Invariant:** `run` always calls `begin`. *Sketch* and *GrillContext* call `begin` without `run`.
-
-### prompt echo
-
-- `handle` looks at the invoked MCP member first, then inherited `begin`, then *catalog*.
-- **Invariant:** practice/fidelity `instructions` toasts only when those members are marked — never because `begin` is marked.
-- **Invariant:** `show_ide_toast` must join same-burst inject lines. A later matching glob must never overwrite an earlier Guidance.
+- **Invariant:** practice and fidelity `instructions` toast only when those members carry *Toast* — never because `begin` is annotated.
+- **Invariant:** toasts in the same burst join their rule lines under one `rules :` prefix; a later matching guideline never overwrites an earlier one.
 
 ---
-
-# tools/prompt_notify
-- **Purpose:** Mark members with *Echo* and toast on `preToolUse`.
-- **Seam (terms):** Echo, PromptNotify, catalog, detect, detect_echo, handle, show_ide_toast, inject_rules_toast
-- **Dependencies (one-way):** installation (Destination), harness/hooks (HookPayload, HookResult), harness/agent_tools (AgentTool, AgentToolSet)
-
-## Echo : Destination
-
-*Echo* marks an AgentOperation or AgentInstructions so PromptNotify toasts it.
-
-Echo()
-------
-flag: str
-----
-annotate(operation): operation
-	// must set _echo on the callable
-	// must apply to AgentInstructions as well as AgentOperation
 
 ## PromptNotify
 
-*PromptNotify* is the preToolUse hook. It toasts when the invoked member, or inherited begin, is marked Echo.
+*PromptNotify* is the preToolUse hook. It toasts when the invoked member, or an inherited begin, carries *Toast*.
 
-PromptNotify()
+PromptNotify(toast_roots: list[Path] | None = None)
 ------
+toast_roots: list[Path] | None
+	// the workspace folders a toast is written to besides this checkout
 catalog: list[tuple[str, str]]
-	// must be longest-token-first
-	// always includes fallback action names
+	// every practice, fidelity, practice rule file, and action name with its kind, longest first, so a fidelity matches before its practice; read once per process
+	-> PracticeCatalogue.practices
+	-> ActionCatalogue.names
 ----
-on_pre_tool_use(hook_payload: HookPayload): HookResult
-	// after handle, always show_ide_toast when user_message is present
+on_pre_tool_use(payload: HookPayload): dict
+	// @Hook("preToolUse")
 	-> PromptNotify.install_ide_toast_extension
 	-> PromptNotify.handle
-	-> PromptNotify.show_ide_toast
-handle(hook_payload: HookPayload, toolsets: list[AgentToolSet] | None): HookResult
-	// empty tool_name must allow quietly
-	// must try detect_echo before detect
-detect_echo(hook_payload: HookPayload, toolsets: list[AgentToolSet] | None): tuple[str, str] | None
-	// never treat inherited begin as the echo for instructions
-	// never toast open_workspace, end, or begin from inherited begin
+	-> PromptNotify.show_toast(user_message, payload.workspace_roots)
+handle(payload: HookPayload, toolsets: list | None): dict
+	// an empty tool_name allows quietly
+	// tries detect_echo before detect; the match becomes user_message "{Kind} → {label}"
+detect_echo(payload: HookPayload, toolsets: list | None): tuple[str, str] | None
+	// never treats an inherited begin as the toast for instructions
+	// never toasts open_workspace, end, or begin from an inherited begin
 	-> PromptNotify.echo_toolsets
-detect(hook_payload: HookPayload): tuple[str, str] | None
-	// never toast an action from a path haystack
-	// always name a guideline when the haystack is a rules path
-echo_toolsets(repo: Path | None): list[AgentToolSet]
-	-> AgentToolSet.load_toolsets
-show_ide_toast(echo: str, repo: Path | None): Path
-	// must join same-burst inject lines
-	// never overwrite an earlier Guidance in that burst
-inject_rules_toast(source: str, labels: list[str]): str
-	// always prefix the joined names with rules :
-toast_notice(echo: str): dict[str, str]
-install_ide_toast_extension(): Path
-
----
-
-# harness/guidance_actions
-- **Purpose:** One *Echo* on `begin` covers every action kit.
-- **Seam (terms):** GuidanceAction.begin
-- **Dependencies (one-way):** tools/prompt_notify (Echo, inject_rules_toast, show_ide_toast)
-
-## GuidanceAction
-
-GuidanceAction()
-------
-----
-begin(guidance, action: str): str
-	// always the one action Echo mark
-run(guidance, operation, action: str): list
-	// always calls begin
-	-> begin
-open_workspace(name: str, path: str): str
-	// never the action echo
-inject_rules(hook_payload: HookPayload): HookResult
-	-> PromptNotify.inject_rules_toast
+detect(payload: HookPayload): tuple[str, str] | None
+	// never toasts an action from a path
+	// names a guideline when the path is a rules path
+echo_toolsets(): list
+	// the CDD checkout's installed toolsets, loaded once per process; a toolset that fails to load raises
+show_toast(toast: str, workspace_roots: list[Path]): list[Path]
+	// the operation the hook server calls for each merged toast, on the one PromptNotify it registered
 	-> PromptNotify.show_ide_toast
+show_ide_toast(echo: str, workspace_roots: list[Path | str]): list[Path]
+	-> ToastFile(folder).show(echo, now) for each workspace folder
+install_ide_toast_extension(): Path
+	// copies ide_toast into the Cursor extensions folder once per process
 
-## Generate : GuidanceAction
+## ToastFile
+The toast notice of one workspace folder, `.cursor/prompt-notify-toast.json`. Nothing about one hook event is kept on the shared *PromptNotify*; each toast is written through its own *ToastFile*.
 
-Generate()
-------
-----
-generate(guidance): str
-	-> run
-
-## Sketch : GuidanceAction
-
-Sketch()
-------
-----
-sketch(guidance): str
-	-> begin
-
----
-
-# harness/guidance
-- **Purpose:** Practice and fidelity prompts toast independently of actions.
-- **Seam (terms):** PracticeGuidance.instructions, FidelityGuidance.instructions
-- **Dependencies (one-way):** tools/prompt_notify (Echo)
-
-## PracticeGuidance
-
-PracticeGuidance()
-------
-----
-instructions(): str
-	// never inherit action echo from begin
-
-## FidelityGuidance
-
-FidelityGuidance()
-------
-----
-instructions(): str
-	// never inherit action echo from begin
+show(message: str, now: datetime): Path
+	// joins same-burst rule lines under one "rules :" prefix; never overwrites an earlier guideline in that burst

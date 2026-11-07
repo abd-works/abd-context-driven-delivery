@@ -1,24 +1,13 @@
-# markdown
+# harness/markdown
+*Markdown* lets an author keep a class's prose in markdown next to the class instead of in Python strings. `@markdown` on a property loads that prose by the property's name, in one of three places: a **folder** `{name}/` beside the class, a **file** `{name}.md` beside the class, or a **section** `## Name` in the class's own `{slug}.md`. The property's return type says what the caller gets back: the text, *HTML*, or a typed collection.
+*MarkdownCollection* is the same lookup when the property holds several entries: the bullets under one heading, or the files in one folder, as a list or keyed by bullet label or file stem. `@markdownCollection` annotates that property, and the collection keeps the original markdown it was read from.
+*MarkdownText* is one markdown document a caller reads by heading: its sections, the block under a named heading, and its ```yaml settings blocks (`yaml_fields`, and `without_yaml` for the prose alone). *FrontMatter* is the settings block at the top of a file (`---` lines, or `# ---` comment lines in a code template): its `fields`, its `settings` text, and the `content` after it, so the catalog, the installer, and the rules all read a file's settings the same way. *HTML* is markdown converted for a page.
+*Format* is the channel an artifact is written in (`markdown`, `python`, `drawio`, ...), with its short name and file extension, so every reader of a format, an extension, or a template folder means the same thing.
 
-## Purpose
+- **Purpose:** Let a class keep its words in markdown beside it, read them back typed, and convert them to HTML.
+- **Seam (terms):** Markdown, MarkdownCollection, MarkdownText, FrontMatter, HTML, Format; the annotations `@markdown` and `@markdownCollection`
+- **Dependencies (one-way):** harness/name, harness/annotations (the annotations on a property are kept when `@markdown` wraps it). A property whose type reads itself from markdown with the object it belongs to, such as a practice's *RulesCollection*, is built through that type's `from_markdown(text, parent=...)`, so this module names no type above it. harness/agent_tools, harness/installation, and harness/guidance depend on it.
 
-Extract co-located markdown — folder, file, or section — and convert that extract to HTML. Assembly of agent recipes is not this package.
+## Constraint
 
-## Seam (terms)
-
-`@markdown`, `@markdownCollection`, `Markdown`, `MarkdownCollection`, `HTML`, `AssetLocator`, `AssetLocation`, `Format`
-
-## Dependencies (one-way)
-
-none — location and extract live in this package
-
-## Public API
-
-- `Markdown.from_label(instance, label, fidelity=None, format=None).extract()` — `AssetLocator.locate` under the instance's class file directory and `instance.name`. A `fidelity` or `format` given here is read instead of the instance's current one, so a fidelity reads its own template without changing the practice that other MCP threads are reading.
-- `Markdown.html()` — `HTML.from_markdown(extract())`.
-- `Format(name)` / `Format.from_extension(extension)` — the one format vocabulary: `name` (`md` is `markdown`), `short`, `extension`, `is_code`, `is_known`, and where its templates are kept (`template_folder`, `template_extension`). Every reader of a format, an extension, or a template folder asks it.
-- `Markdown.coerce(text, return_type)` — str, RulesCollection, templates path map, or HTML.
-- `@markdown` — property name is the label; coerce to the annotated return type. File-kind marks (`@skill` / `@command` / `@rules` / `@mcp`) on the getter are copied through.
-- `@markdownCollection` — same locate as `@markdown`; return type is a collection; `collection.markdown` is the original extract. List iterates bullets or folder files; map keys from bullet label or file stem.
-
-Resolution order: `{label}/` folder, `{label}.md` file, then `## Label` in `{slug}.md`.
+The property's name is the match: folder `{name}/`, then file `{name}.md`, then section `## Name` in `{slug}.md`, in that order, so the first place that exists wins. Write the prose in that file or section, never as a string in the class, because the same words are installed as skills and rules and shown in the catalog. A practice reads another fidelity's or format's prose through `Markdown.from_label(..., fidelity=..., format=...)` rather than changing the practice's current fidelity, which other callers are reading at the same time.

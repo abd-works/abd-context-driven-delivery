@@ -62,6 +62,8 @@ def main(argv: list[str] | None = None) -> None:
         ref=ref,
         out_root=str(out_root),
         brands_root=args.brands,
+        # This command regenerates the checkout it belongs to, whichever folder it is started from.
+        project=_REPO_ROOT,
     )
     if args.apply_brand:
         message = catalog.apply_brand(args.apply_brand)

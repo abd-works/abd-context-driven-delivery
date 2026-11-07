@@ -1,5 +1,1 @@
-"""sketch — Sketch toolset and sketch document outline reader."""
-from sketch.sketch import Sketch
-from sketch.sketch_outline import SketchLens, SketchOutline
-
-__all__ = ["Sketch", "SketchLens", "SketchOutline"]
+"""The Sketch action and the sketch document outline reader. Import its classes from their modules, such as cdd_guidance.actions.sketch.sketch."""

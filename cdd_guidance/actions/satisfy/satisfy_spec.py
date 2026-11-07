@@ -14,7 +14,8 @@ from expects import contain, expect
 from mamba import after, before, description, it
 
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-from satisfy.satisfy import Satisfy
+from cdd_guidance.actions.satisfy.satisfy import Satisfy
+from harness.agent_tools.tool_call import ToolCall
 from space.session.throwaway_project import ThrowawayProject
 
 
@@ -27,7 +28,7 @@ with description("satisfy on practice guidance") as self:
 
     with it("should return validate rules and generate-fixes instructions without error"):
         practice = CleanEngineering(fidelity="code", format="python")
-        text = Satisfy().satisfy([practice])
+        text = Satisfy(session=ToolCall(project=self.throwaway.root).session).satisfy([practice])
         expect(text).to(contain("Validate"))
         expect(text).to(contain("vocabulary-traces-to-source"))
         expect(text).to(contain("generate_fixes_from_validate"))
@@ -35,5 +36,5 @@ with description("satisfy on practice guidance") as self:
 
     # A fix in one format alone leaves the fidelity's other formats still breaking the rule.
     with it("should tell the agent to fix every format of the fidelity: documents, diagrams, and code"):
-        text = Satisfy().satisfy([CleanEngineering(fidelity="model", format="markdown")])
+        text = Satisfy(session=ToolCall(project=self.throwaway.root).session).satisfy([CleanEngineering(fidelity="model", format="markdown")])
         expect(text).to(contain("A violation is fixed only when every format of the fidelity agrees: its documents, its diagrams, and its code."))

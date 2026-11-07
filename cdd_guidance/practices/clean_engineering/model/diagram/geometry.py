@@ -23,6 +23,13 @@ class Geometry(NamedTuple):
     def shifted(self, dx: float, dy: float) -> 'Geometry':
         return Geometry(self.x + dx, self.y + dy, self.width, self.height)
 
+    def moved_to(self, x: float, y: float) -> 'Geometry':
+        return Geometry(x, y, self.width, self.height)
+
+    @property
+    def center(self) -> tuple[float, float]:
+        return (self.x + self.width / 2, self.y + self.height / 2)
+
 
 CELL_WIDTH = 260
 CELL_MIN_HEIGHT = 80

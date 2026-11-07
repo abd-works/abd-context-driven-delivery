@@ -1,5 +1,9 @@
 // === Plans ===
 
+/**
+ * Paradise *Plan* `` ++MavenirProductOffering++.
+ */
+@Represents()
 class Plan {
   id: string;
   // after Midtier map
@@ -18,6 +22,9 @@ class Plan {
   }
 }
 
+/**
+ * Maps `PortalGateway` catalog rows to Paradise *Plan*. Midtier maps; it is not a type.
+ */
 class PlanRepository {
   // << aggregation >>
   plans: Collection<Plan>;
@@ -60,6 +67,9 @@ class MavenirProductOffering {
   }
 }
 
+/**
+ * Mavenir `portalGateway` catalog. `productOfferings/100000000?channelName=CRM`.
+ */
 class PortalGateway {
   constructor() {
   }

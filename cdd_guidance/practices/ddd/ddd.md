@@ -2,7 +2,7 @@
 
 Build the solution around how the business actually works, in the words the business already uses. When the software mirrors the business, it holds the business's logic and knowledge where that understanding actually lives; when it mirrors a database, a framework, or a screen layout, every business conversation has to be re-translated and what the business knows ends up scattered wherever the technology happened to put it.
 
-**`clean_engineering`** owns OO structure, one skill per fidelity: **`clean_engineering-modules`** shapes the module boundaries and seams when **`bounded_context`** draws the map; **`clean_engineering-model`** types the classes, operations, and relationships when **`model`** draws the core aggregates — root, members, repository, and the operations that cross aggregates and contexts; **`clean_engineering-code`** implements the seams when **`tactics`** classifies the remaining building blocks (factories, specifications, domain services, events) and wires repositories, events, and factories. Do not restate module or class analysis here. DDD adds the domain layer on top: where the language changes, which clusters protect which rules, and how those clusters work with one another.
+**`clean_engineering`** owns OO structure, one skill per fidelity: **`clean-engineering-modules`** shapes the module boundaries and seams when **`bounded_context`** draws the map; **`clean-engineering-model`** types the classes, operations, and relationships when **`model`** draws the core aggregates — root, members, repository, and the operations that cross aggregates and contexts; **`clean-engineering-code`** implements the seams when **`tactics`** classifies the remaining building blocks (factories, specifications, domain services, events) and wires repositories, events, and factories. Do not restate module or class analysis here. DDD adds the domain layer on top: where the language changes, which clusters protect which rules, and how those clusters work with one another.
 
 ---
 
@@ -162,6 +162,7 @@ Whenever you create, alter, or delete bounded contexts, aggregates, or the langu
 ```yaml
 default_format: markdown
 stage: specification
+judged_on: graph
 clean_engineering: model
 outputs:
   python: "{bounded_context}/{aggregate}/{aggregate}.py"

@@ -1,11 +1,11 @@
-"""Typed parameters for MCP JSON Schema binding specs."""
+"""Typed parameters for specs of the JSON Schema MCP advertises."""
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from typing import Any, NotRequired, TypedDict
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
-from harness.mcp.mcp_server import Mcp
+from harness.mcp.mcp_server import mcp
 
 
 class NamedRecord(TypedDict):
@@ -17,7 +17,7 @@ class NamedRecord(TypedDict):
 class ParameterTypes:
     """Echo typed arguments so MCP schema and invocation can be observed."""
 
-    @Mcp
+    @mcp
     @agent_tool
     def echo(
         self,
@@ -70,31 +70,31 @@ class ParameterTypes:
             "text_or_count": text_or_count,
         }
 
-    @Mcp
+    @mcp
     @agent_tool
     def echo_open(self, fields: dict[str, Any]) -> dict[str, Any]:
         """Return a dict whose values are not restricted to one JSON type."""
         return dict(fields)
 
-    @Mcp
+    @mcp
     @agent_tool
     def echo_sequence(self, value: Sequence[str]) -> list[str]:
         """Return a sequence as a list."""
         return list(value)
 
-    @Mcp
+    @mcp
     @agent_tool
     def echo_mapping(self, value: Mapping[str, int]) -> dict[str, int]:
         """Return a mapping as a dict."""
         return dict(value)
 
-    @Mcp
+    @mcp
     @agent_tool
     def echo_unannotated(self, value) -> object:
         """Return an unannotated argument."""
         return value
 
-    @Mcp
+    @mcp
     @agent_tool
     def echo_record(self, record: NamedRecord) -> dict[str, str]:
         """Return a record whose fields are named on the type."""

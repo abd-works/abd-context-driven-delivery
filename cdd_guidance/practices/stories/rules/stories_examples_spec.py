@@ -1,0 +1,77 @@
+"""Story rules backed by TypeScript .examples stubs."""
+
+import sys
+from pathlib import Path
+
+_REPO = Path(__file__).resolve().parents[4]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+
+from expects import contain, equal, expect
+from mamba import context, description, it
+
+from cdd_guidance.practices.stories.rules.rule_examples import assert_stories_example_pair, assert_stories_ts_pair
+from cdd_guidance.practices.stories.rules.rule_examples import assert_stories_folder_pair
+
+
+with description("stories TypeScript .examples (faultyAsset.ts)"):
+    with context("story-name-captures-system-mechanic"):
+        with it("should flag Handle Request and accept Submit Order"):
+            assert_stories_example_pair("story-name-captures-system-mechanic")
+
+    with context("plain-english-gwt-steps"):
+        with it("should flag camelCase given steps"):
+            assert_stories_example_pair("plain-english-gwt-steps")
+
+    with context("right-size-story-nodes"):
+        with it("should flag near-duplicate story names"):
+            assert_stories_example_pair("right-size-story-nodes")
+
+    with context("verb-noun-format"):
+        with it("should flag CartStuff"):
+            assert_stories_example_pair("verb-noun-format")
+
+    with context("gwt-steps-trace-to-domain-operations"):
+        with it("should require domain vocabulary in given steps"):
+            assert_stories_example_pair("gwt-steps-trace-to-domain-operations")
+
+    with context("vocabulary-traces-to-domain-source"):
+        # The executable name check was retired in 49bec82f; the rule is a prompt the agent judges.
+        with it("should apply to stories as a prompt rule with no executable check"):
+            from cdd_guidance.practices.stories.rules import BY_SLUG
+            from harness.graph.schema_rules import PracticeSchema
+
+            expect("vocabulary-traces-to-domain-source" in BY_SLUG).to(equal(False))
+            expect(PracticeSchema.load("stories").slugs_for("Story")).to(contain("vocabulary-traces-to-domain-source"))
+
+
+with description("stories TypeScript .examples (folders)"):
+    with context("domain-operation-in-the-step"):
+        with it("should flag orchestration exports"):
+            assert_stories_folder_pair(
+                "domain-operation-in-the-step",
+                "domain-operation-in-the-step",
+                "create-customer.story.shared.ts",
+                node_type="Story",
+            )
+
+    with context("example-role-names"):
+        with it("should require entered/stored/expected exports"):
+            assert_stories_folder_pair(
+                "example-role-names",
+                "example-role-names",
+                "tests/onboard/examples/customers.examples.ts",
+            )
+
+    with context("kebab-case-paths"):
+        with it("should flag camelCase story test file names"):
+            folder = _REPO / "cdd_guidance/practices/stories/model/typescript/_examples/kebab-case-paths"
+            fault = (folder / "faulty" / "HandleRequest_story.test.ts").read_text(encoding="utf-8")
+            clean = (folder / "repaired" / "submit-order.story.test.js").read_text(encoding="utf-8")
+            assert_stories_ts_pair(
+                "kebab-case-paths",
+                fault,
+                clean,
+                relative="HandleRequest_story.test.ts",
+                clean_relative="submit-order.story.test.js",
+            )

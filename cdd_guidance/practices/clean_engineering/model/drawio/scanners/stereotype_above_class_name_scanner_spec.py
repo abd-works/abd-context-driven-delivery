@@ -1,19 +1,11 @@
 """BDD: stereotype-above-class-name — <<Stereotype>> is above the name, not inside <b>."""
-import sys
 import tempfile
 from pathlib import Path
 
 from expects import equal, expect
 from mamba import before, context, description, it
 
-_HERE = Path(__file__).resolve().parent
-_REPO = Path(__file__).resolve().parents[6]
-for _p in (_REPO, _REPO / "tools", _REPO / "cdd_guidance" / "practices"):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
-sys.path.insert(0, str(_HERE))
-
-from stereotype_above_class_name_scanner import (  # noqa: E402
+from cdd_guidance.practices.clean_engineering.model.drawio.scanners.stereotype_above_class_name_scanner import (
     StereotypeAboveClassNameScanner,
 )
 from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import DrawIOClass
@@ -71,11 +63,11 @@ with description("stereotype-above-class-name scanner"):
             violations = _ScannerExample("stereotype-above-class-name").scan_xml(_CLEAN)
             expect(violations).to(equal([]))
 
-    with context("HTML emitted for a class whose name still carries tactical tags"):
+    with context("HTML emitted for a class that carries stereotypes"):
         with before.each:
-            self.html = DrawIOClass(
-                name="Catalog <<Aggregate Root>> <<Entity>>", sequential_order=1
-            ).html()
+            catalog = DrawIOClass(name="Catalog", sequential_order=1)
+            catalog.stereotypes = ["Aggregate Root", "Entity"]
+            self.html = catalog.html()
 
         with it("should include the Aggregate Root stereotype"):
             expect("&lt;&lt;Aggregate Root&gt;&gt;" in self.html).to(equal(True))

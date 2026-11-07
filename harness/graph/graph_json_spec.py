@@ -3,20 +3,17 @@
 import json
 import os
 import shutil
-import sys
 import tempfile
 import time
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
 
 from expects import contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
-from graph import Graph
+from harness.graph.graph import Graph
 
 _CLASS = "export class Cart {\n  total() { return 1; }\n}\n"
 
@@ -29,9 +26,9 @@ def _names(graph: Graph) -> list[str]:
 def _stamp_saved(root: Path, name: str, stamp: float) -> None:
     path = root / ".context" / "graph.json"
     document = json.loads(path.read_text(encoding="utf-8"))
-    for row in document["practices"]["clean_engineering"]["nodes"]:
-        if row[1] == "Cart":
-            row[1] = name
+    for node in document["practices"]["clean_engineering"]["nodes"]:
+        if node["name"] == "Cart":
+            node["name"] = name
     path.write_text(json.dumps(document), encoding="utf-8")
     os.utime(path, (stamp, stamp))
 
@@ -52,15 +49,15 @@ with description("a graph"):
 
         with it("should save serialized json in the folder context"):
             saved = json.loads((self.root / ".context" / "graph.json").read_text(encoding="utf-8"))
-            names = [row[1] for row in saved["practices"]["clean_engineering"]["nodes"]]
+            names = [node["name"] for node in saved["practices"]["clean_engineering"]["nodes"]]
             expect(names).to(contain("Cart"))
 
         with it("should load the saved json after the folder date moves"):
             cache = self.root / ".context" / "graph.json"
             saved = json.loads(cache.read_text(encoding="utf-8"))
-            for row in saved["practices"]["clean_engineering"]["nodes"]:
-                if row[1] == "Cart":
-                    row[1] = "SavedCart"
+            for node in saved["practices"]["clean_engineering"]["nodes"]:
+                if node["name"] == "Cart":
+                    node["name"] = "SavedCart"
             cache.write_text(json.dumps(saved), encoding="utf-8")
             os.utime(self.root, None)
             fresh = Graph()
@@ -112,7 +109,7 @@ with description("a graph"):
                     force=True,
                 ))
                 saved = json.loads((self.root / ".context" / "graph.json").read_text(encoding="utf-8"))
-                names = [row[1] for row in saved["practices"]["clean_engineering"]["nodes"]]
+                names = [node["name"] for node in saved["practices"]["clean_engineering"]["nodes"]]
                 expect(names).to(contain("Cart"))
 
         with context("with a saved graph that already holds extra practices"):
@@ -120,14 +117,14 @@ with description("a graph"):
                 ahead = time.time() + 3600
                 cache = self.root / ".context" / "graph.json"
                 saved = json.loads(cache.read_text(encoding="utf-8"))
-                for row in saved["practices"]["clean_engineering"]["nodes"]:
-                    if row[1] == "Cart":
-                        row[1] = "SavedCart"
+                for node in saved["practices"]["clean_engineering"]["nodes"]:
+                    if node["name"] == "Cart":
+                        node["name"] = "SavedCart"
                 saved["practices"]["stories"] = {
                     "source_root": str(self.root),
-                    "nodes": [["stories:Practice:.:stories", "stories", "Practice", "stories", ".", 1, 1, "", ""]],
+                    "nodes": [{"node_id": "stories:Practice:.:stories", "name": "stories", "type": "Practice", "practice": "stories"}],
                     "edges": [],
-                    "rules": [],
+                    "violations": [],
                 }
                 cache.write_text(json.dumps(saved), encoding="utf-8")
                 os.utime(cache, (ahead, ahead))

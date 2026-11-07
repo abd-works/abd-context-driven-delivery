@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { ServerHealthData } from '@cdd/harness/health/server-health'
+import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
 import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
 

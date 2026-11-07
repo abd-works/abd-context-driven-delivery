@@ -1,41 +1,15 @@
-## Language
+# harness/installation
+*RepositoryToolsets* finds every toolset class in one repository by reading its source, and puts the folders that load them on the import path; the installer (harness/installer), the hook server, and the MCP host each read the repository this way, so all three publish the same toolsets.
+A member's destination is chosen with an annotation on it: `@skill`, `@command("name")`, `@rules` (defined here), `@mcp` (harness/mcp), or `@hook("event")` (harness/hooks); each is a *Destination* from harness/annotations. A member with no destination annotation stays in-process. `@noDeploy` keeps a member out of every destination, and `@noCatalog` keeps it out of the generated catalog without changing what is installed.
+*ContextConfig* is a project's `.context/config.json` (`CONTEXT_FOLDER` names the `.context` folder once): the guidelines that apply to file patterns, which the hook server reads to decide whether a pattern's hooks run, and the folder each practice writes in, which a session reads.
+`RepositoryToolsets.import_modules()` imports the module of every toolset the repository defines without making one, so a process that serves only some toolsets, as the hook server does, still has every registration those modules make; `use_for_this_process()` puts the repository's folders on the import path, and only a process's entry point calls it, so importing a module never changes the path.
+*Installation* writes one destination's files: *FileInstallation* writes skills, commands, and rules, and harness/mcp and harness/hooks each extend *Installation* for their own channel, so a new channel is one more pair rather than a change to the installer. *IdeLayout* is one IDE's folder layout (where its skills, commands, prompts, and rules go, and the rule file's extension), so a new IDE is one more layout rather than an `ide ==` test in every writer.
+`@language_adapter(language="typescript")` on a toolset class publishes its `@mcp` operations as typed TypeScript, so an application outside Python calls the same tools as typed objects; `@identity(...)` on a class names the data fields that name one of its objects, the ones a tool loads it by. `@data_field` under `@property` annotates a property as part of the object's data, and `@data_field(reference=True)` sends the object it holds by its identity alone, so data can name an object that is sent in full elsewhere; `@edits("field")` names the field an operation changes when its argument is called something else, and *SourceFile* annotates a field that holds a path in the session's workspace. `data_of(value)` is the one way an object becomes JSON data, for every MCP answer and every language adapter type alike.
 
-*Installation* publishes marked toolset members into an IDE tree so an author does not write those files by hand. Cursor’s MCP host and hook process live under `harness/`.
-
-### Installer
-
-- Collects installable toolsets from the repo and writes each marked member to the current *Installation*.
-- `/install` is this kit. Point it at an IDE path that exists.
-- `diagnose_after_install` is the last install step: it runs `diagnose_install`, grades green / yellow / red, and appends an install section to `diagnostics.json` on the install path. Guidance probes are `/guidance-diagnostics` on *GuidanceDiagnostics*; workspace MCP probes (space, harness, tools only) are `/agent-tools-diagnostics` on *AgentToolsDiagnostics* (`diagnostics.json` → `agent_tools`), not *Installer*.
-- Installer instructions live in `installer.md`. `@markdown` properties load each section. `diagnose_instructions` returns the Diagnose section.
-
-### Destination
-
-- Put `@skill`, `@command`, `@rules`, `@mcp`, or `@Hook` on a member when that channel should receive it. Unmarked members stay in-process.
-- Put `@language_adapter(language="typescript")` on a toolset class when an application outside Python needs its `@mcp` operations as typed code, and name its `identity` when its tools load one object by name. It marks the class, not a member, because the installer writes the whole object as one file of code.
-- Put `@data_field` under `@property` for each property that is part of an object's data. `data_of(value)` is the one way an object becomes JSON data, for every MCP answer and the language adapter's types alike, so a path always reads with forward slashes.
-
-### Installation
-
-- One write channel per destination. Subclasses implement **write**; callers ask `install(tool)`.
-
-### FileInstallation
-
-- Writes skill, command, and rules markdown. Marks live on the member (`@skill`, `@command`, `@rules`).
-
-### LanguageAdapterInstallation
-
-- Writes typed code for a toolset marked `@language_adapter(language="typescript")` to `{install path}/language-adapters/typescript/`, in the folders its source sits in: its data, typed from the properties it marks with `@data_field`, a class that reads it, and a class that calls its MCP tools. It records toolsets during the walk and writes them together, because their files import each other. The mark sits on the class, not a member, because the whole object is one file.
-
-Build order: `harness/installation` → `harness/mcp` → `harness/hooks`
-
----
-
-# installation
-- **Purpose:** Publish a toolset’s marked members into Cursor (or VS Code / Kilo) so the agent can invoke them as skills, MCP, hooks, commands, or rules.
-- **Seam (terms):** Installer, Destination, Installation, FileInstallation, LanguageAdapterInstallation, Skill, Command, Rules
-- **Dependencies (one-way):** `harness/agent_tools`, `harness/mcp`, `harness/hooks`
+- **Purpose:** Give every channel the annotations, the data, and the writer it publishes a member with, and find the toolsets a repository defines.
+- **Seam (terms):** RepositoryToolsets, ContextConfig, MalformedContextConfigError, `CONTEXT_FOLDER`, Installation, FileInstallation, IdeLayout, LanguageAdapterInstallation, SourceFile; the annotations `@skill`, `@command`, `@rules`, `@noDeploy`, `@noCatalog`, `@language_adapter`, `@identity`, `@data_field`, `@edits`; `data_of(value)`
+- **Dependencies (one-way):** harness/agent_tools, harness/annotations, harness/markdown, harness/name. harness/hooks, harness/mcp, and harness/installer depend on this module; it imports none of them.
 
 ## Constraint
 
-Do not subclass *AgentToolSet* here. Marks live on members; *Installer* walks them, including `harness/`. If `.install-state.json` points at a missing directory, install to `{repo}/.cursor`. Import this package as `harness.installation`. Do not put `harness/` on `PYTHONPATH` as a catalog root — `import mcp` must load the MCP SDK, not `harness.mcp`.
+Put the destination annotation on the member, never in a list on the toolset, so moving a member moves its publication with it. Read the repository's toolsets and import path through *RepositoryToolsets*, so every reader skips the same folders. Import this package as `harness.installation`, and leave `harness/` off `PYTHONPATH`, so `import mcp` loads the MCP SDK.

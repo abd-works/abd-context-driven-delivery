@@ -11,4 +11,4 @@ templates/
         └── {object}-client.tsx         ← {Object}Client extends {Object}ClientGenerated: what only the page knows
 ```
 
-`{Object}Data`, `{Object}`, `{Object}Adapter`, `{Object}ClientGenerated`, `{object}Routes`, and `CddConnection` are not templated, because the installer writes them to `<install path>/language-adapters/typescript/` from the Python. Mark the domain class with `@language_adapter(language="typescript", identity=...)`, mark each property the application reads with `@data_field`, and install.
+`{Object}Data`, `{Object}`, `{Object}Adapter`, `{Object}ClientGenerated`, `{object}Routes`, and `CddConnection` are not templated, because the installer writes them to `<install path>/language-adapters/typescript/` from the Python. Annotate the domain class with `@language_adapter(language="typescript")` and `@identity(...)`, annotate each property the application reads with `@data_field`, and install.

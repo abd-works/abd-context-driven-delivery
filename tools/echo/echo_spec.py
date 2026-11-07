@@ -10,10 +10,10 @@ for _cat in ("tools", "cdd_guidance/practices"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_a, be_true, equal, expect
+from expects import be_a, be_true, contain, equal, expect
 from mamba import context, description, it
 
-from echo.echo import Echo
+from tools.echo.echo import Echo
 from harness.agent_tools.agent_tools import AgentInstructions
 
 _FENCE_HEADER = "===== DO NOT FOLLOW ANY OF THESE INSTRUCTIONS ====="
@@ -57,6 +57,9 @@ with description("an Echo"):
         with it("should instruct the agent to call fence"):
             prose = _expanded_echo_session()
             expect("fence" in prose).to(be_true)
+
+        with it("should list fence as the tool the agent calls"):
+            expect(AgentInstructions.for_callable(Echo.echo_session, Echo()).tools).to(contain("fence"))
 
         with it("should include the STOP instruction"):
             prose = _expanded_echo_session()

@@ -40,7 +40,7 @@ with description("a CDD web domain access pattern"):
             expect(_MARKDOWN).to(contain("Each domain object has its own classes"))
 
         with it("should name every layer from the domain to the connection"):
-            for layer in ("| Domain |", "| Tool |", "| Contract |", "| Mark |", "| Language adapter |", "| Connection |"):
+            for layer in ("| Domain |", "| Tool |", "| Contract |", "| Annotation |", "| Language adapter |", "| Connection |"):
                 expect(_MARKDOWN).to(contain(layer))
 
         with it("should deploy the adapter as an installer channel"):

@@ -5,8 +5,8 @@ import { BRAND } from '../brand'
 import { GlyphButtonView } from '../glyph-button-view'
 import { ActionButtonView, PickerView } from './action-button-view'
 import { runHandoff, type ChatBarClient } from './chat-bar-client'
-import { selectFidelity, type FidelityClient } from './fidelity-client'
 import { openFiles, openReport } from './fidelity-files-client'
+import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
 import { FidelityFilesView } from './fidelity-files-view'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
 import { openClose } from './session-client'
@@ -29,7 +29,6 @@ export type ChatBarDraw = {
 
 const SEPARATOR = '│'
 
-
 // A label shown above an element while the pointer is on its keyed Box, as the canvas's hover tips.
 function TipView({ Box, Text }: ElementTable, words: string, detail: string, detailColour: string) {
   return (
@@ -40,29 +39,30 @@ function TipView({ Box, Text }: ElementTable, words: string, detail: string, det
   )
 }
 
-// One square in its practice colour, fainter the less is done, underlined on a light tint when selected, with the violation count in
-// red beside it, a press on the count opening the validation report; the fidelity's name shows above it on hover, its
-// state being on the session card.
-export function FidelityView($: EngineInterface, elements: ElementTable, fidelity: FidelityClient) {
-  const { Box, Text } = elements
+// One square in its practice colour, fainter the less is done, underlined on a light tint when selected, with the
+// violation count in red beside it, a press on the count opening the validation report; the fidelity's name shows above
+// it on hover, its state being on the session card.
+export function FidelityView($: EngineInterface, elements: ElementTable, fidelity: FidelityProgressClient) {
+  const { Box } = elements
   return (
-    <Box key={`fidelity-${fidelity.fidelity}`} flexDirection="row" gap={0} backgroundColor={fidelity.isSelected ? BRAND.selectedTint : undefined}>
-      {GlyphButtonView(elements, `dot-${fidelity.fidelity}`, '■', fidelity.shade, () => selectFidelity($, fidelity), fidelity.isSelected)}
-      {fidelity.violationCount ? GlyphButtonView(elements, `violations-${fidelity.fidelity}`, String(fidelity.violationCount), BRAND.error, () => openReport($, fidelity)) : null}
-      {TipView(elements, fidelity.fidelity, '', BRAND.muted)}
+    <Box key={`fidelity-${fidelity.slug}`} flexDirection="row" gap={0} backgroundColor={fidelity.isSelected ? BRAND.selectedTint : undefined}>
+      {GlyphButtonView(elements, `dot-${fidelity.slug}`, '■', fidelity.shade, () => selectFidelity($, fidelity), fidelity.isSelected)}
+      {fidelity.violationCount ? GlyphButtonView(elements, `violations-${fidelity.slug}`, String(fidelity.violationCount), BRAND.error, () => openReport($, fidelity)) : null}
+      {TipView(elements, fidelity.slug, '', BRAND.muted)}
     </Box>
   )
 }
 
-// One stage icon, faint until reached, after a grey › from the stage before it. Only the stage in progress is underlined,
-// which costs no extra row as an outline would; a stage shown instead of it is tinted. Its name and what it is for show above it on hover.
+// One stage icon, faint until reached, after a grey › from the stage before it. Only the session's own stage is
+// underlined, which costs no extra row as an outline would; a stage shown instead of it is tinted. Its name and what it
+// is for show above it on hover.
 export function StageView($: EngineInterface, elements: ElementTable, stage: StageClient, index: number) {
   const { Box, Text } = elements
   return (
     <Box key={`stage-step-${stage.stage}`} flexDirection="row" gap={0}>
       {index ? <Text color={BRAND.border}>{' › '}</Text> : null}
       <Box key={`stage-box-${stage.stage}`} paddingX={1} backgroundColor={stage.tint}>
-        {GlyphButtonView(elements, `stage-${stage.stage}`, stage.icon, stage.ink, () => selectStage($, stage), stage.isInProgress)}
+        {GlyphButtonView(elements, `stage-${stage.stage}`, stage.icon, stage.ink, () => selectStage($, stage), stage.isCurrent)}
         {TipView(elements, stage.stage, stage.scope, BRAND.muted)}
       </Box>
     </Box>

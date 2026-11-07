@@ -4,7 +4,7 @@ import { reasonOf } from '../failure'
 import { after, BOARD_URL } from './board'
 
 // /board opens the session board, starting its server from this repository when nothing answers on its port.
-const BOARD_APP = 'harness/kanban/app'
+const BOARD_APP = 'space/kanban/app'
 const START_BY_HAND = `Start it with: npm install, npm run build, then npm start, in ${BOARD_APP}.`
 const STARTED_WITHIN_MILLISECONDS = 20_000
 const STARTED_CHECK_MILLISECONDS = 500

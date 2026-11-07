@@ -7,12 +7,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from grill_context.grill_context import GrillContext
-from harness.guidance_actions import GuidanceArg, GuidanceAction, load_document
-from harness.agent_tools import agent_instructions, agent_toolset, instructions
+from cdd_guidance.actions.grill_context.grill_context import GrillContext
+from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
-from harness.installation.files import Skill
-from harness.mcp.mcp_server import Mcp
+from harness.installation.files import skill
+from harness.mcp.mcp_server import mcp
 
 _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 
@@ -20,86 +20,80 @@ _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 class Sketch(GuidanceAction):
     """Sketch a solution interactively before generating the formal artifact."""
 
-    def __init__(self, agent_dir: str = "") -> None:
-        super().__init__()
+    def __init__(self, agent_dir: str = "", session=None) -> None:
+        super().__init__(session)
         self._agent_dir = agent_dir
 
-    def _sketch_path(self, destination: str, slug: str) -> Path:
-        """Resolve sketch path under the destination's .context folder."""
-        docs = Path(destination)
-        if docs.name == ".context":
-            return docs / f"{slug}-sketch.md"
-        return docs / ".context" / f"{slug}-sketch.md"
+    def made_for(self, session) -> Sketch:
+        """A sketch made for session that finds its template in this sketch's agent_dir."""
+        return type(self)(agent_dir=self._agent_dir, session=session)
+
+    def _context_folder(self, module: str) -> Path:
+        """The .context folder sketches go in: the session root's, or a module's under that root."""
+        folder = self.session.root / module if module else self.session.root
+        return folder if folder.name == ".context" else folder / ".context"
+
+    @property
+    def _sketch_name(self) -> str:
+        """The session's sketch file name: a session is named for the subject it works on, so its sketch is too."""
+        return f"{self.session.name or 'main'}-sketch.md"
 
     @property
     def sketch_template(self) -> str:
         """The sketch template for this instance's agent_dir (tiered discovery)."""
-        return self.find_template(agent_dir=self._agent_dir)
+        return self.find_template()
 
     def _grill_context(self) -> GrillContext:
-        """GrillContext toolset for in-method composition (not a tool)."""
-        return GrillContext()
+        """The grill this sketch runs: made for this sketch's session and working on what it lists."""
+        return self._inside(GrillContext)
 
-    def _generate(self):
-        from generate.generate import Generate
-
-        return Generate()
-
-    @Mcp
+    @mcp
     @agent_tool
     def find_template(self, agent_dir: str = "") -> str:
         """Locate a sketch template using tiered discovery.
         1. Session context - the caller passes an example directly (skip this tool).
         2. Convention - {agent_dir}/templates/*-sketch.* inside the wrapped agent's templates folder.
         3. Default - sketch/templates/sketch-template.md (this toolset's canonical heading-and-indent notation).
-        Returns the resolved template contents as a string."""
-        if agent_dir:
-            root = Path(agent_dir)
-            if root.is_dir():
-                templates_dir = root / "templates"
-                if templates_dir.is_dir():
-                    for path in sorted(templates_dir.glob("*-sketch.*")):
-                        return path.read_text(encoding="utf-8")
-        return _DEFAULT_TEMPLATE.read_text(encoding="utf-8")
+        Returns the resolved template contents as a string.
+        agent_dir: the wrapped agent's folder, from the project's root or absolute. Omit it for the folder this sketch was made with."""
+        agent_dir = agent_dir or self._agent_dir
+        templates_dir = self.path_named(agent_dir) / "templates" if agent_dir else None
+        found = sorted(templates_dir.glob("*-sketch.*")) if templates_dir is not None and templates_dir.is_dir() else []
+        return (found[0] if found else _DEFAULT_TEMPLATE).read_text(encoding="utf-8")
 
-    @Mcp
+    @mcp
     @agent_tool
     def save_sketch(
         self,
-        destination: str,
-        slug: str,
         content: str = "",
         paths: list[str] | str | None = None,
+        module: str = "",
     ) -> str:
-        """Persist a sketch to the destination docs dir as {slug}-sketch.md.
-        Destination is session.path (or session.docs_dir). Files land in
-        {path}/.context/{slug}-sketch.md — never sessions/{name}/ and never
-        {path}/.context/{session-name}/. Module sketches: destination =
-        {session.path}/{module} → {destination}/.context/. Creates parents
-        if missing. Overwrites same path. Returns the resolved sketch path.
+        """Save the session's sketch as {session root}/.context/{session name}-sketch.md, replacing the one there, and
+        return its path. One file holds every practice's section, so a session has one sketch.
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the sketch body in content.
-        content: in-process text. Leave this empty on an MCP call."""
-        target = self._sketch_path(destination, slug)
+        content: in-process text. Leave this empty on an MCP call.
+        module: a module's folder under the session root, for a sketch of that module alone; it goes in that module's .context folder."""
+        target = self._context_folder(module) / self._sketch_name
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(load_document(content, paths), encoding="utf-8")
+        target.write_text(self.document_named(content, paths), encoding="utf-8")
         return str(target)
 
-    @Mcp
+    @mcp
     @agent_tool
-    def list_sketches(self, destination: str, slug: str = "") -> str:
-        """List sketch files under the destination docs dir.
-        If slug is provided, filters to sketches matching that slug prefix.
-        Returns newline-separated paths, or ``no sketches`` when the folder is missing or empty."""
-        context_dir = Path(destination) / ".context"
+    def list_sketches(self, module: str = "") -> str:
+        """List the sketch files in the session root's .context folder, or in a module's under that root.
+        Returns newline-separated paths, or ``no sketches`` when the folder is missing or empty.
+        module: a module's folder under the session root."""
+        context_dir = self._context_folder(module)
         if not context_dir.is_dir():
             return "no sketches"
-        pattern = f"{slug}-sketch.md" if slug else "*-sketch.md"
-        paths = [str(path) for path in sorted(context_dir.glob(pattern))]
+        paths = [str(path) for path in sorted(context_dir.glob("*-sketch.md"))]
         if not paths:
             return "no sketches"
         return "\n".join(paths)
 
-    @Mcp
+    @mcp
     @agent_tool
     def review_sketch(self) -> str:
         """Hard gate after every save_sketch — pause for human review before any next grill question.
@@ -112,8 +106,8 @@ class Sketch(GuidanceAction):
         Grill must validate the sketch's thinking here — not run as a disconnected interview."""
         return "sketch-review"
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_instructions
     def sketch(self, guidance: GuidanceArg) -> str:
         """Confirm views only when the user did not already name them. Write a high-level shell in one integrated sketch file, one section per practice. The shell's level of detail is that fidelity's Scaffold section; the notation is the practice sketch template. Then ask which theme to start. Ask three or four questions from that fidelity's Sketch section, then sketch those answers into the existing sections. Practice Rules apply after those answers, not to the shell. The reply includes these sketch instructions, each practice's sketch template, and each practice's rules."""
@@ -124,8 +118,8 @@ class Sketch(GuidanceAction):
             instructions(item.rules.markdown_block)
             instructions(item.sketch_template)
         self._grill_context().grill_with_context()
-        self.find_template()
-        self.save_sketch()
-        self.review_sketch()
-        self.each(lambda item: self._generate().generate(item if isinstance(item, str) else [item]))
+        tools(self.find_template)
+        tools(self.save_sketch)
+        tools(self.review_sketch)
+        self._grill_context().generate_each()
         return "Sketch complete; generate instructions applied."

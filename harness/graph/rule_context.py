@@ -1,6 +1,7 @@
 """Shared context for graph rule checks: the practice being checked and graph helpers.
 
-Rules read what the loader parsed through each node: ``node.model`` is the parsed object, ``node.get_fact`` its saved facts.
+A node is the object its practice parsed, so rules read its measurements from it; ``node.get_fact`` reads its saved facts,
+which is all a node read back from graph.json holds.
 """
 
 from __future__ import annotations
@@ -33,26 +34,6 @@ class RuleCheckContext:
     def node_data(self, node) -> dict:
         """Every fact the node records: its parsed object's saved attributes and the loader's own facts."""
         return node.facts
-
-    def step_keyword(self, node) -> str:
-        data = self.node_data(node)
-        if data.get("keyword"):
-            return str(data["keyword"])
-        name = (node.name or "").strip()
-        for prefix in ("Given", "When", "Then", "And", "But"):
-            if name.casefold().startswith(prefix.casefold() + " "):
-                return prefix
-        return ""
-
-    def step_text(self, node) -> str:
-        data = self.node_data(node)
-        if data.get("text"):
-            return str(data["text"])
-        name = (node.name or "").strip()
-        for prefix in ("Given", "When", "Then", "And", "But"):
-            if name.casefold().startswith(prefix.casefold() + " "):
-                return name[len(prefix) :].strip()
-        return name
 
     def scenario_outline(self, node) -> bool:
         return bool(self.node_data(node).get("is_outline"))

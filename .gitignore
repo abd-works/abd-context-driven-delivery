@@ -22,7 +22,7 @@ sandbox/node_modules/
 .kilo/
 tools/agent_skills/.deploy-state.json
 primitives/harness/.deploy-state.json
-harness/installation/.install-state.json
+harness/installer/.install-state.json
 
 # SessionLog append-only audit trails (runtime; not sprint artifacts)
 **/logs/events.log
@@ -113,3 +113,11 @@ sandbox/
 
 # pip install -e build metadata
 *.egg-info/
+
+# Local secrets never go to git
+.secrets
+**/.secrets
+
+# Saved graphs are a cache graph.load_working_copy writes; spec fixtures are kept
+**/.context/graph.json
+!**/fixtures/**/.context/graph.json

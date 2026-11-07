@@ -11,20 +11,19 @@ import re
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional
 
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
     DiagramStory,
     DiagramStoryModel,
-    DiagramEpic,
 )
-from cdd_guidance.practices.stories.model.story_model import Epic, Increment, StoryModel, StoryType, Epic
+from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks
+from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel, StoryType
 
 
 class DrawIOIncrement(DiagramIncrement):
     width = 480
-    lane_indent = 40
     lane_style = (
         "inc-lane;whiteSpace=wrap;html=1;overflow=hidden;"
         f"fillColor={DiagramIncrement.fill};strokeColor={DiagramIncrement.stroke};"
@@ -102,24 +101,13 @@ class DrawIOStory(DiagramStory):
 
     @property
     def y(self) -> int:
-        story_map = self._owning_map()
-        return story_map.story_row_y if isinstance(story_map, DrawIOStoryModel) else self.row_y
+        return self._layout().story_y
 
     def cells(self, parent_id: str) -> List["DrawIOStoryModel.Vertex"]:
-        parent = self.parent
-        index = parent.stories.index(self) if isinstance(parent, Epic) else 0
         actor = self.actors[0].strip() if self.actors else ""
-        previous = ""
-        if isinstance(parent, Epic) and index > 0:
-            prior = parent.stories[index - 1]
-            previous = prior.actors[0].strip() if prior.actors else ""
         cell_id = f"{parent_id}/{self.cell_slug}"
         drawn: List[DrawIOStoryModel.Vertex] = []
-        room = (
-            self.y >= parent.y + DrawIOEpic.bar_height + self.actor_height + self.actor_gap
-            if isinstance(parent, Epic) else False
-        )
-        if room and actor:
+        if actor:
             drawn.append(DrawIOStoryModel.Vertex.make(
                 f"{cell_id}/actor", actor, self.x,
                 self.y - self.actor_height - self.actor_gap,
@@ -173,10 +161,7 @@ class DrawIOEpic(DiagramEpic):
     def y(self) -> int:
         if not isinstance(self.parent, Epic):
             return self.row_y
-        story_map = self._owning_map()
-        shaping = isinstance(story_map, DrawIOStoryModel) and story_map.has_outline_estimates
-        base = self.shaping_row_y if shaping else self.nested_row_y
-        return base + self.depth * (self.bar_height + self.depth_gap)
+        return self._layout().sub_epic_y(self.depth)
 
     @property
     def x(self) -> int:
@@ -242,7 +227,7 @@ class DrawIOEpic(DiagramEpic):
             else:
                 estimate_x = self.x + self.tighten
             drawn.append(DrawIOStoryModel.Vertex.make(
-                f"{self.cell_id}/estimate", label, estimate_x, self.stories[0].y if self.stories else self._story_row(),
+                f"{self.cell_id}/estimate", label, estimate_x, self._layout().story_y,
                 max(self.bar_width - (estimate_x - self.x) - self.tighten, 80),
                 DiagramStory.size, self.estimate_style,
             ))
@@ -252,6 +237,8 @@ class DrawIOEpic(DiagramEpic):
         drawn = [DrawIOStoryModel.Vertex.make(
             self.cell_id, self.name, self.x, self.y, self.width, self.height, self.style,
         ).linked(self)]
+        for story in self.stories:
+            drawn.extend(story.cells(self.cell_id))
         estimate = (self.estimate or "").strip()
         if estimate:
             label = self.estimate_label()
@@ -259,15 +246,9 @@ class DrawIOEpic(DiagramEpic):
                 f"{self.cell_id}/epic-estimate", label, self.x, self.estimate_row_y,
                 min(160, self.width), self.estimate_height, self.epic_estimate_style,
             ))
-        for story in self.stories:
-            drawn.extend(story.cells(self.cell_id))
         for child in self.epics:
             drawn.extend(child.cells())
         return drawn
-
-    def _story_row(self) -> int:
-        story_map = self._owning_map()
-        return story_map.story_row_y if isinstance(story_map, DrawIOStoryModel) else DiagramStory.row_y
 
 
 # -- Root node + I/O -----------------------------------------------------------
@@ -295,6 +276,12 @@ class _PlacedCell:
     @property
     def center(self) -> float:
         return self.x + self.width / 2
+
+    @property
+    def story_type(self) -> StoryType:
+        """The kind a story cell's style names after ``story:``."""
+        head = self.style.split(";", 1)[0]
+        return StoryType.from_mark(head.split(":", 1)[1] if ":" in head else None)
 
     @property
     def is_epic_estimate(self) -> bool:
@@ -336,9 +323,9 @@ class DrawIOStoryModel(DiagramStoryModel):
             self.width = 0
             self.height = 0
             self.style = ""
-            self.extra_attributes = None
             self.link = ""
             self.entry = ""
+            self.node = None
 
         @classmethod
         def make(cls, cell_id, label, x, y, width, height, style) -> "DrawIOStoryModel.Vertex":
@@ -353,13 +340,18 @@ class DrawIOStoryModel(DiagramStoryModel):
             return vertex
 
         def linked(self, node) -> "DrawIOStoryModel.Vertex":
-            """Carry the node's links: ``link`` opens the story's own file when it has one,
-            otherwise its ``story-map.md`` entry; ``entry`` keeps the story-map entry."""
-            story_map = node._owning_map()
-            targets = getattr(story_map, "link_targets", None) or {}
-            self.entry = targets.get(("entry", id(node)), "")
-            self.link = targets.get(("file", id(node)), "") or self.entry
+            """Draw this cell for *node*, so it can carry that node's links."""
+            self.node = node
             return self
+
+        def take_links(self, entries: Dict[int, str], links: StoryMapLinks) -> None:
+            """``link`` opens the story's own file when it has one, otherwise its ``story-map.md`` entry;
+            ``entry`` keeps the story-map entry."""
+            if self.node is None:
+                return
+            self.entry = entries.get(id(self.node), "")
+            story_file = links.story_file(self.node) if isinstance(self.node, Story) else ""
+            self.link = story_file or self.entry
 
 
     def _parse_estimate_value(self, value: str) -> str:
@@ -375,82 +367,44 @@ class DrawIOStoryModel(DiagramStoryModel):
         return any(epic._has_estimate() for epic in self.epics)
 
     @property
-    def story_row_y(self) -> int:
-        """Where every story sits: below the lowest epic bar drawn, with room for its actor above it.
-        Nested bars start lower than the top-level ones, so the row is read from where the bars are, not from depth."""
-        bottom = max((epic.y + epic.bar_height for epic in self._every_epic()), default=DrawIOEpic.row_y)
-        if self.has_outline_estimates:
-            return max(DrawIOStory.shaping_row_y, bottom + DiagramStory.pad_below_sub_epic)
-        return max(
-            DiagramStory.row_y,
-            bottom + DiagramStory.actor_height + DiagramStory.actor_gap + DiagramStory.pad_below_sub_epic,
-        )
+    def sub_epic_top(self) -> int:
+        """A shaping outline drops its sub-epics lower, leaving room for the epic estimate above them."""
+        return DrawIOEpic.shaping_row_y if self.has_outline_estimates else DrawIOEpic.nested_row_y
 
-    def _every_epic(self) -> List[Epic]:
-        pending, found = list(self.epics), []
-        while pending:
-            epic = pending.pop()
-            found.append(epic)
-            pending.extend(epic.epics)
-        return found
-
-    def clone(self):
-        return super().clone().save()
+    @property
+    def story_floor(self) -> int:
+        return DrawIOStory.shaping_row_y if self.has_outline_estimates else DrawIOStory.row_y
 
     def render(
         self,
         canonical: StoryModel | None = None,
         previous: str | None = None,
-        links=None,
         workspace: str | None = None,
     ) -> str:
-        """Draw the story map. With *links* (a ``StoryMapLinks``, or a *workspace* folder to find
-        them in), each epic, sub-epic, and story cell links to its ``story-map.md`` entry, and a
-        story to its own file when one exists. With no target file, the cell has no link."""
-        from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks
-        from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
-
-        if links is None and workspace:
-            links = StoryMapLinks.from_workspace(workspace)
-
-        source = canonical if canonical is not None else self
-        markdown = MarkdownStoryModel()
-        body = markdown.render(source, previous)
-        drawn = type(self)(markdown.parse(body))
-        drawn.links = links
-        return drawn.save()
-
-    def _link_targets(self) -> Dict[tuple, str]:
-        links = getattr(self, "links", None)
-        if links is None:
-            return {}
-        targets: Dict[tuple, str] = {
-            ("entry", node_id): target for node_id, target in links.entries(self).items()
-        }
-
-        def stories(epic) -> None:
-            for story in epic.stories:
-                target = links.story_file(story)
-                if target:
-                    targets[("file", id(story))] = target
-            for child in epic.epics:
-                stories(child)
-
-        for epic in self.epics:
-            stories(epic)
-        return targets
+        """Draw the story map. In a *workspace* folder, each epic, sub-epic, and story cell links to its
+        ``story-map.md`` entry there, and a story to its own file when one exists. With no target file,
+        the cell has no link."""
+        links = StoryMapLinks.from_workspace(workspace) if workspace else None
+        drawn = type(self)(canonical if canonical is not None else self)
+        return drawn._drawing(links)
 
     def save(self) -> str:
-        self.link_targets = self._link_targets()
+        return self._drawing(None)
+
+    def _drawing(self, links: Optional[StoryMapLinks]) -> str:
+        vertices = [vertex for epic in self.epics for vertex in epic.cells()]
+        if links is not None:
+            entries = links.entries(self)
+            for vertex in vertices:
+                vertex.take_links(entries, links)
         mxfile = ET.Element("mxfile", attrib={"host": "app.diagrams.net"})
         diagram = ET.SubElement(mxfile, "diagram", attrib={"name": "Story Map", "id": "story-map"})
         graph_model = ET.SubElement(diagram, "mxGraphModel")
         graph_root = ET.SubElement(graph_model, "root")
         ET.SubElement(graph_root, "mxCell", attrib={"id": "0"})
         ET.SubElement(graph_root, "mxCell", attrib={"id": "1", "parent": "0"})
-        for epic in self.epics:
-            for vertex in epic.cells():
-                self._add_cell(graph_root, vertex)
+        for vertex in vertices:
+            self._add_cell(graph_root, vertex)
         body = ET.tostring(mxfile, encoding="unicode")
         return "<?xml version='1.0' encoding='utf-8'?>\n" + body
 
@@ -498,17 +452,17 @@ class DrawIOStoryModel(DiagramStoryModel):
             owners.append(cell)
         return owners
 
-    def _place_stories(self, cells: List["_PlacedCell"], bars: List["_PlacedCell"]) -> None:
-        """Stories by column, then down, each under the deepest epic or sub-epic it sits beneath, with the actor drawn
-        just above it. A top-level epic can hold stories of its own, so its bar is offered too."""
+    def _place_stories(self, cells: List["_PlacedCell"], owners: List["_PlacedCell"]) -> None:
+        """Stories by column, then down, each under the deepest epic it sits beneath, with the actor drawn just
+        above it."""
         stories = sorted((c for c in cells if c.role == "story"), key=lambda c: (c.x, c.y))
         actors = {id(story): actor for actor in cells if actor.role == "actor"
                   for story in [actor.story_below(stories)] if story is not None}
         for cell in stories:
-            owner = _PlacedCell.beneath(cell.center, bars)
+            owner = _PlacedCell.beneath(cell.center, owners)
             if owner is None:
                 continue
-            story = DrawIOStory(cell.value, len(owner.node.stories) + 1, StoryType.USER)
+            story = DrawIOStory(cell.value, len(owner.node.stories) + 1, cell.story_type)
             if id(cell) in actors:
                 story.actors = [actors[id(cell)].value.strip()]
             owner.node.append_story(story)
@@ -676,13 +630,6 @@ class DrawIOStoryModel(DiagramStoryModel):
         return increments
 
 
-    def _new_document(self):
-        root = ET.Element("mxGraphModel")
-        graph_root = ET.SubElement(root, "root")
-        ET.SubElement(graph_root, "mxCell", attrib={"id": "0"})
-        ET.SubElement(graph_root, "mxCell", attrib={"id": "1", "parent": "0"})
-        return root, graph_root, 2
-
     def _cell(self, cell_id, label) -> "DrawIOStoryModel.Vertex":
         vertex = self.Vertex()
         vertex.cell_id = cell_id
@@ -695,8 +642,6 @@ class DrawIOStoryModel(DiagramStoryModel):
             "id": id_str, "value": vertex.label, "style": vertex.style,
             "vertex": "1", "parent": "1",
         }
-        if vertex.extra_attributes:
-            attributes.update(vertex.extra_attributes)
         if getattr(vertex, "link", ""):
             user = {"label": attributes.pop("value"), "link": vertex.link, "id": attributes.pop("id")}
             if vertex.entry and vertex.entry != vertex.link:
