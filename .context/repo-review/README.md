@@ -56,7 +56,7 @@ Every pass below ran the quick suite (3,328 examples at the last pass, no failur
 | Practices round 1 (formats on one domain model) | Done |
 | Practices round 2: Clean Engineering + BDD, DDD + agent BDD + overlays | Done |
 | Practices round 2: Stories + UX | Done |
-| DDD draw.io on Clean Engineering's diagram classes | Agent running |
+| DDD draw.io on Clean Engineering's diagram classes | Done; about 850 lines of DDD layout code deleted |
 | space/kanban | Agent running, on top of the chat-defects branch |
 | Follow-up fixes (recipes read their held fidelity, one format lookup, sketch lenses held, toolset probes, clean-ups) | Agent running |
 

@@ -874,14 +874,6 @@ The diagram format draw.io extends. A modules view (`is_modules_view`: modules w
 + shifted(dx: float, dy: float): Geometry
 + moved_to(x: float, y: float): Geometry
 
-## DiagramCard
-
-A box to place or route around for a view with no diagram node of its own, such as the DDD aggregate view. Placement and routing read only `cell_id`, `geometry`, and `group`.
-
-+ DiagramCard(cell_id: str, width: float, height: float, group: str = "", x: float = 0, y: float = 0)
-------
-+ geometry: Geometry
-
 ## DiagramArrow
 
 The line drawn between two cards for every relationship one class has to another. Several properties can stand behind one arrow, so it carries their names as its label.
@@ -905,7 +897,7 @@ The line drawn between two cards for every relationship one class has to another
 
 Finds the grid position for every card that leaves the fewest crossings and the shortest arrows.
 
-+ CardPlacement(cards: list[DiagramNode | DiagramCard], arrows: list[DiagramArrow])
++ CardPlacement(cards: list[DiagramNode], arrows: list[DiagramArrow])
 	Invariant: a base sits above what derives from it, and an owner above what it owns
 	Invariant: the search is seeded, so the same model always gives the same diagram
 ------
@@ -918,7 +910,7 @@ Finds the grid position for every card that leaves the fewest crossings and the 
 
 Routes every arrow between the placed cards.
 
-+ ArrowRouter(cards: list[DiagramNode | DiagramCard], arrows: list[DiagramArrow], obstacles: list[Geometry] = (), kept_paths: list[list] = ())
++ ArrowRouter(cards: list[DiagramNode], arrows: list[DiagramArrow], obstacles: list[Geometry] = (), kept_paths: list[list] = ())
 	Invariant: an arrow never passes through a card or runs along another arrow, and each has its own end points
 	Invariant: the inheritance arrows of two or more subclasses that reach one base from the same side join into one trunk — a drop from each subclass to a shared bar, and one line from the bar to one point on the base; a single subclass keeps a direct arrow
 ------

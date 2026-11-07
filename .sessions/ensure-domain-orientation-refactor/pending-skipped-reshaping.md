@@ -69,3 +69,6 @@ From CE + BDD agent (e880d325):
 - spec_model_for (Bdd) and code_model_for (CE) are the same suffix lookup: one method on PracticeGuidance.
 - Behaviour change: a draw.io edge with no UML marks now reads as association (scanners used to say unknown).
 - Catalog and install not regenerated.
+
+From DDD draw.io agent (c297c34e):
+- DDD still copies its map into CE modules and classes per render; the review's ideal (practices.md:520) is DDD nodes that are BoundedContext/Aggregate and DiagramModule at once. Needs CE's ContainmentForest and cell ids to nest through .modules, not "/" paths in names.
