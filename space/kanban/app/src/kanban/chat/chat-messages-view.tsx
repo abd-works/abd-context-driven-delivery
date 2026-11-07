@@ -1,4 +1,4 @@
-import type { ChatMessageData } from '@cdd/tools/chat/chat'
+import type { ChatMessageData } from '@cdd/harness/chat/chat'
 
 import { useBoard } from '../board/board-context'
 

@@ -20,6 +20,7 @@ from harness.catalog_generator.catalog_generator import (
 )
 from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.actions.diagnose.diagnose import Diagnose
+from tools.echo.echo import Echo
 
 _REPO_URL = "https://github.com/org/repo"
 _REF = "abc123"
@@ -82,6 +83,10 @@ with description("a practice's page"):
 with description("a utility's page"):
     with it("should name the utility"):
         expect("diagnose" in UtilityPage(Utility(Diagnose)).body).to(be_true)
+
+    with context("that shares its module card with other toolsets"):
+        with it("should show the card of the module its package belongs to"):
+            expect("they share this one card" in UtilityPage(Utility(Echo)).body).to(be_true)
 
 
 with description("a generated catalog"):

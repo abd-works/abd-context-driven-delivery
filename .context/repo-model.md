@@ -30,52 +30,52 @@ Dependencies list the modules a module's production code imports today. Three ru
 + title_camel: str
 ----
 
-# harness/marks
+# harness/annotations
 
-A *Mark* is what an author types on a class or operation; a *Destination* is a mark that says where a member is published, and an *OmissionMark* leaves a member out.
+An *Annotation* is what an author types on a class or operation to say how CDD treats it; a *Destination* is an annotation that says where a member is published, and an *OmissionAnnotation* leaves a member out. Each publisher defines its own destinations (harness/installation, harness/mcp, harness/hooks), and every kind joins one private registry, `annotation_kinds`, as it is defined.
 
-- **Purpose:** Hold the marks an author types and the channels a member is published to, below every publisher, so publishers depend on toolsets and never the other way round.
-- **Seam (terms):** Mark, Destination, NamedDestination, OmissionMark, Toast
+- **Purpose:** Hold the annotations an author types and the channels a member is published to, below every publisher, so publishers depend on toolsets and never the other way round.
+- **Seam (terms):** Annotation, OmissionAnnotation, Destination, NamedDestination, Toast
 - **Dependencies (one-way):** *(none)*
 
-## Mark
+## Annotation
 
-Install and discovery find what an author marked: the operations and classes a mark decorates.
+The base of every annotation an author types: it sets its `flag` on what it annotates, and `annotates(target)` reads it back. Each kind joins `annotation_kinds` as it is defined.
 
 ------
 ----
-+ marks(target: Any): bool
++ annotates(target: Any): bool
 
-## Destination : Mark
+## OmissionAnnotation : Annotation
 
-A mark that names where a member is published: a skill, a command, a rules file, an MCP tool, or a hook.
+The base of an annotation that leaves what it annotates out of something: the catalog (`@noCatalog`) or every destination (`@noDeploy`).
+
+------
++ omits_install: bool
+----
++ annotates(target: Any): bool
+
+## Destination : Annotation
+
+The base of an annotation that says where install publishes a member, by its `channel`: a skill, a command, a rules file, an MCP tool, or a hook.
 
 ------
 + channel: str
 + enlists_member: bool
 ----
-+ name_marked_on(operation: Any): str
++ name_annotated_on(operation: Any): str
 + disabled_on(operation: Any): bool
 
 ## NamedDestination : Destination
 
-A destination whose mark may name what it installs: `@skill("name")`, `@skill(name="name")`, or bare `@skill` for the operation's own name.
+A destination whose annotation may name what it installs: `@skill("name")`, `@command(name="name")`, or bare `@skill` for the operation's own name.
 
 ------
 ----
-
-## OmissionMark : Mark
-
-A mark that leaves what it marks out of something.
-
-------
-+ omits_install: bool
-----
-+ marks(target: Any): bool
 
 ## Toast : Destination
 
-Mark an operation or instructions so the IDE shows a toast naming it when an agent calls it.
+`@Toast` on an operation or instructions: nothing is written at install; the prompt notifier shows a toast naming the operation when an agent calls it.
 
 ------
 ----
@@ -118,6 +118,7 @@ A process by its id that this one may end, such as the server an address file na
 ----
 + stop(wait_seconds: float): None
 	// never signals an id of 0 or this process's own id, so a blank or stale address file cannot end the process that reads it
+---<<raises>>--> ProcessNotStopped
 
 ## ProcessNotStopped : Exception
 
@@ -149,6 +150,7 @@ The git command line, run in one folder.
 + run(*args, env: dict[str, str] | None = None, timeout: float | None = None): str
 	// every repository operation goes through run, so the time limit, the stop of a hung git, and the RepoConnectError a failure raises are the same for all of them
 + succeeds(*args): bool
+---<<raises>>--> RepoConnectError
 
 ## RepoConnectError : RuntimeError
 
@@ -163,7 +165,7 @@ Raised when git cannot be run, or a git command fails, in a clone.
 
 - **Purpose:** Let a class keep its words in markdown beside it, read them back typed, and convert them to HTML.
 - **Seam (terms):** Markdown, MarkdownCollection, MarkdownText, FrontMatter, Format
-- **Dependencies (one-way):** harness/name, harness/marks
+- **Dependencies (one-way):** harness/name, harness/annotations
 
 ## Markdown
 
@@ -183,6 +185,9 @@ The prose one property loads: the file named after the property, or the section 
 + templates_path_map(): dict[str, str]
 + as_property(fn: _F): property
 + return_type_of(fn: Callable[..., Any], default: Any): Any
+---<<loads>>--> Format
+---<<creates>>--> Format
+---<<reads sections with>>--> MarkdownText
 
 ## MarkdownCollection
 
@@ -198,6 +203,9 @@ Listed or keyed extracts that keep the original markdown.
 + attach(instance: Any, name: str | None = None): None
 + as_property(fn: _F): property
 + markdown_collection(fn: _F | str | None = None, label: str | None = None): property | Callable[[_F], property]
+---<<calls raw on>>--> Markdown
+---<<calls built_by on>>--> Markdown
+---<<creates>>--> MarkdownText
 
 ## MarkdownText
 
@@ -249,8 +257,8 @@ The settings at the top of a file: a YAML block between `---` lines, or, in a co
 An *AgentToolSet* is an ordinary class an agent can list and run: each `@agent_tool` member is an *AgentOperation* and each `@agent_instructions` member is *AgentInstructions*. A *ToolCall* is one call as a chat made it, with its project and chat. The whole model of this module, internals included, is `harness/agent_tools/.context/agent-tools-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Let an author publish an ordinary class as operations and instructions an agent can list and use, and let every publisher read those members from one place.
-- **Seam (terms):** AgentToolSet, AgentTool, AgentOperation, GuidanceAgentOperation, AgentInstructions, AgentToolMark, AgentToolSetMark, InstallDestination, OnSubject, ToolSubjectLoader, ToolCall, ChatPointer
-- **Dependencies (one-way):** harness/name, harness/marks, harness/markdown
+- **Seam (terms):** AgentToolSet, AgentTool, AgentOperation, GuidanceAgentOperation, AgentInstructions, AgentToolAnnotation, AgentInstructionsAnnotation, AgentToolSetAnnotation, ToolSetCollectionAnnotation, InstallDestination, ToolSubject, OnSubject, TakesCalledProject, NoSessionLog, SubAgentAnnotation, ToolSubjectLoader, ToolCall, ChatPointer
+- **Dependencies (one-way):** harness/name, harness/annotations, harness/markdown
 
 ## AgentToolSet : AgentToolSetOrigin
 
@@ -271,6 +279,16 @@ Injected by @agent_toolset — the operations, instructions, and nested collecti
 + tools_for(destination: str): list[AgentTool]
 + for_call(call: ToolCall): Any
 + session_for(call: ToolCall): Any
+---<<creates>>--> AgentInstructions
+---<<reads the annotation>>--> AgentInstructionsAnnotation
+---<<creates>>--> AgentOperation
+---<<creates>>--> AgentTool
+---<<keeps>>--> AgentTool
+---<<reads the annotation>>--> AgentToolAnnotation
+---<<reads the annotation>>--> AgentToolSetAnnotation
+---<<reads session of>>--> ToolCall
+---<<reads the annotation>>--> ToolSetCollectionAnnotation
+---<<creates>>--> ToolSubjectLoader
 
 ## AgentTool : AgentToolDestination
 
@@ -297,6 +315,17 @@ One published member of a toolset: its name in every channel, its input schema, 
 + on(toolset: Any): AgentTool
 + should_log_session_invocation(arguments: dict[str, Any] | None): bool
 + log_session_invocation(call: ToolCall): None
+---<<reads the annotation>>--> AgentInstructionsAnnotation
+---<<reads the annotation>>--> AgentToolAnnotation
+---<<loads>>--> AgentToolSet
+---<<calls session_for on>>--> AgentToolSet
+---<<reads constants of>>--> InstallDestination
+---<<loads the prose it needs through>>--> Markdown
+---<<creates>>--> ToolCall
+---<<keeps out of the session log the calls annotated>>--> NoSessionLog
+---<<prepends the sub-agent hand-off for>>--> SubAgentAnnotation
+---<<hands the called project to callables annotated>>--> TakesCalledProject
+---<<is kept out of install by>>--> NoDeploy
 
 ## AgentOperation : AgentTool
 
@@ -313,6 +342,7 @@ An `@agent_tool` on a guidance action: its call is logged as the action, such as
 ------
 ----
 + log_session_invocation(call: ToolCall): None
+---<<reads arguments of>>--> ToolCall
 
 ## AgentInstructions : AgentTool
 
@@ -331,17 +361,38 @@ An `@agent_instructions` operation: its recipe body, expanded for a call, is the
 + member_of(target: Any, member: str): AgentInstructions
 + provider_of(owner: Any, provider_name: str): Any
 + parent_recipe(after_class: type | None = None): tuple[AgentInstructions, type] | None
+---<<reads the annotation>>--> AgentInstructionsAnnotation
+---<<reads the annotation>>--> AgentToolAnnotation
+---<<calls discover_instruction_members on>>--> AgentToolSet
+---<<creates>>--> AgentToolSet
+---<<reads the annotation>>--> AgentToolSetAnnotation
+---<<reads arguments of>>--> ToolCall
 
-## AgentToolMark : Mark
+## AgentToolAnnotation : Annotation
 
-Mark a method as a tool; description comes from the method docstring.
+`@agent_tool` on a method: an operation an agent calls and gets a result from; its description is the docstring.
 
 ------
 ----
 
-## AgentToolSetMark : _ClassJoiningMark
+## AgentInstructionsAnnotation : Annotation
 
-Mark a class as an agent toolset — @agent_tool and @agent_instructions.
+`@agent_instructions` on a method: instructions an agent reads; the body runs when they are expanded.
+
+------
+----
+
+## AgentToolSetAnnotation : _ClassJoiningAnnotation
+
+`@agent_toolset` on a class: makes, in its place, a class of the same name that also derives from AgentToolSet, so the class reads as its own domain first.
+
+------
+----
+---<<joins the annotated class with>>--> AgentToolSet
+
+## ToolSetCollectionAnnotation : _ClassJoiningAnnotation
+
+`@toolset_collection` on a class or property: the class is a ToolSetCollection, or the property is one of the toolset's collections.
 
 ------
 ----
@@ -353,12 +404,41 @@ The channels a member is published to, in the order a tool lists them.
 ------
 ----
 
-## OnSubject : Mark
+## ToolSubject : Annotation
 
-Set on the tool made from an instance operation of a `@tool_subject` class: it loads its object from its leading arguments before it runs the operation.
+`@tool_subject` on the classmethod that loads the object a tool call acts on, so `@agent_tool` can sit on a domain class whose constructor takes collaborators.
 
 ------
 ----
+
+## OnSubject : Annotation
+
+Set by the framework, never typed: the tool made from an instance operation of a `@tool_subject` class loads its object from its leading arguments.
+
+------
+----
+
+## TakesCalledProject : Annotation
+
+Set by the framework, never typed: the tool's callable takes the project its ToolCall names, which no caller passes.
+
+------
+----
+
+## NoSessionLog : Annotation
+
+`@noSessionLog` on an operation: its calls stay out of the session log, for reads an agent or a mod repeats often.
+
+------
+----
+
+## SubAgentAnnotation : Annotation
+
+`@subAgent` on an `@agent_tool` or `@agent_instructions` member: its description starts with the hand-off to a non-blocking background sub-agent.
+
+------
+----
++ with_hand_off(text: str): str
 
 ## ToolSubjectLoader
 
@@ -370,6 +450,9 @@ How a domain class marked `@agent_toolset` finds the object a tool call acts on:
 ----
 + on_subject(load: Callable[..., Any], operation: Callable[..., Any]): Callable[..., Any]
 + given_the_called_project(operation: Any): Any
+---<<reads the loader annotated>>--> ToolSubject
+---<<annotates the tools it makes with>>--> OnSubject
+---<<annotates the tools it makes with>>--> TakesCalledProject
 
 ## ToolCall
 
@@ -388,6 +471,7 @@ One call of a tool as its caller made it: the arguments it sent, the folder of t
 + sent(arguments: dict[str, Any] | None, project: Path | str | None, tool: str = '', mcp_host: Any = None): ToolCall
 + open_sessions_with(opener: SessionOpener): None
 + session_named(session_file: str): Any
+---<<loads>>--> ChatPointer
 
 ## ChatPointer
 
@@ -407,14 +491,15 @@ Which chat a tool call, and the session.log line it writes, came from, so `read_
 + in_log_line(line: str): ChatPointer | None
 + in_chat_file(path: Path): tuple[ChatPointer, str]
 + transcript_text(): list[str]
+---<<creates>>--> Name
 
 # harness/installation
 
 An *Installation* writes one channel (skills, commands, rules, language adapters) for one IDE, laid out by its *IdeLayout*; *RepositoryToolsets* finds every toolset a repository defines.
 
 - **Purpose:** Give every channel the writer it publishes a member with, and find the toolsets a repository defines.
-- **Seam (terms):** Installation, FileInstallation, LanguageAdapterInstallation, IdeLayout, RepositoryToolsets, ContextConfig, Skill, SourceFile, NoCatalog
-- **Dependencies (one-way):** harness/name, harness/marks, harness/agent_tools, harness/markdown
+- **Seam (terms):** Installation, FileInstallation, LanguageAdapterInstallation, IdeLayout, RepositoryToolsets, ContextConfig, SourceFile, DataClass, Skill, Command, Rules, Agent, AgentGuidance, NoCatalog, NoDeploy, DataField, Identity, LanguageAdapter, Edits
+- **Dependencies (one-way):** harness/name, harness/annotations, harness/agent_tools, harness/markdown
 
 ## Installation
 
@@ -443,6 +528,15 @@ Write the markdown files of one channel — skills, slash commands, or rules —
 + relative_path(toolset: Any, name: str): Path
 + write(tool: AgentTool): None
 + write_standing_rule(source: Path): None
+---<<calls invoke_line on>>--> AgentTool
+---<<creates>>--> FrontMatter
+---<<creates>>--> IdeLayout
+---<<reads constants of>>--> InstallDestination
+---<<creates>>--> MarkdownText
+---<<creates>>--> Name
+---<<writes the SKILL.md for>>--> Skill
+---<<writes the slash command for>>--> Command
+---<<writes the rules file for>>--> Rules
 
 ## LanguageAdapterInstallation : Installation
 
@@ -453,6 +547,10 @@ Records marked toolsets during the install walk, then writes them together, beca
 ----
 + record(toolset: Any): None
 + write_all(): list[Path]
+---<<creates>>--> DataClass
+---<<reads constants of>>--> InstallDestination
+---<<generates TypeScript for>>--> LanguageAdapter
+---<<draws a file link for fields annotated>>--> SourceFile
 
 ## IdeLayout
 
@@ -489,6 +587,10 @@ How one IDE lays out the folder CDD installs into: the folder's name in a projec
 + import_modules(): list[str]
 + collect(): list[str]
 	// reads the repository's source without importing it, so the installer, the hook server, and the MCP host publish the same toolsets
+---<<reads constants of>>--> AgentToolSet
+---<<creates>>--> Name
+---<<recognizes toolsets by>>--> Agent
+---<<recognizes toolsets by>>--> AgentGuidance
 
 ## ContextConfig
 
@@ -510,13 +612,6 @@ One project's `.context/config.json`: the guidelines that apply to it, each `ena
 + set_guidelines(guidelines: Mapping[str, str] | str): dict[str, Any]
 + set_practice_folders(folders: Mapping[str, str] | str): dict[str, Any]
 
-## Skill : NamedDestination
-
-Mark an operation to be published as a skill.
-
-------
-----
-
 ## SourceFile
 
 Marks a data field that holds a path in the session's workspace: `path: Annotated[str, SourceFile]`.
@@ -524,24 +619,116 @@ Marks a data field that holds a path in the session's workspace: `path: Annotate
 ------
 ----
 
-## NoCatalog : OmissionMark
+## DataClass
 
-Omit this class or operation from the catalog.
+What the marks on one class declare about its objects' data: the properties that are its data (`@data_field`), the fields that name one object (`@identity`), and the languages its operations are typed in (`@language_adapter`).
 
++ DataClass(data_class: type)
+------
++ fields: dict[str, property]
++ identity: tuple[str, ...]
++ languages: tuple[str, ...]
+----
++ edited_by(operation: Any): tuple[str, ...]
++ sends_by_identity(field: property): bool
++ data(value: Any): dict[str, Any]
++ reference(value: Any): dict[str, Any]
+---<<reads the data fields annotated>>--> DataField
+---<<reads the identity fields annotated>>--> Identity
+---<<reads the edited fields annotated>>--> Edits
+---<<reads the languages annotated>>--> LanguageAdapter
+
+## Skill : NamedDestination
+
+`@skill` or `@skill("name")` on an operation or instructions: install writes `{ide}/skills/{toolset}-{operation}/SKILL.md` (nested folders where the IDE reads them), which the IDE offers as a skill.
+
+------
+----
+
+## Command : NamedDestination
+
+`@command` or `@command(name="name")`: install writes the slash command `{ide}/commands/{toolset}/{name}.md` (`prompts` for VS Code).
+
+------
+----
+
+## Rules : Destination
+
+`@rules` on a practice's or fidelity's rules: install writes `{ide}/rules/{practice}/{fidelity}.mdc` (`.md` scoped by `paths` for Claude Code), which the IDE applies by path.
+
+------
+----
+
+## Agent : NamedDestination
+
+`@agent` names an agent definition. No installer reads it today: the Installer copies `cdd_guidance/agents/*.md` to `{ide}/agents/{name}.md` directly, and RepositoryToolsets only counts `@agent` as a sign that a class is a toolset.
+
+------
+----
+
+## AgentGuidance : NamedDestination
+
+`@agent_guidance` names guidance an agent definition loads. No installer reads it today; RepositoryToolsets only counts it as a sign that a class is a toolset.
+
+------
+----
+
+## NoCatalog : OmissionAnnotation
+
+`@noCatalog` on a class or operation: the catalog leaves it out; install still publishes it.
+
+------
+----
+
+## NoDeploy : OmissionAnnotation
+
+`@noDeploy` on an operation: install publishes it to no destination, whatever else annotates it; the catalog can still list it.
+
+------
+----
+
+## DataField : Annotation
+
+`@data_field` under `@property`: the property is part of the object's data, in every tool answer and in the language adapter's types; `reference=True` sends the object it returns by its identity alone.
+
+------
+----
+
+## Identity
+
+`@identity("field", ...)` on a class: the data fields that name one object, which a language adapter passes to the class's `@tool_subject` loader.
+
++ Identity(*fields)
+------
+----
+
+## LanguageAdapter
+
+`@language_adapter(language="typescript")` on a toolset: install generates typed code in `{ide}/language-adapters/typescript/` that reaches the toolset's MCP operations from outside Python.
+
++ LanguageAdapter(language: str)
+------
+----
+
+## Edits
+
+`@edits("field")` on an operation whose argument names differ from the data fields it changes, so a generated view makes those fields editable.
+
++ Edits(*fields)
 ------
 ----
 
 # harness/hooks
 
-A *Hook* mark makes a member answer an IDE event; the *HookServer* of a checkout runs every enabled hook for a *HookPayload*, and the *HookDaemon* keeps that server running. The whole model of this module, internals included, is `harness/hooks/.context/hooks-runtime-model.md`; that document is canonical, and this section shows only the classes other modules use.
+A *Hook* annotation makes a member answer an IDE event; the *HookServer* of a checkout runs every enabled hook for a *HookPayload*, and the *HookDaemon* keeps that server running. The whole model of this module, internals included, is `harness/hooks/.context/hooks-runtime-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Let a toolset member answer IDE events, through one hook server per checkout that runs every hooked member and merges their answers.
 - **Seam (terms):** Hook, Hooks, HookPayload, HookServer, HookDaemon, HookInstallation
-- **Dependencies (one-way):** harness/marks, harness/agent_tools, harness/installation, harness/process
+- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/process
 
 ## Hook : Destination
 
-Mark an operation to answer one IDE event, such as `postToolUse`.
+`@hook("event")` on an operation: install adds the hook command for that IDE event to `{ide}/hooks.json` and lists the operation in `hook-handlers.json`; the hook server runs it when the IDE fires the event.
 
 ------
 ----
@@ -549,7 +736,7 @@ Mark an operation to answer one IDE event, such as `postToolUse`.
 
 ## Hooks
 
-Class annotation: disable every hook operation on the toolset.
+`@Hooks(disabled=..., deploy=...)` on a toolset class: turns off, or keeps out of install, every hook operation the toolset has.
 
 ------
 ----
@@ -590,6 +777,10 @@ The hooks of one checkout, loaded once: it runs the enabled handlers for each ev
 + diagnose(): dict[str, Any]
 + notice(): str
 + notify_exceptions(): None
+---<<loads>>--> HookPayload
+---<<calls edited_path on>>--> HookPayload
+---<<creates>>--> ToolCall
+---<<runs the members annotated>>--> Hook
 
 ## HookDaemon
 
@@ -608,6 +799,14 @@ The hook daemon of one checkout.
 + replace_stale(): None
 + spawn(): None
 + serve(server: HookServer | None = None): None
+---<<creates>>--> BackgroundStart
+---<<loads>>--> HookServer
+---<<handles stdin>>--> HookServer
+---<<creates>>--> PythonInterpreter
+---<<calls pycache_prefix on>>--> RepositoryToolsets
+---<<calls pythonpath on>>--> RepositoryToolsets
+---<<creates>>--> StoppableProcess
+---<<checks the lock holder is alive with>>--> RunningProcess
 
 ## HookInstallation : Installation
 
@@ -627,14 +826,19 @@ Write the IDE's `hooks.json`, which runs the hook command for each event a hook 
 + write_hooks_manifest(): None
 + standup(): HookServer
 + diagnose(): dict[str, Any]
+---<<reads hook event of>>--> AgentTool
+---<<reads name of>>--> AgentTool
+---<<loads>>--> HookServer
+---<<creates>>--> PythonInterpreter
+---<<enrolls in hooks.json>>--> Hook
 
 # harness/mcp
 
 The *McpHost* is the one cdd server every chat talks to; it keeps one *McpServer* per project, and *McpInstallation* writes each IDE's `cdd` entry and starts it from *CddHome*.
 
-- **Purpose:** Let any chat, in any project, call the operations authors mark @mcp, through one long-running server that keeps each project's toolsets apart.
-- **Seam (terms):** McpHost, McpServer, McpInstallation, UserMcpConfig, CddHome, SpecServer, UserHome
-- **Dependencies (one-way):** harness/marks, harness/agent_tools, harness/installation, harness/process
+- **Purpose:** Let any chat, in any project, call the operations authors annotate @mcp, through one long-running server that keeps each project's toolsets apart.
+- **Seam (terms):** McpHost, McpServer, McpInstallation, UserMcpConfig, CddHome, SpecServer, UserHome, Mcp, LongCall
+- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/process
 
 ## McpHost
 
@@ -658,6 +862,11 @@ The cdd server's MCP side: one *McpServer* for each project a chat works on, ans
 + notify_exceptions(): None
 + from_repo(repo: Path | str): McpHost
 + from_refs(toolset_refs: tuple[str, ...], constructor_context: dict[str, object] | None = None, repo: str | None = None, project: str | None = None): McpHost
+---<<loads>>--> McpServer
+---<<resolves call name>>--> McpServer
+---<<creates>>--> RepositoryToolsets
+---<<loads>>--> ToolCall
+---<<creates>>--> UserMcpConfig
 
 ## McpServer
 
@@ -685,6 +894,12 @@ The toolsets one project's calls are answered by: every `@mcp` operation of the 
 + answer_tool(mcp_name: str, call: ToolCall): object
 	-> AgentTool.answer
 + answer_prompt(mcp_name: str, call: ToolCall): object
+---<<keeps>>--> AgentTool
+---<<loads>>--> AgentToolSet
+---<<reads constants of>>--> InstallDestination
+---<<builds>>--> ToolCall
+---<<waits longer for operations annotated>>--> LongCall
+---<<serves the operations annotated>>--> Mcp
 
 ## McpInstallation : Installation
 
@@ -711,6 +926,12 @@ Record `@mcp` operations, write each IDE's `cdd` entry, and start the one cdd se
 + serve_from_checkout(): str
 + server_is_running(): bool
 + server_runs_this_process(): bool
+---<<keeps>>--> AgentTool
+---<<creates>>--> CddHome
+---<<creates>>--> IdeLayout
+---<<loads>>--> McpHost
+---<<creates>>--> UserMcpConfig
+---<<publishes as a cdd MCP tool>>--> Mcp
 
 ## UserMcpConfig
 
@@ -725,6 +946,7 @@ The IDE's own user-level MCP config — where CDD deploys its host for every pro
 + servers_key: str
 + project_folder: str
 ----
+---<<creates>>--> IdeLayout
 
 ## CddHome
 
@@ -750,6 +972,7 @@ The user's cdd folder: which checkout the one server runs, the Python it runs on
 + install(checkout: Path | str, connect_script: Path | str): None
 + pin(checkout: Path | str): str
 + serve_from(checkout: Path | str): None
+---<<creates>>--> Git
 
 ## SpecServer
 
@@ -763,6 +986,8 @@ The cdd server as chats meet it: its own process on its own port, started throug
 + start(): dict
 + stop(): None
 + chat(project: Path | str | None, seconds: float | None = None): AsyncIterator[object]
+---<<serves from>>--> CddHome
+---<<installs>>--> CddHome
 
 ## UserHome
 
@@ -774,13 +999,27 @@ Points HOME, USERPROFILE and APPDATA at a temp folder so specs never touch the u
 + enter(): Path
 + leave(): None
 
+## Mcp : Destination
+
+`@mcp` on an operation: install publishes it as the MCP tool `{toolset}.{operation}` of the one `cdd` server, whose entry McpInstallation writes to the IDE's MCP config (`.mcp.json`, `~/.claude.json`).
+
+------
+----
+
+## LongCall : Annotation
+
+`@long_call` on an MCP operation: the cdd server waits `LONG_CALL_SECONDS` (600) for its answer instead of `CALL_SECONDS` (10) before telling the chat it is still running.
+
+------
+----
+
 # harness/guidance
 
 A *PracticeGuidance* is one practice: its *FidelityGuidance* fidelities, its *Rule* lists, templates, and examples, read from its markdown. *PracticeCatalogue* and *ActionCatalogue* name what CDD ships; *ApproachStage* is a stage of the approach. The whole model of this module, internals included, is `harness/guidance/.context/practice-guidance-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Let a practice be one class plus its markdown, with fidelities, rules, templates, and examples an agent can follow and a validator can check against.
 - **Seam (terms):** Guidance, PracticeGuidance, FidelityGuidance, GuidanceCollection, Rule, RulesCollection, Schema, PracticeCatalogue, ActionCatalogue, Action, ApproachStage, StageScope
-- **Dependencies (one-way):** harness/name, harness/marks, harness/agent_tools, harness/markdown, harness/installation, harness/hooks, harness/mcp
+- **Dependencies (one-way):** harness/name, harness/annotations, harness/agent_tools, harness/markdown, harness/installation, harness/hooks, harness/mcp
 
 ## Guidance
 
@@ -808,6 +1047,9 @@ Words and rules an agent follows, read from markdown beside the class.
 + every_rule(): list[Rule]
 + templates(): str
 + rules_after_edit(payload: Any): str
+---<<reads the annotation>>--> Hook
+---<<loads the prose it needs through>>--> Markdown
+---<<creates>>--> Name
 
 ## PracticeGuidance : Guidance
 
@@ -847,6 +1089,14 @@ One practice as a class plus its markdown: overview, shared rules, fidelities, t
 	-> read_paths
 + render_files(format: str, paths: list[str] | str, source: str | None = None): dict
 + scoped_markdown(): str
+---<<reads the annotation>>--> AgentToolSetAnnotation
+---<<creates>>--> Format
+---<<reads instructions of>>--> Guidance
+---<<loads the prose it needs through>>--> Markdown
+---<<creates>>--> MarkdownText
+---<<creates>>--> Name
+---<<loads>>--> RulesCollection
+---<<creates>>--> Schema
 
 ## FidelityGuidance : Guidance
 
@@ -879,6 +1129,13 @@ One fidelity of a practice, such as the story map: its stage, its outputs, and i
 + reports(): list[Path]
 + new_report_path(): Path
 + rules(): RulesCollection
+---<<creates>>--> Format
+---<<loads the prose it needs through>>--> Markdown
+---<<creates>>--> MarkdownText
+---<<creates>>--> Name
+---<<loads>>--> PracticeCatalogue
+---<<reads slug of>>--> PracticeGuidance
+---<<annotated with>>--> Rules
 
 ## GuidanceCollection : MarkdownCollection, Guidance
 
@@ -894,6 +1151,8 @@ A practice's fidelities, read from its markdown, published together.
 + rules(): RulesCollection
 + templates(): str
 + instructions(): str
+---<<creates>>--> FidelityGuidance
+---<<annotated with>>--> ToolSetCollectionAnnotation
 
 ## Rule
 
@@ -908,6 +1167,7 @@ One rule a practice checks, by its slug, with its body.
 + attribute_to(practice: str, tag: str = 'base', shared: bool = False): Rule
 + validate(): str
 + from_bullet(text: str, fidelity: str | None = None): Rule
+---<<creates>>--> Name
 
 ## RulesCollection : MarkdownCollection
 
@@ -925,6 +1185,12 @@ The rules of one practice or fidelity, and the paths they apply to.
 + formatted(): str
 + validate(): str
 + scan(paths: Any): Any
+---<<reads the annotation>>--> Hook
+---<<calls edited_path on>>--> HookPayload
+---<<keeps>>--> HookPayload
+---<<creates>>--> MarkdownText
+---<<loads>>--> Rule
+---<<creates>>--> ToolCall
 
 ## Schema
 
@@ -964,6 +1230,9 @@ Every action CDD ships, read from its action folders: each folder under `cdd_gui
 + names(): tuple[str, ...]
 + has(name: str): bool
 + action(name: str): Action | None
+---<<creates>>--> Action
+---<<reads constants of>>--> InstallDestination
+---<<creates>>--> Name
 
 ## Action
 
@@ -1011,7 +1280,7 @@ A *GuidanceAction* is an action, such as generate, run on the guidance a call na
 
 - **Purpose:** Give every guidance action the same way to take guidance, open its session, and run once per listed guidance.
 - **Seam (terms):** GuidanceAction, ActionWorksInNoSession
-- **Dependencies (one-way):** harness/name, harness/marks, harness/agent_tools, harness/guidance, harness/hooks
+- **Dependencies (one-way):** harness/name, harness/annotations, harness/agent_tools, harness/guidance, harness/hooks
 
 ## GuidanceAction
 
@@ -1038,6 +1307,18 @@ An action, such as generate, on the guidance a call names, such as stories-story
 + begin(guidance: GuidanceArg | None = None, action: str = ''): str
 + act_quickly(): str
 + inject_rules(payload: HookPayload): dict[str, Any]
+---<<raises>>--> ActionWorksInNoSession
+---<<reads the annotation>>--> AgentToolAnnotation
+---<<instantiates every action with>>--> AgentToolSet
+---<<creates>>--> GuidanceAgentOperation
+---<<reads tool input of>>--> HookPayload
+---<<reads project of>>--> HookPayload
+---<<reads constants of>>--> InstallDestination
+---<<creates>>--> Name
+---<<checks a practice name with>>--> PracticeCatalogue
+---<<calls session_named on>>--> ToolCall
+---<<creates>>--> ToolCall
+---<<annotated with>>--> Toast
 
 ## ActionWorksInNoSession : Exception
 
@@ -1088,6 +1369,14 @@ One graph.
 + filter_choices(practices: list[str], node_types: list[str]): Filter
 + source(node_id: str): NodeSource | None
 + return_nodes(filter: dict | None = None): list[FilteredNode]
+---<<loads>>--> GraphPractices
+---<<reads children of>>--> Node
+---<<reads name of>>--> Node
+---<<creates>>--> PatternOverlays
+---<<keeps>>--> PracticeCatalogue
+---<<creates>>--> PracticeGraph
+---<<keeps>>--> PracticeGraph
+---<<loads>>--> SavedGraph
 
 ## PracticeGraph
 
@@ -1121,6 +1410,11 @@ An edge is recorded only when both ends are already registered.
 + direct_parent(child: Node): Node | None
 + node_count(type: str): int
 + rebuild_tree(): None
+---<<reads overlay patterns of>>--> Graph
+---<<reads practices of>>--> Graph
+---<<calls serialize on>>--> Node
+---<<calls release on>>--> Node
+---<<creates>>--> Source
 
 ## Node
 
@@ -1152,6 +1446,9 @@ children is the list populate writes on this node.
 + populate(parent: Node | None = None): None
 + serialize(seen: set[str] | None = None, via: Node | None = None, stack: set[str] | None = None): ExplorerEntry
 + rule_category(): GraphRulesCollection | None
+---<<loads>>--> GraphPractices
+---<<calls edges_from on>>--> PracticeGraph
+---<<creates>>--> Source
 
 ## ModelNode : Node
 
@@ -1165,6 +1462,10 @@ Base model object for one practice.
 ----
 + semantic_type(): str
 + batch_schema_sync(): Iterator[None]
+---<<calls practice on>>--> Graph
+---<<calls schema_sync_held on>>--> Graph
+---<<keeps>>--> ModelChildren
+---<<creates>>--> Source
 
 ## ModelChildren : list
 
@@ -1177,6 +1478,8 @@ The list callers already append to.
 + extend(children: Iterable): None
 + insert(index: int, child): None
 + pop(index: int = -1): None
+---<<links>>--> ModelNode
+---<<calls unlink on>>--> ModelNode
 
 ## Source
 
@@ -1224,6 +1527,10 @@ What one practice gives the graph.
 + language_rules(language: str): dict[str, PracticeGraphRule]
 + checks(patterns: tuple[str, ...] = ()): dict[str, PracticeGraphRule]
 + checks_for(node: Node, patterns: tuple[str, ...]): dict[str, PracticeGraphRule]
+---<<finds overlays in>>--> GraphPractices
+---<<reads file language of>>--> Node
+---<<reads type of>>--> Node
+---<<loads and runs>>--> PracticeGraphRule
 
 ## GraphPractices
 
@@ -1236,6 +1543,11 @@ Every practice and pattern overlay registered with the graph.
 + named(name: str): GraphPractice
 + overlay(pattern: str): GraphOverlay
 + in_reading_order(names: list[str]): list[GraphPractice]
+---<<creates>>--> GraphOverlay
+---<<creates>>--> GraphPractice
+---<<keeps>>--> GraphPractice
+---<<checks a practice name with>>--> PracticeCatalogue
+---<<finds a practice module with>>--> PracticeCatalogue
 
 ## GraphOverlay
 
@@ -1272,6 +1584,7 @@ One graph rule: the node types it checks and what it reports on a node or on the
 + check(node, context: RuleCheckContext): list[str]
 + check_practice(context: RuleCheckContext): list[tuple[str, str]]
 + applies_to(node_type: str): bool
+---<<checks a node within>>--> RuleCheckContext
 
 ## RuleCheckContext
 
@@ -1308,6 +1621,7 @@ A rule broken at one place: the rule and the practice that checks it, the node i
 + from_data(data: dict): Violation
 + is_under(prefixes: list[str]): bool
 + in_file(location: str, file: Path, lines_before: int, lines_after: int): Violation
+---<<annotated with>>--> SourceFile
 
 ## SavedGraph
 
@@ -1326,6 +1640,8 @@ Every practice a folder's saved graph keeps, with the pattern overlays it was lo
 + holds(practice_roots: dict[str, Path], overlays: list[str]): bool
 + violations(practices: list[str] | None = None): list[Violation]
 + restored_graph(): Graph
+---<<calls practice on>>--> Graph
+---<<creates>>--> Graph
 
 # harness/installer
 
@@ -1366,6 +1682,20 @@ Publish every marked member of the toolsets a repository defines into one IDE fo
 + diagnose_instructions(): str
 + ensure_mcp_server_on_session_start(payload: HookPayload): str
 + ensure_mcp_server_after_agent_response(payload: HookPayload): str
+---<<reads destinations of>>--> AgentTool
+---<<loads>>--> AgentToolSet
+---<<calls child_toolsets on>>--> AgentToolSet
+---<<writes standing rule>>--> FileInstallation
+---<<creates>>--> FileInstallation
+---<<ensures>>--> HookDaemon
+---<<calls live_address on>>--> HookDaemon
+---<<creates>>--> HookInstallation
+---<<creates>>--> IdeLayout
+---<<reads constants of>>--> InstallDestination
+---<<tracks writes with>>--> Installation
+---<<keeps>>--> Installation
+---<<ensures import path>>--> RepositoryToolsets
+---<<collects>>--> RepositoryToolsets
 
 # harness/diagnostics
 
@@ -1384,6 +1714,9 @@ Probe workspace MCP tools on the install host (space, harness, tools — ping + 
 ----
 + for_call(call: ToolCall): AgentToolsDiagnostics
 + agent_tools_diagnostics(guidance: list[str] | None = None): str
+---<<creates>>--> AgentToolsProbe
+---<<creates>>--> Installer
+---<<creates>>--> ToolCall
 
 ## GuidanceDiagnostics
 
@@ -1394,6 +1727,10 @@ Probe installed guidance instructions and guidance-action MCP operations.
 ----
 + for_call(call: ToolCall): GuidanceDiagnostics
 + guidance_diagnostics(guidance: list[str] | None = None): str
+---<<loads>>--> GuidanceProbe
+---<<calls instructions on>>--> GuidanceProbe
+---<<creates>>--> Installer
+---<<creates>>--> ToolCall
 
 ## AgentToolsProbe
 
@@ -1409,6 +1746,7 @@ A probe of the workspace MCP tools one install deployed (space, harness, and too
 + ping(): str
 + invoke(): str
 + heavy_invoke(): str
+---<<loads>>--> McpHost
 
 ## GuidanceProbe
 
@@ -1422,6 +1760,9 @@ A probe of the guidance one install deployed, made for its Installer and the gui
 + matches(mcp_name: str): bool
 + instructions(): str
 + actions(): str
+---<<loads>>--> AgentToolSet
+---<<finds a practice in>>--> PracticeCatalogue
+---<<finds a toolset reference in>>--> PracticeCatalogue
 
 # harness/sub_agent
 
@@ -1438,6 +1779,8 @@ Launch a non-blocking sub-agent with custom instructions.
 ------
 ----
 + sub_agent(instructions: str, summary: str = ''): str
+---<<annotated with>>--> Mcp
+---<<annotated with>>--> Skill
 
 # harness/health
 
@@ -1459,6 +1802,7 @@ Report the parts of CDD that run outside this MCP host, so a person can see what
 ----
 + load(project: Path | str): ServerHealth
 + report(): ServerHealth
+---<<creates>>--> HookDaemon
 
 # harness/catalog_generator
 
@@ -1490,6 +1834,7 @@ The top-level entry point - the only class `generate_cdd_catalog.py` calls.
 + generate_project_approach(examples_json: str = '', project_title: str = ''): str
 + configure_project_approach(example_paths: list[str] | None = None): str
 + write_page(relative_path: str, html_text: str): Path
+---<<loads>>--> CatalogPractice
 
 ## CatalogPractice
 
@@ -1516,6 +1861,14 @@ One practice as the catalog shows it: the live `PracticeGuidance`, the catalog c
 + column_of(fidelity: FidelityGuidance): StageColumn | None
 + fidelity_in(column: StageColumn): FidelityGuidance | None
 + fidelity_href(fidelity: FidelityGuidance): str
+---<<reads stage of>>--> FidelityGuidance
+---<<reads name of>>--> FidelityGuidance
+---<<calls slice_heading on>>--> MarkdownText
+---<<calls headings on>>--> MarkdownText
+---<<creates>>--> Name
+---<<lists practices from>>--> PracticeCatalogue
+---<<calls domain_markdown_path on>>--> PracticeGuidance
+---<<leaves out what is annotated>>--> NoCatalog
 
 # harness/design_canvas
 
@@ -1589,6 +1942,18 @@ Local git clone: its branches and its commits.
 + close_worktree_command(): str
 + push_commit(message: str, untracked: bool = True, sync_remote: bool = True): Commit
 + push(hint: str = ''): str
+---<<creates>>--> Branch
+---<<creates>>--> FileManager
+---<<runs>>--> Git
+---<<calls succeeds on>>--> Git
+---<<raises>>--> RepoConnectError
+---<<loads>>--> Worktree
+---<<annotated with>>--> AgentToolSetAnnotation
+---<<annotated with>>--> LanguageAdapter
+---<<annotated with>>--> ToolSubject
+---<<annotated with>>--> Mcp
+---<<annotated with>>--> LongCall
+---<<annotated with>>--> Command
 
 ## Branch
 
@@ -1613,6 +1978,7 @@ Named branch on a *Repo* — checkout, commit, merge, and close.
 + land_on_default(): None
 + delete(): None
 + close(commit_message: str = 'branch: close'): None
+---<<asks whether a ref exists through>>--> Repo
 
 ## Worktree
 
@@ -1628,6 +1994,8 @@ One checkout of the repository: its folder and the branch checked out there.
 + from_checkout(path: Path | str, branch_name: str): Worktree
 + fetch_pull(): None
 + close(commit_message: str): Branch
+---<<reads name of>>--> Branch
+---<<calls branch_named on>>--> Repo
 
 # space/session
 
@@ -1661,6 +2029,13 @@ The work sessions of one checkout: open ones in `.sessions/{name}/`, closed ones
 	// main, which works on the whole repository, is the open session when no other is named
 + switch(name: str = '', workpath: Path | None = None): str
 + close(session: Session): None
+---<<creates>>--> Name
+---<<calls primary_root on>>--> Repo
+---<<creates>>--> Repo
+---<<loads>>--> Session
+---<<saves>>--> Session
+---<<registers its session opener with>>--> ToolCall
+---<<annotated with>>--> AgentToolAnnotation
 
 ## Session
 
@@ -1721,6 +2096,20 @@ One named piece of work in a project, kept in `.sessions/{name}/`.
 + list_cdrs(): str
 + write_cdr(slug: str, content: str = '', paths: list[str] | str | None = None): str
 + record_decisions_session(): str
+---<<checks a practice name with>>--> PracticeCatalogue
+---<<keeps>>--> PracticeCatalogue
+---<<creates>>--> PracticeSessionOutput
+---<<keeps>>--> PracticeSessionOutput
+---<<calls path_from_top on>>--> Repo
+---<<creates>>--> Repo
+---<<marks loop>>--> SessionLog
+---<<appends note>>--> SessionLog
+---<<closes>>--> Sessions
+---<<creates>>--> Sessions
+---<<annotated with>>--> Identity
+---<<annotated with>>--> Skill
+---<<annotated with>>--> AgentInstructionsAnnotation
+---<<annotated with>>--> NoSessionLog
 
 ## SessionLog
 
@@ -1753,6 +2142,9 @@ The log of one session: `session.log`, one timestamped line per action, tool cal
 + read_loop(number: int | None = None): str
 + append_note(note: str, loop: int | None = None, paths: list[str] | None = None): str
 + instructions(): str
+---<<creates>>--> LogEntry
+---<<reads session path of>>--> Session
+---<<reads workpath of>>--> Session
 
 ## LogEntry
 
@@ -1767,6 +2159,8 @@ One line of a session log: `<time> <verb> <words...>`, the words being the subje
 + loop_number: int | None
 ----
 + names(fidelity: FidelityGuidance): bool
+---<<reads practice guidance of>>--> FidelityGuidance
+---<<reads name of>>--> FidelityGuidance
 
 ## PracticeSessionOutput
 
@@ -1799,6 +2193,12 @@ What one practice has in one session: its guideline, the paths it reads, its gra
 + choose_root(path: str): PracticeSessionOutput
 + keep_root(root: Path): None
 + use_default_root(): PracticeSessionOutput
+---<<creates>>--> ContextConfig
+---<<loads>>--> Graph
+---<<loads>>--> PracticeCatalogue
+---<<calls work_in on>>--> PracticeGuidance
+---<<loads>>--> Session
+---<<saves fields>>--> Session
 
 ## SessionDiagnostics
 
@@ -1810,6 +2210,8 @@ Probe session logging (generate, validate, loops, chat pointers).
 + for_call(call: ToolCall): SessionDiagnostics
 + session_diagnostics(): str
 + write_to(installer: Any): str
+---<<creates>>--> Installer
+---<<creates>>--> ToolCall
 
 # space/kanban
 
@@ -1848,6 +2250,14 @@ Show every work session as a ticket on a kanban: Backlog, Discovery, Specificati
 + folders(path: str = ''): list[str]
 + help(practice: str): Help
 + practice(key: str): PracticeGuidance
+---<<creates>>--> BacklogItem
+---<<creates>>--> Name
+---<<lists practices from>>--> PracticeCatalogue
+---<<creates>>--> Repo
+---<<calls all on>>--> Sessions
+---<<loads>>--> Sessions
+---<<creates>>--> Stage
+---<<creates>>--> Ticket
 
 ## Column
 
@@ -1858,6 +2268,7 @@ Show every work session as a ticket on a kanban: Backlog, Discovery, Specificati
 + name: str
 + << aggregation >> cards: list[Card]
 ----
+---<<reads cards of>>--> Board
 
 ## Stage : Column
 
@@ -1880,6 +2291,9 @@ Show one stage of the board, the tickets at work in it, and how many it takes be
 ----
 + load(stage: str, project: Path | str): Stage
 + set_wip_limit(limit: int): Stage
+---<<reads title of>>--> ApproachStage
+---<<reads steps of>>--> ApproachStage
+---<<loads>>--> Board
 
 ## Card : ABC
 
@@ -1894,6 +2308,7 @@ Show one stage of the board, the tickets at work in it, and how many it takes be
 ----
 + move_next(): Card
 + move_previous(): Card
+---<<takes timestamps from>>--> SessionLog
 
 ## Ticket : Card
 
@@ -1934,6 +2349,17 @@ Show one work session as a unit of delivery and move it through the stages.
 + violations(): Report
 	-> FidelityProgress.report
 	-> Session.from_project
+---<<loads>>--> BacklogItem
+---<<writes if missing>>--> BacklogItem
+---<<loads>>--> Board
+---<<reads name of>>--> FidelityGuidance
+---<<reads practice guidance of>>--> FidelityGuidance
+---<<loads>>--> FidelityProgress
+---<<calls reopen on>>--> Session
+---<<closes>>--> Session
+---<<keeps>>--> Stage
+---<<annotated with>>--> Identity
+---<<annotated with>>--> DataField
 
 ## BacklogItem : Card
 
@@ -1956,6 +2382,9 @@ Hold an idea not yet started.
 	-> Session.keep_file
 + move_next(): Ticket
 + move_previous(): BacklogItem
+---<<loads>>--> Board
+---<<creates>>--> Name
+---<<creates>>--> Ticket
 
 ## FidelityProgress
 
@@ -1987,6 +2416,12 @@ Hold an idea not yet started.
 + help(): Help
 + files(): dict[str, list[FileEntry]]
 + with_violations(): FidelityProgress
+---<<calls has_declared_output on>>--> FidelityGuidance
+---<<calls files on>>--> FidelityGuidance
+---<<reads key of>>--> PracticeGuidance
+---<<reads steps of>>--> Stage
+---<<loads>>--> Ticket
+---<<lists the declared files as>>--> FileEntry
 
 # tools/file_manager
 
@@ -2010,6 +2445,9 @@ List and read the files under a session's roots, the folders its practices work 
 + read(path: str): FileText
 	// never reads a path outside the session's roots; such a path raises PathOutsideRootsError
 + find(pattern: str): list[Path]
+---<<creates>>--> FileText
+---<<raises>>--> PathOutsideRootsError
+---<<creates>>--> ToolCall
 
 ## FileEntry
 
@@ -2068,6 +2506,7 @@ Reach a Claude Code chat from outside it: list the chats that are connected, and
 + finish(message: str): Chat
 + resend(message: str): Chat
 + remove(message: str): Chat
+---<<loads>>--> ChatPointer
 
 # tools/echo
 
@@ -2085,6 +2524,8 @@ Echo wrapped action instructions inside a DO-NOT-FOLLOW fence so the user can in
 ----
 + fence(body: str): str
 + echo_session(): str
+---<<annotated with>>--> Mcp
+---<<annotated with>>--> NoCatalog
 
 # tools/granola
 
@@ -2108,6 +2549,7 @@ Organize Granola notes into folders and capture notes as independent .context fi
 + write_note_context(folder: str, note_id: str, title: str, date: str, url: str, content: str): str
 + organize(scope: str = 'unfiled'): str
 + context(notes: str, folder: str): str
+---<<creates>>--> Name
 
 # tools/prompt_log
 
@@ -2130,6 +2572,11 @@ Audit what Cursor sends the model — one `@Hook` per event, each writing that e
 + pre_tool_use(payload: HookPayload): dict
 + subagent_start(payload: HookPayload): dict
 + after_agent_response(payload: HookPayload): dict
+---<<reads project of>>--> HookPayload
+---<<reads tool name of>>--> HookPayload
+---<<creates>>--> Sessions
+---<<annotated with>>--> Hooks
+---<<annotated with>>--> Hook
 
 # tools/prompt_notify
 
@@ -2137,7 +2584,7 @@ Audit what Cursor sends the model — one `@Hook` per event, each writing that e
 
 - **Purpose:** Make the guidance an agent is following visible to the person while it runs.
 - **Seam (terms):** PromptNotify
-- **Dependencies (one-way):** harness/name, harness/marks, harness/agent_tools, harness/guidance, harness/installation, harness/hooks, harness/installer, space/session
+- **Dependencies (one-way):** harness/name, harness/annotations, harness/agent_tools, harness/guidance, harness/installation, harness/hooks, harness/installer, space/session
 
 ## PromptNotify
 
@@ -2154,6 +2601,18 @@ Echo detected action, practice, fidelity, and guideline names on preToolUse.
 + show_toast(toast: str, workspace_roots: list[Path]): list[Path]
 + show_ide_toast(echo: str, workspace_roots: list[Path | str]): list[Path]
 + install_ide_toast_extension(): Path
+---<<lists action names from>>--> ActionCatalogue
+---<<loads>>--> AgentToolSet
+---<<reads workspace roots of>>--> HookPayload
+---<<reads tool name of>>--> HookPayload
+---<<registers its toaster with>>--> HookServer
+---<<creates>>--> Installer
+---<<creates>>--> Name
+---<<lists practices from>>--> PracticeCatalogue
+---<<takes timestamps from>>--> SessionLog
+---<<toasts the calls annotated>>--> Toast
+---<<annotated with>>--> Hook
+---<<annotated with>>--> NoCatalog
 
 # cdd_guidance/actions
 
@@ -2174,6 +2633,10 @@ Write the artifacts each listed guidance asks for at its current fidelity.
 + add_generate_header_to_generated(): str
 + generate_output(): str
 + generate_fixes_from_validate(): str
+---<<creates>>--> Format
+---<<reads fidelities of>>--> PracticeGuidance
+---<<reads format of>>--> PracticeGuidance
+---<<renders the earlier fidelity with>>--> Render
 
 ## Validate : GuidanceAction
 
@@ -2185,6 +2648,10 @@ Check artifacts against each listed guidance's rules and save the report.
 + validate(guidance: GuidanceArg, rule: Rule | None = None, graph: bool | str | list[str] | None = None, paths: list[str] | None = None): str
 + listed_rules(): str
 + create_rule(guidance: GuidanceArg, failed: str = '', wanted: str = ''): str
+---<<checks a practice name with>>--> PracticeCatalogue
+---<<validates with>>--> Rule
+---<<annotated with>>--> NoDeploy
+---<<annotated with>>--> Skill
 
 ## Document : GuidanceAction
 
@@ -2193,6 +2660,7 @@ Record what already exists for each listed guidance without correcting it.
 ------
 ----
 + document(guidance: GuidanceArg, paths: list[str]): str
+---<<annotated with>>--> Skill
 
 ## Render : GuidanceAction
 
@@ -2211,6 +2679,8 @@ Validate, fix from the report, and validate again.
 ------
 ----
 + satisfy(guidance: GuidanceArg): str
+---<<loads>>--> AgentInstructions
+---<<reads generate fixes from validate of>>--> Generate
 
 ## Sketch : GuidanceAction
 
@@ -2226,6 +2696,7 @@ Sketch a solution interactively before generating the formal artifact.
 + list_sketches(module: str = ''): str
 + review_sketch(): str
 + sketch(guidance: GuidanceArg): str
+---<<grills with>>--> GrillContext
 
 ## SketchOutline
 
@@ -2236,6 +2707,8 @@ A sketch whose hierarchy is carried by markdown headings above fenced detail.
 ----
 + holds(lens: SketchLens): bool
 + body_for(lens: SketchLens): str
+---<<lists every lens with>>--> SketchLens
+---<<calls opens on>>--> SketchLens
 
 ## SketchLens
 
@@ -2248,6 +2721,8 @@ The section of a sketch that one practice writes, opened by the headings the pra
 + of(practice: str): SketchLens
 + every(): tuple[SketchLens, ...]
 + opens(title: str): bool
+---<<finds a practice class in>>--> PracticeCatalogue
+---<<keeps>>--> PracticeCatalogue
 
 ## Partition : GuidanceAction
 
@@ -2270,6 +2745,7 @@ Grill, then generate and validate one small slice at a time.
 ----
 + mark_iterate_round(): str
 + iterate(guidance: GuidanceArg): str
+---<<grills with>>--> GrillContext
 
 ## GrillContext : GuidanceAction
 
@@ -2293,6 +2769,7 @@ Repair a guidance's artifact for one violation, and re-check a repair theme.
 + repair_loop(): str
 + repair(guidance: GuidanceArg, asset: str = '', violation: str = ''): str
 + verify_fix(guidance: GuidanceArg, theme: str): str
+---<<annotated with>>--> Mcp
 
 ## Diagnose : GuidanceAction
 
@@ -2301,6 +2778,7 @@ Disciplined diagnosis loop for hard bugs and performance regressions.
 ------
 ----
 + diagnose(guidance: GuidanceArg | None = None): str
+---<<annotated with>>--> SubAgentAnnotation
 
 # cdd_guidance/practices/clean_engineering
 
@@ -2319,6 +2797,8 @@ The Clean Engineering practice: modules, model, and code.
 + << composition >> drawio: Drawio
 ----
 + generate_output(): str
+---<<renders>>--> Drawio
+---<<creates>>--> Drawio
 
 ## CleanEngineeringGraph : GraphPractice
 
@@ -2329,6 +2809,7 @@ Clean Engineering's nodes, its rules, and the draw.io rules it checks on a diagr
 + own_rules(): dict
 + language_rules(language: str): dict
 + read(practice: PracticeGraph): None
+---<<registers with>>--> GraphPractices
 
 ## CleanEngineeringModel : OoadNode
 
@@ -2355,6 +2836,10 @@ One class model that every format reads and writes: modules holding classes.
 + get_next_module_from_file(): Module
 + load_module(source: Module): Module
 + child_collections(source: OoadNode): list[ChildCollectionPair]
+---<<creates>>--> ModelChildren
+---<<creates>>--> Module
+---<<keeps>>--> Module
+---<<keeps>>--> OoadClass
 
 ## Module : OoadNode
 
@@ -2389,6 +2874,10 @@ A named module boundary grouping closely related classes.
 + import_targets(text: str, file: Path, root: Path): list[str]
 + load_folder_facts(folder: Path): None
 + child_collections(source: OoadNode): list[ChildCollectionPair]
+---<<creates>>--> CodeBody
+---<<creates>>--> ModelChildren
+---<<creates>>--> OoadClass
+---<<keeps>>--> OoadClass
 
 ## OoadClass : OoadNode
 
@@ -2425,6 +2914,10 @@ A class in the model: what it remembers, what it does, and how it relates.
 + has_more_relationship(): bool
 + load_next_relationship(): Relationship
 + get_next_relationship_from_file(): Relationship
+---<<creates>>--> ModelChildren
+---<<keeps>>--> ModelChildren
+---<<keeps>>--> Operation
+---<<keeps>>--> Property
 
 ## Property : OoadNode
 
@@ -2469,6 +2962,8 @@ Something a class does: its parameters, return, interactions, and invariants.
 + get_next_parameter_from_file(): Parameter
 + load_parameter(source: Parameter): Parameter
 + child_collections(source: OoadNode): list[ChildCollectionPair]
+---<<creates>>--> CodeBody
+---<<creates>>--> ModelChildren
 
 ## MarkdownCleanEngineeringModel : CleanEngineeringModel
 
@@ -2485,6 +2980,15 @@ The markdown format of the class model: a `#` heading per module and a `##` card
 + render(canonical: CleanEngineeringModel | None = None, previous: str | None = None): str
 	-> translate_from
 + from_workspace(root: Path): MarkdownCleanEngineeringModel | None
+---<<renders cards>>--> CleanEngineeringModel
+---<<reads name of>>--> Module
+---<<reads sequential order of>>--> Module
+---<<reads name of>>--> OoadClass
+---<<reads sequential order of>>--> OoadClass
+---<<creates>>--> Operation
+---<<keeps>>--> Operation
+---<<creates>>--> Property
+---<<keeps>>--> Property
 
 ## PythonCleanEngineeringModel : CodeCleanEngineeringModel
 
@@ -2501,6 +3005,17 @@ The Python format of the class model.
 + constructor_lines(oclass: OoadClass, constructor: Operation | None, body: list[str]): list[str]
 + signature(operation: Operation, contract: bool): list[str]
 + block_close(): list[str]
+---<<calls every_class on>>--> CleanEngineeringModel
+---<<calls lines_in on>>--> CodeBody
+---<<creates>>--> CodeBody
+---<<reads name of>>--> Module
+---<<reads sequential order of>>--> Module
+---<<calls declared_bases on>>--> OoadClass
+---<<creates>>--> OoadClass
+---<<loads>>--> Operation
+---<<creates>>--> Operation
+---<<creates>>--> Property
+---<<keeps>>--> Property
 
 ## CodeLanguage
 
@@ -2533,6 +3048,8 @@ The statements inside one operation, test, or step, kept with the language they 
 + mentions(word: str): bool
 + lines_in(language: CodeLanguage, indent: str, unfinished: str): list[str]
 + in_language_of(other: CodeBody, language: CodeLanguage): CodeBody
+---<<calls is_unfinished on>>--> CodeLanguage
+---<<calls comment on>>--> CodeLanguage
 
 ## WrittenBlock
 
@@ -2547,6 +3064,7 @@ The source lines around one block of code that no node holds, kept exactly as re
 + inside_for(body: CodeBody): list[str] | None
 + lead_body(): CodeBody
 + closing_body(): CodeBody
+---<<creates>>--> CodeBody
 
 ## CallGraphEntry
 
@@ -2604,6 +3122,7 @@ A box to place or route around for a view with no diagram node of its own, such 
 + y: float
 + << composition >> geometry: Geometry
 ----
+---<<creates>>--> Geometry
 
 ## DiagramArrow
 
@@ -2633,6 +3152,9 @@ Routes every arrow, retrying the ones that crossed until a pass finds nothing be
 ----
 + route(): list[DiagramArrow]
 	// an arrow never passes through a card or runs along another arrow
+---<<keeps>>--> DiagramArrow
+---<<reads x of>>--> Geometry
+---<<reads y of>>--> Geometry
 
 # cdd_guidance/practices/stories
 
@@ -2650,6 +3172,8 @@ The Stories practice: story map, scenarios, and acceptance tests.
 ------
 ----
 + read_paths(paths: list[str] | str, source: str | None = None): None
+---<<creates>>--> Format
+---<<loads>>--> StoryModel
 
 ## StoriesGraph : GraphPractice
 
@@ -2660,6 +3184,11 @@ The Stories practice's nodes and its rules.
 + align(node): None
 + read(practice: PracticeGraph): None
 + link(graph: Graph): None
+---<<reads practices of>>--> Graph
+---<<registers with>>--> GraphPractices
+---<<reads graph of>>--> PracticeGraph
+---<<reads source root of>>--> PracticeGraph
+---<<loads>>--> StoryModel
 
 ## StoryModel : StoryNode
 
@@ -2677,6 +3206,8 @@ One story map: its epics and increments.
 + append_epic(epic: Epic): None
 + append_increment(increment: Increment): None
 + clone(): StoryModel
+---<<keeps>>--> Epic
+---<<creates>>--> ModelChildren
 
 ## Epic : StoryNode
 
@@ -2700,6 +3231,8 @@ An epic.
 + span_columns(): int
 + diagram_span_columns(): int
 + tree_depth(): int
+---<<creates>>--> ModelChildren
+---<<keeps>>--> Story
 
 ## Story : StoryNode
 
@@ -2714,6 +3247,8 @@ One story under an epic, with its scenarios.
 ----
 + load_map_facts(): None
 + clone(): Story
+---<<creates>>--> ModelChildren
+---<<keeps>>--> Scenario
 
 ## Scenario : StoryNode
 
@@ -2730,6 +3265,11 @@ Behaviour walk-through under a story.
 + when_then_runs(): list[tuple]
 + load_map_facts(): None
 + clone(): Scenario
+---<<creates>>--> ModelChildren
+---<<creates>>--> Step
+---<<keeps>>--> Step
+---<<reads constants of>>--> StepType
+---<<keeps its examples as>>--> Example
 
 ## Step : StoryNode
 
@@ -2749,6 +3289,10 @@ One Given, When, or Then line of a scenario.
 + callees: list[str]
 ----
 + clone(): Step
+---<<creates>>--> CodeBody
+---<<creates>>--> ModelChildren
+---<<keeps>>--> ModelChildren
+---<<reads value of>>--> StepType
 
 ## StepType : str, Enum
 
@@ -2780,6 +3324,9 @@ Story map whose epics and stories are the diagram types.
 + story_y: int
 ----
 + sub_epic_y(depth: int): int
+---<<reads nested row y of>>--> DiagramEpic
+---<<reads bar height of>>--> DiagramEpic
+---<<makes its stories as>>--> DiagramStory
 
 ## DiagramEpic : Epic, DiagramStoryNode
 
@@ -2820,6 +3367,8 @@ The DDD practice: bounded context, model, and tactics.
 + Ddd(fidelity: str = 'bounded_context', format: str | None = None, stage: str | None = None)
 ------
 ----
+---<<creates>>--> Format
+---<<creates>>--> MarkdownCleanEngineeringModel
 
 ## DddGraph : GraphPractice
 
@@ -2829,6 +3378,8 @@ DDD's nodes, read after Clean Engineering's classes, and its rules with Clean En
 ----
 + own_rules(): dict
 + read(practice: PracticeGraph): None
+---<<registers with>>--> GraphPractices
+---<<loads>>--> GraphPractices
 
 # cdd_guidance/practices/ux
 
@@ -2847,6 +3398,7 @@ The UX practice: information architecture, mockup, and front-end code.
 ----
 + ensure_javascript(practice: str, source_format: str, content: Any): dict
 + javascript_practice(key: str): PracticeGuidance
+---<<loads>>--> PracticeCatalogue
 
 ## UxGraph : GraphPractice
 
@@ -2854,6 +3406,7 @@ The UX practice's node types and its rules.
 
 ------
 ----
+---<<registers with>>--> GraphPractices
 
 # cdd_guidance/practices/bdd
 
@@ -2879,6 +3432,10 @@ BDD's describe trees, linked to the Clean Engineering members each observation d
 ----
 + read(practice: PracticeGraph): None
 + link(graph: Graph): None
+---<<reads practices of>>--> Graph
+---<<registers with>>--> GraphPractices
+---<<reads source root of>>--> PracticeGraph
+---<<reads graph of>>--> PracticeGraph
 
 # cdd_guidance/practices/agent_bdd
 
@@ -2896,6 +3453,8 @@ The agent BDD practice: mamba specs that drive a real agent.
 ------
 ----
 + generate_output(): str
+---<<creates>>--> Bdd
+---<<creates>>--> Generate
 
 # cdd_guidance/patterns
 
@@ -2913,6 +3472,7 @@ Implementation fidelity for a domain-module-organized TypeScript stack on an alr
 ------
 + story_test_folder: str | None
 ----
+---<<creates>>--> Stories
 
 ## LernDomainDriven : DomainDrivenStack
 
@@ -2997,6 +3557,14 @@ Convert a folder of documents to markdown and delegate partitioning to selected 
 + complete_capture(repo_path: str, missing_pages: list[str], surface: str = 'web', capture_repo: str = '', base_url: str = ''): CaptureResult
 + capture_from_live_app(repo_path: str, capture_repo: str = '', surface: str = 'web'): str
 + capture_from_documents(folder_path: str, indexers: list[str] | None = None, first: str = ''): str
+---<<raises>>--> ActionWorksInNoSession
+---<<creates>>--> CleanEngineering
+---<<creates>>--> ContextIndex
+---<<creates>>--> Ddd
+---<<creates>>--> Partition
+---<<creates>>--> Stories
+---<<reads session of>>--> ToolCall
+---<<creates>>--> Ux
 
 ## ContextIndex
 

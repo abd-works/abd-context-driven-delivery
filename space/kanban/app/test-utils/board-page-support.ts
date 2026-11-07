@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 
 import type { CddConnection } from '@cdd/cdd-connection'
 import type { CddApi } from '@cdd/cdd-shared'
-import { ChatClientGenerated, type ChatCommandData } from '@cdd/tools/chat/chat'
+import { ChatClientGenerated, type ChatCommandData } from '@cdd/harness/chat/chat'
 import { createApp } from '../packages/session-board/app'
 import { BoardUpdate } from '@src/session-board/board-update'
 import type { Send } from '@src/kanban/board/board-api'

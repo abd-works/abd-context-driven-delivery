@@ -1,4 +1,4 @@
-import type { ChatCommandData } from '@cdd/tools/chat/chat'
+import type { ChatCommandData } from '@cdd/harness/chat/chat'
 import type { EngineInterface } from 'claude-code'
 
 import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../chat-command'

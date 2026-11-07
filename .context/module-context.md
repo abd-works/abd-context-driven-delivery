@@ -1,6 +1,6 @@
 # harness
-*Harness* is the framework every other part of CDD is built on: it writes one name in every case (harness/name), starts and stops long-running processes (harness/process), holds the annotations an author types and the channels they publish to (harness/annotations), keeps a class's words in markdown beside it (harness/markdown), turns an ordinary class into operations an agent can use (harness/agent_tools), gives each channel its writer and finds a repository's toolsets (harness/installation), publishes to every chat through the one `cdd` MCP server (harness/mcp) and the hook server (harness/hooks), installs all of it into each IDE (harness/installer), makes a practice one class plus its markdown (harness/guidance), gives every guidance action the same start (harness/guidance_actions), and reads a working copy into graphs that rules check (harness/graph). The modules are listed lowest first: each depends only on modules before it. Above them, harness/diagnostics probes an install and harness/sub_agent publishes the sub-agent hand-off.
-On top of the framework sit its applications: the chat's board plugin and server health band (harness/chat-ui/pane, harness/health), the generated catalog (harness/catalog_generator), and Claude Design canvases (harness/design_canvas). Each of these folders owns its own card in `{folder}/.context/module-context.md`.
+*Harness* is the framework every other part of CDD is built on: it writes one name in every case (harness/name), starts and stops long-running processes (harness/process), holds the annotations an author types and the channels they publish to (harness/annotations), keeps a class's words in markdown beside it (harness/markdown), turns an ordinary class into operations an agent can use (harness/agent_tools), gives each channel its writer and finds a repository's toolsets (harness/installation), publishes to every chat through the one `cdd` MCP server (harness/mcp) and the hook server (harness/hooks), installs all of it into each IDE (harness/installer), makes a practice one class plus its markdown (harness/guidance), gives every guidance action the same start (harness/guidance_actions), and reads a working copy into graphs that rules check (harness/graph). The modules are listed lowest first: each depends only on modules before it. Above them, harness/diagnostics probes an install and harness/chat lets the board reach a live Claude Code chat and send it a command.
+On top of the framework sit its applications: the chat's board plugin and server health band (harness/chat-ui/pane; the report it shows comes from harness/diagnostics), the generated catalog (harness/catalog_generator), and Claude Design canvases (harness/design_canvas). Each of these folders owns its own card in `{folder}/.context/module-context.md`.
 
 - **Purpose:** Give practices, actions, and tools one framework for publishing classes to agents and IDEs, and the applications that show the work.
 - **Seam (terms):** the annotations `@agent_toolset`, `@agent_tool`, `@agent_instructions`, `@markdown`, `@mcp`, `@skill`, `@command`, `@rules`, `@hook`; *PracticeGuidance*; *GuidanceAction*; *Graph*; `python scripts/install.py --ide {IDE}`
@@ -9,19 +9,6 @@ On top of the framework sit its applications: the chat's board plugin and server
 ## Constraint
 
 Import a child package (`harness.agent_tools`, `harness.guidance`, ...); this folder adds no seam of its own. Keep practice-specific parsing and rules in the practice that owns them, not in the framework, so the framework does not have to change for every practice. Leave `harness/` off `PYTHONPATH`, so `import mcp` loads the MCP SDK.
-
----
-
-# tools
-*Tools* are standalone toolsets an agent or an application calls beside the practices: *Chat* (`tools/chat`) sends a prompt or a command to a live Claude Code chat; *FileManager* (`tools/file_manager`) lists and reads the files under a session's roots; *Echo* (`tools/echo`) shows an action's instructions inside a do-not-follow fence; *Granola* (`tools/granola`) files meeting notes and brings them into a folder's `.context`; *PromptLog* (`tools/prompt_log`) and *PromptNotify* (`tools/prompt_notify`) are hooks that log what the IDE sends the model and show which action, practice, or fidelity was used. Each child folder that has a card keeps it in `{folder}/.context/module-context.md`.
-
-- **Purpose:** Hold the toolsets that are useful on their own, outside any one practice or action.
-- **Seam (terms):** Chat, FileManager, Echo, Granola, PromptLog, PromptNotify; the MCP operations `chat.*`, `file-manager.*`, `echo.*`, `granola.*`
-- **Dependencies (one-way):** harness (agent_tools, installation, mcp, hooks, annotations, guidance, installer, name), space/session (*PromptLog* writes in the open session's log folder). space/session, space/repo, and space/kanban import tools/file_manager, which imports nothing of space: it opens its session through *ToolCall*.
-
-## Constraint
-
-Import repository and session types from `space`, never from a tool, so a tool stays something other modules may use rather than something they depend on for state.
 
 ---
 

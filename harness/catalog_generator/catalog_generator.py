@@ -166,7 +166,7 @@ class CatalogPractice:
 
 
 # The utilities are the toolsets the installer finds in ``space`` (sessions, the board, the repository) and ``tools``
-# (chat, echo, Granola, the file manager), unless annotated @noCatalog. The harness's own toolsets are the framework the
+# (the sub-agent hand-off, Granola, the file manager), unless annotated @noCatalog. The harness's own toolsets are the framework the
 # practices and actions run on, and the guidance under ``cdd_guidance`` has its own pages.
 _UTILITY_PACKAGES = ("space.", "tools.")
 
@@ -759,9 +759,18 @@ class UtilityPage(DetailPage):
         toolset_class = self.utility.toolset_class
         folder = Path(inspect.getfile(toolset_class)).resolve().parent
         purpose = f"<p>{html.escape((toolset_class.__doc__ or '').strip())}</p>"
-        overview = self._markdown_file(folder / ".context" / "module-context.md", purpose)
+        overview = self._markdown_file(self._module_card(folder), purpose)
         guide = self._markdown_file(folder / f"{folder.name}.md", "<p>No dedicated guide.</p>")
         return self._header("Utility", self.utility.name) + self._section("Module overview", overview) + self._section("Guide", guide)
+
+    def _module_card(self, folder: Path) -> Path:
+        """The card of the module the toolset's folder belongs to: its own, or the nearest one above it, since several
+        small toolsets, such as those under ``tools``, share one module card."""
+        for candidate in (folder, *folder.parents):
+            card = candidate / ".context" / "module-context.md"
+            if card.is_file() or candidate == _REPO_ROOT:
+                return card
+        return folder / ".context" / "module-context.md"
 
 
 # -- The project a catalog is generated for -------------------------------------

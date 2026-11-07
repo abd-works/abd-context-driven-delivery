@@ -1,7 +1,7 @@
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
 import type { BoardData } from '@cdd/space/kanban/board'
 import type { TicketData } from '@cdd/space/kanban/ticket'
-import type { ChatData } from '@cdd/tools/chat/chat'
+import type { ChatData } from '@cdd/harness/chat/chat'
 
 import { BacklogDraftClient, BacklogItemClient } from '../backlog-item/backlog-item-client'
 import { ChatClient, isWorkingIn } from '../chat/chat-client'

@@ -1,4 +1,4 @@
-import { ChatClientGenerated, type ChatData } from '@cdd/tools/chat/chat'
+import { ChatClientGenerated, type ChatData } from '@cdd/harness/chat/chat'
 
 import type { BoardApi } from '../board/board-api'
 import type { BoardStore } from '../board/board-store'

@@ -326,8 +326,8 @@ with description("a language adapter"):
             with context("with a field that takes one of a few named words"):
                 with it("should allow only those words"):
                     install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
-                    _install(install_path, ("tools.chat.chat:Chat",))
-                    chat = (install_path / _ADAPTERS / "tools/chat/chat.ts").read_text(encoding="utf-8")
+                    _install(install_path, ("harness.chat.chat:Chat",))
+                    chat = (install_path / _ADAPTERS / "harness/chat/chat.ts").read_text(encoding="utf-8")
                     expect(chat).to(contain("  state: 'waiting' | 'taken' | 'shown' | 'done' | 'failed'\n"))
 
         with description("its shared base"):

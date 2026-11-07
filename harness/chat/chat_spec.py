@@ -14,7 +14,7 @@ for _root in (_REPO_ROOT, _REPO_ROOT / "tools"):
 from expects import be_empty, equal, expect, have_keys, raise_error
 from mamba import after, before, context, description, it
 
-from tools.chat.chat import Chat, ChatNotConnectedError
+from harness.chat.chat import Chat, ChatNotConnectedError
 from harness.installation.destination import data_of
 
 CHAT = "ad6c04ab-chat"

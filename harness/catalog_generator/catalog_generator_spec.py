@@ -99,14 +99,14 @@ with description("Load Context Tool And Utility Registry"):
 
         with it("shows the toolsets in space and tools as utilities"):
             names = [utility.toolset_class.__name__ for utility in self.utilities]
-            expect(names).to(contain("Repo", "Session", "Board", "Chat", "FileManager"))
+            expect(names).to(contain("Repo", "Session", "Board", "FileManager"))
 
         with it("names each utility in kebab case for its page"):
             expect([utility.href for utility in self.utilities]).to(contain("tools/file-manager.html"))
 
         with it("leaves the harness's own toolsets out"):
             names = {utility.toolset_class.__name__ for utility in self.utilities}
-            expect(names & {"Graph", "Catalog", "Guidance", "GuidanceAction"}).to(equal(set()))
+            expect(names & {"Graph", "Catalog", "Guidance", "GuidanceAction", "Chat"}).to(equal(set()))
 
         with it("omits utilities annotated noCatalog"):
             names = {utility.toolset_class.__name__ for utility in self.utilities}

@@ -7,7 +7,7 @@ A hook's result can carry a `toast`, a short notice the person sees beside the c
 
 - **Purpose:** Let a toolset member answer IDE events, and keep one hook server per checkout that runs every hooked member and merges their answers.
 - **Seam (terms):** Hook, Hooks, HookPayload, HookResult, HookInstallation, HooksFileUnreadable, HookDaemon, HookServer, `HookServer.show_toasts_with`, `rules_toast`, `TOAST_ARROW`; the annotations `@hook("event")` and `@Hooks(disabled=True)`
-- **Dependencies (one-way):** harness/agent_tools (the hook server reads the open session through *ToolCall*, as every tool call does), harness/annotations (*Destination*), harness/installation (*Installation*, *RepositoryToolsets*, and *ContextConfig*, which says which guideline applies to an edited file), harness/process (the daemon starts its process with *BackgroundStart* and *PythonInterpreter*, and stops it with *StoppableProcess*). harness/guidance, harness/guidance_actions, harness/health, and harness/installer import this module; it imports none of them and nothing above the framework.
+- **Dependencies (one-way):** harness/agent_tools (the hook server reads the open session through *ToolCall*, as every tool call does), harness/annotations (*Destination*), harness/installation (*Installation*, *RepositoryToolsets*, and *ContextConfig*, which says which guideline applies to an edited file), harness/process (the daemon starts its process with *BackgroundStart* and *PythonInterpreter*, and stops it with *StoppableProcess*). harness/guidance, harness/guidance_actions, harness/diagnostics, and harness/installer import this module; it imports none of them and nothing above the framework.
 
 ## Constraint
 
