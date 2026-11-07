@@ -218,8 +218,6 @@ class OoadClass(OoadNode):
             self._operations.extend(operations)
         for relationship in relationships or []:
             self.place_relationship(relationship)
-        self.property_nodes: List["Property"] = []
-        self.operation_nodes: List["Operation"] = []
 
     @property
     def properties(self) -> List["Property"]:
@@ -261,15 +259,10 @@ class OoadClass(OoadNode):
         self.bold_invariant_lines = bullets.get("bold_invariant_lines", [])
 
     def update_self(self, source: "OoadNode") -> None:
+        """Copy what the class itself says; its properties and operations are reconciled as children."""
         assert isinstance(source, OoadClass)
         self.intent = source.intent
-        self.properties = list(source.properties)
-        self.operations = list(source.operations)
         self.collaborators = list(source.collaborators)
-        if not source.property_nodes and not source.operation_nodes:
-            self.sync_tree_from_legacy()
-        elif not source.properties and not source.operations:
-            self.sync_legacy_from_tree()
 
     def clone(self) -> "OoadClass":
         cloned = type(self)(
@@ -281,8 +274,6 @@ class OoadClass(OoadNode):
         )
         cloned.properties = [item.clone() for item in self.properties]
         cloned.operations = [item.clone() for item in self.operations]
-        cloned.property_nodes = [item.clone() for item in self.property_nodes]
-        cloned.operation_nodes = [item.clone() for item in self.operation_nodes]
         return cloned
 
     def as_record(self) -> dict:
@@ -296,67 +287,32 @@ class OoadClass(OoadNode):
             "collaborators": list(self.collaborators),
         }
 
-    def load_property_field(self, source: "Property") -> "Property":
-        return self.load_property(source)
-
-    def load_operation_field(self, source: "Operation") -> "Operation":
-        return self.load_operation(source)
-
     def load_relationship(self, source: Relationship) -> Relationship:
         loaded = Relationship(target=source.target)
         loaded.update_self(source)
         return loaded
 
     def load_property(self, source: "Property") -> "Property":
+        """A new property for this class's channel, filled from source."""
         from cdd_guidance.practices.clean_engineering.model.property import Property as PropertyNode
 
-        loaded = PropertyNode(
-            source.name,
-            source.sequential_order,
-            type_hint=source.type_hint,
-            description=source.description,
-        )
-        loaded.access = getattr(source, "access", "both")
-        loaded.stereotype = getattr(source, "stereotype", "") or ""
-        loaded.cardinality = getattr(source, "cardinality", "") or ""
-        loaded.origin = getattr(source, "origin", "") or ""
-        source_relationship = getattr(source, "relationship", None)
-        loaded.relationship = source_relationship.clone() if source_relationship is not None else None
-        if loaded.relationship is None:
-            from cdd_guidance.practices.clean_engineering.model.property import bind_property_relationship
-
-            bind_property_relationship(loaded)
-        loaded.invariants = [item.clone() for item in getattr(source, "invariants", [])]
+        loaded = PropertyNode(source.name, source.sequential_order)
+        loaded.update_self(source)
         return loaded
 
     def load_operation(self, source: "Operation") -> "Operation":
+        """A new operation for this class's channel, filled from source."""
         from cdd_guidance.practices.clean_engineering.model.operation import Operation as OperationNode
 
-        node = OperationNode(
-            source.name,
-            source.sequential_order,
-            return_type=source.return_type,
-            description=source.description,
-            callees=list(source.callees),
-            parameters=[parameter.clone() for parameter in source.parameters],
-        )
-        node.invariants = [item.clone() for item in getattr(source, "invariants", [])]
-        node.body = source.body
-        return node
+        loaded = OperationNode(source.name, source.sequential_order)
+        loaded.update_self(source)
+        return loaded
 
     def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:
         assert isinstance(source, OoadClass)
         return [
-            ChildCollectionPair(
-                self_children=self.property_nodes,
-                source_children=source.property_nodes,
-                load=self.load_property,
-            ),
-            ChildCollectionPair(
-                self_children=self.operation_nodes,
-                source_children=source.operation_nodes,
-                load=self.load_operation,
-            ),
+            ChildCollectionPair(self.properties, source.properties, self.load_property),
+            ChildCollectionPair(self.operations, source.operations, self.load_operation),
         ]
 
     def load_properties(self) -> None:
@@ -399,7 +355,6 @@ class OoadClass(OoadNode):
 
     def place_relationship(self, relationship: Relationship) -> None:
         """Put this relationship on every property whose type names the target."""
-        from cdd_guidance.practices.clean_engineering.model.property import bind_property_relationship
         from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
 
         if (relationship.kind or "").lower() == "inheritance":
@@ -413,7 +368,7 @@ class OoadClass(OoadNode):
                 prop.cardinality = relationship.cardinality
             if relationship.description and not getattr(prop, "origin", ""):
                 prop.origin = relationship.description
-            bind_property_relationship(prop)
+            prop.derive_relationship()
 
     def load_relationships(self) -> None:
         while self.has_more_relationship():
@@ -427,23 +382,6 @@ class OoadClass(OoadNode):
 
     def get_next_relationship_from_file(self) -> Relationship:
         raise NotImplementedError(f"{type(self).__name__} must implement get_next_relationship_from_file")
-
-    def sync_tree_from_legacy(self) -> None:
-        from cdd_guidance.practices.clean_engineering.model.operation import Operation as OperationNode
-        from cdd_guidance.practices.clean_engineering.model.property import Property as PropertyNode
-
-        self.property_nodes = [
-            PropertyNode.from_field(field, index)
-            for index, field in enumerate(self.properties, start=1)
-        ]
-        self.operation_nodes = [
-            OperationNode.from_field(field, index)
-            for index, field in enumerate(self.operations, start=1)
-        ]
-
-    def sync_legacy_from_tree(self) -> None:
-        self.properties = list(self.property_nodes)
-        self.operations = list(self.operation_nodes)
 
 
 class File(OoadNode):
@@ -641,13 +579,13 @@ class Module(OoadNode):
         """Fill the facts a code folder owns: its context files and its own source files."""
         from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
 
-        module_context = ModuleContext(folder / "_.py")
+        module_context = ModuleContext(folder)
         content = module_context.read()
         sources = [path for path in folder.iterdir() if path.is_file() and path.suffix.lower() in _CODE_SUFFIXES]
         self.has_module_context = module_context.exists()
         self.has_bounded_context = (folder / ".context" / "bounded-context.md").is_file()
-        self.modules_heading = module_context.modules_heading_hit({}) is not None
-        self.model_blocks = [hit["message"] for hit in module_context.model_block_hits({})]
+        self.modules_heading = module_context.has_modules_heading()
+        self.model_blocks = module_context.model_blocks()
         self.is_a_in_context = bool(_IS_A.search(content))
         self.child_parent_in_context = bool(_CHILD_PARENT.search(content))
         self.public_source_internal = _internal_design_in(
@@ -704,20 +642,20 @@ class CleanEngineeringModel(OoadNode):
         for module in others[0].modules:
             self.modules.append(module.clone())
 
-    @property
-    def classes(self) -> List[OoadClass]:
-        """Flat view of all classes across all modules - for backward compat."""
-        return [cls for module in self.modules for cls in module.classes]
+    def every_class(self) -> List[OoadClass]:
+        """Every class in every module, nested modules included, in module order."""
+        found: List[OoadClass] = []
+        pending = list(self.modules)
+        while pending:
+            module = pending.pop(0)
+            found.extend(module.classes)
+            pending[:0] = module.modules
+        return found
 
     def as_record(self) -> dict:
-        if self.modules:
-            return {
-                "name": self.name,
-                "modules": [module.as_record() for module in self.modules],
-            }
         return {
             "name": self.name,
-            "classes": [loaded.as_record() for loaded in self.classes],
+            "modules": [module.as_record() for module in self.modules],
         }
 
     def update_self(self, source: "OoadNode") -> None:
@@ -741,6 +679,13 @@ class CleanEngineeringModel(OoadNode):
 
     def save(self) -> str:
         raise NotImplementedError(f"{type(self).__name__} must implement save")
+
+    def parse(self, text: str) -> "CleanEngineeringModel":
+        raise NotImplementedError(f"{type(self).__name__} must implement parse")
+
+    def sync(self, text: str, canonical: "CleanEngineeringModel") -> UpdateReport:
+        """Bring canonical up to date with the model this channel reads from text."""
+        return canonical.translate_from(self.parse(text))
 
     def load_content(self) -> None:
         return None
@@ -798,7 +743,7 @@ class CleanEngineeringModelFactory:
                 DrawIOCleanEngineeringModel,
             )
 
-            return DrawIOCleanEngineeringModel().load(text)
+            return DrawIOCleanEngineeringModel().load(str(target))
         if suffix == ".json":
             from cdd_guidance.practices.clean_engineering.model.json.json_class_model import (
                 JsonCleanEngineeringModel,
@@ -810,7 +755,7 @@ class CleanEngineeringModelFactory:
                 MiroCleanEngineeringModel,
             )
 
-            return MiroCleanEngineeringModel().load(text)
+            return MiroCleanEngineeringModel().load(str(target))
         from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (
             MarkdownCleanEngineeringModel,
         )
@@ -818,15 +763,3 @@ class CleanEngineeringModelFactory:
         loaded = MarkdownCleanEngineeringModel()
         loaded.path = str(target)
         return loaded.load(str(target))
-
-
-def __getattr__(name: str):
-    if name == "Property":
-        from cdd_guidance.practices.clean_engineering.model.property import Property
-
-        return Property
-    if name in ("Operation", "Parameter"):
-        from cdd_guidance.practices.clean_engineering.model.operation import Operation, Parameter
-
-        return Operation if name == "Operation" else Parameter
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import re
-from typing import List
+from typing import TYPE_CHECKING, List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
 from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Graph
 
 
 class Invariant(OoadNode):
@@ -64,7 +67,7 @@ def take_property_note(prop: "Property", text: str) -> None:
             prop.origin = origin.group(1).strip()
         else:
             append_invariant(prop, cleaned)
-    bind_property_relationship(prop)
+    prop.derive_relationship()
 
 
 def property_notes(prop: "Property") -> List[str]:
@@ -76,26 +79,6 @@ def property_notes(prop: "Property") -> List[str]:
         lines.append(prop.cardinality)
     lines.extend(invariant_lines(prop))
     return lines
-
-
-def bind_property_relationship(prop: "Property") -> None:
-    """A relationship exists only when the field's type names a domain class."""
-    targets = domain_type_names(prop.type_hint)
-    is_unmarked_collection = not prop.stereotype and (prop.type_hint or " ")[0].islower()
-    if not targets or is_unmarked_collection:
-        # An unmarked list is derived from relationships drawn elsewhere, so it adds no arrow of its own.
-        prop.relationship = None
-        return
-    kind = (prop.stereotype or "association").lower()
-    if kind not in {"composition", "aggregation", "association", "relative"}:
-        kind = "association"
-    prop.stereotype = kind
-    prop.relationship = Relationship(
-        target=targets[0],
-        kind=kind,
-        cardinality=prop.cardinality,
-        description=prop.origin,
-    )
 
 
 def invariant_lines(owner: object) -> List[str]:
@@ -139,6 +122,25 @@ class Property(OoadNode):
         cloned.callees = list(self.callees)
         return cloned
 
+    def derive_relationship(self) -> None:
+        """A relationship exists only when the field's type names a domain class."""
+        targets = domain_type_names(self.type_hint)
+        is_unmarked_collection = not self.stereotype and (self.type_hint or " ")[0].islower()
+        if not targets or is_unmarked_collection:
+            # An unmarked list is derived from relationships drawn elsewhere, so it adds no arrow of its own.
+            self.relationship = None
+            return
+        kind = (self.stereotype or "association").lower()
+        if kind not in {"composition", "aggregation", "association", "relative"}:
+            kind = "association"
+        self.stereotype = kind
+        self.relationship = Relationship(
+            target=targets[0],
+            kind=kind,
+            cardinality=self.cardinality,
+            description=self.origin,
+        )
+
     def save(self) -> str:
         if self.type_hint:
             return f"{self.name}: {self.type_hint}"
@@ -171,24 +173,3 @@ class Property(OoadNode):
 
     def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
         return []
-
-    @classmethod
-    def from_field(cls, field: object, sequential_order: int) -> "Property":
-        loaded = cls(
-            name=getattr(field, "name"),
-            sequential_order=sequential_order,
-            type_hint=getattr(field, "type_hint", ""),
-            description=getattr(field, "description", ""),
-        )
-        loaded.stereotype = getattr(field, "stereotype", "") or ""
-        loaded.cardinality = getattr(field, "cardinality", "") or ""
-        loaded.origin = getattr(field, "origin", "") or ""
-        source_relationship = getattr(field, "relationship", None)
-        loaded.relationship = source_relationship.clone() if source_relationship is not None else None
-        if loaded.relationship is None:
-            bind_property_relationship(loaded)
-        loaded.invariants = [item.clone() for item in getattr(field, "invariants", [])]
-        return loaded
-
-    def to_field(self) -> "Property":
-        return self

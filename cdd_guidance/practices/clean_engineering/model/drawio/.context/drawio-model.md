@@ -1,4 +1,4 @@
-*Drawio* is the miniature kit a caller hires to create, scan, and repair a Clean Engineering Draw.io diagram. *Diagram* is the mxfile. *Page* is one tab. *DiagramNode* is the placed-cell contract — geometry, HTML, style, draw, and keep-or-place. It is written like a class without the `+` seam marks: one type, not a second `IDiagramNode`. *DrawIOModule* and *DrawIOClass* are the live `Module` and `OoadClass` filling that contract. *ImportedClass* is a local-page view of a class owned by another module. *Inheritance* is the relationship that must point up at a parent sitting above its children.
+*Drawio* is the toolset a caller uses to create, scan, and repair a Clean Engineering Draw.io diagram. *Diagram* is the mxfile. *Page* is one tab. *DiagramNode* is the placed-cell contract — geometry, group, HTML, and style; card placement and arrow routing move nodes directly. It is written like a class without the `+` seam marks: one type, not a second `IDiagramNode`. *DrawIOModule* and *DrawIOClass* are the live `Module` and `OoadClass` filling that contract. *ImportedClass* is a local-page view of a class owned by another module. *Inheritance* is the relationship that must point up at a parent sitting above its children.
 
 - A caller never lays out HTML, waypoints, or mxCell attributes. They ask `Drawio` to create or scan a path.
 - *DrawIOModule* always draws from the `Module` it wraps. It never copies purpose or seam terms into a second record.
@@ -6,7 +6,7 @@
 - A *DiagramArrow* is one relationship on a page: kind chooses the arrowhead, the two classes choose the ends, and `ArrowRouter` finds the way between them.
 - **Invariant:** No second `*Model` / `*Entry` family restates `Module`, `OoadClass`, or `Relationship`.
 
-Build order: `Geometry` → `DiagramCard` → `DiagramArrow` → `CardPlacement` → `ArrowRouter` → `DiagramNode` → `DrawIOModule` → `DrawIOClass` → `ImportedClass` → `Page` → `Diagram` → `DrawIOCleanEngineeringModel` → `Drawio`
+Build order: `Geometry` → `DiagramArrow` → `CardPlacement` → `ArrowRouter` → `DiagramNode` → `DrawIOModule` → `DrawIOClass` → `ImportedClass` → `Page` → `Diagram` → `DrawIOCleanEngineeringModel` → `Drawio`
 
 ---
 
@@ -18,7 +18,7 @@ Build order: `Geometry` → `DiagramCard` → `DiagramArrow` → `CardPlacement`
 
 ## Constraint
 
-Callers type `Drawio.create_diagram`, `Drawio.scan`, `Drawio.render`, and the format channel `DrawIOCleanEngineeringModel.parse` / `render` / `sync`. They do not set cell HTML, anchors, or private layout fields. `keep_positioning` on `Drawio` / `Diagram` is the only layout policy they pass.
+Callers type `Drawio.create_diagram`, `Drawio.scan`, `Drawio.render`, and the format channel `DrawIOCleanEngineeringModel.load` / `parse` / `render` and the `sync` every class model inherits. They do not set cell HTML, anchors, or private layout fields. `keep_positioning` on `Drawio` / `Diagram` is the only layout policy they pass.
 
 ## Geometry
 
@@ -44,6 +44,8 @@ DiagramNode()
 << composition >> geometry: Geometry
 	// The node occupies this box on its page. Layout never stores a second copy of the box beside the node.
 cell_id: str
+group: str
+	// the module the node belongs to; card placement keeps one group's cards together
 ----
 html(): str
 	// Label the cell. A subtype fills this from the Module or OoadClass it wraps — never from a parallel record.
@@ -51,16 +53,10 @@ height(): int
 	// Pixel height of this node's geometry. Derived from html content, not a second layout table.
 style(): str
 	// mxCell style for this node. Local vs imported vs module chrome are style, not a second type.
-draw(page: Page): None
-	// Write this cell onto the page from html, style, and geometry. Subtypes may draw children after.
-	-> Page.place
-keep_or_place(previous: Geometry): None
-	// When keep_positioning holds and previous exists, geometry stays. Otherwise the node places itself on the page.
-	-> Geometry
+append_to(root: Element): Element
+	// One mxCell: id, value, style, geometry, written by the Draw.io vertex. Callers never set those attributes.
 parse_html(value: str): None
 	// Restore wrapped Module or OoadClass fields from the cell label. Never invent a second card type.
-- _write_cell(page: Page): None
-	// One mxCell: id, value, style, geometry. Callers never set those attributes.
 
 ## DrawIOModule : DiagramNode
 
@@ -76,10 +72,6 @@ parse_html(value: str): None
 	-> module.public_terms
 + height(): int
 	-> DiagramNode.height
-+ draw(page: Page): None
-	// After the cell is on the page, children draw inside this geometry.
-	-> DiagramNode.draw
-	-> DrawIOModule.draw
 + parse_html(value: str): None
 	-> module
 + dep_depth(): int
@@ -116,26 +108,6 @@ parse_html(value: str): None
 + height(): int
 + style(): str
 	// Always the dashed imported chrome. Never the solid local class style.
-+ draw(page: Page): None
-	// Inheritance imports sit above the local subtype. Other imports sit beside the local class they link.
-	-> DiagramNode.keep_or_place
-	-> DiagramNode.draw
-
-## DiagramCard
-
-+ DiagramCard(cell_id: str, width: float, height: float, group: str)
-	// A card's size is fixed before layout, so layout only ever sets where it sits.
-------
-+ cell_id: str
-+ width: float
-+ height: float
-+ group: str
-	// the module or bounded context it belongs to; cards of one group stay together
-+ x: float
-+ y: float
-+ geometry: Geometry
-+ center: tuple
-----
 
 ## DiagramArrow
 
@@ -158,17 +130,17 @@ parse_html(value: str): None
 
 ## CardPlacement
 
-+ CardPlacement(cards: list[DiagramCard], arrows: list[DiagramArrow])
++ CardPlacement(cards: list[DiagramNode], arrows: list[DiagramArrow])
 	// Shared by every class-shaped view. A base always sits above what derives from it. One model always gives one layout.
 ------
 ----
 + place(): None
 	// swaps cards on a compact grid, keeping the arrangement with the fewest crossings and the shortest arrows
-	-> DiagramCard.geometry
+	-> DiagramNode.geometry
 
 ## ArrowRouter
 
-+ ArrowRouter(cards: list[DiagramCard], arrows: list[DiagramArrow], obstacles: list[Geometry], kept_paths: list[list])
++ ArrowRouter(cards: list[DiagramNode], arrows: list[DiagramArrow], obstacles: list[Geometry], kept_paths: list[list])
 	// Shared by every class-shaped view. Arrows never pass through a card or run along each other, and each has its own end points.
 ------
 ----
@@ -188,8 +160,7 @@ parse_html(value: str): None
 ----
 + draw(): None
 	// Every diagram node draws itself. The page only orders the asks and then separates overlaps.
-	-> DiagramNode.draw
-	-> DiagramNode.keep_or_place
+	-> DiagramNode.append_to
 	-> CardPlacement.place
 	-> ArrowRouter.route
 + place(node: DiagramNode): None
@@ -231,7 +202,7 @@ parse_html(value: str): None
 	-> Diagram.parse
 + render(canonical: CleanEngineeringModel): str
 	-> Diagram.render
-+ sync(text: str, canonical: CleanEngineeringModel): UpdateReport
++ load(path: str): DrawIOCleanEngineeringModel
 	-> parse
 + load_module(source: Module): DrawIOModule
 + load_class(source: OoadClass): DrawIOClass
@@ -239,7 +210,7 @@ parse_html(value: str): None
 ## Drawio
 
 + Drawio(workspace)
-	// The kit a caller types. Create writes a path. Scan judges layout. Repair fixes the generator, not one diagram by hand.
+	// The toolset a caller types. Create writes a path. Scan judges layout. Repair fixes the generator, not one diagram by hand.
 ------
 + source_format: str
 + previous: str
@@ -263,11 +234,27 @@ parse_html(value: str): None
 
 ## DrawioScanner
 
-+ DrawioScanner(rule: str)
-	// Layout audit for an existing mxfile. It reads cells; it does not render them.
++ DrawioScanner(rule: str, explicit_paths: list[Path])
+	// Layout audit for an existing mxfile. It reads cells; it does not render them. Each subclass owns one rule's check.
 ------
 + rule: str
++ explicit_paths: frozenset[Path]
+	// paths the caller named, scanned even inside folders a workspace scan skips; each scanner keeps its own
 + workspace_root: Path
 ----
 + scan(root: Path, files: list): list
++ scan_page(page: DrawioPage): list
 + run_report(paths: list): str
+
+## DrawioPage
+
++ DrawioPage(file_path: Path, name: str, root: Element)
+	// One page of a scanned file. It is read once, so every check on the page sees the same boxes and edges.
+------
++ boxes: dict[str, tuple]
++ class_names: dict[str, str]
++ edges: list[Element]
+----
++ describe(edge: Element): str
++ segments(edge: Element): tuple
+	// the polyline an edge draws, and whether Draw.io's router may draw it differently

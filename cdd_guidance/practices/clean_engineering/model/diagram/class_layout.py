@@ -10,8 +10,9 @@ import heapq
 import math
 import random
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 
+from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import DiagramNode
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
 
 Point = Tuple[int, int]
@@ -57,7 +58,10 @@ _HORIZONTAL_SIDES = ("right", "left")
 
 @dataclass
 class DiagramCard:
-    """One class card: its size is fixed before layout, and layout sets where it sits."""
+    """A box to place or route around for a view with no diagram node of its own, such as the DDD aggregate view.
+
+    A class-diagram view passes its DiagramNode cards directly; placement and routing read only cell_id, geometry,
+    and group."""
 
     cell_id: str
     width: float
@@ -70,14 +74,17 @@ class DiagramCard:
     def geometry(self) -> Geometry:
         return Geometry(self.x, self.y, self.width, self.height)
 
-    @property
-    def center(self) -> Tuple[float, float]:
-        return (self.x + self.width / 2, self.y + self.height / 2)
+    @geometry.setter
+    def geometry(self, box: Geometry) -> None:
+        self.x, self.y, self.width, self.height = box
 
 
 @dataclass
 class DiagramArrow:
-    """One relationship. Routing fills in its sides, its two end points, and the corners between them."""
+    """The line drawn between two cards for every relationship one class has to another.
+
+    Several properties can stand behind one arrow, so it carries their names as its label, not one Relationship.
+    Routing fills in its sides, its two end points, and the corners between them."""
 
     source: str
     target: str
@@ -96,15 +103,20 @@ class DiagramArrow:
         return [self.exit_point] + self.corners + [self.entry_point]
 
 
+# A card is a DiagramNode on a class diagram, or a DiagramCard where a view has no node.
+Card = Union[DiagramNode, "DiagramCard"]
+
+
 class CardPlacement:
     """Finds the grid position for every card that leaves the fewest crossings and the shortest arrows.
 
+    A card is any placed diagram node: placement reads its size and group and sets its geometry.
     Swapping cards and keeping each swap that scores better is what a person does when tidying a diagram by hand.
     The score holds a base above what derives from it and an owner above what it owns, and keeps a module's cards
     together. The search is seeded, so the same model always gives the same diagram.
     """
 
-    def __init__(self, cards: List[DiagramCard], arrows: List[DiagramArrow]) -> None:
+    def __init__(self, cards: List[Card], arrows: List[DiagramArrow]) -> None:
         self._cards = cards
         ids = {card.cell_id for card in cards}
         self._links = [arrow for arrow in arrows if arrow.source != arrow.target and arrow.source in ids and arrow.target in ids]
@@ -202,14 +214,15 @@ class CardPlacement:
         lefts, widths = self._column_extents(grid, cards)
         tops, heights = self._line_extents(grid, cards)
         for cell_id, (column, line) in grid.items():
-            card = cards[cell_id]
-            card.x = (lefts[column] + (widths[column] - card.width) / 2) // GRID_STEP * GRID_STEP
-            card.y = (tops[line] + (heights[line] - card.height) / 2) // GRID_STEP * GRID_STEP
+            box = cards[cell_id].geometry
+            x = (lefts[column] + (widths[column] - box.width) / 2) // GRID_STEP * GRID_STEP
+            y = (tops[line] + (heights[line] - box.height) / 2) // GRID_STEP * GRID_STEP
+            cards[cell_id].geometry = box.moved_to(x, y)
 
     def _column_extents(self, grid, cards) -> Tuple[List[float], List[float]]:
         widths = [0.0] * (max(position[0] for position in grid.values()) + 1)
         for cell_id, position in grid.items():
-            widths[position[0]] = max(widths[position[0]], cards[cell_id].width)
+            widths[position[0]] = max(widths[position[0]], cards[cell_id].geometry.width)
         lefts = []
         left = float(PAGE_MARGIN)
         for width in widths:
@@ -220,7 +233,7 @@ class CardPlacement:
     def _line_extents(self, grid, cards) -> Tuple[List[float], List[float]]:
         heights = [0.0] * (max(position[1] for position in grid.values()) + 1)
         for cell_id, position in grid.items():
-            heights[position[1]] = max(heights[position[1]], cards[cell_id].height)
+            heights[position[1]] = max(heights[position[1]], cards[cell_id].geometry.height)
         tops = []
         top = float(PAGE_MARGIN)
         for line, height in enumerate(heights):
@@ -367,7 +380,7 @@ class ArrowRouter:
 
     def __init__(
         self,
-        cards: List[DiagramCard],
+        cards: List[Card],
         arrows: List[DiagramArrow],
         obstacles: Iterable[Geometry] = (),
         kept_paths: Iterable[List[Point]] = (),
@@ -378,6 +391,8 @@ class ArrowRouter:
         self._kept_paths = list(kept_paths)
 
     def route(self) -> List[DiagramArrow]:
+        if not self._arrows:
+            return []
         for arrow in self._arrows:
             arrow.exit_side, arrow.entry_side = self._facing_sides(arrow)
         self._assign_ports()
@@ -411,11 +426,11 @@ class ArrowRouter:
         return arrow.source != arrow.target and arrow.source in self._cards and arrow.target in self._cards
 
     def _length_between_cards(self, arrow: DiagramArrow) -> float:
-        source, target = self._cards[arrow.source].center, self._cards[arrow.target].center
+        source, target = self._cards[arrow.source].geometry.center, self._cards[arrow.target].geometry.center
         return abs(source[0] - target[0]) + abs(source[1] - target[1])
 
     def _facing_sides(self, arrow: DiagramArrow) -> Tuple[str, str]:
-        source, target = self._cards[arrow.source], self._cards[arrow.target]
+        source, target = self._cards[arrow.source].geometry, self._cards[arrow.target].geometry
         if arrow.kind == INHERITANCE or target.y + target.height <= source.y:
             return ("top", "bottom") if target.y < source.y else ("bottom", "top")
         if target.y >= source.y + source.height:
@@ -424,13 +439,13 @@ class ArrowRouter:
             return ("bottom", "bottom")
         return ("right", "left") if target.center[0] >= source.center[0] else ("left", "right")
 
-    def _card_between(self, source: DiagramCard, target: DiagramCard) -> bool:
+    def _card_between(self, source: Geometry, target: Geometry) -> bool:
         """True when two cards in one row have a third between them, so the arrow has to go under it."""
         left, right = sorted((source, target), key=lambda card: card.x)
         top, bottom = max(left.y, right.y), min(left.y + left.height, right.y + right.height)
         return any(
             card.x >= left.x + left.width and card.x + card.width <= right.x and card.y < bottom and card.y + card.height > top
-            for card in self._cards.values()
+            for card in (node.geometry for node in self._cards.values())
         )
 
     def _grid_without(self, lifted: Optional[DiagramArrow]) -> _RouteGrid:
@@ -454,7 +469,7 @@ class ArrowRouter:
             sides.setdefault((arrow.source, arrow.exit_side), []).append((arrow, True))
             sides.setdefault((arrow.target, arrow.entry_side), []).append((arrow, False))
         for (cell_id, side), users in sides.items():
-            card = self._cards[cell_id]
+            card = self._cards[cell_id].geometry
             users.sort(key=lambda user: self._far_end_position(user, side))
             for position, (arrow, leaving) in enumerate(users):
                 point = self._port(card, side, (position + 1) / (len(users) + 1))
@@ -468,7 +483,7 @@ class ArrowRouter:
 
     def _straighten(self, arrow: DiagramArrow) -> None:
         """Two cards that face each other with one arrow between them get a straight line, not a small step."""
-        source, target = self._cards[arrow.source], self._cards[arrow.target]
+        source, target = self._cards[arrow.source].geometry, self._cards[arrow.target].geometry
         if arrow.exit_side in _VERTICAL_SIDES:
             shared = _shared_middle(source.x, source.width, target.x, target.width)
             if shared is not None:
@@ -482,10 +497,10 @@ class ArrowRouter:
 
     def _far_end_position(self, user: Tuple[DiagramArrow, bool], side: str) -> float:
         arrow, leaving = user
-        far = self._cards[arrow.target if leaving else arrow.source].center
+        far = self._cards[arrow.target if leaving else arrow.source].geometry.center
         return far[0] if side in _VERTICAL_SIDES else far[1]
 
-    def _port(self, card: DiagramCard, side: str, fraction: float) -> Point:
+    def _port(self, card: Geometry, side: str, fraction: float) -> Point:
         """On the grid along the side, so the arrow's first run stays straight wherever a person left the card."""
         if side in _VERTICAL_SIDES:
             along = round((card.x + card.width * fraction) / GRID_STEP) * GRID_STEP

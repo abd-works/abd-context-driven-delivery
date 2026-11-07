@@ -109,7 +109,6 @@ class Operation(OoadNode):
         "bold_interaction_lines",
         "bold_invariant_lines",
         "owner",
-        "interactions",
     )
 
     def __init__(
@@ -154,8 +153,6 @@ class Operation(OoadNode):
         self.prose_comment = False
         self.bold_interaction_lines: list[int] = []
         self.bold_invariant_lines: list[int] = []
-        # The member a Clean Engineering model document describes this code operation with, when one does.
-        self.described_by: "Operation | Property | None" = None
         for key, value in fields.items():
             setattr(self, key, value)
         if parameters:
@@ -165,11 +162,6 @@ class Operation(OoadNode):
     def owner(self) -> str:
         """The name of the class that declares this operation; ``_module`` for a module function; empty before a class holds it."""
         return self.parent.name if isinstance(self.parent, OoadClass) else ""
-
-    @property
-    def interactions(self) -> List[str]:
-        """The calls the model document gives this operation, such as ``Ledger.record``; empty when no document describes it."""
-        return list(self.described_by.callees) if self.described_by is not None else []
 
     @property
     def parameters(self) -> List[Parameter]:
@@ -243,10 +235,6 @@ class Operation(OoadNode):
     def render(self) -> str:
         return self.save()
 
-    def to_field(self) -> "Operation":
-        return self
-
-
     def as_record(self) -> dict:
         return {
             "name": self.name,
@@ -310,20 +298,6 @@ class Operation(OoadNode):
                 )
             ]
         return []
-
-    @classmethod
-    def from_field(cls, field: object, sequential_order: int) -> "Operation":
-        node = cls(
-            name=getattr(field, "name"),
-            sequential_order=sequential_order,
-            return_type=getattr(field, "return_type", ""),
-            description=getattr(field, "description", ""),
-            callees=list(getattr(field, "callees", []) or []),
-            parameters=list(getattr(field, "parameters", []) or []),
-        )
-        node.invariants = [item.clone() for item in getattr(field, "invariants", [])]
-        node.body = getattr(field, "body", node.body)
-        return node
 
 
 def _span_fingerprint(source_span: str) -> str:

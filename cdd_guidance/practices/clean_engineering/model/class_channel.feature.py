@@ -159,7 +159,7 @@ def load_source(name: str) -> CleanEngineeringModel:
     for module_name in _FILES:
         if name == "drawio":
             text = (EXPECTED / _drawio_path(module_name)).read_text(encoding="utf-8")
-            parsed = DrawIOCleanEngineeringModel().load(text)
+            parsed = DrawIOCleanEngineeringModel().parse(text)
         else:
             text = (EXPECTED / _code_path(module_name)).read_text(encoding="utf-8")
             parsed = TypeScriptCleanEngineeringModel.parse(text)
@@ -195,7 +195,7 @@ def _save_drawio(folder: Path, source: CleanEngineeringModel) -> CleanEngineerin
     for module in source.modules:
         text = pages[module.name]
         _write(folder / _drawio_path(module.name), text)
-        parsed = DrawIOCleanEngineeringModel().load(text)
+        parsed = DrawIOCleanEngineeringModel().parse(text)
         for parsed_module in parsed.modules:
             parsed_module.name = module.name
             loaded.modules.append(parsed_module)

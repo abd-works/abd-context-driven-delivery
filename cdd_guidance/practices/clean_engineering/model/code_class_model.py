@@ -8,6 +8,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
+    companion_interface_name,
     is_interface_name,
 )
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
@@ -24,7 +25,7 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
 
     def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
         kept = self.parse(previous) if previous else type(self)(name="", sequential_order=1)
-        known_names = [oclass.name for oclass in canonical.classes]
+        known_names = [oclass.name for oclass in canonical.every_class()]
         lines = self.file_header(canonical, self._preamble(canonical, kept))
         for module in canonical.modules:
             lines.extend(self._render_module(module, known_names, kept))
@@ -32,7 +33,7 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
 
     def operation_body(self, class_name: str, operation_name: str) -> CodeBody:
         """The body this model read for one operation; "constructor" finds the constructor in any language."""
-        for oclass in self.classes:
+        for oclass in self.every_class():
             if oclass.name != class_name:
                 continue
             for operation in oclass.operations:
@@ -87,7 +88,29 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         return preamble.lines_in(self.language, "", "")
 
     def class_open(self, oclass: OoadClass, known_names: List[str]) -> List[str]:
-        raise NotImplementedError(f"{type(self).__name__} must spell class_open")
+        """A blank line, the class's doc comment, then the declaration for its kind: an interface, a class with its
+        interface, a subclass, or a plain class. A language spells each piece."""
+        lines = [""] + self.class_doc(oclass.intent)
+        if is_interface_name(oclass.name):
+            return lines + self.interface_declaration(oclass)
+        interface = companion_interface_name(oclass.name, known_names)
+        if interface:
+            return lines + self.implementing_declaration(oclass, interface)
+        return lines + self.class_declaration(oclass)
+
+    def class_doc(self, intent: str) -> List[str]:
+        return [f"/** {intent} */"] if intent else []
+
+    def interface_declaration(self, oclass: OoadClass) -> List[str]:
+        raise NotImplementedError(f"{type(self).__name__} must spell interface_declaration")
+
+    def implementing_declaration(self, oclass: OoadClass, interface: str) -> List[str]:
+        raise NotImplementedError(f"{type(self).__name__} must spell implementing_declaration")
+
+    def class_declaration(self, oclass: OoadClass) -> List[str]:
+        """`class Name {`, extending the first collaborator when the class has one."""
+        extends = f" extends {oclass.collaborators[0]}" if oclass.collaborators else ""
+        return [f"class {oclass.name}{extends} {{"]
 
     def class_close(self, has_members: bool) -> List[str]:
         return ["}"]

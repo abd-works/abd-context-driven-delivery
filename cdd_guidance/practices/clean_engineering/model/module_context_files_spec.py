@@ -1,46 +1,34 @@
-"""Read module-context.md next to a class."""
+"""The module card next to a code folder."""
 
-import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[4]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-
-from expects import equal, expect
+from expects import contain, equal, expect
 from mamba import description, it
 
-from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContextFiles
+from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
 
 _EXAMPLES = Path(__file__).resolve().parent / "python" / "_examples"
 
 
-class ContextRow:
-    def for_folder(self, class_name: str, folder: str) -> dict:
-        path = _EXAMPLES / folder / "faulty" / "faultyAsset.py"
-        return {"name": class_name, "message": str(path.resolve()), "contributor": class_name}
+def _card(example: str, version: str) -> ModuleContext:
+    return ModuleContext(_EXAMPLES / example / version)
 
 
-with description("module-context.md next to a class"):
-    with it("should flag a class folder with no module-context.md"):
-        hits = ModuleContextFiles().rows_for_missing_module_context([ContextRow().for_folder("OrphanModule", "missing-module-context")])
-        expect(any("OrphanModule" in (h["name"] + h["message"]) for h in hits)).to(equal(True))
+with description("the module card of a code folder"):
+    with it("should be missing for a folder with no card"):
+        expect(_card("missing-module-context", "faulty").exists()).to(equal(False))
 
-    with it("should flag a Modules heading"):
-        hits = ModuleContextFiles().rows_for_language_modules_one_section(
-            [ContextRow().for_folder("LanguageSplit", "language-modules-one-section")]
-        )
-        expect(any("Modules" in h["message"] for h in hits)).to(equal(True))
+    with it("should read as empty for a folder with no card"):
+        expect(_card("missing-module-context", "faulty").read()).to(equal(""))
 
-    with it("should flag Internal design and a private name"):
-        hits = ModuleContextFiles().rows_for_public_seam_only([ContextRow().for_folder("LeakySeam", "public-seam-only")])
-        blob = " ".join(h["message"] for h in hits)
-        expect("Internal design" in blob).to(equal(True))
-        expect("_CartLog" in blob).to(equal(True))
+    with it("should find a Modules heading"):
+        expect(_card("language-modules-one-section", "faulty").has_modules_heading()).to(equal(True))
 
-    with it("should flag a typed dump"):
-        hits = ModuleContextFiles().rows_for_modules_not_model_blocks(
-            [ContextRow().for_folder("ModelDump", "modules-not-model-blocks")]
-        )
-        blob = " ".join(h["message"] for h in hits)
-        expect("Live instance" in blob).to(equal(True))
+    with it("should find no Modules heading once it is repaired"):
+        expect(_card("language-modules-one-section", "repaired").has_modules_heading()).to(equal(False))
+
+    with it("should name the model detail written into it"):
+        expect(" ".join(_card("modules-not-model-blocks", "faulty").model_blocks())).to(contain("Live instance"))
+
+    with it("should name no model detail once it is repaired"):
+        expect(_card("modules-not-model-blocks", "repaired").model_blocks()).to(equal([]))

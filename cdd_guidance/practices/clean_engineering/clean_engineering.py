@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio import Drawio
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.java.java_class_model import JavaCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import JavaScriptCleanEngineeringModel
@@ -37,7 +38,6 @@ class CleanEngineering(PracticeGuidance):
         self,
         fidelity: str = "modules",
         format: str | None = None,
-        drawio=None,
     ) -> None:
         super().__init__(
             format=format,
@@ -54,9 +54,15 @@ class CleanEngineering(PracticeGuidance):
                 "sketch": SketchCleanEngineeringModel,
             },
         )
-        self.drawio = drawio
-        if self.drawio is not None:
-            self.drawio.mode = "tool"
+        self._drawio: Drawio | None = None
+
+    @property
+    def drawio(self) -> Drawio:
+        """The Draw.io toolset this practice renders its diagrams with, made for this practice's workspace."""
+        if self._drawio is None:
+            self._drawio = Drawio(workspace=self.workspace)
+            self._drawio.mode = "tool"
+        return self._drawio
 
     @agent_instructions
     def generate_output(self) -> str:
@@ -68,6 +74,7 @@ class CleanEngineering(PracticeGuidance):
         (markdown / python / …) from contexts, examples, and templates — do
         not invoke drawio.render.
         """
-        tools(self.drawio.render())
+        if self.format == "drawio":
+            tools(self.drawio.render())
         return "Artifact written under {session.path}/."
     

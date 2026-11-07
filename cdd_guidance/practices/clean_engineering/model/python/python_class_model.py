@@ -7,29 +7,23 @@ from __future__ import annotations
 
 import ast
 import re
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
-
-_repo = Path(__file__).resolve().parents[3]
-if str(_repo) not in sys.path:
-    sys.path.insert(0, str(_repo))
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
-    Operation,
-    Property,
     companion_interface_name,
     is_interface_name,
 )
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import apply_python_function_metrics
-from cdd_guidance.practices.clean_engineering.model.update_report import UpdateReport
 
 _MODULE_MARKER = re.compile(r"^#\s*===\s*(.+?)\s*===$", re.MULTILINE)
 _CLASS_PATTERN = re.compile(r'class\s+(\w+)[^:]*:\s*\n\s+"""([^"]*?)"""', re.DOTALL)
@@ -48,14 +42,7 @@ class ParsedPython:
     tree: ast.AST | None
 
 
-class PythonOoadClass(OoadClass):
-    pass
-
-
 class PythonModule(Module):
-    def load_class(self, source: OoadClass) -> PythonOoadClass:
-        return PythonOoadClass(name=source.name, sequential_order=source.sequential_order)
-
     def load_source_facts(self, text: str, file: Path, root: Path) -> None:
         super().load_source_facts(text, file, root)
         tree = _syntax_tree(text)
@@ -150,9 +137,6 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         except SyntaxError:
             return None
 
-    def sync(self, text: str, canonical: CleanEngineeringModel) -> UpdateReport:
-        return canonical.translate_from(self.parse(text))
-
     def _parse_regex(self, text: str) -> "PythonCleanEngineeringModel":
         model = type(self)(name="", sequential_order=1)
         segments = _MODULE_MARKER.split(text)
@@ -188,9 +172,9 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
             model.modules.append(module)
         return model
 
-    def _class_from_ast(self, node: ast.ClassDef, class_order: int) -> PythonOoadClass:
+    def _class_from_ast(self, node: ast.ClassDef, class_order: int) -> OoadClass:
         intent = ast.get_docstring(node) or ""
-        oclass = PythonOoadClass(
+        oclass = OoadClass(
             name=node.name,
             sequential_order=class_order,
             intent=intent.strip(),
@@ -211,7 +195,7 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         if not top_ops:
             return
         if not module.classes:
-            holder = PythonOoadClass(name="_module", sequential_order=1)
+            holder = OoadClass(name="_module", sequential_order=1)
             holder.operations = top_ops
             module.classes.append(holder)
             return
@@ -334,7 +318,7 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
     def _populate_classes_regex(self, text: str, module: PythonModule) -> None:
         order = len(module.classes) + 1
         for m in _CLASS_PATTERN.finditer(text):
-            oclass = PythonOoadClass(
+            oclass = OoadClass(
                 name=m.group(1),
                 sequential_order=order,
                 intent=m.group(2).strip(),
@@ -343,7 +327,7 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
             order += 1
         if not module.classes:
             for m in _CLASS_NAME_ONLY.finditer(text):
-                module.classes.append(PythonOoadClass(name=m.group(1), sequential_order=order))
+                module.classes.append(OoadClass(name=m.group(1), sequential_order=order))
                 order += 1
 
 
@@ -412,10 +396,10 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         return "cls" if operation.is_classmethod else "self"
 
     def _needs_abc(self, canonical: CleanEngineeringModel) -> bool:
-        known = [oclass.name for oclass in canonical.classes]
+        known = [oclass.name for oclass in canonical.every_class()]
         return any(
             is_interface_name(oclass.name) or companion_interface_name(oclass.name, known)
-            for oclass in canonical.classes
+            for oclass in canonical.every_class()
         )
 
     def _bases(self, oclass: OoadClass) -> str:

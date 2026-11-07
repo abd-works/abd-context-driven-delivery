@@ -2,24 +2,17 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
-from typing import List, Optional
-
-_repo = Path(__file__).resolve().parents[3]
-if str(_repo) not in sys.path:
-    sys.path.insert(0, str(_repo))
+from typing import Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
-    OoadNode,
 )
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
 
 
 class JsonParseError(ValueError):
@@ -60,12 +53,12 @@ class JsonRelationship(Relationship):
 
 
 class JsonOoadClass(OoadClass):
-    def load_property_field(self, source: Property) -> JsonProperty:
+    def load_property(self, source: Property) -> JsonProperty:
         loaded = JsonProperty(name=source.name)
         loaded.update_self(source)
         return loaded
 
-    def load_operation_field(self, source: Operation) -> JsonOperation:
+    def load_operation(self, source: Operation) -> JsonOperation:
         loaded = JsonOperation(name=source.name)
         loaded.update_self(source)
         return loaded
@@ -74,18 +67,6 @@ class JsonOoadClass(OoadClass):
         loaded = JsonRelationship(target=source.target)
         loaded.update_self(source)
         return loaded
-
-    def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
-        assert isinstance(source, OoadClass)
-        return [
-            ChildCollectionPair(self.properties, source.properties, self.load_property_field),
-            ChildCollectionPair(self.operations, source.operations, self.load_operation_field),
-        ]
-
-    def update_self(self, source: OoadNode) -> None:
-        assert isinstance(source, OoadClass)
-        self.intent = source.intent
-        self.collaborators = list(source.collaborators)
 
     @classmethod
     def from_record(cls, record: dict, sequential_order: int) -> "JsonOoadClass":
@@ -165,9 +146,6 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
         if canonical is not None:
             self.translate_from(canonical)
         return json.dumps(self.as_record(), indent=2)
-
-    def sync(self, text: str, canonical: CleanEngineeringModel) -> UpdateReport:
-        return canonical.translate_from(self.parse(text))
 
     @classmethod
     def from_workspace(cls, root: Path) -> Optional["JsonCleanEngineeringModel"]:

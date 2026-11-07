@@ -1,41 +1,31 @@
 """Scanner: stereotype-above-class-name — <<Stereotype>> is not inside <b> with the name."""
 from __future__ import annotations
 
-import html
 import re
-from pathlib import Path
 
-from _drawio_base import DrawioScanner
+from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
+    DrawioPage,
+    DrawioScanner,
+    DrawioViolation,
+    class_title_in,
+)
 
-RULE = "stereotype-above-class-name"
 _STEREOTYPE = re.compile(r"<<[^>]+>>|«[^»]+»")
 
 
 class StereotypeAboveClassNameScanner(DrawioScanner):
-    RULE = RULE
+    RULE = "stereotype-above-class-name"
 
-    def scan_page(self, page_root) -> list:
+    def scan_page(self, page: DrawioPage) -> list[DrawioViolation]:
         violations = []
-        for cell in page_root.iter("mxCell"):
-            if cell.get("vertex") != "1":
-                continue
-            raw = cell.get("value") or ""
-            if not raw:
-                continue
-            text = self._unescape(html.unescape(raw))
-            match = re.search(r"<b[^>]*>(.*?)</b>", text, re.IGNORECASE | re.DOTALL)
-            if not match:
-                continue
-            title = match.group(1)
-            if _STEREOTYPE.search(title):
-                violations.append(
-                    self.violation(
-                        f"[{self._scan_page_name}] Stereotype sits on the same line as the "
-                        f"class name inside <b>: "
-                        f"{re.sub(r'<[^>]+>', '', title)[:80]!r}",
-                        location=str(self._scan_file_path),
-                    )
-                )
+        for cell in page.root.iter("mxCell"):
+            title = class_title_in(cell.get("value") or "") if cell.get("vertex") == "1" else None
+            if title and _STEREOTYPE.search(title):
+                violations.append(self.violation(
+                    page,
+                    "Stereotype sits on the same line as the class name inside <b>: "
+                    f"{re.sub(r'<[^>]+>', '', title)[:80]!r}",
+                ))
         return violations
 
 

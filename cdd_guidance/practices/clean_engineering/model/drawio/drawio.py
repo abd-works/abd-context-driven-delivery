@@ -1,7 +1,7 @@
-"""Draw.io miniature kit — render class diagrams, scan layout rules, repair on failure.
+"""The Draw.io toolset: render a class or modules diagram, scan its layout rules, repair the generator on failure.
 
-Not a full context tool: no partition / grill / sketch / fidelities. Composed by
-CleanEngineering when ``format`` is ``drawio``. Layout scan lives on DrawioScanner.
+It has no partition, grill, sketch, or fidelities of its own; CleanEngineering composes it when ``format`` is
+``drawio``. Each layout rule is a scanner under ``scanners/``.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model im
 class Drawio:
     """# Instructions
 
-    Miniature kit for Clean Engineering Draw.io class diagrams: create →
+    The Draw.io toolset for Clean Engineering diagrams: create →
     validate/scan layout rules → repair (sub-agent) on definitive failures.
     """
 

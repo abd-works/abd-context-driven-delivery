@@ -28,10 +28,10 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
-    Operation,
-    Property,
-    Relationship,
 )
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (
     MarkdownCleanEngineeringModel,
 )
@@ -332,24 +332,24 @@ with description("MiroCleanEngineeringModel class fidelity") as self:
             self.back = MiroCleanEngineeringModel().parse(svg)
 
         with it("should recover the Cart class"):
-            all_classes = list(self.back.classes)
+            all_classes = list(self.back.every_class())
             cart = next((c for c in all_classes if c.name == "Cart"), None)
             expect(cart is not None).to(be_true)
 
         with it("should recover Cart properties"):
-            all_classes = list(self.back.classes)
+            all_classes = list(self.back.every_class())
             cart = next(c for c in all_classes if c.name == "Cart")
             prop_names = [p.name for p in cart.properties]
             expect("owner" in prop_names).to(be_true)
 
         with it("should recover Cart operations"):
-            all_classes = list(self.back.classes)
+            all_classes = list(self.back.every_class())
             cart = next(c for c in all_classes if c.name == "Cart")
             op_names = [o.name for o in cart.operations]
             expect("place_order" in op_names).to(be_true)
 
         with it("should recover Cart -> Order association"):
-            all_classes = list(self.back.classes)
+            all_classes = list(self.back.every_class())
             cart = next(c for c in all_classes if c.name == "Cart")
             expect(any(r.target == "Order" for r in cart.relationships)).to(be_true)
 

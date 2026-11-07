@@ -11,7 +11,6 @@ from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import 
     DiagramModule,
     ImportedClass,
 )
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
 
 
 class MiroClass(DiagramClass):
@@ -65,7 +64,7 @@ class MiroModule(DiagramModule):
 
     def load_class(self, source: OoadClass) -> MiroClass:
         loaded = MiroClass(name=source.name, sequential_order=source.sequential_order)
-        loaded.update_self(source)
+        loaded.translate_from(source)
         return loaded
 
     def mermaid_id(self) -> str:
@@ -90,7 +89,6 @@ class Page:
         self._elements: List[str] = []
 
     def place(self, node: DiagramModule, mermaid: str) -> None:
-        node.geometry = node.keep_or_place(node.geometry)
         geo = node.geometry
         element_id = f'CleanEngineering-{node.mermaid_id()}'
         title = escape(f'{node.name} - Class Diagram', quote=True)

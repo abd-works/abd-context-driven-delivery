@@ -87,7 +87,7 @@ def _bodies(language: str, text: str) -> dict:
     model = adapter.parse(text)
     return {
         f"{oclass.name}.{operation.name}": operation.body.text
-        for oclass in model.classes
+        for oclass in model.every_class()
         for operation in oclass.operations
     }
 

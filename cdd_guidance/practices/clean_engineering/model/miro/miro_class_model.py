@@ -23,18 +23,18 @@ parse() extracts the Mermaid source from the SVG and reconstructs the model.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 import xml.etree.ElementTree as ET
-from html import escape
 from typing import Dict, List, Optional, Tuple
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
-    Operation,
-    Property,
-    Relationship,
 )
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     ContainmentForest,
     DiagramCleanEngineeringModel,
@@ -49,7 +49,6 @@ from cdd_guidance.practices.clean_engineering.model.miro.diagram_node import (
     MiroModule,
     Page,
 )
-from cdd_guidance.practices.clean_engineering.model.update_report import UpdateReport
 
 class MiroCleanEngineeringModel(DiagramCleanEngineeringModel):
 
@@ -61,7 +60,7 @@ class MiroCleanEngineeringModel(DiagramCleanEngineeringModel):
 
     def load_class(self, source: OoadClass) -> MiroClass:
         loaded = MiroClass(name=source.name, sequential_order=source.sequential_order)
-        loaded.update_self(source)
+        loaded.translate_from(source)
         return loaded
 
     def _imported_class(self, source: OoadClass, from_module: str = '') -> MiroImportedClass:
@@ -70,7 +69,7 @@ class MiroCleanEngineeringModel(DiagramCleanEngineeringModel):
             sequential_order=source.sequential_order,
             from_module=from_module,
         )
-        loaded.update_self(source)
+        loaded.translate_from(source)
         return loaded
 
     def _is_modules_view(self, canonical: CleanEngineeringModel) -> bool:
@@ -87,14 +86,13 @@ class MiroCleanEngineeringModel(DiagramCleanEngineeringModel):
     # Uniform callable surface
     # ------------------------------------------------------------------
 
-    def load(self, text: str) -> "MiroCleanEngineeringModel":
-        return self.parse(text)
+    def load(self, path: str) -> "MiroCleanEngineeringModel":
+        loaded = self.parse(Path(path).read_text(encoding="utf-8"))
+        loaded.path = path
+        return loaded
 
     def save(self, canonical: CleanEngineeringModel | None = None, previous: Optional[str] = None) -> str:
         return self.render(canonical if canonical is not None else self, previous)
-
-    def clone(self) -> str:
-        return super().clone().save()
 
     def render(
         self,
@@ -126,13 +124,6 @@ class MiroCleanEngineeringModel(DiagramCleanEngineeringModel):
             )
             model.modules.extend(parsed.modules)
         return model
-
-    def sync(
-        self,
-        text: str,
-        canonical: "MiroCleanEngineeringModel",
-    ) -> UpdateReport:
-        return canonical.translate_from(self.parse(text))
 
     # ------------------------------------------------------------------
     # Modules view
@@ -270,7 +261,7 @@ class MiroCleanEngineeringModel(DiagramCleanEngineeringModel):
                 "classDiagram", f"{canonical.name or 'System'} - Class Diagram"
             )
 
-        all_classes = list(canonical.classes)
+        all_classes = list(canonical.every_class())
         class_nodes = {self.load_class(oclass).mermaid_id(): self.load_class(oclass) for oclass in all_classes}
         class_by_id = {cid: node for cid, node in class_nodes.items()}
         module_by_id = {

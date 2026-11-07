@@ -31,28 +31,22 @@ Relationships:
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 from typing import List, Optional
 
-_repo = Path(__file__).resolve().parents[3]
-if str(_repo) not in sys.path:
-    sys.path.insert(0, str(_repo))
-
-from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
 from cdd_guidance.practices.clean_engineering.model.call_graph import parse_arrow_line
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
-    Operation,
-    Property,
-    Relationship,
     companion_interface_name,
     is_interface_name,
 )
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.property import append_invariant, invariant_lines, property_notes, take_property_note
-from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
+from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names, split_top_level
 
 
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
@@ -77,27 +71,6 @@ def _class_heading_bases(raw: str) -> List[str]:
 
 
 class MarkdownOoadClass(OoadClass):
-    def load_property_field(self, source: Property) -> Property:
-        loaded = Property(name=source.name)
-        loaded.update_self(source)
-        return loaded
-
-    def load_operation_field(self, source: Operation) -> Operation:
-        loaded = Operation(name=source.name)
-        loaded.update_self(source)
-        return loaded
-
-    def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
-        assert isinstance(source, OoadClass)
-        return [
-            ChildCollectionPair(self.properties, source.properties, self.load_property_field),
-            ChildCollectionPair(self.operations, source.operations, self.load_operation_field),
-        ]
-
-    def update_self(self, source: OoadNode) -> None:
-        assert isinstance(source, OoadClass)
-        self.intent = source.intent
-        self.collaborators = list(source.collaborators)
 
     def render(self, known_names: Optional[List[str]] = None) -> str:
         names = known_names or []
@@ -498,9 +471,6 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             return self._render_cards()
         return "\n".join(module.render() for module in self.modules)
 
-    def sync(self, text: str, canonical: CleanEngineeringModel) -> UpdateReport:
-        return canonical.translate_from(self.parse(text))
-
     @classmethod
     def from_workspace(cls, root: Path) -> Optional["MarkdownCleanEngineeringModel"]:
         for path in sorted(root.glob("**/*.md")):
@@ -754,33 +724,12 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         return ops
 
 
-    _NON_DOMAIN_TYPE_NAMES = frozenset({
-        "String", "Number", "Boolean", "Void", "Any", "Unknown", "Object",
-        "Record", "Array", "Promise", "Partial", "Omit", "Pick", "RegExp",
-        "Date", "Error", "Map", "Set", "Readonly", "Required", "NonNullable",
-        "Collection", "List", "Iterable", "Sequence", "Optional",
-    })
-
-
-    def _domain_type_names(self, type_raw: str) -> List[str]:
-        """PascalCase type names from a CE type hint (returns, params, props)."""
-        if not type_raw:
-            return []
-        names: List[str] = []
-        for m in re.finditer(r"\b([A-Z][A-Za-z0-9]*)\b", type_raw):
-            name = m.group(1)
-            if name in self._NON_DOMAIN_TYPE_NAMES or name in names:
-                continue
-            names.append(name)
-        return names
-
 
     def _relationships_from_properties(self, props: List[Property]) -> None:
         """A relationship is optional on the property. A primitive or a third-party type has none."""
-        from cdd_guidance.practices.clean_engineering.model.property import bind_property_relationship
 
         for prop in props:
-            bind_property_relationship(prop)
+            prop.derive_relationship()
 
     def _dedupe_relationships(self, rels: List[Relationship]) -> List[Relationship]:
         """One edge per target; stronger ownership (composition > aggregation > association) wins."""
@@ -836,19 +785,19 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             if not m:
                 continue
             op_name = ("_" if private and not m.group(1).startswith("_") else "") + m.group(1)
-            params = [p.strip() for p in m.group(2).split(",") if p.strip()]
+            params = split_top_level(m.group(2))
             ret = (m.group(3) or "").strip()
             ops.append(Operation(name=op_name, parameters=params, return_type=ret))
 
             kind = ret_kind or "association"
-            for target in self._domain_type_names(ret):
+            for target in domain_type_names(ret):
                 rels.append(Relationship(kind=kind, target=target))
             for param in params:
                 # name: Type  or  name?: Type
                 pm = re.match(r"^(\w+)\??:\s*(.+)$", param)
                 if not pm:
                     continue
-                for target in self._domain_type_names(pm.group(2)):
+                for target in domain_type_names(pm.group(2)):
                     rels.append(Relationship(kind="association", target=target))
         return ops, rels
 
