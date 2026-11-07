@@ -372,6 +372,14 @@ The spelling TypeScript and JavaScript share. Nodes: BraceScenario. Read through
 
 The `typescript` format. Nodes: TypeScriptEpic, TypeScriptStory, TypeScriptScenario.
 
+------
++ story_test_folder: str
+	// the step library folder: the stories workspace root, else the deploy root, unless named
++ story_test_import_path: str
+	// property: the import every story file uses for story-test
++ story_test_file_path: str
+	// property: where the shared story-test.ts seed is written
+
 ## JavaScriptStoryModel : BraceStoryModel
 
 The `javascript` format. Nodes: JavaScriptEpic, JavaScriptStory, JavaScriptScenario.
