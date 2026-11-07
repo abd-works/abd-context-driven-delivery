@@ -16,7 +16,7 @@ from harness.name.name import Name
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import data_field
 from harness.markdown.markdown import MarkdownCollection, MarkdownText
-from harness.hooks.hooks import Hook
+from harness.hooks.hooks import Hook, hook
 
 if TYPE_CHECKING:
     from harness.hooks.hook_server import HookPayload
@@ -151,7 +151,7 @@ class RulesCollection(MarkdownCollection):
         """Which edited files these rules apply to."""
         return self._applies_to
 
-    @Hook("postToolUse", disabled=True)
+    @hook("postToolUse", disabled=True)
     def inject_rules(self, payload: HookPayload) -> dict[str, Any]:
         """The rules that apply to the file the agent just edited, as context for its next step. The session notes
         them even while the hook is turned off, so its log still names the rules each edit was checked against."""

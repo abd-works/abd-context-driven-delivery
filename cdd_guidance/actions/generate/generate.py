@@ -5,17 +5,17 @@ from __future__ import annotations
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
-from harness.installation.files import Skill
+from harness.installation.files import skill
 from harness.markdown.format import Format
-from harness.mcp.mcp_server import Mcp
+from harness.mcp.mcp_server import mcp
 from cdd_guidance.actions.validate.validate import Validate
 
 @agent_toolset
 class Generate(GuidanceAction):
     """Generate artifacts for provided context tools."""
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_instructions
     def generate(self, guidance: GuidanceArg) -> str:
         """Write artifacts for each listed guidance at its current fidelity. The shared rules and that fidelity's rules are part of these instructions. After the artifact is written, call validate with the same guidance and paths set to the files you wrote."""

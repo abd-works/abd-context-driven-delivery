@@ -12,7 +12,7 @@ from typing import Callable, Literal, TypeVar
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.destination import data_field, identity, language_adapter
-from harness.mcp.mcp_server import Mcp
+from harness.mcp.mcp_server import mcp
 from harness.agent_tools.chat_pointer import ChatPointer
 
 # The mod checks in every second, so a chat silent for this long has gone.
@@ -123,7 +123,7 @@ class Chat:
         return cls(_chats_folder() / chat)
 
     @classmethod
-    @Mcp
+    @mcp
     @agent_tool
     @noSessionLog
     def list(cls) -> list[Chat]:
@@ -132,7 +132,7 @@ class Chat:
         chats = [cls(entry) for entry in sorted(folder.iterdir())] if folder.is_dir() else []
         return [chat for chat in chats if chat.is_connected]
 
-    @Mcp
+    @mcp
     @agent_tool
     @noSessionLog
     def send(self, kind: CommandKind, text: str) -> Chat:
@@ -144,7 +144,7 @@ class Chat:
         (waiting / self._next_file_name()).write_text(json.dumps({"kind": kind, "text": text, "sent_at": self.clock()}), encoding="utf-8")
         return self
 
-    @Mcp
+    @mcp
     @agent_tool
     @noSessionLog
     def messages(self) -> list[ChatMessage]:
@@ -153,7 +153,7 @@ class Chat:
         newest = sorted(sent, key=lambda entry: entry[0].name, reverse=True)[:KEPT_MESSAGES]
         return [self._message(path, state) for path, state in newest]
 
-    @Mcp
+    @mcp
     @agent_tool
     @noSessionLog
     def check_in(self, is_busy: bool = False, name: str = "", folder: str = "") -> list[ChatCommand]:
@@ -168,7 +168,7 @@ class Chat:
         self._finish_worked_on(is_busy)
         return self._take_ready(is_busy)
 
-    @Mcp
+    @mcp
     @agent_tool
     @noSessionLog
     def confirm(self, message: str, is_shown: bool, reason: str = "") -> Chat:
@@ -181,7 +181,7 @@ class Chat:
         self._move(taken, SHOWN if is_shown else FAILED)
         return self
 
-    @Mcp
+    @mcp
     @agent_tool
     @noSessionLog
     def finish(self, message: str) -> Chat:
@@ -191,7 +191,7 @@ class Chat:
             self._move(shown, DONE)
         return self
 
-    @Mcp
+    @mcp
     @agent_tool
     @noSessionLog
     def resend(self, message: str) -> Chat:
@@ -204,7 +204,7 @@ class Chat:
                 self._move(unshown, WAITING)
         return self
 
-    @Mcp
+    @mcp
     @agent_tool
     @noSessionLog
     def remove(self, message: str) -> Chat:

@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
-from harness.installation.files import Skill
-from harness.mcp.mcp_server import Mcp
+from harness.installation.files import skill
+from harness.mcp.mcp_server import mcp
 
 @agent_toolset
 class Render(GuidanceAction):
     """Render already-generated output for provided context tools."""
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_tool
     def render(
         self,

@@ -6,8 +6,8 @@ from pathlib import Path
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset
-from harness.installation.files import Skill
-from harness.mcp.mcp_server import Mcp
+from harness.installation.files import skill
+from harness.mcp.mcp_server import mcp
 
 _SATISFY_MARKDOWN = Path(__file__).with_name("satisfy.md").read_text(encoding="utf-8")
 
@@ -16,8 +16,8 @@ _SATISFY_MARKDOWN = Path(__file__).with_name("satisfy.md").read_text(encoding="u
 class Satisfy(GuidanceAction):
     """Satisfy artifacts for provided context tools."""
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_instructions
     def satisfy(self, guidance: GuidanceArg) -> str:
         """Run validate for each listed guidance against the content; apply generate_fixes_from_validate, then validate again when done."""

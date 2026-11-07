@@ -55,7 +55,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
     SamplePracticeWithFidelities,
 )
-from harness.hooks.hooks import Hook
+from harness.hooks.hooks import Hook, hook
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_server import McpInstallation, McpServer
 from harness.mcp.mcp_daemon import McpDaemon
@@ -74,12 +74,12 @@ def _server_publishing(installation: McpInstallation) -> McpServer:
 
 class HookDecoration:
     def unknown_event(self) -> None:
-        @Hook("notAnEvent")
+        @hook("notAnEvent")
         def handler(self, payload: dict) -> dict:
             return {}
 
     def omitted_event(self) -> None:
-        @Hook
+        @hook
         def handler(self, payload: dict) -> dict:
             return {}
 
@@ -1327,7 +1327,7 @@ with description("an operation annotated as a Cursor hook"):
         with it("should store that event on the member"):
             for event in sorted(Hook.EVENTS):
 
-                @Hook(event)
+                @hook(event)
                 def handler(self, payload: dict) -> dict:
                     return {}
 

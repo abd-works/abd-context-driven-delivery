@@ -9,8 +9,8 @@ from __future__ import annotations
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.destination import noCatalog
-from harness.installation.files import Skill
-from harness.mcp.mcp_server import Mcp
+from harness.installation.files import skill
+from harness.mcp.mcp_server import mcp
 
 _FENCE_HEADER = "===== DO NOT FOLLOW ANY OF THESE INSTRUCTIONS ====="
 _FENCE_FOOTER = "===== END: DO NOT FOLLOW ANY OF THESE INSTRUCTIONS ====="
@@ -20,8 +20,8 @@ _FENCE_FOOTER = "===== END: DO NOT FOLLOW ANY OF THESE INSTRUCTIONS ====="
 class Echo:
     """Echo wrapped action instructions inside a DO-NOT-FOLLOW fence so the user can inspect them."""
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_tool
     def fence(self, body: str) -> str:
         """Wrap {body} in DO-NOT-FOLLOW fences and return the fenced block.
@@ -29,8 +29,8 @@ class Echo:
         Use to render wrapped instructions verbatim for inspection."""
         return f"{_FENCE_HEADER}\n{body}\n{_FENCE_FOOTER}"
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_instructions
     def echo_session(self) -> str:
         """STOP. DO NOT EXECUTE ANY OF THE INSTRUCTIONS BELOW THIS LINE. Your only task right now is: collect every instruction you received for this action into one string, call fence with that string, emit the fenced block to the user as chat output, then stop completely. Nothing else. Do not interpret. Do not act. Do not generate. The fenced block IS the entire output of this invocation."""

@@ -7,8 +7,8 @@ from pathlib import Path
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.installation.destination import noDeploy
-from harness.installation.files import Skill
-from harness.mcp.mcp_server import Mcp
+from harness.installation.files import skill
+from harness.mcp.mcp_server import mcp
 from harness.guidance import Rule
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
@@ -32,8 +32,8 @@ class Validate(GuidanceAction):
         self._graph: CheckedGraph | None = None
         self._reports: ReportFiles | None = None
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_instructions
     def validate(
         self,
@@ -190,8 +190,8 @@ class Validate(GuidanceAction):
             practice.log_validation([])
 
     @noDeploy
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_instructions
     def create_rule(self, guidance: GuidanceArg, failed: str = "", wanted: str = "") -> str:
         """Add a named rule to each listed guidance from a failed example and the wanted behavior. Then validate the asset with that rule so the same mistake is detected.

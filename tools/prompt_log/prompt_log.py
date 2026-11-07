@@ -17,7 +17,7 @@ from pathlib import Path
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.hooks.hook_server import HookPayload
-from harness.hooks.hooks import Hook, Hooks
+from harness.hooks.hooks import Hook, Hooks, hook
 from harness.installation.destination import noCatalog
 from space.session.session_log import SessionLog
 
@@ -164,28 +164,28 @@ class PromptLog:
         with open(path, "a", encoding="utf-8") as log:
             log.write(text if text.endswith("\n") else f"{text}\n")
 
-    @Hook("beforeSubmitPrompt")
+    @hook("beforeSubmitPrompt")
     def before_submit_prompt(self, payload: HookPayload) -> dict:
         self._append(payload, PromptLogEntry("beforeSubmitPrompt", payload).with_prompt().with_attachments("ATTACHMENTS"))
         return {"continue": True}
 
-    @Hook("beforeReadFile")
+    @hook("beforeReadFile")
     def before_read_file(self, payload: HookPayload) -> dict:
         entry = PromptLogEntry("beforeReadFile", payload).with_read_file().with_attachments("PROMPT ATTACHMENTS (bundled with read)")
         self._append(payload, entry)
         return {"permission": "allow"}
 
-    @Hook("preToolUse")
+    @hook("preToolUse")
     def pre_tool_use(self, payload: HookPayload) -> dict:
         self._append(payload, PromptLogEntry(f"preToolUse:{payload.tool_name}", payload).with_tool_call())
         return {"permission": "allow"}
 
-    @Hook("subagentStart")
+    @hook("subagentStart")
     def subagent_start(self, payload: HookPayload) -> dict:
         self._append(payload, PromptLogEntry("subagentStart", payload).with_fields(payload, _SUBAGENT_FIELDS_SHOWN))
         return {"permission": "allow"}
 
-    @Hook("afterAgentResponse")
+    @hook("afterAgentResponse")
     def after_agent_response(self, payload: HookPayload) -> dict:
         self._append(payload, PromptLogEntry("afterAgentResponse", payload).with_fields(payload, ("text",)))
         return {}

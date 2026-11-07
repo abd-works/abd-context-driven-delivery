@@ -5,8 +5,8 @@ from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.sub_agent.mark import subAgent
 from harness.guidance_actions import GuidanceAction, GuidanceArg
 from harness.installation.destination import noCatalog
-from harness.installation.files import Skill
-from harness.mcp.mcp_server import Mcp
+from harness.installation.files import skill
+from harness.mcp.mcp_server import mcp
 
 @noCatalog
 @agent_toolset
@@ -18,8 +18,8 @@ class Diagnose(GuidanceAction):
     """
 
     @subAgent
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_tool
     def diagnose(self, guidance: GuidanceArg | None = None) -> str:
         """A discipline for hard bugs. Skip phases only when explicitly justified.

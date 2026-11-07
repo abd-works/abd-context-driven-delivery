@@ -26,7 +26,7 @@ from harness.name.name import Name
 from harness.installation.destination import noCatalog
 from harness.marks.mark import Toast
 from harness.hooks.hook_server import TOAST_ARROW, HookPayload, HookServer, rules_toast
-from harness.hooks.hooks import Hook
+from harness.hooks.hooks import hook
 from space.session.session_log import SessionLog
 
 TOAST_NOTICE = ".cursor/prompt-notify-toast.json"
@@ -78,7 +78,7 @@ class PromptNotify:
 
         return {self._compact(name): "action" for name in ActionCatalogue.names()}
 
-    @Hook("preToolUse")
+    @hook("preToolUse")
     def on_pre_tool_use(self, payload: HookPayload) -> dict:
         """Toast what the tool call uses in every workspace folder of the chat that made it."""
         self.install_ide_toast_extension()

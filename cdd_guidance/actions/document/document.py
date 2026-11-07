@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset
-from harness.installation.files import Skill
-from harness.mcp.mcp_server import Mcp
+from harness.installation.files import skill
+from harness.mcp.mcp_server import mcp
 
 @agent_toolset
 class Document(GuidanceAction):
@@ -14,8 +14,8 @@ class Document(GuidanceAction):
     # Document records what is there without correcting it, so an edit it makes is no work the rules should steer.
     injects_rules = False
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_instructions
     def document(self, guidance: GuidanceArg, paths: list[str]) -> str:
         """Record what already exists for the listed guidance without correcting it. Read contexts and templates, and write the observed state under the session path so violations are flagged, not fixed.

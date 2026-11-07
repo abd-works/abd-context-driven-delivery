@@ -15,7 +15,7 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.documents import load_document
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.hooks.hook_server import rules_toast
-from harness.hooks.hooks import Hook
+from harness.hooks.hooks import hook
 from harness.marks.mark import Toast, mark_kinds
 
 if TYPE_CHECKING:
@@ -366,7 +366,7 @@ class GuidanceAction:
         )
 
     @Toast
-    @Hook("postToolUse")
+    @hook("postToolUse")
     def inject_rules(self, payload: HookPayload) -> dict[str, Any]:
         """Inject listed Guidance rules markdown after this action returns."""
         if not self.injects_rules or not self._payload_is_this_action(payload):

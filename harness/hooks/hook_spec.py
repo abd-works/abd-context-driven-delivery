@@ -30,7 +30,7 @@ from harness.hooks.hook_server import (
     HookResult,
     HookServer,
 )
-from harness.hooks.hooks import Hook, Hooks
+from harness.hooks.hooks import Hook, Hooks, hook
 from space.session.sessions import Sessions
 from space.work_state import WorkState
 
@@ -48,7 +48,7 @@ def _dispatch_work_session_inject(tmp: tempfile.TemporaryDirectory):
 
     @agent_toolset
     class _PracticeInject:
-        @Hook("postToolUse")
+        @hook("postToolUse")
         def on_inject(self, payload: HookPayload) -> dict:
             return {
                 "additional_context": (
@@ -69,7 +69,7 @@ def _dispatch_work_session_inject(tmp: tempfile.TemporaryDirectory):
 class _DisabledFixture:
     calls: list[str] = []
 
-    @Hook("afterAgentResponse")
+    @hook("afterAgentResponse")
     def on_after(self, payload: HookPayload) -> dict:
         type(self).calls.append("after")
         return {"agent_message": "ran"}
@@ -79,7 +79,7 @@ class _DisabledFixture:
 class _DispatchFixture:
     calls: list[str] = []
 
-    @Hook("afterAgentResponse")
+    @hook("afterAgentResponse")
     def on_after(self, payload: HookPayload) -> dict:
         type(self).calls.append("after")
         return {"agent_message": "ran"}
@@ -89,7 +89,7 @@ class _DispatchFixture:
 class _StopFixture:
     calls: list[str] = []
 
-    @Hook("stop")
+    @hook("stop")
     def on_stop(self, payload: HookPayload) -> dict:
         type(self).calls.append("stop")
         return {"followup_message": "/turn"}
@@ -100,7 +100,7 @@ class _PatternInject:
     pattern = "lern_domain_driven"
     calls: list[str] = []
 
-    @Hook("postToolUse")
+    @hook("postToolUse")
     def inject_rules(self, payload: HookPayload) -> dict:
         type(self).calls.append("lern")
         return {"additional_context": "lern rules"}
@@ -110,7 +110,7 @@ class _PatternInject:
 class _PayloadReader:
     seen: list[HookPayload] = []
 
-    @Hook("postToolUse")
+    @hook("postToolUse")
     def on_used(self, payload: HookPayload) -> dict:
         type(self).seen.append(payload)
         return {}
@@ -120,7 +120,7 @@ class _PayloadReader:
 class _CoreInject:
     calls: list[str] = []
 
-    @Hook("postToolUse")
+    @hook("postToolUse")
     def inject_rules(self, payload: HookPayload) -> dict:
         type(self).calls.append("core")
         return {"additional_context": "core rules"}
@@ -150,7 +150,7 @@ def _guidelines_dispatch(root: Path, toolsets: list, config: str | dict | None =
 
 @agent_toolset
 class _HookToolset:
-    @Hook("stop")
+    @hook("stop")
     def on_stop(self, payload: HookPayload) -> dict:
         return {}
 
@@ -263,7 +263,7 @@ with description("hook dispatch"):
         with it("should keep user_message separate from agent_message"):
             @agent_toolset
             class _MessageFixture:
-                @Hook("beforeSubmitPrompt")
+                @hook("beforeSubmitPrompt")
                 def on_before(self, payload: HookPayload) -> dict:
                     return {
                         "user_message": "for user",
@@ -280,13 +280,13 @@ with description("hook dispatch"):
         with it("should keep additional_context from every handler"):
             @agent_toolset
             class _FirstRules:
-                @Hook("preToolUse")
+                @hook("preToolUse")
                 def on_first(self, payload: HookPayload) -> dict:
                     return {"additional_context": "clean engineering code rules"}
 
             @agent_toolset
             class _SecondRules:
-                @Hook("preToolUse")
+                @hook("preToolUse")
                 def on_second(self, payload: HookPayload) -> dict:
                     return {"additional_context": "ddd tactics rules"}
 
@@ -302,7 +302,7 @@ with description("hook dispatch"):
         with it("should run inject_rules when a file edit arrives as afterFileEdit"):
             @agent_toolset
             class _FileEditRules:
-                @Hook("postToolUse")
+                @hook("postToolUse")
                 def inject_rules(self, payload: HookPayload) -> dict:
                     return {"additional_context": payload.get("file_path") or ""}
 
@@ -320,13 +320,13 @@ with description("hook dispatch"):
         with it("should keep a repeated additional_context body once"):
             @agent_toolset
             class _Once:
-                @Hook("postToolUse")
+                @hook("postToolUse")
                 def on_first(self, payload: HookPayload) -> dict:
                     return {"additional_context": "keep-operations-small-focused"}
 
             @agent_toolset
             class _Again:
-                @Hook("postToolUse")
+                @hook("postToolUse")
                 def on_second(self, payload: HookPayload) -> dict:
                     return {"additional_context": "keep-operations-small-focused"}
 
@@ -344,7 +344,7 @@ with description("hook dispatch"):
 
                 @agent_toolset
                 class _ChatInject:
-                    @Hook("postToolUse")
+                    @hook("postToolUse")
                     def on_inject(self, payload: HookPayload) -> dict:
                         return {"additional_context": "stories scenario rules"}
 
@@ -438,7 +438,7 @@ with description("hook dispatch"):
 
                 @agent_toolset
                 class _EditCheck:
-                    @Hook("postToolUse")
+                    @hook("postToolUse")
                     def inject_rules(self, payload: HookPayload) -> dict:
                         path = (payload.get("tool_input") or {}).get("path") or ""
                         if path.endswith("story-map.md"):
@@ -508,7 +508,7 @@ with description("hook dispatch"):
         with it("should put that description on the hook event as agent_message"):
             @agent_toolset
             class _DescribedFixture:
-                @Hook("preToolUse")
+                @hook("preToolUse")
                 def on_pre_tool(self, payload: HookPayload) -> dict:
                     """Honor the hook operation description."""
                     return {"permission": "allow"}
@@ -522,7 +522,7 @@ with description("hook dispatch"):
         with it("should carry the handler through without a dispatch failure"):
             @agent_toolset
             class _StatusFixture:
-                @Hook("sessionStart")
+                @hook("sessionStart")
                 def on_session_start(self, payload: HookPayload) -> str:
                     return "running"
 
@@ -532,7 +532,7 @@ with description("hook dispatch"):
         with it("should leave the hook event free of an agent message"):
             @agent_toolset
             class _StatusFixture:
-                @Hook("sessionStart")
+                @hook("sessionStart")
                 def on_session_start(self, payload: HookPayload) -> str:
                     """Report whether the host already runs."""
                     return "running"
@@ -678,7 +678,7 @@ with description("a hook server") as self:
         with before.each:
             @agent_toolset
             class _RaisingFixture:
-                @Hook("stop")
+                @hook("stop")
                 def on_stop(self, payload: HookPayload) -> dict:
                     raise RuntimeError("handler misconfigured")
 
@@ -805,7 +805,7 @@ with description("a hook handler"):
 
 @agent_toolset
 class _ToastingInject:
-    @Hook("postToolUse")
+    @hook("postToolUse")
     def on_used(self, payload: HookPayload) -> dict:
         return {"additional_context": "rules for the edit", "toast": "rules injected for stories-scenarios"}
 
@@ -909,7 +909,7 @@ with description("a hook server whose project registers no sessions"):
     with before.each:
         @agent_toolset
         class _ContextInject:
-            @Hook("postToolUse")
+            @hook("postToolUse")
             def on_inject(self, payload: HookPayload) -> dict:
                 return {"additional_context": "stories scenario rules"}
 
@@ -942,7 +942,7 @@ with description("a hook install"):
 
         @agent_toolset
         class _StopHook:
-            @Hook("stop")
+            @hook("stop")
             def on_stop(self, payload: HookPayload) -> dict:
                 return {}
 

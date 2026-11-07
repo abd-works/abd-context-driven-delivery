@@ -10,8 +10,8 @@ from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, Segment
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
-from harness.installation.files import Skill
-from harness.mcp.mcp_server import Mcp
+from harness.installation.files import skill
+from harness.mcp.mcp_server import mcp
 
 @agent_toolset
 class Partition(GuidanceAction):
@@ -20,7 +20,7 @@ class Partition(GuidanceAction):
     Slash ``/partition`` runs this action once for each listed guidance, in the session the call works in.
     """
 
-    @Mcp
+    @mcp
     @agent_tool
     def verify_segment_completeness(
         self,
@@ -89,7 +89,7 @@ class Partition(GuidanceAction):
             resolved.read_text(encoding="utf-8", errors="replace"),
         )
 
-    @Mcp
+    @mcp
     @agent_tool
     def index(
         self,
@@ -103,7 +103,7 @@ class Partition(GuidanceAction):
         source = self.source_label(context, paths)
         return f"Index the corpus at {source} under {self._folder(out_root).as_posix()}/.context/. Read those files locally."
 
-    @Mcp
+    @mcp
     @agent_tool
     def segment(self, out_root: str | None = None) -> str:
         """Write verbatim source chunks from the index into segment files under out_root (from the project's root, or absolute), or under the session's root when out_root is omitted. Completeness must use named entries, not length alone."""
@@ -139,8 +139,8 @@ class Partition(GuidanceAction):
         steps = (self._guidance_to_index_by(item), self.index(context, out_root, paths), self.segment(out_root))
         return "\n\n".join(step for step in steps if step)
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_instructions
     def partition(self,
         guidance: GuidanceArg,

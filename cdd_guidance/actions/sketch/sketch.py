@@ -11,8 +11,8 @@ from cdd_guidance.actions.grill_context.grill_context import GrillContext
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
-from harness.installation.files import Skill
-from harness.mcp.mcp_server import Mcp
+from harness.installation.files import skill
+from harness.mcp.mcp_server import mcp
 
 _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 
@@ -47,7 +47,7 @@ class Sketch(GuidanceAction):
         """The grill this sketch runs: made for this sketch's session and working on what it lists."""
         return self._inside(GrillContext)
 
-    @Mcp
+    @mcp
     @agent_tool
     def find_template(self, agent_dir: str = "") -> str:
         """Locate a sketch template using tiered discovery.
@@ -61,7 +61,7 @@ class Sketch(GuidanceAction):
         found = sorted(templates_dir.glob("*-sketch.*")) if templates_dir is not None and templates_dir.is_dir() else []
         return (found[0] if found else _DEFAULT_TEMPLATE).read_text(encoding="utf-8")
 
-    @Mcp
+    @mcp
     @agent_tool
     def save_sketch(
         self,
@@ -79,7 +79,7 @@ class Sketch(GuidanceAction):
         target.write_text(self.document_named(content, paths), encoding="utf-8")
         return str(target)
 
-    @Mcp
+    @mcp
     @agent_tool
     def list_sketches(self, module: str = "") -> str:
         """List the sketch files in the session root's .context folder, or in a module's under that root.
@@ -93,7 +93,7 @@ class Sketch(GuidanceAction):
             return "no sketches"
         return "\n".join(paths)
 
-    @Mcp
+    @mcp
     @agent_tool
     def review_sketch(self) -> str:
         """Hard gate after every save_sketch — pause for human review before any next grill question.
@@ -106,8 +106,8 @@ class Sketch(GuidanceAction):
         Grill must validate the sketch's thinking here — not run as a disconnected interview."""
         return "sketch-review"
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_instructions
     def sketch(self, guidance: GuidanceArg) -> str:
         """Confirm views only when the user did not already name them. Write a high-level shell in one integrated sketch file, one section per practice. The shell's level of detail is that fidelity's Scaffold section; the notation is the practice sketch template. Then ask which theme to start. Ask three or four questions from that fidelity's Sketch section, then sketch those answers into the existing sections. Practice Rules apply after those answers, not to the shell. The reply includes these sketch instructions, each practice's sketch template, and each practice's rules."""

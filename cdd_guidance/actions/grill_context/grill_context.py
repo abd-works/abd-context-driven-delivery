@@ -8,8 +8,8 @@ from pathlib import Path
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import agent_tool
-from harness.installation.files import Skill
-from harness.mcp.mcp_server import Mcp
+from harness.installation.files import skill
+from harness.mcp.mcp_server import mcp
 
 _NEVER_WALKED = frozenset({".git", ".venv", "node_modules"})
 
@@ -48,7 +48,7 @@ class GrillContext(GuidanceAction):
         entry = f"### {heading}\n\n{body.strip()}\n\n"
         return base + entry
 
-    @Mcp
+    @mcp
     @agent_tool
     def explore_context_files(self, folder: str = "") -> str:
         """Scan a directory tree for context files: the session's root, or a folder the plan names.
@@ -77,7 +77,7 @@ class GrillContext(GuidanceAction):
             found.extend(Path(folder) / name for name in files)
         return sorted(found)
 
-    @Mcp
+    @mcp
     @agent_tool
     def read_context_file(self, path: str) -> str:
         """Confirm a context file and return its path.
@@ -88,7 +88,7 @@ class GrillContext(GuidanceAction):
             raise ContextFileNotFound(target)
         return str(target)
 
-    @Mcp
+    @mcp
     @agent_tool
     def write_grill_answer(self, heading: str, body: str) -> str:
         """Append one insight to grill-answers.md under the given heading.
@@ -102,8 +102,8 @@ class GrillContext(GuidanceAction):
         answers_path.write_text(self._appended_answers_content(existing, heading, body), encoding="utf-8")
         return str(answers_path)
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_instructions
     def grill(self, guidance: GuidanceArg) -> str:
         """Interview the plan against codebase context until questions are grounded in files you have read, then generate each listed guidance. Ask one framed question at a time and write each resolved insight to grill-answers.md."""

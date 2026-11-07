@@ -3,17 +3,17 @@ from __future__ import annotations
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, tools, instructions
-from harness.installation.files import Skill
+from harness.installation.files import skill
 from harness.hooks.hooks import Hooks
-from harness.mcp.mcp_server import Mcp
+from harness.mcp.mcp_server import mcp
 
 @Hooks(disabled=True, deploy=False)
 @agent_toolset
 class CarStory(GuidanceAction):
     """Scripted trip actions over one or more Car context tools."""
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_instructions
     def travelTo(self, guidance: GuidanceArg, destination: str, conditions: str) -> str:
         """Scripted trip to a destination under stated conditions."""
@@ -30,8 +30,8 @@ class CarStory(GuidanceAction):
             tools(car.speak())
         return f"Instructions for traveling to {destination}"
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_instructions
     def inspect_trip(self, guidance: GuidanceArg, plan: str) -> str:
         """Collect the trip plan into one string, call wrap_story, emit the fenced block only."""

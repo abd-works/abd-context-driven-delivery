@@ -5,8 +5,8 @@ from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
-from harness.installation.files import Skill
-from harness.mcp.mcp_server import Mcp
+from harness.installation.files import skill
+from harness.mcp.mcp_server import mcp
 
 @agent_toolset
 class Improvement(GuidanceAction):
@@ -17,8 +17,8 @@ class Improvement(GuidanceAction):
     def repair_loop(self) -> str:
         """Deep root-cause recipe — why the toolset's expected behavior failed."""
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_instructions
     def repair(self, guidance: GuidanceArg, asset: str = "", violation: str = "") -> str:
         """Open a domain repair on each listed guidance and instruct the fix.
@@ -41,8 +41,8 @@ class Improvement(GuidanceAction):
             "at the seam. See repair.md."
         )
 
-    @Mcp
-    @Skill
+    @mcp
+    @skill
     @agent_tool
     def verify_fix(self, guidance: GuidanceArg, theme: str) -> str:
         """Re-run the regression check for a themed repair bucket on each listed guidance.
