@@ -1,6 +1,6 @@
 import { FORMAT_GROUPS } from '../board/board-brand'
 import type { ColumnClient } from '../board/column-client'
-import type { TicketFiles } from './ticket'
+import type { FilesByFidelity } from './ticket-client'
 
 export type FormatChip = { label: string; formats: string[] }
 
@@ -25,15 +25,15 @@ export function chosenFormats(stage: ColumnClient, slugs: string[], picked: stri
   return [...new Set(slugs.flatMap(slug => chips.flatMap(chip => chipFormat(stage, slug, chip) ?? [])))]
 }
 
-const hasMade = (files: TicketFiles, slug: string, chip: FormatChip): boolean =>
+const hasMade = (files: FilesByFidelity, slug: string, chip: FormatChip): boolean =>
   chip.formats.some(format => (files[slug]?.[format] ?? []).some(entry => entry.exists))
 
-export const chipDoneCount = (files: TicketFiles, slugs: string[], chip: FormatChip): number => slugs.filter(slug => hasMade(files, slug, chip)).length
+export const chipDoneCount = (files: FilesByFidelity, slugs: string[], chip: FormatChip): number => slugs.filter(slug => hasMade(files, slug, chip)).length
 
 export const chipOfferedCount = (stage: ColumnClient, slugs: string[], chip: FormatChip): number => slugs.filter(slug => chipFormat(stage, slug, chip)).length
 
 // A tile opens ready to run: the fidelities' default formats, unless that output already exists.
-export function defaultPicks(stage: ColumnClient, slugs: string[], files: TicketFiles): string[] {
+export function defaultPicks(stage: ColumnClient, slugs: string[], files: FilesByFidelity): string[] {
   const defaults = slugs.map(slug => stage.defaultFormats[slug] ?? '')
   return chipsOf(stage, slugs)
     .filter(chip => chip.formats.some(format => defaults.includes(format)) && !chipDoneCount(files, slugs, chip))

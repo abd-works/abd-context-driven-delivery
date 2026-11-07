@@ -452,12 +452,7 @@ it should say fix violations on held violations
 #### with generate next
 
 ```
-it should ask for the commands of the default format
--> TicketClient.runNext()
-```
-
-```
-it should send those commands in order
+it should send the generate command in the default format
 -> TicketClient.runNext()
 ```
 
@@ -721,7 +716,7 @@ it should link to the report of the fidelity left with violations
 ### Generate Fidelity Output
 
 ```
-it should send the commands the ticket names
+it should send the generate command for the picked formats
 -> BoardPage.tiles
 -> TileActionsClient.run(barAt)
 -> ChatClient.checkIn()
@@ -3505,26 +3500,6 @@ it should list only the fidelities asked for
   -> Repo.files_changed_on(branch: str)
   <- list[str]
 <- dict
-```
-
-```
-it should render the earlier fidelity into the new format first
--> Board.ticket("pet-visits", *DISCOVERY_DONE, title="Pet visits")
-<- Ticket
--> Board.backlog_item("returns.md", "Returns and refunds")
-<- BacklogItem
--> Ticket.generate_commands(ticket="pet-visits", fidelities=["stories-scenarios"], formats=["drawio"])
-<- list[str]
-```
-
-```
-it should name the ticket's session in the generate command
--> Board.ticket("pet-visits", *DISCOVERY_DONE, title="Pet visits")
-<- Ticket
--> Board.backlog_item("returns.md", "Returns and refunds")
-<- BacklogItem
--> Ticket.generate_commands(ticket="pet-visits", fidelities=["stories-scenarios"], formats=["drawio"])
-<- list[str]
 ```
 
 ```

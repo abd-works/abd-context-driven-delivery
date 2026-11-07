@@ -39,7 +39,7 @@ from harness.kanban.session_board_examples import (
     seed_checkout_flow_held_on_violations,
     validated,
 )
-from harness.kanban.story_test import SharedStories, column_in, expect_action, expect_actions, expect_held_on_violations, expect_no_next, expect_placed
+from harness.kanban.story_test import SharedStories, column_in, expect_action, expect_actions, expect_held_on_violations, expect_no_next, expect_placed, progress_in
 
 shared_stories = SharedStories("Guide Work Through Practices")
 
@@ -115,7 +115,7 @@ def _(s):
 
     @s.then("each Discovery tile marks Generate, Validate, and Review ○, its segment dim")
     def _(world):
-        tiles = {slug: (world.read["progress"][slug]["actions"], world.read["progress"][slug]["state"]) for slug in DISCOVERY_FIDELITY_SLUGS}
+        tiles = {slug: (progress_in(world.read, slug)["actions"], progress_in(world.read, slug)["state"]) for slug in DISCOVERY_FIDELITY_SLUGS}
         expect(tiles).to(equal(dict.fromkeys(DISCOVERY_FIDELITY_SLUGS, ({"generate": "to_do", "validate": "to_do", "review": "to_do"}, "not_started"))))
 
 
@@ -282,20 +282,17 @@ def _(s):
 
     @s.when("the Person runs billing-report's next step")
     def _(world):
-        ticket = world.Ticket.load(BILLING_REPORT.name)
-        world.before = world.data_of(ticket)
-        default_format = column_in(world.data_of(world.Board.current().show()), "Discovery")["default_formats"][world.before["next"]]
-        world.commands = ticket.generate_commands(fidelities=[world.before["next"]], formats=[default_format])
+        world.before = world.data_of(world.Ticket.load(BILLING_REPORT.name))
+        world.discovery = column_in(world.data_of(world.Board.current().show()), "Discovery")
 
     @s.then("Run next read Run next: generate before it ran")
     def _(world):
-        expect((world.before["progress"][world.before["next"]]["next_action"], world.before["next"])).to(equal(("generate", STORY_MAP)))
+        expect((world.before["next"]["next_action"], world.before["next"]["slug"])).to(equal(("generate", STORY_MAP)))
 
-    # The command also names the ticket's session.json, as kanban_tools_spec 'should name the ticket's session in the
-    # generate command' requires, because a command runs in whichever chat it is sent to.
+    # The board app writes the command from the stage's default format; the command itself is left to its specs.
     @s.and_("the chat receives the command /actions-generate stories-story-map format=markdown")
     def _(world):
-        expect(world.commands).to(equal(["/actions-generate stories-story-map format=markdown session=.sessions/billing-report/session.json"]))
+        expect(world.discovery["default_formats"][world.before["next"]["slug"]]).to(equal("markdown"))
 
 
 @shared_stories.scenario("Send Next Fidelity Action", "Open the report while violations hold the ticket")
@@ -313,11 +310,11 @@ def _(s):
     def _(world):
         ticket = world.Ticket.load(CHECKOUT_FLOW.name)
         world.before = world.data_of(ticket)
-        world.report = world.data_of(ticket.progress_of(world.before["next"]).report())
+        world.report = world.data_of(ticket.progress_of(world.before["next"]["slug"]).report())
 
     @s.then("Run next read Run next: fix violations")
     def _(world):
-        expect(world.before["progress"][world.before["next"]]["next_action"]).to(equal("satisfy"))
+        expect(world.before["next"]["next_action"]).to(equal("satisfy"))
 
     @s.and_("the report panel opens on stories-story-map")
     def _(world):
@@ -338,7 +335,7 @@ def _(s):
     @s.when("the Person runs billing-report's next step")
     def _(world):
         ticket = world.Ticket.load(BILLING_REPORT.name)
-        world.reviewed = world.data_of(ticket.progress_of(world.data_of(ticket)["next"]).finish_review())
+        world.reviewed = world.data_of(ticket.progress_of(world.data_of(ticket)["next"]["slug"]).finish_review())
 
     @s.then("billing-report's story_map marks Review ✓")
     def _(world):
@@ -361,7 +358,7 @@ def _(s):
 
     @s.then("Run next reads Run next: review on stories-story-map")
     def _(world):
-        expect((world.read["progress"][world.read["next"]]["next_action"], world.read["next"])).to(equal(("review", STORY_MAP)))
+        expect((world.read["next"]["next_action"], world.read["next"]["slug"])).to(equal(("review", STORY_MAP)))
 
 
 @shared_stories.scenario("Send Next Fidelity Action", "Name nothing to run on a ticket done in its stage")

@@ -1,5 +1,5 @@
-"""Generate Fidelity Outputs at the server tier: the shared scenarios through the cdd tool ticket.generate_commands
-and the generate.generate prompt, on a cdd server started on a throwaway project."""
+"""Generate Fidelity Outputs at the server tier: the shared scenarios through the generate.generate prompt, on a cdd
+server started on a throwaway project."""
 
 from harness.kanban.session_board_tiers import ServerTier
 from harness.kanban.story_test import load_shared, replay

@@ -37,7 +37,7 @@ Output persistence is mandatory. Create and update at least one markdown artifac
 
 ## Handoff
 
-Run `handoff` when the specification role is complete. State whether the handoff is for a new specification session or for the implementation agent.
+Run the `space-session-handoff-session` skill when the specification role is complete. State whether the handoff is for a new specification session or for the implementation agent.
 
 Include the exact implementation scope and exclusions, source and specification artifact paths, authoritative domain terms, Given-When-Then scenarios with example data, UI interaction decisions, domain invariants and stereotypes, public module interfaces and object contracts, BDD test signature locations, suggested build order, question-and-answer log, assumptions, risks, and deferred implementation questions.
 

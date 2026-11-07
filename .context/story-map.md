@@ -264,24 +264,24 @@ section: body
                 NA — practices/stories
 ###     (S) User --> Request Session Handoff
 ####        Tests
-                NA — space/handoff
+                NA — space/session
 ###     (S) Handoff --> Write Handoff Document
 ####        Tests
-                # space/handoff/handoff_spec.py
-                with it("should expose write_handoff tool and handoff_session action")
+                # space/session/handoff_spec.py
+                with description("a session's handoff tools")
+                    with it("should offer write_handoff as a tool")
+                    with it("should offer handoff_session as instructions")
+                    with it("should call write_handoff when running the handoff_session instructions")
 
-                # space/handoff/handoff_spec.py
-                with it("should call write_handoff when running the handoff_session action")
-
-                # space/handoff/handoff_spec.py
-                with description("write_handoff")
-                    with context("given a workspace with an active session folder")
-                        with it("should write a file named handoff-{timestamp}.md in the session folder")
+                # space/session/handoff_spec.py
+                with description("a session writing a handoff")
+                    with context("with a project whose current session is named")
+                        with it("should write a file named handoff-{timestamp}.md in that session's folder")
                         with it("should write the content verbatim")
                         with it("should return the absolute path of the written file")
-                    with context("given a workspace with no active session")
-                        with it("should create a fallback session folder and write the file there")
                         with it("should not write a handoff-latest.md")
+                    with context("with a project that has no named current session")
+                        with it("should write into the main session folder")
 
 ---
 

@@ -1,14 +1,13 @@
 import { FORMAT_GROUPS } from '../board/board-brand'
 import type { BoardStore, FilesPanel, SidePanel } from '../board/board-store'
-import type { TicketFiles } from './ticket'
-import type { TicketClient } from './ticket-client'
+import type { FilesByFidelity, TicketClient } from './ticket-client'
 
 const TAB_GROUPS = ['markdown', 'code', 'diagram']
 const SESSION_ENTRY = 'session'
 const TAB_ORDER = TAB_GROUPS.flatMap(label => FORMAT_GROUPS.find(group => group.label === label)?.formats ?? [])
 
 // One tab per format the fidelity offers, generated or not: a story map always shows its markdown and its diagram.
-export const offeredTabs = (files: TicketFiles, slugs: string[]): string[] =>
+export const offeredTabs = (files: FilesByFidelity, slugs: string[]): string[] =>
   slugs.flatMap(slug =>
     [...TAB_ORDER, ...Object.keys(files[slug] ?? {}).filter(label => !TAB_ORDER.includes(label))].flatMap(label => (files[slug]?.[label] ?? []).map(entry => entry.path)),
   )
@@ -29,7 +28,7 @@ export const folderGroupsOf = (paths: string[]): { root: string; entries: { path
   }))
 
 // Tabs follow what is offered now; one a person closed stays closed, and one a violation opened stays open.
-function withFiles(panel: FilesPanel, files: TicketFiles): FilesPanel {
+function withFiles(panel: FilesPanel, files: FilesByFidelity): FilesPanel {
   const before = offeredTabs(panel.files, panel.slugs)
   const after = offeredTabs(files, panel.slugs)
   const kept = panel.tabs.filter(tab => after.includes(tab) || !before.includes(tab))
@@ -64,7 +63,7 @@ export class FilesPanelClient {
   }
 
   // A session folder's files are shown as the files of one entry, so the list, folder, and tabs read them the same way.
-  private async read(ticket: TicketClient, slugs: string[], isSession: boolean): Promise<TicketFiles | null> {
+  private async read(ticket: TicketClient, slugs: string[], isSession: boolean): Promise<FilesByFidelity | null> {
     if (!isSession) return ticket.filesOf(slugs)
     const entries = await ticket.sessionClient.folderFiles()
     return entries && { [SESSION_ENTRY]: { [SESSION_ENTRY]: entries } }

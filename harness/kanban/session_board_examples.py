@@ -171,9 +171,6 @@ LATEST_HANDOFF = "handoff-20261101T120000.md"
 HANDOFF_TEXT = "# Handoff\n"
 EARLIER_HANDOFF = "handoff-20261031T090000.md"
 EARLIER_HANDOFF_TEXT = "# Earlier handoff\n"
-PET_VISITS_STORY_MAP_ROOT = "docs"
-PET_VISITS_STORY_MAP_FILE = "docs/.context/story-map.md"
-PET_VISITS_STORY_MAP_TEXT = "# Pet visits\n"
 SPEC_THEIRS = "src/theirs_spec.py"
 SPEC_MINE = "src/mine_spec.py"
 # The active ticket's work not yet committed, as kanban_tools_spec writes work.txt before a ticket is left, so leaving
@@ -188,7 +185,7 @@ PET_VISITS_TICKET = TicketTitle("Pet visits")
 BILLING_REPORT_ON_SRC_BILLING = TicketTitle("Billing report", path="src/billing")
 ENTER_CARD_DETAILS = TicketTitle("Enter card details", scope="story", parent="checkout-flow")
 STORY_MAP = "stories-story-map"
-DISCOVERY_FIDELITY_SLUGS = tuple(f"{practice}-{fidelity}" for practice, _, fidelity in DISCOVERY_FIDELITIES)
+DISCOVERY_FIDELITY_SLUGS = tuple(f"{practice}-{fidelity}".replace("_", "-") for practice, _, fidelity in DISCOVERY_FIDELITIES)
 DISCOVERY_LIMIT = 3
 RAISED_DISCOVERY_LIMIT = 4
 LOWERED_DISCOVERY_LIMIT = 2

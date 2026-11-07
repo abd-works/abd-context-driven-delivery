@@ -165,7 +165,7 @@ Observed: `Board.help`; the ? on a tile or a practice name opens help in a side 
 
 ### (S) Person --> [Send Next Fidelity Action](move-work-forward-on-session-board/guide-work-through-practices/send-next-fidelity-action/send_next_fidelity_action_story.test.md)
 
-Observed: on generate, Run next sends the commands of `ticket.generate_commands` for the fidelity's default format; on validate or review it fills the prompt.
+Observed: on generate, Run next sends `/actions-generate` for the fidelity in its stage's default format; on validate or review it fills the prompt.
 
 ## (E) Generate Fidelity Outputs
 

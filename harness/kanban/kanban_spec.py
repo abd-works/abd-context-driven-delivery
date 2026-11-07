@@ -11,14 +11,14 @@ from harness.installation.installer import Installer
 
 Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
 
-from bdd.bdd import Bdd  # noqa: E402
-from ddd.ddd import Ddd  # noqa: E402
+from cdd_guidance.practices.bdd.bdd import Bdd  # noqa: E402
+from cdd_guidance.practices.ddd.ddd import Ddd  # noqa: E402
+from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
+from cdd_guidance.practices.ux.ux import Ux  # noqa: E402
 from harness.installation.destination import data_of  # noqa: E402
 from harness.kanban.board import Board, Card, ColumnNotFoundError  # noqa: E402
 from harness.kanban.ticket import Ticket  # noqa: E402
 from space.repo.repo import Repo  # noqa: E402
-from stories.stories import Stories  # noqa: E402
-from ux.ux import Ux  # noqa: E402
 
 
 class SessionsFolder:
@@ -99,6 +99,9 @@ with description("a board") as self:
 
         with it("should choose every practice"):
             expect([type(practice).__name__ for practice in self.board.practices]).to(equal(["Stories", "Ddd", "Ux", "CleanEngineering", "Bdd"]))
+
+        with it("should choose the practice classes their packages define, loaded once under one name"):
+            expect([type(practice) for practice in self.board.practices[:3]]).to(equal([Stories, Ddd, Ux]))
 
         with it("should share its practices with every other board loaded in the process, since they do not change between calls"):
             expect(Board.load(SessionsFolder().project).practices[0]).to(be(self.board.practices[0]))

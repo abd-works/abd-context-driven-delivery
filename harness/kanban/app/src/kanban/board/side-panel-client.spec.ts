@@ -1,10 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import type { ReportRuleData } from '@cdd/harness/kanban/ticket'
-import type { TicketFiles } from '@src/kanban/ticket/ticket'
 import { folderGroupsOf, generatedPaths, offeredTabs } from '@src/kanban/ticket/files-panel-client'
 import { BoardOnProject, ticketOn as shownTicket } from 'test-utils/board-page-support'
-import type { TicketClient } from '@src/kanban/ticket/ticket-client'
+import type { FilesByFidelity, TicketClient } from '@src/kanban/ticket/ticket-client'
 
 import type { BoardPage } from './board-page'
 import type { FilesPanel, ReportPanel } from './board-store'
@@ -36,7 +35,7 @@ const ticketOn = (page: BoardPage): TicketClient => shownTicket(page, TICKET)
 // A ticket the page still holds after the board stopped showing it: its tools name a ticket the board does not have.
 const goneTicket = (page: BoardPage, name: string): TicketClient => {
   const shown = ticketOn(page).toJSON()
-  const progress = Object.fromEntries(Object.entries(shown.progress).map(([slug, entry]) => [slug, { ...entry, ticket: name }]))
+  const progress = shown.progress.map(entry => ({ ...entry, ticket: name }))
   return page.ticket({ ...shown, name, progress })
 }
 
@@ -121,7 +120,7 @@ describe('View Fidelity Files', () => {
   })
 
   it('should keep markdown before code before diagrams', () => {
-    const files: TicketFiles = { [SLUG]: { drawio: [{ path: 'b.drawio', exists: true }], python: [{ path: 'c.py', exists: true }], markdown: [{ path: 'a.md', exists: true }] } }
+    const files: FilesByFidelity = { [SLUG]: { drawio: [{ path: 'b.drawio', exists: true }], python: [{ path: 'c.py', exists: true }], markdown: [{ path: 'a.md', exists: true }] } }
     expect(offeredTabs(files, [SLUG])).toEqual(['a.md', 'c.py', 'b.drawio'])
   })
 

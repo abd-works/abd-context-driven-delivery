@@ -30,7 +30,7 @@ Partition runs last. Call `partition` only after convert or capture, and after e
 
 ## Handoff
 
-Run `handoff` when context is indexed and partitioned. State whether the handoff is for a new context session or for the discovery agent.
+Run the `space-session-handoff-session` skill when context is indexed and partitioned. State whether the handoff is for a new context session or for the discovery agent.
 
 Include the source, the Context Setup path used, the index path, segment paths, lenses, coverage results, and any source that still needs capture.
 

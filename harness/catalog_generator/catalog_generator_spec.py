@@ -30,7 +30,7 @@ from harness.catalog_generator.catalog_generator import (
     catalog_utilities,
     keep_in_catalog,
     noCatalog,
-    omitted_from_catalog,
+    NoCatalog,
     resolve_lifecycle_actions,
 )
 from harness.agent_tools import agent_instructions, agent_toolset
@@ -115,7 +115,7 @@ with description("noCatalog"):
                 """Sketch the plan."""
                 return None
 
-            expect(omitted_from_catalog(sketch)).to(be_true)
+            expect(NoCatalog.marks(sketch)).to(be_true)
             expect(Skill.marks(sketch)).to(be_true)
             expect("noCatalog" in Installer._ANNOTATIONS).to(equal(False))
             expect("Skill" in Installer._ANNOTATIONS).to(be_true)

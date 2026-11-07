@@ -24,9 +24,11 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
-from ddd.ddd import Ddd
 from expects import be_none, be_true, equal, expect
 
+from cdd_guidance.practices.ddd.ddd import Ddd
+from cdd_guidance.practices.stories.stories import Stories
+from cdd_guidance.practices.ux.ux import Ux
 from space.repo.repo import Repo
 from harness.kanban.session_board_examples import (
     BACK_TO_BACKLOG,
@@ -54,9 +56,7 @@ from harness.kanban.session_board_examples import (
     SURFACE_FIXTURE_PROJECT,
     seed_surface_fixture,
 )
-from harness.kanban.story_test import SharedStories, column_in, expect_backlog, expect_placed, expect_refused, names_in, refusal_of, ticket_in
-from stories.stories import Stories
-from ux.ux import Ux
+from harness.kanban.story_test import SharedStories, column_in, expect_backlog, expect_placed, expect_refused, names_in, progress_in, refusal_of, ticket_in
 
 shared_stories = SharedStories("See Work On Session Board")
 
@@ -80,7 +80,7 @@ def _(s):
     @s.then("the header reads cdd-board-surface-fixture · 9 tickets · active: Checkout flow")
     def _(world):
         tickets = [name for column in world.read["columns"] for name in names_in(column)]
-        header = (world.read["project"], len(tickets), ticket_in(world.read, world.read["active"])["title"])
+        header = (world.read["project"], len(tickets), world.read["active"]["title"])
         expect(header).to(equal((SURFACE_FIXTURE_PROJECT, 9, "Checkout flow")))
 
 
@@ -259,7 +259,7 @@ def _(s):
     # The thick orange outline is drawn by ticket-card-view.tsx from the active ticket named here.
     @s.then("the header names Checkout flow as active")
     def _(world):
-        expect((world.read["active"], ticket_in(world.read, world.read["active"])["title"])).to(equal((CHECKOUT_FLOW.name, "Checkout flow")))
+        expect((world.read["active"]["name"], world.read["active"]["title"])).to(equal((CHECKOUT_FLOW.name, "Checkout flow")))
 
 
 @shared_stories.scenario("Display Ticket Details", "Show the ticket of a card pressed anywhere")
@@ -278,11 +278,11 @@ def _(s):
 
     @s.and_("the details say No handoff yet and Next: stories-story-map, generate")
     def _(world):
-        expect((world.selected["session"]["handoff"], world.selected["next"], world.selected["progress"][world.selected["next"]]["next_action"])).to(equal(("", "stories-story-map", "generate")))
+        expect((world.selected["session"]["handoff"], world.selected["next"]["slug"], world.selected["next"]["next_action"])).to(equal(("", "stories-story-map", "generate")))
 
     @s.and_("the details show a tile for each enabled fidelity with its fidelity progress")
     def _(world):
-        expect({slug: world.selected["progress"][slug]["state"] for slug in DISCOVERY_FIDELITY_SLUGS}).to(equal(dict.fromkeys(DISCOVERY_FIDELITY_SLUGS, "not_started")))
+        expect({slug: progress_in(world.selected, slug)["state"] for slug in DISCOVERY_FIDELITY_SLUGS}).to(equal(dict.fromkeys(DISCOVERY_FIDELITY_SLUGS, "not_started")))
 
 
 @shared_stories.scenario("Display Ticket Details", "Name a split ticket by the ticket it came from")

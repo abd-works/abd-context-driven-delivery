@@ -19,6 +19,7 @@ import re
 
 from expects import contain, equal, expect
 
+from cdd_guidance.practices.stories.stories import Stories
 from harness.kanban.session_board_examples import (
     BILLING_REPORT,
     CHECKOUT_FLOW,
@@ -33,8 +34,7 @@ from harness.kanban.session_board_examples import (
     seed_checkout_flow_held_on_violations,
     seed_checkout_flow_open,
 )
-from harness.kanban.story_test import SharedStories, expect_action, expect_held_on_violations
-from stories.stories import Stories
+from harness.kanban.story_test import SharedStories, expect_action, expect_held_on_violations, progress_in
 from validate.graph_json_reader import violations_from_graph_json_files
 
 shared_stories = SharedStories("Validate Fidelity Outputs")
@@ -96,7 +96,7 @@ def _(s):
 
     @s.then("validate is on for story_map")
     def _(world):
-        expect(world.read["progress"][STORY_MAP]["allowed_actions"]).to(contain("validate"))
+        expect(progress_in(world.read, STORY_MAP)["allowed_actions"]).to(contain("validate"))
 
 
 @shared_stories.scenario("Save Validation Report", "Save the report and the graph it checked")
@@ -233,4 +233,4 @@ def _(s):
 
     @s.then("the story_map bar shows no report link")
     def _(world):
-        expect(world.read["progress"][STORY_MAP]["report_file"]).to(equal(""))
+        expect(progress_in(world.read, STORY_MAP)["report_file"]).to(equal(""))

@@ -12,15 +12,17 @@ from functools import cache
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Callable
 
-from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
+from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
 from harness.installation.destination import data_field, language_adapter
 from harness.guidance.practice_catalogue import PracticeCatalogue
-from harness.installation.files import command
+from harness.guidance_actions import load_document
+from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
 from tools.file_manager.file_manager import FileEntry, FileManager, FileText
 from space.repo.repo import Repo
 from space.session.chat_pointer import NO_CHAT, ChatPointer
+from space.session.decision_records import FORMAT_FILE, DecisionRecords
 from space.work_state import (
     LEGACY_SESSIONS_FOLDER,
     SESSIONS_FOLDER,
@@ -580,12 +582,6 @@ class Session:
         session = cls._current_of(repo)
         session._open(saved, repo, Repo(repo).session_folder(saved), repo if saved == MAIN_SESSION_NAME else None)
 
-    def new_handoff_path(self) -> Path:
-        """A new ``handoff-{timestamp}.md`` in this session's folder, which it creates; names sort by time, so
-        ``latest_handoff`` finds the newest."""
-        self.session_path.mkdir(parents=True, exist_ok=True)
-        return self.session_path / f"handoff-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')}.md"
-
     @classmethod
     @mcp
     @command(name="current-session")
@@ -708,6 +704,136 @@ class Session:
         """The newest handoff file, as a path from the project; handoff names sort by their timestamp."""
         handoffs = sorted(self.session_path.glob(_HANDOFF_FILES))
         return self.from_project(handoffs[-1]) if handoffs else ""
+
+    @mcp
+    @skill
+    @agent_tool
+    def write_handoff(self, content: str = "", paths: list[str] | str | None = None) -> str:
+        """Write a handoff into this session's folder, .sessions/{session}/handoff-{timestamp}.md (.sessions/main/ for the main session).
+        Returns the absolute path of the written file.
+        paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the handoff body in content.
+        content: in-process text. Leave this empty on an MCP call."""
+        document = load_document(content, paths)
+        if not document.strip():
+            return "Nothing written: draft the handoff to a file and pass its path in paths."
+        path = self._new_handoff_path()
+        path.write_text(document, encoding="utf-8")
+        return str(path.resolve())
+
+    def _new_handoff_path(self) -> Path:
+        """A new ``handoff-{timestamp}.md`` in this session's folder, which it creates; names sort by time, so
+        ``latest_handoff`` finds the newest."""
+        self.session_path.mkdir(parents=True, exist_ok=True)
+        return self.session_path / f"handoff-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')}.md"
+
+    @mcp
+    @skill
+    @agent_instructions
+    def handoff_session(self, next_focus: str = "", session: str = "") -> str:
+        """Write a compact handoff for the session whose session.json is {{session}} (the current session when blank) so the next agent can continue. Tailor to {{next_focus}} when provided."""
+        """Draft the handoff markdown from this conversation. Tailor it to {{next_focus}} when provided.
+
+        Use this exact structure:
+
+        # Handoff — {one-line description} ({today ISO date})
+
+        ## Outcome
+        One paragraph: what this session actually achieved and where the next session starts.
+
+        ## Progress
+        Keep this section terse. Do not write long essays.
+
+        ### Files
+        Short bullet list of created or modified files — relative paths plus a few words each.
+
+        ### Outstanding
+        Short bullet list of remaining work, failures, and partial items.
+
+        ## Key Learnings
+        Do not cross-check AGENTS.md or dump every learning. List only the most important rules / corrections from the corrections document: rule name + star count, optionally the session delta. One line per rule. If every learning is already in that file, the list of top rules is still required — do not write "All captured. No new items." as a substitute.
+
+        Find the corrections document in this order:
+        1. Assume it is in the current session folder (e.g. `.sessions/{name}/corrections.md` or a path the session already uses).
+        2. If not found, search the sessions root (`.sessions/corrections.md`, `.sessions/**/corrections.md`).
+        3. If still not found, look under `.sessions/main/`.
+        4. Also try the durable project location `.context/corrections.md` if the session copies are missing.
+
+        Read the current session block first (the latest `# Session: YYYY-MM-DD` heading). Prefer rules that appear in that block, ordered by star count.
+
+        ## Approach for Next Agent
+        Analyse the chat and/or the user's instructions for a deliberate numbered loop whose steps are context tools plus their parameters. Extract the actual slash-command / tool+parameter sequence used or instructed in this session. Do not invent a generic software process.
+
+        Examples of the style (replace with the sequence from this session):
+        - `/stories-scenarios` `/generate` `/markdown`
+        - `/clean-engineering-model` `/generate` `/markdown`
+        - `/stories-acceptance-tests` `/clean-engineering-code` `/generate` `/code`
+
+        Include:
+        - Read this handoff and the corrections document (session block first) to orient.
+        - The numbered context-tool loop extracted from this session.
+        - If a skill conflicts with corrections.md, follow corrections.md.
+        - A start-at pointer for the next agent.
+        - Corrections CLI commands if a `corrections-cli` exists in the project.
+
+        ## Correction trend
+        Include this section only if the corrections document was found. Compare this session's correction count (from the session block / conversation) to the previous session's count. State the trend in 1–2 sentences (e.g. "Session 2026-09-14 needed 5 corrections across 2 epics — roughly 2–3 per story. The previous session needed ~12. Trend is sharply down."). Optionally append the Corrections CLI cheat sheet (`list`, `add-correction`, `new-session`). If corrections cannot be found after the search order above, omit this section.
+        """
+        tools(self.write_handoff)
+        """Write the handoff markdown to a file and call session.write_handoff with paths set to that file and session set to {{session}}; leave session empty when it is blank, so the handoff goes to the current session. Do not pass the handoff body. Report the returned path to the user."""
+        return "Handoff written."
+
+    @property
+    def decision_records(self) -> DecisionRecords:
+        """The Context Decision Records this session keeps, under its workpath's ``.context/cdr/``."""
+        return DecisionRecords(self.root / CONTEXT_FOLDER / "cdr")
+
+    @mcp
+    @skill
+    @agent_tool
+    def read_cdr_format(self) -> str:
+        """Return CDR-FORMAT.md - when to offer a CDR, template, numbering, and optional sections.
+        Read this before offering or writing a CDR."""
+        return FORMAT_FILE.read_text(encoding="utf-8")
+
+    @mcp
+    @skill
+    @agent_tool
+    def list_cdrs(self) -> str:
+        """List CDR files under this session's workpath .context/cdr/.
+        Returns newline-separated paths sorted by filename; empty string if missing or empty."""
+        return "\n".join(str(path) for path in self.decision_records.paths)
+
+    @mcp
+    @skill
+    @agent_tool
+    def write_cdr(
+        self,
+        *,
+        slug: str,
+        content: str = "",
+        paths: list[str] | str | None = None,
+    ) -> str:
+        """Write one Context Decision Record to this session's workpath .context/cdr/{NNNN}-{slug}.md.
+        NNNN is the next sequential number under .context/cdr/. Creates the directory lazily.
+        paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the record body in content.
+        content: in-process text. Leave this empty on an MCP call.
+        slug: kebab-case short name (e.g. 'event-sourced-orders').
+        Returns the resolved path. Call immediately when a qualifying decision crystallises - do not batch."""
+        return str(self.decision_records.write(slug, load_document(content, paths)))
+
+    @mcp
+    @skill
+    @agent_instructions
+    def record_decisions_session(self, session: str = "") -> str:
+        """Offer and write Context Decision Records (CDRs) for the session whose session.json is {{session}} (the current session when blank) sparingly as decisions crystallise during the wrapped action - never batch; never invent decisions. Pass session={{session}} to session.list_cdrs and session.write_cdr, and leave it empty when it is blank."""
+        """Step 1 - Read the format once via read_cdr_format. Internalise the three-criteria gate and the minimal template."""
+        tools(self.read_cdr_format)
+        """Step 2 - Optionally call list_cdrs so you do not re-record an already-captured decision. Records live under the session workpath's .context/cdr/."""
+        tools(self.list_cdrs)
+        """Step 3 - During the session (grill, sketch, or generate), watch for decisions that meet ALL three: hard to reverse, surprising without context, and a real trade-off. If any criterion is missing, skip the CDR."""
+        """Step 4 - When a qualifying decision crystallises, offer a CDR briefly (title + one-line gist). If the user accepts, write the record to a file and call write_cdr immediately with a kebab slug and paths set to that file. Do not pass the record body. Do not batch; do not wait until the end."""
+        """Step 5 - Keep CDRs short. Prefer a single paragraph. Add Status / Considered Options / Consequences only when they add genuine value."""
+        return "CDR session active."
 
     def from_project(self, path: Path | str) -> str:
         """path as written from the project's top, the way the board names every file and folder."""

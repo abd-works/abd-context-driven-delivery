@@ -162,6 +162,11 @@ def names_in(column: dict) -> list[str]:
     return [ticket["name"] for key in ("in_progress", "done", "tickets") for ticket in column.get(key, [])]
 
 
+def progress_in(ticket: dict, fidelity: str) -> dict:
+    """The progress of the fidelity slug names, such as stories-story-map, as the ticket shows it."""
+    return next(progress for progress in ticket["progress"] if progress["slug"] == fidelity)
+
+
 def expect_placed(ticket: dict, column: str, is_done: bool) -> None:
     """The ticket shows in column, in its Done when is_done, else In progress."""
     actual = (ticket["column"], ticket["is_done"])
@@ -172,19 +177,19 @@ def expect_placed(ticket: dict, column: str, is_done: bool) -> None:
 def expect_actions(ticket: dict, fidelity: str, generate: str, validate: str, review: str) -> None:
     """The fidelity's Generate, Validate, and Review each read to_do, in_progress, or done on the ticket."""
     expected = {"generate": generate, "validate": validate, "review": review}
-    actual = ticket["progress"][fidelity]["actions"]
+    actual = progress_in(ticket, fidelity)["actions"]
     if actual != expected:
         raise AssertionError(f"expected {fidelity} on {ticket['name']} to read {expected}, but it reads {actual}")
 
 
 def expect_action(ticket: dict, fidelity: str, action: str, state: str) -> None:
     """One of the fidelity's Generate, Validate, and Review reads state on the ticket."""
-    _expect_equal(ticket["progress"][fidelity]["actions"][action], state, f"{fidelity} {action} on {ticket['name']}")
+    _expect_equal(progress_in(ticket, fidelity)["actions"][action], state, f"{fidelity} {action} on {ticket['name']}")
 
 
 def expect_held_on_violations(ticket: dict, fidelity: str) -> None:
     """The fidelity's Validate is in progress until its violations are fixed, and its segment shows violations."""
-    progress = ticket["progress"][fidelity]
+    progress = progress_in(ticket, fidelity)
     _expect_equal((progress["actions"]["validate"], progress["state"]), ("in_progress", "violations"), f"{fidelity} on {ticket['name']}")
 
 
@@ -195,7 +200,7 @@ def expect_no_next(ticket: dict) -> None:
 
 def expect_active(board: dict, name: str | None) -> None:
     """The board names the ticket of the session saved as open; none while no ticket's session is."""
-    _expect_equal(board["active"], name, "the active ticket")
+    _expect_equal(board["active"] and board["active"]["name"], name, "the active ticket")
 
 
 def expect_backlog(board: dict, titles: list[str]) -> None:

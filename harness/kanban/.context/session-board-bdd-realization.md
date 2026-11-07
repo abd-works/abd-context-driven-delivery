@@ -370,7 +370,7 @@ View Fidelity Files
   it should open one tab per format, generated or not
   ```
   ```
-  -> _module.offeredTabs(files: TicketFiles, slugs: string[])
+  -> _module.offeredTabs(files: FilesByFidelity, slugs: string[])
   it should keep markdown before code before diagrams
   ```
   ```
@@ -922,12 +922,7 @@ Send Next Fidelity Action
   with generate next
     ```
     -> TicketClient.runNext()
-    -> ReportClient.path
-    it should ask for the commands of the default format
-    ```
-    ```
-    -> TicketClient.runNext()
-    it should send those commands in order
+    it should send the generate command in the default format
     ```
   with generate next on a fidelity of a stage the ticket has moved past
     ```
@@ -1020,11 +1015,11 @@ a generated ticket client
 
 Choose Action And Formats
   ```
-  -> _module.defaultPicks(stage: ColumnClient, slugs: string[], files: TicketFiles)
+  -> _module.defaultPicks(stage: ColumnClient, slugs: string[], files: FilesByFidelity)
   it should give each fidelity its default format
   ```
   ```
-  -> _module.defaultPicks(stage: ColumnClient, slugs: string[], files: TicketFiles)
+  -> _module.defaultPicks(stage: ColumnClient, slugs: string[], files: FilesByFidelity)
   it should not pick a format already generated
   ```
   ```
@@ -1102,7 +1097,7 @@ Generate Fidelity Output
   -> BoardPage.tiles
   -> BoardPage.tileActions
   -> TileActionsClient.run(tile: Tile, stage: ColumnClient)
-  it should send the commands the ticket names
+  it should send the generate command for the picked formats
   ```
   ```
   -> BoardPage.tiles
@@ -1566,7 +1561,7 @@ Generate Fidelity Output
   ```
   -> BoardReader.poll()
   -> ReportClient.text
-  it should send the generate commands from Run on an opened card
+  it should send the generate command from Run on an opened card
   ```
 
 
@@ -2850,20 +2845,6 @@ the board tools
         <- list[str]
       <- dict
       it should list only the fidelities asked for
-      ```
-      ```
-      -> Board.ticket(name: str)
-      <- Ticket
-      -> Ticket.generate_commands(fidelities: list[str], formats: list[str])
-      <- list[str]
-      it should render the earlier fidelity into the new format first
-      ```
-      ```
-      -> Board.ticket(name: str)
-      <- Ticket
-      -> Ticket.generate_commands(fidelities: list[str], formats: list[str])
-      <- list[str]
-      it should name the ticket's session in the generate command
       ```
       ```
       -> Board.ticket(name: str)

@@ -35,7 +35,7 @@ Execute relevant automated tests and validation commands after each small behavi
 
 ## Handoff
 
-Run `handoff` when the implementation role or session is complete. State whether the handoff is for a new implementation session or for a downstream code review or release activity.
+Run the `space-session-handoff-session` skill when the implementation role or session is complete. State whether the handoff is for a new implementation session or for a downstream code review or release activity.
 
 Include implemented and excluded scope, specification artifact paths, changed production and test files, decisions made during coding, question-and-answer log, database or configuration effects, test execution commands and results, remaining risks, unresolved questions with owners, and the next exact behavior or release step.
 

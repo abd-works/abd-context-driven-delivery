@@ -17,13 +17,13 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # - Run next holds on fix violations until they are fixed, and says "fix violations". Observed.
 with story("Send Next Fidelity Action"):
     with scenario("Generate the next fidelity in its default format"):
-        # Evidence: observed: ticket-client.spec 'with generate next' — 'should ask for the commands of the default format', 'should send those commands in order'; 'should name the step that runs next'; kanban_tools_spec 'should name generate as the next action'.
+        # Evidence: observed: ticket-client.spec 'with generate next' — 'should send the generate command in the default format'; 'should name the step that runs next'; kanban_tools_spec 'should name generate as the next action'.
         with given("billing-report is the active [ticket](../../../.context/kanban-model.md#ticket--card) with nothing recorded and a chat is connected"):
             pass
         with when("the Person runs billing-report's next step"):
             # Person -> Ticket.next_action <- generate on stories-story-map
-            # Person -> Ticket.generate_commands(['stories-story-map'], ['markdown'])
-            # Ticket <- ['/actions-generate stories-story-map format=markdown']
+            # Board page -> Stage.default_formats <- markdown for stories-story-map
+            # Board page -> TicketClient.actionCommand('/actions-generate stories-story-map format=markdown')
             # Board page -> Chat.send('command', '/actions-generate stories-story-map format=markdown')
             pass
         with then("Run next read Run next: generate before it ran"):

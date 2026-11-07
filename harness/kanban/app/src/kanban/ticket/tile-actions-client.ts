@@ -26,7 +26,7 @@ export type TileBar = {
 
 // A tile can hold several fidelities: its link opens the report of the one left with violations, else the first report.
 function reportSlugOf(ticket: TicketClient, tile: Tile): string | undefined {
-  const reported = tile.slugs.filter(slug => ticket.progress[slug]?.report_file)
+  const reported = tile.slugs.filter(slug => ticket.progressNamed(slug)?.report_file)
   return reported.find(slug => ticket.stateOf(slug).key === 'violations') ?? reported[0]
 }
 
@@ -100,18 +100,12 @@ export class TileActionsClient {
     }
   }
 
-  async runCommandsOf(ticket: TicketClient, fidelities: string[], formats: string[]): Promise<void> {
-    const commands = await ticket.generateCommands(fidelities, formats)
-    for (const command of commands ?? []) await ticket.chat.command(command)
-  }
-
   // One command names every fidelity the bar acts on, so a stage's work stays a single turn.
   async run(tile: Tile, stage: ColumnClient): Promise<void> {
     if (!ACTIONS_WITH_FORMATS.includes(tile.action)) return this.sendFor(tile, `/actions-${tile.action} ${slugsOf(tile)}`)
     const formats = chosenFormats(stage, tile.slugs, tile.picked)
     this.save(tile, { picked: [] })
-    if (tile.action === 'generate') await this.runCommandsOf(tile.ticket, tile.slugs, formats)
-    else await this.sendFor(tile, `/actions-render ${slugsOf(tile)} format=${formats.join(',')}`)
+    await this.sendFor(tile, `/actions-${tile.action} ${slugsOf(tile)} format=${formats.join(',')}`)
   }
 
   validate(tile: Tile): Promise<void> {

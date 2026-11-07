@@ -120,7 +120,7 @@ test.describe('Send commands to a chat', () => {
 })
 
 test.describe('Generate Fidelity Output', () => {
-  test('should send the generate commands from Run on an opened card', async ({ page }) => {
+  test('should send the generate command from Run on an opened card', async ({ page }) => {
     await waitForChat(page)
     const bar = await openTileBarOf(await openCardOf(page, 'checkout-flow'))
     await bar.getByRole('button', { name: /^diagram/ }).click()

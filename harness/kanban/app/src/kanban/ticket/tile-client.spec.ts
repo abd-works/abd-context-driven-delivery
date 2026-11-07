@@ -4,7 +4,7 @@ import type { BoardPage } from '@src/kanban/board/board-page'
 import type { ColumnClient } from '@src/kanban/board/column-client'
 import { BoardOnProject, ticketOn } from 'test-utils/board-page-support'
 
-import type { TicketFiles } from './ticket'
+import type { FilesByFidelity } from './ticket-client'
 import { cellPlace, headPlace } from './tile-client'
 import { chipsOf, chosenFormats, defaultPicks } from './tile-formats'
 
@@ -26,10 +26,10 @@ const LATER_STAMP = '2026-11-02T10:00:00Z'
 
 let board: BoardOnProject
 let STAGE: ColumnClient
-let NOTHING_MADE: TicketFiles
-let MARKDOWN_MADE: TicketFiles
+let NOTHING_MADE: FilesByFidelity
+let MARKDOWN_MADE: FilesByFidelity
 
-const filesOn = async (): Promise<TicketFiles> => (await ticketOn((await board.page()).page, TICKET).filesOf([SLUG]))!
+const filesOn = async (): Promise<FilesByFidelity> => (await ticketOn((await board.page()).page, TICKET).filesOf([SLUG]))!
 
 beforeAll(async () => {
   board = await BoardOnProject.start()
@@ -148,7 +148,7 @@ describe('Generate Fidelity Output', () => {
     return { page, chat }
   }
 
-  it('should send the commands the ticket names', async () => {
+  it('should send the generate command for the picked formats', async () => {
     const { chat } = await ran()
     expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map format=markdown session=.sessions/billing-report/session.json' }])
   })

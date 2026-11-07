@@ -12,17 +12,16 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # Actor: Person
 #
 # Acceptance criteria:
-# - When a fidelity uses a different format from the one before it, the earlier fidelity is rendered into that format first. Observed: `Ticket.generate_commands`.
+# - When a fidelity uses a different format from the one before it, the earlier fidelity is rendered into that format first. Observed: the Generate action renders it before it generates.
 with story("Generate Fidelity Output"):
     with scenario("Send the generate command from a tile"):
-        # Evidence: observed: tile-client.spec 'Generate Fidelity Output' — 'should send the commands the ticket names', 'should clear the picks'; story-actions.spec 'should send the generate commands from Run on an opened card'.
+        # Evidence: observed: tile-client.spec 'Generate Fidelity Output' — 'should send the generate command for the picked formats', 'should clear the picks'; story-actions.spec 'should send the generate command from Run on an opened card'.
         with given("billing-report is the active [ticket](../../../.context/kanban-model.md#ticket--card) with nothing generated and a chat is connected"):
             pass
         with and_("its story_map bar has generate chosen and the markdown chip picked"):
             pass
         with when("the Person runs generate on story_map"):
-            # Person -> Ticket.generate_commands(['stories-story-map'], ['markdown'])
-            # Ticket <- ['/actions-generate stories-story-map format=markdown']
+            # Board page -> TicketClient.actionCommand('/actions-generate stories-story-map format=markdown')
             # Board page -> Chat.send('command', '/actions-generate stories-story-map format=markdown')
             # chat mod -> Chat.check_in() <- the command
             # chat mod -> Claude Code command.run('actions-generate', 'stories-story-map format=markdown')  [External: Claude Code]
@@ -34,12 +33,12 @@ with story("Generate Fidelity Output"):
         with and_("Claude Code goes on to Resolve Fidelity Output Paths for stories-story-map"):
             pass
     with scenario("Render the earlier fidelity into a new format first"):
-        # Evidence: observed: kanban_tools_spec 'with a fidelity's markdown generated' — 'should render the earlier fidelity into the new format first'; Ticket.generate_commands.
+        # Evidence: the Generate action renders the earlier fidelity before it generates (cdd_guidance/actions/generate).
         with given("pet-visits' story map is docs/.context/story-map.md, generated in markdown only"):
             pass
         with when("the Person generates scenarios in drawio"):
-            # Person -> Ticket.generate_commands(['stories-scenarios'], ['drawio'])
-            # Ticket -> FidelityGuidance(Stories story_map).output_paths() <- markdown docs/story-map.md there, drawio not
+            # Board page -> TicketClient.actionCommand('/actions-generate stories-scenarios format=drawio')
+            # Generate -> FidelityGuidance(Stories story_map).output_paths() <- markdown docs/story-map.md there, drawio not
             pass
         with then("the first command is /actions-render stories-story-map format=drawio source=markdown"):
             pass

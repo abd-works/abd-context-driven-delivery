@@ -9,7 +9,6 @@ import type { BoardPage } from '../board/board-page'
 import type { ColumnClient } from '../board/column-client'
 import { TicketChat } from '../chat/chat-client'
 import { fixReportPrompt, fixRulePrompt, fixViolationPrompt, ReportClient } from './report-client'
-import type { TicketFiles } from './ticket'
 
 const RUN_NEXT_COMMANDS: Record<string, string> = {
   validate: '/actions-validate',
@@ -19,6 +18,10 @@ const RUN_NEXT_COMMANDS: Record<string, string> = {
 // person's own approval.
 const STEPS_WITHOUT_CHAT = ['satisfy', 'review']
 const CLOSE_SESSION_COMMAND = '/space:session:close-session'
+
+// Each fidelity's files by format, as its own files tool answers, by the fidelity's slug: a tile or panel over several
+// fidelities reads them side by side.
+export type FilesByFidelity = Record<string, NonNullable<Awaited<ReturnType<FidelityProgressClientGenerated['files']>>>>
 
 const isBacklogItem = (moved: TicketData | BacklogItemData): moved is BacklogItemData => !('column' in moved)
 
@@ -43,9 +46,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   get violatedSlugs(): string[] {
-    return Object.entries(this.progress)
-      .filter(([, progress]) => progress.state === 'violations')
-      .map(([slug]) => slug)
+    return this.progress.filter(progress => progress.state === 'violations').map(progress => progress.slug)
   }
 
   get standing(): string {
@@ -64,7 +65,7 @@ export class TicketClient extends TicketClientGenerated {
 
   // The action Run next sends: the next fidelity's own next action.
   get nextAction(): string {
-    return this.next ? (this.progress[this.next]?.next_action ?? '') : ''
+    return this.next?.next_action ?? ''
   }
 
   // The ticket's session, its practices, and its fidelities' progress each answer their own tools, built from the data
@@ -77,9 +78,13 @@ export class TicketClient extends TicketClientGenerated {
     return new PracticeSessionOutputClientGenerated(this.api, this.session.practices[practice] ?? null)
   }
 
+  progressNamed(slug: string): FidelityProgressData | undefined {
+    return this.progress.find(progress => progress.slug === slug)
+  }
+
   // Python sends progress for every fidelity the board requires, so a fidelity the ticket has none for is a page bug.
   progressOf(slug: string): FidelityProgressData {
-    const progress = this.progress[slug]
+    const progress = this.progressNamed(slug)
     if (!progress) throw new Error(`ticket ${this.name} has no progress on ${slug}`)
     return progress
   }
@@ -95,7 +100,7 @@ export class TicketClient extends TicketClientGenerated {
 
   // Each fidelity answers for its own files, so a tile or panel over several fidelities reads them side by side; none
   // when any read failed, because the page has already shown that failure.
-  async filesOf(slugs: string[]): Promise<TicketFiles | null> {
+  async filesOf(slugs: string[]): Promise<FilesByFidelity | null> {
     const read = await Promise.all(slugs.map(slug => this.progressClient(slug).files()))
     if (read.some(files => !files)) return null
     return Object.fromEntries(slugs.map((slug, index) => [slug, read[index]!]))
@@ -119,11 +124,11 @@ export class TicketClient extends TicketClientGenerated {
   get runNextHint(): string {
     if (this.isLocked) return 'Activate this session to run its next step'
     if (!this.next) return 'Nothing to run next'
-    return `${this.runNextLabel} on ${this.next}`
+    return `${this.runNextLabel} on ${this.next.slug}`
   }
 
   get nextNote(): string {
-    return this.next ? `Next: ${this.next}, ${this.nextStepName}` : ''
+    return this.next ? `Next: ${this.next.slug}, ${this.nextStepName}` : ''
   }
 
   get lockNote(): string {
@@ -151,7 +156,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   stateOf(slug: string): { label: string; color: string; key: string } {
-    const key = this.progress[slug]?.state ?? 'not_started'
+    const key = this.progressNamed(slug)?.state ?? 'not_started'
     return { ...STATES[key]!, key }
   }
 
@@ -171,7 +176,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   violationCountOf(slugs: string[]): number {
-    return slugs.reduce((total, slug) => total + (this.progress[slug]?.violation_count ?? 0), 0)
+    return slugs.reduce((total, slug) => total + (this.progressNamed(slug)?.violation_count ?? 0), 0)
   }
 
   enabledSlugs(stage: ColumnClient): string[] {
@@ -179,11 +184,11 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   allows(slug: string, action: string): boolean {
-    return (this.progress[slug]?.allowed_actions ?? []).includes(action)
+    return (this.progressNamed(slug)?.allowed_actions ?? []).includes(action)
   }
 
   isNext(stage: ColumnClient, slug: string): boolean {
-    return this.next === slug && stage.workRequired.includes(slug)
+    return this.next?.slug === slug && stage.workRequired.includes(slug)
   }
 
   select(): void {
@@ -296,14 +301,15 @@ export class TicketClient extends TicketClientGenerated {
     return STEPS_WITHOUT_CHAT.includes(this.nextAction) || this.page.chat.canSend
   }
 
-  // Generate can take two commands, a render and then the generate, so it runs them where the others fill the prompt.
+  // Generate is sent straight to the chat, in the default format of the stage that requires the fidelity; the others
+  // fill the prompt.
   async runNext(): Promise<void> {
-    const slug = this.next ?? ''
+    const slug = this.next?.slug ?? ''
     if (this.nextAction === 'satisfy') return this.page.panels.openReport(this, slug)
     if (this.nextAction === 'review') return this.review(slug)
     if (this.nextAction !== 'generate') return this.chat.fill(this.actionCommand(`${RUN_NEXT_COMMANDS[this.nextAction]} ${slug}`))
     const format = this.stageRequiring(slug)?.defaultFormats[slug]
-    await this.page.tileActions.runCommandsOf(this, [slug], format ? [format] : [])
+    await this.chat.command(this.actionCommand(`/actions-generate ${slug}${format ? ` format=${format}` : ''}`))
   }
 
   // Run next can reach back to an earlier stage, so a fidelity's stage is the one that requires it, not the ticket's.

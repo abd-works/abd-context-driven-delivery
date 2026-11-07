@@ -25,7 +25,7 @@ from generate.generate import Generate  # noqa: E402
 from harness.kanban.backlog_item import BacklogItem, BacklogItemNotFoundError  # noqa: E402
 from harness.kanban.board import Board, Stage  # noqa: E402
 from harness.kanban.session_board_examples import SURFACE_FIXTURE_PROJECT, SessionsProject  # noqa: E402
-from harness.kanban.story_test import World, ticket_in  # noqa: E402
+from harness.kanban.story_test import World, progress_in, ticket_in  # noqa: E402
 from harness.kanban.ticket import FidelityNotFoundError, Ticket, TicketNotFoundError  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 from space.session import Session  # noqa: E402
@@ -175,8 +175,7 @@ class TicketHandle:
         return SessionHandle(self._cdd, self)
 
     def progress_of(self, slug: str) -> FidelityProgressHandle:
-        progress = self.data()["progress"]
-        if slug not in progress:
+        if slug not in [progress["slug"] for progress in self.data()["progress"]]:
             raise FidelityNotFoundError(slug, f"ticket {self.name!r}")
         return FidelityProgressHandle(self._cdd, self, slug)
 
@@ -200,7 +199,7 @@ class FidelityProgressHandle:
         self.slug = slug
 
     def data(self) -> dict:
-        return self._ticket.data()["progress"][self.slug]
+        return progress_in(self._ticket.data(), self.slug)
 
     def __getattr__(self, operation: str) -> Any:
         if operation.startswith("_"):

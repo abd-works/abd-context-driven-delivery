@@ -5,7 +5,7 @@
 
 *ContextConfig* is a project's `.context/config.json`: the guidelines that apply to file patterns and the folder each practice writes in.
 
-The work itself is kept by the child modules, each with its own card: the *Session* an agent works in (`space/session`), the *Repo* that session sits in (`space/repo`), the handoff the next agent resumes from (`space/handoff`), and the Context Decision Records (`space/record_decisions`).
+The work itself is kept by the child modules, each with its own card: the *Session* an agent works in, with the handoff the next agent resumes from and its Context Decision Records (`space/session`), and the *Repo* that session sits in (`space/repo`).
 
 - **Purpose:** Tell every tool which project, checkout, and open work a call is about, and what the project configured, so sessions, the board, and the repo tools all find the same `.sessions/` and the same settings.
 - **Seam (terms):** WorkState, ContextConfig, `working_on`, `project_folder`, `project_checkout`, `board_checkout`

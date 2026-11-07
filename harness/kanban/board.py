@@ -157,15 +157,10 @@ class Board:
         return [*self.tickets, *self.backlog_items]
 
     @property
+    @data_field
     def active(self) -> Ticket | None:
         """The ticket of the session saved as open; none while main is, since main is not on the board."""
         return self.ticket(self._repo.current_session.name)
-
-    @property
-    @data_field(key="active")
-    def active_name(self) -> str | None:
-        active = self.active
-        return active.name if active else None
 
     def column(self, name: str) -> Column:
         found = next((column for column in self._columns if column.name == name), None)

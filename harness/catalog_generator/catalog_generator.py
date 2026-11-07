@@ -39,7 +39,7 @@ from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.markdown.format import Format
 from harness.markdown.markdown import MarkdownText
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
-from harness.installation.destination import noCatalog, omitted_from_catalog
+from harness.installation.destination import NoCatalog, noCatalog
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 from space.work_state import project_checkout
@@ -121,7 +121,7 @@ class CatalogPractice:
     @property
     def fidelities(self) -> list[FidelityGuidance]:
         """The practice's fidelities in declared order, less those marked ``@noCatalog``."""
-        return [fidelity for fidelity in self.practice.fidelities if not omitted_from_catalog(fidelity)]
+        return [fidelity for fidelity in self.practice.fidelities if not NoCatalog.marks(fidelity)]
 
     def column_of(self, fidelity: FidelityGuidance) -> StageColumn | None:
         return STAGE_COLUMNS.of(fidelity.stage)
@@ -158,7 +158,7 @@ def catalog_practices() -> list[CatalogPractice]:
     practices = [
         CatalogPractice(practice)
         for practice in PracticeCatalogue.practices()
-        if not omitted_from_catalog(type(practice))
+        if not NoCatalog.marks(type(practice))
     ]
     shown = [practice for practice in practices if practice.on_board]
     return sorted(shown, key=lambda practice: (practice.order, practice.display_name))
@@ -169,7 +169,6 @@ UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
     ("installer", "harness.installation.installer", "Installer"),
     ("diagnose", "cdd_guidance.actions.diagnose.diagnose", "Diagnose"),
     ("echo", "echo.echo", "Echo"),
-    ("handoff", "space.handoff.handoff", "Handoff"),
     ("repo", "space.repo.repo", "Repo"),
 )
 
@@ -209,7 +208,7 @@ def catalog_utilities() -> list[RegistryEntry]:
 
 def keep_in_catalog(entry: RegistryEntry) -> bool:
     """Registry rows marked ``@noCatalog`` stay deployed and stay out of the catalog."""
-    return not omitted_from_catalog(entry.cls)
+    return not NoCatalog.marks(entry.cls)
 
 
 # -- Fidelity templates -------------------------------------------------------
@@ -451,7 +450,7 @@ class LifecycleAction:
         """The kit's live tool for this action; none when the kit has no such tool or marks it ``@noCatalog``."""
         tools = self.kit.tools
         tool = tools[self.name] if self.name in tools else None
-        if tool is None or omitted_from_catalog(getattr(tool, "callable", tool)):
+        if tool is None or NoCatalog.marks(getattr(tool, "callable", tool)):
             return None
         return tool
 
@@ -1341,7 +1340,7 @@ class Catalog:
     def add_guidance(self, guidance: Any) -> None:
         from harness.markdown import HTML, Markdown
 
-        if omitted_from_catalog(guidance):
+        if NoCatalog.marks(guidance):
             return
         slug = getattr(guidance, "context_index_key", None) or type(guidance).__name__
         for label in ("context", "guidance", "examples"):

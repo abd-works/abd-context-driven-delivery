@@ -1,8 +1,7 @@
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
 import type { ColumnClient } from '../board/column-client'
-import type { TicketFiles } from './ticket'
-import type { TicketClient } from './ticket-client'
+import type { FilesByFidelity, TicketClient } from './ticket-client'
 import { defaultPicks } from './tile-formats'
 
 const DEFAULT_ACTION = 'generate'
@@ -53,7 +52,7 @@ export class TileClient {
   }
 
   // A person's own choice of formats stays; until they make one, the defaults follow what is already generated.
-  private withFiles(tile: Tile, shown: Tile, files: TicketFiles, stage: ColumnClient): Tile {
+  private withFiles(tile: Tile, shown: Tile, files: FilesByFidelity, stage: ColumnClient): Tile {
     return { ...tile, files, picked: tile.picked === shown.picked ? defaultPicks(stage, tile.slugs, files) : tile.picked }
   }
 

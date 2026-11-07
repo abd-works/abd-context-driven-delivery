@@ -146,12 +146,7 @@ describe('Send Next Fidelity Action', () => {
       return { asked, chat }
     }
 
-    it('should ask for the commands of the default format', async () => {
-      const { asked } = await ran()
-      expect(asked.find(request => request.path === `/api/ticket/${OTHER}/generate-commands`)?.body).toEqual({ fidelities: ['stories-story-map'], formats: ['markdown'] })
-    })
-
-    it('should send those commands in order', async () => {
+    it('should send the generate command in the default format', async () => {
       const { chat } = await ran()
       expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map format=markdown session=.sessions/billing-report/session.json' }])
     })

@@ -10,9 +10,9 @@ const standingOf = (ticket: TicketClient): string => (ticket.column === 'Complet
 
 function changesOf(was: TicketClient, ticket: TicketClient): string[] {
   const moved = standingOf(was) === standingOf(ticket) ? [] : [`${ticket.title} moved to ${standingOf(ticket)}`]
-  const done = Object.entries(ticket.progress)
-    .filter(([slug, progress]) => progress.state === 'done' && was.progress[slug]?.state !== 'done')
-    .map(([slug]) => `${slug} done on ${ticket.name}`)
+  const done = ticket.progress
+    .filter(progress => progress.state === 'done' && was.progressNamed(progress.slug)?.state !== 'done')
+    .map(progress => `${progress.slug} done on ${ticket.name}`)
   return [...moved, ...done]
 }
 
