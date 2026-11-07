@@ -413,3 +413,62 @@ with description("a guidance action that wrote files"):
         from harness.guidance_actions import GuidanceAction
 
         expect(GuidanceAction(session=self.session).graph).to(be(self.session.graph))
+
+
+with description("two calls in one session on two fidelities of the same practice"):
+    with before.each:
+        from harness.guidance_actions import GuidanceAction
+
+        project = _project()
+        _open_session(project, "alpha")
+        served = GuidanceAction()
+        self.story_map_call = served.for_call(_call("stories-story-map", project))
+        self.practice = self.story_map_call.listed()[0]
+        self.scenarios_call = served.for_call(_call("stories-scenarios", project))
+        self.scenarios_call.listed()
+        self.story_map = self.story_map_call.fidelity_of(self.practice)
+        self.scenarios = self.scenarios_call.fidelity_of(self.practice)
+
+    with it("should work on the one practice the session holds in both calls"):
+        expect(self.scenarios_call.listed()[0]).to(be(self.practice))
+
+    with it("should give the first call its own fidelity's rules in its instructions"):
+        expect(self.story_map.instructions).to(contain(self.story_map.rules.markdown.strip()))
+
+    with it("should keep the second call's fidelity's rules out of the first call's instructions"):
+        expect(self.story_map.instructions).not_to(contain(self.scenarios.rules.markdown.strip()))
+
+    with it("should give the second call only its own fidelity's rules in its instructions"):
+        expect(self.scenarios.instructions).not_to(contain(self.story_map.rules.markdown.strip()))
+
+    with it("should check the first call's fidelity's rules and not the second's"):
+        checked = self.story_map.checked_rule_collections()
+        expect([self.story_map.rules in checked, self.scenarios.rules in checked]).to(equal([True, False]))
+
+    with it("should give each call its own fidelity's template"):
+        expect(self.story_map.templates).not_to(equal(self.scenarios.templates))
+
+
+with description("a fidelity's actions"):
+    with before.each:
+        from space.session import Sessions
+
+        self.project = _project()
+        _open_session(self.project, "alpha")
+        self.session = Sessions(self.project).current()
+        self.fidelity = self.session.practice("stories").guidance.fidelities["story_map"]
+
+    with it("should list each action that works on a guidance"):
+        expect(self.fidelity.actions.names).to(contain("generate", "validate", "render"))
+
+    with it("should hold each action once"):
+        expect(self.fidelity.actions.generate).to(be(self.fidelity.actions.generate))
+
+    with it("should run an action on it in the format named, which the fidelity keeps"):
+        self.fidelity.actions.generate(format="drawio")
+        expect(self.fidelity.format).to(equal("drawio"))
+
+    with it("should run the action in the session its practice works in"):
+        self.fidelity.actions.generate(format="drawio")
+        log = self.project / ".sessions" / "alpha" / "session.log"
+        expect(log.read_text(encoding="utf-8")).to(contain("generate"))

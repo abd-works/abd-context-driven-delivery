@@ -27,7 +27,6 @@ from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, ApproachC
 from harness.catalog_generator.approach_page import ApproachPage
 from harness.catalog_generator.brand import Brand
 from harness.catalog_generator.catalog_examples import EXAMPLES_FOLDER, CatalogFidelity
-from harness.markdown.front_matter import FrontMatter
 from harness.catalog_generator.hub_board import HubBoard
 from harness.catalog_generator.markdown_html import MarkdownHtml
 from harness.catalog_generator.page_shell import PageShell
@@ -38,8 +37,6 @@ from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import NoCatalog
 from harness.installation.files import skill
 from harness.installation.repository_toolsets import RepositoryToolsets
-from harness.markdown.format import Format
-from harness.markdown.markdown import MarkdownText
 from harness.mcp.mcp_server import mcp
 from harness.annotations.name import Name
 from harness.process.git import Git
@@ -186,12 +183,9 @@ class CatalogPractice:
     @property
     def shared_markdown(self) -> str:
         """The practice-level ``##`` sections of the practice guide, each with its heading: everything but
-        ``## Fidelities``, whose blocks each fidelity page shows. The guide is read with the same ``MarkdownText``
-        that gives each ``FidelityGuidance`` its section."""
-        guide = self.practice.domain_markdown_path()
-        if not guide.is_file():
-            return ""
-        document = MarkdownText(guide.read_text(encoding="utf-8"))
+        ``## Fidelities``, whose blocks each fidelity page shows. They are read from the practice's own document,
+        which gives each ``FidelityGuidance`` its section too."""
+        document = self.practice.document
         names = [name for _start, _end, level, name in document.headings() if level == 2]
         sections = (document.slice_heading(name) for name in names if name.casefold() != "fidelities")
         return "\n\n".join(section for section in sections if section)
@@ -274,41 +268,16 @@ class LifecycleAction:
 
 
 class FidelityTemplate:
-    """The template file a fidelity page shows for the fidelity's default format: a template named for the practice,
-    else the best match in the practice's ``templates`` folder by name, settings, stage, and format folder."""
-
-    _NOT_TEMPLATE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".trap"})
-    # The settings a template names its fidelity, artifact, and format in.
-    _SETTING_KEYS = ("fidelity", "artifact", "format")
-    # How strongly each sign ties a template to the fidelity.
-    _NAMED_FOR_FIDELITY = 100
-    _NAME_HOLDS_FIDELITY = 40
-    _SETTINGS_NAME_FIDELITY = 50
-    _SETTINGS_NAME_STAGE = 30
-    _IN_FORMAT_FOLDER = 5
-    _PRODUCTION_TEMPLATE = -20
-    _CODE_TEMPLATE = 10
-    _MAIN_FLOW_SCENARIO = 25
+    """The template file a fidelity page shows: the one the fidelity reads its template from, in its default format,
+    shown as a code fence with its path inside the practice folder."""
 
     def __init__(self, shown: CatalogFidelity) -> None:
         self.fidelity = shown.fidelity
         self.module_dir = Path(self.fidelity.practice_guidance.module_dir).resolve()
-        self.templates_root = self.module_dir / "templates"
-        self._format = Format(self.fidelity.default_format)
-        self._column = shown.column
 
     @property
     def path(self) -> Path | None:
-        if not self.fidelity.default_format or not self.templates_root.is_dir():
-            return None
-        named = self._named_template_file()
-        if named is not None:
-            return named
-        scored = self._scored_templates()
-        if scored:
-            scored.sort(key=lambda pair: (-pair[0], len(pair[1].parts), pair[1].as_posix()))
-            return scored[0][1].resolve()
-        return self._fallback_root_template()
+        return self.fidelity.template_file
 
     @property
     def relative_path(self) -> str:
@@ -343,98 +312,6 @@ class FidelityTemplate:
             f'<pre class="code-fence"><code class="language-{html.escape(self.language)}">'
             f"{html.escape(self.body)}</code></pre>"
         )
-
-    def _format_aliases(self) -> tuple[str, ...]:
-        return tuple(dict.fromkeys((self._format.short, self._format.name)))
-
-    def _named_template_file(self) -> Path | None:
-        extension = self._format.template_extension
-        for slug in Name(self.fidelity.practice_guidance.key).spellings:
-            for stem in (f"{slug}-templates", f"{slug}-template"):
-                found = self._named_stem_path(stem, extension)
-                if found is not None:
-                    return found
-        return None
-
-    def _named_stem_path(self, stem: str, extension: str) -> Path | None:
-        if extension:
-            preferred = self.templates_root / f"{stem}{extension}"
-            if preferred.is_file():
-                return preferred.resolve()
-        for path in sorted(self.templates_root.glob(f"{stem}.*")):
-            return path.resolve()
-        return None
-
-    def _search_roots(self) -> list[Path]:
-        root = self.templates_root
-        roots = [root / alias for alias in self._format_aliases() if (root / alias).is_dir()]
-        return roots or [root]
-
-    def _candidate_template_paths(self) -> list[Path]:
-        return [path for root in self._search_roots() for path in root.rglob("*") if self._is_template_candidate(path)]
-
-    def _is_template_candidate(self, path: Path) -> bool:
-        if not path.is_file():
-            return False
-        if "sketch" in path.name.lower() or "components" in path.parts or ".codeql" in path.parts:
-            return False
-        return path.suffix.lower() not in self._NOT_TEMPLATE_SUFFIXES
-
-    def _scored_templates(self) -> list[tuple[int, Path]]:
-        scored = [(self._name_score(path) + self._settings_score(path), path) for path in self._candidate_template_paths()]
-        return [(score, path) for score, path in scored if score > 0]
-
-    def _name_score(self, path: Path) -> int:
-        fidelity = Name(self.fidelity.name).kebab
-        stem = Name(path.stem).kebab
-        score = 0
-        if stem == fidelity:
-            score += self._NAMED_FOR_FIDELITY
-        elif fidelity in stem:
-            score += self._NAME_HOLDS_FIDELITY
-        if any(alias == path.parent.name.lower() for alias in self._format_aliases()):
-            score += self._IN_FORMAT_FOLDER
-        if "production" in path.name.lower():
-            score += self._PRODUCTION_TEMPLATE
-        if path.suffix == ".tpl":
-            score += self._CODE_TEMPLATE
-        if self.fidelity.name == "scenarios" and "main-flow" in stem:
-            score += self._MAIN_FLOW_SCENARIO
-        return score
-
-    def _settings_score(self, path: Path) -> int:
-        tokens = self._settings_tokens(path)
-        score = self._SETTINGS_NAME_FIDELITY if {self.fidelity.name.lower(), Name(self.fidelity.name).kebab} & tokens else 0
-        stage_tokens = set(self._column.template_tokens) if self._column is not None else set()
-        return score + (self._SETTINGS_NAME_STAGE if stage_tokens & tokens else 0)
-
-    def _settings_tokens(self, path: Path) -> set[str]:
-        """The values a template's settings give its fidelity, artifact, and format, in lower case."""
-        try:
-            settings = FrontMatter(path.read_text(encoding="utf-8")).settings.lower()
-        except (OSError, UnicodeDecodeError):
-            return set()
-        tokens: set[str] = set()
-        for key in self._SETTING_KEYS:
-            listed = re.search(rf"{key}\s*:\s*\[([^\]]*)\]", settings)
-            single = re.search(rf"{key}\s*:\s*([^\n]+)", settings)
-            values = listed.group(1).split(",") if listed else [single.group(1)] if single else []
-            tokens.update(value.strip().strip("\"'").lower() for value in values)
-        return {token for token in tokens if token}
-
-    def _fallback_root_template(self) -> Path | None:
-        extension = self._format.template_extension
-        aliases = self._format_aliases()
-        root_files = [
-            path for path in self.templates_root.iterdir()
-            if path.is_file() and "sketch" not in path.name.lower()
-            and (not extension or path.suffix == extension or path.suffix.lstrip(".") in aliases)
-        ]
-        if len(root_files) == 1:
-            return root_files[0].resolve()
-        fidelity = Name(self.fidelity.name).kebab
-        named = [path for path in root_files if fidelity in Name(path.stem).kebab]
-        return sorted(named)[0].resolve() if named else None
 
 
 class GitCitation:

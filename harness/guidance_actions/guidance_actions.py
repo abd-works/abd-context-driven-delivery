@@ -3,6 +3,7 @@ names."""
 
 from __future__ import annotations
 
+import inspect
 import json
 import re
 from pathlib import Path
@@ -10,8 +11,8 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, NotRequired, TypedDic
 
 from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import InstallDestination
-from harness.annotations.name import Name
 from harness.agent_tools.tool_call import ToolCall
+from harness.guidance.action_catalogue import ActionCatalogue
 from harness.guidance.documents import load_document
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.hooks.hook_server import rules_toast
@@ -194,9 +195,11 @@ class GuidanceAction:
         in a ``session=`` word, else the session open in the call's project, else the session this action was made for.
         A session is space/session's *Session*, which the call opens; the framework never names its class."""
         guidance = call.arguments.get("guidance")
-        named = GuidanceArgument(guidance).session_named if guidance is not None else ""
+        argument = GuidanceArgument(guidance) if guidance is not None else None
+        named = argument.session_named if argument is not None else ""
         action = self.made_for((call.session_named(named) if named else None) or call.session or self._session)
-        action._work_on(guidance)
+        if argument is not None:
+            action._take(guidance, argument)
         return action
 
     def made_for(self, session: Any) -> GuidanceAction:
@@ -257,7 +260,10 @@ class GuidanceAction:
         the Guidance it built, so its operations all work on the same objects."""
         if guidance is None or guidance == self._guidance_worked_on:
             return
-        argument = GuidanceArgument(guidance)
+        self._take(guidance, GuidanceArgument(guidance))
+
+    def _take(self, guidance: GuidanceArg, argument: GuidanceArgument) -> None:
+        """Work on guidance, as argument, made once from it, reads it."""
         self._guidance_worked_on = guidance
         self._listed_items = None
         self._guidance_text = argument.text
@@ -296,13 +302,25 @@ class GuidanceAction:
         if self._session is None or named.key is None:
             return AgentToolSet.instantiate(raw)
         practice = self._session.practice(named.key).guidance
-        if named.fidelity:
-            practice.work_at(named.fidelity)
+        fidelity = practice.work_at(named.fidelity) if named.fidelity else practice.fidelities.current
         if named.format:
             # The fidelity keeps the format it is given, so the next action on it works in it without being told.
-            practice.format = named.format
-        self._worked_at[id(practice)] = practice.fidelities.current
+            (fidelity if fidelity is not None else practice).format = named.format
+        self._worked_at[id(practice)] = fidelity
         return practice
+
+    def work_on_fidelity(self, fidelity: Any, format: str = "") -> None:
+        """Work on fidelity, one fidelity of a practice, held for this action: its practice is the one Guidance this
+        action lists, worked at that fidelity, in format when one is named, which the fidelity keeps."""
+        practice = fidelity.practice_guidance
+        practice.work_at(fidelity.name)
+        if format:
+            fidelity.format = format
+        self._guidance_worked_on = fidelity
+        self._guidance_text = None
+        self._tool_items = [practice]
+        self._listed_items = [practice]
+        self._worked_at[id(practice)] = fidelity
 
     def fidelity_of(self, item: Any) -> Any:
         """The fidelity this action works at on item, one of the Guidance it lists: the one its guidance named, read
@@ -341,7 +359,7 @@ class GuidanceAction:
 
     def run(self, operation: Callable[[Any], Any], *, action: str = "") -> list:
         """Run ``operation`` on the guidance this action works on: once on its string, or once per Guidance."""
-        self._log_running_action(action)
+        self.log_running(action)
         try:
             return self.each(operation)
         except BaseException as failure:
@@ -349,8 +367,9 @@ class GuidanceAction:
                 self._session.log.failure(failure, tool=action or type(self).__name__)
             raise
 
-    def _log_running_action(self, action: str) -> None:
-        """Session trail for this run — override on actions such as Validate that log differently."""
+    def log_running(self, action: str) -> None:
+        """Log that this action runs action, once, in the session it works in; an action such as Validate that logs
+        differently overrides it."""
         if not action or self._session is None or self._logged_session_action == action:
             return
         self._logged_session_action = action
@@ -410,11 +429,11 @@ class GuidanceAction:
         """Inject listed Guidance rules markdown after this action returns."""
         if not self.injects_rules or not self._payload_is_this_action(payload):
             return {}
-        action = self.for_call(ToolCall(payload.tool_input, payload.project))
+        action = self.for_call(payload.call)
         parts, labels = action._listed_inject_parts(payload)
         if not parts:
             return {}
-        return {"additional_context": "\n\n".join(parts), "toast": rules_toast(Name(type(self).__name__).kebab, labels)}
+        return {"additional_context": "\n\n".join(parts), "toast": rules_toast(self.slug, labels)}
 
     def _listed_inject_parts(self, payload: HookPayload) -> tuple[list[str], list[str]]:
         parts: list[str] = []
@@ -440,3 +459,24 @@ class GuidanceAction:
 
     def _comparable(self, tool_name: str) -> str:
         return tool_name.casefold().replace(".", "_").replace("-", "_")
+
+
+class FidelityActionRunner:
+    """Runs a guidance action on one fidelity, for ``fidelity.actions``: the action is made for the session the
+    fidelity's practice works in and holds that fidelity, so it works on it whatever another call works on."""
+
+    def works_on_fidelities(self, action: Any) -> bool:
+        """Whether action is a guidance action whose operation takes the guidance a caller names."""
+        return issubclass(action.toolset_class, GuidanceAction) and "guidance" in inspect.signature(action.operation).parameters
+
+    def run(self, action: Any, fidelity: Any, arguments: dict[str, Any]) -> Any:
+        """Run action on fidelity. A ``format`` the operation does not take is the format the fidelity works in."""
+        practice = fidelity.practice_guidance
+        made = action.toolset_class(session=practice.session if practice is not None else None)
+        taken = inspect.signature(action.operation).parameters
+        format = "" if "format" in taken else str(arguments.pop("format", "") or "")
+        made.work_on_fidelity(fidelity, format)
+        return getattr(made, action.name)(guidance=None, **arguments)
+
+
+ActionCatalogue.run_actions_with(FidelityActionRunner())

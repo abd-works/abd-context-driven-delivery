@@ -204,7 +204,7 @@ The toolsets whose hooks the server runs.
 	-> HookHandlersFile.refs
 ------
 + << composition >> toolsets: list[AgentToolSet]
-	// skips toolsets named in AgentToolSet.HOSTED_ONLY_CLASS_NAMES
+	// skips toolsets whose class is annotated @hosted_only
 + repo_root: Path | None
 + failures: list[tuple[str, BaseException]]
 	// a reference that does not load (bad reference, missing module or class, not a toolset, constructor mismatch)

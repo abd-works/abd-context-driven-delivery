@@ -50,7 +50,6 @@ tools: dict[str, AgentTool]
 toolset_collections: list[ToolSetCollection]
 mode: ExpansionMode
 	Invariant: value is "instructions" or "tool"
-HOSTED_ONLY_CLASS_NAMES: frozenset[str]
 	// classes whose tools run only through the practice or toolset that holds them; install and the hook server skip them
 parameter_notes: dict[str, str]
 	// parameter name -> note added after the description of each tool that takes it
@@ -196,7 +195,7 @@ GuidanceAgentOperation(name: str, callable: Callable, toolset: AgentToolSet)
 ------
 ----
 log_session_invocation(call: ToolCall): None
-	-> toolset._log_running_action(name)
+	-> toolset.log_running(name)
 
 ## AgentInstructions : AgentTool                                  <!-- Md -->
 
@@ -408,4 +407,4 @@ lineno: int
 | Skill, command, and rules markdown | `FileInstallation` | live toolset: `description`, `tools_for(destination)`; `AgentTool.invoke_line`; `AgentInstructions.expand` |
 | MCP enrollment | `McpInstallation.write` (records each operation), `McpServer` (enrolls it at start) | each member's `mcp_name`, `kind`, `description`, `parameters` |
 | Runtime call | `McpServer` | `AgentTool.invoke(arguments, project=...)`, the project of the runtime the call's project names |
-| Hooks | `HookInstallation`, `HookDaemon`, `HookServer` | `tools_for("hook")`, `hook_event`, `HOSTED_ONLY_CLASS_NAMES` |
+| Hooks | `HookInstallation`, `HookDaemon`, `HookServer` | `tools_for("hook")`, `hook_event`, `@hosted_only` |

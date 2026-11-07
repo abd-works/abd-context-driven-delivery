@@ -10,8 +10,7 @@ from harness.agent_tools.agent_tools import AgentTool, InstallDestination
 from harness.annotations.name import Name
 from harness.installation.destination import Installation
 from harness.installation.ide_layout import IdeLayout
-from harness.markdown.front_matter import FrontMatter
-from harness.markdown.markdown import MarkdownText
+from harness.markdown.markdown import MarkdownFile
 from harness.annotations.annotation import Destination, NamedDestination, annotation_kinds
 
 
@@ -96,7 +95,6 @@ class FileInstallation(Installation):
         body = "\n\n".join(part for part in parts if part).rstrip()
         text = f"{body}\n" if body else ""
         if self.destination == InstallDestination.RULE:
-            text = MarkdownText(text).without_yaml
             text = self._rules_front_matter(text, tool.toolset) + text
         elif self.destination == InstallDestination.SKILL:
             text = self._skill_front_matter(relative.parent.name, self._skill_overview(tool.toolset, parts)) + text
@@ -105,9 +103,9 @@ class FileInstallation(Installation):
     def write_standing_rule(self, source: Path) -> None:
         """Install one always-on rule from ``cdd_guidance/rules``: ``.md`` scoped by ``paths`` for
         Claude Code, the source front matter as written for every other IDE."""
-        text = source.read_text(encoding="utf-8")
+        front_matter = MarkdownFile(source).front_matter
+        text = front_matter.text
         if self.layout.scopes_rules_by_paths:
-            front_matter = FrontMatter(text)
             fields, body = front_matter.fields, front_matter.content
             globs = "" if fields.get("alwaysApply") == "true" else fields.get("globs", "")
             text = self._claude_rules_front_matter(fields.get("description", source.stem), globs) + body
@@ -209,9 +207,9 @@ class FileInstallation(Installation):
             return self._instructions_at_install(tool)
         if self.destination == InstallDestination.RULE:
             result = getattr(tool.toolset, tool.name, None)
-            markdown = getattr(result, "markdown", None)
-            if isinstance(markdown, str) and markdown.strip():
-                return markdown.strip()
+            prose = getattr(result, "prose", None)
+            if isinstance(prose, str) and prose.strip():
+                return prose.strip()
             formatted = getattr(result, "formatted", None)
             if callable(formatted):
                 return str(formatted()).strip()

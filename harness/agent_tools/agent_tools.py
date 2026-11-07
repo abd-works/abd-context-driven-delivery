@@ -464,17 +464,6 @@ class AgentToolSet(AgentToolSetOrigin):
     publishes."""
 
     _mode: str = "instructions"
-    HOSTED_ONLY_CLASS_NAMES: ClassVar[frozenset[str]] = frozenset(
-        {
-            "RulesCollection",
-            "MarkdownCollection",
-            "GuidanceCollection",
-            "PracticeGuidance",
-            "FidelityGuidance",
-        }
-    )
-    """Classes whose tools run only through the practice or toolset that holds them. Install and the hook server skip
-    them by class name, because the installer reads class names from source without importing it."""
     parameter_notes: ClassVar[dict[str, str]] = {}
     """What an agent reads about a parameter, by its name, after the description of every tool on this toolset that
     takes it; a guidance action explains its ``guidance`` parameter this way."""
@@ -1015,7 +1004,7 @@ class GuidanceAgentOperation(AgentOperation):
         """Log the call as its action, in the session the action made for it works in."""
         if not self.should_log_session_invocation(call.arguments):
             return
-        self.toolset._log_running_action(self.name)
+        self.toolset.log_running(self.name)
 
 
 @dataclass

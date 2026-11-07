@@ -24,7 +24,7 @@ from harness.installation.install_record import InstallRecord
 from harness.installation.language_adapter import LanguageAdapterInstallation
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.markdown import markdown
-from harness.markdown.front_matter import FrontMatter
+from harness.markdown.markdown import MarkdownFile
 
 # The record of the last install into a project's own IDE folder; an install into a temporary folder keeps its record
 # in that folder, so a spec's install never replaces the person's.
@@ -240,10 +240,10 @@ class Installer:
         if not source.is_dir():
             return
         for path in sorted(source.glob("*.md")):
-            text = path.read_text(encoding="utf-8")
-            dest = self.path / "agents" / f"{FrontMatter(text).fields.get('name') or path.stem}.md"
+            front_matter = MarkdownFile(path).front_matter
+            dest = self.path / "agents" / f"{front_matter.fields.get('name') or path.stem}.md"
             dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_text(text, encoding="utf-8")
+            dest.write_text(front_matter.text, encoding="utf-8")
             self.record.track(dest, self.path)
 
     def _install_standing_rules(self) -> None:
