@@ -142,7 +142,7 @@ function StageColumnView({ column }: { column: ColumnClient }) {
   return (
     <div className="board-column" data-column={column.name}>
       <div className="stage-head-box">
-        <StageHeadView stage={column.name} isOverLimit={column.isOverLimit}>
+        <StageHeadView stage={column} isOverLimit={column.isOverLimit}>
           <WipLimitView column={column} />
         </StageHeadView>
       </div>

@@ -1,4 +1,4 @@
-import type { ColumnData, FidelityGuidanceData } from '@cdd/space/kanban/board'
+import type { ColumnData, FidelityGuidanceData, StageScopeData } from '@cdd/space/kanban/board'
 import { StageClientGenerated, type StageData } from '@cdd/space/kanban/stage'
 
 import type { BacklogItemClient } from '../backlog-item/backlog-item-client'
@@ -27,6 +27,16 @@ export class ColumnClient {
 
   get isBacklog(): boolean {
     return this.data.items !== undefined
+  }
+
+  // How much of the solution a stage's work covers; none on the Backlog and Complete.
+  get scope(): StageScopeData | undefined {
+    return this.data.scope
+  }
+
+  // The actions an action bar offers with formats: those that write a fidelity's files.
+  get producingActions(): string[] {
+    return this.data.producing_actions ?? []
   }
 
   // Each fidelity the stage requires, with the formats it writes and its default one.

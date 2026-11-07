@@ -18,11 +18,12 @@ export const ACTION_STANDINGS: Record<string, { mark: string; color: string; lab
 
 export const STEP_FAILED = '✕'
 
-// What each stage covers, drawn as a shape that narrows and deepens along the board.
-export const STAGE_SCOPES: Record<string, { name: string; reach: string; covers: string; width: number; height: number }> = {
-  Discovery: { name: 'Whole solution', reach: 'wide / shallow', covers: 'outcomes · scope · boundaries', width: 36, height: 12 },
-  Specification: { name: 'Sprint', reach: 'narrow / deeper', covers: 'behaviour · design · logic', width: 16, height: 22 },
-  Implementation: { name: 'Story', reach: 'narrowest / deep', covers: 'tests · code · interface', width: 11, height: 28 },
+// The size the board draws each stage's scope at, by the shape Python names: wide and shallow for the whole solution,
+// narrow and deep for one story.
+export const SCOPE_SIZES: Record<string, { width: number; height: number }> = {
+  solution: { width: 36, height: 12 },
+  sprint: { width: 16, height: 22 },
+  story: { width: 11, height: 28 },
 }
 
 export const FORMAT_GROUPS = [
@@ -30,8 +31,6 @@ export const FORMAT_GROUPS = [
   { label: 'markdown', formats: ['markdown'] },
   { label: 'code', formats: ['python', 'typescript', 'javascript', 'java', 'html'] },
 ]
-
-export const TILE_ACTIONS = ['generate', 'render', 'sketch', 'iterate', 'document']
 
 export const countOf = (count: number, noun: string): string => `${count} ${count === 1 ? noun : `${noun}s`}`
 

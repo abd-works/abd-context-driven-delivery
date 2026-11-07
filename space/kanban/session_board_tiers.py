@@ -40,8 +40,8 @@ TOOLSETS = (
     "space.session.session:Session",
     "space.session.session:PracticeSessionOutput",
     "space.kanban.backlog_item:BacklogItem",
-    "validate.validate:Validate",
-    "generate.generate:Generate",
+    "cdd_guidance.actions.validate.validate:Validate",
+    "cdd_guidance.actions.generate.generate:Generate",
 )
 
 

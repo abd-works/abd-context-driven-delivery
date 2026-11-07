@@ -1,4 +1,3 @@
-import { TILE_ACTIONS } from '../board/board-brand'
 import { useBoard } from '../board/board-context'
 import type { Tile } from '../board/board-store'
 import { FormatIcon } from '../board/icons'
@@ -31,11 +30,13 @@ function FormatChipView({ tile, chip, isOff }: { tile: Tile; chip: ChipFace; isO
   )
 }
 
+// The stage the bar is on says which actions write a fidelity's files.
 function ActionChoiceView({ tile, isOff }: { tile: Tile; isOff: boolean }) {
   const { page } = useBoard()
+  const actions = page.board.stageNamed(tile.stage)?.producingActions ?? []
   return (
     <select className="step-control action-choice" aria-label="Action" disabled={isOff} value={tile.action} onChange={event => page.tileActions.chooseAction(tile, event.target.value)}>
-      {TILE_ACTIONS.map(action => (
+      {actions.map(action => (
         <option key={action} value={action}>
           {action}
         </option>

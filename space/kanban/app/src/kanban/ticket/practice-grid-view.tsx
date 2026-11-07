@@ -27,7 +27,7 @@ function GridStageHeadView({ ticket, stage }: { ticket: TicketClient; stage: Col
   const spot = { ticket, stage, place, fidelities: ticket.enabledFidelities(stage) }
   const isOpen = page.tiles.isOpen(ticket.name, place)
   return (
-    <StageHeadView stage={stage.name}>
+    <StageHeadView stage={stage}>
       <button className="expand-mark" aria-label={`Actions for ${stage.name}`} aria-expanded={isOpen} onClick={() => void page.tiles.toggle(ticket, spot)}>
         {isOpen ? '▴' : '▾'}
       </button>

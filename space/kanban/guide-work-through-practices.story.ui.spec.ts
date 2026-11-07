@@ -18,7 +18,6 @@ import type { Locator, Page } from './app/tests/story-ui'
 
 const RESTING_MILLISECONDS = 500
 const STILL_CLOSED_MILLISECONDS = 800
-const PRACTICES = ['Stories', 'DDD', 'UX', 'CE', 'BDD']
 
 const details = (page: Page) => page.locator('.details-body')
 const tileIn = (where: Locator, slug: string) => where.locator(`[data-tile="${slug}"]`)
@@ -205,7 +204,10 @@ test.describe('with no chat connected', () => {
       })
 
       test('Then each practice switch is off until Active session only is turned off', async ({ page }) => {
-        for (const practice of PRACTICES) await expect(page.getByRole('switch', { name: `Disable ${practice} for Billing report` })).toBeDisabled()
+        // The details name each practice the board sends, so every switch the details show is checked.
+        const switches = details(page).getByRole('switch', { name: /^Disable .+ for Billing report$/ })
+        await expect(switches.first()).toBeVisible()
+        for (const practiceSwitch of await switches.all()) await expect(practiceSwitch).toBeDisabled()
       })
     })
   })

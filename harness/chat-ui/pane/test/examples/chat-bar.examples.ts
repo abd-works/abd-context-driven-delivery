@@ -3,7 +3,7 @@
 // Seed: state the cdd server owns, the TicketData and BoardData the Python Ticket and Board would report. A Given sets
 // it on the stubbed server (cdd-stub.ts), never on the pane.
 // Interaction: what a person types into the chat bar or reads from it, such as a new session's name.
-import type { BoardData, ColumnData, FidelityGuidanceData, PracticeGuidanceData } from '@cdd/space/kanban/board'
+import type { BoardData, ColumnData, FidelityGuidanceData, PracticeGuidanceData, StageScopeData } from '@cdd/space/kanban/board'
 import type { ActionStatesData, FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 import type { PracticeSessionOutputData } from '@cdd/space/session/practice-session-output'
@@ -115,13 +115,20 @@ export function paymentRetry(): TicketData {
   return checkoutFlow({ title: 'Payment retry', name: 'payment-retry', column: 'Discovery', next: 'stories-story-map' })
 }
 
+// Seed: what every stage reports beside its fidelities, as ApproachStage does: its scope and the actions run on a fidelity.
+const STAGE_ACTIONS = ['generate', 'validate', 'review', 'iterate', 'sketch', 'render', 'document']
+const SCOPES: Record<string, StageScopeData> = {
+  Discovery: { shape: 'solution', name: 'Whole solution', reach: 'wide / shallow', covers: 'outcomes · scope · boundaries' },
+  Specification: { shape: 'sprint', name: 'Sprint', reach: 'narrow / deeper', covers: 'behaviour · design · logic' },
+  Implementation: { shape: 'story', name: 'Story', reach: 'narrowest / deep', covers: 'tests · code · interface' },
+}
+
 const column = (name: string, tickets: TicketData[]): ColumnData => {
   const work = WORK_OF[name] ?? []
-  return {
-    name,
-    in_progress: tickets.filter(ticket => ticket.column.name === name),
-    ...(work.length ? { work_required: work.map(fidelityOf) } : {}),
-  }
+  const stage = work.length
+    ? { scope: SCOPES[name], actions: STAGE_ACTIONS, producing_actions: STAGE_ACTIONS.filter(action => action !== 'validate' && action !== 'review'), work_required: work.map(fidelityOf) }
+    : {}
+  return { name, in_progress: tickets.filter(ticket => ticket.column.name === name), ...stage }
 }
 
 // Seed: the board as board.show returns it, each ticket in the column it names and the active one whole.

@@ -14,8 +14,6 @@ import { StageClient, shownStageName } from './stage-client'
 // cdr/0001-stage-strip-band.md, design/StageStrip.dc.html. Every rule lives in the Python Ticket; this file shows its answers.
 const chatBar = atom({ plugin: 'cdd-board', key: 'chatBar' } as const, { board: null, problem: null } as ChatBarJson)
 
-const STAGES = ['Backlog', 'Discovery', 'Specification', 'Implementation', 'Complete']
-
 const ticketsOf = (column: ColumnData): TicketData[] => [...(column.in_progress ?? []), ...(column.done ?? []), ...(column.tickets ?? [])]
 
 // The active session's line: health mark, session name, fidelity dots, action button, stage icons.
@@ -70,17 +68,24 @@ export class ChatBarClient {
     return (this.ticket?.is_done ?? false) && this.stage !== 'Complete'
   }
 
+  // The board's columns in its order: Backlog, each stage, Complete. Only a stage holds fidelities to show.
   get stages(): StageClient[] {
-    const reached = STAGES.indexOf(this.stage)
-    return STAGES.map(
-      (name, index) =>
+    const columns = this.board?.columns ?? []
+    const reached = columns.findIndex(column => column.name === this.stage)
+    return columns.map(
+      (column, index) =>
         new StageClient({
-          name,
+          name: column.name,
           status: index < reached ? 'done' : index === reached ? 'in_progress' : 'not_reached',
-          isShown: name === this.shownStage && name !== this.stage,
-          canShow: index > 0 && index < STAGES.length - 1,
+          isShown: column.name === this.shownStage && column.name !== this.stage,
+          canShow: column.work_required !== undefined,
         }),
     )
+  }
+
+  // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them.
+  get actions(): string[] {
+    return this.board?.columns.find(column => column.name === this.shownStage)?.actions ?? []
   }
 
   // The shown stage's fidelities of the practices this session has turned on: the ticket's progress on each fidelity
@@ -103,6 +108,7 @@ export class ChatBarClient {
             nextAction: progress.next_action,
             isSelected: progress.slug === this.selected,
             folder: ticket.session.practices[progress.practice]?.root ?? '',
+            colour: this.board?.practices.find(practice => practice.key === progress.practice)?.colour ?? '',
           }),
       )
   }

@@ -10,8 +10,8 @@ import { callTool, currentChatBar, refreshChatBar, type ChatBarClient } from './
 
 const selectedFidelity = atom({ plugin: 'cdd-board', key: 'selectedFidelity' } as const, null as string | null)
 
-// The canvas's practice colours and progress looks (design/StageStrip.dc.html).
-const PRACTICE_COLOURS: Record<string, string> = { stories: '#6BCB77', ddd: '#6C5CE7', ux: '#E84393', clean_engineering: '#4FC3F7', bdd: '#00B894' }
+// The canvas's progress looks (design/StageStrip.dc.html); each practice's colour comes with the board.
+const NO_PRACTICE_COLOUR = '#9B9BA8'
 const LOOKS: Record<string, { mark: string; word: string; colour: string; shade: string }> = {
   not_started: { mark: '○', word: 'to do', colour: '#71717A', shade: '40' },
   in_progress: { mark: '…', word: 'doing', colour: '#F59E0B', shade: '80' },
@@ -19,7 +19,6 @@ const LOOKS: Record<string, { mark: string; word: string; colour: string; shade:
   validated: { mark: '◎', word: 'to review', colour: '#E8E8ED', shade: 'C0' },
   done: { mark: '✓', word: 'done', colour: '#22C55E', shade: 'FF' },
 }
-export const BUILDER_ACTIONS = ['generate', 'validate', 'review', 'iterate', 'sketch', 'render', 'document']
 export const ACTION_ICONS: Record<string, string> = { generate: '✦', validate: '◎', review: '✓', satisfy: '✚', iterate: '↻', sketch: '✎', render: '⇄', document: '▭', advance: '→' }
 
 export type FidelityJson = {
@@ -33,6 +32,7 @@ export type FidelityJson = {
   nextAction: string
   isSelected: boolean
   folder: string
+  colour: string
 }
 
 // A practice fidelity of the shown stage, shaded by its progress as on the board.
@@ -77,7 +77,7 @@ export class FidelityClient {
   }
 
   get colour(): string {
-    return PRACTICE_COLOURS[this.practice] ?? '#9B9BA8'
+    return this.json.colour || NO_PRACTICE_COLOUR
   }
 
   // The practice colour, fainter the less is done.

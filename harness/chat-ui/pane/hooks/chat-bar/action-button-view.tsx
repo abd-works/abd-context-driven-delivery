@@ -4,7 +4,7 @@ import { BRAND } from '../brand'
 import { toggleActionPicker } from './action-picker-client'
 import { moveNext, type ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
-import { ACTION_ICONS, BUILDER_ACTIONS, chooseAction, reviewFidelity, runAction } from './fidelity-client'
+import { ACTION_ICONS, chooseAction, reviewFidelity, runAction } from './fidelity-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
@@ -40,13 +40,13 @@ export function ActionButtonView($: EngineInterface, { Box, Button, Text }: Elem
   )
 }
 
-// Every builder action, the fidelity's next one marked, any of which runs in place of the next.
+// Every action the shown stage offers, the fidelity's next one marked, any of which runs in place of the next.
 export function PickerView($: EngineInterface, { Box, Button }: ElementTable, { chatBar, picker }: ChatBarDraw) {
   const fidelity = chatBar.actionFidelity
   if (!picker.isOpen || !fidelity) return null
   return (
     <Box key="picker" flexDirection="row" gap={1} paddingX={1} borderStyle="single" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
-      {BUILDER_ACTIONS.map(action => (
+      {chatBar.actions.map(action => (
         <Button key={`pick-${action}`} label={`${ACTION_ICONS[action]} ${action}`} variant={action === fidelity.nextAction ? 'primary' : undefined} onPress={() => chooseAction($, fidelity, action)} />
       ))}
     </Box>
