@@ -24,6 +24,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 from harness.catalog_generator.catalog_generator import Catalog, GitCitation
+from space.work_state import working_on
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -63,10 +64,12 @@ def main(argv: list[str] | None = None) -> None:
         out_root=str(out_root),
         brands_root=args.brands,
     )
-    if args.apply_brand:
-        message = catalog.apply_brand(args.apply_brand)
-    else:
-        message = catalog.generate_catalog(brand=args.brand or "")
+    # This command regenerates the checkout it belongs to, whichever folder it is started from.
+    with working_on(_REPO_ROOT):
+        if args.apply_brand:
+            message = catalog.apply_brand(args.apply_brand)
+        else:
+            message = catalog.generate_catalog(brand=args.brand or "")
     print(message)
 
 

@@ -12,13 +12,16 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import equal, expect
+from unittest.mock import patch
+
+from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeWithFidelities,
 )
-from harness.catalog_generator.catalog_generator import Catalog
+from harness.catalog_generator.catalog_generator import Catalog, CatalogPageNotRendered
+from harness.markdown import Markdown
 
 
 with description("generated catalog pages") as self:
@@ -42,3 +45,12 @@ with description("generated catalog pages") as self:
 
         with it("should not scrape deployed markdown files or heading structure from disk"):
             expect(any(p.suffix == ".md" for p in self.out.iterdir())).to(equal(False))
+
+    with context("that has a guidance page whose markdown cannot be rendered"):
+        with it("should fail naming the page that could not be rendered"):
+            catalog = Catalog(repo_url="https://example.com/cdd", ref="abc")
+            practice = SamplePracticeWithFidelities(format="markdown")
+            with patch.object(Markdown, "html", side_effect=ValueError("unclosed fence")):
+                expect(lambda: catalog.add_guidance(practice)).to(
+                    raise_error(CatalogPageNotRendered, contain("sample_tool-context"))
+                )
