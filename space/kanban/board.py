@@ -10,30 +10,24 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
-from harness.installation.destination import data_field, language_adapter
+from harness.guidance.rule import Rule
+from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
-from cdd_guidance.practices.stages import DISCOVERY, IMPLEMENTATION, SPECIFICATION
+from cdd_guidance.practices.stages import STAGES, ApproachStage, StageScope
+from space.repo.repo import Repo
 from space.session import Session
-from space.work_state import board_checkout
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from harness.guidance.guidance import FidelityGuidance
-    from harness.guidance.rule import Rule
     from space.kanban.backlog_item import BacklogItem
     from space.kanban.ticket import Ticket
-    from space.repo.repo import Branch, Repo, Worktree
+    from space.repo.repo import Branch, Worktree
 
 BACKLOG_COLUMN = "Backlog"
 COMPLETE_COLUMN = "Complete"
-GENERATE = "generate"
-VALIDATE = "validate"
-REVIEW = "review"
-# What every fidelity goes through in its stage, named as the session log names them.
-STAGE_ACTIONS = (GENERATE, VALIDATE, REVIEW)
 # How many tickets a stage holds before its count shows as over its limit, until a person sets another.
 DEFAULT_WIP_LIMIT = 3
 FORGE = "https://forge.abdworks.net/abd-context-driven-delivery"
@@ -91,19 +85,12 @@ class Board:
         self._columns = self._build_columns()
 
     @classmethod
-    def load(cls, repo_root: Path | str) -> Board:
-        """The board of the repository at repo_root, with every practice chosen."""
-        from space.repo.repo import Repo
-
-        return cls(Repo(repo_root), list(PracticeCatalogue.practices()))
-
-    @classmethod
     @tool_subject
-    def current(cls) -> Board:
-        """The board of the project the running call names. One cdd server answers every chat, so it reads the
-        project from each request's X-CDD-Project header and runs the call inside working_on(project). A chat in a
-        ticket's worktree reads the board of the project's main checkout, where every ticket's session lives."""
-        return cls.load(board_checkout())
+    def load(cls, project: Path | str) -> Board:
+        """The board of project, with every practice chosen; a tool call is handed the project the call names. A chat
+        in a ticket's worktree reads the board of the project's main checkout, where every ticket's session lives."""
+        checkout = Repo(Repo(project).checkout_folder).primary_root()
+        return cls(Repo(checkout), list(PracticeCatalogue.practices()))
 
     @property
     def repo(self) -> Repo:
@@ -200,11 +187,14 @@ class Board:
         """Return the overview, guidance, and rules of the practice or fidelity slug names, such as stories or stories-story-map, with the stage a fidelity belongs to and its page on the forge."""
         for practice in self._practices:
             if practice.slug == slug:
-                return Help(practice, None)
+                return Help(practice, None, None)
             fidelity = next((entry for entry in practice.fidelities if entry.slug == slug), None)
             if fidelity is not None:
-                return Help(practice, fidelity)
+                return Help(practice, fidelity, self._stage_requiring(fidelity))
         raise PracticeNotFoundError(slug, "the board")
+
+    def _stage_requiring(self, fidelity: FidelityGuidance) -> Stage | None:
+        return next((column for column in self._columns if isinstance(column, Stage) and fidelity in column.work_required), None)
 
     def practice(self, key: str) -> PracticeGuidance:
         """The board's practice whose folder name is key, such as clean_engineering."""
@@ -214,11 +204,10 @@ class Board:
         return found
 
     def _build_columns(self) -> list[Column]:
-        # The stage names come from the one place a fidelity's **Stage:** is read against, written as column titles.
-        stages = [Stage(name.capitalize(), self, list(STAGE_ACTIONS)) for name in (DISCOVERY, SPECIFICATION, IMPLEMENTATION)]
-        return [Backlog(self), *stages, Complete(self)]
+        return [Backlog(self), *(Stage(stage, self) for stage in STAGES), Complete(self)]
 
 
+@identity("name")
 class Column:
     """*Column* is one place on the board: Backlog, a stage, or Complete."""
 
@@ -260,51 +249,56 @@ class Complete(Column):
         return list(self.cards)
 
 
-@language_adapter(language="typescript", identity="name")
+@language_adapter(language="typescript")
 @agent_toolset
 class Stage(Column):
     """Show one stage of the board, the tickets at work in it, and how many it takes before it is over its limit."""
 
-    # Every chosen practice's fidelity for the stage goes through its actions. The stage keeps its own WIP limit in the
+    # It is a column made for one stage of the approach, which says its scope and the actions run on a fidelity in it.
+    # Every chosen practice's fidelity for the stage goes through its steps. The stage keeps its own WIP limit in the
     # board's file, `.sessions/_board.json`, beside the other stages' limits.
 
-    def __init__(self, name: str, board: Board, actions: list[str]) -> None:
-        super().__init__(name, board)
-        self._actions = list(actions)
+    def __init__(self, approach: ApproachStage, board: Board) -> None:
+        super().__init__(approach.title, board)
+        self._approach = approach
 
     @classmethod
     @tool_subject
-    def load(cls, stage: str) -> Stage:
-        """The stage of the current board named stage, such as Discovery."""
-        found = Board.current().column(stage)
+    def load(cls, stage: str, *, project: Path | str) -> Stage:
+        """The stage named stage, such as Discovery, on the board of project."""
+        found = Board.load(project).column(stage)
         if not isinstance(found, Stage):
             raise NotAStageError(stage)
         return found
 
     @property
+    def steps(self) -> list[str]:
+        """What every fidelity goes through in this stage, in order: generate, validate, and review."""
+        return self._approach.steps
+
+    @property
+    @data_field
+    def scope(self) -> StageScope:
+        """How much of the solution the stage's work covers, which the board draws as its shape."""
+        return self._approach.scope
+
+    @property
+    @data_field
     def actions(self) -> list[str]:
-        return list(self._actions)
-
-    @property
-    @data_field(key="work_required")
-    def work_required_slugs(self) -> list[str]:
-        return [fidelity.slug for fidelity in self.work_required]
+        """Every action a person can run on a fidelity in this stage: its steps first, then the others."""
+        return self._approach.actions
 
     @property
     @data_field
-    def formats(self) -> dict[str, list[str]]:
-        return {fidelity.slug: list(fidelity.outputs) for fidelity in self.work_required}
+    def producing_actions(self) -> list[str]:
+        """The actions that write a fidelity's files, which an action bar offers with formats."""
+        return self._approach.producing_actions
 
     @property
     @data_field
-    def default_formats(self) -> dict[str, str]:
-        return {fidelity.slug: fidelity.default_format for fidelity in self.work_required}
-
-    @property
     def work_required(self) -> list[FidelityGuidance]:
         """Every fidelity of every chosen practice whose stage is this stage, in practice order."""
-        stage = self.name.lower()
-        return [fidelity for practice in self._board.practices for fidelity in practice.fidelities if fidelity.stage == stage]
+        return [fidelity for practice in self._board.practices for fidelity in practice.fidelities if fidelity.stage == self._approach.name]
 
     @property
     def next_stage(self) -> Stage | None:
@@ -391,9 +385,10 @@ class Card(ABC):
 class Help:
     """The overview, guidance, and rules of a practice or one of its fidelities, with its stage and its page on the forge."""
 
-    def __init__(self, practice: PracticeGuidance, fidelity: FidelityGuidance | None) -> None:
+    def __init__(self, practice: PracticeGuidance, fidelity: FidelityGuidance | None, stage: Stage | None) -> None:
         self._practice = practice
         self._fidelity = fidelity
+        self._stage = stage
 
     @property
     def _subject(self) -> PracticeGuidance | FidelityGuidance:
@@ -401,27 +396,21 @@ class Help:
 
     @property
     @data_field
-    def practice(self) -> str:
-        """The key of the practice this help is about, or whose fidelity it is about, such as clean_engineering."""
-        return self._practice.key
+    def practice(self) -> PracticeGuidance:
+        """The practice this help is about, or whose fidelity it is about."""
+        return self._practice
 
     @property
     @data_field
-    def fidelity(self) -> str:
-        """The name of the fidelity this help is about, such as story_map; empty on a practice's help."""
-        return self._fidelity.name if self._fidelity else ""
+    def fidelity(self) -> FidelityGuidance | None:
+        """The fidelity this help is about; none on a practice's help."""
+        return self._fidelity
 
     @property
-    @data_field
-    def slug(self) -> str:
-        """The slug of the practice or fidelity this help is about, such as stories-story-map."""
-        return self._subject.slug
-
-    @property
-    @data_field
-    def stage(self) -> str:
-        """The column of the stage the fidelity belongs to, such as Discovery; empty on a practice's help."""
-        return self._fidelity.stage.capitalize() if self._fidelity else ""
+    @data_field(reference=True)
+    def stage(self) -> Stage | None:
+        """The stage the fidelity belongs to, such as Discovery; none on a practice's help."""
+        return self._stage
 
     @property
     @data_field
@@ -435,8 +424,8 @@ class Help:
 
     @property
     @data_field
-    def rules(self) -> list[HelpRule]:
-        return [HelpRule(rule) for rule in self._subject.rules]
+    def rules(self) -> list[Rule]:
+        return list(self._subject.rules)
 
     @property
     @data_field
@@ -446,44 +435,3 @@ class Help:
         if not page or page in FIDELITIES_WITHOUT_PAGE:
             return f"{FORGE}/context-tools/{self._practice.key}.html"
         return f"{FORGE}/fidelities/{page}.html"
-
-
-class HelpRule:
-    """One rule as help shows it: its slug and its text."""
-
-    def __init__(self, rule: Rule) -> None:
-        self._rule = rule
-
-    @property
-    @data_field
-    def slug(self) -> str:
-        return self._rule.slug
-
-    @property
-    @data_field
-    def text(self) -> str:
-        return self._rule.body.strip()
-
-
-class Workspace:
-    """Whether a ticket has its branch and its worktree, and whether the active ticket being left is on a branch of its own."""
-
-    def __init__(self, branch: Branch, leaving: Branch | None) -> None:
-        self._branch = branch
-        self._leaving = leaving
-
-    @property
-    @data_field
-    def has_branch(self) -> bool:
-        return self._branch.exists
-
-    @property
-    @data_field
-    def has_worktree(self) -> bool:
-        return self._branch.worktree is not None
-
-    @property
-    @data_field
-    def leaving_has_branch(self) -> bool:
-        """Whether the active ticket being left has its own branch checked out, so its work can be committed, pushed, and merged."""
-        return self._leaving is not None and self._leaving.is_checked_out

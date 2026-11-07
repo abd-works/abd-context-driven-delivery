@@ -19,10 +19,11 @@ Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
 from harness.installation.destination import DataField, data_of  # noqa: E402
 from space.kanban.backlog_item import BacklogItem  # noqa: E402
 from space.kanban.board import Stage  # noqa: E402
-from space.kanban.report import ReportRule, Violation  # noqa: E402
+from harness.graph.violation import Violation  # noqa: E402
+from space.kanban.report import ReportRule  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
-from space.kanban.board import Workspace  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
+from space.repo.repo import Branch  # noqa: E402
 from space.kanban.board import FidelityNotFoundError, NotAStageError, PracticeNotFoundError  # noqa: E402
 from tools.file_manager.file_manager import PathOutsideRootsError  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
@@ -489,7 +490,7 @@ with description("the board tools") as self:
                 self.opened = self.project.call("ticket.create", title="Loyalty points", scope="feature")
 
             with it("should return the new ticket in Discovery"):
-                expect((self.opened["name"], self.opened["column"])).to(equal(("loyalty-points", "Discovery")))
+                expect((self.opened["name"], self.opened["column"]["name"])).to(equal(("loyalty-points", "Discovery")))
 
             with it("should leave the current session as it is"):
                 expect(self.project.call("board.show")["active"]).to(equal(None))
@@ -536,7 +537,7 @@ with description("the board tools") as self:
                 self.started = self.project.call("backlog-item.start", backlog_item="Returns and refunds", scope="feature")
 
             with it("should return the new ticket in Discovery"):
-                expect((self.started["name"], self.started["column"])).to(equal(("returns-and-refunds", "Discovery")))
+                expect((self.started["name"], self.started["column"]["name"])).to(equal(("returns-and-refunds", "Discovery")))
 
             with it("should take the item off the Backlog"):
                 expect(self.project.column("Backlog")["items"]).to(equal([]))
@@ -571,7 +572,7 @@ with description("the board tools") as self:
                 self.moved = self.project.call("ticket.move_to", ticket="pet-visits", stage="Implementation", done=True)
 
             with it("should show the ticket in that stage's Done"):
-                expect((self.moved["column"], self.moved["is_done"])).to(equal(("Implementation", True)))
+                expect((self.moved["column"]["name"], self.moved["is_done"])).to(equal(("Implementation", True)))
 
         # (S) Person --> Move Ticket, a ticket that is done in Discovery
         with context("that moves a ticket to the next column"):
@@ -579,7 +580,7 @@ with description("the board tools") as self:
                 self.moved = self.project.call("ticket.move_next", ticket="pet-visits")
 
             with it("should show the ticket in the next stage"):
-                expect(self.moved["column"]).to(equal("Specification"))
+                expect(self.moved["column"]["name"]).to(equal("Specification"))
 
             with it("should show the ticket in progress there"):
                 expect(self.moved["is_done"]).to(be_false)
@@ -590,7 +591,7 @@ with description("the board tools") as self:
                     self.moved = self.project.call("ticket.move_next", ticket="pet-visits")
 
                 with it("should show the ticket in that stage's Done all the same"):
-                    expect((self.moved["column"], self.moved["is_done"])).to(equal(("Specification", True)))
+                    expect((self.moved["column"]["name"], self.moved["is_done"])).to(equal(("Specification", True)))
 
                 with context("and on to the column after"):
                     with before.each:
@@ -603,31 +604,31 @@ with description("the board tools") as self:
                             self.moved = self.project.call("ticket.move_next", ticket="pet-visits")
 
                         with it("should close the ticket"):
-                            expect(self.moved["column"]).to(equal("Complete"))
+                            expect(self.moved["column"]["name"]).to(equal("Complete"))
 
                         with it("should leave a ticket in Complete where it is on another move forward"):
-                            expect(self.project.call("ticket.move_next", ticket="pet-visits")["column"]).to(equal("Complete"))
+                            expect(self.project.call("ticket.move_next", ticket="pet-visits")["column"]["name"]).to(equal("Complete"))
 
                         with context("and back again"):
                             with before.each:
                                 self.moved = self.project.call("ticket.move_previous", ticket="pet-visits")
 
                             with it("should reopen the ticket in Implementation"):
-                                expect(self.moved["column"]).to(equal("Implementation"))
+                                expect(self.moved["column"]["name"]).to(equal("Implementation"))
 
                 with context("and back from Done"):
                     with before.each:
                         self.moved = self.project.call("ticket.move_previous", ticket="pet-visits")
 
                     with it("should show the ticket in progress in that stage"):
-                        expect((self.moved["column"], self.moved["is_done"])).to(equal(("Specification", False)))
+                        expect((self.moved["column"]["name"], self.moved["is_done"])).to(equal(("Specification", False)))
 
             with context("and back to the previous column"):
                 with before.each:
                     self.moved = self.project.call("ticket.move_previous", ticket="pet-visits")
 
                 with it("should show the ticket in Discovery"):
-                    expect(self.moved["column"]).to(equal("Discovery"))
+                    expect(self.moved["column"]["name"]).to(equal("Discovery"))
 
                 with it("should show the ticket in Discovery's Done"):
                     expect(self.moved["is_done"]).to(be_true)
@@ -655,7 +656,8 @@ with description("the board tools") as self:
 
         # (S) Person --> Choose Action And Formats
         with it("should give each fidelity its default format"):
-            expect(self.project.column("Discovery")["default_formats"]["stories-story-map"]).to(equal("markdown"))
+            story_map = next(fidelity for fidelity in self.project.column("Discovery")["work_required"] if fidelity["slug"] == "stories-story-map")
+            expect(story_map["default_format"]).to(equal("markdown"))
 
         # (S) Board App --> Display Fidelity Progress
         with it("should show each fidelity's Generate, Validate, and Review"):
@@ -680,7 +682,7 @@ with description("the board tools") as self:
                 expect([rule["slug"] for rule in self.help["rules"]]).to(contain("verb-noun-format"))
 
             with it("should name the stage a fidelity belongs to"):
-                expect(self.help["stage"]).to(equal("Discovery"))
+                expect(self.help["stage"]["name"]).to(equal("Discovery"))
 
             with it("should link to the fidelity's page on the forge"):
                 expect(self.help["href"]).to(equal("https://forge.abdworks.net/abd-context-driven-delivery/fidelities/stories-story_map.html"))
@@ -693,7 +695,7 @@ with description("the board tools") as self:
                 expect([rule["slug"] for rule in self.help["rules"]]).to(contain("do-not-invent-requirements"))
 
             with it("should name no fidelity on a practice's help"):
-                expect((self.help["fidelity"], self.help["stage"])).to(equal(("", "")))
+                expect((self.help["fidelity"], self.help["stage"])).to(equal((None, None)))
 
         with context("that opens help on a slug no practice or fidelity of the board goes by"):
             with it("should refuse it, naming the slug"):
@@ -747,7 +749,7 @@ with description("the board tools") as self:
 
             # One fidelity object per session: the progress's fidelity is the one an action on the ticket's session works with.
             with it("should give each progress the fidelity its ticket's session holds"):
-                ticket = Ticket.load("pet-visits")
+                ticket = Ticket.load("pet-visits", project=self.project.root)
                 expect(ticket.progress_of("stories-story-map").fidelity is ticket.session.practices["stories"].fidelities["story_map"]).to(be_true)
 
             with it("should give the board the ticket's session.json"):
@@ -1039,10 +1041,10 @@ with description("the board tools") as self:
                 self.project.call("ticket.activate", ticket="sign-up", opening=["branch"])
 
             with it("should create the ticket's branch when a ticket that has none is activated"):
-                expect(self.project.call("ticket.workspace", ticket="sign-up")["has_branch"]).to(be_true)
+                expect(self.project.call("ticket.branch", ticket="sign-up")["exists"]).to(be_true)
 
         with it("should say a ticket has no branch yet"):
-            expect(self.project.call("ticket.workspace", ticket="sign-up")["has_branch"]).to(be_false)
+            expect(self.project.call("ticket.branch", ticket="sign-up")["exists"]).to(be_false)
 
         with it("should name no worktree for a ticket that has none"):
             expect(self.project.ticket_json("sign-up")["worktree"]).to(equal(""))
@@ -1080,7 +1082,7 @@ with description("the board tools") as self:
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             with it("should say the ticket being left has no branch yet"):
-                expect(self.project.call("ticket.workspace", ticket="sign-up")["leaving_has_branch"]).to(be_false)
+                expect(self.project.call("ticket.branch", ticket="pet-visits")["is_checked_out"]).to(be_false)
 
             with it("should commit nothing on a ticket that has no branch"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit", "push", "merge"])
@@ -1101,7 +1103,7 @@ with description("the board tools") as self:
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             with it("should say the ticket being left is on its branch"):
-                expect(self.project.call("ticket.workspace", ticket="sign-up")["leaving_has_branch"]).to(be_true)
+                expect(self.project.call("ticket.branch", ticket="pet-visits")["is_checked_out"]).to(be_true)
 
             with it("should commit the branch the ticket being left is on"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit"])
@@ -1146,7 +1148,7 @@ with description("the board tools") as self:
             names = set(self.project.server.tools)
             expect(names).to(equal({
                 "board.show", "board.help", "board.folders", "stage.set_wip_limit",
-                "ticket.create", "ticket.activate", "ticket.workspace", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
+                "ticket.create", "ticket.activate", "ticket.branch", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
                 "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files",
                 "session.current", "session.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
                 "session.choose_workpath", "session.files", "session.folder_files", "session.read_file",
@@ -1171,13 +1173,20 @@ with description("the board tools") as self:
         with it("should send a Ticket's progress as one FidelityProgress per fidelity, each naming its fidelity"):
             expect([progress["slug"] for progress in self.project.ticket_json("pet-visits")["progress"]][:2]).to(equal(["stories-story-map", "ddd-bounded-context"]))
 
+        with it("should send a Ticket's column by its name alone, since the column sends the ticket"):
+            expect(self.project.ticket_json("pet-visits")["column"]).to(equal({"name": "Discovery"}))
+
+        with it("should send each fidelity a Stage requires as the fidelity's own data"):
+            story_map = self.project.column("Discovery")["work_required"][0]
+            expect(story_map).to(equal({"slug": "stories-story-map", "name": "story_map", "outputs": {"markdown": ".context/story-map.md", "drawio": ".context/story-map.drawio"}, "default_format": "markdown"}))
+
         with it("should send a Ticket's next fidelity as its FidelityProgress"):
             expect(set(self.project.ticket_json("pet-visits")["next"])).to(equal(set(self.project.ticket_json("pet-visits")["progress"][0])))
 
-        with it("should return exactly the fields a Workspace marks as its data"):
+        with it("should return exactly the fields a Branch marks as its data"):
             subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
-            workspace = self.project.call("ticket.workspace", ticket="pet-visits")
-            expect(set(workspace)).to(equal(set(DataField.fields_of(Workspace))))
+            branch = self.project.call("ticket.branch", ticket="pet-visits")
+            expect(set(branch)).to(equal(set(DataField.fields_of(Branch))))
 
         with it("should return exactly the fields a BacklogItem marks as its data"):
             expect(set(self.project.column("Backlog")["items"][0])).to(equal(set(DataField.fields_of(BacklogItem))))

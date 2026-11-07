@@ -1,3 +1,5 @@
+import type { FidelityGuidanceData } from '@cdd/space/kanban/board'
+
 import { useBoard } from '../board/board-context'
 import type { ColumnClient } from '../board/column-client'
 import { CheckIcon } from '../board/icons'
@@ -10,14 +12,15 @@ const EDGE_PIXELS = 3
 
 // opensOnHover: a hover opens the bar for a look on an opened card. The details grid opens one only on a press, so
 // moving the pointer across the grid does not open bar after bar.
-type TileProps = { ticket: TicketClient; stage: ColumnClient; slug: string; hasPracticeChip: boolean; opensOnHover: boolean }
+type TileProps = { ticket: TicketClient; stage: ColumnClient; fidelity: FidelityGuidanceData; hasPracticeChip: boolean; opensOnHover: boolean }
 
-function TileNameView({ ticket, stage, slug }: TileProps) {
+function TileNameView({ ticket, stage, fidelity }: TileProps) {
   const { page } = useBoard()
-  const place = cellPlace(stage.name, slug)
+  const { slug } = fidelity
+  const place = cellPlace(stage.name, fidelity)
   const isOn = ticket.isOn(slug)
   const practice = page.board.practiceOf(slug)
-  const toggle = () => page.tiles.toggle(ticket, { ticket, stage, place, slugs: [slug] })
+  const toggle = () => page.tiles.toggle(ticket, { ticket, stage, place, fidelities: [fidelity] })
   return (
     <button className="tile-name" title={practice?.skillOf(slug)} disabled={!isOn} aria-expanded={page.tiles.isOpen(ticket.name, place)} onClick={() => void toggle()}>
       {practice?.fidelityNameOf(slug) ?? slug}
@@ -36,7 +39,8 @@ function TileHelpView({ slug }: { slug: string }) {
 }
 
 function TileHeadingView(props: TileProps) {
-  const { ticket, slug, hasPracticeChip } = props
+  const { ticket, hasPracticeChip } = props
+  const { slug } = props.fidelity
   const { page } = useBoard()
   const practice = page.board.practiceOf(slug)
   const { key, label } = ticket.stateOf(slug)
@@ -57,19 +61,20 @@ function TileHeadingView(props: TileProps) {
 }
 
 export function TileView(props: TileProps) {
-  const { ticket, stage, slug, opensOnHover } = props
+  const { ticket, stage, fidelity, opensOnHover } = props
+  const { slug } = fidelity
   const { page } = useBoard()
   const practice = page.board.practiceOf(slug)
   const isOn = ticket.isOn(slug)
-  const place = cellPlace(stage.name, slug)
+  const place = cellPlace(stage.name, fidelity)
   const { key } = ticket.stateOf(slug)
-  const borderColor = key === 'violations' ? 'var(--violations)' : ticket.isNext(stage, slug) ? 'var(--accent)' : 'var(--border)'
-  const hover = isOn && opensOnHover ? { onMouseEnter: () => page.tiles.hoverIn({ ticket, stage, place, slugs: [slug] }), onMouseLeave: () => page.tiles.hoverOut(ticket.name, place) } : {}
+  const borderColor = key === 'violations' ? 'var(--violations)' : ticket.isNext(stage, fidelity) ? 'var(--accent)' : 'var(--border)'
+  const hover = isOn && opensOnHover ? { onMouseEnter: () => page.tiles.hoverIn({ ticket, stage, place, fidelities: [fidelity] }), onMouseLeave: () => page.tiles.hoverOut(ticket.name, place) } : {}
   const open = isOn ? page.tiles.openOn(ticket.name, place) : undefined
   return (
     <div className="skill-cell" data-tile={slug} {...hover} style={{ opacity: ticket.lightOf(slug), borderColor, borderLeftColor: practice?.color, borderLeftWidth: key === 'done' ? REVIEWED_EDGE_PIXELS : EDGE_PIXELS }}>
       <TileHeadingView {...props} />
-      {open ? <ActionBarView ticket={ticket} stage={stage} tile={open} /> : null}
+      {open ? <ActionBarView ticket={ticket} tile={open} /> : null}
     </div>
   )
 }

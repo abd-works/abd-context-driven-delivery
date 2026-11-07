@@ -130,7 +130,7 @@ class FileText:
 @language_adapter(language="typescript")
 @agent_toolset
 class FileManager:
-    """List and read the files under the current session's roots, the folders its practices work in."""
+    """List and read the files under a session's roots, the folders its practices work in."""
 
     # The session owns its file manager in memory; it keeps nothing but the roots it reads.
 
@@ -140,11 +140,11 @@ class FileManager:
 
     @classmethod
     @tool_subject
-    def current(cls) -> FileManager:
-        """The file manager of the session being worked on."""
-        from space.session import Session
+    def load(cls, *, project: Path) -> FileManager:
+        """The file manager of the session open in project, the checkout a tool call works on."""
+        from space.repo.repo import Repo
 
-        return Session.current().file_manager
+        return Repo(project).current_session.file_manager
 
     @property
     @data_field

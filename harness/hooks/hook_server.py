@@ -6,7 +6,7 @@ import logging
 import os
 import sys
 import time
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -55,11 +55,21 @@ class CursorEvent:
         return Hook.normalize_event(self.name)
 
 
-class HookPayload:
-    """Cursor stdin JSON for one firing."""
+class HookPayload(Mapping[str, Any]):
+    """The fields an IDE sends on stdin for one firing of a hook, such as the tool that just ran and its input. Its
+    handlers read them through the named properties; it reads as a mapping of those fields too."""
 
-    def __init__(self, fields: dict[str, Any]) -> None:
+    def __init__(self, fields: Mapping[str, Any]) -> None:
         self._fields = dict(fields)
+
+    def __getitem__(self, key: str) -> Any:
+        return self._fields[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._fields)
+
+    def __len__(self) -> int:
+        return len(self._fields)
 
     @classmethod
     def from_stdin(cls, raw: bytes) -> HookPayload:
@@ -80,20 +90,49 @@ class HookPayload:
     def generation_id(self) -> str:
         return str(self._fields.get("generation_id") or "")
 
-    def edited_path(self) -> str:
-        for key in ("file_path", "path", "uri"):
-            value = self._fields.get(key)
-            if isinstance(value, str) and value.strip():
-                return value
+    @property
+    def tool_name(self) -> str:
+        """The tool the event is about, such as ``mcp__cdd__generate_generate``; empty for an event about no tool."""
+        return str(self._fields.get("tool_name") or "")
+
+    @property
+    def tool_input(self) -> dict[str, Any]:
+        """The arguments the tool was called with; none when the IDE sent none or sent text that is no JSON object."""
         raw = self._fields.get("tool_input") or {}
         if isinstance(raw, str):
             try:
                 raw = json.loads(raw)
             except json.JSONDecodeError:
-                return ""
-        if not isinstance(raw, dict):
-            return ""
-        return str(raw.get("path") or raw.get("file_path") or raw.get("target_notebook") or "")
+                return {}
+        return raw if isinstance(raw, dict) else {}
+
+    @property
+    def workspace_roots(self) -> list[Path]:
+        """The folders Cursor names as the chat's workspace."""
+        raw = self._fields.get("workspace_roots") or []
+        if isinstance(raw, str):
+            raw = [raw]
+        if not isinstance(raw, list):
+            return []
+        return [Path(item) for item in raw if isinstance(item, str) and item.strip()]
+
+    @property
+    def project(self) -> Path | None:
+        """The folder of the project the event happened in: Cursor's first workspace root, else the folder Claude Code
+        ran in; none when the event names neither."""
+        roots = self.workspace_roots
+        if roots:
+            return roots[0]
+        folder = str(self._fields.get("cwd") or "").strip()
+        return Path(folder) if folder else None
+
+    def edited_path(self) -> str:
+        for key in ("file_path", "path", "uri"):
+            value = self._fields.get(key)
+            if isinstance(value, str) and value.strip():
+                return value
+        tool_input = self.tool_input
+        return str(tool_input.get("path") or tool_input.get("file_path") or tool_input.get("target_notebook") or "")
 
     def as_dict(self) -> dict[str, Any]:
         return dict(self._fields)
@@ -238,7 +277,7 @@ class HookHandler:
 
     def _guideline_roots(self, payload: HookPayload) -> list[Path]:
         edited = payload.edited_path()
-        roots = self._declared_roots(payload)
+        roots = payload.workspace_roots
         if not edited:
             return roots or [self.repo_root]
         edited_path = Path(edited)
@@ -253,14 +292,6 @@ class HookHandler:
         if roots:
             return roots
         return [self.repo_root]
-
-    def _declared_roots(self, payload: HookPayload) -> list[Path]:
-        raw = payload.as_dict().get("workspace_roots") or []
-        if isinstance(raw, str):
-            raw = [raw]
-        if not isinstance(raw, list):
-            return []
-        return [Path(item) for item in raw if isinstance(item, str) and item.strip()]
 
     def _contains(self, root: Path, edited: Path) -> bool:
         try:
@@ -283,7 +314,7 @@ class HookHandler:
         return ContextConfig(root).guideline(pattern)
 
     def invoke(self, payload: HookPayload) -> HookResult:
-        raw = self.tool.callable(payload.as_dict())
+        raw = self.tool.callable(payload)
         fields = raw if isinstance(raw, Mapping) else None
         result = HookResult.from_handler(fields)
         if result.additional_context or not fields:

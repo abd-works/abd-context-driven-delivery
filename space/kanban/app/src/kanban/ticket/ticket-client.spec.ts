@@ -172,7 +172,8 @@ describe('Send Next Fidelity Action', () => {
     it('should mark its tile as the next one', async () => {
       const { page } = await ran()
       const discovery = page.board.stageNamed('Discovery')!
-      expect(ticketOn(page, OTHER).isNext(discovery, 'stories-story-map')).toBe(true)
+      const storyMap = discovery.workRequired.find(fidelity => fidelity.slug === 'stories-story-map')!
+      expect(ticketOn(page, OTHER).isNext(discovery, storyMap)).toBe(true)
     })
   })
 
@@ -207,7 +208,8 @@ describe('Send Next Fidelity Action', () => {
 describe('Choose Ticket Practices', () => {
   async function turnedOff() {
     const { page } = await board.page()
-    page.store.change({ tiles: [{ ticket: ticketOn(page, ACTIVE), place: 'cell-Discovery-ddd-bounded-context', stage: 'Discovery', slugs: ['ddd-bounded-context'], action: 'generate', picked: [], isPinned: true, files: {} }] })
+    const boundedContext = page.board.stageNamed('Discovery')!.workRequired.find(fidelity => fidelity.slug === 'ddd-bounded-context')!
+    page.store.change({ tiles: [{ ticket: ticketOn(page, ACTIVE), place: 'cell-Discovery-ddd-bounded-context', stage: 'Discovery', fidelities: [boundedContext], action: 'generate', picked: [], isPinned: true, files: {} }] })
     await ticketOn(page, ACTIVE).enablePractice('ddd', false)
     return page
   }
@@ -226,7 +228,7 @@ describe('Write Ticket Handoff', () => {
     const { page } = await board.page()
     const chat = await board.connectChat(page)
     await ticketOn(page, ACTIVE).fillHandoff()
-    expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: 'Write a handoff for ticket checkout-flow with /space-handoff-handoff-session.' }])
+    expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: 'Write a handoff for ticket checkout-flow with /space-session-handoff-session.' }])
   })
 })
 
@@ -245,7 +247,7 @@ describe('Close Active Session', () => {
 
   it('should leave the ticket in its column', async () => {
     const { page } = await closed()
-    expect(ticketOn(page, ACTIVE).column).toBe('Discovery')
+    expect(ticketOn(page, ACTIVE).column.name).toBe('Discovery')
   })
 })
 

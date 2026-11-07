@@ -304,8 +304,8 @@ test.describe('with a chat connected', () => {
         await card(page, 'checkout-flow').getByRole('button', { name: 'Handoff' }).first().click()
       })
 
-      test("Then the chat's prompt holds Write a handoff for ticket checkout-flow with /space-handoff-handoff-session.", async () => {
-        await expect.poll(() => receivedBy(chat)).toContain('Write a handoff for ticket checkout-flow with /space-handoff-handoff-session.')
+      test("Then the chat's prompt holds Write a handoff for ticket checkout-flow with /space-session-handoff-session.", async () => {
+        await expect.poll(() => receivedBy(chat)).toContain('Write a handoff for ticket checkout-flow with /space-session-handoff-session.')
       })
 
       // The toast also names the chat: "Queued for the prompt of Steer chat, for you to review: …".
@@ -329,7 +329,7 @@ test.describe('with a chat connected', () => {
         await expect(toast(page, 'It goes in when this turn ends.')).toBeVisible()
         const before = chat.received.length
         chat.isBusy = false
-        await expect.poll(() => receivedBy(chat).slice(before)).toContain('Write a handoff for ticket checkout-flow with /space-handoff-handoff-session.')
+        await expect.poll(() => receivedBy(chat).slice(before)).toContain('Write a handoff for ticket checkout-flow with /space-session-handoff-session.')
       })
     })
   })

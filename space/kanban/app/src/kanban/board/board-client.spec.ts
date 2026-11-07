@@ -281,7 +281,7 @@ describe('Display Ticket Details', () => {
     closedTwinOf('billing-report', 'Billing report')
     const { page } = await board.page()
     page.board.select('Complete/billing-report')
-    expect(page.board.selectedTicket?.column).toBe('Complete')
+    expect(page.board.selectedTicket?.column.name).toBe('Complete')
   })
 })
 

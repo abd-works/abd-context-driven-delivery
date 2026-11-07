@@ -7,31 +7,28 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.installation.destination import data_field, language_adapter
+from harness.guidance.guidance import FidelityGuidance
+from harness.installation.destination import data_field, identity, language_adapter
+from harness.mcp.mcp_server import mcp
 from space.kanban.board import (
     BACKLOG_COLUMN,
     COMPLETE_COLUMN,
-    GENERATE,
-    REVIEW,
-    VALIDATE,
     Board,
     Card,
+    Column,
     FidelityNotFoundError,
     NotAStageError,
     Stage,
-    Workspace,
 )
+from cdd_guidance.practices.stages import GENERATE, REVIEW, VALIDATE
 from space.kanban.report import Report, ReportFile
-from harness.mcp.mcp_server import mcp
 from space.repo.repo import Branch, Repo
 from space.session import Session, name_of
 from space.session.session import LogEntry
 from tools.file_manager.file_manager import FileEntry
 
 if TYPE_CHECKING:
-    from harness.guidance.guidance import FidelityGuidance
     from space.kanban.backlog_item import BacklogItem
-    from space.kanban.board import Column
 
 GRAPH_RULE_VIOLATION = "graph-rule"
 MOVED_INTO = "move"
@@ -54,7 +51,8 @@ class TicketNotFoundError(LookupError):
         super().__init__(f"no ticket named {ticket!r} on the board")
 
 
-@language_adapter(language="typescript", identity="name")
+@identity("name")
+@language_adapter(language="typescript")
 @agent_toolset
 class Ticket(Card):
     """Show one work session as a unit of delivery and move it through the stages."""
@@ -71,9 +69,9 @@ class Ticket(Card):
 
     @classmethod
     @tool_subject
-    def load(cls, ticket: str) -> Ticket:
-        """The ticket named ticket on the current board, read from its own session alone."""
-        found = Board.current().ticket(ticket)
+    def load(cls, ticket: str, *, project: Path | str) -> Ticket:
+        """The ticket named ticket on the board of project, read from its own session alone."""
+        found = Board.load(project).ticket(ticket)
         if found is None:
             raise TicketNotFoundError(ticket)
         return found
@@ -82,9 +80,9 @@ class Ticket(Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def create(cls, title: str, scope: str = "feature", parent: str = "", path: str = "") -> Ticket:
+    def create(cls, title: str, scope: str = "feature", parent: str = "", path: str = "", *, project: Path | str) -> Ticket:
         """Open a new ticket titled title in Discovery. scope is feature, story, or slice; parent names the ticket it was split from; path is the folder in the repository its session works on."""
-        board = Board.current()
+        board = Board.load(project)
         name = name_of(title)
         root = board.repo.root
         workpath = (root / path).resolve() if path else root
@@ -98,9 +96,11 @@ class Ticket(Card):
         ticket's name would read "ticket"."""
         return self._session.name
 
-    @property
+    @mcp
+    @agent_tool
+    @noSessionLog
     def branch(self) -> Branch:
-        """The ticket's own branch, named as the ticket; the repository may not have it yet."""
+        """Return ticket's own branch, named as the ticket: whether the repository has it yet, so activating ticket offers to create only what is missing, and whether it is checked out, so leaving ticket can commit, push, and merge its work."""
         return self._board.repo.branch_named(self.name)
 
     @property
@@ -136,8 +136,10 @@ class Ticket(Card):
         return FidelityProgress.from_log(self._own(fidelity), stage, self._session.log_entries, self)
 
     @property
+    @data_field(reference=True)
     def column(self) -> Column:
-        """Complete once closed; otherwise the stage of its latest move, or the earliest stage it has work in."""
+        """Complete once closed; otherwise the stage of its latest move, or the earliest stage it has work in. Sent by
+        its name, since the column sends the ticket."""
         if self._session.is_closed:
             return self._board.column(COMPLETE_COLUMN)
         moved = self._moved_into()
@@ -145,11 +147,6 @@ class Ticket(Card):
             return moved
         worked = [progress.stage for progress in self._enabled_progress if progress.done_actions]
         return worked[0] if worked else self._stages[0]
-
-    @property
-    @data_field(key="column")
-    def column_name(self) -> str:
-        return self.column.name
 
     @property
     @data_field
@@ -205,7 +202,7 @@ class Ticket(Card):
     @data_field
     def worktree(self) -> str:
         """The folder of the ticket's own worktree, where its chat works; empty while it has none."""
-        found = self._board.worktrees.get(self.branch)
+        found = self._board.worktrees.get(self.branch())
         return str(found.path) if found else ""
 
     @mcp
@@ -229,22 +226,14 @@ class Ticket(Card):
     @noSessionLog
     def open_worktree(self) -> Ticket:
         """Open ticket's own worktree beside the repository, creating its branch when missing: the folder its chat works in, named as its worktree. The open session is left as it is."""
-        self.branch.open_in_worktree()
+        self.branch().open_in_worktree()
         # The board lists worktrees once per read, so the ticket is read again from a board that lists the new one.
         return Board.load(self._board.repo.root).ticket(self.name)
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def workspace(self) -> Workspace:
-        """Say whether ticket already has its branch and its worktree, so activating it offers only what is missing, and whether the active ticket being left is on a branch of its own, so its work can be committed, pushed, and merged."""
-        active = self._board.active
-        return Workspace(self.branch, active.branch if active is not None else None)
 
     def leave(self, leaving: list[str]) -> None:
         """Do what leaving names with the ticket's work: commit, push, merge. Only on its own branch, checked out,
         because those steps act on whatever is checked out."""
-        if not leaving or not self.branch.is_checked_out:
+        if not leaving or not self.branch().is_checked_out:
             return
         repo = self._board.repo
         if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
@@ -338,10 +327,6 @@ class Ticket(Card):
         return item
 
     @property
-    def _folder(self) -> Path:
-        return self._session.session_path
-
-    @property
     def _stages(self) -> list[Stage]:
         return [column for column in self._board.columns if isinstance(column, Stage)]
 
@@ -370,7 +355,8 @@ class Ticket(Card):
         return self
 
 
-@language_adapter(language="typescript", identity=("ticket", "slug"))
+@identity("ticket", "slug")
+@language_adapter(language="typescript")
 @agent_toolset
 class FidelityProgress:
     """*FidelityProgress* is how far one fidelity has got through its stage's actions on one ticket."""
@@ -398,14 +384,15 @@ class FidelityProgress:
         done_verbs = {verb for _, verb in naming if verb == GENERATE}
         done_verbs |= {VALIDATE} if validated else set()
         done_verbs |= {REVIEW} if reviewed else set()
-        read = cls(fidelity, stage, [action for action in stage.actions if action in done_verbs], has_violations, ticket)
+        read = cls(fidelity, stage, [action for action in stage.steps if action in done_verbs], has_violations, ticket)
         return read.with_violations() if read._is_judged_failing else read
 
     @classmethod
     @tool_subject
-    def load(cls, ticket: str, fidelity: str) -> FidelityProgress:
-        """The progress of fidelity, a slug such as stories-story-map, on the ticket named ticket."""
-        return Ticket.load(ticket).progress_of(fidelity)
+    def load(cls, ticket: str, fidelity: str, *, project: Path | str) -> FidelityProgress:
+        """The progress of fidelity, a slug such as stories-story-map, on the ticket named ticket on the board of
+        project."""
+        return Ticket.load(ticket, project=project).progress_of(fidelity)
 
     @property
     @data_field
@@ -420,11 +407,15 @@ class FidelityProgress:
         return self._fidelity.slug
 
     @property
+    @data_field
     def fidelity(self) -> FidelityGuidance:
+        """The fidelity this progress is on, as its ticket's session holds it."""
         return self._fidelity
 
     @property
+    @data_field(reference=True)
     def stage(self) -> Stage:
+        """The stage that requires the fidelity, sent by its name, since the stage sends its tickets."""
         return self._stage
 
     @property
@@ -444,7 +435,7 @@ class FidelityProgress:
 
     @property
     def remaining_actions(self) -> list[str]:
-        return [action for action in self._stage.actions if action not in self._done_actions]
+        return [action for action in self._stage.steps if action not in self._done_actions]
 
     @property
     @data_field
@@ -490,7 +481,7 @@ class FidelityProgress:
     @data_field(key="actions")
     def action_states(self) -> ActionStates:
         """Each action as to_do, in_progress, or done. A validate that left violations is in progress until they are fixed."""
-        states = {action: "done" if action in self._done_actions else "to_do" for action in self._stage.actions}
+        states = {action: "done" if action in self._done_actions else "to_do" for action in self._stage.steps}
         if self._has_violations:
             states[VALIDATE] = "in_progress"
         return ActionStates(states)

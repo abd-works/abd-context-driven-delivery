@@ -21,6 +21,7 @@ from mcp.server import NotificationOptions, Server
 from mcp.server.models import InitializationOptions
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
+from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import Destination, Installation, data_of
 from harness.mcp.restart_gate import RestartGate
 from harness.mcp.tool_calls import StillRunning, ToolCalls, ToolRequest
@@ -416,9 +417,6 @@ class McpServer:
         self._started = False
         self._toolset_refs: tuple[str, ...] = ()
         self._constructor_context: dict[str, object] = {}
-        from space.session import Session
-
-        self.session = Session.current(self.project)
 
     def _apply_catalog_import_path(self) -> None:
         from harness.installation.installer import Installer
@@ -549,13 +547,15 @@ class McpServer:
         return name
 
     def invoke_tool(self, mcp_name: str, arguments: dict[str, object] | None = None) -> object:
+        """Call the tool published as mcp_name on this runtime's project."""
         resolved = self.resolve_call_name(mcp_name)
         if resolved not in self._tools:
             raise KeyError(resolved)
-        return self._tools[resolved].invoke(arguments)
+        return self._tools[resolved].invoke(arguments, project=self.project)
 
     def invoke_prompt(self, mcp_name: str, arguments: dict[str, object] | None = None) -> object:
-        return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+        """The instructions published as mcp_name, expanded for a call on this runtime's project."""
+        return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments, project=self.project)
 
 
 class _ProjectNamedOnly:
@@ -785,14 +785,11 @@ class McpHost:
         reporter: Callable[[str], None] | None,
         project: Path | None,
     ) -> object:
-        # Read both from the modules as they are now: a restart imports them again, and tools read the new ones.
+        # Read it from the module as it is now: a restart imports it again, and tools read the new one.
         from harness.agent_tools.progress import reporting_to
-        from space.work_state import working_on
 
-        if project is None:
-            return self.dispatch(name, arguments)
-        with working_on(project), reporting_to(reporter):
-            return self.dispatch(name, arguments)
+        with reporting_to(reporter):
+            return self.dispatch(name, arguments, project)
 
     def _listed_tool(self, tool: AgentTool) -> types.Tool | None:
         """tool as the tool list shows it; one whose schema cannot be read is skipped, so the rest still list."""
@@ -802,28 +799,29 @@ class McpHost:
             self._runtime.skip(tool.mcp_name, error)
             return None
 
-    def dispatch(self, name: str, arguments: dict[str, object] | None = None) -> object:
-        """Run one tool call on the project being worked on. A true ``ping`` argument answers without entering the
+    def dispatch(self, name: str, arguments: dict[str, object] | None = None, project: Path | None = None) -> object:
+        """Run one tool call on project, the folder the calling chat names; a call made in process that names none works
+        on the folder ``CDD_PROJECT`` names, else the current folder. A true ``ping`` argument answers without entering the
         tool."""
         resolved = self._runtime.resolve_call_name(name)
         if resolved == BUILTIN_PING_TOOL:
             return self.ping()
         if resolved == BUILTIN_RESTART_TOOL:
             return self.restart()
-        return self._dispatch_on_project(resolved, arguments)
+        return self._dispatch_on_project(resolved, arguments, project)
 
-    def _dispatch_on_project(self, resolved: str, arguments: dict[str, object] | None) -> object:
-        with self._restart_gate.running_call():
-            return self._dispatch_between_restarts(resolved, arguments)
+    def _dispatch_on_project(self, resolved: str, arguments: dict[str, object] | None, project: Path | None) -> object:
+        # WHY: space sits above the framework. Space code that has not yet been handed its project reads it from
+        # working_on, so the call still names its project there.
+        from space.work_state import project_folder, working_on
 
-    def _dispatch_between_restarts(self, resolved: str, arguments: dict[str, object] | None) -> object:
-        from space.session import Session
+        with self._restart_gate.running_call(), working_on(project or project_folder()) as checkout:
+            return self._dispatch_between_restarts(resolved, arguments, checkout)
+
+    def _dispatch_between_restarts(self, resolved: str, arguments: dict[str, object] | None, checkout: Path) -> object:
         from space.session.chat_pointer import ChatPointer
-        from space.work_state import project_checkout
 
-        project = project_checkout()
-        runtime = self.runtime_for(project)
-        Session.refresh_current_from_repo(project)
+        runtime = self.runtime_for(checkout)
         chat, args = ChatPointer.taken_from(arguments)
         with ChatPointer.serving(chat):
             try:
@@ -835,7 +833,7 @@ class McpHost:
                     return runtime.invoke_prompt(resolved, args)
                 return runtime.invoke_tool(resolved, args)
             except BaseException as failure:
-                Session.current(project).record_failure(failure, tool=resolved)
+                ToolCall(args, checkout).session.record_failure(failure, tool=resolved)
                 raise
 
     def _enrolled(self, name: str) -> bool:

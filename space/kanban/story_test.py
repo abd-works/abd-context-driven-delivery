@@ -169,7 +169,7 @@ def progress_in(ticket: dict, fidelity: str) -> dict:
 
 def expect_placed(ticket: dict, column: str, is_done: bool) -> None:
     """The ticket shows in column, in its Done when is_done, else In progress."""
-    actual = (ticket["column"], ticket["is_done"])
+    actual = (ticket["column"]["name"], ticket["is_done"])
     if actual != (column, is_done):
         raise AssertionError(f"expected {ticket['name']} in {column} {'Done' if is_done else 'In progress'}, but it is in {actual[0]} {'Done' if actual[1] else 'In progress'}")
 

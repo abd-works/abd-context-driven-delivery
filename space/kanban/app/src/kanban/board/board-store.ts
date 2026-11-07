@@ -1,10 +1,10 @@
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
-import type { BoardData, HelpData } from '@cdd/space/kanban/board'
+import type { BoardData, FidelityGuidanceData, HelpData } from '@cdd/space/kanban/board'
+import type { BranchData } from '@cdd/space/kanban/ticket'
 
 import type { ChatData, ChatMessageData } from '@cdd/tools/chat/chat'
 import type { ReportClient } from '../ticket/report-client'
 import type { FilesByFidelity, TicketClient } from '../ticket/ticket-client'
-import type { WorkspaceClient } from '../ticket/workspace-client'
 
 export type Toast = { id: number; text: string; isFailure: boolean }
 export type Region = 'board' | 'details'
@@ -12,7 +12,7 @@ export type BacklogDraft = { isOpen: boolean; title: string; text: string }
 
 // An open action bar: on a tile or on a stage head. One ticket and place hold at most one bar, and the bar holds its
 // ticket, whose tools its controls call.
-export type Tile = { ticket: TicketClient; place: string; stage: string; slugs: string[]; action: string; picked: string[]; isPinned: boolean; files: FilesByFidelity }
+export type Tile = { ticket: TicketClient; place: string; stage: string; fidelities: FidelityGuidanceData[]; action: string; picked: string[]; isPinned: boolean; files: FilesByFidelity }
 
 // A dialog or panel holds the ticket it is about, so its actions reach that ticket's tools without looking it up again.
 export type Activation = {
@@ -21,7 +21,10 @@ export type Activation = {
   leavingTitle: string
   leaving: string[]
   opening: string[]
-  workspace: WorkspaceClient
+  // The ticket's own branch, and the branch of the active ticket being left: commit, push, and merge act only on a
+  // branch that is checked out, and the dialog offers to create only what is missing.
+  branch: BranchData
+  leavingBranch: BranchData | null
 }
 
 // The roots dialog: the ticket's workpath on top and each practice's practice root under it. Starting a backlog item asks for its workpath

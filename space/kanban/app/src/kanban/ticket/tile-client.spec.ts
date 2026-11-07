@@ -1,11 +1,12 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { FidelityGuidanceData } from '@cdd/space/kanban/board'
 import type { BoardPage } from '@src/kanban/board/board-page'
 import type { ColumnClient } from '@src/kanban/board/column-client'
 import { BoardOnProject, ticketOn } from 'test-utils/board-page-support'
 
 import type { FilesByFidelity } from './ticket-client'
-import { cellPlace, headPlace } from './tile-client'
+import { headPlace } from './tile-client'
 import { chipsOf, chosenFormats, defaultPicks } from './tile-formats'
 
 // billing-report is made the active ticket: nothing is recorded on it yet. The project's story map,
@@ -13,12 +14,11 @@ import { chipsOf, chosenFormats, defaultPicks } from './tile-formats'
 const TICKET = 'billing-report'
 const SLUG = 'stories-story-map'
 const STORY_MAP = '.context/story-map.md'
-const TWO_SLUGS = [SLUG, 'ddd-bounded-context']
-const PLACE = cellPlace('Discovery', SLUG)
+const PLACE = `cell-Discovery-${SLUG}`
 const OTHER_SLUG = 'ddd-bounded-context'
-const OTHER_PLACE = cellPlace('Discovery', OTHER_SLUG)
+const OTHER_PLACE = `cell-Discovery-${OTHER_SLUG}`
 const THIRD_SLUG = 'ux-ia'
-const THIRD_PLACE = cellPlace('Discovery', THIRD_SLUG)
+const THIRD_PLACE = `cell-Discovery-${THIRD_SLUG}`
 const HEAD = headPlace('Discovery')
 const HOVER_MILLISECONDS = 500
 const LEAVE_MILLISECONDS = 250
@@ -26,6 +26,11 @@ const LATER_STAMP = '2026-11-02T10:00:00Z'
 
 let board: BoardOnProject
 let STAGE: ColumnClient
+// The fidelities Discovery requires, as the board sends them.
+let STORY_MAP_FIDELITY: FidelityGuidanceData
+let OTHER_FIDELITY: FidelityGuidanceData
+let THIRD_FIDELITY: FidelityGuidanceData
+let TWO_FIDELITIES: FidelityGuidanceData[]
 let NOTHING_MADE: FilesByFidelity
 let MARKDOWN_MADE: FilesByFidelity
 
@@ -34,6 +39,11 @@ const filesOn = async (): Promise<FilesByFidelity> => (await ticketOn((await boa
 beforeAll(async () => {
   board = await BoardOnProject.start()
   STAGE = (await board.page()).page.board.stageNamed('Discovery')!
+  const required = (slug: string) => STAGE.workRequired.find(fidelity => fidelity.slug === slug)!
+  STORY_MAP_FIDELITY = required(SLUG)
+  OTHER_FIDELITY = required(OTHER_SLUG)
+  THIRD_FIDELITY = required(THIRD_SLUG)
+  TWO_FIDELITIES = [STORY_MAP_FIDELITY, OTHER_FIDELITY]
   MARKDOWN_MADE = await filesOn()
   board.remove(STORY_MAP)
   NOTHING_MADE = await filesOn()
@@ -53,32 +63,32 @@ async function activeTicketPage({ isMarkdownMade = false } = {}) {
   return { page, ticket: ticketOn(page, TICKET), chat: board.chat('chat-1') }
 }
 
-const spot = (page: BoardPage, slugs = [SLUG], place = PLACE) => ({ ticket: ticketOn(page, TICKET), stage: STAGE, place, slugs })
+const spot = (page: BoardPage, fidelities = [STORY_MAP_FIDELITY], place = PLACE) => ({ ticket: ticketOn(page, TICKET), stage: STAGE, place, fidelities })
 const barAt = (page: BoardPage, place = PLACE) => page.tiles.openOn(TICKET, place)
 const openPlaces = (page: BoardPage) => page.store.state.tiles.map(tile => tile.place)
 
 describe('Choose Action And Formats', () => {
   it('should give each fidelity its default format', () => {
-    expect(defaultPicks(STAGE, [SLUG], NOTHING_MADE)).toEqual(['markdown'])
+    expect(defaultPicks([STORY_MAP_FIDELITY], NOTHING_MADE)).toEqual(['markdown'])
   })
 
   it('should not pick a format already generated', () => {
-    expect(defaultPicks(STAGE, [SLUG], MARKDOWN_MADE)).toEqual([])
+    expect(defaultPicks([STORY_MAP_FIDELITY], MARKDOWN_MADE)).toEqual([])
   })
 
   it('should let a chip stand for a group', () => {
-    expect(chipsOf(STAGE, TWO_SLUGS).map(chip => chip.label)).toEqual(['diagram', 'markdown'])
+    expect(chipsOf(TWO_FIDELITIES).map(chip => chip.label)).toEqual(['diagram', 'markdown'])
   })
 
   it('should give each fidelity its default format from a chip', () => {
-    expect(chosenFormats(STAGE, TWO_SLUGS, ['markdown'])).toEqual(['markdown'])
+    expect(chosenFormats(TWO_FIDELITIES, ['markdown'])).toEqual(['markdown'])
   })
 
   describe('with a format generated on one fidelity of two', () => {
     async function markdownChip() {
       const { page, ticket } = await activeTicketPage({ isMarkdownMade: true })
-      await page.tiles.open(spot(page, TWO_SLUGS, HEAD), true)
-      return page.tileActions.barOf(ticket, STAGE, barAt(page, HEAD)!).chips.find(chip => chip.label === 'markdown')
+      await page.tiles.open(spot(page, TWO_FIDELITIES, HEAD), true)
+      return page.tileActions.barOf(ticket, barAt(page, HEAD)!).chips.find(chip => chip.label === 'markdown')
     }
 
     it('should count how many fidelities it is generated on', async () => {
@@ -93,27 +103,27 @@ describe('Choose Action And Formats', () => {
   it('should keep Run off until a format is chosen', async () => {
     const { page, ticket } = await activeTicketPage({ isMarkdownMade: true })
     await page.tiles.open(spot(page), true)
-    expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).runOff).toBe(true)
+    expect(page.tileActions.barOf(ticket, barAt(page)!).runOff).toBe(true)
   })
 
   it('should keep Run off on a render with nothing to render', async () => {
     const { page, ticket } = await activeTicketPage()
     await page.tiles.open(spot(page), true)
     page.tileActions.chooseAction(barAt(page)!, 'render')
-    expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).runOff).toBe(true)
+    expect(page.tileActions.barOf(ticket, barAt(page)!).runOff).toBe(true)
   })
 
   it('should keep Run off on a locked ticket', async () => {
     const { page } = await activeTicketPage()
     await page.tiles.open({ ...spot(page), ticket: ticketOn(page, 'move-me') }, true)
-    expect(page.tileActions.barOf(ticketOn(page, 'move-me'), STAGE, page.tiles.openOn('move-me', PLACE)!).runOff).toBe(true)
+    expect(page.tileActions.barOf(ticketOn(page, 'move-me'), page.tiles.openOn('move-me', PLACE)!).runOff).toBe(true)
   })
 
   it('should keep Run off with no chat connected', async () => {
     const { page, ticket } = await activeTicketPage()
     page.store.change({ targetChat: null })
     await page.tiles.open(spot(page), true)
-    expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).runOff).toBe(true)
+    expect(page.tileActions.barOf(ticket, barAt(page)!).runOff).toBe(true)
   })
 })
 
@@ -121,13 +131,13 @@ describe('Validate Fidelity', () => {
   it('should allow Validate on files already there, with nothing recorded yet', async () => {
     const { page, ticket } = await activeTicketPage({ isMarkdownMade: true })
     await page.tiles.open(spot(page), true)
-    expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).validateOff).toBe(false)
+    expect(page.tileActions.barOf(ticket, barAt(page)!).validateOff).toBe(false)
   })
 
   it('should keep Validate off with no files and nothing recorded', async () => {
     const { page, ticket } = await activeTicketPage()
     await page.tiles.open(spot(page), true)
-    expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).validateOff).toBe(true)
+    expect(page.tileActions.barOf(ticket, barAt(page)!).validateOff).toBe(true)
   })
 
   it('should link to the report of the fidelity left with violations', async () => {
@@ -135,8 +145,8 @@ describe('Validate Fidelity', () => {
     board.write(`.sessions/${TICKET}/validation-reports/stories-story-map-20261101T100000.md`, '# Graph rule validation\n')
     board.write(`.sessions/${TICKET}/validation-reports/ddd-bounded-context-20261101T100000.md`, '# Graph rule validation\n')
     const { page, ticket } = await activeTicketPage()
-    await page.tiles.open(spot(page, TWO_SLUGS, HEAD), true)
-    expect(page.tileActions.barOf(ticket, STAGE, barAt(page, HEAD)!).reportSlug).toBe(OTHER_SLUG)
+    await page.tiles.open(spot(page, TWO_FIDELITIES, HEAD), true)
+    expect(page.tileActions.barOf(ticket, barAt(page, HEAD)!).reportSlug).toBe(OTHER_SLUG)
   })
 })
 
@@ -144,7 +154,7 @@ describe('Generate Fidelity Output', () => {
   async function ran() {
     const { page, chat } = await activeTicketPage()
     await page.tiles.open(spot(page), true)
-    await page.tileActions.run(barAt(page)!, STAGE)
+    await page.tileActions.run(barAt(page)!)
     return { page, chat }
   }
 
@@ -165,7 +175,7 @@ describe('Render Fidelity Format', () => {
     await page.tiles.open(spot(page), true)
     page.tileActions.chooseAction(barAt(page)!, 'render')
     page.tileActions.toggleFormat(barAt(page)!, 'diagram')
-    await page.tileActions.run(barAt(page)!, STAGE)
+    await page.tileActions.run(barAt(page)!)
     expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-render stories-story-map format=drawio session=.sessions/billing-report/session.json' }])
   })
 })
@@ -175,7 +185,7 @@ describe('Send Tile Action To Chat', () => {
     const { page, chat } = await activeTicketPage()
     await page.tiles.open(spot(page), true)
     page.tileActions.chooseAction(barAt(page)!, action)
-    await page.tileActions.run(barAt(page)!, STAGE)
+    await page.tileActions.run(barAt(page)!)
     expect(await chat.checkIn()).toEqual([{ kind: 'command', text: `/actions-${action} stories-story-map session=.sessions/billing-report/session.json` }])
   })
 })
@@ -191,7 +201,7 @@ describe('Validate Fidelity', () => {
   it('should stay off until the ticket allows it', async () => {
     const { page, ticket } = await activeTicketPage()
     await page.tiles.open(spot(page), true)
-    expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).validateOff).toBe(true)
+    expect(page.tileActions.barOf(ticket, barAt(page)!).validateOff).toBe(true)
   })
 })
 
@@ -199,7 +209,7 @@ describe('Review Fidelity', () => {
   it('should not allow Review until Validate is clean', async () => {
     const { page, ticket } = await activeTicketPage()
     await page.tiles.open(spot(page), true)
-    expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).reviewOff).toBe(true)
+    expect(page.tileActions.barOf(ticket, barAt(page)!).reviewOff).toBe(true)
   })
 })
 
@@ -208,7 +218,7 @@ describe('Send Action To Stage Practices', () => {
     const { page, chat } = await activeTicketPage()
     await page.tiles.open(spot(page, STAGE.workRequired, HEAD), true)
     page.tileActions.chooseAction(barAt(page, HEAD)!, 'sketch')
-    await page.tileActions.run(barAt(page, HEAD)!, STAGE)
+    await page.tileActions.run(barAt(page, HEAD)!)
     expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-sketch stories-story-map ddd-bounded-context ux-ia clean-engineering-modules bdd-behavior session=.sessions/billing-report/session.json' }])
   })
 })
@@ -271,7 +281,7 @@ describe('Open Practice Tile', () => {
     async function pressedTwo() {
       const { page, ticket } = await activeTicketPage()
       await page.tiles.toggle(ticket, spot(page))
-      await page.tiles.toggle(ticket, spot(page, [OTHER_SLUG], OTHER_PLACE))
+      await page.tiles.toggle(ticket, spot(page, [OTHER_FIDELITY], OTHER_PLACE))
       return { page, ticket }
     }
 
@@ -298,7 +308,7 @@ describe('Open Practice Tile', () => {
       const { page, ticket } = await activeTicketPage()
       await page.tiles.toggle(ticket, spot(page))
       pointerTimers()
-      page.tiles.hoverIn(spot(page, [OTHER_SLUG], OTHER_PLACE))
+      page.tiles.hoverIn(spot(page, [OTHER_FIDELITY], OTHER_PLACE))
       await vi.advanceTimersByTimeAsync(HOVER_MILLISECONDS)
       return page
     }
@@ -309,7 +319,7 @@ describe('Open Practice Tile', () => {
 
     it('should replace the hovered bar with the next one a hover opens, and keep the pressed one', async () => {
       const page = await pressedAndHovered()
-      page.tiles.hoverIn(spot(page, [THIRD_SLUG], THIRD_PLACE))
+      page.tiles.hoverIn(spot(page, [THIRD_FIDELITY], THIRD_PLACE))
       await vi.advanceTimersByTimeAsync(HOVER_MILLISECONDS)
       expect(openPlaces(page)).toEqual([PLACE, THIRD_PLACE])
     })
@@ -327,7 +337,7 @@ describe('Open Practice Tile', () => {
       const { page, ticket } = await activeTicketPage()
       const specification = page.board.stageNamed('Specification')!
       await page.tiles.toggle(ticket, spot(page, STAGE.workRequired, HEAD))
-      await page.tiles.toggle(ticket, { ticket, stage: specification, place: headPlace(specification.name), slugs: specification.workRequired })
+      await page.tiles.toggle(ticket, { ticket, stage: specification, place: headPlace(specification.name), fidelities: specification.workRequired })
       expect(openPlaces(page)).toEqual([HEAD, headPlace('Specification')])
     })
   })
@@ -350,7 +360,7 @@ describe('Expand Ticket', () => {
   describe('with a segment pressed', () => {
     async function pressed() {
       const { page, ticket } = await activeTicketPage()
-      await page.cards.openSegment(ticket, STAGE, SLUG)
+      await page.cards.openSegment(ticket, STAGE, STORY_MAP_FIDELITY)
       return page
     }
 
@@ -365,7 +375,7 @@ describe('Expand Ticket', () => {
 
   it('should move an open bar to the tile the ticket works on next when it moves', async () => {
     const { page, ticket } = await activeTicketPage()
-    await page.tiles.open(spot(page, [OTHER_SLUG], OTHER_PLACE), true)
+    await page.tiles.open(spot(page, [OTHER_FIDELITY], OTHER_PLACE), true)
     await page.cards.follow(ticket)
     expect(openPlaces(page)).toEqual([PLACE])
   })

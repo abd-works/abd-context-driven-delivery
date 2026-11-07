@@ -1,4 +1,5 @@
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
+import type { FidelityGuidanceData } from '@cdd/space/kanban/board'
 import { FidelityProgressClientGenerated, type ActionStatesData, type FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import { TicketClientGenerated, type ReportRuleData, type TicketData, type ViolationData } from '@cdd/space/kanban/ticket'
 import { PracticeSessionOutputClientGenerated } from '@cdd/space/session/practice-session-output'
@@ -37,7 +38,7 @@ export class TicketClient extends TicketClientGenerated {
 
   // A session can sit in closed/ under the name of an open one, so a column and name together say which ticket is meant.
   get address(): string {
-    return `${this.column}/${this.name}`
+    return `${this.column.name}/${this.name}`
   }
 
   // Commands run in the active session, so with Active session only on, another ticket cannot start one.
@@ -47,6 +48,10 @@ export class TicketClient extends TicketClientGenerated {
 
   get violatedSlugs(): string[] {
     return this.progress.filter(progress => progress.state === 'violations').map(progress => progress.slug)
+  }
+
+  hasViolationsIn(stage: ColumnClient): boolean {
+    return this.progress.some(progress => progress.state === 'violations' && progress.stage.name === stage.name)
   }
 
   get standing(): string {
@@ -60,7 +65,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   get stagePlace(): string {
-    return [this.column, this.standing].filter(Boolean).join(' · ')
+    return [this.column.name, this.standing].filter(Boolean).join(' · ')
   }
 
   // The action Run next sends: the next fidelity's own next action.
@@ -179,16 +184,16 @@ export class TicketClient extends TicketClientGenerated {
     return slugs.reduce((total, slug) => total + (this.progressNamed(slug)?.violation_count ?? 0), 0)
   }
 
-  enabledSlugs(stage: ColumnClient): string[] {
-    return stage.workRequired.filter(slug => this.isOn(slug))
+  enabledFidelities(stage: ColumnClient): FidelityGuidanceData[] {
+    return stage.workRequired.filter(fidelity => this.isOn(fidelity.slug))
   }
 
   allows(slug: string, action: string): boolean {
     return (this.progressNamed(slug)?.allowed_actions ?? []).includes(action)
   }
 
-  isNext(stage: ColumnClient, slug: string): boolean {
-    return this.next?.slug === slug && stage.workRequired.includes(slug)
+  isNext(stage: ColumnClient, fidelity: FidelityGuidanceData): boolean {
+    return this.next?.slug === fidelity.slug && this.next.stage.name === stage.name
   }
 
   select(): void {
@@ -280,7 +285,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   fillHandoff(): Promise<void> {
-    return this.chat.fill(`Write a handoff for ticket ${this.name} with /space-handoff-handoff-session.`)
+    return this.chat.fill(`Write a handoff for ticket ${this.name} with /space-session-handoff-session.`)
   }
 
   // A report's fixes are for the ticket whose report it is, so they name its session and go to its chat.
@@ -301,19 +306,13 @@ export class TicketClient extends TicketClientGenerated {
     return STEPS_WITHOUT_CHAT.includes(this.nextAction) || this.page.chat.canSend
   }
 
-  // Generate is sent straight to the chat, in the default format of the stage that requires the fidelity; the others
-  // fill the prompt.
+  // Generate is sent straight to the chat, in the next fidelity's default format; the others fill the prompt.
   async runNext(): Promise<void> {
     const slug = this.next?.slug ?? ''
     if (this.nextAction === 'satisfy') return this.page.panels.openReport(this, slug)
     if (this.nextAction === 'review') return this.review(slug)
     if (this.nextAction !== 'generate') return this.chat.fill(this.actionCommand(`${RUN_NEXT_COMMANDS[this.nextAction]} ${slug}`))
-    const format = this.stageRequiring(slug)?.defaultFormats[slug]
+    const format = this.next?.fidelity.default_format
     await this.chat.command(this.actionCommand(`/actions-generate ${slug}${format ? ` format=${format}` : ''}`))
-  }
-
-  // Run next can reach back to an earlier stage, so a fidelity's stage is the one that requires it, not the ticket's.
-  private stageRequiring(slug: string): ColumnClient | undefined {
-    return this.page.board.stages.find(stage => stage.workRequired.includes(slug))
   }
 }

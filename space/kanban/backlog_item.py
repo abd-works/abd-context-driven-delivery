@@ -7,7 +7,7 @@ from pathlib import Path
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.installation.destination import data_field, language_adapter
+from harness.installation.destination import data_field, identity, language_adapter
 from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
 from space.kanban.ticket import Ticket
 from harness.mcp.mcp_server import mcp
@@ -21,7 +21,8 @@ class BacklogItemNotFoundError(LookupError):
         super().__init__(f"no backlog item titled {backlog_item!r} on the board")
 
 
-@language_adapter(language="typescript", identity="title")
+@identity("title")
+@language_adapter(language="typescript")
 @agent_toolset
 class BacklogItem(Card):
     """Hold an idea not yet started. Starting it opens a ticket for it."""
@@ -32,8 +33,9 @@ class BacklogItem(Card):
 
     @classmethod
     @tool_subject
-    def load(cls, backlog_item: str) -> BacklogItem:
-        found = Board.current().backlog_item(backlog_item)
+    def load(cls, backlog_item: str, *, project: Path | str) -> BacklogItem:
+        """The backlog item titled backlog_item on the board of project."""
+        found = Board.load(project).backlog_item(backlog_item)
         if found is None:
             raise BacklogItemNotFoundError(backlog_item)
         return found
@@ -42,9 +44,9 @@ class BacklogItem(Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def create(cls, title: str, text: str = "") -> BacklogItem:
+    def create(cls, title: str, text: str = "", *, project: Path | str) -> BacklogItem:
         """Add an idea to the Backlog: one markdown file, with title as its heading and text under it."""
-        board = Board.current()
+        board = Board.load(project)
         item = cls(board.repo.backlog_folder / f"{name_of(title)}.md", board)
         item._write(title, text)
         return item
@@ -128,6 +130,6 @@ class BacklogItem(Card):
         return Ticket(session, self._board)
 
     def _ticket_opened(self, scope: str, path: str) -> Ticket:
-        ticket = Ticket.create(self.title, scope, "", path)
+        ticket = Ticket.create(self.title, scope, "", path, project=self._board.repo.root)
         ticket.session.record(f"backlog {self._path}")
         return ticket

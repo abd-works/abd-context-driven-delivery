@@ -5,7 +5,7 @@ The *cdd-board* plugin connects a Claude Code chat to the Session Board, so the 
 
 - **Purpose:** let a person drive the agent from the board, and keep the chat aware of the active ticket.
 - **Seam (terms):** `cdd-board` plugin; `/board`; the status line entry; the active ticket section of the system prompt; the server health band
-- **Dependencies (one-way):** tools/chat (the chat tools it checks in with, through the board's `/api/chat/:chat/check-in` route), harness/kanban (the board it reads, and ticket types from the language adapter at compile time only), harness/health (`server-health.report`, and its types from the language adapter at compile time only)
+- **Dependencies (one-way):** tools/chat (the chat tools it checks in with, through the board's `/api/chat/:chat/check-in` route), space/kanban (the board it reads, and ticket types from the language adapter at compile time only), harness/health (`server-health.report`, and its types from the language adapter at compile time only)
 
 ## Constraint
 

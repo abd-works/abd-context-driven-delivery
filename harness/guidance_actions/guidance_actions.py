@@ -1,18 +1,24 @@
-"""First-order guidance-action prelude: take the guidance a call names, then run the operation on it."""
+"""First-order guidance-action prelude: an action made for its call's session runs an operation on the guidance the call
+names."""
 
 from __future__ import annotations
 
-import inspect
 import json
 import re
-import threading
 from pathlib import Path
-from typing import Any, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Any, NotRequired, TypedDict
 
 from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions, agent_toolset, tools
 from harness.agent_tools.name import Name
+from harness.agent_tools.tool_call import ToolCall
+from harness.guidance.practice_catalogue import PracticeCatalogue
 from tools.prompt_notify.prompt_notify import PromptNotify, Toast
 from harness.hooks.hooks import Hook
+
+if TYPE_CHECKING:
+    from harness.hooks.hook_server import HookPayload
+    from space.session.session import PracticeSessionOutput, Session
+
 
 class GuidanceRef(TypedDict):
     """One Guidance: a toolset ref, plus the fidelity or context that ref accepts."""
@@ -35,7 +41,7 @@ _FORMAT_WORD = "format="
 # The session a command is for, as the session board names it: `session=.sessions/<name>/session.json`.
 _SESSION_WORD = "session="
 _SKIP_PARTS = {".git", ".venv", "node_modules", "__pycache__"}
-# What a call works on before it names any guidance; None cannot stand for it, since naming None keeps what it had.
+# What an action works on before it names any guidance; None cannot stand for it, since naming None keeps what it had.
 _NOTHING_WORKED_ON = object()
 PATHS_NOTE = (
     "paths: a file, a list of files, or a folder. Pass paths on an MCP call. "
@@ -73,114 +79,77 @@ def _read_entry(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
+class ActionWorksInNoSession(Exception):
+    """An action made for no session, such as one listed for install, was asked for the session it works in."""
+
+    def __init__(self, action: str) -> None:
+        super().__init__(f"{action} was made for no session; make it for the session its call works in")
+        self.action = action
+
+
 @agent_toolset
 class GuidanceAction:
-    """Bind guidance and run an operation on that string or each listed Guidance.
+    """An action, such as generate, on the guidance a call names, such as stories-story-map, made for the session that
+    call works in.
 
-    The MCP server runs calls on several threads against one action, so what a call is working on
-    is kept per thread: two calls at once must each answer for their own guidance.
-
-    An action works in one session. An action started inside another is made for that action's session; a board
-    command names its ticket's session in a ``session=`` word; any other call works in the chat's current session.
-
-    A call takes the guidance it works on once, when it starts; the action's operations then read it from the action
-    through ``listed()``, so each practice it lists is one object, the one its session holds.
+    The cdd server makes a new action for each call (``for_call``), so the guidance a call names, the session it works
+    in, and the practices it lists belong to that action alone: calls running at once never see each other's, and no
+    call changes the session another call reads. A board command names its ticket's session in a ``session=`` word,
+    because it runs in whichever chat it is sent to; any other call works in the session open in its project. An action
+    started inside another (``_inside``) is made for that action's session and works on the same practices. An action
+    made for no session, such as one listed for install, logs nothing and keeps no format.
     """
 
-    def __init__(self, session: Any = None) -> None:
+    def __init__(self, session: Session | None = None) -> None:
         super().__init__()
-        self._running = threading.local()
-        self._made_for = session
+        self._session = session
+        # The guidance argument this action works on, so naming the same argument again keeps what it built.
+        self._guidance_worked_on: Any = _NOTHING_WORKED_ON
+        self._guidance_text: str | None = None
+        self._tool_items: list = []
+        self._listed_items: list | None = None
+        self._logged_session_action: str | None = None
 
-    # The guidance argument this call works on, so naming the same argument again in the same call keeps what it built.
-    @property
-    def _guidance_worked_on(self) -> Any:
-        return getattr(self._running, "guidance_worked_on", _NOTHING_WORKED_ON)
+    def for_call(self, call: ToolCall) -> GuidanceAction:
+        """An action of this kind made for call and working on the guidance it names: in the session that guidance names
+        in a ``session=`` word, else the session open in the call's project, else the session this action was made for."""
+        guidance = call.arguments.get("guidance")
+        action = self.made_for(self._session_named_in(guidance, call.project) or call.session or self._session)
+        action._work_on(guidance)
+        return action
 
-    @_guidance_worked_on.setter
-    def _guidance_worked_on(self, guidance: Any) -> None:
-        self._running.guidance_worked_on = guidance
+    def made_for(self, session: Session | None) -> GuidanceAction:
+        """An action of this kind, set up as this one is, made for session."""
+        return type(self)(session=session)
 
-    @property
-    def _guidance_text(self) -> str | None:
-        return getattr(self._running, "guidance_text", None)
-
-    @_guidance_text.setter
-    def _guidance_text(self, text: str | None) -> None:
-        self._running.guidance_text = text
-
-    @property
-    def _tool_items(self) -> list:
-        return getattr(self._running, "tool_items", [])
-
-    @_tool_items.setter
-    def _tool_items(self, items: list) -> None:
-        self._running.tool_items = items
+    def session_for(self, call: ToolCall) -> Session | None:
+        """The session this action logs call in: the one it was made for."""
+        return self._session
 
     @property
-    def _logged_session_action(self) -> str | None:
-        return getattr(self._running, "logged_session_action", None)
+    def session(self) -> Session:
+        """The session this action works in."""
+        if self._session is None:
+            raise ActionWorksInNoSession(type(self).__name__)
+        return self._session
 
-    @_logged_session_action.setter
-    def _logged_session_action(self, action: str | None) -> None:
-        self._running.logged_session_action = action
+    def _session_named_in(self, guidance: Any, project: Path | None) -> Session | None:
+        """The session whose session.json guidance names in a ``session=`` word, a path from the project or an absolute
+        one; none when it names none."""
+        if not isinstance(guidance, str):
+            return None
+        named = next((word[len(_SESSION_WORD):] for word in guidance.split() if word.startswith(_SESSION_WORD)), "")
+        return self._session_kept_in(Path(named), project) if named else None
 
-    # The session.json a command's session= word named, a path from the project; empty when it named none.
-    @property
-    def _named_session_file(self) -> str:
-        return getattr(self._running, "named_session_file", "")
+    def _session_kept_in(self, session_file: Path, project: Path | None) -> Session:
+        # WHY: space sits above the framework, so sessions are imported when an action first needs one.
+        from space.repo.repo import Repo
+        from space.session.session import Session, SessionNotFoundError
 
-    @_named_session_file.setter
-    def _named_session_file(self, path: str) -> None:
-        self._running.named_session_file = path
-        self._running.session = None
-
-    @property
-    def _listed_items(self) -> list | None:
-        return getattr(self._running, "listed_items", None)
-
-    @_listed_items.setter
-    def _listed_items(self, items: list | None) -> None:
-        self._running.listed_items = items
-
-    @property
-    def session(self):
-        """The session this action works in: the session.json a command's session= word named, else the session it was
-        made for, else the chat's current session. A board command names its ticket's session, which need not be the
-        session open in the chat that runs it."""
-        found = getattr(self._running, "session", None)
-        if found is None:
-            found = self._session_to_work_in()
-            self._running.session = found
-        return found
-
-    def _session_to_work_in(self):
-        from space.session import Session
-
-        if self._named_session_file:
-            return Session.from_file(self._named_session_file)
-        return self._made_for if self._made_for is not None else Session.current()
-
-    def start_call(self) -> None:
-        """Begin a new call: one action object serves every call while the MCP server runs, so a call starts with no
-        no guidance taken, no session found, and no line logged, rather than with the last call's."""
-        self._logged_session_action = None
-        self._guidance_worked_on = _NOTHING_WORKED_ON
-        self._named_session_file = ""
-        self._guidance_text = None
-        self._tool_items = []
-        self._listed_items = None
-
-    def call_session(self, arguments: dict[str, Any]):
-        """The session a call with arguments works in, once it has taken their guidance: a board command names its
-        ticket's session in its guidance, which the call's log line belongs in."""
-        if "guidance" in arguments:
-            self._work_on(arguments.get("guidance"))
-        return self.session
-
-    def session_action_for_operation(self, operation: str) -> str:
-        """MCP operation name → session action name (``run`` uses the same string)."""
-        return operation
+        found = session_file if session_file.is_absolute() or project is None else project / session_file
+        if not found.is_file():
+            raise SessionNotFoundError(str(session_file))
+        return Session.load(found.parent, project or Repo(found.parent).checkout_folder)
 
     def _discover_operations(self) -> dict[str, AgentOperation]:
         from harness.agent_tools.agent_tools import AgentToolMark, GuidanceAgentOperation
@@ -196,12 +165,11 @@ class GuidanceAction:
         return discovered
 
     def _work_on(self, guidance: GuidanceArg | None = None) -> None:
-        """Guidance ref or dict: iterate Guidance. Other strings: run once on that text. Naming again what this call
-        already works on keeps the Guidance it built, so a call's operations all work on the same objects."""
+        """Guidance ref or dict: iterate Guidance. Other strings: run once on that text. Naming again what this action
+        already works on keeps the Guidance it built, so its operations all work on the same objects."""
         if guidance is None or guidance == self._guidance_worked_on:
             return
         self._guidance_worked_on = guidance
-        self._named_session_file = ""
         self._listed_items = None
         listed = self._as_guidance_item(guidance)
         if listed is not None and not isinstance(guidance, list):
@@ -218,14 +186,26 @@ class GuidanceAction:
             items.append(item if listed is None else listed)
         self._tool_items = items
 
+    def _work_on_listed(self, worked_on: str | list) -> None:
+        """Work on what another action already took: its text, or the Guidance it listed, as the same objects."""
+        self._guidance_worked_on = worked_on
+        if isinstance(worked_on, str):
+            self._guidance_text = worked_on
+            self._tool_items = []
+            self._listed_items = None
+            return
+        self._guidance_text = None
+        self._tool_items = list(worked_on)
+        self._listed_items = list(worked_on)
+
     def _work_on_text(self, text: str) -> None:
         """Agents on MCP often send several slugs, a ``format=`` word, and a ``session=`` word in one string; list the
-        slugs as Guidance and keep the session. Any other word keeps the whole string as text, so prose still runs once."""
+        slugs as Guidance. The session word chose the session this action was made for. Any other word keeps the whole
+        string as text, so prose still runs once."""
         refs = self._slug_words(text)
         if refs:
             self._guidance_text = None
             self._tool_items = refs
-            self._named_session_file = next((word[len(_SESSION_WORD):] for word in text.split() if word.startswith(_SESSION_WORD)), "")
             return
         self._guidance_text = text
         self._tool_items = []
@@ -266,14 +246,14 @@ class GuidanceAction:
     def _guidance_slug(self, text: str) -> str | dict[str, Any] | None:
         if not _GUIDANCE_SLUG.match(text):
             return None
-        return GuidanceCatalog.ref_for(text)
+        return PracticeCatalogue.toolset_ref(text)
 
     def guidance_text(self) -> str | None:
         """The string to run this action on, when guidance was not a Guidance list."""
         return self._guidance_text
 
     def listed(self) -> list:
-        """The Guidance this run works on, each practice worked on in this action's session: its practice adopts it,
+        """The Guidance this action works on, each practice worked on in this action's session: its practice adopts it,
         and a fidelity the guidance named no format for works in the format it was last given in that session."""
         if self._guidance_text is not None:
             return []
@@ -292,16 +272,18 @@ class GuidanceAction:
         its own."""
         return self._names_format(raw) or not isinstance(raw, (str, dict))
 
-    def _session_practice(self, item):
-        """The practice item is, as this action's session holds it; none when item is no practice CDD has."""
+    def _session_practice(self, item) -> PracticeSessionOutput | None:
+        """The practice item is, as this action's session holds it; none when the action works in no session or item is
+        no practice CDD has."""
         from harness.guidance.guidance import PracticeGuidance
-        from harness.guidance.practice_catalogue import PracticeCatalogue
 
-        if not isinstance(item, PracticeGuidance) or not PracticeCatalogue.has(item.key):
+        if self._session is None or not isinstance(item, PracticeGuidance) or not PracticeCatalogue.has(item.key):
             return None
-        return self.session.practice(item.key)
+        return self._session.practice(item.key)
 
     def _work_in_session(self, item, chose_format: bool) -> None:
+        """The practice of this action's session works with item. The session was made for this action's call, so no
+        other call sees the fidelity and format item works at."""
         practice = self._session_practice(item)
         if practice is None:
             return
@@ -309,20 +291,14 @@ class GuidanceAction:
         if not chose_format:
             practice.use_kept_format()
 
-    def _inside(self, action_type: type, guidance: str | list | None = None):
+    def _inside(self, action_type: type[GuidanceAction], guidance: str | list | None = None) -> GuidanceAction:
         """An action of action_type started inside this one: made for this action's session and working on guidance,
         this action's text or some of its listed Guidance, or on everything this action works on when guidance is
         none. It works on the same objects, so the session's practices stay the ones this action listed."""
-        inner = action_type(self.session)
-        worked_on = guidance if guidance is not None else self._guidance_text if self._guidance_text is not None else self.listed()
-        inner._guidance_worked_on = worked_on
-        if isinstance(worked_on, str):
-            inner._guidance_text = worked_on
-            inner._tool_items = []
-        else:
-            inner._guidance_text = None
-            inner._tool_items = list(worked_on)
-            inner._listed_items = list(worked_on)
+        inner = action_type(session=self._session)
+        inner._work_on_listed(
+            guidance if guidance is not None else self._guidance_text if self._guidance_text is not None else self.listed()
+        )
         return inner
 
     def each(self, operation):
@@ -333,13 +309,14 @@ class GuidanceAction:
         return [operation(item) for item in self.listed()]
 
     def run(self, operation, *, action: str = "") -> list:
-        """Run ``operation`` on the guidance this call works on: once on its string, or once per Guidance."""
+        """Run ``operation`` on the guidance this action works on: once on its string, or once per Guidance."""
         self._keep_named_formats()
         self._log_running_action(action)
         try:
             return self.each(operation)
         except BaseException as failure:
-            self.session.record_failure(failure, tool=action or type(self).__name__)
+            if self._session is not None:
+                self._session.record_failure(failure, tool=action or type(self).__name__)
             raise
 
     def _keep_named_formats(self) -> None:
@@ -352,13 +329,11 @@ class GuidanceAction:
 
     def _log_running_action(self, action: str) -> None:
         """Session trail for this run — override on actions such as Validate that log differently."""
-        if not action:
-            return
-        if self._logged_session_action == action:
+        if not action or self._session is None or self._logged_session_action == action:
             return
         self._logged_session_action = action
         self.listed()
-        self.session.log_guidance_action(action)
+        self._session.log_guidance_action(action)
 
     @Toast
     @agent_instructions
@@ -373,8 +348,8 @@ class GuidanceAction:
         """The open session as an agent acting on this command needs it: its session.json, the project root paths
         are named from, the session's root, and where each listed practice writes. The agent works from the project's
         checkout, so every path it sees starts there; told nothing, it guesses where files go under a moved root."""
-        session = self.session
-        if session.session_path is None:
+        session = self._session
+        if session is None or session.session_path is None:
             return ""
         session_json = session.session_file
         root = session.root.as_posix()
@@ -409,38 +384,31 @@ class GuidanceAction:
 
     @Toast
     @Hook("postToolUse")
-    def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    def inject_rules(self, payload: HookPayload) -> dict[str, Any]:
         """Inject listed Guidance rules markdown after this action returns."""
-        if type(self).__name__ == "Document":
+        if type(self).__name__ == "Document" or not self._payload_is_this_action(payload):
             return {}
-        data = payload or {}
-        if not self._payload_is_this_action(data):
-            return {}
-        self._work_on_payload_guidance(data)
-        parts, labels = self._listed_inject_parts(data)
+        action = self.for_call(ToolCall(payload.tool_input, payload.project))
+        parts, labels = action._listed_inject_parts(payload)
         if not parts:
             return {}
-        body = "\n\n".join(parts)
-        action = Name(type(self).__name__).kebab
         echo = PromptNotify()
-        echo.toast_roots = data.get("workspace_roots")
-        echo.show_ide_toast(
-            PromptNotify().inject_rules_toast(action, labels),
-        )
-        return {"additional_context": body}
+        echo.toast_roots = payload.workspace_roots
+        echo.show_ide_toast(PromptNotify().inject_rules_toast(Name(type(self).__name__).kebab, labels))
+        return {"additional_context": "\n\n".join(parts)}
 
-    def _listed_inject_parts(self, data: dict[str, Any]) -> tuple[list[str], list[str]]:
+    def _listed_inject_parts(self, payload: HookPayload) -> tuple[list[str], list[str]]:
         parts: list[str] = []
         labels: list[str] = []
         for guidance in self.listed():
-            text = self._listed_guidance_rules(guidance, data)
+            text = self._listed_guidance_rules(guidance, payload)
             if not text:
                 continue
             parts.append(text)
             labels.append(type(guidance).__name__)
         return parts, labels
 
-    def _listed_guidance_rules(self, guidance: Any, data: dict[str, Any]) -> str:
+    def _listed_guidance_rules(self, guidance: Any, payload: HookPayload) -> str:
         rules = getattr(guidance, "rules", None)
         if rules is None:
             return ""
@@ -448,74 +416,15 @@ class GuidanceAction:
         if Hook.disabled_on(globbed):
             return ""
         if callable(globbed):
-            text = (globbed(data).get("additional_context") or "").strip()
+            text = (globbed(payload).get("additional_context") or "").strip()
             if text:
                 return text
         return (getattr(rules, "markdown", None) or "").strip()
 
-    def _payload_is_this_action(self, payload: dict[str, Any]) -> bool:
-        tool = str(payload.get("tool_name") or "").lower()
+    def _payload_is_this_action(self, payload: HookPayload) -> bool:
+        tool = payload.tool_name.lower()
         if not tool:
             return False
         name = Name(type(self).__name__)
         aliases = {name.snake, name.kebab, "".join(name.words)}
         return any(alias and alias in tool for alias in aliases)
-
-    def _work_on_payload_guidance(self, payload: dict[str, Any]) -> None:
-        raw = payload.get("tool_input") or {}
-        if isinstance(raw, str):
-            try:
-                raw = json.loads(raw)
-            except json.JSONDecodeError:
-                raw = {}
-        if not isinstance(raw, dict):
-            return
-        if "guidance" in raw:
-            self._work_on(raw.get("guidance"))
-
-
-class GuidanceCatalog:
-    """Map a practice or fidelity slug to the toolset ref an action can list."""
-
-    _refs: dict[str, str | dict[str, Any]] | None = None
-
-    @classmethod
-    def ref_for(cls, slug: str) -> str | dict[str, Any] | None:
-        cls._load()
-        return (cls._refs or {}).get(slug)
-
-    @classmethod
-    def _load(cls) -> None:
-        if cls._refs is not None:
-            return
-        from harness.installation.installer import Installer
-        from harness.agent_tools.agent_tools import AgentToolSet
-
-        installer = Installer()
-        refs: dict[str, str | dict[str, Any]] = {}
-        practices = installer.repo / "cdd_guidance" / "practices"
-        for py_file in installer._iter_collect_files(practices):
-            for ref in installer._toolset_refs_in_file(py_file, installer.repo):
-                cls._index_ref(refs, ref, AgentToolSet)
-        cls._refs = refs
-
-    @classmethod
-    def _index_ref(cls, refs: dict[str, str | dict[str, Any]], ref: str, toolsets: Any) -> None:
-        try:
-            practice = toolsets.instantiate(ref)
-        except (ImportError, ModuleNotFoundError, TypeError, ValueError, AttributeError, OSError):
-            return
-        fidelities = getattr(getattr(practice, "fidelities", None), "entries", None)
-        if not isinstance(fidelities, dict) or not fidelities:
-            return
-        slug = str(getattr(practice, "slug", "") or "")
-        if slug and slug not in refs:
-            refs[slug] = ref
-        for name, child in fidelities.items():
-            fidelity_ref = {"toolset": ref, "fidelity": name}
-            child_slug = str(getattr(child, "slug", "") or "")
-            if child_slug and child_slug not in refs:
-                refs[child_slug] = fidelity_ref
-            for alias in {name, name.replace("_", "-")}:
-                if alias and alias not in refs:
-                    refs[alias] = fidelity_ref

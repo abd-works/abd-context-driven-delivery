@@ -1,3 +1,5 @@
+import type { FidelityGuidanceData } from '@cdd/space/kanban/board'
+
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
 import type { ColumnClient } from '../board/column-client'
@@ -27,9 +29,9 @@ export class OpenCardClient {
   }
 
   // A press on a segment opens the card on that fidelity.
-  async openSegment(ticket: TicketClient, stage: ColumnClient, slug: string): Promise<void> {
+  async openSegment(ticket: TicketClient, stage: ColumnClient, fidelity: FidelityGuidanceData): Promise<void> {
     if (this.store.state.openCard !== ticket.name) this.toggle(ticket)
-    await this.page.tiles.open({ ticket, stage, place: cellPlace(stage.name, slug), slugs: [slug] }, true)
+    await this.page.tiles.open({ ticket, stage, place: cellPlace(stage.name, fidelity), fidelities: [fidelity] }, true)
   }
 
   // A ticket's address changes with its column, so the selection goes with it, and its open bars give way to one bar
@@ -43,9 +45,9 @@ export class OpenCardClient {
 
   private async followBars(moved: TicketClient, stage: ColumnClient): Promise<void> {
     this.store.change(state => ({ tiles: withoutBarsOf(state.tiles, moved.name) }))
-    const slugs = moved.enabledSlugs(stage)
-    const slug = slugs.find(entry => moved.stateOf(entry).key !== 'done') ?? slugs[0]
-    if (slug) await this.page.tiles.open({ ticket: moved, stage, place: cellPlace(stage.name, slug), slugs: [slug] }, true)
+    const fidelities = moved.enabledFidelities(stage)
+    const fidelity = fidelities.find(entry => moved.stateOf(entry.slug).key !== 'done') ?? fidelities[0]
+    if (fidelity) await this.page.tiles.open({ ticket: moved, stage, place: cellPlace(stage.name, fidelity), fidelities: [fidelity] }, true)
   }
 
   releaseTicket(ticket: string): void {
@@ -59,8 +61,8 @@ export class OpenCardClient {
   dropPractice(ticket: string, practice: string): void {
     const remaining = (tile: Tile): Tile | null => {
       if (tile.ticket.name !== ticket) return tile
-      const slugs = tile.slugs.filter(slug => this.page.board.practiceOf(slug)?.key !== practice)
-      return slugs.length ? { ...tile, slugs } : null
+      const fidelities = tile.fidelities.filter(fidelity => this.page.board.practiceOf(fidelity.slug)?.key !== practice)
+      return fidelities.length ? { ...tile, fidelities } : null
     }
     this.store.change(state => ({ tiles: state.tiles.map(remaining).filter((tile): tile is Tile => tile !== null) }))
   }

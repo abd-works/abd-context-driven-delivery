@@ -92,7 +92,7 @@ Broken on `ensure-domain-orientation-refactor` (wave 3). The graph declares a se
   - session_probe.py:45, :46 import Generate and Validate.
 
 ## The board (space/kanban)
-Decided: the board is part of tracking the work, so it moved from `harness/kanban` to `space/kanban`, beside the session and repo it reads. Its imports of space are now within space, and it no longer reads `space.work_state`: each `@tool_subject` loader takes the call's project, which `harness/agent_tools` hands it (`agent_tools.py:835`, a function-level import of `space.work_state.project_folder`, the same upward edge `agent_tools.py:1101` already makes to `space.session`). What is left:
+Decided: the board is part of tracking the work, so it moved from `harness/kanban` to `space/kanban`, beside the session and repo it reads. Its imports of space are now within space, and it no longer reads `space.work_state`: each `@tool_subject` loader takes the call's project, which `harness/agent_tools` hands it from the tool call the MCP host makes for that project, so the board adds no import of `space.work_state` to the framework. What is left:
 - **space/kanban → harness, as all of space does.** board.py:11–17, ticket.py:8–12, backlog_item.py:8–10 and :13, report.py:10 import `harness.agent_tools`, `harness.guidance`, `harness.installation`, and `harness.mcp`; report.py:231–232 import `harness.graph`. These close once the shared marks move below agent_tools, installation, hooks, and mcp (above) and the graph's rules are reached through a seam space may depend on.
 - **space/kanban → tools/file_manager:** ticket.py:30 (*FileEntry*, the type `fidelity-progress.files` answers with).
 - **space/kanban → cdd_guidance/practices/stages:** board.py:18 (the stage names).

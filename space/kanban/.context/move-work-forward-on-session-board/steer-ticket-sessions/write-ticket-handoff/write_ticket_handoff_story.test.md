@@ -6,7 +6,7 @@
 
 *Given* checkout-flow is the active [ticket](../../../kanban-model.md#ticket--card) and a chat is connected
 *When* the Person asks for a handoff on checkout-flow
-*Then* the chat's prompt holds Write a handoff for ticket checkout-flow with /space-handoff-handoff-session.
+*Then* the chat's prompt holds Write a handoff for ticket checkout-flow with /space-session-handoff-session.
 *And* a toast says Queued for the prompt, for you to review
 
 #### Scenario: Hold the handoff until the chat's turn ends

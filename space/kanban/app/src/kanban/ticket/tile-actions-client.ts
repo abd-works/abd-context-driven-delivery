@@ -1,14 +1,14 @@
 import { ACTION_STANDINGS, countOf, STEP_FAILED } from '../board/board-brand'
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
-import type { ColumnClient } from '../board/column-client'
 import type { TicketClient } from './ticket-client'
+import { slugsOf } from './tile-client'
 import { chipDoneCount, chipOfferedCount, chipsOf, chosenFormats } from './tile-formats'
 import type { FormatChip } from './tile-formats'
 
 const ACTIONS_WITH_FORMATS = ['generate', 'render']
 
-const slugsOf = (tile: Tile): string => tile.slugs.join(' ')
+const namedIn = (tile: Tile): string => slugsOf(tile.fidelities).join(' ')
 
 export type ChipFace = FormatChip & { hint: string; isOn: boolean; isDone: boolean; count: string }
 export type StepFace = { mark: string; color: string; hint: string; text: string }
@@ -26,13 +26,13 @@ export type TileBar = {
 
 // A tile can hold several fidelities: its link opens the report of the one left with violations, else the first report.
 function reportSlugOf(ticket: TicketClient, tile: Tile): string | undefined {
-  const reported = tile.slugs.filter(slug => ticket.progressNamed(slug)?.report_file)
+  const reported = slugsOf(tile.fidelities).filter(slug => ticket.progressNamed(slug)?.report_file)
   return reported.find(slug => ticket.stateOf(slug).key === 'violations') ?? reported[0]
 }
 
-function chipFaceOf(stage: ColumnClient, tile: Tile, chip: FormatChip): ChipFace {
-  const done = chipDoneCount(tile.files, tile.slugs, chip)
-  const offered = chipOfferedCount(stage, tile.slugs, chip)
+function chipFaceOf(tile: Tile, chip: FormatChip): ChipFace {
+  const done = chipDoneCount(tile.files, tile.fidelities, chip)
+  const offered = chipOfferedCount(tile.fidelities, chip)
   const isOn = tile.picked.includes(chip.label)
   const standing = done === 0 ? 'not done' : done === offered ? 'done' : `${done} of ${offered} done`
   const count = done > 0 && done < offered ? `${done} of ${offered}` : ''
@@ -45,13 +45,14 @@ const stepFaceOf = (standing: string, name: string): StepFace => {
 }
 
 function validateFaceOf(ticket: TicketClient, tile: Tile): StepFace {
-  if (!tile.slugs.some(slug => ticket.stateOf(slug).key === 'violations')) return stepFaceOf(ticket.standingOf(tile.slugs, 'validate'), 'Validate')
-  const count = ticket.violationCountOf(tile.slugs)
+  const slugs = slugsOf(tile.fidelities)
+  if (!slugs.some(slug => ticket.stateOf(slug).key === 'violations')) return stepFaceOf(ticket.standingOf(slugs, 'validate'), 'Validate')
+  const count = ticket.violationCountOf(slugs)
   const text = count ? countOf(count, 'violation') : 'violations'
   return { mark: STEP_FAILED, color: 'var(--violations)', hint: text, text }
 }
 
-const allowsAll = (ticket: TicketClient, tile: Tile, action: string): boolean => tile.slugs.length > 0 && tile.slugs.every(slug => ticket.allows(slug, action))
+const allowsAll = (ticket: TicketClient, tile: Tile, action: string): boolean => tile.fidelities.length > 0 && tile.fidelities.every(fidelity => ticket.allows(fidelity.slug, action))
 
 // What an open action bar offers, and what its controls send to the chat.
 export class TileActionsClient {
@@ -73,10 +74,10 @@ export class TileActionsClient {
     this.save(tile, { picked: tile.picked.includes(chip) ? tile.picked.filter(entry => entry !== chip) : [...tile.picked, chip] })
   }
 
-  private canRun(ticket: TicketClient, stage: ColumnClient, tile: Tile): boolean {
-    if (ticket.isLocked || !this.chat.canSend || !tile.slugs.length) return false
-    if (!chosenFormats(stage, tile.slugs, tile.picked).length) return false
-    return tile.action !== 'render' || chipsOf(stage, tile.slugs).some(chip => chipDoneCount(tile.files, tile.slugs, chip) > 0)
+  private canRun(ticket: TicketClient, tile: Tile): boolean {
+    if (ticket.isLocked || !this.chat.canSend || !tile.fidelities.length) return false
+    if (!chosenFormats(tile.fidelities, tile.picked).length) return false
+    return tile.action !== 'render' || chipsOf(tile.fidelities).some(chip => chipDoneCount(tile.files, tile.fidelities, chip) > 0)
   }
 
   // The ticket says when Validate and Review have something to look at: an action it recorded, or a declared file there.
@@ -84,32 +85,32 @@ export class TileActionsClient {
     return !ticket.isLocked && allowsAll(ticket, tile, action)
   }
 
-  barOf(ticket: TicketClient, stage: ColumnClient, tile: Tile): TileBar {
+  barOf(ticket: TicketClient, tile: Tile): TileBar {
     const validate = validateFaceOf(ticket, tile)
     return {
-      chips: chipsOf(stage, tile.slugs).map(chip => chipFaceOf(stage, tile, chip)),
+      chips: chipsOf(tile.fidelities).map(chip => chipFaceOf(tile, chip)),
       isLocked: ticket.isLocked,
-      runOff: !this.canRun(ticket, stage, tile),
+      runOff: !this.canRun(ticket, tile),
       // Validate runs in the chat; a review is the person's own approval, so it needs no chat.
       validateOff: !this.chat.canSend || !this.hasSomethingToCheck(ticket, tile, 'validate'),
       reviewOff: !this.hasSomethingToCheck(ticket, tile, 'review'),
       validate,
-      review: stepFaceOf(ticket.standingOf(tile.slugs, 'review'), 'Review'),
+      review: stepFaceOf(ticket.standingOf(slugsOf(tile.fidelities), 'review'), 'Review'),
       reportSlug: reportSlugOf(ticket, tile),
       hasViolations: validate.text !== '',
     }
   }
 
   // One command names every fidelity the bar acts on, so a stage's work stays a single turn.
-  async run(tile: Tile, stage: ColumnClient): Promise<void> {
-    if (!ACTIONS_WITH_FORMATS.includes(tile.action)) return this.sendFor(tile, `/actions-${tile.action} ${slugsOf(tile)}`)
-    const formats = chosenFormats(stage, tile.slugs, tile.picked)
+  async run(tile: Tile): Promise<void> {
+    if (!ACTIONS_WITH_FORMATS.includes(tile.action)) return this.sendFor(tile, `/actions-${tile.action} ${namedIn(tile)}`)
+    const formats = chosenFormats(tile.fidelities, tile.picked)
     this.save(tile, { picked: [] })
-    await this.sendFor(tile, `/actions-${tile.action} ${slugsOf(tile)} format=${formats.join(',')}`)
+    await this.sendFor(tile, `/actions-${tile.action} ${namedIn(tile)} format=${formats.join(',')}`)
   }
 
   validate(tile: Tile): Promise<void> {
-    return this.sendFor(tile, `/actions-validate ${slugsOf(tile)}`)
+    return this.sendFor(tile, `/actions-validate ${namedIn(tile)}`)
   }
 
   // The tile's ticket names its own session in the command, which goes to that ticket's chat.
@@ -119,7 +120,7 @@ export class TileActionsClient {
 
   // The ticket writes the review to its session log, and the board read after it shows the fidelity done.
   async review(tile: Tile): Promise<void> {
-    await Promise.all(tile.slugs.map(slug => tile.ticket.progressClient(slug).finishReview()))
+    await Promise.all(tile.fidelities.map(fidelity => tile.ticket.progressClient(fidelity.slug).finishReview()))
     await this.page.reader.refresh()
   }
 }

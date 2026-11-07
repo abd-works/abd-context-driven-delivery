@@ -24,7 +24,7 @@ function GridCornerView() {
 function GridStageHeadView({ ticket, stage }: { ticket: TicketClient; stage: ColumnClient }) {
   const { page } = useBoard()
   const place = headPlace(stage.name)
-  const spot = { ticket, stage, place, slugs: ticket.enabledSlugs(stage) }
+  const spot = { ticket, stage, place, fidelities: ticket.enabledFidelities(stage) }
   const isOpen = page.tiles.isOpen(ticket.name, place)
   return (
     <StageHeadView stage={stage.name}>
@@ -50,7 +50,7 @@ function StageBarsView({ ticket }: { ticket: TicketClient }) {
     <div className="column-grid details-grid">
       {open.map(({ stage, index, tile }) => (
         <div key={stage.name} style={{ gridColumn: index + 2, gridRow: 1 }}>
-          <ActionBarView ticket={ticket} stage={stage} tile={tile} />
+          <ActionBarView ticket={ticket} tile={tile} />
         </div>
       ))}
     </div>
@@ -77,8 +77,8 @@ function PracticeLineView({ ticket, practice }: { ticket: TicketClient; practice
     <div className="column-grid details-grid">
       <PracticeLabelView ticket={ticket} practice={practice} />
       {page.board.stages.map(stage => {
-        const slug = stage.workRequired.find(required => practice.has(required))
-        return slug ? <TileView key={slug} ticket={ticket} stage={stage} slug={slug} hasPracticeChip={false} opensOnHover={false} /> : <span key={stage.name} />
+        const fidelity = stage.workRequired.find(required => practice.has(required.slug))
+        return fidelity ? <TileView key={fidelity.slug} ticket={ticket} stage={stage} fidelity={fidelity} hasPracticeChip={false} opensOnHover={false} /> : <span key={stage.name} />
       })}
       <span />
     </div>

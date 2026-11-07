@@ -8,14 +8,14 @@ import { scenario, story } from '../../../story-test'
 // Epic: Move Work Forward From Chat Bar
 // Sub-epic: Steer Sessions
 // Map: ../../../../../.context/story-map.md#s-person----open-session
-// Model: ../../../../../../kanban/.context/kanban-model.md
+// Model: ../../../../../../../space/kanban/.context/kanban-model.md
 // Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
 
 // (S) Person --> Open Session
 story('Open Session', CHAT_BAR, () => {
   scenario('Open a session from the list', ({ given, when, then }) => {
     // Evidence: inferred: story map 'picking a session ... then calls ticket.activate'; no chat bar code yet
-    given('checkout-flow is the active [session](../../../../../../kanban/.context/kanban-model.md#session)', async ($, on, scene) => {
+    given('checkout-flow is the active [session](../../../../../../../space/kanban/.context/kanban-model.md#session)', async ($, on, scene) => {
       scene.world.board = boardOf('checkout-flow', checkoutFlow(), paymentRetry())
     })
     when('the Person picks payment-retry and confirms the activation dialog', async ($, on, scene) => {

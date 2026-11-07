@@ -48,15 +48,6 @@ COMPLETE_FOLDER = "_complete"
 _ARCHIVE_FOLDER = "_archive"
 _TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 _LOOP_MARKER = re.compile(r"---\s+(\d+)(?:\s|$)")
-_KNOWN_ACTIONS = (
-    "generate",
-    "validate",
-    "sketch",
-    "document",
-    "satisfy",
-    "iterate",
-    "createRule",
-)
 _TOOL_INPUT_PATH_KEYS = (
     "path",
     "file_path",
@@ -140,8 +131,11 @@ class Loop:
             self.entries.extend(body.splitlines())
 
     def _action_from_entries(self) -> str:
+        from harness.guidance.action_catalogue import ActionCatalogue
+
+        names = ActionCatalogue.names()
         for line in reversed(self.entries):
-            for name in _KNOWN_ACTIONS:
+            for name in names:
                 if f" {name} " in f" {line} " or line.endswith(f" {name}"):
                     return name
         return ""

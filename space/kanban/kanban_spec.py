@@ -73,7 +73,7 @@ with description("a board") as self:
             expect([fidelity.name for fidelity in self.discovery.work_required]).to(equal(["story_map", "bounded_context", "ia"]))
 
         with it("should give every stage Generate, Validate, and Review, in that order"):
-            expect([self.board.column(name).actions for name in ("Discovery", "Specification", "Implementation")]).to(equal([["generate", "validate", "review"]] * 3))
+            expect([self.board.column(name).steps for name in ("Discovery", "Specification", "Implementation")]).to(equal([["generate", "validate", "review"]] * 3))
 
     with context("with BDD chosen"):
         with before.each:
@@ -113,10 +113,23 @@ with description("a board") as self:
             (self.checkout / ".git").mkdir(exist_ok=True)
             inside = self.checkout / "src" / "visits"
             inside.mkdir(parents=True)
-            os.environ["CDD_PROJECT"] = str(inside)
+            self.inside = inside
 
         with it("should show the board of the whole checkout, where sessions keep their folders"):
-            expect(Board.current().repo.root).to(equal(self.checkout.resolve()))
+            expect(Board.load(self.inside).repo.root).to(equal(self.checkout.resolve()))
+
+    with context("of a project named by a folder in a ticket's worktree"):
+        with before.each:
+            self.checkout = SessionsFolder().project
+            worktree_git = self.checkout / ".git" / "worktrees" / "pet-visits"
+            worktree_git.mkdir(parents=True)
+            (worktree_git / "commondir").write_text("../..\n", encoding="utf-8")
+            self.worktree = Path(tempfile.mkdtemp(prefix="kanban-worktree-"))
+            (self.worktree / ".git").write_text(f"gitdir: {worktree_git}\n", encoding="utf-8")
+            (self.worktree / "docs").mkdir()
+
+        with it("should show the board of the project's main checkout, where every ticket's session lives"):
+            expect(Board.load(self.worktree / "docs").repo.root).to(equal(self.checkout.resolve()))
 
     with context("with no session saved as open"):
         with it("should have no active ticket, since main is not on the board"):
@@ -297,9 +310,9 @@ with description("a ticket") as self:
     # (S) Person --> Open Ticket Session
     with context("that has just been started"):
         with before.each:
-            SessionsFolder()
-            Ticket.create("PawPlace", "initiative")
-            self.ticket = Ticket.create("Pet visits", "feature", "pawplace")
+            project = SessionsFolder().project
+            Ticket.create("PawPlace", "initiative", project=project)
+            self.ticket = Ticket.create("Pet visits", "feature", "pawplace", project=project)
 
         with it("should be in Discovery, in progress"):
             expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Discovery", False)))

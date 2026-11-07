@@ -101,7 +101,7 @@ test.describe('Send commands to a chat', () => {
     await waitForChat(page)
     await card(page, 'checkout-flow').getByRole('button', { name: 'Handoff' }).first().click()
     await expect(toast(page, /^Queued for the prompt/)).toBeVisible()
-    await lastReceived('Write a handoff for ticket checkout-flow with /space-handoff-handoff-session.')
+    await lastReceived('Write a handoff for ticket checkout-flow with /space-session-handoff-session.')
     expect(chat.received.at(-1)?.kind).toBe('fill')
   })
 

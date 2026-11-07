@@ -259,7 +259,7 @@ class Installer:
             self._installed_paths.append(normalized)
 
     def _track_installation(self, installation: Installation) -> None:
-        installation.bind_tracker(self._track_write)
+        installation.track_writes_with(self._track_write)
 
     def _load_state(self) -> dict[str, Any]:
         if not self._state_file.is_file():

@@ -142,7 +142,7 @@ Observed: the Archive button calls `Ticket.archive`.
 
 ### (S) Person --> [Write Ticket Handoff](move-work-forward-on-session-board/steer-ticket-sessions/write-ticket-handoff/write_ticket_handoff_story.test.py)
 
-Observed: the Handoff button fills the prompt with `/space-handoff-handoff-session`.
+Observed: the Handoff button fills the prompt with `/space-session-handoff-session`.
 
 ### (S) Board App --> [Display Latest Handoff](move-work-forward-on-session-board/steer-ticket-sessions/display-latest-handoff/display_latest_handoff_story.test.py)
 

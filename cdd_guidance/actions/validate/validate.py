@@ -34,25 +34,12 @@ class PathsNotFoundError(FileNotFoundError):
 class Validate(GuidanceAction):
     """Validate artifacts for provided context tools."""
 
-    # One action serves every MCP call at once, so what a call works on is kept per call, the way the base keeps the
-    # guidance it bound.
-    @property
-    def _unchecked_files(self) -> set[str]:
-        """The declared files of the formats this call does not check; their graph hits are left out of its report."""
-        return getattr(self._running, "unchecked_files", set())
-
-    @_unchecked_files.setter
-    def _unchecked_files(self, files: set[str]) -> None:
-        self._running.unchecked_files = files
-
-    @property
-    def _reports(self) -> list[Path]:
-        """The report files this call claimed, one for each listed guidance's fidelity."""
-        return getattr(self._running, "reports", [])
-
-    @_reports.setter
-    def _reports(self, reports: list[Path]) -> None:
-        self._running.reports = reports
+    def __init__(self, session=None) -> None:
+        super().__init__(session)
+        # The declared files of the formats this call does not check; their graph hits are left out of its report.
+        self._unchecked_files: set[str] = set()
+        # The report files this call claimed, one for each listed guidance's fidelity.
+        self._reports: list[Path] = []
 
     @Mcp
     @Skill

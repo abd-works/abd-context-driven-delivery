@@ -1,4 +1,4 @@
-import type { ColumnData } from '@cdd/space/kanban/board'
+import type { ColumnData, FidelityGuidanceData } from '@cdd/space/kanban/board'
 import { StageClientGenerated, type StageData } from '@cdd/space/kanban/stage'
 
 import type { BacklogItemClient } from '../backlog-item/backlog-item-client'
@@ -29,16 +29,9 @@ export class ColumnClient {
     return this.data.items !== undefined
   }
 
-  get workRequired(): string[] {
+  // Each fidelity the stage requires, with the formats it writes and its default one.
+  get workRequired(): FidelityGuidanceData[] {
     return this.data.work_required ?? []
-  }
-
-  get formats(): Record<string, string[]> {
-    return this.data.formats ?? {}
-  }
-
-  get defaultFormats(): Record<string, string> {
-    return this.data.default_formats ?? {}
   }
 
   get wipLimit(): number | undefined {

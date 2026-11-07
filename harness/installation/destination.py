@@ -97,23 +97,16 @@ noDeploy = NoDeploy
 class LanguageAdapter:
     """Deploy typed code in language for this toolset's MCP operations, so an application outside Python reaches them.
 
-    identity names the data fields (`@data_field`) that hold the object's name, one for each argument its
-    `@tool_subject` loader takes, in the same order, so code holding only that data knows which object its operations
-    act on. A fidelity's progress is named by its ticket and its slug. An object its tools never load by name, such as
-    the one board, has none.
+    The adapter names the object its operations act on by the class's `@identity` fields.
     """
 
     flag = "_language_adapters"
-    identity_flag = "_language_adapter_identity"
 
-    def __init__(self, *, language: str, identity: str | tuple[str, ...] = "") -> None:
+    def __init__(self, *, language: str) -> None:
         self.language = language
-        self.identity = (identity,) if isinstance(identity, str) and identity else tuple(identity or ())
 
     def __call__(self, toolset: Any) -> Any:
         setattr(toolset, self.flag, (*self.languages_of(toolset), self.language))
-        if self.identity:
-            setattr(toolset, self.identity_flag, self.identity)
         return toolset
 
     @classmethod
@@ -121,13 +114,43 @@ class LanguageAdapter:
         """The languages a toolset's class is marked for."""
         return tuple(getattr(toolset, cls.flag, ()))
 
-    @classmethod
-    def identity_fields_of(cls, toolset: Any) -> tuple[str, ...]:
-        """The fields of the toolset's data that name one object, or none when its tools load none by name."""
-        return tuple(getattr(toolset, cls.identity_flag, ()))
-
 
 language_adapter = LanguageAdapter
+
+
+class Identity:
+    """Name the data fields (`@data_field`) that name one object of this class, such as a ticket's `name`; a fidelity's
+    progress is named by its `ticket` and its `slug`. A subclass is named as its base is.
+
+    A language adapter reads them as the arguments of the class's `@tool_subject` loader, in the same order, so code
+    holding only an object's data knows which object its operations act on. A field marked as a reference sends an
+    object by these fields alone, so a ticket can name the column that holds it without sending the column again. An
+    object nothing names, such as the one board, has none.
+    """
+
+    flag = "_identity_fields"
+
+    def __init__(self, *fields: str) -> None:
+        self.fields = fields
+
+    def __call__(self, data_class: type) -> type:
+        setattr(data_class, self.flag, self.fields)
+        return data_class
+
+    @classmethod
+    def fields_of(cls, data_class: type) -> tuple[str, ...]:
+        """The fields that name one object of data_class, or none."""
+        return tuple(getattr(data_class, cls.flag, ()))
+
+
+identity = Identity
+
+
+class ReferenceWithoutIdentityError(TypeError):
+    """A field sends an object as a reference, but the object's class has no `@identity` to name it by."""
+
+    def __init__(self, data_class: type) -> None:
+        super().__init__(f"{data_class.__name__} is sent as a reference, so mark the fields that name it with @identity")
 
 
 class Edits:
@@ -158,23 +181,32 @@ edits = Edits
 class DataField(Mark):
     """Mark a property as part of the object's data: what its tools answer with and what a language adapter types.
 
-    Put it under `@property`. key is the name the data uses when it differs from the property's, such as a ticket's
-    `column_name` sent as `column`, because the property of that name returns the column itself.
+    Put it under `@property`. key is the name the data uses when it differs from the property's, such as a fidelity's
+    progress's `fidelity_slug` sent as `slug`. reference sends the object the property returns by its `@identity`
+    alone: the object belongs to another, such as the column holding a ticket, which sends it in full.
     """
 
     flag = "_data_field"
+    reference_flag = "_data_field_reference"
     copied = False
 
-    def __new__(cls, target: Any = None, *, key: str = ""):
+    def __new__(cls, target: Any = None, *, key: str = "", reference: bool = False):
         mark = object.__new__(cls)
         mark.key = key
+        mark.reference = reference
         if callable(target):
             return mark.annotate(target)
         return mark
 
     def annotate(self, getter: Any) -> Any:
         setattr(getter, self.flag, self.key or getter.__name__)
+        setattr(getter, self.reference_flag, self.reference)
         return getter
+
+    @classmethod
+    def is_reference(cls, field: property) -> bool:
+        """Whether field sends its object by identity alone."""
+        return bool(getattr(field.fget, cls.reference_flag, False))
 
     @classmethod
     def fields_of(cls, data_class: type) -> dict[str, property]:
@@ -204,8 +236,22 @@ def data_of(value: Any) -> Any:
         return [data_of(item) for item in value]
     fields = DataField.fields_of(type(value)) if not isinstance(value, type) else {}
     if fields:
-        return {key: data_of(field.fget(value)) for key, field in fields.items()}
+        return {key: (reference_of if DataField.is_reference(field) else data_of)(field.fget(value)) for key, field in fields.items()}
     return value
+
+
+def reference_of(value: Any) -> Any:
+    """value by its identity alone, such as `{"name": "Discovery"}` for a stage, so data can name an object that is
+    sent in full elsewhere without sending it again; none stays none."""
+    if value is None:
+        return None
+    if isinstance(value, (list, tuple)):
+        return [reference_of(item) for item in value]
+    named = Identity.fields_of(type(value))
+    if not named:
+        raise ReferenceWithoutIdentityError(type(value))
+    fields = DataField.fields_of(type(value))
+    return {key: data_of(fields[key].fget(value)) for key in named}
 
 
 class SourceFile:
@@ -270,7 +316,7 @@ class Installation:
         self.repo = Path(repo).resolve() if repo is not None else None
         self._install_tracker: InstallTracker | None = None
 
-    def bind_tracker(self, tracker: InstallTracker) -> None:
+    def track_writes_with(self, tracker: InstallTracker) -> None:
         self._install_tracker = tracker
 
     def track_write(self, dest: Path) -> None:

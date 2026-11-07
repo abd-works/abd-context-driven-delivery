@@ -24,6 +24,10 @@ class Sketch(GuidanceAction):
         super().__init__(session)
         self._agent_dir = agent_dir
 
+    def made_for(self, session) -> Sketch:
+        """A sketch made for session that finds its template in this sketch's agent_dir."""
+        return type(self)(agent_dir=self._agent_dir, session=session)
+
     def _context_folder(self, module: str) -> Path:
         """The .context folder sketches go in: the session root's, or a module's under that root."""
         folder = self.session.root / module if module else self.session.root

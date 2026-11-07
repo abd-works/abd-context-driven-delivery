@@ -18,7 +18,7 @@ from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_or
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, OnSubject
 from harness.agent_tools.name import Name
-from harness.installation.destination import DataField, Edits, Installation, LanguageAdapter, SourceFile
+from harness.installation.destination import DataField, Edits, Identity, Installation, LanguageAdapter, SourceFile
 
 _FOLDER = "language-adapters"
 _TYPESCRIPT = "typescript"
@@ -43,13 +43,15 @@ _SCALAR_NAMES = {"str": "string", "int": "number", "float": "number", "bool": "b
 _RESERVED_WORDS = frozenset({"default", "function", "class", "delete", "new", "in", "void", "with"})
 _SCHEMA_INPUTS = {"string": "text", "integer": "number", "number": "number", "boolean": "check"}
 _HINT_INPUTS = {str: "text", int: "number", float: "number", bool: "check"}
+# Carried on a reference field's type, which TypeScript writes as the referenced object's identity fields alone.
+_REFERENCE = "reference"
 
 
 class MissingIdentityError(ValueError):
     """A toolset's tools load one object by name, but its mark does not say which field of its data holds that name."""
 
     def __init__(self, toolset_name: str) -> None:
-        super().__init__(f"{toolset_name} loads one object by name; add identity=<field>, one field for each argument of its loader, to its @language_adapter mark")
+        super().__init__(f"{toolset_name} loads one object by name; mark its class @identity(<field>), one field for each argument of its loader")
 
 
 def schema_type(schema: Mapping[str, Any]) -> str:
@@ -157,7 +159,15 @@ def shape_fields(shape: type, names: Mapping[str, Any]) -> dict[str, object]:
 
 def _return_hint(field: property, names: Mapping[str, Any]) -> object:
     getter = field.fget
-    return get_type_hints(getter, globalns=getter.__globals__, localns=dict(names), include_extras=True)["return"]
+    hint = get_type_hints(getter, globalns=getter.__globals__, localns=dict(names), include_extras=True)["return"]
+    return Annotated[hint, _REFERENCE] if DataField.is_reference(field) else hint
+
+
+def is_reference(hint: object) -> bool:
+    """A field marked `@data_field(reference=True)`, which sends its object by identity alone."""
+    if get_origin(hint) is NotRequired:
+        hint = get_args(hint)[0]
+    return get_origin(hint) is Annotated and _REFERENCE in get_args(hint)[1:]
 
 
 def is_source_file(hint: object) -> bool:
@@ -255,7 +265,7 @@ class TypeScriptToolset:
         self._imports: set[tuple[str, str]] = set()
         self.name = type(toolset).__name__
         self.slug = toolset.slug
-        self.identity_fields = LanguageAdapter.identity_fields_of(type(toolset))
+        self.identity_fields = Identity.fields_of(type(toolset))
 
     @property
     def file_path(self) -> PurePosixPath:
@@ -360,6 +370,8 @@ class TypeScriptToolset:
         return f"  {name}: {self._hint_type(hint)}"
 
     def _hint_type(self, hint: object) -> str:
+        if is_reference(hint):
+            return self._reference_type(_unwrapped(hint))
         hint = _unwrapped(hint)
         if is_shape(hint):
             return self._shape_reference(hint)
@@ -373,6 +385,16 @@ class TypeScriptToolset:
         if origin is dict:
             return f"Record<string, {self._hint_type(get_args(hint)[1])}>"
         return _SCALAR_TYPES.get(hint, "unknown")
+
+    def _reference_type(self, hint: object) -> str:
+        """The identity fields alone of the object a reference field names, such as `{ name: string }` for a column."""
+        if get_origin(hint) in (Union, types.UnionType):
+            return " | ".join(self._reference_type(option) for option in get_args(hint))
+        if hint is type(None):
+            return "null"
+        fields = DataField.fields_of(hint)
+        named = [f"{name}: {self._hint_type(_return_hint(fields[name], self.peer_classes))}" for name in Identity.fields_of(hint)]
+        return f"{{ {'; '.join(named)} }}"
 
     def _shape_reference(self, shape: type) -> str:
         name = shape_name(shape)
@@ -599,8 +621,23 @@ class TypeScriptViews:
         elif field in self._edits:
             fallback = self._editable(field, hint, variable)
         else:
-            fallback = f"<ReadOnlyField label=\"{label_of(field)}\" value={{{variable}.{getter}}} />"
+            fallback = f"<ReadOnlyField label=\"{label_of(field)}\" value={{{self._shown_value(field, hint, variable)}}} />"
         return f"{{fields.{getter} ? fields.{getter}({variable}) : {fallback}}}"
+
+    def _shown_value(self, field: str, hint: object, variable: str) -> str:
+        """A field as a person reads it: a reference by the one field that names the object it refers to, such as a
+        ticket's column by its name."""
+        value = f"{variable}.{Name(field).camel}"
+        if not is_reference(hint):
+            return value
+        target = _unwrapped(hint)
+        is_union = get_origin(target) in (Union, types.UnionType)
+        options = [option for option in get_args(target) if option is not type(None)] if is_union else [target]
+        named = Identity.fields_of(options[0]) if len(options) == 1 else ()
+        if len(named) != 1:
+            return value
+        may_be_none = is_union and type(None) in get_args(target)
+        return f"{value}{'?' if may_be_none else ''}.{named[0]}"
 
     def _source(self, field: str, variable: str) -> str:
         """A file field opens the shared source view at the line, or the range, the same data holds."""

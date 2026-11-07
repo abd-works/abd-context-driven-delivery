@@ -12,6 +12,7 @@ JSON out, on a server started with the board's toolsets on the throwaway project
 
 from __future__ import annotations
 
+import functools
 import json
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,7 @@ from harness.installation.installer import Installer
 
 Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
 
-from generate.generate import Generate  # noqa: E402
+from cdd_guidance.actions.generate.generate import Generate  # noqa: E402
 from space.kanban.backlog_item import BacklogItem, BacklogItemNotFoundError  # noqa: E402
 from space.kanban.board import Board, Stage  # noqa: E402
 from space.kanban.session_board_examples import SURFACE_FIXTURE_PROJECT, SessionsProject  # noqa: E402
@@ -29,7 +30,7 @@ from space.kanban.story_test import World, progress_in, ticket_in  # noqa: E402
 from space.kanban.ticket import FidelityNotFoundError, Ticket, TicketNotFoundError  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 from space.session import Session  # noqa: E402
-from validate.validate import Validate  # noqa: E402
+from cdd_guidance.actions.validate.validate import Validate  # noqa: E402
 
 TOOLSETS = (
     "space.kanban.board:Board",
@@ -50,10 +51,30 @@ class DomainTier:
     name = "domain"
 
     def open(self) -> World:
-        return World(project=SessionsProject(SURFACE_FIXTURE_PROJECT), Board=Board, Stage=Stage, Ticket=Ticket, BacklogItem=BacklogItem, Session=Session, Validate=Validate, Generate=Generate, data_of=data_of)
+        project = SessionsProject(SURFACE_FIXTURE_PROJECT)
+        on_project = {name: OnProject(domain_class, project.root) for name, domain_class in (("Board", Board), ("Stage", Stage), ("Ticket", Ticket), ("BacklogItem", BacklogItem))}
+        return World(project=project, **on_project, Session=Session, Validate=Validate, Generate=Generate, data_of=data_of)
 
     def close(self, world: World) -> None:
         world.project.close()
+
+
+class OnProject:
+    """A board class whose loader and class tools are handed the throwaway project, as the cdd server hands each tool
+    call the project the call names; every other member is the class's own."""
+
+    _GIVEN_THE_PROJECT = ("load", "create")
+
+    def __init__(self, domain_class: type, project: Path) -> None:
+        self._domain_class = domain_class
+        self._project = project
+
+    def __call__(self, *arguments: Any) -> Any:
+        return self._domain_class(*arguments)
+
+    def __getattr__(self, member: str) -> Any:
+        found = getattr(self._domain_class, member)
+        return functools.partial(found, project=self._project) if member in self._GIVEN_THE_PROJECT else found
 
 
 class ServerTier:
@@ -100,7 +121,7 @@ class BoardTools:
     def __init__(self, cdd: CddTools) -> None:
         self._cdd = cdd
 
-    def current(self) -> BoardTools:
+    def load(self) -> BoardTools:
         """The board of the project the cdd server was started on."""
         return self
 

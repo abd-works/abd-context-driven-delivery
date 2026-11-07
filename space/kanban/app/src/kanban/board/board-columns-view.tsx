@@ -119,7 +119,7 @@ function DropZoneView({ accepts, onDrop, onItemDrop, className, children }: Drop
 // Starting a backlog item opens it in the first stage's In progress, so only that list takes one.
 function StageListView({ column, done, children }: { column: ColumnClient; done: boolean; children: ReactNode }) {
   const { page } = useBoard()
-  const accepts = (ticket: TicketClient) => !(ticket.column === column.name && ticket.isDone === done)
+  const accepts = (ticket: TicketClient) => !(ticket.column.name === column.name && ticket.isDone === done)
   const startsItems = !done && page.board.stages[0]?.name === column.name
   return (
     <DropZoneView className="card-list" accepts={accepts} onDrop={ticket => ticket.moveTo(column.name, done)} onItemDrop={startsItems ? item => page.roots.openToStart(item) : undefined}>

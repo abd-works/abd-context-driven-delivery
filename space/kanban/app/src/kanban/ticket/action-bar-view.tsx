@@ -1,11 +1,11 @@
 import { TILE_ACTIONS } from '../board/board-brand'
 import { useBoard } from '../board/board-context'
 import type { Tile } from '../board/board-store'
-import type { ColumnClient } from '../board/column-client'
 import { FormatIcon } from '../board/icons'
 import { FileViewsView } from './file-views-view'
 import type { TicketClient } from './ticket-client'
 import type { ChipFace, StepFace, TileBar } from './tile-actions-client'
+import { slugsOf } from './tile-client'
 
 function StepMarkView({ step }: { step: StepFace }) {
   return (
@@ -44,7 +44,7 @@ function ActionChoiceView({ tile, isOff }: { tile: Tile; isOff: boolean }) {
   )
 }
 
-function RunLineView({ tile, stage, bar }: { tile: Tile; stage: ColumnClient; bar: TileBar }) {
+function RunLineView({ tile, bar }: { tile: Tile; bar: TileBar }) {
   const { page } = useBoard()
   return (
     <div className="bar-line">
@@ -53,7 +53,7 @@ function RunLineView({ tile, stage, bar }: { tile: Tile; stage: ColumnClient; ba
         <FormatChipView key={chip.label} tile={tile} chip={chip} isOff={bar.isLocked} />
       ))}
       <span className="bar-run">
-        <button className="action primary step-control small" disabled={bar.runOff} onClick={() => void page.tileActions.run(tile, stage)}>
+        <button className="action primary step-control small" disabled={bar.runOff} onClick={() => void page.tileActions.run(tile)}>
           Run
         </button>
       </span>
@@ -93,18 +93,18 @@ function ReviewLineView({ tile, bar }: { tile: Tile; bar: TileBar }) {
   )
 }
 
-type ActionBarProps = { ticket: TicketClient; stage: ColumnClient; tile: Tile; onMouseEnter?: () => void; onMouseLeave?: () => void }
+type ActionBarProps = { ticket: TicketClient; tile: Tile; onMouseEnter?: () => void; onMouseLeave?: () => void }
 
 // What a person does on an open tile: look at its files, pick an action and formats, run it, validate, and review.
-export function ActionBarView({ ticket, stage, tile, onMouseEnter, onMouseLeave }: ActionBarProps) {
+export function ActionBarView({ ticket, tile, onMouseEnter, onMouseLeave }: ActionBarProps) {
   const { page } = useBoard()
-  const bar = page.tileActions.barOf(ticket, stage, tile)
+  const bar = page.tileActions.barOf(ticket, tile)
   return (
     <div className="expansion" data-bar={tile.place} onClick={() => page.tiles.pin(tile.ticket.name, tile.place)} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <div className="bar-line bar-files">
-        <FileViewsView ticket={ticket} slugs={tile.slugs} />
+        <FileViewsView ticket={ticket} slugs={slugsOf(tile.fidelities)} />
       </div>
-      <RunLineView tile={tile} stage={stage} bar={bar} />
+      <RunLineView tile={tile} bar={bar} />
       <ValidateLineView ticket={ticket} tile={tile} bar={bar} />
       <ReviewLineView tile={tile} bar={bar} />
     </div>

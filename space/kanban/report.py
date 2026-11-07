@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from harness.graph.violation import UNKNOWN_LOCATION, Violation
 from harness.installation.destination import data_field
 
 if TYPE_CHECKING:
@@ -21,58 +22,6 @@ JUDGMENT_HEADING = re.compile(r"^## Judgment — `(?P<file>[^`]+)`")
 JUDGMENT_SECTION = re.compile(r"^#{1,2} Judgment\b", re.M)
 JUDGED_RULE_HEADING = re.compile(r"^### `(?P<rule>[^`]+)` — Fail\s*$")
 FINDING_LINE = re.compile(r"^- (?:(?P<file>[^\s:]+):(?P<line>\d+)\s+)?(?P<message>.+)$")
-
-
-class SourceLine:
-    """One numbered line of the file a violation names."""
-
-    def __init__(self, number: int, text: str) -> None:
-        self._number = number
-        self._text = text
-
-    @property
-    @data_field
-    def number(self) -> int:
-        return self._number
-
-    @property
-    @data_field
-    def text(self) -> str:
-        return self._text
-
-
-class Violation:
-    """One place a report says a rule is broken: the file and line it names, when it names them, and the lines around it."""
-
-    def __init__(self, location: str, line: int | None, message: str, source: list[SourceLine] | None = None) -> None:
-        self._location = location
-        self._line = line
-        self._message = message
-        self._source = list(source or [])
-
-    @property
-    @data_field
-    def location(self) -> str:
-        return self._location
-
-    @property
-    @data_field
-    def line(self) -> int | None:
-        return self._line
-
-    @property
-    @data_field
-    def message(self) -> str:
-        return self._message
-
-    @property
-    @data_field
-    def source(self) -> list[SourceLine]:
-        return list(self._source)
-
-    def at(self, location: str, source: list[SourceLine]) -> Violation:
-        """This violation in location, with the lines around it read from there."""
-        return Violation(location, self._line, self._message, source)
 
 
 class ReportRule:
@@ -112,8 +61,7 @@ class ReportRule:
     @property
     def identity(self) -> tuple:
         """A saved graph holds its whole practice's hits, so two fidelities of one practice report the same broken rule."""
-        practice = self._fidelity.split("-")[0]
-        return (practice, self._name, *((violation.location, violation.line, violation.message) for violation in self._violations))
+        return (self._name, *((violation.practice, violation.location, violation.line, violation.message) for violation in self._violations))
 
 
 class Report:
@@ -214,10 +162,10 @@ class ReportFile:
     def _graph_rules(self) -> list[ReportRule]:
         return [self._rule(name, [self._violation_of(hit) for hit in hits]) for name, hits in self._hits_by_rule().items()]
 
-    def _hits_by_rule(self) -> dict[str, list[dict]]:
+    def _hits_by_rule(self) -> dict[str, list[Violation]]:
         """The hits on the rules this report answers for: a saved graph holds its whole practice's hits. A rule no
         fidelity describes belongs to none, so every report keeps it."""
-        from validate.graph_json_reader import violations_by_rule, violations_from_graph_json_files
+        from cdd_guidance.actions.validate.graph_json_reader import violations_by_rule, violations_from_graph_json_files
 
         progress = self._progress
         answered = progress.rules_answered_by(self)
@@ -228,11 +176,11 @@ class ReportFile:
 
     def _scanned_rules(self) -> set[str]:
         """The rules a scanner checks now; a saved graph keeps the hits of a scanner deleted since it was saved."""
-        from harness.graph.practice_rules_registry import checks_for_practice
+        from harness.graph.graph_practice import GraphPractices
         from harness.graph.schema_rules import active_overlay_patterns
 
         overlays = json.loads(self._graph.read_text(encoding="utf-8")).get("overlays", [])
-        return set(checks_for_practice(self._progress.practice, active_overlay_patterns(tuple(overlays))))
+        return set(GraphPractices.named(self._progress.practice).checks(active_overlay_patterns(tuple(overlays))))
 
     def _judged_rules(self, text: str) -> list[ReportRule]:
         """Each rule the judgment fails, once however many judged files fail it, with its findings at the judged files' lines."""
@@ -248,24 +196,20 @@ class ReportFile:
     def _judged_violation(self, judged_file: str, finding: Violation) -> Violation:
         """A finding names the judged file by its name alone, or no file; one that names another file keeps that file's path."""
         named = finding.location
-        location = judged_file if not named or Path(named).name == Path(judged_file).name else named
-        return finding.at(location, self._source_around(location, finding.line))
+        location = judged_file if named in ("", UNKNOWN_LOCATION) or Path(named).name == Path(judged_file).name else named
+        return finding.in_file(location, self._file_in_repository(location), SOURCE_LINES_BEFORE, SOURCE_LINES_AFTER)
 
-    def _violation_of(self, hit: dict) -> Violation:
-        location = self._repo.path_from_top(self._workpath / hit["location"])
-        line = hit["line_number"]
-        return Violation(location, line, hit["violation_message"], self._source_around(location, line))
+    def _violation_of(self, hit: Violation) -> Violation:
+        """A hit as the saved graph names it, from the workpath, named from the project with the lines around it."""
+        file = self._workpath / hit.location
+        return hit.in_file(self._repo.path_from_top(file), file, SOURCE_LINES_BEFORE, SOURCE_LINES_AFTER)
 
-    def _source_around(self, location: str, line: int | None) -> list[SourceLine]:
-        """The numbered lines around line; none when the violation names no line or the file is not in this repository."""
+    def _file_in_repository(self, location: str) -> Path:
+        """The file location names, a path from the project; the repository's top, which is no file, for a location
+        outside the repository, so no file outside it is read."""
         root = self._repo.root
         target = (root / location).resolve()
-        if line is None or root not in target.parents or not target.is_file():
-            return []
-        # Split on newlines alone: a graph counts lines that way, and splitlines() also breaks on form feeds.
-        lines = target.read_text(encoding="utf-8", errors="replace").split("\n")
-        first = max(line - SOURCE_LINES_BEFORE, 1)
-        return [SourceLine(number, text.rstrip("\r")) for number, text in enumerate(lines[first - 1:line + SOURCE_LINES_AFTER], first)]
+        return target if root in target.parents else root
 
 
 class Judgment:
@@ -319,8 +263,9 @@ class Judgment:
             return False
         located = bullet if bullet and bullet["line"] else None
         self._findings.append(Violation(
-            located["file"] if located else "",
-            int(located["line"]) if located else None,
+            self._rule,
             bullet["message"] if bullet else line,
+            location=located["file"] if located else "",
+            line=int(located["line"]) if located else None,
         ))
         return True

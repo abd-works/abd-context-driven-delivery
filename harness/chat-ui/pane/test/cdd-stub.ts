@@ -3,11 +3,11 @@
 // after the press rather than setting it by hand. Every other tool answers from `answers`, and any tool fails with the
 // server's own text from `refusals`. An operation Python does not have, or an argument it does not take, is refused and
 // kept in `unknown`, which every story expects empty, so a test fails when the chat bar calls a name Python dropped.
-import type { BoardData } from '@cdd/harness/kanban/board'
-import type { FidelityProgressData } from '@cdd/harness/kanban/fidelity-progress'
-import type { TicketData } from '@cdd/harness/kanban/ticket'
+import type { BoardData } from '@cdd/space/kanban/board'
+import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
+import type { TicketData } from '@cdd/space/kanban/ticket'
 
-import { boardOf, checkoutFlow, HEALTHY, progressOf, STAGE_ORDER, WORK_OF } from './examples/chat-bar.examples'
+import { boardOf, checkoutFlow, HEALTHY, progressOf, STAGE_ORDER } from './examples/chat-bar.examples'
 
 type Call = { tool: string; args: any }
 
@@ -36,13 +36,15 @@ const toolText = (text: string, isError: boolean) => ({ value: { content: [{ typ
 const ticketsOf = (board: BoardData): TicketData[] => board.columns.flatMap(column => [...(column.in_progress ?? []), ...(column.tickets ?? [])])
 
 // The first fidelity of the ticket's stage, among its practices, that is not done; null once the stage is done.
-function nextOf(ticket: TicketData): string | null {
-  return (WORK_OF[ticket.column] ?? []).find(slug => ticket.session.practices[slug.slice(0, slug.indexOf('-'))]?.enabled && ticket.progress[slug]?.state !== 'done') ?? null
+function nextOf(ticket: TicketData): FidelityProgressData | null {
+  return ticket.progress.find(progress => progress.stage.name === ticket.column.name && progress.is_enabled && progress.state !== 'done') ?? null
 }
 
-function changed(world: World, ticket: TicketData, active: string | null = world.board.active): TicketData {
+const activeName = (world: World): string | null => world.board.active?.name ?? null
+
+function changed(world: World, ticket: TicketData, active: string | null = activeName(world)): TicketData {
   // Ticket.next_fidelity is none once the stage is done or the ticket is Complete.
-  const next = ticket.column === 'Complete' || ticket.is_done ? null : nextOf(ticket)
+  const next = ticket.column.name === 'Complete' || ticket.is_done ? null : nextOf(ticket)
   const settled = { ...ticket, next }
   world.board = boardOf(active, ...ticketsOf(world.board).map(entry => (entry.name === settled.name ? settled : entry)))
   return settled
@@ -58,21 +60,22 @@ const named = (world: World, name: string): TicketData => {
 function moveNext(world: World, { ticket }: { ticket: string }): TicketData {
   const moving = named(world, ticket)
   if (!moving.is_done) return changed(world, { ...moving, is_done: true })
-  const following = STAGE_ORDER[STAGE_ORDER.indexOf(moving.column) + 1] ?? 'Complete'
-  return changed(world, { ...moving, column: following, is_done: false })
+  const following = STAGE_ORDER[STAGE_ORDER.indexOf(moving.column.name) + 1] ?? 'Complete'
+  return changed(world, { ...moving, column: { name: following }, is_done: false })
 }
 
 // FidelityProgress.finish_review: the fidelity is reviewed and done; the stage is done once every fidelity of it is.
 function finishReview(world: World, { ticket, fidelity }: { ticket: string; fidelity: string }): FidelityProgressData {
   const reviewing = named(world, ticket)
-  const actions = { ...reviewing.progress[fidelity]!.actions, review: 'done' }
-  const reviewed = { ...reviewing, progress: { ...reviewing.progress, [fidelity]: progressOf(ticket, fidelity, 'done', actions) } }
-  return changed(world, { ...reviewed, is_done: nextOf(reviewed) === null }).progress[fidelity]!
+  const progressNamed = (entry: TicketData) => entry.progress.find(progress => progress.slug === fidelity)!
+  const actions = { ...progressNamed(reviewing).actions, review: 'done' }
+  const reviewed = { ...reviewing, progress: reviewing.progress.map(progress => (progress.slug === fidelity ? progressOf(ticket, fidelity, 'done', actions) : progress)) }
+  return progressNamed(changed(world, { ...reviewed, is_done: nextOf(reviewed) === null }))
 }
 
 // Ticket.close: the ticket goes to Complete and no session is active.
 function close(world: World, { ticket }: { ticket: string }): TicketData {
-  return changed(world, { ...named(world, ticket), column: 'Complete' }, world.board.active === ticket ? null : world.board.active)
+  return changed(world, { ...named(world, ticket), column: { name: 'Complete' } }, activeName(world) === ticket ? null : activeName(world))
 }
 
 // Ticket.activate: the ticket becomes the board's active session.
@@ -84,7 +87,7 @@ function activate(world: World, { ticket }: { ticket: string }): TicketData {
 function create(world: World, { title }: { title: string }): TicketData {
   const name = title.toLowerCase().replace(/[^a-z0-9]+/g, '-')
   const created = checkoutFlow({ title, name, column: 'Discovery', next: 'stories-story-map' })
-  world.board = boardOf(world.board.active, ...ticketsOf(world.board), created)
+  world.board = boardOf(activeName(world), ...ticketsOf(world.board), created)
   return created
 }
 
@@ -103,7 +106,7 @@ export const OPERATIONS: Record<string, string[]> = {
   'board.show': [],
   'ticket.create': ['title', 'scope', 'parent', 'path'],
   'ticket.activate': ['ticket', 'leaving', 'opening'],
-  'ticket.workspace': ['ticket'],
+  'ticket.branch': ['ticket'],
   'ticket.close': ['ticket', 'leaving'],
   'ticket.move_next': ['ticket'],
   'fidelity-progress.finish_review': ['ticket', 'fidelity'],

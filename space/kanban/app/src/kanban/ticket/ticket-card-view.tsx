@@ -7,6 +7,7 @@ import type { ColumnClient } from '../board/column-client'
 import { SessionActionIcon } from '../board/icons'
 import { FileViewsView } from './file-views-view'
 import type { TicketClient } from './ticket-client'
+import { slugsOf } from './tile-client'
 import { TileView } from './tile-view'
 
 export type CardSpot = 'left' | 'right' | 'only'
@@ -24,7 +25,7 @@ const withoutSelecting = (press: () => unknown) => (event: MouseEvent) => {
 function openCardPlace(ticket: TicketClient, spot: CardSpot) {
   const border = ticket.isActive ? ACTIVE_BORDER_WIDTH : 1
   const span = spot === 'only' ? `100% + ${2 * (9 + border)}px` : `200% + ${4 * border + 26}px`
-  const opensLeft = OPENS_LEFT_COLUMNS.includes(ticket.column)
+  const opensLeft = OPENS_LEFT_COLUMNS.includes(ticket.column.name)
   return { width: `calc(${span})`, top: -border, left: opensLeft ? 'auto' : -border, right: opensLeft ? -border : 'auto', opensLeft }
 }
 
@@ -32,16 +33,17 @@ function SegmentsView({ ticket, stage, onSkill }: { ticket: TicketClient; stage:
   const { page, state } = useBoard()
   return (
     <div className="segments">
-      {ticket.enabledSlugs(stage).map(slug => {
+      {ticket.enabledFidelities(stage).map(fidelity => {
+        const { slug } = fidelity
         const { key, label, color } = ticket.stateOf(slug)
         const practice = page.board.practiceOf(slug)
         const skill = practice?.skillOf(slug) ?? slug
-        const isOpen = state.tiles.some(tile => tile.ticket.name === ticket.name && tile.slugs.length === 1 && tile.slugs[0] === slug)
+        const isOpen = state.tiles.some(tile => tile.ticket.name === ticket.name && tile.fidelities.length === 1 && tile.fidelities[0]?.slug === slug)
         const leave = () => onSkill('')
         const enter = () => onSkill(skill)
         const background = key === 'violations' ? color : practice?.color
         return (
-          <button key={slug} className="segment-hit" title={label} aria-label={`${skill}: ${label}`} aria-expanded={isOpen} onClick={withoutSelecting(() => page.cards.openSegment(ticket, stage, slug))} onMouseEnter={enter} onMouseLeave={leave} onFocus={enter} onBlur={leave}>
+          <button key={slug} className="segment-hit" title={label} aria-label={`${skill}: ${label}`} aria-expanded={isOpen} onClick={withoutSelecting(() => page.cards.openSegment(ticket, stage, fidelity))} onMouseEnter={enter} onMouseLeave={leave} onFocus={enter} onBlur={leave}>
             <span className="segment" style={{ background, opacity: ticket.lightOf(slug) }} />
           </button>
         )
@@ -74,14 +76,14 @@ function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
       <div className="ticket-meta">{ageOf(state.now, ticket.lastActivity)}</div>
       <SegmentsView ticket={ticket} stage={stage} onSkill={setSkill} />
       {skill ? <div className="card-skill">{skill}</div> : null}
-      {ticket.violatedSlugs.some(slug => stage.workRequired.includes(slug)) ? (
+      {ticket.hasViolationsIn(stage) ? (
         <button className="violations-link card-violations" onClick={withoutSelecting(() => page.panels.openReport(ticket, ''))}>
           violations
         </button>
       ) : null}
       <div className="card-files">
         <SessionActionsView ticket={ticket} />
-        <FileViewsView ticket={ticket} slugs={ticket.enabledSlugs(stage)} />
+        <FileViewsView ticket={ticket} slugs={slugsOf(ticket.enabledFidelities(stage))} />
       </div>
     </>
   )
@@ -162,8 +164,8 @@ function OpenCardView({ ticket, stage, spot }: { ticket: TicketClient; stage: Co
   return (
     <div ref={card} className={opensLeft ? 'card-open grows-left' : 'card-open'} data-open-card={ticket.name} style={{ ...place, borderColor: borderColorOf(ticket), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}>
       <CardFaceView ticket={ticket} stage={stage} />
-      {ticket.enabledSlugs(stage).map(slug => (
-        <TileView key={slug} ticket={ticket} stage={stage} slug={slug} hasPracticeChip opensOnHover />
+      {ticket.enabledFidelities(stage).map(fidelity => (
+        <TileView key={fidelity.slug} ticket={ticket} stage={stage} fidelity={fidelity} hasPracticeChip opensOnHover />
       ))}
     </div>
   )

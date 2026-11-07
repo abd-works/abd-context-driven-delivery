@@ -34,7 +34,7 @@ class MoveTicketAdapterDriver implements MoveTicketDriver {
 
   async placeOf(ticket: string): Promise<TicketPlace> {
     const { column, is_done: isDone } = this.moved.get(ticket)!
-    return { column, isDone }
+    return { column: column.name, isDone }
   }
 
   private async columns() {

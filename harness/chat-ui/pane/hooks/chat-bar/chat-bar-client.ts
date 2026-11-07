@@ -1,8 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { BoardData, ColumnData } from '@cdd/harness/kanban/board'
-import type { TicketData } from '@cdd/harness/kanban/ticket'
+import type { BoardData, ColumnData } from '@cdd/space/kanban/board'
+import type { TicketData } from '@cdd/space/kanban/ticket'
 
 import type { ChatBarJson } from '../../types'
 import { reasonOf } from '../failure'
@@ -57,7 +57,7 @@ export class ChatBarClient {
   }
 
   get stage(): string {
-    return this.ticket?.column ?? ''
+    return this.ticket?.column.name ?? ''
   }
 
   // A stage icon a person picked shows that stage's fidelities; otherwise the dots show the stage the session is in.
@@ -83,33 +83,33 @@ export class ChatBarClient {
     )
   }
 
-  // The shown stage's fidelities of the practices this session has turned on.
+  // The shown stage's fidelities of the practices this session has turned on: the ticket's progress on each fidelity
+  // names its stage and holds the fidelity itself, in the order the stage requires them.
   get fidelities(): FidelityClient[] {
     const ticket = this.ticket
-    const column = this.board?.columns.find(entry => entry.name === this.shownStage)
-    if (!ticket || !column) return []
-    return (column.work_required ?? [])
-      .filter(slug => ticket.session.practices[ticket.progress[slug]?.practice ?? '']?.enabled)
+    if (!ticket) return []
+    return ticket.progress
+      .filter(progress => progress.stage.name === this.shownStage && progress.is_enabled)
       .map(
-        slug =>
+        progress =>
           new FidelityClient({
-            slug,
-            practice: ticket.progress[slug]?.practice ?? '',
-            name: this.fidelityNameOf(slug, ticket.progress[slug]?.practice ?? ''),
-            progress: ticket.progress[slug]?.state ?? 'not_started',
-            violationCount: ticket.progress[slug]?.violation_count ?? 0,
-            actions: ticket.progress[slug]?.actions ?? { generate: 'to_do', validate: 'to_do', review: 'to_do' },
-            defaultFormat: column.default_formats?.[slug] ?? '',
-            nextAction: ticket.progress[slug]?.next_action ?? '',
-            isSelected: slug === this.selected,
-            folder: ticket.session.practices[ticket.progress[slug]?.practice ?? '']?.root ?? '',
+            slug: progress.slug,
+            practice: progress.practice,
+            name: progress.fidelity.name,
+            progress: progress.state,
+            violationCount: progress.violation_count,
+            actions: progress.actions,
+            defaultFormat: progress.fidelity.default_format,
+            nextAction: progress.next_action,
+            isSelected: progress.slug === this.selected,
+            folder: ticket.session.practices[progress.practice]?.root ?? '',
           }),
       )
   }
 
   // The fidelity the action button acts on: the one a person selected, else the ticket's next, else the first shown.
   get actionFidelity(): FidelityClient | null {
-    return this.selectedFidelity ?? this.fidelities.find(fidelity => fidelity.fidelity === this.ticket?.next) ?? this.fidelities[0] ?? null
+    return this.selectedFidelity ?? this.fidelities.find(fidelity => fidelity.fidelity === this.ticket?.next?.slug) ?? this.fidelities[0] ?? null
   }
 
   // Null when the stored fidelity is not one of the shown stage's, so the selection never points into a hidden stage.
@@ -121,9 +121,9 @@ export class ChatBarClient {
   get statusLine(): string {
     const ticket = this.ticket
     if (!ticket) return ''
-    const violations = Object.values(ticket.progress).filter(progress => progress.state === 'violations').length
-    const next = ticket.next ? `next: ${ticket.next}` : ticket.is_done ? 'done' : ''
-    return [ticket.name, ticket.column, next, violations ? `${violations} with violations` : ''].filter(Boolean).join(' · ')
+    const violations = ticket.progress.filter(progress => progress.state === 'violations').length
+    const next = ticket.next ? `next: ${ticket.next.slug}` : ticket.is_done ? 'done' : ''
+    return [ticket.name, ticket.column.name, next, violations ? `${violations} with violations` : ''].filter(Boolean).join(' · ')
   }
 
   // The agent context: what the agent is told about the active session in its system prompt, the same session the
@@ -132,21 +132,15 @@ export class ChatBarClient {
     const ticket = this.ticket
     if (!ticket) return ''
     return (
-      `CDD session board: you are working on ticket ${ticket.name} ("${ticket.title}"), in ${ticket.column}. ` +
-      (ticket.next ? `Its next guidance is ${ticket.next}. ` : 'Its stage is done and waits for a person to move it. ') +
+      `CDD session board: you are working on ticket ${ticket.name} ("${ticket.title}"), in ${ticket.column.name}. ` +
+      (ticket.next ? `Its next guidance is ${ticket.next.slug}. ` : 'Its stage is done and waits for a person to move it. ') +
       'Each fidelity goes through generate, validate, then review, which a person records on the board.'
     )
   }
 
-  // A fidelity's slug begins with its practice's slug, such as ux- in ux-front-end-code; what follows is its own name.
-  private fidelityNameOf(slug: string, practiceKey: string): string {
-    const practiceSlug = this.board?.practices.find(practice => practice.key === practiceKey)?.slug ?? ''
-    return practiceSlug && slug.startsWith(`${practiceSlug}-`) ? slug.slice(practiceSlug.length + 1) : slug
-  }
-
+  // The board sends the active session's ticket whole.
   private get ticket(): TicketData | null {
-    const active = this.board?.active
-    return this.board?.columns.flatMap(ticketsOf).find(ticket => ticket.name === active) ?? null
+    return this.board?.active ?? null
   }
 }
 
@@ -205,5 +199,5 @@ export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Prom
 }
 
 export async function runHandoff($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
-  await $.prompt.fill({ text: `Write a handoff for ticket ${chatBar.sessionName} with /space-handoff-handoff-session.`, mode: 'append' })
+  await $.prompt.fill({ text: `Write a handoff for ticket ${chatBar.sessionName} with /space-session-handoff-session.`, mode: 'append' })
 }

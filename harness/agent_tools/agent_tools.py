@@ -9,20 +9,30 @@ import re
 import sys
 import textwrap
 import types
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, ClassVar, Mapping, cast, get_args, get_origin, get_type_hints
 
 from harness.agent_tools.name import Name
 from harness.agent_tools.parameter_schema import ParameterSchema
+from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import Mark
 
 ContextDocument = dict[str, Any]
 ArgumentDocument = dict[str, Any]
 TypeAnnotation = Any
-# A `@tool_subject` loader or a class tool that takes this argument is handed the folder of the project the running call
-# works on. No caller passes it, so it is not one of the tool's arguments.
+# A `@tool_subject` loader or a class tool that takes this argument is handed the checkout of the project its call works
+# on. No caller passes it, so it is not one of the tool's arguments.
 CALLED_PROJECT = "project"
+
+
+class CallNamesNoProject(Exception):
+    """A tool that acts on a project's objects was called without naming the project, so it cannot tell which project's
+    board, tickets, or files to load."""
+
+    def __init__(self, tool: str) -> None:
+        super().__init__(f"{tool} acts on a project's objects, but its call names no project")
+        self.tool = tool
 
 
 class AgentToolValidationError(Exception):
@@ -385,7 +395,7 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
         arguments and the operation's own, so every reader of its signature sees what a caller passes."""
         identity = list(inspect.signature(load).parameters.values())
         own = [param for param in inspect.signature(operation).parameters.values() if param.name != "self"]
-        identity_names = [param.name for param in identity]
+        identity_names = [*(param.name for param in identity), *([CALLED_PROJECT] if TakesCalledProject.marks(load) else [])]
 
         @functools.wraps(operation)
         def on_subject(**arguments: Any) -> Any:
@@ -394,7 +404,18 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
 
         on_subject.__signature__ = inspect.Signature(identity + own, return_annotation=inspect.signature(operation).return_annotation)
         on_subject.__annotations__ = {**load.__annotations__, **operation.__annotations__}
+        if TakesCalledProject.marks(load):
+            TakesCalledProject(on_subject)
         return OnSubject(on_subject)
+
+    def for_call(self, call: ToolCall) -> Any:
+        """This toolset as call works on it. A toolset keeps no state of one call, so it serves every call itself; a
+        toolset that does, such as a guidance action, answers one made for call."""
+        return self
+
+    def session_for(self, call: ToolCall) -> Any:
+        """The session this toolset's tools log call in: the session open in the call's project."""
+        return call.session
 
     def _discover_instruction_members(self) -> dict[str, AgentInstructions]:
         discovered: dict[str, AgentInstructions] = {}
@@ -821,9 +842,8 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
 
     @classmethod
     def given_the_called_project(cls, operation: Any) -> Any:
-        """A class operation that takes the call's project, as one that is handed the folder of the project the
-        running call works on and leaves it out of its signature, so no caller passes it. Any other operation as it
-        is."""
+        """A class operation that takes the call's project, with the project left out of its signature, so no caller
+        passes it and its tool hands it the project its call names. Any other operation as it is."""
         if not inspect.ismethod(operation) or CALLED_PROJECT not in inspect.signature(operation).parameters:
             return operation
         function = operation.__func__
@@ -831,14 +851,11 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
 
         @functools.wraps(function)
         def on_called_project(owner: Any, *arguments: Any, **named: Any) -> Any:
-            # WHY: space sits above the framework; the MCP host names each call's project with working_on.
-            from space.work_state import project_folder
-
-            return function(owner, *arguments, **named, **{CALLED_PROJECT: project_folder()})
+            return function(owner, *arguments, **named)
 
         on_called_project.__signature__ = signature.replace(parameters=[parameter for parameter in signature.parameters.values() if parameter.name != CALLED_PROJECT])
         on_called_project.__annotations__ = {name: hint for name, hint in function.__annotations__.items() if name != CALLED_PROJECT}
-        return types.MethodType(on_called_project, operation.__self__)
+        return types.MethodType(TakesCalledProject(on_called_project), operation.__self__)
 
     @classmethod
     def instantiate_all(cls, items: list) -> list:
@@ -1077,12 +1094,33 @@ class AgentTool(AgentToolDestination):
         """The JSON Schema of the arguments a caller passes, read from the callable's type hints."""
         return ParameterSchema(self.callable).json_schema
 
-    def invoke(self, arguments: dict[str, Any] | None = None) -> Any:
-        """Run the tool with arguments as a caller sent them: log the call in the session, then call it with each
+    def invoke(self, arguments: dict[str, Any] | None = None, *, project: Path | str | None = None) -> Any:
+        """Run the tool with arguments as a caller sent them, on the checkout of project, the project the calling chat
+        works on."""
+        return self.answer(ToolCall(arguments, project))
+
+    def answer(self, call: ToolCall) -> Any:
+        """Answer call on its toolset made for it: log the call in the session it works in, then call the tool with each
         argument in the type its parameter declares."""
-        payload = dict(arguments or {})
-        self.log_session_invocation(payload)
-        return self.callable(**ParameterSchema(self.callable).coerced(payload))
+        tool = self.on(self.toolset.for_call(call))
+        tool.log_session_invocation(call)
+        return tool.callable(**ParameterSchema(tool.callable).coerced(call.arguments), **tool._called_project(call))
+
+    def on(self, toolset: Any) -> AgentTool:
+        """This tool on toolset, a toolset of the same class made for one call; the tool as it is when toolset is its
+        own."""
+        if toolset is self.toolset:
+            return self
+        bound = getattr(self.callable, "__self__", None) is self.toolset
+        return replace(self, callable=types.MethodType(self.callable.__func__, toolset) if bound else self.callable, toolset=toolset)
+
+    def _called_project(self, call: ToolCall) -> dict[str, Path]:
+        """The project argument a callable that takes it is handed: the checkout call names."""
+        if not TakesCalledProject.marks(self.callable):
+            return {}
+        if call.project is None:
+            raise CallNamesNoProject(self.mcp_name)
+        return {CALLED_PROJECT: call.project}
 
     def should_log_session_invocation(self, arguments: dict[str, Any] | None) -> bool:
         if arguments and arguments.get("ping") is True:
@@ -1093,19 +1131,17 @@ class AgentTool(AgentToolDestination):
             return True
         return self.install_to_mcp
 
-    def log_session_invocation(self, arguments: dict[str, Any] | None) -> None:
-        """Log the call in the session it works in: a guidance action's own session, which a board command names, or
-        else the chat's current session."""
-        if not self.should_log_session_invocation(arguments):
+    def log_session_invocation(self, call: ToolCall) -> None:
+        """Log call in the session its toolset works in for it: a guidance action's own session, which a board command
+        names, or else the session open in the call's project. A call that works in no session logs nothing."""
+        if not self.should_log_session_invocation(call.arguments):
             return
-        from space.session import Session
-
-        payload = arguments or {}
-        call_session = getattr(self.toolset, "call_session", None)
-        session = call_session(payload) if callable(call_session) else Session.current()
+        session = self.toolset.session_for(call)
+        if session is None:
+            return
         logged_args = {
             key: value
-            for key, value in payload.items()
+            for key, value in call.arguments.items()
             if isinstance(value, (str, int, float, bool, list))
         }
         session.log_agent_tool(self.mcp_name, logged_args)
@@ -1234,23 +1270,14 @@ class AgentOperation(AgentTool):
 
 @dataclass
 class GuidanceAgentOperation(AgentOperation):
-    """@agent_tool on a GuidanceAction kit — session log via ``run``, not generic ``tool …``."""
+    """An ``@agent_tool`` on a guidance action: its call is logged as the action, such as ``render``, rather than as a
+    ``tool …`` line."""
 
-    def invoke(self, arguments: dict[str, Any] | None = None) -> Any:
-        toolset = self.toolset
-        toolset.start_call()
-        return super().invoke(arguments)
-
-    def log_session_invocation(self, arguments: dict[str, Any] | None) -> None:
-        """Log the call as its action, in the session the action works in once it has bound the call's guidance."""
-        if not self.should_log_session_invocation(arguments):
+    def log_session_invocation(self, call: ToolCall) -> None:
+        """Log the call as its action, in the session the action made for it works in."""
+        if not self.should_log_session_invocation(call.arguments):
             return
-        toolset = self.toolset
-        action = toolset.session_action_for_operation(self.name)
-        if not action:
-            return
-        toolset.call_session(dict(arguments or {}))
-        toolset._log_running_action(action)
+        self.toolset._log_running_action(self.name)
 
 
 @dataclass
@@ -1300,17 +1327,13 @@ class AgentInstructions(AgentTool):
         self._scan()
         return list(dict.fromkeys(self._tools))
 
-    def invoke(self, arguments: dict[str, Any] | None = None) -> str:
-        """The instructions an agent follows for this call, expanded with arguments. One action object serves every
-        call while the MCP server runs, so each call starts its own line in the session log."""
-        payload = dict(arguments or {})
-        toolset = self.toolset
-        if hasattr(toolset, "start_call"):
-            toolset.start_call()
-        self.log_session_invocation(payload)
-        if self.name == "instructions" and hasattr(toolset, "instructions"):
-            return toolset.instructions
-        return self._expanded_reply(payload)
+    def answer(self, call: ToolCall) -> str:
+        """The instructions an agent follows for call, expanded with its arguments by the toolset made for it."""
+        tool = self.on(self.toolset.for_call(call))
+        tool.log_session_invocation(call)
+        if tool.name == "instructions" and hasattr(tool.toolset, "instructions"):
+            return tool.toolset.instructions
+        return tool._expanded_reply(call.arguments)
 
     def _expanded_reply(self, arguments: dict[str, Any]) -> str:
         toolset = self.toolset
@@ -2255,7 +2278,7 @@ class ToolSubject(Mark):
     """Mark the classmethod that finds the object a tool call acts on, so ``@agent_tool`` can sit on a domain class
     whose constructor takes collaborators. Each instance operation's tool takes this loader's arguments before its
     own: ``load(ticket)`` and ``move_next(self)`` make the tool ``ticket.move_next(ticket)``. A loader that takes
-    ``project`` is handed the folder of the project the call works on, so ``load(ticket, *, project)`` loads the
+    ``project`` is handed the checkout of the project its call works on, so ``load(ticket, *, project)`` loads the
     ticket from that project's board and the tool still takes only ``ticket``."""
 
     flag = "_is_tool_subject"
@@ -2267,6 +2290,14 @@ class OnSubject(Mark):
     leading arguments before it runs the operation."""
 
     flag = "_runs_on_subject"
+    copied = False
+
+
+class TakesCalledProject(Mark):
+    """Set on a tool's callable that takes the project its call works on, which its signature leaves out because no
+    caller passes it: the tool hands it the project its ``ToolCall`` names."""
+
+    flag = "_takes_called_project"
     copied = False
 
 

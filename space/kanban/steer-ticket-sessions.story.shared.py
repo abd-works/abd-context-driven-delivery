@@ -88,7 +88,7 @@ def _(s):
 
     @s.then("the Backlog shows Gift cards with the text Sell gift cards.")
     def _(world):
-        items = column_in(world.data_of(world.Board.current().show()), "Backlog")["items"]
+        items = column_in(world.data_of(world.Board.load().show()), "Backlog")["items"]
         expect([(item["title"], item["text"]) for item in items]).to(equal([(GIFT_CARDS_IDEA.title, GIFT_CARDS_IDEA.text)]))
 
 
@@ -104,7 +104,7 @@ def _(s):
 
     @s.when("the Person starts Gift cards")
     def _(world):
-        world.folders = world.Board.current().folders(path="")
+        world.folders = world.Board.load().folders(path="")
 
     @s.then("the roots dialog lists the top folders of the repository")
     def _(world):
@@ -112,7 +112,7 @@ def _(s):
 
     @s.and_("Gift cards is still in the Backlog")
     def _(world):
-        expect_backlog(world.data_of(world.Board.current().show()), [GIFT_CARDS_IN_BACKLOG.heading])
+        expect_backlog(world.data_of(world.Board.load().show()), [GIFT_CARDS_IN_BACKLOG.heading])
 
     @s.when("the Person chooses src/visits as its root")
     def _(world):
@@ -150,7 +150,7 @@ def _(s):
 
     @s.but_("the Backlog no longer shows Returns and refunds")
     def _(world):
-        expect_backlog(world.data_of(world.Board.current().show()), [])
+        expect_backlog(world.data_of(world.Board.load().show()), [])
 
 
 @shared_stories.scenario("Add Backlog Item", "Bring a ticket back from the Backlog with its work")
@@ -175,7 +175,7 @@ def _(s):
 
     @s.but_("no new ticket is opened")
     def _(world):
-        expect(tickets_on(world.data_of(world.Board.current().show()))).to(equal([SIGN_UP_HELD.name]))
+        expect(tickets_on(world.data_of(world.Board.load().show()))).to(equal([SIGN_UP_HELD.name]))
 
 
 @shared_stories.scenario("Open Ticket Session", "Open a new ticket")
@@ -200,7 +200,7 @@ def _(s):
 
     @s.and_("checkout-flow is still the active ticket")
     def _(world):
-        expect_active(world.data_of(world.Board.current().show()), CHECKOUT_FLOW.name)
+        expect_active(world.data_of(world.Board.load().show()), CHECKOUT_FLOW.name)
 
 
 @shared_stories.scenario("Open Ticket Session", "Open a ticket on a folder of the repository")
@@ -235,7 +235,7 @@ def _(s):
 
     @s.when("the Person browses src for checkout-flow's root")
     def _(world):
-        world.folders = world.Board.current().folders(path="src")
+        world.folders = world.Board.load().folders(path="src")
 
     @s.then("the roots dialog lists src/billing and src/visits")
     def _(world):
@@ -291,11 +291,11 @@ def _(s):
 
     @s.when("the Person moves checkout-flow into Complete")
     def _(world):
-        world.workspace = world.data_of(world.ticket.workspace())
+        world.leaving = world.data_of(world.ticket.branch())
 
     @s.then("a dialog headed Close session Checkout flow offers commit and push, chosen")
     def _(world):
-        expect(world.workspace["leaving_has_branch"]).to(be_true)
+        expect(world.leaving["is_checked_out"]).to(be_true)
 
     @s.when("the Person confirms")
     def _(world):
@@ -303,7 +303,7 @@ def _(s):
 
     @s.then("checkout-flow shows in Complete and is selected")
     def _(world):
-        expect(world.closed["column"]).to(equal("Complete"))
+        expect(world.closed["column"]["name"]).to(equal("Complete"))
 
     @s.and_("a toast says Checkout flow: committed, pushed · Session Checkout flow closed")
     def _(world):
@@ -311,7 +311,7 @@ def _(s):
 
     @s.and_("no ticket is active")
     def _(world):
-        expect_active(world.data_of(world.Board.current().show()), None)
+        expect_active(world.data_of(world.Board.load().show()), None)
 
 
 @shared_stories.scenario("Close Active Session", "Complete a ticket that has no branch of its own")
@@ -331,7 +331,7 @@ def _(s):
 
     @s.then("checkout-flow shows in Complete")
     def _(world):
-        expect(world.closed["column"]).to(equal("Complete"))
+        expect(world.closed["column"]["name"]).to(equal("Complete"))
 
     @s.and_("its folder is in .sessions/_complete/checkout-flow")
     def _(world):
@@ -404,11 +404,11 @@ def _(s):
 
     @s.then("the Backlog shows the backlog item Back to backlog and it is selected")
     def _(world):
-        expect_backlog(world.data_of(world.Board.current().show()), [BACK_TO_BACKLOG.title])
+        expect_backlog(world.data_of(world.Board.load().show()), [BACK_TO_BACKLOG.title])
 
     @s.but_("no stage shows back-to-backlog")
     def _(world):
-        expect(ticket_in(world.data_of(world.Board.current().show()), BACK_TO_BACKLOG.name)).to(be_none)
+        expect(ticket_in(world.data_of(world.Board.load().show()), BACK_TO_BACKLOG.name)).to(be_none)
 
 
 @shared_stories.scenario("Move Ticket", "Close a ticket moved on past Implementation")
@@ -428,7 +428,7 @@ def _(s):
 
     @s.then("almost-shipped shows in Complete")
     def _(world):
-        expect(world.moved["column"]).to(equal("Complete"))
+        expect(world.moved["column"]["name"]).to(equal("Complete"))
 
     @s.and_("its folder is in .sessions/_complete/almost-shipped")
     def _(world):
@@ -492,15 +492,16 @@ def _(s):
 
     @s.when("the Person activates billing-report")
     def _(world):
-        world.workspace = world.data_of(world.ticket.workspace())
+        world.leaving = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).branch())
+        world.opening = world.data_of(world.ticket.branch())
 
     @s.then("a dialog headed Switch from Checkout flow to Billing report offers commit and push, chosen, and merge, not chosen")
     def _(world):
-        expect(world.workspace["leaving_has_branch"]).to(be_true)
+        expect(world.leaving["is_checked_out"]).to(be_true)
 
     @s.and_("it offers a branch for billing-report, chosen")
     def _(world):
-        expect(world.workspace["has_branch"]).to(be_false)
+        expect(world.opening["exists"]).to(be_false)
 
     @s.when("the Person chooses merge and confirms")
     def _(world):
@@ -508,7 +509,7 @@ def _(s):
 
     @s.then("billing-report is the active ticket with a thick orange outline")
     def _(world):
-        expect_active(world.data_of(world.Board.current().show()), BILLING_REPORT.name)
+        expect_active(world.data_of(world.Board.load().show()), BILLING_REPORT.name)
 
     @s.and_("a toast says Checkout flow: committed, pushed, merged to main · Billing report: branch created · Billing report is now active")
     def _(world):
@@ -534,7 +535,7 @@ def _(s):
 
     @s.then("billing-report is the active ticket")
     def _(world):
-        expect_active(world.data_of(world.Board.current().show()), BILLING_REPORT.name)
+        expect_active(world.data_of(world.Board.load().show()), BILLING_REPORT.name)
 
     @s.and_("the branch checked out is as it was")
     def _(world):
@@ -564,7 +565,7 @@ def _(s):
 
     @s.then("billing-report is the active ticket")
     def _(world):
-        expect_active(world.data_of(world.Board.current().show()), BILLING_REPORT.name)
+        expect_active(world.data_of(world.Board.load().show()), BILLING_REPORT.name)
 
     @s.but_("nothing is committed on checkout-flow's branch")
     def _(world):
@@ -588,7 +589,7 @@ def _(s):
 
     @s.and_("billing-report is the active ticket")
     def _(world):
-        expect_active(world.data_of(world.Board.current().show()), BILLING_REPORT.name)
+        expect_active(world.data_of(world.Board.load().show()), BILLING_REPORT.name)
 
 
 @shared_stories.scenario("Split Ticket Into Child Tickets", "Ask the chat to split a ticket into child tickets")
@@ -625,7 +626,7 @@ def _(s):
 
     @s.then("no column shows pet-visits")
     def _(world):
-        expect(ticket_in(world.data_of(world.Board.current().show()), PET_VISITS.name)).to(be_none)
+        expect(ticket_in(world.data_of(world.Board.load().show()), PET_VISITS.name)).to(be_none)
 
     @s.and_("its folder is in .sessions/_archive/pet-visits")
     def _(world):

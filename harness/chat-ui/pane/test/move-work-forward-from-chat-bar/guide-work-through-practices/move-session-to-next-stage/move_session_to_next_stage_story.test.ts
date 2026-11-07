@@ -8,7 +8,7 @@ import { scenario, story } from '../../../story-test'
 // Epic: Move Work Forward From Chat Bar
 // Sub-epic: Guide Work Through Practices
 // Map: ../../../../../.context/story-map.md#s-person----move-session-to-next-stage
-// Model: ../../../../../../kanban/.context/kanban-model.md
+// Model: ../../../../../../../space/kanban/.context/kanban-model.md
 // Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
 
 // (S) Person --> Move Session To Next Stage
@@ -18,7 +18,7 @@ story('Move Session To Next Stage', CHAT_BAR, () => {
     given('checkout-flow is In progress in Specification with stories-scenarios, ux-mockup and clean-engineering-model reviewed', async ($, on, scene) => {
       scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'stories-scenarios': DONE, 'ux-mockup': DONE, 'clean-engineering-model': DONE }, { is_done: true, next: null }))
     })
-    when('the Person moves checkout-flow to the next [stage](../../../../../../kanban/.context/kanban-model.md#stage--column)', async ($, on, scene) => {
+    when('the Person moves checkout-flow to the next [stage](../../../../../../../space/kanban/.context/kanban-model.md#stage--column)', async ($, on, scene) => {
       expect(await labelOf(scene.ui, 'next-action')).toBe('move checkout-flow on')
       await scene.ui.press({ key: 'next-action' })
     })

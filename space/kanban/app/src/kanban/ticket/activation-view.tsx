@@ -31,7 +31,7 @@ function SessionFactsView({ session, branch }: { session: string; branch: string
 // Commit, push, and merge act on what is checked out, so with no branch of its own there is nothing to act on.
 function LeaveGroupView({ open }: { open: Activation }) {
   const { page } = useBoard()
-  const hasBranch = open.workspace.leavingHasBranch
+  const hasBranch = open.leavingBranch?.is_checked_out ?? false
   const options = [
     { key: 'commit', label: `Commit changes on ${open.leavingTitle}` },
     { key: 'push', label: `Push ${open.leavingTitle} to origin` },
@@ -50,7 +50,8 @@ function LeaveGroupView({ open }: { open: Activation }) {
 
 function OpenGroupView({ open }: { open: Activation }) {
   const { page } = useBoard()
-  const { hasBranch, hasWorktree } = open.workspace
+  const hasBranch = open.branch.exists
+  const hasWorktree = open.ticket.worktree !== ''
   return (
     <div className="dialog-group">
       <div className="dialog-group-heading">OPEN</div>

@@ -28,8 +28,8 @@ with story("Close Active Session"):
         with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), on its own branch"):
             pass
         with when("the Person moves checkout-flow into Complete"):
-            # Person -> Ticket.workspace()
-            # Ticket <- leaving_has_branch: true
+            # Person -> Ticket.branch()
+            # Ticket <- Branch is_checked_out: true
             pass
         with then("a dialog headed Close session Checkout flow offers commit and push, chosen"):
             pass

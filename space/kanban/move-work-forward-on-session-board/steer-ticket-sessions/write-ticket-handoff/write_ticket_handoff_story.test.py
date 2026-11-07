@@ -16,11 +16,11 @@ with story("Write Ticket Handoff"):
         with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card) and a chat is connected"):
             pass
         with when("the Person asks for a handoff on checkout-flow"):
-            # Board page -> Chat.send('fill', 'Write a handoff for ticket checkout-flow with /space-handoff-handoff-session.')
+            # Board page -> Chat.send('fill', 'Write a handoff for ticket checkout-flow with /space-session-handoff-session.')
             # chat mod -> Chat.check_in(is_busy=False) <- the fill
             # chat mod -> Claude Code prompt.fill(text, append)  [External: Claude Code]
             pass
-        with then("the chat's prompt holds Write a handoff for ticket checkout-flow with /space-handoff-handoff-session."):
+        with then("the chat's prompt holds Write a handoff for ticket checkout-flow with /space-session-handoff-session."):
             pass
         with and_("a toast says Queued for the prompt, for you to review"):
             pass

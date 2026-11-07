@@ -6,7 +6,7 @@ import type { BoardPage } from './board-page'
 import { ColumnClient } from './column-client'
 import { PracticeClient } from './practice-client'
 
-const standingOf = (ticket: TicketClient): string => (ticket.column === 'Complete' ? ticket.column : `${ticket.column} · ${ticket.isDone ? 'Done' : 'In progress'}`)
+const standingOf = ({ column, isDone }: TicketClient): string => (column.name === 'Complete' ? column.name : `${column.name} · ${isDone ? 'Done' : 'In progress'}`)
 
 function changesOf(was: TicketClient, ticket: TicketClient): string[] {
   const moved = standingOf(was) === standingOf(ticket) ? [] : [`${ticket.title} moved to ${standingOf(ticket)}`]
@@ -78,7 +78,7 @@ export class BoardClient extends BoardClientGenerated {
 
   // The stage whose fidelities a ticket shows: Complete keeps showing Implementation's.
   stageOf(ticket: TicketClient): ColumnClient | undefined {
-    return this.stageNamed(ticket.column) ?? this.stages.at(-1)
+    return this.stageNamed(ticket.column.name) ?? this.stages.at(-1)
   }
 
   stageNamed(name: string): ColumnClient | undefined {

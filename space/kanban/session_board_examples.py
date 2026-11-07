@@ -39,7 +39,7 @@ STORY_MAP_GRAPH = {
         },
     },
 }
-GRAPH_EXAMPLES = Path(__file__).resolve().parents[1] / "graph" / "_examples" / "input"
+GRAPH_EXAMPLES = Path(__file__).resolve().parents[2] / "harness" / "graph" / "_examples" / "input"
 ENTITY_ROOT_FILE = "src/account-credentials/account-credentials.ts"
 STORY_FILE = "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts"
 

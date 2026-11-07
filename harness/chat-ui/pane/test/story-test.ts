@@ -37,7 +37,7 @@ export function story(name: string, lifecycle: Lifecycle, build: () => void): vo
 export function scenario(name: string, build: (words: StepWords) => void): void {
   const lifecycle = storyLifecycle
   const steps: { word: Word; run: Step }[] = []
-  const words = Object.fromEntries((['given', 'when', 'then', 'and', 'but'] as Word[]).map(word => [word, (_text: string, run: Step = () => undefined) => steps.push({ word, run })]))
+  const words = Object.fromEntries((['given', 'when', 'then', 'and', 'but'] as Word[]).map(word => [word, (_text: string, run: Step = () => undefined) => void steps.push({ word, run })]))
   build(words as StepWords)
   test(`${storyName} › ${name}`, async ($, on) => {
     let mounted: any

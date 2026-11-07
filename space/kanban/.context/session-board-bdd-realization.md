@@ -1779,7 +1779,7 @@ a board
   of a project named by a folder inside its checkout
     ```
     -> BoardData.project
-    -> Board.current(cls)
+    -> Board.load(project)
     <- Board
     -> BoardTools.current()
     -> Board.repo_root
@@ -1796,7 +1796,7 @@ a board
     -> Ticket.session
     <- Session
     -> SessionSeed.folder
-    -> Board.current(cls)
+    -> Board.load(project)
     <- Board
     -> BoardTools.current()
     -> BoardData.project
@@ -1806,7 +1806,7 @@ a board
     -> Ticket.session
     <- Session
     -> SessionSeed.folder
-    -> Board.current(cls)
+    -> Board.load(project)
     <- Board
     -> BoardTools.current()
     -> BoardData.project
@@ -1816,7 +1816,7 @@ a board
     -> Ticket.session
     <- Session
     -> SessionSeed.folder
-    -> Board.current(cls)
+    -> Board.load(project)
     <- Board
     -> BoardTools.current()
     -> BoardData.project
@@ -1826,7 +1826,7 @@ a board
     -> Ticket.session
     <- Session
     -> SessionSeed.folder
-    -> Board.current(cls)
+    -> Board.load(project)
     <- Board
     -> BoardTools.current()
     -> BoardData.project
@@ -1836,7 +1836,7 @@ a board
     -> Ticket.session
     <- Session
     -> SessionSeed.folder
-    -> Board.current(cls)
+    -> Board.load(project)
     <- Board
     -> BoardTools.current()
     -> BoardData.project
@@ -1846,7 +1846,7 @@ a board
     -> Ticket.session
     <- Session
     -> SessionSeed.folder
-    -> Board.current(cls)
+    -> Board.load(project)
     <- Board
     -> BoardTools.current()
     -> BoardData.project
@@ -1856,7 +1856,7 @@ a board
     -> Ticket.session
     <- Session
     -> SessionSeed.folder
-    -> Board.current(cls)
+    -> Board.load(project)
     <- Board
     -> BoardTools.current()
     -> BoardData.project
@@ -1866,7 +1866,7 @@ a board
     -> Ticket.session
     <- Session
     -> SessionSeed.folder
-    -> Board.current(cls)
+    -> Board.load(project)
     <- Board
     -> BoardTools.current()
     -> BoardData.project
@@ -1876,7 +1876,7 @@ a board
     -> Ticket.session
     <- Session
     -> SessionSeed.folder
-    -> Board.current(cls)
+    -> Board.load(project)
     <- Board
     -> BoardTools.current()
     -> BoardData.project
@@ -1886,7 +1886,7 @@ a board
     -> Ticket.session
     <- Session
     -> SessionSeed.folder
-    -> Board.current(cls)
+    -> Board.load(project)
     <- Board
     -> BoardTools.current()
     -> BoardData.project
@@ -3085,7 +3085,7 @@ the board tools
     ```
     -> Board.ticket(name: str)
     <- Ticket
-    -> Ticket.workspace()
+    -> Ticket.branch()
     <- dict
     it should say a ticket has no branch yet
     ```
@@ -3111,7 +3111,7 @@ the board tools
         <- str
         -> Session.switch()
       <- Ticket
-      -> Ticket.workspace()
+      -> Ticket.branch()
       <- dict
       it should create the ticket's branch when a ticket that has none is activated
       ```
@@ -3119,7 +3119,7 @@ the board tools
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.workspace()
+      -> Ticket.branch()
       <- dict
       it should say the ticket being left has no branch yet
       ```
@@ -3149,7 +3149,7 @@ the board tools
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.workspace()
+      -> Ticket.branch()
       <- dict
       it should say the ticket being left is on its branch
       ```
@@ -3221,9 +3221,9 @@ the board tools
     ```
     -> Board.ticket(name: str)
     <- Ticket
-    -> Ticket.workspace()
+    -> Ticket.branch()
     <- dict
-    it should return exactly the fields WorkspaceData names
+    it should return exactly the fields BranchData names
     ```
     ```
     -> Board.ticket(name: str)
@@ -3575,7 +3575,7 @@ with a chat connected
     Ask the chat to write a handoff
       ```
       -> BoardReader.poll()
-      it Then the chat's prompt holds Write a handoff for ticket checkout-flow with /space-handoff-handoff-session.
+      it Then the chat's prompt holds Write a handoff for ticket checkout-flow with /space-session-handoff-session.
       ```
       ```
       // the graph holds no operation this observation calls

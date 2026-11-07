@@ -42,7 +42,7 @@ class BacklogItemsAdapterDriver implements BacklogItemsDriver {
   }
 
   async columnOfTicket(title: string): Promise<string> {
-    return this.started.get(title)!.column
+    return this.started.get(title)!.column.name
   }
 
   async stateOfWork(title: string, fidelity: string): Promise<string> {

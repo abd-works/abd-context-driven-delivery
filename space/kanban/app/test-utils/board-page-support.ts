@@ -295,7 +295,7 @@ export class BoardOnProject {
 }
 
 export const ticketOn = (page: BoardPage, name: string): TicketClient => {
-  const found = page.board.tickets.find(ticket => ticket.name === name && ticket.column !== 'Complete')
+  const found = page.board.tickets.find(ticket => ticket.name === name && ticket.column.name !== 'Complete')
   if (!found) throw new Error(`The board shows no open ticket ${name}`)
   return found
 }

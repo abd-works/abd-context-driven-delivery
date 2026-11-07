@@ -22,7 +22,7 @@ with story("Send Next Fidelity Action"):
             pass
         with when("the Person runs billing-report's next step"):
             # Person -> Ticket.next_action <- generate on stories-story-map
-            # Board page -> Stage.default_formats <- markdown for stories-story-map
+            # Board page -> FidelityProgress.fidelity.default_format <- markdown for stories-story-map
             # Board page -> TicketClient.actionCommand('/actions-generate stories-story-map format=markdown')
             # Board page -> Chat.send('command', '/actions-generate stories-story-map format=markdown')
             pass

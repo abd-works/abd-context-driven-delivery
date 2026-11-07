@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { ActionStatesData, FidelityProgressData } from '@cdd/harness/kanban/fidelity-progress'
+import type { ActionStatesData, FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 
 import { commandOf } from '../chat-command'
 import { reasonOf } from '../failure'
@@ -49,7 +49,7 @@ export class FidelityClient {
 
   // The fidelity's own name as the session card shows it, such as Scenarios or Front end code.
   get name(): string {
-    const words = this.json.name.replace(/-/g, ' ')
+    const words = this.json.name.replace(/_/g, ' ')
     return words.charAt(0).toUpperCase() + words.slice(1)
   }
 

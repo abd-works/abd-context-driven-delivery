@@ -9,7 +9,7 @@ import { ThrowawayCddHome } from './throwaway-cdd-home'
 export default function startRunCddHome(): () => void {
   const chats = mkdtempSync(join(tmpdir(), 'cdd-board-run-chats-'))
   process.env.CDD_CHATS_FOLDER = join(chats, 'chats')
-  process.env.CDD_CLAUDE_PROJECTS = join(chats, 'projects')
+  process.env.CLAUDE_CONFIG_DIR = chats
   const home = ThrowawayCddHome.forRun()
   return () => {
     home.close()

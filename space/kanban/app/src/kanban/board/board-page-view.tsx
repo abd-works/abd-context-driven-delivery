@@ -25,7 +25,7 @@ function ViolationsBandView({ ticket }: { ticket: TicketClient }) {
   return (
     <div className="band" role="status" aria-label="Active ticket's violations">
       <span className="band-words">
-        {ticket.name} · {ticket.column} · violations: {ticket.violatedSlugs.join(', ')}
+        {ticket.name} · {ticket.column.name} · violations: {ticket.violatedSlugs.join(', ')}
       </span>
     </div>
   )

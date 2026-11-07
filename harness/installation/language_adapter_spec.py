@@ -230,7 +230,7 @@ with description("a language adapter"):
         with it("should track every file it writes, so clean removes them"):
             tracked = []
             adapters = LanguageAdapterInstallation("Claude", self.install_path, repo=_REPO)
-            adapters.bind_tracker(tracked.append)
+            adapters.track_writes_with(tracked.append)
             adapters.record(AgentToolSet.instantiate("space.kanban.ticket:Ticket"))
             adapters.write_all()
             expect(sorted(path.name for path in tracked)).to(equal(["cdd-connection.ts", "cdd-shared.ts", "cdd-views.tsx", "package.json", "ticket-views.tsx", "ticket.ts"]))

@@ -50,18 +50,18 @@ function HelpTextView({ markdown, className }: { markdown: string; className: st
 
 export function HelpPanelHeadView({ panel: { help } }: { panel: HelpPanel }) {
   const { page } = useBoard()
-  const practice = page.board.practiceNamed(help.practice)
+  const practice = page.board.practiceNamed(help.practice.key)
   return (
     <div className="panel-words">
       <div className="panel-kind">
         HELP<span className="accent-mark">_</span>
       </div>
-      <h1>{help.fidelity ? practice?.fidelityNameOf(help.slug) : practice?.name}</h1>
+      <h1>{help.fidelity ? practice?.fidelityNameOf(help.fidelity.slug) : practice?.name}</h1>
       <div className="help-place">
         <span className="practice-chip" style={{ borderLeftColor: practice?.color }}>
           {practice?.name}
         </span>
-        <span className="panel-subtitle">{help.stage || 'Practice overview'}</span>
+        <span className="panel-subtitle">{help.stage?.name ?? 'Practice overview'}</span>
       </div>
     </div>
   )
@@ -85,7 +85,7 @@ function HelpRulesView({ help }: { help: HelpData }) {
       {help.rules.map(rule => (
         <div key={rule.slug} className="help-rule">
           <div className="help-rule-name">{rule.slug}</div>
-          <div className="help-rule-text">{rule.text}</div>
+          <div className="help-rule-text">{rule.body.trim()}</div>
         </div>
       ))}
     </HelpGroupView>

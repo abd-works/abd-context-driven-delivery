@@ -10,7 +10,8 @@ import { fixtureRoot } from './test-utils/fixture-repo'
 const PORT = 8779
 // The specs' chats live apart from the person's real ones, which the cdd-board mod in each chat keeps under ~/.claude.
 const CHATS_FOLDER = join(tmpdir(), 'cdd-board-surface-chats')
-const CLAUDE_PROJECTS = join(tmpdir(), 'cdd-board-surface-projects')
+// The chats' transcripts are read from <CLAUDE_CONFIG_DIR>/projects, so the specs' Claude folder is a folder of their own.
+const CLAUDE_CONFIG = join(tmpdir(), 'cdd-board-surface-claude')
 // A command left waiting by an earlier run would reach this run's chat, so each run starts with no chats.
 rmSync(CHATS_FOLDER, { recursive: true, force: true })
 // The board talks to a cdd server of the run's own, serving this checkout, so a spec that restarts cdd or connects a chat
@@ -38,6 +39,6 @@ export default defineConfig({
     url: `http://127.0.0.1:${PORT}/`,
     reuseExistingServer: false,
     timeout: 120_000,
-    env: { BOARD_PORT: String(PORT), BOARD_PROJECT: fixtureRoot, BOARD_FIXTURE_ROOT: fixtureRoot, CDD_CHATS_FOLDER: CHATS_FOLDER, CDD_CLAUDE_PROJECTS: CLAUDE_PROJECTS, CDD_HOME: cddHome.folder, CDD_SERVER_PORT: String(cddHome.port) },
+    env: { BOARD_PORT: String(PORT), BOARD_PROJECT: fixtureRoot, BOARD_FIXTURE_ROOT: fixtureRoot, CDD_CHATS_FOLDER: CHATS_FOLDER, CLAUDE_CONFIG_DIR: CLAUDE_CONFIG, CDD_HOME: cddHome.folder, CDD_SERVER_PORT: String(cddHome.port) },
   },
 })

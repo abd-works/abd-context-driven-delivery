@@ -1,3 +1,5 @@
+import type { FidelityGuidanceData } from '@cdd/space/kanban/board'
+
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
 import type { ColumnClient } from '../board/column-client'
@@ -8,11 +10,14 @@ const DEFAULT_ACTION = 'generate'
 const HOVER_OPEN_MILLISECONDS = 500
 const HOVER_CLOSE_MILLISECONDS = 250
 
-export const cellPlace = (stage: string, slug: string): string => `cell-${stage}-${slug}`
+export const cellPlace = (stage: string, fidelity: FidelityGuidanceData): string => `cell-${stage}-${fidelity.slug}`
 export const headPlace = (stage: string): string => `head-${stage}`
 
+// A ticket names its progress on each fidelity by the fidelity's slug.
+export const slugsOf = (fidelities: FidelityGuidanceData[]): string[] => fidelities.map(fidelity => fidelity.slug)
+
 // Where a bar opens: on which ticket, in which stage, at which place, over which fidelities.
-export type TileSpot = { ticket: TicketClient; stage: ColumnClient; place: string; slugs: string[] }
+export type TileSpot = { ticket: TicketClient; stage: ColumnClient; place: string; fidelities: FidelityGuidanceData[] }
 
 // A bar is found by its ticket's name and its place, because each board read makes new ticket clients.
 export const isAt = (tile: Tile, ticket: string, place: string): boolean => tile.ticket.name === ticket && tile.place === place
@@ -35,14 +40,14 @@ export class TileClient {
   // The bar shows at once and its files fill in when they are read, because reading them can take a second. Only the
   // latest open of a place takes the files, so a slow read from an earlier open cannot change the bar shown now.
   async open(spot: TileSpot, isPinned: boolean): Promise<void> {
-    const { ticket, stage, place, slugs } = spot
+    const { ticket, stage, place, fidelities } = spot
     const order = ++this.opening
     this.latestOpening.set(`${ticket.name} ${place}`, order)
-    const shown: Tile = { ticket, place, stage: stage.name, slugs, action: DEFAULT_ACTION, picked: defaultPicks(stage, slugs, {}), isPinned, files: {} }
+    const shown: Tile = { ticket, place, stage: stage.name, fidelities, action: DEFAULT_ACTION, picked: defaultPicks(fidelities, {}), isPinned, files: {} }
     this.store.change(state => ({ tiles: [...this.othersKept(state.tiles, shown), shown] }))
-    const files = (await ticket.filesOf(slugs)) ?? {}
+    const files = (await ticket.filesOf(slugsOf(fidelities))) ?? {}
     if (this.latestOpening.get(`${ticket.name} ${place}`) !== order) return
-    this.change(ticket.name, place, tile => this.withFiles(tile, shown, files, stage))
+    this.change(ticket.name, place, tile => this.withFiles(tile, shown, files))
   }
 
   // A bar a hover opens replaces any other bar a hover opened; pressed bars stay.
@@ -52,8 +57,8 @@ export class TileClient {
   }
 
   // A person's own choice of formats stays; until they make one, the defaults follow what is already generated.
-  private withFiles(tile: Tile, shown: Tile, files: FilesByFidelity, stage: ColumnClient): Tile {
-    return { ...tile, files, picked: tile.picked === shown.picked ? defaultPicks(stage, tile.slugs, files) : tile.picked }
+  private withFiles(tile: Tile, shown: Tile, files: FilesByFidelity): Tile {
+    return { ...tile, files, picked: tile.picked === shown.picked ? defaultPicks(tile.fidelities, files) : tile.picked }
   }
 
   // Changes the one open bar on that ticket at that place, and leaves every other bar as it is.
@@ -109,7 +114,7 @@ export class TileClient {
   }
 
   private async reloadFiles(tile: Tile): Promise<void> {
-    const files = await tile.ticket.filesOf(tile.slugs)
+    const files = await tile.ticket.filesOf(slugsOf(tile.fidelities))
     if (files) this.change(tile.ticket.name, tile.place, open => ({ ...open, files }))
   }
 }

@@ -3,6 +3,7 @@ import { useBoard } from '../board/board-context'
 import { ExpandIcon } from '../board/icons'
 import { PracticeGridView } from './practice-grid-view'
 import type { TicketClient } from './ticket-client'
+import { slugsOf } from './tile-client'
 
 function ExpandDetailsView() {
   const { page, state } = useBoard()
@@ -27,7 +28,7 @@ function PlaceLinkView({ label, hint, isOff = false, onPress }: { label: string;
 function TicketBarView({ ticket }: { ticket: TicketClient }) {
   const { page } = useBoard()
   const stage = page.board.stageOf(ticket)
-  const stageSlugs = stage ? ticket.enabledSlugs(stage) : []
+  const stageSlugs = stage ? slugsOf(ticket.enabledFidelities(stage)) : []
   return (
     <div className="details-bar-words">
       <div className="details-heading">

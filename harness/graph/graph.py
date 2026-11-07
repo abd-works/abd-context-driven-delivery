@@ -17,7 +17,6 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from harness.agent_tools import agent_tool, agent_toolset
-from harness.agent_tools.agent_tools import tool_subject
 from harness.agent_tools.progress import report_progress
 from harness.installation.destination import data_field, language_adapter
 from harness.installation.files import command, skill
@@ -1123,9 +1122,10 @@ class AppliedOverlays(Inventory):
 @language_adapter(language="typescript")
 @agent_toolset
 class Graph:
-    """One graph. Builders fill nodes, edges, and rules. The explorer reads the tree."""
+    """One graph. Builders fill nodes, edges, and rules. The explorer reads the tree.
 
-    _current: Graph | None = None
+    Each project's cdd runtime holds one graph, the toolset its graph tools run on, so the calls one chat makes load
+    and filter its project's graph and never another's."""
 
     def __init__(self) -> None:
         self._folder: Path | None = None
@@ -1153,14 +1153,6 @@ class Graph:
         self._folder = folder
         self._practice_roots = {name: source_root}
         self.practice(name).source_root = str(source_root)
-
-    @classmethod
-    @tool_subject
-    def current(cls) -> Graph:
-        """The graph this process holds: one per cdd server, loaded and filtered by the calls made to it."""
-        if cls._current is None:
-            cls._current = cls()
-        return cls._current
 
     def report_progress(self, message: str) -> None:
         """Tell whoever called the running tool which practice, file, node, or rule is in progress."""

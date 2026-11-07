@@ -3,10 +3,11 @@
 // Seed: state the cdd server owns, the TicketData and BoardData the Python Ticket and Board would report. A Given sets
 // it on the stubbed server (cdd-stub.ts), never on the pane.
 // Interaction: what a person types into the chat bar or reads from it, such as a new session's name.
-import type { BoardData, ColumnData, PracticeGuidanceData } from '@cdd/harness/kanban/board'
-import type { ActionStatesData, FidelityProgressData } from '@cdd/harness/kanban/fidelity-progress'
-import type { SessionData, TicketData } from '@cdd/harness/kanban/ticket'
+import type { BoardData, ColumnData, FidelityGuidanceData, PracticeGuidanceData } from '@cdd/space/kanban/board'
+import type { ActionStatesData, FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
+import type { TicketData } from '@cdd/space/kanban/ticket'
 import type { PracticeSessionOutputData } from '@cdd/space/session/practice-session-output'
+import type { SessionData } from '@cdd/space/session/session'
 
 // Seed: server-health.report while every part runs.
 export const HEALTHY = { kanban_app_port: 8778, graph_app_port: 5173, is_hook_server_running: false }
@@ -28,12 +29,38 @@ const practiceOf = (slug: string): string => PRACTICES.find(practice => slug.sta
 // Seed: each practice as Board.practices reports it; a fidelity's slug begins with its practice's slug.
 const SHORT_NAMES: Record<string, [string, string]> = { stories: ['Stories', '#6BCB77'], ddd: ['DDD', '#6C5CE7'], ux: ['UX', '#E84393'], clean_engineering: ['CE', '#4FC3F7'], bdd: ['BDD', '#00B894'] }
 const practiceData = (key: string): PracticeGuidanceData => ({ key, slug: key.replace('_', '-'), short_name: SHORT_NAMES[key][0], colour: SHORT_NAMES[key][1], fidelities: EVERY_FIDELITY.filter(slug => practiceOf(slug) === key) })
+// Seed: the stage that requires a fidelity.
+const stageOf = (slug: string): string => STAGE_ORDER.find(stage => (WORK_OF[stage] ?? []).includes(slug)) ?? ''
+// Seed: the fidelities this project writes in TypeScript by default; every other writes markdown.
+const TYPESCRIPT_FIRST = ['stories-scenarios', 'clean-engineering-model']
 
-// Seed: one fidelity's progress as the Python FidelityProgress reports it. Its next action is satisfy while it has
-// violations, else the first of generate, validate and review not done, nothing once it is done.
+// Seed: one fidelity as FidelityGuidance reports it: its name after its practice's slug, and its default format.
+export function fidelityOf(slug: string): FidelityGuidanceData {
+  const name = slug.slice(practiceOf(slug).length + 1).replace(/-/g, '_')
+  const defaultFormat = TYPESCRIPT_FIRST.includes(slug) ? 'typescript' : 'markdown'
+  return { name, outputs: { [defaultFormat]: `.context/${name}` }, default_format: defaultFormat, slug }
+}
+
+// Seed: one fidelity's progress as the Python FidelityProgress reports it, on a practice the session has turned on or
+// off. Its next action is satisfy while it has violations, else the first of generate, validate and review not done,
+// nothing once it is done.
 export function progressOf(ticket: string, slug: string, state = 'not_started', actions: ActionStatesData = NOT_DONE, violations = 0): FidelityProgressData {
   const nextAction = state === 'violations' ? 'satisfy' : (STEPS.find(step => actions[step] !== 'done') ?? '')
-  return { ticket, slug, practice: practiceOf(slug), is_enabled: true, next_action: nextAction, allowed_actions: [], state, actions, report_file: '', violation_count: violations }
+  const practice = practiceOf(slug)
+  return {
+    ticket,
+    slug,
+    fidelity: fidelityOf(slug),
+    stage: { name: stageOf(slug) },
+    practice,
+    is_enabled: practice in ROOTS,
+    next_action: nextAction,
+    allowed_actions: [],
+    state,
+    actions,
+    report_file: '',
+    violation_count: violations,
+  }
 }
 
 // Seed: a ticket's session with the practices Stories, UX and Clean Engineering turned on, each on its chosen root.
@@ -43,21 +70,28 @@ function sessionOf(name: string, title: string): SessionData {
   return { name, session_file: sessionFile, workpath: '', handoff: '', title, scope: '', parent: '', practices: Object.fromEntries(PRACTICES.map(practice => [practice, practiceData(practice)])) }
 }
 
+// Seed: what a story says about a ticket: its name and title, the stage it is in, the slug of its next fidelity (none
+// once its stage is done), and whether it is done in its stage.
+export type TicketSeed = { name?: string; title?: string; column?: string; next?: string | null; is_done?: boolean }
+
 // Seed: checkout-flow, In progress in Specification with the practices Stories, UX and Clean Engineering, nothing yet done.
-export function checkoutFlow(overrides: Partial<TicketData> = {}): TicketData {
-  const name = overrides.name ?? 'checkout-flow'
-  const title = overrides.title ?? 'Checkout flow'
+export function checkoutFlow(seed: TicketSeed = {}): TicketData {
+  const name = seed.name ?? 'checkout-flow'
+  const title = seed.title ?? 'Checkout flow'
+  const next = seed.next === undefined ? 'stories-scenarios' : seed.next
   return {
     title,
     last_activity: '2026-11-05T06:00:00Z',
     name,
     session: sessionOf(name, title),
-    progress: Object.fromEntries(EVERY_FIDELITY.map(slug => [slug, progressOf(name, slug)])),
-    column: 'Specification',
-    is_done: false,
-    next: 'stories-scenarios',
+    progress: EVERY_FIDELITY.map(slug => progressOf(name, slug)),
+    column: { name: seed.column ?? 'Specification' },
+    is_closed: false,
+    is_active: false,
+    drop_targets: ['Backlog'],
+    is_done: seed.is_done ?? false,
+    next: next ? progressOf(name, next) : null,
     worktree: '',
-    ...overrides,
   }
 }
 
@@ -67,10 +101,13 @@ export const VALIDATED: FidelityState = { progress: 'in_progress', actions: { ge
 export const DONE: FidelityState = { progress: 'done', actions: { generate: 'done', validate: 'done', review: 'done' } }
 
 // Seed: checkout-flow with these fidelities' progress, actions and violation counts as the Python Ticket would report them.
-export function checkoutFlowWith(fidelities: Record<string, FidelityState>, overrides: Partial<TicketData> = {}): TicketData {
-  const plain = checkoutFlow(overrides)
-  const changed = Object.entries(fidelities).map(([slug, state]) => [slug, progressOf(plain.name, slug, state.progress, { ...NOT_DONE, ...state.actions }, state.violations ?? 0)])
-  return { ...plain, progress: { ...plain.progress, ...Object.fromEntries(changed) } }
+export function checkoutFlowWith(fidelities: Record<string, FidelityState>, seed: TicketSeed = {}): TicketData {
+  const plain = checkoutFlow(seed)
+  const changedOf = (progress: FidelityProgressData): FidelityProgressData => {
+    const state = fidelities[progress.slug]
+    return state ? progressOf(plain.name, progress.slug, state.progress, { ...NOT_DONE, ...state.actions }, state.violations ?? 0) : progress
+  }
+  return { ...plain, progress: plain.progress.map(changedOf) }
 }
 
 // Seed: payment-retry, In progress in Discovery.
@@ -82,14 +119,15 @@ const column = (name: string, tickets: TicketData[]): ColumnData => {
   const work = WORK_OF[name] ?? []
   return {
     name,
-    in_progress: tickets.filter(ticket => ticket.column === name),
-    ...(work.length ? { work_required: work, default_formats: { 'stories-scenarios': 'typescript', 'clean-engineering-model': 'typescript' } } : {}),
+    in_progress: tickets.filter(ticket => ticket.column.name === name),
+    ...(work.length ? { work_required: work.map(fidelityOf) } : {}),
   }
 }
 
-// Seed: the board as board.show returns it, each ticket in the column it names.
+// Seed: the board as board.show returns it, each ticket in the column it names and the active one whole.
 export function boardOf(active: string | null, ...tickets: TicketData[]): BoardData {
-  return { project: 'abd-context-driven-delivery', practices: PRACTICES.map(practiceData), active, columns: [{ name: 'Backlog', items: [] }, ...STAGE_ORDER.map(name => column(name, tickets))] }
+  const activeTicket = tickets.find(ticket => ticket.name === active) ?? null
+  return { project: 'abd-context-driven-delivery', practices: PRACTICES.map(practiceData), active: activeTicket, columns: [{ name: 'Backlog', items: [] }, ...STAGE_ORDER.map(name => column(name, tickets))] }
 }
 
 // Interaction: the name a person types in the session list's field.

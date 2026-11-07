@@ -217,7 +217,7 @@ def _(s):
 
     @s.when("the Person opens help on the story_map fidelity")
     def _(world):
-        world.help = world.data_of(world.Board.current().help(slug="stories-story-map"))
+        world.help = world.data_of(world.Board.load().help(slug="stories-story-map"))
 
     @s.then("a side panel shows story_map's overview, guidance, and rules such as verb-noun-format")
     def _(world):
@@ -226,7 +226,7 @@ def _(s):
 
     @s.and_("it names the stage Discovery")
     def _(world):
-        expect(world.help["stage"]).to(equal("Discovery"))
+        expect(world.help["stage"]["name"]).to(equal("Discovery"))
 
     @s.and_("its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/fidelities/stories-story_map.html")
     def _(world):
@@ -241,7 +241,7 @@ def _(s):
 
     @s.when("the Person opens help on the Stories practice")
     def _(world):
-        world.help = world.data_of(world.Board.current().help(slug="stories"))
+        world.help = world.data_of(world.Board.load().help(slug="stories"))
 
     @s.then("a side panel shows Practice overview and SHARED RULES such as do-not-invent-requirements")
     def _(world):
@@ -250,7 +250,7 @@ def _(s):
 
     @s.and_("it names no fidelity")
     def _(world):
-        expect((world.help["fidelity"], world.help["stage"])).to(equal(("", "")))
+        expect((world.help["fidelity"], world.help["stage"])).to(equal((None, None)))
 
     @s.and_("its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/context-tools/stories.html")
     def _(world):
@@ -266,7 +266,7 @@ def _(s):
 
     @s.when("the Person opens help on the ddd model fidelity")
     def _(world):
-        world.help = world.data_of(world.Board.current().help(slug="ddd-model"))
+        world.help = world.data_of(world.Board.load().help(slug="ddd-model"))
 
     @s.then("its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/context-tools/ddd.html")
     def _(world):
@@ -283,7 +283,8 @@ def _(s):
     @s.when("the Person runs billing-report's next step")
     def _(world):
         world.before = world.data_of(world.Ticket.load(BILLING_REPORT.name))
-        world.discovery = column_in(world.data_of(world.Board.current().show()), "Discovery")
+        world.discovery = column_in(world.data_of(world.Board.load().show()), "Discovery")
+        world.next_fidelity = next(fidelity for fidelity in world.discovery["work_required"] if fidelity["slug"] == world.before["next"]["slug"])
 
     @s.then("Run next read Run next: generate before it ran")
     def _(world):
@@ -292,7 +293,7 @@ def _(s):
     # The board app writes the command from the stage's default format; the command itself is left to its specs.
     @s.and_("the chat receives the command /actions-generate stories-story-map format=markdown")
     def _(world):
-        expect(world.discovery["default_formats"][world.before["next"]["slug"]]).to(equal("markdown"))
+        expect(world.next_fidelity["default_format"]).to(equal("markdown"))
 
 
 @shared_stories.scenario("Send Next Fidelity Action", "Open the report while violations hold the ticket")

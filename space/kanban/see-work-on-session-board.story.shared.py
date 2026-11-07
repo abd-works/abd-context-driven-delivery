@@ -75,7 +75,7 @@ def _(s):
 
     @s.when("the Person opens the session board at http://127.0.0.1:8778")
     def _(world):
-        world.read = world.data_of(world.Board.current().show())
+        world.read = world.data_of(world.Board.load().show())
 
     @s.then("the header reads cdd-board-surface-fixture · 9 tickets · active: Checkout flow")
     def _(world):
@@ -104,7 +104,7 @@ def _(s):
 
     @s.and_("the Discovery stage requires story_map, bounded_context, and ia, each through Generate, Validate, and Review")
     def _(world):
-        required = (column_in(world.read, "Discovery")["work_required"], world.board.column("Discovery").actions)
+        required = ([fidelity["slug"] for fidelity in column_in(world.read, "Discovery")["work_required"]], world.board.column("Discovery").steps)
         expect(required).to(equal((["stories-story-map", "ddd-bounded-context", "ux-ia"], ["generate", "validate", "review"])))
 
 
@@ -117,7 +117,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.refusal = refusal_of(lambda: world.data_of(world.Board.current().show()))
+        world.refusal = refusal_of(lambda: world.data_of(world.Board.load().show()))
 
     @s.then("a toast says cdd board.show failed: JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)")
     def _(world):
@@ -132,7 +132,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.data_of(world.Board.current().show())
+        world.read = world.data_of(world.Board.load().show())
 
     @s.then("the Backlog column shows the backlog item Search the catalog")
     def _(world):
@@ -160,7 +160,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.data_of(world.Board.current().show())
+        world.read = world.data_of(world.Board.load().show())
 
     @s.then("the Backlog column shows one backlog item Gift cards with the text Sell them at the till.")
     def _(world):
@@ -179,7 +179,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.data_of(world.Board.current().show())
+        world.read = world.data_of(world.Board.load().show())
 
     @s.then("the Backlog column shows the backlog item Returns and refunds")
     def _(world):
@@ -195,7 +195,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.data_of(world.Board.current().show())
+        world.read = world.data_of(world.Board.load().show())
 
     @s.then("the Discovery stage shows the tickets Pet visits and Sign up")
     def _(world):
@@ -218,7 +218,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.data_of(world.Board.current().show())
+        world.read = world.data_of(world.Board.load().show())
 
     @s.then("second-spec shows In progress in the Specification stage")
     def _(world):
@@ -238,11 +238,11 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.data_of(world.Board.current().show())
+        world.read = world.data_of(world.Board.load().show())
 
     @s.then("pet-visits shows in the Specification stage")
     def _(world):
-        expect(ticket_in(world.read, PET_VISITS.name)["column"]).to(equal("Specification"))
+        expect(ticket_in(world.read, PET_VISITS.name)["column"]["name"]).to(equal("Specification"))
 
 
 @shared_stories.scenario("Display Ticket Card", "Outline the active ticket")
@@ -254,7 +254,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.data_of(world.Board.current().show())
+        world.read = world.data_of(world.Board.load().show())
 
     # The thick orange outline is drawn by ticket-card-view.tsx from the active ticket named here.
     @s.then("the header names Checkout flow as active")
@@ -274,7 +274,7 @@ def _(s):
 
     @s.then("the details show Billing report, root whole repository, and Discovery · in progress")
     def _(world):
-        expect((world.selected["title"], world.selected["session"]["workpath"], world.selected["column"], world.selected["is_done"])).to(equal(("Billing report", "", "Discovery", False)))
+        expect((world.selected["title"], world.selected["session"]["workpath"], world.selected["column"]["name"], world.selected["is_done"])).to(equal(("Billing report", "", "Discovery", False)))
 
     @s.and_("the details say No handoff yet and Next: stories-story-map, generate")
     def _(world):
@@ -316,7 +316,7 @@ def _(s):
 
     @s.and_("the limit is still 4 when the board is read again")
     def _(world):
-        expect(column_in(world.data_of(world.Board.current().show()), "Discovery")["wip_limit"]).to(equal(RAISED_DISCOVERY_LIMIT))
+        expect(column_in(world.data_of(world.Board.load().show()), "Discovery")["wip_limit"]).to(equal(RAISED_DISCOVERY_LIMIT))
 
 
 @shared_stories.scenario("Set Stage WIP Limit", "Give every stage a limit of 3 until a person sets one")
@@ -328,7 +328,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.data_of(world.Board.current().show())
+        world.read = world.data_of(world.Board.load().show())
 
     @s.then("Discovery, Specification, and Implementation each show the limit 3")
     def _(world):

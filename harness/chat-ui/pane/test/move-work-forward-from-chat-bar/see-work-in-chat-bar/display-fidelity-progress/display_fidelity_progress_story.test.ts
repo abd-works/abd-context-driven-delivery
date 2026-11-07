@@ -7,7 +7,7 @@ import { scenario, story } from '../../../story-test'
 // Epic: Move Work Forward From Chat Bar
 // Sub-epic: See Work In Chat Bar
 // Map: ../../../../../.context/story-map.md#s-chat-bar----display-fidelity-progress
-// Model: ../../../../../../kanban/.context/kanban-model.md
+// Model: ../../../../../../../space/kanban/.context/kanban-model.md
 // Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
 
 // (S) Chat Bar --> Display Fidelity Progress
@@ -15,7 +15,7 @@ story('Display Fidelity Progress', CHAT_BAR, () => {
   scenario('Shade each dot by its progress', ({ given, when, then, and }) => {
     // Evidence: inferred: CDR 0001 'Fidelity dots'; no chat bar code yet
     given('checkout-flow is In progress in Specification with the practices Stories, UX and Clean Engineering')
-    and('its [fidelity progress](../../../../../../kanban/.context/kanban-model.md#fidelityprogress) is stories-scenarios done, ux-mockup in progress and clean-engineering-model not started', async ($, on, scene) => {
+    and('its [fidelity progress](../../../../../../../space/kanban/.context/kanban-model.md#fidelityprogress) is stories-scenarios done, ux-mockup in progress and clean-engineering-model not started', async ($, on, scene) => {
       scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'stories-scenarios': DONE, 'ux-mockup': GENERATED }))
     })
     when('the Chat Bar draws checkout-flow')

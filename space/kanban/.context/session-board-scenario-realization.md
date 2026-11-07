@@ -416,7 +416,7 @@ it should let a ticket in any column be dropped on the Backlog
         <- BacklogItem
       <- Ticket | BacklogItem
   -> ActivationClient.start()
-    -> Ticket.workspace()
+    -> Ticket.branch()
     -> ActivationClient.show()
       -> BoardStore.change()
         -> board-store.saveLayout()
@@ -1244,7 +1244,7 @@ it should close the panel
 ```
 it should offer commit and push on leaving and open with merge off
 -> ActivationClient.start(chosen, false)
-  -> Ticket.workspace()
+  -> Ticket.branch()
   -> ActivationClient.show()
     -> BoardStore.change()
       -> board-store.saveLayout()
@@ -1254,7 +1254,7 @@ it should offer commit and push on leaving and open with merge off
 ```
 it should offer a branch to a ticket that has none
 -> ActivationClient.start(chosen, false)
-  -> Ticket.workspace()
+  -> Ticket.branch()
   -> ActivationClient.show()
     -> BoardStore.change()
       -> board-store.saveLayout()
@@ -1265,7 +1265,7 @@ it should offer a branch to a ticket that has none
 ```
 it should choose nothing to leave when the session has no branch
 -> ActivationClient.start(ticketOn)
-  -> Ticket.workspace()
+  -> Ticket.branch()
   -> ActivationClient.show()
     -> BoardStore.change()
       -> board-store.saveLayout()
@@ -1275,7 +1275,7 @@ it should choose nothing to leave when the session has no branch
 ```
 it should say what it switches from and to
 -> ActivationClient.start(chosen, false)
-  -> Ticket.workspace()
+  -> Ticket.branch()
   -> ActivationClient.show()
     -> BoardStore.change()
       -> board-store.saveLayout()
@@ -1287,7 +1287,7 @@ it should say what it switches from and to
 ```
 it should send what was chosen
 -> ActivationClient.start(chosen, false)
-  -> Ticket.workspace()
+  -> Ticket.branch()
   -> ActivationClient.show()
     -> BoardStore.change()
       -> board-store.saveLayout()
@@ -1309,7 +1309,7 @@ it should send what was chosen
 ```
 it should report it
 -> ActivationClient.start(chosen, false)
-  -> Ticket.workspace()
+  -> Ticket.branch()
   -> ActivationClient.show()
     -> BoardStore.change()
       -> board-store.saveLayout()
@@ -1333,7 +1333,7 @@ it should report it
 ```
 it should close the dialog
 -> ActivationClient.start(chosen, false)
-  -> Ticket.workspace()
+  -> Ticket.branch()
   -> ActivationClient.show()
     -> BoardStore.change()
       -> board-store.saveLayout()
@@ -1349,7 +1349,7 @@ it should close the dialog
 ```
 it should send nothing
 -> ActivationClient.start(chosen, false)
-  -> Ticket.workspace()
+  -> Ticket.branch()
   -> ActivationClient.show()
     -> BoardStore.change()
       -> board-store.saveLayout()
@@ -1366,7 +1366,7 @@ it should send nothing
 ```
 it should ask what to do with its work
 -> ActivationClient.start(active, true)
-  -> Ticket.workspace()
+  -> Ticket.branch()
   -> ActivationClient.show()
     -> BoardStore.change()
       -> board-store.saveLayout()
@@ -1377,7 +1377,7 @@ it should ask what to do with its work
 ```
 it should send what to do with its work
 -> ActivationClient.start(active, true)
-  -> Ticket.workspace()
+  -> Ticket.branch()
   -> ActivationClient.show()
     -> BoardStore.change()
       -> board-store.saveLayout()
@@ -1394,7 +1394,7 @@ it should send what to do with its work
 ```
 it should select the ticket in Complete
 -> ActivationClient.start(active, true)
-  -> Ticket.workspace()
+  -> Ticket.branch()
   -> ActivationClient.show()
     -> BoardStore.change()
       -> board-store.saveLayout()
@@ -2164,7 +2164,7 @@ it should share its practices with every other board loaded in the process, sinc
 
 ```
 it should show the board of the whole checkout, where sessions keep their folders
--> Board.current()
+-> Board.load(project)
 <- Board
 -> Board.repo_root
 <- Path
@@ -2188,7 +2188,7 @@ it should show every work session as a ticket
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
--> Board.current("pet-visits")
+-> Board.load(project).ticket("pet-visits")
 <- Board
 -> Board.tickets
 <- list[Ticket]
@@ -2200,7 +2200,7 @@ it should leave main off the board
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
--> Board.current("pet-visits")
+-> Board.load(project).ticket("pet-visits")
 <- Board
 -> Board.tickets
 <- list[Ticket]
@@ -2212,7 +2212,7 @@ it should show each backlog item in the Backlog column
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
--> Board.current("pet-visits")
+-> Board.load(project).ticket("pet-visits")
 <- Board
 -> Board.column("Backlog")
 <- Column
@@ -2230,7 +2230,7 @@ it should leave archived sessions off the board
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
--> Board.current("pet-visits")
+-> Board.load(project).ticket("pet-visits")
 <- Board
 -> Board.tickets
 <- list[Ticket]
@@ -2242,7 +2242,7 @@ it should show closed sessions in Complete
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
--> Board.current("pet-visits")
+-> Board.load(project).ticket("pet-visits")
 <- Board
 -> Board.column("Complete")
 <- Column
@@ -2260,7 +2260,7 @@ it should name the ticket of the current session as active
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
--> Board.current("pet-visits")
+-> Board.load(project).ticket("pet-visits")
 <- Board
 -> Board.active
   -> Repo.current_session
@@ -2274,7 +2274,7 @@ it should show tickets and backlog items alike as the board's cards
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
--> Board.current("pet-visits")
+-> Board.load(project).ticket("pet-visits")
 <- Board
 -> Board.cards
 <- list[Card]
@@ -2286,7 +2286,7 @@ it should count both a ticket and a backlog item as a card
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
--> Board.current("pet-visits")
+-> Board.load(project).ticket("pet-visits")
 <- Board
 -> Board.cards
 <- list[Card]
@@ -2298,7 +2298,7 @@ it should give each card one column
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
--> Board.current("pet-visits")
+-> Board.load(project).ticket("pet-visits")
 <- Board
 -> Card.column
 <- Column
@@ -2312,7 +2312,7 @@ it should list every column with its tickets or items
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
--> Board.current("pet-visits")
+-> Board.load(project).ticket("pet-visits")
 <- Board
 -> data_of(Board)
   <- the board's data fields, each column and card as its own data
@@ -3833,7 +3833,7 @@ it should create the ticket's branch when a ticket that has none is activated
   <- str
   -> Session.switch
 <- Ticket
--> Ticket.workspace(ticket="sign-up")
+-> Ticket.branch(ticket="sign-up")
 <- dict
 ```
 
@@ -3843,7 +3843,7 @@ it should say a ticket has no branch yet
   -> Session.log_guidance_action(action: str)
 -> Board.ticket("pet-visits", title="Pet visits")
 <- Ticket
--> Ticket.workspace(ticket="sign-up")
+-> Ticket.branch(ticket="sign-up")
 <- dict
 ```
 
@@ -3855,7 +3855,7 @@ it should say the ticket being left has no branch yet
   -> Session.log_guidance_action(action: str)
 -> Board.ticket("pet-visits", title="Pet visits")
 <- Ticket
--> Ticket.workspace(ticket="sign-up")
+-> Ticket.branch(ticket="sign-up")
 <- dict
 ```
 
@@ -3893,7 +3893,7 @@ it should leave the branch checked out as it was
 it should say the ticket being left is on its branch
 -> GuidanceAction.run(["git", "checkout", "-q", "-b", "pet-visits"], cwd=self.project.root, check=True)
   -> Session.log_guidance_action(action: str)
--> Ticket.workspace(ticket="sign-up")
+-> Ticket.branch(ticket="sign-up")
 <- dict
 ```
 
@@ -3974,14 +3974,14 @@ it should return exactly the fields TicketData names
 ```
 
 ```
-it should return exactly the fields WorkspaceData names
+it should return exactly the fields BranchData names
 -> Board.ticket("pet-visits", title="Pet visits")
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
 -> GuidanceAction.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
   -> Session.log_guidance_action(action: str)
--> Ticket.workspace(ticket="pet-visits")
+-> Ticket.branch(ticket="pet-visits")
 <- dict
 ```
 
