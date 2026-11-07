@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
-from harness.name.name import Name
+from harness.annotations.name import Name
 
 _LINK = re.compile(r"\[([^\]\n]+)\]\(([^)\s]*)\)")
 _STORY_FILE_SUFFIXES = ("_story.test.md", "_story.spec.md")

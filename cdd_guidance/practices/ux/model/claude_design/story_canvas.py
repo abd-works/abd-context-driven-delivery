@@ -18,7 +18,7 @@ from urllib.parse import quote, urlencode
 from harness.design_canvas.canvas import DesignCanvas, artboard, box, stem, thumbnail
 from harness.design_canvas.look import BACKGROUND, FONTS, LOOK
 from cdd_guidance.practices.ux.model.claude_design.nodes import ClaudeDesignUxMap
-from harness.name.name import Name
+from harness.annotations.name import Name
 from cdd_guidance.practices.ux.model.story_link import key_of
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Iterable
 
 from harness.agent_tools.agent_tools import AgentToolSet
-from harness.name.name import Name
+from harness.annotations.name import Name
 
 logger = logging.getLogger(__name__)
 

@@ -7,7 +7,7 @@ import inspect
 from pathlib import Path
 
 from harness.agent_tools.agent_tools import InstallDestination
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.installation.files import Skill  # noqa: F401 - defining Skill registers the skill channel this reads
 from harness.annotations.annotation import annotation_kinds
 

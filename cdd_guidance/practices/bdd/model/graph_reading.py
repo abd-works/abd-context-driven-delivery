@@ -7,7 +7,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.graph import Graph, PracticeGraph
 

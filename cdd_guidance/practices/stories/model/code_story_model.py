@@ -26,7 +26,7 @@ import textwrap
 from typing import Dict, List, Optional, Tuple, Union
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import render_call_graph_block
-from harness.name.name import Name
+from harness.annotations.name import Name
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock, WrittenKey
 from cdd_guidance.practices.stories.model.story_model import (
     Background,

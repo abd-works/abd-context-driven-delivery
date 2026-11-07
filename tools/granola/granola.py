@@ -13,7 +13,7 @@ from pathlib import Path
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import agent_tool, tool_subject
 from harness.installation.context_config import CONTEXT_FOLDER
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 

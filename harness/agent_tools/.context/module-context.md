@@ -9,7 +9,7 @@
 
 - **Purpose:** Let an author publish an ordinary class as operations and recipes an agent can list and use, and let every publisher (MCP, skills, hooks, the catalog) read those members from one place.
 - **Seam (terms):** AgentToolSet, AgentTool, AgentOperation, AgentInstructions, ToolSetCollection, ParameterSchema, InstallDestination, ToolCall, SessionOpener, SessionsNotLoaded, ChatPointer, ToolSubjectLoader; the annotations `@agent_toolset`, `@agent_tool`, `@agent_instructions`, `@tool_subject`, `@noSessionLog`, `@subAgent`; `tools(...)`, `instructions(...)`; `parameter_notes`
-- **Dependencies (one-way):** harness/name, harness/annotations, harness/markdown. space/session registers its *SessionOpener* with *ToolCall*; this module imports nothing above the framework.
+- **Dependencies (one-way):** harness/annotations (the annotations, and *Name* for every published name), harness/markdown. space/session registers its *SessionOpener* with *ToolCall*; this module imports nothing above the framework.
 
 ## Constraint
 

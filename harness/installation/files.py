@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from harness.agent_tools.agent_tools import AgentTool, InstallDestination
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.installation.destination import Installation
 from harness.installation.ide_layout import IdeLayout
 from harness.markdown.front_matter import FrontMatter

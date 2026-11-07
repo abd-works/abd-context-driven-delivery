@@ -13,7 +13,7 @@ from typing import Any, Dict, Iterable, List, Optional
 from harness.graph.model_node import ModelChildren
 from harness.graph.model_node import ModelNode
 from harness.graph.graph import Graph
-from harness.name.name import Name
+from harness.annotations.name import Name
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock

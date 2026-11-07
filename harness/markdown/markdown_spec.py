@@ -10,7 +10,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_none, contain, equal, expect, raise_error
+from expects import be, be_none, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from harness.guidance.fixtures.other_tool.other_tool_host import OtherTool
@@ -58,6 +58,22 @@ with description("a co-located markdown file beside the module"):
                 expect(type(rendered)).to(equal(HTML))
                 expect(str(rendered)).to(contain("known prose for guidance in sample tool"))
                 expect(str(rendered)).to(contain("<p>"))
+
+    with context("with one Markdown read more than once"):
+        with before.each:
+            self.section = Markdown.from_label(SampleTool(), "guidance")
+            self.first = self.section.extract()
+
+        with it("should locate its section once"):
+            expect(self.section.location).to(be(self.section.location))
+
+        with it("should keep the document it read the first time"):
+            document = self.section.document
+            self.section.extract()
+            expect(self.section.document).to(be(document))
+
+        with it("should answer the same prose each time"):
+            expect(self.section.extract()).to(equal(self.first))
 
 
 class _MistypedSampleTool(SampleTool):

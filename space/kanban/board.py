@@ -14,7 +14,7 @@ from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.repo.repo import Repo
 from space.session.session_log import SessionLog

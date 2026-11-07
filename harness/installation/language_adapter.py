@@ -17,7 +17,7 @@ from pathlib import Path, PurePosixPath
 from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_origin, get_type_hints
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, OnSubject, ToolSubjectLoader
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.installation.destination import DataClass, Installation, SourceFile
 
 _FOLDER = "language-adapters"
