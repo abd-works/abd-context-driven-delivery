@@ -49,8 +49,8 @@ with description("guidance diagnostics install"):
         probe.arguments.cleanup()
         expect(missing).to(equal([]))
         expect(args["format"]).to(equal("markdown"))
-        expect(args["paths"][0]).to(contain("cdd_guidance"))
-        expect(args["paths"][0]).to(contain("practices"))
+        expect(args["source"]).to(equal("markdown"))
+        expect(args["paths"][0]).to(contain("cdd-guidance-probe-"))
         probe.actions()
         data = json.loads((tree / "diagnostics.json").read_text(encoding="utf-8"))
         item = data["guidance"]["actions"]["items"][0]
