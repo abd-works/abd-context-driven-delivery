@@ -78,8 +78,9 @@ class MarkdownIncrement(Increment):
     """Increment leaf node for the Markdown format. Knows how to parse thin-slicing.md."""
 
     @classmethod
-    def from_workspace(cls, root: "Path") -> List["MarkdownIncrement"]:
-        """Find thin-slicing markdown in *root* and return parsed increments."""
+    def from_workspace(cls, root: "Path", stories: Dict[str, "Story"]) -> List["MarkdownIncrement"]:
+        """Find thin-slicing markdown in *root* and return parsed increments, each delivering the map's own stories,
+        which stories holds by name."""
         root = Path(root).resolve()
         if root.is_file():
             return []
@@ -87,20 +88,21 @@ class MarkdownIncrement(Increment):
             candidate = root / name
             if candidate.exists():
                 rel = str(candidate.relative_to(root)).replace("\\", "/")
-                return cls.parse(candidate.read_text(encoding="utf-8"), rel)
+                return cls.parse(candidate.read_text(encoding="utf-8"), rel, stories)
             for found in root.rglob(name):
                 rel = str(found.relative_to(root)).replace("\\", "/")
-                return cls.parse(found.read_text(encoding="utf-8"), rel)
+                return cls.parse(found.read_text(encoding="utf-8"), rel, stories)
         return []
 
     @classmethod
-    def parse(cls, text: str, rel_file: str, line_offset: int = 0) -> List["MarkdownIncrement"]:
-        """Parse a thin-slicing.md body into a list of MarkdownIncrement nodes."""
+    def parse(cls, text: str, rel_file: str, stories: Dict[str, "Story"]) -> List["MarkdownIncrement"]:
+        """Parse a thin-slicing.md body into a list of MarkdownIncrement nodes; each bullet names a story the map
+        holds, which stories holds by name."""
         increments: List[MarkdownIncrement] = []
         current: Optional[MarkdownIncrement] = None
         in_stories = False
 
-        for idx, raw in enumerate(text.splitlines(), start=1 + line_offset):
+        for idx, raw in enumerate(text.splitlines(), start=1):
             stripped = raw.strip()
             if not stripped:
                 continue
@@ -129,7 +131,9 @@ class MarkdownIncrement(Increment):
                 in_stories = False
             elif in_stories:
                 if m := _BULLET.match(raw):
-                    current.stories.append(strip_markup(m.group(1)))
+                    story = stories.get(strip_markup(m.group(1)))
+                    if story is not None:
+                        current.stories.append(story)
                 else:
                     in_stories = False
 
@@ -964,6 +968,7 @@ class MarkdownStoryModel(StoryModel):
                 raise MarkdownParseError(f"{md_path}: {err}") from err
             # Stamp before merging: a second file's headings would otherwise land on the first file's epics.
             parsed.attach_source_locations(text, rel)
+            self.source_texts[rel] = text
             for epic in parsed.epics:
                 self.epics.append(epic)
             if not self.has_source_file:
@@ -979,7 +984,8 @@ class MarkdownStoryModel(StoryModel):
             epic._load_scenarios(scenarios)
         if self.increments:
             return
-        for increment in MarkdownIncrement.from_workspace(root):
+        stories = {story.name: story for story in self.every_story()}
+        for increment in MarkdownIncrement.from_workspace(root, stories):
             self.increments.append(increment)
 
     # -- Uniform Callable Surface ----------------------------------------------

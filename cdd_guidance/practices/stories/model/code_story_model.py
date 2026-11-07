@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import re
 import textwrap
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import render_call_graph_block
@@ -337,6 +338,14 @@ class CodeStoryModel(StoryModel):
     epic_type = CodeEpic
     story_type = CodeStory
     increment_type = CodeIncrement
+    story_test_suffix = ""
+    """How a story test file in this language ends, such as ``_story.test.py``; empty for a language whose story
+    tests are not read beside a story map."""
+
+    @classmethod
+    def reads_story_test(cls, path: Path) -> bool:
+        """True when the file at path is a story test in this language, which this model's story type reads."""
+        return bool(cls.story_test_suffix) and Path(path).name.endswith(cls.story_test_suffix)
 
     def __init__(self, source: "StoryModel | str | None" = None, tests_root: str | None = None):
         if isinstance(source, str):

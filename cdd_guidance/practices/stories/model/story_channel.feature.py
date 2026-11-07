@@ -18,6 +18,7 @@ from cdd_guidance.practices.stories.model.json.nodes import JsonStoryModel
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStoryModel
 from cdd_guidance.practices.stories.model.miro.nodes import MiroStoryModel
 from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.stories.model.java.java_story_model import JavaStoryModel
 from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
 from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
@@ -227,7 +228,7 @@ def _expected_typescript() -> dict:
 
 def load_source(name: str) -> StoryModel:
     if name == "markdown":
-        return StoryModel.load(EXPECTED)
+        return Stories().read_folder(EXPECTED)
     if name == "drawio":
         return DrawIOStoryModel().load((EXPECTED / "story-map.drawio").read_text(encoding="utf-8"))
     return TypeScriptStoryModel().load(_expected_typescript())

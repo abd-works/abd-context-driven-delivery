@@ -40,8 +40,13 @@ class BehaviorNode(ModelNode):
     `written` is how the block was spelled in the language it was read from, and `setup` the code above its first
     child, so a render into the same language can write both back."""
 
-    _practice_key = "bdd"
     graph_facts = ("expect_count", "has_implementation", "private_probe")
+
+    @classmethod
+    def practice_kind(cls) -> type:
+        from cdd_guidance.practices.bdd.bdd import Bdd
+
+        return Bdd
 
     def __init__(self, name: str, sequential_order: int = 1, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)

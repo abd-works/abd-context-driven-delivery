@@ -18,6 +18,7 @@ from cdd_guidance.practices.stories.model.story_model import Epic
 
 class JavaScriptStoryModel(BraceStoryModel):
     LEAF_EXTENSION = "_story.test.js"
+    story_test_suffix = LEAF_EXTENSION
     epic_type = JavaScriptEpic
     story_type = JavaScriptStory
     language = JAVASCRIPT

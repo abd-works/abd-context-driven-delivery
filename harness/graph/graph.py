@@ -898,7 +898,24 @@ class Graph:
         practice = self._held.get(key)
         if practice is None:
             raise UnknownPractice(key, tuple(self._held))
-        if key not in self.practices:
+        return self._opened(practice)
+
+    def practice_of(self, kind: type) -> PracticeGuidance:
+        """The practice of class kind among those this graph holds, such as its Stories for ``Stories``, opened like
+        ``practice``. Code that knows the practice's class asks for it by that class, never by its key."""
+        practice = next((held for held in self._held.values() if type(held) is kind), None)
+        if practice is None:
+            raise UnknownPractice(kind.__name__, tuple(self._held))
+        return self._opened(practice)
+
+    def loaded(self, kind: type) -> PracticeGuidance | None:
+        """The practice of class kind when the last load reads it; none when it reads no such practice. A practice that
+        links its nodes to another's, or checks them against another's, asks this, so it opens nothing."""
+        return next((practice for practice in self.practices.values() if type(practice) is kind), None)
+
+    def _opened(self, practice: PracticeGuidance) -> PracticeGuidance:
+        """practice, opened in this graph on the folder it last loaded the first time it is asked for."""
+        if practice.key not in self.practices:
             self._open_practice(practice, self._source_roots.get(practice) or self._folder)
         return practice
 

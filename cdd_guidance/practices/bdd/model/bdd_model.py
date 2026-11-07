@@ -17,10 +17,15 @@ from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 
 
 class BddModel(ModelNode):
-    _practice_key = "bdd"
     _semantic_type_name = "Spec"
     graph_facts = ("patches_infrastructure", "signature_marker", "top_level_describes", "code_like_describe_lines", "private_probe")
     _belongs = {("Description", "Spec")}
+
+    @classmethod
+    def practice_kind(cls) -> type:
+        from cdd_guidance.practices.bdd.bdd import Bdd
+
+        return Bdd
 
     def __init__(self, graph: Graph | None = None) -> None:
         super().__init__("spec", 0, graph)
@@ -34,7 +39,7 @@ class BddModel(ModelNode):
 
     @descriptions.setter
     def descriptions(self, descriptions: list[Description]) -> None:
-        self._refill(self._descriptions, descriptions)
+        self._descriptions.refill(descriptions)
 
 
     def parse(self, text: str) -> "BddModel":

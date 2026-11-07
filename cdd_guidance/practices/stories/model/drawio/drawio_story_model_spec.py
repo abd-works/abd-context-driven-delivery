@@ -20,7 +20,6 @@ from cdd_guidance.practices.stories.model.story_model import Scenario
 from cdd_guidance.practices.stories.model.diagram_story_model import DiagramEpic, DiagramEpic
 from cdd_guidance.practices.stories.model.drawio.nodes import (
     DrawIOEpic,
-    DrawIOIncrement,
     DrawIOParseError,
     DrawIOStory,
     DrawIOStoryModel,
@@ -162,15 +161,16 @@ with description("a DrawIO Story Map") as self:
     with context("rendering the thin-slice view for a StoryModel with 2 increments"):
         with before.each:
             self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
+            stories = {story.name: story for story in self.source.every_story()}
             inc_a = Increment(
                 "Increment A - first outcome",
                 1,
-                [Story("Story 1.1.1", 1), Story("Story 1.2.1", 2)],
+                [stories["Story 1.1.1"], stories["Story 1.2.1"]],
             )
-            inc_b = Increment("Increment B - second outcome", 2, [Story("Story 1.3.1", 1)])
+            inc_b = Increment("Increment B - second outcome", 2, [stories["Story 1.3.1"]])
             self.source.append_increment(inc_a)
             self.source.append_increment(inc_b)
-            self.text = DrawIOIncrement.save(self.source)
+            self.text = self.source.save_thin_slice()
 
         with it("should serialize as a valid DrawIO document with mxfile envelope"):
             root_el = ET.fromstring(self.text)
@@ -219,6 +219,22 @@ with description("a DrawIO Story Map") as self:
             )
             label_x = int(label.find("mxGeometry").attrib["x"])
             expect(label_x < LEFT_MARGIN_X).to(be_true)
+
+        with context("read back into a map holding the same stories"):
+            with before.each:
+                self.read = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story().load_thin_slice(self.text)
+
+            with it("should recover both increments by name"):
+                expect([increment.name for increment in self.read.increments]).to(
+                    equal(["Increment A - first outcome", "Increment B - second outcome"])
+                )
+
+            with it("should deliver the map's own stories"):
+                own = self.read.every_story()
+                expect(all(any(story is mine for mine in own) for increment in self.read.increments for story in increment.stories)).to(be_true)
+
+            with it("should leave each story under its own epic"):
+                expect([story.parent.name for story in self.read.increments[0].stories]).to(equal(["Epic 1.1", "Epic 1.2"]))
 
     with context("that stacks nested sub-epics by depth (parent above children)"):
         with before.each:

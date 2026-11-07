@@ -37,6 +37,13 @@ _ARROWS = ("→", "->")
 _HELD_BY = "(by"
 
 
+def _ddd_practice(cls) -> type:
+    """The DDD practice's class: every DDD node belongs to it, though most subclass a Clean Engineering node."""
+    from cdd_guidance.practices.ddd.ddd import Ddd
+
+    return Ddd
+
+
 class Integration:
     """An arrow from an aggregate to another class."""
 
@@ -80,7 +87,7 @@ class InvariantObject(Property):
     """A property that changes with its entity. Stereotype is invariant."""
 
     _semantic_type_name = "InvariantObject"
-    _practice_key = "ddd"
+    practice_kind = classmethod(_ddd_practice)
 
     def __init__(self, name: str = "", sequential_order: int = 0, source: "InvariantObject | None" = None, **kwargs) -> None:
         if source is not None:
@@ -127,7 +134,7 @@ class Entity(OoadClass):
     """Identity that stays the same when its values change."""
 
     _semantic_type_name = "Entity"
-    _practice_key = "ddd"
+    practice_kind = classmethod(_ddd_practice)
     _belongs = {("InvariantObject", "Entity")}
 
     def __init__(self, name: str = "", sequential_order: int = 0, source: "Entity | None" = None, **kwargs) -> None:
@@ -166,7 +173,7 @@ class ValueObject(OoadClass):
     """No write operations and no setters. create, clone, and mix return a new instance."""
 
     _semantic_type_name = "ValueObject"
-    _practice_key = "ddd"
+    practice_kind = classmethod(_ddd_practice)
 
     def __init__(self, name: str = "", sequential_order: int = 0, source: "ValueObject | None" = None, **kwargs) -> None:
         if source is not None:
@@ -188,7 +195,7 @@ class Repository(OoadClass):
     """A collection. Operations are any of create, read, update, delete, and search."""
 
     _semantic_type_name = "Repository"
-    _practice_key = "ddd"
+    practice_kind = classmethod(_ddd_practice)
 
     def __init__(self, name: str = "", sequential_order: int = 0, source: "Repository | None" = None, **kwargs) -> None:
         if source is not None:
@@ -208,7 +215,7 @@ class DomainService(OoadClass):
     """No state. An operation here is one no domain object can perform."""
 
     _semantic_type_name = "DomainService"
-    _practice_key = "ddd"
+    practice_kind = classmethod(_ddd_practice)
 
     def __init__(self, name: str = "", sequential_order: int = 0, source: "DomainService | None" = None, **kwargs) -> None:
         if source is not None:
@@ -226,7 +233,7 @@ class DomainEvent(Property):
     """One producer aggregate, one or many consumers, and a subject property."""
 
     _semantic_type_name = "DomainEvent"
-    _practice_key = "ddd"
+    practice_kind = classmethod(_ddd_practice)
 
     def __init__(self, name: str = "", sequential_order: int = 0, source: "DomainEvent | None" = None, **kwargs) -> None:
         if source is not None:
@@ -254,7 +261,7 @@ class DomainEvent(Property):
 
 class Specification(OoadClass):
     _semantic_type_name = "Specification"
-    _practice_key = "ddd"
+    practice_kind = classmethod(_ddd_practice)
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
@@ -262,7 +269,7 @@ class Specification(OoadClass):
 
 class Factory(OoadClass):
     _semantic_type_name = "Factory"
-    _practice_key = "ddd"
+    practice_kind = classmethod(_ddd_practice)
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
@@ -291,7 +298,7 @@ class Aggregate(Module):
     """Knows its root entity and its integrations. The entity loads invariant objects."""
 
     _semantic_type_name = "Aggregate"
-    _practice_key = "ddd"
+    practice_kind = classmethod(_ddd_practice)
     _belongs = {
         ("Entity", "Aggregate"),
         ("ValueObject", "Aggregate"),
@@ -340,7 +347,7 @@ class BoundedContext(Module):
     """A module of aggregates. A nested context is a context whose parent is a context."""
 
     _semantic_type_name = "BoundedContext"
-    _practice_key = "ddd"
+    practice_kind = classmethod(_ddd_practice)
     _belongs = {
         ("Aggregate", "BoundedContext"),
         ("BoundedContext", "BoundedContext"),

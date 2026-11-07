@@ -15,52 +15,98 @@ from harness.graph.graph import EdgeType, Graph, Node, Source
 NO_SOURCE_FILE = "."
 
 
-class ModelChildren(list):
-    """The list callers already append to. Appending records the graph edge."""
+class _RecordedList(list):
+    """A list on a model object whose every change records or drops the owner's edge of one kind to the item."""
 
     def __init__(self, owner: "ModelNode", kind: str) -> None:
         super().__init__()
         self.owner = owner
         self.kind = kind
-        owner._child_lists.append(self)
 
-    def append(self, child) -> None:
-        list.append(self, child)
-        self.owner._link(child, self.kind)
+    def append(self, item) -> None:
+        list.append(self, item)
+        self._record(item)
 
-    def extend(self, children: Iterable) -> None:
-        for child in children:
-            self.append(child)
+    def extend(self, items: Iterable) -> None:
+        for item in items:
+            self.append(item)
 
-    def insert(self, index: int, child) -> None:
-        list.insert(self, index, child)
-        self.owner._link(child, self.kind)
+    def insert(self, index: int, item) -> None:
+        list.insert(self, index, item)
+        self._record(item)
 
     def pop(self, index: int = -1):
-        child = list.pop(self, index)
-        self.owner._unlink(child, self.kind)
-        return child
+        item = list.pop(self, index)
+        self._drop(item)
+        return item
 
-    def __setitem__(self, index, child) -> None:
+    def __setitem__(self, index, item) -> None:
         if isinstance(index, slice):
-            self.owner._refill(self, list(child))
+            self.refill(list(item))
             return
-        list.__setitem__(self, index, child)
+        list.__setitem__(self, index, item)
+        self._record(item)
+
+    def refill(self, incoming: Iterable) -> None:
+        """Hold exactly incoming from now on, dropping the edge to each item held before."""
+        for item in list(self):
+            self._drop(item)
+        self.clear()
+        for item in incoming:
+            self.append(item)
+
+    def _record(self, item) -> None:
+        raise NotImplementedError
+
+    def _drop(self, item) -> None:
+        raise NotImplementedError
+
+
+class ModelChildren(_RecordedList):
+    """The list of the parts an owner is made of. Appending a part makes the owner its parent and records the edge."""
+
+    def __init__(self, owner: "ModelNode", kind: str) -> None:
+        super().__init__(owner, kind)
+        owner._child_lists.append(self)
+
+    def _record(self, child) -> None:
         self.owner._link(child, self.kind)
+
+    def _drop(self, child) -> None:
+        self.owner._unlink(child, self.kind)
+
+
+class ModelReferences(_RecordedList):
+    """The list of model objects an owner refers to without owning them, such as the stories an increment delivers,
+    which stay under their own epic. Appending records a relationship edge; the object keeps its parent."""
+
+    def __init__(self, owner: "ModelNode", kind: str) -> None:
+        super().__init__(owner, kind)
+        owner._reference_lists.append(self)
+
+    def _record(self, target) -> None:
+        self.owner._refer(target, self.kind)
+
+    def _drop(self, target) -> None:
+        self.owner._unlink(target, self.kind)
+
+    def record_all(self) -> None:
+        """Record the edge to every object held, as on a graph the owner has just moved to."""
+        for target in self:
+            self._record(target)
 
 
 class ModelWithoutPractice(TypeError):
     """A model object class that names no practice, so the graph cannot tell which practice graph it belongs to."""
 
     def __init__(self, model_class: type) -> None:
-        super().__init__(f"{model_class.__name__} names no practice: set _practice_key on it or a base class.")
+        super().__init__(f"{model_class.__name__} names no practice: give it or a base class a practice_kind.")
         self.model_class = model_class
 
 
 class ModelNode(Node):
     """Base model object for one practice. Subclasses name the practice and the belongsTo pairs."""
 
-    _practice_key: str = ""
     _semantic_type_name: str = "Node"
     _belongs: set[tuple[str, str]] = set()
     _schema_edge_fields: frozenset[str] = frozenset({"source", "collaborators", "dependencies", "type_hint", "return_type", "callees"})
@@ -80,14 +126,20 @@ class ModelNode(Node):
         wrapped._schema_wrapped = True
         cls.__init__ = wrapped
 
+    @classmethod
+    def practice_kind(cls) -> type:
+        """The class of the practice this object's graph node belongs to, such as ``Stories``. Each practice's base model
+        class answers it, importing its practice's class when asked, since the practice's own module may import its
+        model."""
+        raise ModelWithoutPractice(cls)
+
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
-        if not type(self)._practice_key:
-            raise ModelWithoutPractice(type(self))
         graph = graph or Graph()
-        # A model class names its practice by key; the graph holds that practice, so this finds it, never makes one.
-        practice = graph.practice(type(self)._practice_key)
+        # The graph holds the practice of that class, so this finds it, never makes one.
+        practice = graph.practice_of(type(self).practice_kind())
         semantic = type(self)._semantic_type_name
         self._child_lists: list[ModelChildren] = []
+        self._reference_lists: list[ModelReferences] = []
         Node.__init__(
             self,
             practice,
@@ -132,12 +184,11 @@ class ModelNode(Node):
             or (edge.parent is child and edge.child is self and edge.kind == "belongsTo"),
         )
 
-    def _refill(self, children: ModelChildren, incoming: Iterable) -> None:
-        for child in list(children):
-            self._unlink(child, children.kind)
-        children.clear()
-        for child in incoming:
-            children.append(child)
+    def _refer(self, target, kind: str) -> None:
+        """Record a relationship edge of kind to target when both are on one graph; an owner that moves to another
+        graph records it there (``_adopt``)."""
+        if isinstance(target, ModelNode) and target is not self and target.graph is self.graph:
+            self.graph.record(EdgeType.from_kind(kind, "relationship"), self, target)
 
     def _adopt(self, child: "ModelNode") -> None:
         if child.practice is self.practice:
@@ -150,6 +201,9 @@ class ModelNode(Node):
                 node._move_to(self.practice)
         for edge in carried:
             self.graph.record(EdgeType(edge.kind, edge.order, edge.display), edge.parent, edge.child)
+        for node in subtree:
+            for references in node._reference_lists:
+                references.record_all()
 
     def _move_to(self, practice) -> None:
         if self.practice is practice:
