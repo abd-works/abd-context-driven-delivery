@@ -17,7 +17,7 @@ from harness.mcp.mcp_server import mcp
 from harness.annotations.name import Name
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.repo.repo import Repo
-from space.session.session_log import SessionLog
+from space.session.session_log import LogTimestamp
 from space.session.session import MAIN_SESSION_NAME
 from space.session.sessions import Sessions
 
@@ -203,7 +203,7 @@ class Board:
     @noSessionLog
     def folders(self, path: str = "") -> list[str]:
         """List the folders inside path, a folder in the repository (its top when empty), as paths from the project, for a person choosing a workpath or a practice root. Installed packages, caches, and hidden folders hold no one's work, so they are left out."""
-        return sorted(entry.path for entry in self._repo.file_manager.list(path).folders)
+        return sorted(entry.path for entry in self.sessions.file_manager.list(path).folders)
 
     @mcp
     @agent_tool
@@ -407,7 +407,7 @@ class Card(ABC):
     def move_previous(self) -> Card: ...
 
     def _timestamp(self, moment: datetime) -> str:
-        return SessionLog.timestamp(moment)
+        return str(LogTimestamp(moment))
 
 
 class Help:

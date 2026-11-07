@@ -60,8 +60,8 @@ class ProbeArguments:
     def work_session(self) -> Any:
         """The main session of a new temp project, for probing operations that write under the session's root, so a
         probe never writes into the session being worked on; ``cleanup`` removes the project, its log included. It is
-        opened the way every tool call opens its session."""
-        return ToolCall(project=self._temp_dir()).session
+        opened through the sessions registered with *ToolCall*, so diagnostics never import them."""
+        return ToolCall.session_in(self._temp_dir())
 
     def cleanup(self) -> None:
         """Remove the files and folders the probe made."""

@@ -449,7 +449,7 @@ with description("a language adapter"):
     with description("the generated views of an annotated toolset"):
         with before.all:
             install_path = Path(tempfile.mkdtemp(prefix="language-adapter-views-"))
-            _install(install_path, ("harness.installation._examples.note:Note", "tools.file_manager.file_manager:FileManager"))
+            _install(install_path, ("harness.installation._examples.note:Note", "space.session.file_manager:FileManager"))
             root = install_path / _ADAPTERS
             self.note = (root / "harness/installation/_examples/note.ts").read_text(encoding="utf-8")
             self.views = (root / "harness/installation/_examples/note-views.tsx").read_text(encoding="utf-8")
@@ -510,7 +510,7 @@ with description("a language adapter"):
 
         with description("the shared file views"):
             with it("should read files through the file manager's generated client"):
-                expect(self.file_views).to(contain("from './tools/file_manager/file-manager'"))
+                expect(self.file_views).to(contain("from './space/session/file-manager'"))
 
             with it("should take Monaco from the application"):
                 expect(self.file_views).to(contain("from '@monaco-editor/react'"))
