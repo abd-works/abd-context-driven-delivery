@@ -47,15 +47,15 @@ class Bdd(PracticeGuidance):
     # In the knowledge graph: BDD's describe trees, linked to the Clean Engineering members each observation drives.
     node_types = ("Spec", "Description", "Context", "Observation")
 
-    def read_working_copy(self, practice_graph) -> None:
+    def read_working_copy(self) -> None:
         """Each spec file's language model reads its describe tree, whose spec, descriptions, contexts, and observations
-        are added to the BDD practice graph as they are."""
+        are added to its graph as they are."""
         from cdd_guidance.practices.bdd.model.graph_reading import read_specs
 
-        read_specs(practice_graph)
+        read_specs(self)
 
-    def link_to_other_practices(self, graph) -> None:
+    def link_to_other_practices(self) -> None:
         """Link each observation to the operations and properties of the code it drives."""
         from cdd_guidance.practices.bdd.model.graph_reading import link_observations
 
-        link_observations(graph)
+        link_observations(self.graph)

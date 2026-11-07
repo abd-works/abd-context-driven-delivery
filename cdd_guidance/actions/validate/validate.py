@@ -97,23 +97,32 @@ class Validate(GuidanceAction):
         so its fidelity's reports go to that session; an item with no current fidelity, or no practice a session works
         on, has none."""
         items = [item for item in self.listed() if not isinstance(item, str)]
-        currents = [(item, getattr(getattr(item, "fidelities", None), "current", None)) for item in items]
-        return [current for item, current in currents if current is not None and self._session_practice(item) is not None]
+        worked = [(item, self.fidelity_of(item)) for item in items]
+        return [fidelity for item, fidelity in worked if fidelity is not None and self._session_practice(item) is not None]
 
     def _checked_outputs(self) -> CheckedOutputs:
-        """Each listed guidance with its fidelity outputs, by format. Validate checks one format, the guidance's own:
-        the format the guidance names, else the one the latest generate wrote, else the fidelity's default. A
-        fidelity's formats mirror each other, so checking every one reports each finding once per format."""
-        return [(item, self._fidelity_outputs(item)) for item in self.listed() if not isinstance(item, str)]
+        """Each listed guidance with the format this call checks and its fidelity outputs, by format. Validate checks
+        one format, the guidance's own: the format the guidance names, else the one its fidelity last used, else the
+        fidelity's default. It is read once, here, so the whole call checks that format. A fidelity's formats mirror
+        each other, so checking every one reports each finding once per format."""
+        return [(item, *self._checked_format_and_outputs(item)) for item in self.listed() if not isinstance(item, str)]
 
-    def _fidelity_outputs(self, item) -> dict[str, list[str]]:
-        return item.output_paths() if isinstance(item, PracticeGuidance) else {}
+    def _checked_format_and_outputs(self, item) -> tuple[str, dict[str, list[str]]]:
+        """The format this call checks item's fidelity in, and where that fidelity writes each format."""
+        fidelity = self.fidelity_of(item)
+        if fidelity is None or not isinstance(item, PracticeGuidance):
+            return item.format, {}
+        return fidelity.format, self._fidelity_outputs(fidelity)
+
+    def _fidelity_outputs(self, fidelity) -> dict[str, list[str]]:
+        """Where fidelity writes each format in this action's session."""
+        return fidelity.output_paths()
 
     def _judging_instruction(self, checked: CheckedOutputs, graph_paths: list[Path]) -> str:
         """What the judge judges for each listed guidance: at a model or code fidelity with a graph, the graph validate
         built; otherwise the checked format's files."""
-        graph_judged = [(item, outputs) for item, outputs in checked if graph_paths and self._judges_graph(item)]
-        file_judged = [(item, outputs) for item, outputs in checked if not (graph_paths and self._judges_graph(item))]
+        graph_judged = [entry for entry in checked if graph_paths and self._judges_graph(entry[0])]
+        file_judged = [entry for entry in checked if not (graph_paths and self._judges_graph(entry[0]))]
         sentences = []
         if graph_judged:
             sentences.append(
@@ -130,11 +139,11 @@ class Validate(GuidanceAction):
         return "\n\n".join(sentences)
 
     def _judged_files(self, checked: CheckedOutputs) -> str:
-        return "; ".join(f"{item.format}: {', '.join(outputs.get(item.format, []))}" for item, outputs in checked)
+        return "; ".join(f"{format}: {', '.join(outputs.get(format, []))}" for _item, format, outputs in checked)
 
     def _judges_graph(self, item) -> bool:
-        current = getattr(getattr(item, "fidelities", None), "current", None)
-        return current is not None and current.is_judged_on_graph
+        fidelity = self.fidelity_of(item)
+        return fidelity is not None and fidelity.is_judged_on_graph
 
     def _listed_practices(self) -> list:
         """Each listed practice as this action's session holds it, which logs its own validate line; guidance that is no

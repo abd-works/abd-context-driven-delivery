@@ -121,6 +121,35 @@ class GuidanceArgument:
         return PracticeCatalogue.toolset_ref(text) if _GUIDANCE_SLUG.match(text) else None
 
 
+class _NamedPractice:
+    """The practice CDD has that one listed Guidance names, with the fidelity and format it names: a ref, a ref mapping,
+    or a practice already made, whose current fidelity and format are the ones it names. A mapping with constructor
+    arguments of its own, or any other guidance, names no practice of a session."""
+
+    def __init__(self, raw: Any) -> None:
+        from harness.guidance.guidance import PracticeGuidance
+
+        self.key: str | None = None
+        self.fidelity = ""
+        self.format = ""
+        if isinstance(raw, PracticeGuidance):
+            self._made(raw)
+        elif isinstance(raw, dict) and not raw.get("context"):
+            self.key = PracticeCatalogue.key_of(str(raw.get("toolset") or ""))
+            self.fidelity = str(raw.get("fidelity") or "")
+            self.format = str(raw.get("format") or "")
+        elif isinstance(raw, str):
+            self.key = PracticeCatalogue.key_of(raw)
+
+    def _made(self, practice: Any) -> None:
+        if not PracticeCatalogue.has(practice.key):
+            return
+        current = practice.fidelities.current
+        self.key = practice.key
+        self.fidelity = current.name if current is not None else ""
+        self.format = practice.format or ""
+
+
 class ActionWorksInNoSession(Exception):
     """An action made for no session, such as one listed for install, was asked for the session it works in."""
 
@@ -156,6 +185,9 @@ class GuidanceAction:
         self._tool_items: list = []
         self._listed_items: list | None = None
         self._logged_session_action: str | None = None
+        # The fidelity this action works at on each listed practice, by the practice's id: the one its guidance named,
+        # read once when listed, so a later call on another fidelity of the same practice does not change this one's.
+        self._worked_at: dict[int, Any] = {}
 
     def for_call(self, call: ToolCall) -> GuidanceAction:
         """An action of this kind made for call and working on the guidance it names: in the session that guidance names
@@ -248,24 +280,37 @@ class GuidanceAction:
         return self._guidance_text
 
     def listed(self) -> list:
-        """The Guidance this action works on, each practice worked on in this action's session: its practice adopts it,
-        and a fidelity the guidance named no format for works in the format it was last given in that session."""
+        """The Guidance this action works on. A practice CDD has is the session's own instance of it, the one the
+        session's graph holds, working from now on at the fidelity the guidance names, whose format is the one the
+        guidance names, else the one that fidelity last used; any other guidance is made from its ref."""
         if self._guidance_text is not None:
             return []
         if self._listed_items is None:
-            items = AgentToolSet.instantiate_all(self._tool_items)
-            for item, raw in zip(items, self._tool_items):
-                self._work_in_session(item, chose_format=self._chooses_format(raw))
-            self._listed_items = items
+            self._listed_items = [self._worked_on(raw) for raw in self._tool_items]
         return self._listed_items
 
-    def _names_format(self, raw: Any) -> bool:
-        return isinstance(raw, dict) and bool(raw.get("format"))
+    def _worked_on(self, raw: Any) -> Any:
+        """What raw names: the session's own practice, worked at the fidelity and format raw names, or guidance made
+        from raw when it names no practice of this action's session."""
+        named = _NamedPractice(raw)
+        if self._session is None or named.key is None:
+            return AgentToolSet.instantiate(raw)
+        practice = self._session.practice(named.key).guidance
+        if named.fidelity:
+            practice.work_at(named.fidelity)
+        if named.format:
+            # The fidelity keeps the format it is given, so the next action on it works in it without being told.
+            practice.format = named.format
+        self._worked_at[id(practice)] = practice.fidelities.current
+        return practice
 
-    def _chooses_format(self, raw: Any) -> bool:
-        """Whether the caller chose this guidance's format: a ref naming one, or guidance already built, which carries
-        its own."""
-        return self._names_format(raw) or not isinstance(raw, (str, dict))
+    def fidelity_of(self, item: Any) -> Any:
+        """The fidelity this action works at on item, one of the Guidance it lists: the one its guidance named, read
+        when the action listed it, so another call working on another fidelity of the same practice never changes it;
+        item's current fidelity for guidance no session holds, and none for text."""
+        if id(item) in self._worked_at:
+            return self._worked_at[id(item)]
+        return getattr(getattr(item, "fidelities", None), "current", None)
 
     def _session_practice(self, item) -> Any:
         """The practice item is, as this action's session holds it; none when the action works in no session or item is
@@ -276,21 +321,12 @@ class GuidanceAction:
             return None
         return self._session.practice(item.key)
 
-    def _work_in_session(self, item, chose_format: bool) -> None:
-        """The practice of this action's session works with item. The session was made for this action's call, so no
-        other call sees the fidelity and format item works at."""
-        practice = self._session_practice(item)
-        if practice is None:
-            return
-        practice.guideline = item
-        if not chose_format:
-            practice.use_kept_format()
-
     def _inside(self, action_type: type[GuidanceAction], guidance: str | list | None = None) -> GuidanceAction:
         """An action of action_type started inside this one: made for this action's session and working on guidance,
         this action's text or some of its listed Guidance, or on everything this action works on when guidance is
         none. It works on the same objects, so the session's practices stay the ones this action listed."""
         inner = action_type(session=self._session)
+        inner._worked_at = dict(self._worked_at)
         inner._work_on_listed(
             guidance if guidance is not None else self._guidance_text if self._guidance_text is not None else self.listed()
         )
@@ -305,7 +341,6 @@ class GuidanceAction:
 
     def run(self, operation: Callable[[Any], Any], *, action: str = "") -> list:
         """Run ``operation`` on the guidance this action works on: once on its string, or once per Guidance."""
-        self._keep_named_formats()
         self._log_running_action(action)
         try:
             return self.each(operation)
@@ -313,14 +348,6 @@ class GuidanceAction:
             if self._session is not None:
                 self._session.log.failure(failure, tool=action or type(self).__name__)
             raise
-
-    def _keep_named_formats(self) -> None:
-        """Save the format each listed guidance named on its fidelity in this action's session, so the next action on
-        that fidelity, such as the validate that follows a generate, works in it without being told again."""
-        for item, raw in zip(self.listed(), self._tool_items):
-            practice = self._session_practice(item) if self._names_format(raw) else None
-            if practice is not None:
-                practice.keep_format()
 
     def _log_running_action(self, action: str) -> None:
         """Session trail for this run — override on actions such as Validate that log differently."""

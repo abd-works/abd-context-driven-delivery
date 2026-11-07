@@ -10,26 +10,30 @@ from pathlib import Path
 
 
 class RuleCheckContext:
-    """The practice one load checks, and the folder its source was read from."""
+    """The practice one load checks, the graph that holds it, and the folder its source was read from."""
 
     def __init__(self, practice, source_root: Path | None) -> None:
         self.practice = practice
+        self.graph = practice.graph
         self.source_root = source_root
 
+    def nodes(self, type: str | None = None) -> list:
+        """The checked practice's nodes, or only those of type."""
+        return self.graph.nodes_of(self.practice, type)
+
+    def edges(self, kind: str) -> list:
+        """The checked practice's edges of kind."""
+        return self.graph.edges_of(self.practice, kind)
+
+    def node(self, node_id: str):
+        """The node called node_id in the graph; none when no practice holds one."""
+        return self.graph.node(node_id)
+
     def child_count(self, node, edge_kinds: tuple[str, ...]) -> int:
-        count = 0
-        for kind in edge_kinds:
-            for edge in self.practice.edges.get(kind, []):
-                if edge.parent is node:
-                    count += 1
-        return count
+        return sum(1 for kind in edge_kinds for edge in self.edges(kind) if edge.parent is node)
 
     def children(self, node, edge_kind: str) -> list:
-        return [
-            edge.child
-            for edge in self.practice.edges.get(edge_kind, [])
-            if edge.parent is node
-        ]
+        return [edge.child for edge in self.edges(edge_kind) if edge.parent is node]
 
     def node_data(self, node) -> dict:
         """Every fact the node records: its parsed object's saved attributes and the loader's own facts."""

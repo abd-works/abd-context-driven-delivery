@@ -394,8 +394,8 @@ with description("a clean engineering model on a graph"):
 
     with it("should record participants and belongsTo"):
         practice = self.graph.practice("clean_engineering")
-        participants = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("participants", [])]
-        belongs = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("belongsTo", [])]
+        participants = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "participants")]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "belongsTo")]
         expect(participants).to(contain(("orders", "Order"), ("Order", "place")))
         expect(belongs).to(contain(("Order", "orders"), ("place", "Order")))
 

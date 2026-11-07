@@ -76,12 +76,12 @@ class CleanEngineering(PracticeGuidance):
     def language_checks(self, language: str) -> dict:
         return rules_in(f"{self.package}.model.drawio.rules") if language == "drawio" else {}
 
-    def read_working_copy(self, practice_graph) -> None:
+    def read_working_copy(self) -> None:
         """Read each source file with its language's class model, adding the folders, classes, properties, operations,
         and parameters it parsed as nodes, and keep the members the model documents describe on the practice's root."""
         from cdd_guidance.practices.clean_engineering.model.graph_reading import read_code_and_models
 
-        read_code_and_models(practice_graph)
+        read_code_and_models(self)
 
     @property
     def drawio(self) -> Drawio:

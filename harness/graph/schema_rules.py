@@ -16,7 +16,6 @@ from typing import ClassVar
 from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.schema_edges import SchemaKey
 from harness.guidance.guidance import PracticeGuidance
-from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.schema import Schema
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -24,12 +23,6 @@ _PRACTICES_ROOT = _ROOT / "cdd_guidance" / "practices"
 _PATTERNS_ROOT = _ROOT / "cdd_guidance" / "patterns"
 # Fields every schema type may carry that describe the type itself, not a relationship.
 _TYPE_FIELDS = frozenset({"is", "fidelity", "name", "path"})
-
-
-def _extended_by(practice: PracticeGuidance) -> PracticeGuidance:
-    """The practice whose types practice's schema builds on, which its ``extends`` names. A schema is the same in every
-    graph, so it reads the catalogue's own instance of that practice."""
-    return PracticeCatalogue.practice(practice.extends)
 
 
 class PracticeSchema:
@@ -66,10 +59,10 @@ class PracticeSchema:
     @cached_property
     def rules(self) -> dict[str, tuple[str, ...]]:
         """Each node type with the rule slugs it carries: its own, its supertypes', and its anchored type's."""
-        extended = self._declared.extends
-        if not extended:
+        extended = self._declared.extended
+        if extended is None:
             return dict(self._direct_rules)
-        anchored_rules = PracticeSchema.load(_extended_by(self.guidance), self.patterns)._direct_rules
+        anchored_rules = PracticeSchema.load(extended, self.patterns)._direct_rules
         return {node_type: self._carried_rules(node_type, anchored_rules) for node_type in sorted(self.types)}
 
     def slugs_for(self, node_type: str) -> tuple[str, ...]:
@@ -84,10 +77,10 @@ class PracticeSchema:
         own = self._declared.anchor_types
         if own:
             return node_type if node_type in own.values() else None
-        extended = self._declared.extends
-        if not extended:
+        extended = self._declared.extended
+        if extended is None:
             return None
-        anchors = _extended_by(self.guidance).anchor_types
+        anchors = extended.anchor_types
         last = self._supertype_chain(node_type)[-1]
         return anchors.get(self._supertypes.get(last, ""))
 
@@ -95,14 +88,19 @@ class PracticeSchema:
         """The fidelity that creates this node type and every higher one; empty when the schema gives none."""
         return list(self._fidelities.get(SchemaKey.from_node_type(node_type).key, []))
 
-    def apply_to(self, practice_graph) -> None:
-        """Register every rule slug against the node types it applies to on practice_graph."""
-        for node_type, slugs in self.rules.items():
+    @cached_property
+    def applicable(self) -> dict[str, list[str]]:
+        """Each rule slug with the node types it applies to: the types that carry it, and those the practice says also
+        carry it."""
+        found: dict[str, list[str]] = {}
+        carried = [(node_type, slugs) for node_type, slugs in self.rules.items()]
+        carried.extend((node_type, self.slugs_for(node_type)) for node_type in self._declared.rule_types)
+        for node_type, slugs in carried:
             for slug in slugs:
-                practice_graph.apply_rule(slug, [node_type])
-        for node_type in self._declared.rule_types:
-            for slug in self.slugs_for(node_type):
-                practice_graph.apply_rule(slug, [node_type])
+                types = found.setdefault(slug, [])
+                if node_type not in types:
+                    types.append(node_type)
+        return found
 
     def rule_label(self, node_type: str, slug: str) -> str:
         """``practice.node.rule``, or ``lern.domain.driven.practice.node.rule`` for a rule a pattern adds."""
@@ -180,7 +178,7 @@ class PracticeSchema:
 
     def _supertype_chain(self, node_type: str) -> tuple[str, ...]:
         """node_type, then each local supertype its ``is:`` names, up to the first anchor word."""
-        anchors = _extended_by(self.guidance).anchor_types if self._declared.extends else {}
+        anchors = self._declared.extended.anchor_types if self._declared.extended is not None else {}
         chain: list[str] = []
         current = node_type
         while current and current not in chain:

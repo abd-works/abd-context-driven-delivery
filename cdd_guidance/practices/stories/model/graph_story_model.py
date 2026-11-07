@@ -1,7 +1,7 @@
-"""GraphStoryModel accepts a loaded story model and records it on a practice graph.
+"""GraphStoryModel accepts a loaded story model and records it on the graph that holds Stories.
 
 Each story object is its own graph node: the epic, story, background, scenario, and step the model read are added to
-the practice graph as they are, so rules read the scenario, its steps, and its story straight from them. A node keeps
+the graph as they are, so rules read the scenario, its steps, and its story straight from them. A node keeps
 as its own facts only what the object does not know, such as the exports of the file its story was read from.
 """
 
@@ -94,7 +94,6 @@ class GraphStoryModel:
         recording = _StoryGraphRecording(self, practice, on_node)
         with self.model.batch_schema_sync():
             recording.write()
-        practice.loaded = ["nodes", "edges", "rules"]
 
     def _epic_evidence(self, root: str, story_file: str, epic: Epic, top: bool) -> list[str]:
         """What the epic declares, else the sub-epic file's opening docblock, else the labels its children carry."""
@@ -195,14 +194,15 @@ class _StoryGraphRecording:
     def __init__(self, story_graph: GraphStoryModel, practice, on_node: Optional[Callable[[str], None]]) -> None:
         self.story_graph = story_graph
         self.practice = practice
-        self.root = practice.source_root
+        self.graph = practice.graph
+        self.root = self.graph.source_root_of(practice)
         self.on_node = on_node
         self.story_at = 0
         self.story_total = len(story_graph.model.every_story())
 
     def write(self) -> None:
         for epic in self.story_graph.model.epics:
-            self._epic(self.practice.root_node, epic, True)
+            self._epic(self.graph.root_of(self.practice), epic, True)
 
     def _epic(self, parent: Node, epic: Epic, top: bool) -> None:
         graph = self.story_graph
@@ -215,7 +215,7 @@ class _StoryGraphRecording:
         epic.load_map_facts()
         epic.evidence = graph._epic_evidence(self.root, story_file, epic, top)
         node = self._add_node(node_id, epic.name, semantic, source_file, line, end, epic)
-        self.practice.link("decomposedInto", parent, node)
+        self.graph.link("decomposedInto", parent, node)
         for child in epic.epics:
             self._epic(node, child, False)
         for story in epic.stories:
@@ -230,7 +230,7 @@ class _StoryGraphRecording:
         story.load_map_facts()
         facts = graph._file_facts(self.root, file)
         node = self._add_node(node_id, story.name, "Story", file or ".", line, end, story, facts)
-        self.practice.link("decomposedInto", parent, node)
+        self.graph.link("decomposedInto", parent, node)
         for background in story.backgrounds:
             self._background(file, node, background)
         scoped = [name for background in story.backgrounds for name in background.examples]
@@ -249,7 +249,7 @@ class _StoryGraphRecording:
         self.story_graph._ensure_source(background, file, line, end)
         background.load_map_facts()
         node = self._add_node(node_id, label, "Background", file or ".", line, end, background)
-        self.practice.link("background", parent, node)
+        self.graph.link("background", parent, node)
         for step in background.steps:
             self._step(file, node, step, "steps")
 
@@ -263,14 +263,14 @@ class _StoryGraphRecording:
         scenario.load_map_facts()
         facts = {"is_outline": bool(scenario.is_outline), "story_name": scenario.story_name or ""}
         node = self._add_node(node_id, scenario.name, "Scenario", file or ".", line, end, scenario, facts)
-        self.practice.link("scenarios", parent, node)
+        self.graph.link("scenarios", parent, node)
         for step in scenario.steps:
             self._step(file, node, step, "steps")
         own_background = [name for background in scenario.backgrounds for name in background.examples]
         for name in dict.fromkeys([*scenario.examples, *own_background, *scoped]):
             source = Source(file or ".", line, end, self.root)
-            example = self.practice.add_named("Example", f"stories:Example:{file}:{name}", name, source)
-            self.practice.link("examples", node, example)
+            example = self.graph.add_named(self.practice, "Example", f"stories:Example:{file}:{name}", name, source)
+            self.graph.link("examples", node, example)
 
     def _step(self, file: str, parent: Node, step: Step, edge_kind: str) -> None:
         semantic = _step_semantic(step)
@@ -279,17 +279,17 @@ class _StoryGraphRecording:
         node_id = f"stories:{semantic}:{file}:{line}:{hash(label) & 0xFFFFFF}"
         continuations = list(step.ands)
         node = self._add_node(node_id, label, semantic, file or ".", line, end, step)
-        self.practice.link(edge_kind, parent, node)
+        self.graph.link(edge_kind, parent, node)
         for continuation in continuations:
             self._step(file, node, continuation, "ands")
 
     def _add_node(self, node_id: str, name: str, semantic: str, file: str, line: int, end: int, story_object, facts=None) -> Node:
         """The story object added as the graph node node_id, called name, of type semantic, with the facts it does not
         hold itself; the node already called node_id when two objects share it."""
-        if node_id not in self.practice.by_id:
+        if not self.graph.holds(self.practice, node_id):
             story_object.name = name
             story_object.type = semantic
-        node = self.practice.add(story_object, node_id, file, line, end)
+        node = self.graph.add(self.practice, story_object, node_id, file, line, end)
         for key, value in (facts or {}).items():
             node.set_fact(key, value)
         return node

@@ -71,17 +71,17 @@ class Stories(PracticeGuidance):
 
         align_story_node(node)
 
-    def read_working_copy(self, practice_graph) -> None:
-        """Read the story tests, or the story maps when there are none, into the Stories practice graph."""
+    def read_working_copy(self) -> None:
+        """Read the story tests, or the story maps when there are none, into its graph."""
         from cdd_guidance.practices.stories.model.graph_reading import read_stories
 
-        read_stories(practice_graph)
+        read_stories(self)
 
-    def link_to_other_practices(self, graph) -> None:
+    def link_to_other_practices(self) -> None:
         """Link each step to the operations it calls and each example to the classes and properties it shows."""
         from cdd_guidance.practices.stories.model.graph_reading import link_steps_and_examples
 
-        link_steps_and_examples(graph)
+        link_steps_and_examples(self.graph)
 
     def read_paths(self, paths: list[str] | str, source: str | None = None):
         """Story tests in code carry their epic and sub-epic only in their folders, under the story map that names them,

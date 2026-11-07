@@ -1,13 +1,18 @@
 """How Stories takes part in the graph: it reads the story tests (or, when there are none, the story maps) into a
-story model and adds its epics, stories, scenarios, steps, and examples to its practice graph, then links each step to
-the operations it calls and each example to the classes and properties it shows."""
+story model and adds its epics, stories, scenarios, steps, and examples to its graph, then links each step to the
+operations it calls and each example to the classes and properties it shows."""
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
 
-from harness.graph.graph import Graph, PracticeGraph
+from typing import TYPE_CHECKING
+
+from harness.graph.graph import Graph
+
+if TYPE_CHECKING:
+    from cdd_guidance.practices.stories.stories import Stories
 from harness.graph.skipped_folders import scanned_files
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
@@ -24,12 +29,12 @@ def align_story_node(node) -> None:
     elif node.type in {"Scenario", "Story", "Background"}:
         node.source.widen_to_call_close()
     elif node.type == "Example":
-        node.source.align_to_example_export(node.practice.source_root, node.name)
+        node.source.align_to_example_export(node.graph.source_root_of(node.practice), node.name)
 
 
-def read_stories(practice: PracticeGraph) -> None:
+def read_stories(practice: Stories) -> None:
     """Read the story tests (or, when there are none, the story maps) into a story model and add its epics, stories,
-    scenarios, steps, and examples to the Stories practice graph."""
+    scenarios, steps, and examples to the graph that holds Stories."""
     from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
 
     graph = practice.graph
@@ -48,11 +53,11 @@ def link_steps_and_examples(graph: Graph) -> None:
         _StoryLinks(graph).link()
 
 
-def _typescript_model(practice: PracticeGraph):
+def _typescript_model(practice: Stories):
     from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
     graph = practice.graph
-    root = Path(practice.source_root)
+    root = Path(graph.source_root_of(practice))
     sources = _typescript_files(graph, root)
     files: dict[str, str] = {}
     for index, path in enumerate(sources, start=1):
@@ -63,12 +68,12 @@ def _typescript_model(practice: PracticeGraph):
     return TypeScriptStoryModel("tests").load(files, on_file=lambda detail: graph.report_progress(f"stories · parse · {detail}"))
 
 
-def _story_map_model(practice: PracticeGraph):
+def _story_map_model(practice: Stories):
     """The story maps under the practice's root; with edited files, only the story maps among them."""
     from cdd_guidance.practices.stories.model.story_model import StoryModel
 
     graph = practice.graph
-    root = Path(practice.source_root)
+    root = Path(graph.source_root_of(practice))
     on_file = lambda detail: graph.report_progress(f"stories · markdown · {detail}")  # noqa: E731
     edited = graph.edited_files()
     if edited is None:
@@ -107,10 +112,10 @@ class _StoryLinks:
 
     def link(self) -> None:
         operations: dict[str, list] = {}
-        for operation in self.clean.nodes.get("Operation", []):
+        for operation in self.graph.nodes_of(self.clean, "Operation"):
             operations.setdefault(operation.name, []).append(operation)
-        steps = [node for node in self.stories.by_id.values() if node.type in {"Step", "Given", "When", "Then"}]
-        examples = [node for node in self.stories.by_id.values() if node.type == "Example"]
+        steps = [node for node in self.graph.nodes_of(self.stories) if node.type in {"Step", "Given", "When", "Then"}]
+        examples = self.graph.nodes_of(self.stories, "Example")
         for index, step in enumerate(steps, start=1):
             self.graph.report_progress(f"stories · steps · {index}/{len(steps)} · {step.name}")
             self._link_step(step, operations, examples)
@@ -124,29 +129,29 @@ class _StoryLinks:
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [operation for name in called for operation in operations.get(name, ())]
         epic = self._epic_for(step) if matched else None
-        modules = {node.name: node for node in self.clean.nodes.get("Module", [])}
+        modules = {node.name: node for node in self.graph.nodes_of(self.clean, "Module")}
         for operation in matched:
-            self.stories.link("invokes", step, operation, "relationship")
-            self.clean.link("invokedBy", operation, step, "relationship")
+            self.graph.link("invokes", step, operation, "relationship")
+            self.graph.link("invokedBy", operation, step, "relationship")
             module = modules.get(Path(operation.source.file).parent.name)
             if module is not None and epic is not None:
-                self.clean.link("usedBy", module, epic, "relationship")
-                self.stories.link("uses", epic, module, "relationship")
+                self.graph.link("usedBy", module, epic, "relationship")
+                self.graph.link("uses", epic, module, "relationship")
         if step.get_fact("phase"):
             for example in examples:
                 if re.search(rf"\b{re.escape(example.name)}\b", body):
-                    self.stories.link("observes", step, example, "relationship")
+                    self.graph.link("observes", step, example, "relationship")
 
     def _link_example(self, example, text: str) -> None:
-        for class_node in self.clean.nodes.get("OoadClass", []):
+        for class_node in self.graph.nodes_of(self.clean, "OoadClass"):
             if re.search(rf"\b{re.escape(class_node.name)}\b", text):
-                self.stories.link("demonstrates", example, class_node, "grouped")
-                self.clean.link("demonstrates", class_node, example, "grouped")
-                self.clean.link("demonstratedThrough", class_node, example, "relationship")
-        for prop in self.clean.nodes.get("Property", []):
+                self.graph.link("demonstrates", example, class_node, "grouped")
+                self.graph.link("demonstrates", class_node, example, "grouped")
+                self.graph.link("demonstratedThrough", class_node, example, "relationship")
+        for prop in self.graph.nodes_of(self.clean, "Property"):
             if re.search(rf"\.{re.escape(prop.name)}\b", text):
-                self.stories.link("retrievedUsing", example, prop, "relationship")
-                self.clean.link("retrievedUsing", prop, example, "relationship")
+                self.graph.link("retrievedUsing", example, prop, "relationship")
+                self.graph.link("retrievedUsing", prop, example, "relationship")
 
     def _step_body(self, step) -> str:
         """The step's line and the lines after it; each file is read once per load."""

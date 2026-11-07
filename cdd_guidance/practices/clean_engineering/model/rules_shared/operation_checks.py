@@ -300,7 +300,7 @@ class EliminateDuplication(PracticeGraphRule):
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
         seen: dict[str, str] = {}
         hits: list[tuple[str, str]] = []
-        for op_node in context.practice.nodes.get("Operation", []):
+        for op_node in context.nodes("Operation"):
             fingerprint = op_node.get_fact("body_fingerprint", "")
             if not fingerprint or op_node.get_fact("line_count", 0) < 3:
                 continue

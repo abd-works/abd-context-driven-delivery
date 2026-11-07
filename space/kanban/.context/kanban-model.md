@@ -525,7 +525,7 @@ A validation report of one fidelity saved in a session folder, with the graph th
 	-> violations_from_graph_json_files
 	-> violations_by_rule
 	-> SavedGraph.restored_graph
-	-> PracticeGraph.checks
+	-> PracticeGuidance.checks
 	-> Judgment.from_report
 	-> Violation.in_file
 	-> Repo.path_from_top

@@ -104,7 +104,7 @@ class GraphRulesCollection(RulesCollection):
     def from_node(cls, node: Any) -> GraphRulesCollection:
         """The rules node's schema gives its type, each with its prose, the check that runs it when one exists, and
         whether that check applies to node; node says which checks it has and which apply to it."""
-        schema = node.practice.schema
+        schema = node.schema
         checks = node.rule_checks()
         applying = node.applying_rule_types()
         entries: dict[str, GraphRule] = {}
@@ -139,7 +139,7 @@ class GraphRulesCollection(RulesCollection):
     @property
     def shown(self) -> list[GraphRule]:
         """Every rule, or only the violating ones of the chosen rules when the graph's filter asks for violations."""
-        graph = self.node.practice.graph
+        graph = self.node.graph
         if graph is None:
             return self.chosen(False, [])
         return self.chosen(graph.filter.violations, list(graph.filter.rules))

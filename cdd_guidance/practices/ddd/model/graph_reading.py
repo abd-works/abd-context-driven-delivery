@@ -7,29 +7,34 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from harness.graph.model_node import schema_sync_paused
-from harness.graph.graph import Node, PracticeGraph
+from harness.graph.graph import Node
 from harness.graph.skipped_folders import skips_folder
+
+if TYPE_CHECKING:
+    from cdd_guidance.practices.ddd.ddd import Ddd
 
 # A helper class in a test folder is never a domain aggregate, whatever its name suggests.
 _TEST_FOLDERS = ("tests/", "test-utils/")
 _FOREIGN_KEY = "//\\s*foreign\\s+(\\w+)"
 
 
-def read_contexts_and_blocks(practice: PracticeGraph) -> None:
-    """Add the bounded contexts, aggregates, and building blocks of the folder the DDD practice graph reads; the
+def read_contexts_and_blocks(practice: Ddd) -> None:
+    """Add the bounded contexts, aggregates, and building blocks of the folder the graph holding DDD reads; the
     building blocks are the classes Clean Engineering already read."""
     with schema_sync_paused():
         _DddReading(practice).read()
 
 
 class _DddReading:
-    """One read of a working copy into the DDD practice graph."""
+    """One read of a working copy into the graph that holds DDD."""
 
-    def __init__(self, practice: PracticeGraph) -> None:
+    def __init__(self, practice: Ddd) -> None:
         self.practice = practice
-        self.root = Path(practice.source_root)
+        self.graph = practice.graph
+        self.root = Path(self.graph.source_root_of(practice))
         self._texts: dict[str, str] = {}
         self._blocks: dict[str, Node] = {}
 
@@ -37,21 +42,21 @@ class _DddReading:
         """Read the practice's folder; a folder not written yet, such as a session's code root, holds no contexts."""
         if not self.root.is_dir():
             return
-        self.practice.graph.report_progress("ddd · bounded contexts")
+        self.graph.report_progress("ddd · bounded contexts")
         contexts = self._contexts()
         for folder, members in sorted(self._members_by_folder().items()):
-            self._aggregate(folder, members, _context_for(folder, contexts) or self.practice.root_node)
+            self._aggregate(folder, members, _context_for(folder, contexts) or self.graph.root_of(self.practice))
 
     def _contexts(self) -> dict[str, Node]:
         """Each bounded context by its folder, under the context of the folder around it."""
         found = _bounded_contexts(self.root) or [(".", _unmarked_context(self.root), ".")]
         contexts: dict[str, Node] = {}
         for rel, context, markdown in found:
-            node = self.practice.add(context, f"ddd:BoundedContext:{rel}:{context.name}", markdown, 1, context.context_file_lines)
+            node = self.graph.add(self.practice, context, f"ddd:BoundedContext:{rel}:{context.name}", markdown, 1, context.context_file_lines)
             parent = _context_for(str(Path(rel).parent).replace("\\", "/"), contexts) if rel != "." else None
-            self.practice.link("owns", parent or self.practice.root_node, node)
+            self.graph.link("owns", parent or self.graph.root_of(self.practice), node)
             if parent is not None:
-                self.practice.link("belongsTo", node, parent, "relationship")
+                self.graph.link("belongsTo", node, parent, "relationship")
             contexts[rel] = node
         return contexts
 
@@ -59,8 +64,8 @@ class _DddReading:
         """The classes Clean Engineering read that DDD names a building block, by folder, each with its kind."""
         from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
-        clean = self.practice.graph.practices.get("clean_engineering")
-        classes = clean.nodes.get("OoadClass", []) if clean is not None else []
+        clean = self.practice.extended
+        classes = self.graph.nodes_of(clean, "OoadClass") if clean is not None else []
         names = {cls.name for cls in classes}
         members: dict[str, list[tuple[Node, str]]] = {}
         for cls in classes:
@@ -75,9 +80,9 @@ class _DddReading:
 
         aggregate = Aggregate(Path(folder).name, 1)
         aggregate.load_folder_facts(self.root / folder)
-        node = self.practice.add(aggregate, f"ddd:Aggregate:{folder}", folder, 1, 1)
-        self.practice.link("owns", context, node)
-        self.practice.link("belongsTo", node, context, "relationship")
+        node = self.graph.add(self.practice, aggregate, f"ddd:Aggregate:{folder}", folder, 1, 1)
+        self.graph.link("owns", context, node)
+        self.graph.link("belongsTo", node, context, "relationship")
         for cls, kind in members:
             self._block(node, cls, kind)
         for cls, kind in members:
@@ -88,23 +93,23 @@ class _DddReading:
         node = self._block_node(cls, kind)
         node.set_fact("folder", cls.get_fact("folder"))
         self._blocks[cls.name] = node
-        self.practice.link("root" if kind == "EntityRoot" else "owns", aggregate, node)
-        self.practice.link("belongsTo", node, aggregate, "relationship")
+        self.graph.link("root" if kind == "EntityRoot" else "owns", aggregate, node)
+        self.graph.link("belongsTo", node, aggregate, "relationship")
         root = self._blocks.get(cls.name[: -len("Repository")]) if kind == "Repository" and cls.name.endswith("Repository") else None
         if root is not None:
-            self.practice.link("accesses", node, root, "relationship")
+            self.graph.link("accesses", node, root, "relationship")
         return node
 
     def _block_node(self, cls: Node, kind: str) -> Node:
         """The building block the class is, at the class's lines."""
         node_id = f"ddd:{kind}:{cls.source.file}:{cls.name}"
-        return self.practice.add(tactical_block(cls, kind), node_id, cls.source.file, cls.source.start_line, cls.source.end_line)
+        return self.graph.add(self.practice, tactical_block(cls, kind), node_id, cls.source.file, cls.source.start_line, cls.source.end_line)
 
     def _associate(self, cls: Node) -> None:
         """An entity root names each other root it holds a reference to with a ``// foreign Name`` comment."""
         for other in re.findall(_FOREIGN_KEY, self._text(cls)):
             if other in self._blocks and other != cls.name:
-                self.practice.link("associates", self._blocks[cls.name], self._blocks[other], "relationship")
+                self.graph.link("associates", self._blocks[cls.name], self._blocks[other], "relationship")
 
     def _text(self, cls: Node) -> str:
         file = cls.source.file

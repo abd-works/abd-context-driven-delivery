@@ -34,7 +34,7 @@ class _StoriesRules(PracticeGuidance):
     def __init__(self, root=None) -> None:
         self.format = None
         if root is not None:
-            Session(root).practice("stories").guideline = self
+            self.work_in(Session(root).practice("stories"))
 
     @property
     def key(self) -> str:

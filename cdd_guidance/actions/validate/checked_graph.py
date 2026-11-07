@@ -14,8 +14,9 @@ from cdd_guidance.actions.validate.graph_json_reader import (
     violations_from_graph_json_files,
 )
 
-# What validate checks for each listed guidance: the guidance, and its fidelity's declared files by format.
-CheckedOutputs = list[tuple[Any, dict[str, list[str]]]]
+# What validate checks for each listed guidance: the guidance, the format the call checks, and its fidelity's declared
+# files by format.
+CheckedOutputs = list[tuple[Any, str, dict[str, list[str]]]]
 
 
 class PathsNotFoundError(FileNotFoundError):
@@ -90,7 +91,7 @@ class CheckedGraph:
 
     def _other_format_files(self) -> set[str]:
         """The declared files of every format validate does not check, as graph node files record them."""
-        others = [self.session.path_named(path) for item, outputs in self._checked for format, paths in outputs.items() if format != item.format for path in paths if "{" not in path]
+        others = [self.session.path_named(path) for _item, checked, outputs in self._checked for format, paths in outputs.items() if format != checked for path in paths if "{" not in path]
         return {path.relative_to(self.session.root).as_posix() for path in others if self.session.root in path.parents}
 
     def _written_outputs(self) -> list[str]:
@@ -99,7 +100,7 @@ class CheckedGraph:
         it."""
         if not self._practices:
             return []
-        declared = [path for item, outputs in self._checked for path in outputs.get(item.format, [])]
+        declared = [path for _item, checked, outputs in self._checked for path in outputs.get(checked, [])]
         found = [self.session.path_named(path) for path in declared if "{" not in path]
         folders = {path.parent if path.is_file() else path for path in found if path.exists()}
         return sorted(str(folder) for folder in folders if self._under_root(folder))

@@ -946,7 +946,7 @@ class StoryModel(StoryNode):
     def _copy_map_on_graph(self) -> None:
         maps = [
             node
-            for node in self.practice.nodes.get("StoryModel", [])
+            for node in self.graph.nodes_of(self.practice, "StoryModel")
             if node is not self and isinstance(node, StoryModel) and node.epics
         ]
         if maps:

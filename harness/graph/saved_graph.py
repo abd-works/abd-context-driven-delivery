@@ -15,7 +15,8 @@ from harness.graph.violation import Violation
 from harness.installation.destination import data_of
 
 if TYPE_CHECKING:
-    from harness.graph.graph import Edge, Graph, Node, PracticeGraph
+    from harness.graph.graph import Edge, Graph, Node
+    from harness.guidance.guidance import PracticeGuidance
 
 GRAPH_FILE_NAME = "graph.json"
 # The shape this code writes. A saved graph of any other shape is read as no saved graph, so the next load replaces it.
@@ -48,7 +49,7 @@ class SavedNode:
     @classmethod
     def from_node(cls, node: Node) -> SavedNode:
         source = node.source
-        return cls(node.node_id, node.name, node.type, node.practice.name, source.file, source.start_line, source.end_line, node.stage, node.facts)
+        return cls(node.node_id, node.name, node.type, node.practice.key, source.file, source.start_line, source.end_line, node.stage, node.facts)
 
     @classmethod
     def from_record(cls, record: dict) -> SavedNode:
@@ -115,15 +116,16 @@ class SavedPractice:
         self.violations = violations
 
     @classmethod
-    def from_practice(cls, practice: PracticeGraph, files: list[str] | None = None) -> SavedPractice:
-        """The practice as it is now; with files, only its nodes read from them (each a file or folder from its source
-        root) and the edges that join two of them or one of them to the practice's root."""
-        nodes = [node for group in practice.nodes.values() for node in group if _read_from(node, files)]
-        edges = [edge for group in practice.edges.values() for edge in group if _joins_kept(edge, files)]
+    def from_practice(cls, practice: PracticeGuidance, files: list[str] | None = None) -> SavedPractice:
+        """The practice as the graph that holds it has it now; with files, only its nodes read from them (each a file
+        or folder from its source root) and the edges that join two of them or one of them to the practice's root."""
+        graph = practice.graph
+        nodes = [node for node in graph.nodes_of(practice) if _read_from(node, files)]
+        edges = [edge for edge in graph.edges_of(practice) if _joins_kept(edge, files)]
         return cls(
-            practice.name,
-            practice.source_root,
-            practice.root_node.facts,
+            practice.key,
+            graph.source_root_of(practice),
+            graph.root_of(practice).facts,
             [SavedNode.from_node(node) for node in nodes],
             [SavedEdge.from_edge(edge) for edge in edges],
             [violation for node in nodes for violation in node.rules.violations],
@@ -213,11 +215,7 @@ class SavedGraph:
         from harness.graph.graph import Graph
 
         graph = Graph()
-        graph.overlays = list(self.overlays)
-        for name, saved in self.practices.items():
-            graph.practice(name).restore(saved)
-        for name, saved in self.practices.items():
-            graph.practice(name).restore_links(saved)
+        graph.restored_from(self)
         return graph
 
 

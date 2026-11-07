@@ -40,9 +40,9 @@ class OneWayDeps(PracticeGraphRule):
         hits: list[tuple[str, str]] = []
         for cycle in _strongly_connected(imports):
             for importer in sorted(cycle):
-                first = context.practice.registered(importer)
+                first = context.node(importer)
                 for imported in sorted(imports.get(importer, set()) & cycle):
-                    second = context.practice.registered(imported)
+                    second = context.node(imported)
                     hits.append(
                         (
                             importer,
@@ -88,11 +88,11 @@ class DeepModule(PracticeGraphRule):
 
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
         modules = sorted(
-            (module for module in context.practice.nodes.get("Module", []) if module.source.file),
+            (module for module in context.nodes("Module") if module.source.file),
             key=lambda module: -len(module.source.file),
         )
         classes: dict[str, list[str]] = {}
-        for node in context.practice.nodes.get("OoadClass", []):
+        for node in context.nodes("OoadClass"):
             owner = _owning_module(node.source.file, modules)
             if owner is not None and node.name != "_module" and not is_test_code(node.source.file):
                 classes.setdefault(owner.node_id, []).append(node.name)
@@ -183,7 +183,7 @@ class SourceParses(PracticeGraphRule):
 
 
 def _folders(context: "RuleCheckContext") -> list["Node"]:
-    return [folder for kind in _FOLDER_TYPES for folder in context.practice.nodes.get(kind, [])]
+    return [folder for kind in _FOLDER_TYPES for folder in context.nodes(kind)]
 
 
 def _is_under(path: str | None, folder: str | None) -> bool:
@@ -197,7 +197,7 @@ def _sibling_modules(node: "Node", context: "RuleCheckContext") -> list[str]:
     parent = _parent_folder(node.source.file or "")
     return [
         other.source.file
-        for other in context.practice.nodes.get("Module", [])
+        for other in context.nodes("Module")
         if other is not node and other.source.file and _parent_folder(other.source.file) == parent
     ]
 
@@ -213,7 +213,7 @@ def _imports_under(node: "Node", context: "RuleCheckContext") -> set[str]:
         if not _is_under(folder.source.file, node.source.file):
             continue
         for dependency in folder.get_fact("dependencies", []):
-            imported = context.practice.registered(dependency)
+            imported = context.node(dependency)
             if imported is not None and imported.source.file:
                 targets.add(imported.source.file)
     return targets

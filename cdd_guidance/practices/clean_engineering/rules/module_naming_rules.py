@@ -59,7 +59,7 @@ class NoModulePerClass(PracticeGraphRule):
 
 def _public_classes_in(folder_node: "Node", context: "RuleCheckContext") -> int:
     count = 0
-    for class_node in context.practice.nodes.get("OoadClass", []):
+    for class_node in context.nodes("OoadClass"):
         file_name = (class_node.source.file or "").rsplit("/", 1)[-1]
         if class_node.get_fact("folder") == folder_node.node_id and not file_name.startswith(("_", "test_")):
             count += 1

@@ -184,7 +184,7 @@ class LayerSeparation(PracticeGraphRule):
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
         classes = ClassGraph(context)
         targets = {node.node_id: _forwarding_target(node, classes) for node in classes.classes}
-        names = {node.node_id: node.name for node in context.practice.nodes.get("OoadClass", [])}
+        names = {node.node_id: node.name for node in context.nodes("OoadClass")}
         hits = [
             (
                 node.node_id,
@@ -228,18 +228,18 @@ def _sole_forward(operation: "Node") -> str:
 
 
 def _pass_through_folders(context: "RuleCheckContext", classes: ClassGraph, targets: dict[str, str]) -> list[tuple[str, str]]:
-    folder_of = {node.node_id: node.get_fact("folder", "") for node in context.practice.nodes.get("OoadClass", [])}
+    folder_of = {node.node_id: node.get_fact("folder", "") for node in context.nodes("OoadClass")}
     members: dict[str, list[str]] = {}
     for node in classes.classes:
         members.setdefault(folder_of[node.node_id], []).append(node.node_id)
     hits: list[tuple[str, str]] = []
     for folder_id, class_ids in members.items():
-        folder = context.practice.registered(folder_id)
+        folder = context.node(folder_id)
         if folder is None or folder.type not in ("Module", "Package") or not all(targets[class_id] for class_id in class_ids):
             continue
         reached = {folder_of[targets[class_id]] for class_id in class_ids} - {folder_id}
         if len(reached) == 1:
-            other = context.practice.registered(next(iter(reached)))
+            other = context.node(next(iter(reached)))
             hits.append(
                 (
                     folder_id,

@@ -5,11 +5,13 @@ from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
 
-from expects import be, be_above, be_none, contain, equal, expect
+from expects import be, be_a, be_above, be_none, contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
-from harness.graph.graph import EdgeType, Graph, Node, PracticeGraph, Source
+from harness.graph.graph import EdgeType, Graph, Node, Source
+from harness.guidance.guidance import PracticeGuidance
+from harness.graph.explorer import PracticeInventory
 from harness.graph.pattern_overlays import PatternOverlays
 
 _ROOT = _HERE
@@ -134,7 +136,7 @@ def _inside(file: str | None, scope: list[str]) -> bool:
 
 
 def _practice_nodes(graph: Graph, practice: str, scope: list[str]) -> list[Node]:
-    nodes = [node for group in graph.practice(practice).nodes.values() for node in group]
+    nodes = graph.nodes_of(graph.practice(practice))
     return [node for node in nodes if _inside(node.source.file, scope)]
 
 
@@ -147,7 +149,7 @@ def violations_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[st
 
 
 def edges_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, str, str]]:
-    edges = [edge for group in graph.practice(practice).edges.values() for edge in group]
+    edges = graph.edges_of(graph.practice(practice))
     return {
         (edge.parent.node_id, edge.child.node_id, edge.kind)
         for edge in edges
@@ -169,7 +171,7 @@ with description("a graph"):
         with context("with clean engineering"):
             with before.all:
                 self.clean = self.graph.practice("clean_engineering")
-                self.clean_tree = data_of(self.clean.root_node.serialize())
+                self.clean_tree = data_of(self.graph.root_of(self.clean).serialize())
                 self.account = tree_named(self.clean_tree, "AccountCredentials", "OoadClass")
 
             with it("should count three modules"):
@@ -192,7 +194,7 @@ with description("a graph"):
                 ).to(equal(True))
 
             with it("should order relative, owns, properties, belongsTo, hasParameter, hasType, invokedBy, and dependsOn"):
-                expect(self.clean.edge_type_kinds).to(
+                expect(PracticeInventory(self.graph, self.clean).edge_types).to(
                     equal(
                         [
                             "relative",
@@ -280,12 +282,9 @@ with description("a graph"):
                                     parameter = child
                     expect(parameter["type"]).to(equal("Parameter"))
 
-                with it("should run rule queries after the node and edge queries"):
-                    expect(self.clean.loaded).to(equal(["nodes", "edges", "rules"]))
-
             with context("with the register operation"):
                 with before.all:
-                    self.register = self.clean.by_id[tree_child(self.account, "register")["node_id"]]
+                    self.register = self.graph.node(tree_child(self.account, "register")["node_id"])
 
                 with it("should show the register body as Monaco text"):
                     expect(self.register.source.text.splitlines()[0].strip()).to(equal("async register(): Promise<void> {"))
@@ -360,7 +359,7 @@ with description("a graph"):
                     with before.all:
                         self.graph.filter.select_rules(["limit-operation-parameters"])
                         self.graph.filter.select_violations()
-                        self.violation_tree = data_of(self.graph.practice("clean_engineering").root_node.serialize())
+                        self.violation_tree = data_of(self.graph.root_of(self.graph.practice("clean_engineering")).serialize())
 
                     with it("should return the operation that fails the rule"):
                         returned = [node["name"] for node in data_of(self.graph.return_nodes())]
@@ -423,8 +422,8 @@ with description("a graph"):
         with context("with stories"):
             with before.all:
                 self.stories = self.graph.practice("stories")
-                self.stories_tree = data_of(self.stories.root_node.serialize())
-                self.clean_tree = data_of(self.graph.practice("clean_engineering").root_node.serialize())
+                self.stories_tree = data_of(self.graph.root_of(self.stories).serialize())
+                self.clean_tree = data_of(self.graph.root_of(self.graph.practice("clean_engineering")).serialize())
 
             with it("should count one epic"):
                 expect(tree_count(self.stories_tree, "Epic")).to(equal(1))
@@ -683,7 +682,7 @@ with description("a graph"):
         with context("with domain-driven design"):
             with before.all:
                 self.ddd = self.graph.practice("ddd")
-                self.ddd_tree = data_of(self.ddd.root_node.serialize())
+                self.ddd_tree = data_of(self.graph.root_of(self.ddd).serialize())
                 self.bounded_context = tree_named(self.ddd_tree, "bounded context", "BoundedContext")
                 self.aggregate = tree_named(self.ddd_tree, "account-credentials", "Aggregate")
 
@@ -706,7 +705,7 @@ with description("a graph"):
                 expect(tree_count(self.ddd_tree, "Repository")).to(equal(2))
 
             with it("should order root, owns, belongsTo, accesses, and associates"):
-                expect(self.ddd.edge_type_kinds).to(equal(["root", "owns", "belongsTo", "accesses", "associates"]))
+                expect(PracticeInventory(self.graph, self.ddd).edge_types).to(equal(["root", "owns", "belongsTo", "accesses", "associates"]))
 
             with it("should include only domain stereotypes"):
                 expect(
@@ -831,7 +830,7 @@ with description("a graph"):
 
         with context("with behavior-driven development that has one story spec without describes"):
             with before.all:
-                self.bdd_tree = data_of(self.graph.practice("bdd").root_node.serialize())
+                self.bdd_tree = data_of(self.graph.root_of(self.graph.practice("bdd")).serialize())
 
             with it("should count one spec"):
                 expect(tree_count(self.bdd_tree, "Spec")).to(equal(1))
@@ -843,7 +842,7 @@ with description("a graph"):
                 expect(tree_count(self.bdd_tree, "Description")).to(equal(0))
 
             with it("should have only the owns edge type"):
-                expect(self.graph.practice("bdd").edge_type_kinds).to(equal(["owns"]))
+                expect(PracticeInventory(self.graph, self.graph.practice("bdd")).edge_types).to(equal(["owns"]))
 
             with context("with the practice selected"):
                 with before.all:
@@ -876,7 +875,7 @@ with description("a graph"):
 
         with context("with experience design that has no map"):
             with before.all:
-                self.ux_tree = data_of(self.graph.practice("ux").root_node.serialize())
+                self.ux_tree = data_of(self.graph.root_of(self.graph.practice("ux")).serialize())
 
             with it("should count zero maps"):
                 expect(tree_count(self.ux_tree, "UxMap")).to(equal(0))
@@ -885,7 +884,7 @@ with description("a graph"):
                 expect(tree_names(self.ux_tree)).to(equal([]))
 
             with it("should have no edge types"):
-                expect(self.graph.practice("ux").edge_type_kinds).to(equal([]))
+                expect(PracticeInventory(self.graph, self.graph.practice("ux")).edge_types).to(equal([]))
 
     with context("loaded from only the edited files of a working copy that every graph practice reads"):
         with before.all:
@@ -958,7 +957,7 @@ with description("a graph"):
                 expect(nodes_in(self.edited, "clean_engineering", ["src"])).to(equal(set()))
 
 
-def _node(practice: PracticeGraph, type: str, name: str, line: int) -> Node:
+def _node(practice: PracticeGuidance, type: str, name: str, line: int) -> Node:
     return Node(practice, type, f"{type}:{line}:{name}", name, Source("story.ts", line, line))
 
 
@@ -969,7 +968,7 @@ with description("a node's fidelity"):
 
         with it("should be that fidelity of the practice the node belongs to"):
             node = _node(Graph().practice("stories"), "Story", "Create account", 1)
-            expect(node.fidelity).to(be(node.practice.guidance.fidelities["story_map"]))
+            expect(node.fidelity).to(be(node.practice.fidelities["story_map"]))
 
     with context("with a scenario node"):
         with it("should be the fidelity the stories schema gives a scenario"):
@@ -1007,9 +1006,9 @@ with description("a scenario"):
             self.when = _node(self.practice, "Step", "when the User creates their account", 20)
             self.then = _node(self.practice, "Step", "then the account is unconfirmed", 30)
             owns = EdgeType("owns", 1, "direct")
-            self.practice.record(owns, self.scenario, self.then)
-            self.practice.record(owns, self.scenario, self.when)
-            self.practice.record(owns, self.scenario, self.given)
+            self.practice.graph.record(owns, self.scenario, self.then)
+            self.practice.graph.record(owns, self.scenario, self.when)
+            self.practice.graph.record(owns, self.scenario, self.given)
             self.scenario.populate()
 
         with it("should list the steps in source order"):
@@ -1023,8 +1022,8 @@ with description("a scenario"):
             self.later = _node(self.practice, "Operation", "register", 80)
             self.earlier = _node(self.practice, "Operation", "save", 5)
             invokes = EdgeType("invokes", 2, "grouped")
-            self.practice.record(invokes, self.step, self.later)
-            self.practice.record(invokes, self.step, self.earlier)
+            self.practice.graph.record(invokes, self.step, self.later)
+            self.practice.graph.record(invokes, self.step, self.earlier)
             self.step.populate()
 
         with it("should keep that call order under the step"):
@@ -1148,25 +1147,45 @@ with description("a graph's practice"):
     with before.each:
         self.graph = Graph()
         self.practice = self.graph.practice("stories")
-        self.story = self.practice.add_named("Story", "stories:Story:Create account", "Create account", Source("story.md", 1, 1))
+        self.story = self.graph.add_named(self.practice, "Story", "stories:Story:Create account", "Create account", Source("story.md", 1, 1))
 
-    with it("should hold the practice's guidance"):
-        expect(self.practice.guidance.key).to(equal("stories"))
+    with it("should be the practice's guidance itself"):
+        expect(self.practice).to(be_a(PracticeGuidance))
 
-    with it("should hold a guidance that knows the graph"):
-        expect(self.practice.guidance.graph).to(be(self.graph))
+    with it("should know the graph that holds it"):
+        expect(self.practice.graph).to(be(self.graph))
 
-    with it("should hold a guidance at no fidelity, since a fidelity belongs to a call"):
-        expect(self.practice.guidance.fidelities.current).to(be_none)
+    with it("should be the same object each time the graph is asked for it"):
+        expect(self.graph.practice("stories")).to(be(self.practice))
 
-    with it("should keep the same guidance when the graph asks for the practice again"):
-        expect(self.graph.practice("stories").guidance).to(be(self.practice.guidance))
+    with it("should be the node's practice, by reference"):
+        expect(self.story.practice).to(be(self.practice))
 
-    with it("should give a node its practice by reference"):
-        expect(self.story.practice.guidance).to(be(self.practice.guidance))
+    with it("should reach its nodes through the graph it holds"):
+        expect(self.practice.graph.nodes_of(self.practice)).to(equal([self.story]))
 
-    with it("should give the practice its nodes through the graph it holds"):
-        expect(self.practice.guidance.graph.nodes_of(self.practice.guidance)).to(equal([self.story]))
+    with it("should leave the graph no part of its own for the practice"):
+        import harness.graph.graph as graph_module
+
+        expect(hasattr(graph_module, "PracticeGraph")).to(equal(False))
+
+    with context("that extends another practice"):
+        with it("should hold the practice it extends, the one its graph holds"):
+            expect(self.graph.practice("ddd").extended).to(be(self.graph.every_practice["clean_engineering"]))
+
+
+with description("a graph given practices"):
+    with before.each:
+        from harness.guidance.practice_catalogue import PracticeCatalogue
+
+        self.practices = PracticeCatalogue.create_all()
+        self.graph = Graph(self.practices)
+
+    with it("should hold the very practices it was given"):
+        expect(list(self.graph.every_practice.values())).to(equal(self.practices))
+
+    with it("should make itself the graph each of them holds"):
+        expect({id(practice.graph) for practice in self.practices}).to(equal({id(self.graph)}))
 
 
 with description("a node's rules"):
@@ -1197,7 +1216,7 @@ with description("a node's rules"):
             expect(self.root.rules.slugs).to(contain("node-decides-next-page"))
 
 
-with description("a graph a session holds"):
+with description("a graph opened on a folder"):
     with before.each:
         import tempfile
 
@@ -1206,21 +1225,19 @@ with description("a graph a session holds"):
         (self.folder / "src").mkdir()
         self.source = self.folder / "src" / "order.py"
         self.source.write_text("class Order:\n    pass\n", encoding="utf-8")
-        self.graph = Graph.of_session(self.session_folder, self.folder)
+        self.graph = Graph()
+        self.graph.open(self.folder.resolve())
 
     with after.each:
         import shutil
 
         shutil.rmtree(self.folder, ignore_errors=True)
 
-    with it("should be the same graph each time the session asks"):
-        expect(Graph.of_session(self.session_folder, self.folder)).to(be(self.graph))
-
     with it("should read no file until a call loads or refreshes it"):
         expect(_class_names_in(self.graph)).to(equal([]))
 
     with it("should open every practice on the session's root"):
-        expect(self.graph.practice("clean_engineering").source_root).to(equal(str(self.folder.resolve())))
+        expect(self.graph.source_root_of(self.graph.practice("clean_engineering"))).to(equal(str(self.folder.resolve())))
 
     with context("that is refreshed with a file an action wrote"):
         with before.each:
@@ -1266,4 +1283,4 @@ with description("a graph a session holds"):
 
 
 def _class_names_in(graph: Graph) -> list[str]:
-    return sorted(node.name for node in graph.practice("clean_engineering").nodes.get("OoadClass", []))
+    return sorted(node.name for node in graph.nodes_of(graph.practice("clean_engineering"), "OoadClass"))
