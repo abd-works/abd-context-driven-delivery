@@ -192,7 +192,8 @@ def _read_tree(folder: Path) -> dict:
 
 
 def _write_markdown(source: StoryModel, folder: Path) -> None:
-    _write(folder / "story-map.md", MarkdownStoryModel(source).save())
+    markdown = MarkdownStoryModel(source)
+    _write(folder / "story-map.md", markdown.save())
 
     def visit(epic, parts: list) -> None:
         for story in epic.stories:
@@ -200,16 +201,12 @@ def _write_markdown(source: StoryModel, folder: Path) -> None:
                 continue
             _write(
                 folder.joinpath(*parts, f"{_kebab(story.name)}_story.spec.md"),
-                MarkdownScenario.render_scenarios(
-                    story.scenarios,
-                    story_name=story.name,
-                    story_backgrounds=story.backgrounds,
-                ),
+                story.scenarios_text(),
             )
         for child in epic.epics:
             visit(child, parts + [_kebab(child.name)])
 
-    for epic in source.epics:
+    for epic in markdown.epics:
         visit(epic, [_kebab(epic.name)])
 
 

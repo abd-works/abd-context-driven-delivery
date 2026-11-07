@@ -16,10 +16,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import (
-    parse_call_graph_block,
-    render_call_graph_block,
-)
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType
 from cdd_guidance.practices.stories.model.story_model import Background, StepType, Scenario, Step
 from cdd_guidance.practices.stories.model.source_location import SourceLocation, path_from
@@ -444,7 +441,7 @@ class MarkdownScenario(Scenario):
             if stripped.startswith("```"):
                 body = "\n".join(self._realization_lines)
                 if self._realization_target is not None and body.strip():
-                    self._realization_target.call_graph = parse_call_graph_block(body)
+                    self._realization_target.call_graph = CallGraph.parse(body)
                 self._in_realization_fence = False
                 self._realization_lines = []
                 self._realization_target = None
@@ -597,117 +594,6 @@ class MarkdownScenario(Scenario):
         self._take_step(steps, keyword, text)
         self._current.steps = steps
 
-    @classmethod
-    def render_scenarios(
-        cls,
-        scenarios: List["MarkdownScenario"],
-        *,
-        story_name: str = "",
-        story_backgrounds=None,
-    ) -> str:
-        """Emit markdown matching scenario templates (GWT + examples tables)."""
-        return cls._render_scenario_lines(scenarios, story_name, story_backgrounds)
-
-    @classmethod
-    def _render_scenario_lines(cls, scenarios, story_name, story_backgrounds) -> str:
-        lines: List[str] = []
-        if story_name:
-            lines.append(f"## Story: {story_name}")
-            lines.append("")
-        lines.extend(cls._render_example_tables(cls._shared_examples(scenarios)))
-        for background in story_backgrounds or []:
-            if not background.steps:
-                continue
-            lines.append(f"### Story Background: {background.name}")
-            lines.append("")
-            for step in background.steps:
-                lines.extend(cls._step_lines(step))
-            lines.append("")
-            # The story background's own examples sit in its section, so they read back onto the story.
-            lines.extend(cls._render_example_tables(background.examples))
-        for sc in scenarios:
-            kind = "Scenario Outline" if getattr(sc, "is_outline", False) else "Scenario"
-            lines.append(f"### {kind}: {sc.name}")
-            lines.append("")
-            for background in sc.backgrounds:
-                if not background.steps:
-                    continue
-                lines.append("### Background")
-                lines.append("")
-                for step in background.steps:
-                    lines.extend(cls._step_lines(step))
-                lines.append("")
-            for step in sc.steps_in(StepType.GIVEN):
-                lines.extend(cls._step_lines(step))
-            for when_steps, then_steps in sc.when_then_runs():
-                for step in when_steps:
-                    lines.extend(cls._step_lines(step))
-                for step in then_steps:
-                    lines.extend(cls._step_lines(step))
-            records = sc.examples.table()
-            if records:
-                lines.append("")
-                lines.append("### Examples")
-                lines.append("")
-                headers = list(records[0].keys())
-                lines.append("| " + " | ".join(headers) + " |")
-                lines.append("| " + " | ".join("---" for _ in headers) + " |")
-                for record in records:
-                    lines.append("| " + " | ".join(str(record.get(h, "")) for h in headers) + " |")
-            lines.append("")
-        return "\n".join(lines).rstrip() + "\n"
-
-    @classmethod
-    def _shared_examples(cls, scenarios: List["MarkdownScenario"]):
-        for scenario in scenarios:
-            for background in scenario.backgrounds:
-                if background.examples:
-                    return background.examples
-        return {}
-
-    @classmethod
-    def _render_example_tables(cls, examples) -> List[str]:
-        if not examples:
-            return []
-        buckets: List[tuple] = []
-        index: dict = {}
-        for name, example in examples.items():
-            cells = dict(example.cells())
-            cells.setdefault("example", name)
-            headers = tuple(cells.keys())
-            group = str(cells.get("group") or "")
-            key = (group, headers)
-            position = index.get(key)
-            if position is None:
-                index[key] = len(buckets)
-                buckets.append((group, headers, []))
-                position = index[key]
-            buckets[position][2].append(cells)
-        lines = ["### Examples", ""]
-        for group, headers, entries in buckets:
-            if group:
-                lines.append(f"#### {group}")
-                lines.append("")
-            lines.append("| " + " | ".join(headers) + " |")
-            lines.append("| " + " | ".join("---" for _ in headers) + " |")
-            for cells in entries:
-                values = [str(cells.get(header, "")).replace("|", "/") for header in headers]
-                lines.append("| " + " | ".join(values) + " |")
-            lines.append("")
-        return lines
-
-    @classmethod
-    def _step_lines(cls, step: Step) -> List[str]:
-        lines = [f"*{step.keyword}* {MarkdownStep.prose(step)}"]
-        for extra in step.ands:
-            lines.append(f"*{extra.keyword}* {MarkdownStep.prose(extra)}")
-        if getattr(step, "call_graph", None):
-            lines.append("")
-            lines.append("```realization")
-            lines.append(render_call_graph_block(step.call_graph))
-            lines.append("```")
-        return lines
-
     def _infer_story_name(self) -> str:
         for line in self._lines[:20]:
             match = _STORY_H2.match(line)
@@ -723,6 +609,67 @@ class MarkdownScenario(Scenario):
         return self._path.stem.replace("-", " ")
 
 
+def step_lines(step: Step) -> List[str]:
+    """A step and the steps chained onto it as markdown lines, with its realization fence when it has a call graph."""
+    lines = [f"*{step.keyword}* {MarkdownStep.prose(step)}"]
+    for extra in step.ands:
+        lines.append(f"*{extra.keyword}* {MarkdownStep.prose(extra)}")
+    if getattr(step, "call_graph", None):
+        lines.extend(["", "```realization", step.call_graph.block(), "```"])
+    return lines
+
+
+def example_table_lines(examples) -> List[str]:
+    """Examples as markdown tables under an Examples heading: one table per group and set of columns."""
+    if not examples:
+        return []
+    buckets: List[tuple] = []
+    index: dict = {}
+    for name, example in examples.items():
+        cells = dict(example.cells())
+        cells.setdefault("example", name)
+        headers = tuple(cells.keys())
+        group = str(cells.get("group") or "")
+        key = (group, headers)
+        if key not in index:
+            index[key] = len(buckets)
+            buckets.append((group, headers, []))
+        buckets[index[key]][2].append(cells)
+    lines = ["### Examples", ""]
+    for group, headers, entries in buckets:
+        if group:
+            lines.extend([f"#### {group}", ""])
+        lines.append("| " + " | ".join(headers) + " |")
+        lines.append("| " + " | ".join("---" for _ in headers) + " |")
+        for cells in entries:
+            values = [str(cells.get(header, "")).replace("|", "/") for header in headers]
+            lines.append("| " + " | ".join(values) + " |")
+        lines.append("")
+    return lines
+
+
+def scenario_lines(scenario: Scenario) -> List[str]:
+    """One scenario as markdown: its heading, its own backgrounds, its steps in Given, When, Then order, and its
+    examples table."""
+    kind = "Scenario Outline" if getattr(scenario, "is_outline", False) else "Scenario"
+    lines = [f"### {kind}: {scenario.name}", ""]
+    for background in scenario.backgrounds:
+        if background.steps:
+            lines.extend(["### Background", ""])
+            lines.extend(line for step in background.steps for line in step_lines(step))
+            lines.append("")
+    lines.extend(line for step in scenario.steps_in(StepType.GIVEN) for line in step_lines(step))
+    for when_steps, then_steps in scenario.when_then_runs():
+        lines.extend(line for step in [*when_steps, *then_steps] for line in step_lines(step))
+    records = scenario.examples.table()
+    if records:
+        headers = list(records[0].keys())
+        lines.extend(["", "### Examples", "", "| " + " | ".join(headers) + " |", "| " + " | ".join("---" for _ in headers) + " |"])
+        lines.extend("| " + " | ".join(str(record.get(header, "")) for header in headers) + " |" for record in records)
+    lines.append("")
+    return lines
+
+
 # -- Leaf node types -----------------------------------------------------------
 
 class MarkdownStory(Story):
@@ -732,6 +679,48 @@ class MarkdownStory(Story):
         # story is written back as read; None for a story read from anywhere else.
         self.markdown_heading: Optional[tuple] = None
         self.markdown_parts: Optional[list] = None
+
+    def scenarios_text(self) -> str:
+        """This story's own scenarios file: its heading, the examples its scenarios share, its backgrounds, then its
+        scenarios."""
+        lines = [f"## Story: {self.name}", ""] if self.name else []
+        lines.extend(self._scenario_section_lines())
+        return "\n".join(lines).rstrip() + "\n"
+
+    def outline_lines(self, level: int, links: Optional[StoryMapLinks]) -> List[str]:
+        """This story as an outline heading at level, linked to its own file when links name one, with its
+        backgrounds and scenarios one heading level below."""
+        actor = f"{strip_backticks(self.actors[0])} " if self.actors else ""
+        lines = [f"{'#' * min(level, 6)} {self.story_type.outline_mark} {actor}--> {self.label(links)}"]
+        if not self.scenarios and not self.backgrounds:
+            return lines
+        marks = "#" * min(level + 1, 6)
+        section = "\n".join(self._scenario_section_lines()).rstrip()
+        return lines + [""] + [f"{marks} {line[4:]}" if line.startswith("### ") else line for line in section.splitlines()]
+
+    def label(self, links: Optional[StoryMapLinks]) -> str:
+        """The story's name, linked to its own file when links name one."""
+        name = strip_backticks(self.name)
+        target = links.story_file(self) if links is not None else ""
+        return f"[{name}]({target})" if target else name
+
+    def _scenario_section_lines(self) -> List[str]:
+        lines = example_table_lines(self._shared_examples())
+        for background in self.backgrounds:
+            if not background.steps:
+                continue
+            lines.extend([f"### Story Background: {background.name}", ""])
+            lines.extend(line for step in background.steps for line in step_lines(step))
+            lines.append("")
+            # The story background's own examples sit in its section, so they read back onto the story.
+            lines.extend(example_table_lines(background.examples))
+        for scenario in self.scenarios:
+            lines.extend(scenario_lines(scenario))
+        return lines
+
+    def _shared_examples(self):
+        """The examples the first of this story's scenarios with a background that holds any shares."""
+        return next((background.examples for scenario in self.scenarios for background in scenario.backgrounds if background.examples), {})
 
     def load_scenarios(self, root, scenarios=None) -> None:
         name = self.name.strip()
@@ -779,6 +768,28 @@ class MarkdownStory(Story):
 
 
 class MarkdownEpic(Epic):
+    def outline_lines(self, level: int, links: Optional[StoryMapLinks]) -> List[str]:
+        """This epic as outline headings at level, every heading at column 0 so it has an anchor to link to: its
+        estimate (after its stories for a sub-epic), its stories, then its sub-epics one level deeper."""
+        lines = [f"{'#' * min(level, 6)} (E) {strip_backticks(self.name)}"]
+        estimate = [f"* {self.estimate}"] if self.estimate else []
+        stories = [line for story in self.stories for line in story.outline_lines(level + 1, links)]
+        lines.extend([*estimate, *stories] if level == 1 else [*stories, *estimate])
+        lines.extend(line for child in self.epics for line in child.outline_lines(level + 1, links))
+        return lines
+
+    def heading_lines(self, depth: int, links: Optional[StoryMapLinks]) -> List[str]:
+        """This epic as a heading at depth, its nested epics below it, then its stories as bullets with their
+        scenarios beneath. A top epic's own stories have no place in headings."""
+        lines = [f"{'#' * depth} {self.name}"]
+        lines.extend(line for nested in self.epics for line in nested.heading_lines(depth + 1, links))
+        if depth == 1:
+            return lines
+        for story in self.stories:
+            lines.append(f"- {story.label(links)}")
+            lines.extend(f"  - {scenario.name}" for scenario in story.scenarios)
+        return lines
+
     def _load_scenarios(self, scenarios) -> None:
         for child in self.epics:
             child._load_scenarios(scenarios)
@@ -844,73 +855,6 @@ class _StepLines:
             return as_read
         indent = "  " if continuation else ""
         return f"{indent}*{step.keyword}* {MarkdownStep.prose(step)}  \n"
-
-
-class _StoryMapWriter:
-    """Writes one story map as markdown lines. With *links*, a story that has its own markdown file links to it."""
-
-    def __init__(self, links: Optional[StoryMapLinks] = None) -> None:
-        self.links = links
-        self.lines: List[str] = []
-
-    def outline(self, story_map: StoryModel) -> str:
-        """Every heading at column 0; the ``#`` count carries the depth. An indented heading
-        is a code block in markdown, so it has no anchor to link to."""
-        for epic in story_map.epics:
-            self.lines.append(f"# (E) {self._plain(epic.name)}")
-            if epic.estimate:
-                self.lines.append(f"* {epic.estimate}")
-            self._outline_stories(epic, 2)
-            self._outline_epics(epic.epics, 2)
-        return "\n".join(self.lines)
-
-    def headings(self, story_map: StoryModel) -> str:
-        """Epics and nested epics as headings, each nested epic's stories as bullets with their scenarios beneath."""
-        for epic in story_map.epics:
-            self.lines.append(f"# {epic.name}")
-            for child in epic.epics:
-                self._heading_epic(child, 2)
-        return "\n".join(self.lines)
-
-    def _outline_epics(self, epics: List[Epic], level: int) -> None:
-        for epic in epics:
-            self.lines.append(f"{'#' * min(level, 6)} (E) {self._plain(epic.name)}")
-            self._outline_stories(epic, level + 1)
-            if epic.estimate:
-                self.lines.append(f"* {epic.estimate}")
-            self._outline_epics(epic.epics, level + 1)
-
-    def _outline_stories(self, epic: Epic, level: int) -> None:
-        marks = "#" * min(level, 6)
-        for story in epic.stories:
-            actor = f"{self._plain(story.actors[0])} " if story.actors else ""
-            self.lines.append(f"{marks} {story.story_type.outline_mark} {actor}--> {self._label(story)}")
-            self.lines.extend(self._scenario_lines_under(story, level))
-
-    def _scenario_lines_under(self, story: Story, level: int) -> List[str]:
-        """A story's backgrounds and scenarios, their headings one level below the story's."""
-        if not story.scenarios and not story.backgrounds:
-            return []
-        text = MarkdownScenario.render_scenarios(story.scenarios, story_backgrounds=story.backgrounds)
-        marks = "#" * min(level + 1, 6)
-        return [""] + [f"{marks} {line[4:]}" if line.startswith("### ") else line for line in text.splitlines()]
-
-    def _heading_epic(self, epic: Epic, depth: int) -> None:
-        self.lines.append(f"{'#' * depth} {epic.name}")
-        for nested in epic.epics:
-            self._heading_epic(nested, depth + 1)
-        for story in epic.stories:
-            self.lines.append(f"- {self._label(story)}")
-            for scenario in story.scenarios:
-                self.lines.append(f"  - {scenario.name}")
-
-    def _label(self, story: Story) -> str:
-        name = self._plain(story.name)
-        target = self.links.story_file(story) if self.links is not None else ""
-        return f"[{name}]({target})" if target else name
-
-    def _plain(self, text: str) -> str:
-        return strip_backticks(text)
 
 
 class MarkdownParseError(Exception):
@@ -1006,11 +950,10 @@ class MarkdownStoryModel(StoryModel):
         document = story_map.scenario_document
         if document is not None:
             return self._render_scenario_document(document)
-        links = StoryMapLinks.from_workspace(workspace) if workspace else None
-        writer = _StoryMapWriter(links)
+        links = StoryMapLinks.from_workspace(story_map, workspace) if workspace else None
         if not self._should_render_outline(story_map, previous) and not self._is_discovery_story_map(story_map):
-            return writer.headings(story_map)
-        body = writer.outline(story_map)
+            return "\n".join(line for epic in story_map.epics for line in epic.heading_lines(1, links))
+        body = "\n".join(line for epic in story_map.epics for line in epic.outline_lines(1, links))
         if self._is_discovery_story_map(story_map):
             return self._wrap_story_map_document(body, previous)
         return body

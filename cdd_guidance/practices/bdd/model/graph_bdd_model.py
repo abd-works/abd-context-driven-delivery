@@ -12,9 +12,11 @@ from __future__ import annotations
 import re
 from typing import List, Optional
 
+from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph, CallGraphEntry
 from harness.graph.graph import Node
 from harness.graph.saved_graph import SavedGraph
 
@@ -31,8 +33,8 @@ class GraphBddModel(BddModel):
     def parse(self, text: str) -> "GraphBddModel":
         graph = SavedGraph.from_text(text).restored_graph()
         self._graph = graph
-        self._bdd = graph.practice("bdd")
-        self._clean = graph.practice("clean_engineering")
+        self._bdd = graph.practice_of(Bdd)
+        self._clean = graph.practice_of(CleanEngineering)
         for nodes in self._behavior_by_file().values():
             self._read_spec(sorted(nodes, key=lambda node: (node.source.start_line, -node.source.end_line)))
         return self
@@ -74,12 +76,12 @@ class GraphBddModel(BddModel):
         parent.contexts.append(node)
         return node
 
-    def _realization(self, observation: Node) -> List[CallGraphEntry]:
-        entries: List[CallGraphEntry] = []
+    def _realization(self, observation: Node) -> CallGraph:
+        entries = CallGraph()
         for edge in self._graph.edges_from("invokes", observation):
             facts = _member_facts(edge.child)
             entries.extend(self._call(facts.get("owner", ""), edge.child.name, 0, set(), facts))
-        return entries or [CallGraphEntry(depth=0, kind="call", text=NO_OPERATION)]
+        return entries or CallGraph([CallGraphEntry(depth=0, kind="call", text=NO_OPERATION)])
 
     def _call(self, owner: str, name: str, depth: int, trail: set, code_facts: Optional[dict] = None) -> List[CallGraphEntry]:
         """A call on owner.name, then the interactions the model gives it, then what it returns."""

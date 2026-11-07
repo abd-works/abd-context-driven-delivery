@@ -104,7 +104,7 @@ def _screen_outline(screen: Screen) -> dict[str, Any]:
 
 def _control_outline(control: Control) -> tuple:
     interactions = [(i.name, i.trigger, i.effect, _name(i.destination)) for i in control.interactions]
-    fields = (type(control).__name__, control.name, control.control_type, control.label, control.bound_field,
+    fields = (control.semantic_type(), control.name, control.control_type, control.label, control.bound_field,
               list(control.states), interactions)
     if not isinstance(control, StoryDemoControl):
         return fields

@@ -8,9 +8,9 @@ from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import (
+    CallGraph,
     CallGraphEntry,
     parse_arrow_line,
-    render_call_graph_block,
 )
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
@@ -98,7 +98,7 @@ class BddModel(ModelNode):
                 for surface in observation.surface_lines:
                     lines.append(f"{pad}  -> {surface}")
                 if observation.call_graph:
-                    for graph_line in render_call_graph_block(observation.call_graph).splitlines():
+                    for graph_line in observation.call_graph.block().splitlines():
                         lines.append(f"{pad}  {graph_line}")
                 lines.append(f"{pad}  it {observation.name}")
                 lines.append(f"{pad}  ```")
@@ -188,14 +188,14 @@ class _SketchReader:
         owner, lines, self._fence = self._owner(), self._fence or [], None
         if owner is None:
             return
-        call_graph: list[CallGraphEntry] = []
+        call_graph = CallGraph()
         for raw in lines:
             stripped = raw.strip()
             if not stripped or stripped.startswith("//"):
                 continue
             if stripped.startswith("it "):
                 observation = Observation(stripped[3:].strip(), len(owner.observations) + 1)
-                observation.call_graph, call_graph = call_graph, []
+                observation.call_graph, call_graph = call_graph, CallGraph()
                 owner.observations.append(observation)
                 continue
             call_graph.append(self._call_graph_entry(raw, stripped))

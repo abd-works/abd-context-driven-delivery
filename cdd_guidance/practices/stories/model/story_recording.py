@@ -17,7 +17,7 @@ from harness.graph.graph import Node
 from cdd_guidance.practices.stories.model.source_location import SourceLocation
 
 if TYPE_CHECKING:
-    from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
+    from cdd_guidance.practices.stories.model.story_model import StoryModel
 
 _EXPORT_CONST = re.compile(r"export const (\w+)")
 _DOMAIN_CLASS = re.compile(r"\bclass\s+([A-Z]\w*)\b")

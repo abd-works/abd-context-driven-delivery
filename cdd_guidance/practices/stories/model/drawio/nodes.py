@@ -298,7 +298,7 @@ class DrawIOStoryModel(DiagramStoryModel):
     """DrawIO story-map I/O. IS the format-typed tree root.
 
     load reads a file into these nodes. save writes the nodes you edited.
-    The thin-slice table is DrawIOIncrement.save and DrawIOIncrement.load.
+    The thin-slice view is save_thin_slice and load_thin_slice, over this map's own increments.
     """
 
     class Vertex:
@@ -331,12 +331,12 @@ class DrawIOStoryModel(DiagramStoryModel):
             self.node = node
             return self
 
-        def take_links(self, entries: Dict[int, str], links: StoryMapLinks) -> None:
+        def take_links(self, links: StoryMapLinks) -> None:
             """``link`` opens the story's own file when it has one, otherwise its ``story-map.md`` entry;
             ``entry`` keeps the story-map entry."""
             if self.node is None:
                 return
-            self.entry = entries.get(id(self.node), "")
+            self.entry = links.entry_for(self.node)
             story_file = links.story_file(self.node) if isinstance(self.node, Story) else ""
             self.link = story_file or self.entry
 
@@ -371,19 +371,17 @@ class DrawIOStoryModel(DiagramStoryModel):
         """Draw the story map. In a *workspace* folder, each epic, sub-epic, and story cell links to its
         ``story-map.md`` entry there, and a story to its own file when one exists. With no target file,
         the cell has no link."""
-        links = StoryMapLinks.from_workspace(workspace) if workspace else None
         drawn = type(self)(canonical if canonical is not None else self)
-        return drawn._drawing(links)
+        if workspace:
+            drawn.links = StoryMapLinks.from_workspace(drawn, workspace)
+        return drawn.save()
 
     def save(self) -> str:
-        return self._drawing(None)
-
-    def _drawing(self, links: Optional[StoryMapLinks]) -> str:
+        """Draw this story map; each cell links where the links of the folder it was placed in say."""
         vertices = [vertex for epic in self.epics for vertex in epic.cells()]
-        if links is not None:
-            entries = links.entries(self)
+        if self.links is not None:
             for vertex in vertices:
-                vertex.take_links(entries, links)
+                vertex.take_links(self.links)
         mxfile = ET.Element("mxfile", attrib={"host": "app.diagrams.net"})
         diagram = ET.SubElement(mxfile, "diagram", attrib={"name": "Story Map", "id": "story-map"})
         graph_model = ET.SubElement(diagram, "mxGraphModel")

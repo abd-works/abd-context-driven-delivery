@@ -8,7 +8,7 @@ from typing import List, Optional
 from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock
 
 
@@ -111,7 +111,7 @@ class Observation(BehaviorNode):
 
     def __init__(self, name: str, sequential_order: int = 1, graph=None) -> None:
         super().__init__(name=name, sequential_order=sequential_order, graph=graph)
-        self.call_graph: List[CallGraphEntry] = []
+        self.call_graph = CallGraph()
         self.surface_lines: List[str] = []
         self.body = CodeBody()
 
@@ -122,6 +122,6 @@ class Observation(BehaviorNode):
     def clone(self) -> "Observation":
         cloned = type(self)(self.name, self.sequential_order)
         cloned.take_code_from(self)
-        cloned.call_graph = list(self.call_graph)
+        cloned.call_graph = CallGraph(self.call_graph)
         cloned.surface_lines = list(self.surface_lines)
         return cloned

@@ -27,26 +27,28 @@ class ClaudeDesignUxMap(UxMap):
     height = 1100
 
     def render(self, ux_map: UxMap) -> str:
-        return json.dumps(self.boards(ux_map.screens), indent=1, ensure_ascii=False)
+        """ux_map's screens placed on the canvas: copied into a Claude Design map, which places its own."""
+        return type(self).copy_of(ux_map).save()
+
+    def save(self) -> str:
+        return json.dumps(self.boards(), indent=1, ensure_ascii=False)
 
     def parse(self, content: str) -> UxMap:
         raise ClaudeDesignScreensNotReadable("Claude Design screens are placed from the UX map; they are not read back.")
 
-    @classmethod
-    def prototype_names(cls, screens: Iterable) -> List[str]:
-        """Each prototype once, in screen order, at its path on the canvas."""
+    def prototype_names(self) -> List[str]:
+        """Each prototype this map's screens name once, in screen order, at its path on the canvas."""
         found: List[str] = []
-        for screen in screens:
+        for screen in self.screens:
             if screen.prototype:
-                name = f"{cls.folder}/{Path(screen.prototype).name}"
+                name = f"{self.folder}/{Path(screen.prototype).name}"
                 if name not in found:
                     found.append(name)
         return found
 
-    @classmethod
-    def names(cls, screens: Iterable, files: Iterable[str] = ()) -> List[str]:
+    def names(self, files: Iterable[str] = ()) -> List[str]:
         """The prototypes the screens name, then any other screen artboard already in the folder (*files*)."""
-        names = cls.prototype_names(screens)
+        names = self.prototype_names()
         return names + [name for name in files if name not in names]
 
     @staticmethod
@@ -58,13 +60,11 @@ class ClaudeDesignUxMap(UxMap):
         """Each screen's own canvas page: the editor shows it alone there, so leaving Play lands on it to edit."""
         return ("screen-" + Path(name).name.removesuffix(".dc.html"))[:40]
 
-    @classmethod
-    def pages(cls, screens: Iterable, files: Iterable[str] = ()) -> List[dict]:
-        return [{"id": cls.page_of(name), "name": cls.title(name)} for name in cls.names(screens, files)]
+    def pages(self, files: Iterable[str] = ()) -> List[dict]:
+        return [{"id": self.page_of(name), "name": self.title(name)} for name in self.names(files)]
 
-    @classmethod
-    def boards(cls, screens: Iterable, files: Iterable[str] = ()) -> Dict[str, dict]:
+    def boards(self, files: Iterable[str] = ()) -> Dict[str, dict]:
         """One board per screen, alone on its own page at a desktop size."""
-        return {name: {"x": 0, "y": 0, "w": cls.width, "h": cls.height, "page": cls.page_of(name), "title": cls.title(name),
+        return {name: {"x": 0, "y": 0, "w": self.width, "h": self.height, "page": self.page_of(name), "title": self.title(name),
                        "is_interactive": True}
-                for name in cls.names(screens, files)}
+                for name in self.names(files)}

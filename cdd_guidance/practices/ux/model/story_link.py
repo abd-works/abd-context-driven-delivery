@@ -51,9 +51,14 @@ class StoryLink:
         return node is self.node or (node.semantic_type() in _NODE_TYPES[self.kind] and key_of(node) == self.key)
 
     def _candidates(self, graph: Graph) -> Iterator[Node]:
-        for practice in list(graph.practices.values()):
-            for node_type in _NODE_TYPES[self.kind]:
-                yield from graph.nodes_of(practice, node_type)
+        """The Stories nodes of this link's kind on graph; none while graph reads no Stories."""
+        from cdd_guidance.practices.stories.stories import Stories
+
+        stories = graph.loaded(Stories)
+        if stories is None:
+            return
+        for node_type in _NODE_TYPES[self.kind]:
+            yield from graph.nodes_of(stories, node_type)
 
 
 def key_of(node: Node) -> str:

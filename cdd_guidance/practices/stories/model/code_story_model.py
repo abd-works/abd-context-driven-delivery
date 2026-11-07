@@ -26,7 +26,6 @@ import textwrap
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import render_call_graph_block
 from harness.annotations.name import Name
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock, WrittenKey
 from cdd_guidance.practices.stories.model.story_model import (
@@ -466,7 +465,7 @@ class CodeStoryModel(StoryModel):
         """The step's body; an empty one carries the realization call graph as comments above the placeholder."""
         scaffold: List[str] = []
         if step.body.is_empty and step.call_graph:
-            graph = textwrap.dedent(render_call_graph_block(step.call_graph)).splitlines()
+            graph = textwrap.dedent(step.call_graph.block()).splitlines()
             scaffold = [f"{indent}{self.language.comment(line)}" for line in graph]
         return scaffold + step.body.lines_in(self.language, indent, self.step_placeholder())
 

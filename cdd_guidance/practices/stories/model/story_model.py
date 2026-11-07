@@ -8,14 +8,14 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from harness.graph.model_node import ModelChildren, ModelReferences
 from harness.graph.model_node import ModelNode
 from harness.graph.graph import Graph
 from harness.annotations.name import Name
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock
 
 from .source_location import SourceLocation
@@ -373,9 +373,7 @@ class Step(StoryNode):
         self.values: List[str] = list(values) if values is not None else []
         self.actor = actor
         self.source = source
-        self.call_graph: List[CallGraphEntry] = (
-            list(origin.call_graph) if origin is not None and getattr(origin, "call_graph", None) else []
-        )
+        self.call_graph = CallGraph(origin.call_graph if origin is not None and getattr(origin, "call_graph", None) else [])
         self.body = CodeBody()
         if origin is not None:
             self.take_code_from(origin)
@@ -456,7 +454,7 @@ class Step(StoryNode):
             name=self.name,
         )
         cloned.ands = [step.clone() for step in self.ands]
-        cloned.call_graph = list(self.call_graph)
+        cloned.call_graph = CallGraph(self.call_graph)
         cloned.take_code_from(self)
         return cloned
 
@@ -1001,6 +999,8 @@ class StoryModel(StoryNode):
         # The text of each file this map was read from, by the path its nodes name, so recording the map on a graph
         # finds each node's lines without reading the file again.
         self.source_texts: Dict[str, str] = {}
+        # Where each node links in the folder this map was placed in to be drawn; none until a render places it.
+        self.links = None
         if isinstance(source, StoryModel):
             self._copy_map(source)
 
