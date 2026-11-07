@@ -18,6 +18,7 @@ from mamba import description, it
 
 from harness.diagnostics.guidance_probe import GuidanceProbe, instruction_result
 from harness.diagnostics.guidance_diagnostics import GuidanceDiagnostics
+import space.session.session  # noqa: F401 - registers how a tool call opens its session, as the server does at start
 
 
 def _installer(tree: Path, payload: dict) -> Installer:
