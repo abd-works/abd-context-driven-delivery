@@ -54,7 +54,7 @@ from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geom
 from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
     DrawIOClass,
     DrawIOModule,
-    ImportedClass,
+    DrawIOImportedClass,
 )
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -114,8 +114,8 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         loaded.translate_from(source)
         return loaded
 
-    def imported_class(self, source: OoadClass, from_module: str = '') -> ImportedClass:
-        loaded = ImportedClass(
+    def imported_class(self, source: OoadClass, from_module: str = '') -> DrawIOImportedClass:
+        loaded = DrawIOImportedClass(
             name=source.name,
             sequential_order=source.sequential_order,
             from_module=from_module,

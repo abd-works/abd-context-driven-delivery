@@ -13,7 +13,6 @@ from cdd_guidance.practices.clean_engineering.model.class_stereotypes import Cla
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import apply_brace_body_metrics
 from cdd_guidance.practices.clean_engineering.model.property import Property, append_invariant, take_property_note
 from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
 
@@ -252,7 +251,7 @@ class CFamilyParse:
         op.line_count = max(1, len([line for line in body.splitlines() if line.strip()]))
         op.body_fingerprint = operation_body_fingerprint(body)
         op.body = CodeBody(body, self._language)
-        apply_brace_body_metrics(op, body)
+        op.load_brace_body_facts(body)
         if op.name in {"constructor", "__init__"}:
             op.constructed_types = self._constructed_types(body, op.line or 1)
         return op

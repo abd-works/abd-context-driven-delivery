@@ -28,7 +28,6 @@ from cdd_guidance.practices.clean_engineering.model.class_stereotypes import (
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import apply_python_function_metrics
 
 _FUTURE_IMPORT = "from __future__ import annotations"
 _ABC_IMPORT = "from abc import ABC, abstractmethod"
@@ -206,7 +205,7 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
             isinstance(dec, ast.Name) and dec.id == "staticmethod" for dec in node.decorator_list
         )
         operation.is_classmethod = self._is_classmethod(node)
-        apply_python_function_metrics(operation, node)
+        operation.load_python_function_facts(node)
         return operation
 
     def _is_classmethod(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:

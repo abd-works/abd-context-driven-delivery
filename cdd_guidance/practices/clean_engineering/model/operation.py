@@ -32,15 +32,9 @@ from harness.graph.bound_node import BoundChildren
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass, OoadNode
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
-    exception_without_message_in_text,
-    generic_exception_message_in_text,
-    io_and_domain_callees,
-    io_and_domain_in_text,
-    markdown_bullet_lines,
-    mutates_without_record_in_text,
-    private_reach_in_text,
-    prose_comment_in_text,
-    raises_on_empty_in_text,
+    MIN_DELEGATION_LINES,
+    PythonFunctionBody,
+    SourceText,
 )
 from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair
 
@@ -215,17 +209,43 @@ class Operation(OoadNode):
         """Fill the facts this operation's own source span carries, beyond what the parser measured."""
         if not self.body_fingerprint:
             self.body_fingerprint = _span_fingerprint(source_span)
-        self.io_and_domain_callees = io_and_domain_callees([c for c in self.callees if c], self.line_count or 0)
-        self.private_reach = private_reach_in_text(source_span)
-        self.io_and_domain = io_and_domain_in_text(source_span)
-        self.raises_on_empty = raises_on_empty_in_text(source_span)
-        self.exception_without_message = exception_without_message_in_text(source_span)
-        self.generic_exception_message = generic_exception_message_in_text(source_span)
-        self.mutates_without_record = mutates_without_record_in_text(source_span)
-        self.prose_comment = prose_comment_in_text(source_span)
-        bullets = markdown_bullet_lines(source_span)
+        self.io_and_domain_callees = self._delegates_io_and_domain()
+        span = SourceText(source_span)
+        self.private_reach = span.private_reach()
+        self.io_and_domain = span.mixes_io_and_domain()
+        self.raises_on_empty = span.raises_on_empty()
+        self.exception_without_message = span.exception_without_message()
+        self.generic_exception_message = span.generic_exception_message()
+        self.mutates_without_record = span.mutates_without_record()
+        self.prose_comment = span.has_prose_comment()
+        bullets = span.markdown_bullet_lines()
         self.bold_interaction_lines = bullets.get("bold_interaction_lines", [])
         self.bold_invariant_lines = bullets.get("bold_invariant_lines", [])
+
+    def load_brace_body_facts(self, body: str) -> None:
+        """Fill the facts the rules measure on a brace-language method body (inside its `{` … `}`)."""
+        measured = SourceText(body)
+        self.max_control_flow_depth = measured.control_flow_depth()
+        self.has_bare_catch = measured.has_bare_catch()
+        self.swallows_exceptions = measured.swallows_exceptions()
+        self.unnamed_literal_numbers = measured.unnamed_numbers()
+        self.peer_private_access = measured.reaches_peer_private(frozenset(p.name for p in self.parameters if p.name))
+
+    def load_python_function_facts(self, node) -> None:
+        """Fill the facts the rules measure on a Python function, from its syntax tree."""
+        measured = PythonFunctionBody(node)
+        self.max_control_flow_depth = measured.control_flow_depth()
+        self.has_bare_catch, self.swallows_exceptions = measured.except_flags()
+        self.unnamed_literal_numbers = measured.unnamed_numbers()
+        self.narrative_comment_lines = 0
+        self.peer_private_access = measured.reaches_peer_private()
+        self.packed_parameters = measured.packed_parameters()
+
+    def _delegates_io_and_domain(self) -> bool:
+        """A long operation that calls both I/O and domain calculations does two jobs, even when it only delegates."""
+        if (self.line_count or 0) < MIN_DELEGATION_LINES:
+            return False
+        return SourceText("\n".join(f"{callee}(" for callee in self.callees if callee)).calls_io_and_domain()
 
     def save(self) -> str:
         params = ", ".join(parameter.save() for parameter in self.parameters)

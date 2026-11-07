@@ -1,9 +1,9 @@
-*Drawio* is the toolset a caller uses to create, scan, and repair a Clean Engineering Draw.io diagram. *DrawIOCleanEngineeringModel* is the draw.io format of the class model: it parses a diagram into the same modules and classes every other format reads, and renders a model back as a modules view or a class view. *DrawIOModule* and *DrawIOClass* are the live `Module` and `OoadClass` on a page; each writes itself as one Draw.io vertex through *DrawioVertex*. *ImportedClass* here is the dashed Draw.io card for a class owned by another module. *DrawioScanner* reads an existing `.drawio` file page by page and reports one layout rule; each rule is a scanner subclass.
+*Drawio* is the toolset a caller uses to create, scan, and repair a Clean Engineering Draw.io diagram. *DrawIOCleanEngineeringModel* is the draw.io format of the class model: it parses a diagram into the same modules and classes every other format reads, and renders a model back as a modules view or a class view. *DrawIOModule* and *DrawIOClass* are the live `Module` and `OoadClass` on a page; each writes itself as one Draw.io vertex through *DrawioVertex*. *DrawIOImportedClass* is the dashed Draw.io card for a class owned by another module. *DrawioScanner* reads an existing `.drawio` file page by page and reports one layout rule; each rule is a scanner subclass.
 
 - A caller never lays out HTML, waypoints, or mxCell attributes. They ask `Drawio` to create or scan a path.
 - *DrawIOModule* always draws from the `Module` it is. It never copies purpose or seam terms into a second record.
 - *DrawIOClass* always draws from the `OoadClass` it is. Properties, operations, and stereotypes come from that class.
-- The page layout — *Geometry*, *DiagramNode*, *DiagramClass*, *DiagramModule*, the shared *ImportedClass*, *DiagramArrow*, *CardPlacement*, *ArrowRouter*, and *ContainmentForest* — belongs to the class model and is modelled in [ooad-model.md](../../.context/ooad-model.md). This module uses it; Miro and the DDD aggregate view use it too.
+- The page layout — *Geometry*, *DiagramNode*, *DiagramClass*, *DiagramModule*, the shared *ImportedClass*, *DiagramArrow*, *CardPlacement*, *ArrowRouter*, and *ContainmentForest* — belongs to the class model and is modelled in [ooad-model.md](../../.context/ooad-model.md). This module uses it; the DDD aggregate view uses it too.
 - **Invariant:** No second `*Model` / `*Entry` family restates `Module`, `OoadClass`, or `Relationship`.
 
 ---
@@ -60,14 +60,13 @@ The Draw.io UML class cell.
 + width(): int
 	// wide enough that no member line wraps, because the height counts one printed line per member
 + html(): str
-	// stereotypes, name, properties, then operations, with - for a private operation
-	-> DiagramClass.display_name
-	-> DiagramClass.tactical_stereotypes
+	// the stereotypes as <<Mark>>s in small italics above the name, then properties and operations, with - for a private operation
+	// parse reads the marks back into stereotypes, and each inheritance arrow into a base
 + style(): str
 
-## ImportedClass : ImportedClass, DrawIOClass
+## DrawIOImportedClass : ImportedClass, DrawIOClass
 
-The dashed card for a class owned by another module. It extends the class model's shared *ImportedClass* (imported here as `SharedImportedClass`) and *DrawIOClass*.
+The dashed card for a class owned by another module. It extends the class model's shared *ImportedClass* and *DrawIOClass*.
 
 ------
 ----
@@ -101,7 +100,7 @@ The `drawio` format. A modules view when the model has modules and no class memb
 	// previous when this render keeps its positions
 + load_module(source: Module): DrawIOModule
 + load_class(source: OoadClass): DrawIOClass
-+ imported_class(source: OoadClass, from_module: str = ""): ImportedClass
++ imported_class(source: OoadClass, from_module: str = ""): DrawIOImportedClass
 
 ## Drawio
 

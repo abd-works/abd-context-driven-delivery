@@ -2,36 +2,30 @@
 
 *CleanEngineeringModel* is one class model that every format reads and writes: modules holding classes, each with properties, operations and their parameters, and the relationships its properties name. A nested module is a module whose parent is a module. Every node is a graph node (*BoundNode*), so the same objects the formats build are the nodes the graph holds.
 
-A format is one subclass of *CleanEngineeringModel*: markdown, JSON, sketch, Python, TypeScript, JavaScript, Java, draw.io, and Miro. Each format reads text with `parse(text)` and writes a model with `render(canonical, previous)`. Markdown also reads a file through the walk on the base nodes: `load(path)` asks `has_more_module` / `get_next_module_from_file`, each module asks `has_more_class` / `get_next_class_from_file`, and each class loads its properties, operations, and relationships the same way. A format overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its text contains.
+A format is one subclass of *CleanEngineeringModel*: markdown, JSON, sketch, Python, TypeScript, JavaScript, Java, and draw.io. Each format reads text with `parse(text)` and writes a model with `render(canonical, previous)`. Markdown also reads a file through the walk on the base nodes: `load(path)` asks `has_more_module` / `get_next_module_from_file`, each module asks `has_more_class` / `get_next_class_from_file`, and each class loads its properties, operations, and relationships the same way. A format overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its text contains.
 
 One format's model becomes another's through `translate_from(source)`: each node copies what it says itself (`update_self`), then matches the source's children to its own by name, else by order, and builds each new child in its own format through `load_module`, `load_class`, `load_property`, `load_operation`, or `load_parameter`. The `UpdateReport` it returns lists what matched, what was added, and what was removed. `sync(text, canonical)` parses text in this format and translates canonical from it.
 
-Callers use the base nodes. `CleanEngineeringModelFactory.load` takes a file or a folder, chooses the format, and returns a `CleanEngineeringModel`. The practice picks a format by name from `CleanEngineering(...).formats`.
+Callers use the base nodes. The practice picks a format by name from `CleanEngineering(...).formats`. A class's bases and stereotypes are part of what it says itself, so every format writes and reads them and `update_self`, `clone`, and `as_record` copy them. Text a format cannot read raises *UnreadableSource*; the graph read records each such file on its folder, where the `source-parses` rule reports it.
 
 `CleanEngineeringGraph` in `practices/clean_engineering/graph_practice.py` is the practice's `GraphPractice`. When `Graph.load_working_copy` or `Graph.load_files` builds the graph, `fill_working_copy` in `harness/graph/working_copy.py` asks each registered practice to read in dependency order. Clean Engineering reads each source file with its language's model and adds each folder as a *Module* (`load_folder_facts`), and each class, property, operation, and parameter the parser built, as nodes; `load_source_facts` and `load_span_facts` fill the facts its rules read. It then reads every `.context/*-model.md` in scope with *MarkdownCleanEngineeringModel* into *ModelDescriptions*. DDD reads after Clean Engineering and sees its classes as building blocks.
 
 ```
-model = CleanEngineeringModelFactory.load(path)
+model = CleanEngineering().formats["markdown"]().parse(text)
 python = PythonCleanEngineeringModel().render(model, previous)
 ```
 
 # practices/clean_engineering/model
 
 - **Purpose:** One class model for every format. Callers see the base nodes; a format only differs in how it reads and spells its text.
-- **Seam (terms):** CleanEngineeringModelFactory, CleanEngineeringModel, Module, OoadClass, Property, Operation, Parameter, Relationship, CodeBody
-- **Dependencies (one-way):** harness/graph (*BoundNode*, *BoundChildren*, *Graph*), actions/sketch (*SketchOutline*, *SketchLens*), practices/clean_engineering/model/drawio (*DrawIOCleanEngineeringModel*, loaded by the factory)
+- **Seam (terms):** CleanEngineeringModel, UnreadableSource, Module, OoadClass, Property, Operation, Parameter, Relationship, CodeBody
+- **Dependencies (one-way):** harness/graph (*BoundNode*, *BoundChildren*, *Graph*), actions/sketch (*SketchOutline*, *SketchLens*), practices/clean_engineering/model/drawio (*DrawIOCleanEngineeringModel*)
 
-*BoundNode*, *BoundChildren*, *Graph*, *SketchOutline*, and *SketchLens* are owned by the modules above; this model only uses them. The draw.io format — *DrawIOCleanEngineeringModel*, *DrawIOModule*, *DrawIOClass*, and its *ImportedClass* — is modelled in [drawio-model.md](../drawio/.context/drawio-model.md).
+*BoundNode*, *BoundChildren*, *Graph*, *SketchOutline*, and *SketchLens* are owned by the modules above; this model only uses them. The draw.io format — *DrawIOCleanEngineeringModel*, *DrawIOModule*, *DrawIOClass*, and its *DrawIOImportedClass* — is modelled in [drawio-model.md](../drawio/.context/drawio-model.md).
 
-## CleanEngineeringModelFactory
+## UnreadableSource : ValueError
 
-------
-----
-+ load(path: str): CleanEngineeringModel
-	// a folder or a .py file: PythonCleanEngineeringModel. .drawio: DrawIOCleanEngineeringModel. .json: JsonCleanEngineeringModel
-	// .svg or .html: MiroCleanEngineeringModel. Anything else: MarkdownCleanEngineeringModel
-	-> CleanEngineeringModel.load
-	-> CleanEngineeringModel.parse
+A source file its language cannot read, such as Python that does not parse. Reading it as an empty or partial model would drop its classes from every check without saying so.
 
 ## OoadNode : BoundNode
 
@@ -188,6 +182,7 @@ A source file inside a module. It holds the properties and operations that sit a
 + line: int | None
 + end_line: int | None
 + bases: list[str]
+	// the classes it extends or implements, as its declaration names them
 + peer_names: list[str]
 	// the other classes in the same source file
 + module_helpers: list[list]
@@ -198,6 +193,8 @@ A source file inside a module. It holds the properties and operations that sit a
 	-> Property.derive_relationship
 + load_source_facts(class_text: str): None
 	// the shape and source-span facts the graph reads: operation shapes, property names, what the constructor builds, prose comments
++ declared_bases(known_names: list[str]): list[str]
+	// its bases, then the I{Class} contract it implements when known_names hold one
 + load_property(source: Property): Property
 + load_operation(source: Operation): Operation
 + load_relationship(source: Relationship): Relationship
@@ -407,11 +404,29 @@ The `markdown` format: a `#` heading per module and a `##` card per class, or a 
 
 ------
 ----
-+ parse_body(name: str, body: str, sequential_order: int): MarkdownOoadClass
++ parse_body(heading: ClassHeading, body: str, sequential_order: int): MarkdownOoadClass
 + render(known_names: list[str] | None = None): str
++ heading(known_names: list[str]): ClassHeading
+	-> OoadClass.declared_bases
 + render_card(level: int): str
-+ keep_card(card: str, heading: Match): None
++ keep_card(card: str, heading: ClassHeading): None
 	// remembers the card this class was read from
+
+## ClassHeading
+
+A class heading as written: `Cart <<Aggregate Root>> : Basket, Auditable`, or a card's `**Cart** <<Entity>> — note`.
+
++ ClassHeading(name: str, stereotypes: list[str] = [], bases: list[str] = [], note: str = "")
+------
++ name: str
++ stereotypes: list[str]
++ bases: list[str]
++ note: str
+	// a card's note after its marks, kept as written
+----
++ read(raw: str): ClassHeading
++ text(): str
++ card_text(): str
 
 ## JsonCleanEngineeringModel : CleanEngineeringModel
 
@@ -606,14 +621,18 @@ A class model written as code. The walk and the body rule live here; a language 
 	// the description when it is the operation's own text, not one joined from its comments
 + file_header(canonical: CleanEngineeringModel, preamble: CodeBody): list[str]
 + class_open(oclass: OoadClass, known_names: list[str]): list[str]
-	// a blank line, the doc comment, the stereotype decorators, then the declaration for its kind: an interface, a class with its interface, or a class
+	// a blank line, the doc comment, the stereotype decorators, then the declaration for its kind: an interface, or a class with the bases it declares
+	-> OoadClass.declared_bases
 + class_doc(intent: str): list[str]
 + class_intent(oclass: OoadClass): str
 + stereotype_decorators(oclass: OoadClass): list[str]
 	// none for a language that marks stereotypes in the doc comment
 + interface_declaration(oclass: OoadClass): list[str]
-+ implementing_declaration(oclass: OoadClass, interface: str): list[str]
-+ class_declaration(oclass: OoadClass): list[str]
++ class_declaration(oclass: OoadClass, bases: list[str]): list[str]
+	// class Name extends Base implements Contract, Other {
++ heritage(bases: list[str]): tuple
+	// the one base a class extends, and the bases it implements
++ class_modifiers(implemented: list[str]): str
 + class_close(has_members: bool): list[str]
 + property_line(prop: Property, contract: bool): list[str]
 + constructor_lines(oclass: OoadClass, constructor: Operation | None, body: list[str]): list[str]
@@ -623,6 +642,15 @@ A class model written as code. The walk and the body rule live here; a language 
 + block_close(): list[str]
 	// each language overrides the spelling operations above. None of them decides what a body holds
 
+## BraceCleanEngineeringModel : CodeCleanEngineeringModel
+
+A class model written in a brace language: TypeScript, JavaScript, or Java. They read through one parse.
+
+------
+----
++ parse(text: str): BraceCleanEngineeringModel
+	-> CFamilyParse.parse
+
 ## CFamilyParse
 
 Reads brace-language source — TypeScript, JavaScript, and Java — into one module of classes, with each operation's body kept in its language.
@@ -631,7 +659,7 @@ Reads brace-language source — TypeScript, JavaScript, and Java — into one mo
 ------
 ----
 + parse(text: str): CleanEngineeringModel
-	// the preamble, each class with its doc comment and stereotypes, then the top-level functions
+	// the preamble, each class with its doc comment, stereotypes, and the bases its heritage clause names, then the top-level functions
 	-> ClassHead.above
 + method_span_in_text(text: str, name: str, fallback_line: int = 1): tuple[int, int]
 	// the lines a brace-language method spans, when the graph load has no end line
@@ -645,10 +673,7 @@ The `python` format.
 	// CodeLanguage.named("python")
 ----
 + parse(text: str): PythonCleanEngineeringModel
-	-> parse_detailed
-+ parse_detailed(text: str): ParsedPython
-	// ast when the text parses, so the operation metrics are measured; regular expressions when it does not
-+ parse_file(path: Path): ParsedPython | None
+	// read from the syntax tree; text that does not parse raises UnreadableSource
 + load_module(source: Module): PythonModule
 + file_header, class_open, class_close, property_line, constructor_lines, signature, block_close
 	// Python spelling only. The stereotypes are decorators with no arguments: @aggregate_root
@@ -662,15 +687,7 @@ The `python` format.
 + import_targets(text: str, file: Path, root: Path): list[str]
 	// every import and from-import, absolute or relative
 
-## ParsedPython
-
-------
-+ model: PythonCleanEngineeringModel
-+ content: str
-+ lines: list[str]
-+ tree: AST | None
-
-## TypeScriptCleanEngineeringModel : CodeCleanEngineeringModel
+## TypeScriptCleanEngineeringModel : BraceCleanEngineeringModel
 
 The `typescript` format.
 
@@ -678,12 +695,10 @@ The `typescript` format.
 + language: CodeLanguage
 	// CodeLanguage.named("typescript")
 ----
-+ parse(text: str): TypeScriptCleanEngineeringModel
-	-> CFamilyParse.parse
-+ class_doc, class_intent, stereotype_decorators, interface_declaration, implementing_declaration, property_line, constructor_lines, signature
++ class_doc, class_intent, stereotype_decorators, interface_declaration, class_modifiers, property_line, constructor_lines, signature
 	// TypeScript spelling only. The stereotypes are decorators with no arguments: @AggregateRoot()
 
-## JavaScriptCleanEngineeringModel : CodeCleanEngineeringModel
+## JavaScriptCleanEngineeringModel : BraceCleanEngineeringModel
 
 The `javascript` format.
 
@@ -691,14 +706,12 @@ The `javascript` format.
 + language: CodeLanguage
 	// CodeLanguage.named("javascript")
 ----
-+ parse(text: str): JavaScriptCleanEngineeringModel
-	-> CFamilyParse.parse
 + render_class(oclass: OoadClass, known_names: list[str], kept: CodeCleanEngineeringModel): list[str]
 	// an example extension class becomes a comment pointing at its base type
-+ interface_declaration, implementing_declaration, property_line, constructor_lines, signature
-	// JavaScript spelling only. JavaScript has no interfaces, so an interface is a class that says it is one
++ interface_declaration, class_declaration, property_line, constructor_lines, signature
+	// JavaScript spelling only. JavaScript has no interfaces, so an interface is a class that says it is one, and the bases past the one it extends are named in an // implements line
 
-## JavaCleanEngineeringModel : CodeCleanEngineeringModel
+## JavaCleanEngineeringModel : BraceCleanEngineeringModel
 
 The `java` format.
 
@@ -706,14 +719,12 @@ The `java` format.
 + language: CodeLanguage
 	// CodeLanguage.named("java")
 ----
-+ parse(text: str): JavaCleanEngineeringModel
-	-> CFamilyParse.parse
-+ interface_declaration, implementing_declaration, class_declaration, property_line, constructor_lines, signature
++ interface_declaration, class_modifiers, property_line, constructor_lines, signature
 	// Java spelling only
 
 ## DiagramNode
 
-One placed cell. Draw.io writes it as HTML and Miro as Mermaid; the box is shared.
+One placed cell. Draw.io writes it as HTML; the box, its placement, and its arrows are shared.
 
 ------
 + geometry: Geometry
@@ -732,11 +743,6 @@ A class on a page. The format fills the label.
 ----
 + height(): int
 	// grows with the number of properties and operations
-+ display_name(): str
-	// the name without bold marks, <<stereotypes>>, or an extends clause
-+ tactical_stereotypes(): list[str]
-	// the <<stereotypes>> written in the class name
-+ extends_base_name(): str | None
 
 ## ImportedClass : DiagramClass
 
@@ -766,7 +772,7 @@ A module on a page: purpose, seam, nesting, and height. The format fills the lab
 
 ## ContainmentForest
 
-Path nesting and dependency depth for ordering modules on a page. Draw.io and Miro both use it.
+Path nesting and dependency depth for ordering modules on a page.
 
 ------
 + by_name: dict[str, Module]
@@ -778,7 +784,7 @@ Path nesting and dependency depth for ordering modules on a page. Draw.io and Mi
 
 ## DiagramCleanEngineeringModel : CleanEngineeringModel
 
-The diagram format both Draw.io and Miro extend. A modules view (`is_modules_view`: modules with no class members to show) stops at modules; a class view continues through properties and operations.
+The diagram format draw.io extends. A modules view (`is_modules_view`: modules with no class members to show) stops at modules; a class view continues through properties and operations.
 
 ------
 + module_type: DiagramModule
@@ -848,54 +854,3 @@ Routes every arrow between the placed cards.
 + route(): list[DiagramArrow]
 	// routes shortest first, then lifts each arrow that crosses another and searches again with the rest in place
 	-> DiagramArrow.corners
-
-## MiroCleanEngineeringModel : DiagramCleanEngineeringModel
-
-The Miro format: a canvas-composer SVG that holds Mermaid diagrams.
-
-------
-----
-+ parse(text: str): MiroCleanEngineeringModel
-	// the Mermaid source inside the SVG: a flowchart reads as modules, a classDiagram as classes
-+ render(canonical: CleanEngineeringModel, previous: str | None = None): str
-	// a modules view or a class view, placed on a Page
-	-> Page.place
-+ load(path: str): MiroCleanEngineeringModel
-+ save(canonical: CleanEngineeringModel | None = None, previous: str | None = None): str
-+ load_module(source: Module): MiroModule
-+ load_class(source: OoadClass): MiroClass
-
-## MiroModule : DiagramModule
-
-------
-----
-+ mermaid_id(): str
-+ mermaid_label(): str
-	// name, purpose, and seam terms
-+ load_class(source: OoadClass): MiroClass
-
-## MiroClass : DiagramClass
-
-------
-----
-+ mermaid_id(): str
-+ mermaid_lines(): list[str]
-	// a classDiagram block: stereotypes, properties, operations
-
-## MiroImportedClass : ImportedClass
-
-------
-----
-+ mermaid_id(): str
-+ mermaid_lines(): list[str]
-
-## Page
-
-One canvas-composer SVG that places modules as diagram widgets.
-
-+ Page(name: str)
-------
-+ name: str
-----
-+ place(node: DiagramModule, mermaid: str): None
-+ svg(): str

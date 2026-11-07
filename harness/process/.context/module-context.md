@@ -1,10 +1,12 @@
 # harness/process
-*RunningProcess* is a process on this computer by its id, asked whether it is still running; the hook server's lock file, *HookDaemon*, *McpDaemon*, and `scripts/instances.py` name processes this way. *StoppableProcess* is a running process this code may stop, and it waits for the process to exit. The process helpers start Python in the background with no console window on Windows (`windowless_python_executable`, `detached_creationflags`, `hidden_process_startupinfo`), or on a console whose output a caller reads (`console_python_executable`).
+*BackgroundStart* starts a server that keeps running after the chat that started it, with no console window on Windows (`run(command, cwd=..., env=..., log=...)`, or its `creationflags` and `startupinfo` for a caller that starts the process itself); `inside_starters_job()` is the same start for a Windows job that refuses to let its children leave. *PythonInterpreter* is the Python to start: `windowless` for a background server, `console` for a hook command whose JSON the IDE reads from stdout.
+*RunningProcess* is a process on this computer by its id, asked whether it is still running; the hook server's lock file, *HookDaemon*, *McpDaemon*, and `scripts/instances.py` name processes this way. *StoppableProcess* is a running process this code may stop, and it waits for the process to exit, or raises *ProcessNotStopped*.
+*Git* runs the git command line in one folder, with a time limit that suits the command and no inherited stdin (which hangs git under the MCP server on Windows); every failure raises *RepoConnectError*. The repository tools (space/repo), the catalog's source links, and the pinned cdd runtime all run git through it.
 
-- **Purpose:** Name, start, and stop the long-running processes the framework keeps, the same way on Windows and elsewhere.
-- **Seam (terms):** RunningProcess, StoppableProcess, ProcessNotStopped; `windowless_python_executable`, `console_python_executable`, `detached_creationflags`, `hidden_process_startupinfo`
-- **Dependencies (one-way):** none, so harness/hooks, harness/mcp, and the scripts all use it without depending on each other.
+- **Purpose:** Start, name, and stop the processes the framework keeps, and run git, the same way on Windows and elsewhere.
+- **Seam (terms):** BackgroundStart, PythonInterpreter, RunningProcess, StoppableProcess, ProcessNotStopped, Git, RepoConnectError. Each class is a separate small tool its callers use directly, so the module is all seam by design.
+- **Dependencies (one-way):** none, so harness/hooks, harness/mcp, harness/catalog_generator, space/repo, and the scripts all use it without depending on each other.
 
 ## Constraint
 
-Start a background server with `windowless_python_executable` and `detached_creationflags`, and a hook command, whose JSON the IDE reads from stdout, with `console_python_executable`: `pythonw.exe` drops stdout.
+Start a background server with *BackgroundStart* and `PythonInterpreter().windowless`, and a hook command with `PythonInterpreter().console`: `pythonw.exe` drops stdout. Run git only through *Git*, so every git command gets the same time limit and the same error.

@@ -3,7 +3,7 @@
 
 - **Purpose:** Report whether the board app, the graph app, and the hook server are running, for the chat's server health band.
 - **Seam (terms):** ServerHealth; the MCP operation `server-health.report`
-- **Dependencies (one-way):** harness/agent_tools, harness/installation (`@language_adapter`, `@data_field`), harness/mcp, harness/hooks (*HookDaemon*, *HookServer*), `scripts/instances.py` (the graph app's ports). It reads the board app's port as a number and imports nothing from space/kanban.
+- **Dependencies (one-way):** harness/agent_tools, harness/installation (`@language_adapter`, `@data_field`), harness/mcp, harness/hooks (*HookDaemon*, which answers whether this checkout's hook server is running), `scripts/instances.py` (the graph app's ports). It reads the board app's port as a number and imports nothing from space/kanban. It is one class kept as its own module because it is a published toolset with its own TypeScript adapter that depends on harness/hooks and harness/mcp; inside harness/hooks it would make the hooks depend on the MCP server.
 
 ## Constraint
 

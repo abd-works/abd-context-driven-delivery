@@ -11,11 +11,7 @@ from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
-    markdown_bullet_lines,
-    prose_comment_in_text,
-    prototype_swap_in_text,
-)
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair, TranslationError, UpdateReport
 
 if TYPE_CHECKING:
@@ -256,9 +252,10 @@ class OoadClass(OoadNode):
         ]
         self.property_names = sorted(prop.name for prop in self.properties)
         self.constructs = [type_name for type_name, _line in constructor.constructed_types] if constructor else []
-        self.prose_comment = prose_comment_in_text(class_text, hash_only=True)
-        self.prototype_swap = prototype_swap_in_text(class_text, self.line or 1)
-        bullets = markdown_bullet_lines(class_text)
+        source = SourceText(class_text)
+        self.prose_comment = source.has_prose_comment(hash_only=True)
+        self.prototype_swap = source.prototype_swap(self.line or 1)
+        bullets = source.markdown_bullet_lines()
         self.bold_interaction_lines = bullets.get("bold_interaction_lines", [])
         self.bold_invariant_lines = bullets.get("bold_invariant_lines", [])
 

@@ -11,7 +11,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import Ooad
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     DiagramClass,
     DiagramModule,
-    ImportedClass as SharedImportedClass,
+    ImportedClass,
 )
 
 CLASS_STYLE = (
@@ -113,7 +113,7 @@ class DrawIOClass(DiagramClass, DrawioVertex):
         return f'<i style="font-size:9px;color:#888;">{html.escape(label)}</i><br/>'
 
 
-class ImportedClass(SharedImportedClass, DrawIOClass):
+class DrawIOImportedClass(ImportedClass, DrawIOClass):
     """Dashed Draw.io card for a class owned by another aggregate."""
 
     def html(self) -> str:
