@@ -27,8 +27,6 @@ class BddModel(ModelNode):
         self.preamble = CodeBody()
         self.written = None
         self._descriptions = ModelChildren(self, "descriptions")
-        if graph is not None:
-            self._copy_descriptions_on_graph()
 
     @property
     def descriptions(self) -> list[Description]:
@@ -38,12 +36,6 @@ class BddModel(ModelNode):
     def descriptions(self, descriptions: list[Description]) -> None:
         self._refill(self._descriptions, descriptions)
 
-    def _copy_descriptions_on_graph(self) -> None:
-        others = [node for node in self._copies_on_graph("Spec") if node.descriptions]
-        if not others:
-            return
-        for description in others[0].descriptions:
-            self.descriptions.append(description.clone())
 
     def parse(self, text: str) -> "BddModel":
         self.descriptions = _SketchReader().read(text)
