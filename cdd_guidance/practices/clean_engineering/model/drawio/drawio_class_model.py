@@ -82,7 +82,9 @@ MODULE_TITLE_STYLE = 'text;html=1;align=center;verticalAlign=middle;fontSize=18;
 MODULE_SUBTITLE_STYLE = 'text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;'
 _MODULE_MARKER = 'fillColor=#1a3a6e'
 _MODULE_CHILD_MARKER = 'fillColor=#dae8fc'
-_RELATIONSHIP_STRENGTH = {'inheritance': 4, 'composition': 3, 'aggregation': 2, 'association': 1, 'relative': 1}
+_RELATIONSHIP_STRENGTH = {'inheritance': 4, 'composition': 3, 'aggregation': 2, 'association': 1, 'relative': 1, 'dependency': 0}
+# The interaction a dependency names, written on its arrow as `«stops»`.
+_DEPENDENCY_LABEL = re.compile('«([^»]+)»')
 
 Box = Tuple[float, float, float, float]
 Relationships = List[Tuple[str, str, str]]
@@ -266,6 +268,8 @@ class _ClassDiagramReader:
             kind = _classify_edge(cell.get('style', ''))
             if kind == 'inheritance' and target_name not in source.bases:
                 source.bases.append(target_name)
+            for label in _DEPENDENCY_LABEL.findall(html.unescape(cell.get('value', '') or '')):
+                source.depend_on(target_name, label.strip())
             _mark_relationship_kind(source, target_name, kind)
         for oclass in self._classes_by_cell.values():
             for prop in oclass.properties:
@@ -273,8 +277,9 @@ class _ClassDiagramReader:
 
 
 def _mark_relationship_kind(oclass: OoadClass, target: str, kind: str) -> None:
-    """The arrow is the property whose type names the target. The strongest kind drawn to it stays on that property."""
-    if (kind or "").lower() == "inheritance":
+    """The arrow is the property whose type names the target. The strongest kind drawn to it stays on that property.
+    Inheritance and a dependency stand for no property."""
+    if (kind or "").lower() in {"inheritance", "dependency"}:
         return
     for prop in oclass.properties:
         if target not in pascal_type_names(prop.type_hint or ""):
@@ -431,6 +436,8 @@ class _ClassDiagramWriter:
         self._cell_ids_by_name: dict[str, list[str]] = {}
         self._assign_cell_ids()
         self.arrow_labels: Dict[Tuple[str, str], str] = {}
+        # The interactions each pair's dependencies name, in model order: `stops`, `reads sections with`.
+        self.dependency_labels: Dict[Tuple[str, str], List[str]] = {}
         self.relationships = self._collect_relationships()
         self.module_labels = {
             self.cell_ids[id(oclass)]: module_tab_label(module.name) for module in canonical.modules for oclass in module.classes
@@ -491,6 +498,8 @@ class _ClassDiagramWriter:
                 continue
             for prop in oclass.properties:
                 self._collect_property_relationship(source, oclass, prop, relationships)
+            for dependency in oclass.dependencies:
+                self._collect_dependency(source, oclass, dependency, relationships)
             for base in self._base_names(oclass):
                 target = self.resolve_target(oclass, base)
                 if target and (source, target, 'inheritance') not in relationships:
@@ -505,6 +514,21 @@ class _ClassDiagramWriter:
         relationships.append((source, target, relationship.kind or 'association'))
         named = self.arrow_labels.get((source, target))
         self.arrow_labels[(source, target)] = f'{named}, {prop.name}' if named else prop.name
+
+    def _collect_dependency(self, source: str, oclass: OoadClass, dependency, relationships: Relationships) -> None:
+        target = self.resolve_target(oclass, dependency.target)
+        if not target or target == source:
+            return
+        if (source, target, 'dependency') not in relationships:
+            relationships.append((source, target, 'dependency'))
+        labels = self.dependency_labels.setdefault((source, target), [])
+        if dependency.label and dependency.label not in labels:
+            labels.append(dependency.label)
+
+    def arrow_label(self, pair: Tuple[str, str]) -> str:
+        """The arrow's words: the properties it stands for, then each interaction its dependencies name, as `«stops»`."""
+        named = [self.arrow_labels.get(pair, '')] + [f'«{label}»' for label in self.dependency_labels.get(pair, [])]
+        return ' '.join(part for part in named if part)
 
     def _base_names(self, oclass: OoadClass) -> List[str]:
         return list(oclass.bases)
@@ -580,7 +604,7 @@ class _ClassDiagramPage:
         for source, target, kind in self._relationships():
             if source == target:
                 continue
-            label = self._writer.arrow_labels.get((source, target), '')
+            label = self._writer.arrow_label((source, target))
             arrow = arrows.setdefault((source, target), DiagramArrow(source, target, kind, label))
             if _RELATIONSHIP_STRENGTH[kind] > _RELATIONSHIP_STRENGTH[arrow.kind]:
                 arrow.kind = kind
@@ -616,7 +640,10 @@ class _ClassDiagramPage:
         return None
 
     def _repeats_inherited_arrow(self, arrow: DiagramArrow, arrows: Dict[Tuple[str, str], DiagramArrow]) -> bool:
-        """A subclass restating its base's field says nothing a reader cannot already see on the base."""
+        """A subclass restating its base's field says nothing a reader cannot already see on the base. A dependency is
+        what the subclass itself does, so it stays."""
+        if arrow.kind == 'dependency':
+            return False
         return any(
             source == arrow.source and kind == 'inheritance' and (target, arrow.target) in arrows
             for source, target, kind in self._writer.relationships
@@ -681,6 +708,9 @@ class _ClassDiagramPage:
 
 
 def _is_weaker_than_opposite(pair: Tuple[str, str], arrows: Dict[Tuple[str, str], DiagramArrow]) -> bool:
+    """A field drawn both ways keeps the stronger end. A dependency says what one class does to the other, so it stays."""
+    if arrows[pair].kind == 'dependency':
+        return False
     opposite = arrows.get((pair[1], pair[0]))
     return opposite is not None and _RELATIONSHIP_STRENGTH[opposite.kind] > _RELATIONSHIP_STRENGTH[arrows[pair].kind]
 
@@ -865,6 +895,8 @@ def _card_operation(line: str) -> Optional[Operation]:
 
 
 def _classify_edge(style: str) -> str:
+    if 'dashed=1' in style and 'endArrow=open' in style and 'diamondThin' not in style:
+        return 'dependency'
     if 'endFill=0' in style and 'endArrow=block' in style:
         return 'inheritance'
     if 'startFill=1' in style and 'diamondThin' in style:

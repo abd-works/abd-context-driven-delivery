@@ -216,6 +216,8 @@ class OoadClass(OoadNode):
         self.peer_names: List[str] = []
         self.module_helpers: List[list] = []
         self.collaborators: List[str] = collaborators if collaborators is not None else []
+        # What this class does to another class at run time, each named by its interaction: `---<<stops>>--> RunningProcess`.
+        self.dependencies: List[Relationship] = []
         self._properties = ModelChildren(self, "participants")
         self._operations = ModelChildren(self, "participants")
         if properties:
@@ -274,6 +276,7 @@ class OoadClass(OoadNode):
         self.stereotypes = list(source.stereotypes)
         self.bases = list(source.bases)
         self.collaborators = list(source.collaborators)
+        self.dependencies = [item.clone() for item in getattr(source, "dependencies", [])]
 
     def clone(self) -> "OoadClass":
         cloned = type(self)(
@@ -285,6 +288,7 @@ class OoadClass(OoadNode):
         )
         cloned.stereotypes = list(self.stereotypes)
         cloned.bases = list(self.bases)
+        cloned.dependencies = [item.clone() for item in self.dependencies]
         cloned.properties = [item.clone() for item in self.properties]
         cloned.operations = [item.clone() for item in self.operations]
         return cloned
@@ -299,6 +303,7 @@ class OoadClass(OoadNode):
             "properties": [item.as_record() for item in self.properties],
             "operations": [item.as_record() for item in self.operations],
             "relationships": [item.as_record() for item in self.relationships],
+            "dependencies": [item.as_record() for item in self.dependencies],
             "collaborators": list(self.collaborators),
         }
 
@@ -374,6 +379,9 @@ class OoadClass(OoadNode):
 
         if (relationship.kind or "").lower() == "inheritance":
             return
+        if (relationship.kind or "").lower() == "dependency":
+            self.depend_on(relationship.target, relationship.label)
+            return
         for prop in self.properties:
             if relationship.target not in domain_type_names(getattr(prop, "type_hint", "") or ""):
                 continue
@@ -384,6 +392,12 @@ class OoadClass(OoadNode):
             if relationship.description and not getattr(prop, "origin", ""):
                 prop.origin = relationship.description
             prop.derive_relationship()
+
+    def depend_on(self, target: str, label: str) -> None:
+        """Record that this class acts on target at run time, labelled by the interaction; the same pair and label once."""
+        if any(item.target == target and item.label == label for item in self.dependencies):
+            return
+        self.dependencies.append(Relationship(target=target, kind="dependency", label=label))
 
     def load_relationships(self) -> None:
         while self.has_more_relationship():

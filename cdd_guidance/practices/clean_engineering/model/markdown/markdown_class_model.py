@@ -27,6 +27,8 @@ Relationships:
   - Operation return types and PascalCase parameter types also become edges
     (default association). An optional stereotype on the op line applies to
     the return type (e.g. ``+ << composition >> continueToForm(): PortabilityForm``).
+  - A line ``---<<stops>>--> RunningProcess`` after the operations is a dependency: what the class does to
+    another class at run time, labelled by that interaction.
 """
 from __future__ import annotations
 
@@ -53,6 +55,8 @@ from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 _CARD_HEADING = re.compile(r"^(#{2,6})\s+\*\*([^*]+)\*\*(.*?)\s*$")
 _FENCE = re.compile(r"^\s*(```|~~~)")
+# A dependency line: `---<<reads sections with>>--> MarkdownText`.
+_DEPENDENCY = re.compile(r"^\s*-{3}<<\s*(?P<label>.+?)\s*>>-{2}>\s*(?P<target>[A-Za-z_][\w.]*)\s*$")
 
 
 def _split_bases(text: str) -> List[str]:
@@ -111,7 +115,7 @@ class MarkdownOoadClass(OoadClass):
         lines: List[str] = [f"## {self.heading(known_names or []).text()}", ""]
         if self.intent:
             lines.extend([self.intent, ""])
-        if self.properties or self.operations:
+        if self.properties or self.operations or self.dependencies:
             lines.extend(self._member_lines())
         lines.append("")
         return "\n".join(lines)
@@ -136,6 +140,7 @@ class MarkdownOoadClass(OoadClass):
                 continue
             lines.append(self._public_line(operation.render()))
             lines.extend(self._notes_under(operation.callees, invariant_lines(operation)))
+        lines.extend(f"---<<{item.label}>>--> {item.target}" for item in self.dependencies)
         return lines
 
     def _constructor_line(self, constructors: List[Operation]) -> str:
@@ -208,6 +213,7 @@ class MarkdownOoadClass(OoadClass):
         loaded.properties = parsed.properties
         loaded.operations = parsed.operations
         loaded.collaborators = list(parsed.collaborators)
+        loaded.dependencies = list(parsed.dependencies)
         return loaded
 
 
@@ -612,6 +618,11 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             module.description = body.strip()
 
     def _parse_class(self, name: str, body: str) -> OoadClass:
+        dependencies = [
+            Relationship(target=found.group("target"), kind="dependency", label=found.group("label"))
+            for found in (_DEPENDENCY.match(line) for line in body.splitlines()) if found
+        ]
+        body = "\n".join(line for line in body.splitlines() if not _DEPENDENCY.match(line))
         parts6 = re.split(r"(?m)^-{6}\s*$", body, maxsplit=1)
         pre6 = parts6[0] if parts6 else ""
         post6 = parts6[1] if len(parts6) > 1 else ""
@@ -660,6 +671,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             intent=intent,
             properties=props,
             operations=ops,
+            relationships=dependencies,
         )
 
 
