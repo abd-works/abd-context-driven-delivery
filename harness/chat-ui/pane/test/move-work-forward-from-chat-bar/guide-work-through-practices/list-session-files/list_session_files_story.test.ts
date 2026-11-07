@@ -2,7 +2,7 @@ import { expect } from 'claude-code/testing'
 
 import { called } from '../../../cdd-stub'
 import { MODEL_FILES } from '../../../examples/chat-bar.examples'
-import { CHAT_BAR, labelOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, filesPaneOf, labelOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -26,7 +26,9 @@ story('List Session Files', CHAT_BAR, () => {
     })
     // ChatBarView press -> openFiles($, fidelity) -> $.mcp.call('fidelity-progress.files', { ticket: 'checkout-flow', fidelity: 'clean-engineering-model' }) -> FidelityProgress.files()
     then('a tab opens for chat-bar-client.ts and one for fidelity-progress-client.ts, as in View Fidelity Files', async ($, on, scene) => {
-      const tabs = await Promise.all(['file-pane/hooks/chat-bar/chat-bar-client.ts', 'file-pane/hooks/chat-bar/fidelity-progress-client.ts'].map(key => labelOf(scene.ui, key)))
+      const pane = await filesPaneOf($)
+      const tabs = await Promise.all(['file-pane/hooks/chat-bar/chat-bar-client.ts', 'file-pane/hooks/chat-bar/fidelity-progress-client.ts'].map(key => labelOf(pane, key)))
+      await pane.unmount()
       expect(tabs).toEqual(['chat-bar-client.ts', 'fidelity-progress-client.ts'])
       expect(called(scene.world, 'fidelity-progress.files')).toEqual({ ticket: 'checkout-flow', fidelity: 'clean-engineering-model' })
     })

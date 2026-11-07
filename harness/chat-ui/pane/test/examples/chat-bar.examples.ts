@@ -157,4 +157,5 @@ export const MODEL_REPORT = {
   text: '# Validation\n\n## no-legacy-api-after-refactor\n\nFail',
   rules: [],
   has_saved_graph: false,
+  is_out_of_date: false,
 }
