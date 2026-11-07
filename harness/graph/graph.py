@@ -678,12 +678,13 @@ class Node:
 
     def get_fact(self, key: str, default=None):
         """This node's fact, else the nearest ancestor's: a fact a whole file owns lives once, on the file's top node."""
-        node = self
-        while node is not None:
+        node, visited = self, set()
+        while node is not None and id(node) not in visited:
             if node._model_has(key):
                 return getattr(node.model, key)
             if key in node.data:
                 return node.data[key]
+            visited.add(id(node))
             node = node.parent or node.practice.direct_parent(node)
         return default
 
