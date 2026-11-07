@@ -11,7 +11,7 @@ The MCP tools `repo.switch_branch`, `repo.close_branch`, `repo.switch_worktree`,
 
 - **Purpose:** Give every caller one object graph for the clone, its branches and worktrees, its commits, and its GitHub tickets, so version control and ticket flow are never reimplemented with raw `git` or `gh` output.
 - **Seam (terms):** Repo, Branch, Worktree, Commit, Project, ProjectTicket, ProjectTicketState, `Repo.current`, `Repo.session_named`, `repo.switch_branch`, `repo.close_branch`, `repo.switch_worktree`, `repo.close_worktree`, `repo.push_commit`
-- **Dependencies (one-way):** `harness/agent_tools`, `harness/installation`, `harness/mcp`, `space` (*WorkState*, `project_checkout`); `space/session` and `tools/file_manager` (both import `space/repo` back — a cycle tracked in `.sessions/_backlog/break-module-dependency-cycles.md`)
+- **Dependencies (one-way):** `harness/agent_tools`, `harness/installation`, `harness/mcp`, `space` (*WorkState*, `project_checkout`), `space/session`, `tools/file_manager` (*FileManager*). `space` (*WorkState* reads the saved *Branch* and *Worktree*) and `space/session` import `space/repo` back, and `tools/file_manager` imports `space/session`, which imports `space/repo`; these cycles are tracked in `.sessions/_backlog/break-module-dependency-cycles.md`.
 
 ## Constraint
 
