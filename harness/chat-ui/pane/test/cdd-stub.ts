@@ -115,12 +115,13 @@ function readFile(world: World, { path }: { session: string; path: string }): Fi
   return { path, text: world.texts[path] ?? '' }
 }
 
-// Ticket.branch: the ticket's own branch, named as the ticket; one the repository does not have for a ticket the story
-// gives none.
+// Ticket.branch and Ticket.work_branch: the branch the story gives the ticket, such as main for work on main; for a
+// ticket the story gives none, its own branch, named as the ticket, which the repository does not have.
 const branch = (world: World, { ticket }: { ticket: string }): BranchData => world.branches[ticket] ?? { name: ticket, exists: false, is_checked_out: false }
 
 const TOOLS: Record<string, (world: World, args: any) => unknown> = {
   'ticket.branch': branch,
+  'ticket.work_branch': branch,
   'ticket.move_next': moveNext,
   'fidelity-progress.finish_review': finishReview,
   'ticket.close': close,
@@ -145,6 +146,7 @@ export const OPERATIONS: Record<string, string[]> = {
   'ticket.create': ['title', 'scope', 'parent', 'path'],
   'ticket.activate': ['ticket', 'leaving', 'opening'],
   'ticket.branch': ['ticket'],
+  'ticket.work_branch': ['ticket'],
   'ticket.close': ['ticket', 'leaving'],
   'ticket.move_next': ['ticket'],
   'fidelity-progress.finish_review': ['ticket', 'fidelity'],

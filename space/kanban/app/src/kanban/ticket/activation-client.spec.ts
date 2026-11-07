@@ -29,10 +29,10 @@ async function switchingPage() {
 const activatePosts = (asked: Asked[]) => asked.filter(request => request.path === `/api/ticket/${CHOSEN}/activate`)
 
 describe('Activate Ticket', () => {
-  it('should offer commit and push on leaving and open with merge off', async () => {
+  it('should offer a handoff, commit and push on leaving and open with merge off', async () => {
     const { page, chosen } = await switchingPage()
     await page.activation.start(chosen, false)
-    expect(page.store.state.activation?.leaving).toEqual(['commit', 'push'])
+    expect(page.store.state.activation?.leaving).toEqual(['handoff', 'commit', 'push'])
   })
 
   it('should offer a branch to a ticket that has none', async () => {
@@ -41,10 +41,19 @@ describe('Activate Ticket', () => {
     expect(page.store.state.activation?.opening).toEqual(['branch'])
   })
 
-  it('should choose nothing to leave when the session has no branch', async () => {
+  // The fixture project is checked out on main, so the active session's work is on main, which leaving commits and pushes.
+  it('should offer a handoff, commit and push of main when the session has no branch of its own', async () => {
     const { page } = await board.page()
     await page.activation.start(ticketOn(page, CHOSEN), false)
-    expect(page.store.state.activation?.leaving).toEqual([])
+    expect([page.store.state.activation?.leavingBranch?.name, page.store.state.activation?.leaving]).toEqual(['main', ['handoff', 'commit', 'push']])
+  })
+
+  it('should leave only the handoff chosen once a person unchooses commit and push', async () => {
+    const { page, chosen } = await switchingPage()
+    await page.activation.start(chosen, false)
+    page.activation.toggleLeaving('commit')
+    page.activation.toggleLeaving('push')
+    expect(page.store.state.activation?.leaving).toEqual(['handoff'])
   })
 
   it('should say what it switches from and to', async () => {
@@ -64,12 +73,12 @@ describe('Activate Ticket', () => {
 
     it('should send what was chosen', async () => {
       const { asked } = await confirmed()
-      expect(activatePosts(asked)[0]?.body).toEqual({ leaving: ['commit', 'push', 'merge'], opening: ['branch'] })
+      expect(activatePosts(asked)[0]?.body).toEqual({ leaving: ['handoff', 'commit', 'push', 'merge'], opening: ['branch'] })
     })
 
     it('should report it', async () => {
       const { page } = await confirmed()
-      expect(page.store.state.toasts.at(-1)?.text).toBe('Checkout flow: committed, pushed, merged to main · Billing report: branch created · Billing report is now active')
+      expect(page.store.state.toasts.at(-1)?.text).toBe('Checkout flow: handoff written, committed, pushed, merged to main · Billing report: branch created · Billing report is now active')
     })
   })
 
@@ -108,7 +117,7 @@ describe('Close Active Session', () => {
   it('should send what to do with its work', async () => {
     const { page, asked } = await closing()
     await page.activation.confirm()
-    expect(asked.find(request => request.path === `/api/ticket/${ACTIVE}/close`)?.body).toEqual({ leaving: ['commit', 'push'] })
+    expect(asked.find(request => request.path === `/api/ticket/${ACTIVE}/close`)?.body).toEqual({ leaving: ['handoff', 'commit', 'push'] })
   })
 
   it('should select the ticket in Complete', async () => {

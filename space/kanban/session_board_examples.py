@@ -342,6 +342,14 @@ def seed_checkout_flow_open_on_main(project: SessionsProject) -> None:
     seed_checkout_flow_open(project)
 
 
+def seed_checkout_flow_open_on_pushed_main(project: SessionsProject) -> None:
+    """checkout-flow open on main, pushed to origin, with its work not yet committed: a session with no branch of its own."""
+    project.seed_git_checkout()
+    project.seed_origin()
+    project.seed_file(WORK_FILE, WORK_TEXT)
+    seed_checkout_flow_open(project)
+
+
 def seed_checkout_flow_open_on_its_pushed_branch(project: SessionsProject) -> None:
     """checkout-flow open on its own branch, checked out and pushed to origin, with its work not yet committed."""
     project.seed_git_checkout()

@@ -22,6 +22,7 @@ from space.kanban.board import (
     Stage,
 )
 from harness.guidance.stages import GENERATE, REVIEW, VALIDATE
+from space.kanban.leaving_handoff import LeavingHandoff
 from space.kanban.report import Report, ReportFile
 from space.repo.repo import Branch
 from space.session import Session
@@ -40,6 +41,7 @@ ONCE_THERE_IS_OUTPUT = (VALIDATE, REVIEW)
 LEAVE_COMMIT = "commit"
 LEAVE_PUSH = "push"
 LEAVE_MERGE = "merge"
+LEAVE_HANDOFF = "handoff"
 OPEN_BRANCH = "branch"
 OPEN_WORKTREE = "worktree"
 
@@ -97,6 +99,18 @@ class Ticket(Card):
     def branch(self) -> Branch:
         """Return ticket's own branch, named as the ticket: whether the repository has it yet, so activating ticket offers to create only what is missing, and whether it is checked out, so leaving ticket can commit, push, and merge its work."""
         return self._board.repo.branch_named(self.name)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def work_branch(self) -> Branch:
+        """Return the branch ticket's work is on, which leaving ticket commits and pushes: its own branch while it is checked out, else the default branch while the checkout is on it, as for a session with no branch of its own. Any other branch checked out is not ticket's, so its own branch comes back not checked out and leaving commits nothing."""
+        own = self.branch()
+        if own.is_checked_out:
+            return own
+        repo = self._board.repo
+        default = repo.branch_named(repo.default_branch)
+        return default if default.is_checked_out else own
 
     @property
     def title(self) -> str:
@@ -205,7 +219,7 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def activate(self, leaving: list[str] | None = None, opening: list[str] | None = None) -> Ticket:
-        """Make ticket the current session. leaving names what to do with the active ticket's work first: commit, push, merge. opening names what to create for ticket: branch, worktree."""
+        """Make ticket the current session. leaving names what to do with the active ticket's work first: handoff, commit, push, merge. opening names what to create for ticket: branch, worktree."""
         active = self._board.active
         if active is not None and active.name != self.name:
             active.leave(leaving or [])
@@ -227,15 +241,22 @@ class Ticket(Card):
         return Board.load(self._board.repo.root).ticket(self.name)
 
     def leave(self, leaving: list[str]) -> None:
-        """Do what leaving names with the ticket's work: commit, push, merge. Only on its own branch, checked out,
-        because those steps act on whatever is checked out."""
-        if not leaving or not self.branch().is_checked_out:
+        """Do what leaving names with the ticket's work: write a handoff for its session, then commit, push, and merge
+        the branch its work is on. Those three only while that branch is checked out, because they act on whatever is
+        checked out. Work on the default branch is committed and pushed there; it has no branch to merge and no
+        worktree to remove."""
+        if not leaving:
+            return
+        if LEAVE_HANDOFF in leaving:
+            self._session.handoffs.write(LeavingHandoff(self).document)
+        branch = self.work_branch()
+        if not branch.is_checked_out:
             return
         repo = self._board.repo
         if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
             repo.push_commit(f"{self.name}: leave session", sync_remote=LEAVE_PUSH in leaving)
-        if LEAVE_MERGE in leaving:
-            repo.close_branch(self.name)
+        if LEAVE_MERGE in leaving and not branch.is_default:
+            repo.close_branch(branch.name)
 
     @mcp
     @agent_tool
@@ -283,7 +304,7 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
-        """Close ticket: its session ends, its folder moves to _complete/, and it shows in Complete. leaving names what to do with its work first: commit, push, merge."""
+        """Close ticket: its session ends, its folder moves to _complete/, and it shows in Complete. leaving names what to do with its work first: handoff, commit, push, merge."""
         self.leave(leaving or [])
         self._session.close()
         return Ticket(self._session.move_to_closed(), self._board)

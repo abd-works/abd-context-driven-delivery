@@ -40,6 +40,19 @@ with story("Activate Ticket"):
             pass
         with and_("a toast says Checkout flow: committed, pushed, merged to main · Billing report: branch created · Billing report is now active"):
             pass
+    with scenario("Write a handoff for the session being left"):
+        # Evidence: observed: chat-ui-defects backlog item — switching with Create handoff on writes a handoff for the session being left.
+        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card)"):
+            pass
+        with when("the Person activates billing-report with Create handoff chosen"):
+            # Person -> Ticket.activate(leaving=['handoff'], opening=[])
+            # Ticket -> active Ticket.leave(['handoff'])
+            # Ticket -> Handoffs.write(LeavingHandoff(checkout-flow).document)
+            pass
+        with then("checkout-flow's session folder holds a handoff"):
+            pass
+        with but_("billing-report's session folder holds none"):
+            pass
     with scenario("Activate a ticket when the active one has no branch"):
         # Evidence: observed: activation-client.spec 'should choose nothing to leave when the session has no branch'; kanban_tools_spec 'with the active ticket on no branch of its own' — 'should commit nothing on a ticket that has no branch', 'should leave the branch checked out as it was'; 'that activates a ticket' — 'should make the chosen ticket the current session'.
         with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card)"):
