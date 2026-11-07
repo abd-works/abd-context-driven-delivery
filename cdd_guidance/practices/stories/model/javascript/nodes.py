@@ -6,7 +6,6 @@ from typing import List
 
 from cdd_guidance.practices.stories.model.brace_story import BraceScenario
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeStory
-from cdd_guidance.practices.stories.model.story_model import Story
 
 
 class JavaScriptScenario(BraceScenario):
@@ -29,23 +28,6 @@ class JavaScriptStory(CodeStory):
         story.read_description(content)
         story.fill(content)
         return story
-
-    @classmethod
-    def create(
-        cls,
-        story: Story,
-        relative_story_test_path: str = "../../story-test.js",
-        relative_types_path: str | None = None,
-        **kwargs,
-    ) -> str:
-        from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
-
-        import_path = relative_types_path or relative_story_test_path
-        return "\n".join([
-            f'import {{ background, scenario, story }} from "{import_path}";',
-            "",
-            JavaScriptStoryModel().story_text(cls(story)),
-        ])
 
 
 class JavaScriptEpic(CodeEpic):

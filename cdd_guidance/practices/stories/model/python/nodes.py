@@ -5,7 +5,7 @@ import re
 from typing import List
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory
-from cdd_guidance.practices.stories.model.story_model import Background, Story
+from cdd_guidance.practices.stories.model.story_model import Background
 
 
 class PythonScenario(CodeScenario):
@@ -87,18 +87,6 @@ class PythonStory(CodeStory):
             story.domain_terms = [term.strip() for term in domain_match.group(1).split(",") if term.strip()]
         story.fill(content)
         return story
-
-    @classmethod
-    def create(cls, story: Story, **kwargs) -> str:
-        from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
-
-        return "\n".join([
-            "from __future__ import annotations",
-            "",
-            "from story_test import and_, background, given, scenario, story, then, when",
-            "",
-            PythonStoryModel().story_text(cls(story)),
-        ])
 
 
 class PythonEpic(CodeEpic):

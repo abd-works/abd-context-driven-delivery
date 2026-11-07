@@ -10,8 +10,6 @@ from harness.name.name import Name
 
 from cdd_guidance.practices.stories.model.brace_story import BraceScenario
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeStory
-from cdd_guidance.practices.stories.model.story_model import Story
-from cdd_guidance.practices.stories.model.typescript.story_file import DEFAULT_STORY_TEST_IMPORT
 
 
 class TypeScriptScenario(BraceScenario):
@@ -55,16 +53,6 @@ class TypeScriptStory(CodeStory):
             story.evidence = [part.strip() for part in evidence_match.group(1).split(",") if part.strip()]
         story.fill(content)
         return story
-
-    @classmethod
-    def create(cls, story: Story, story_test_import_path: str = DEFAULT_STORY_TEST_IMPORT, **kwargs) -> str:
-        from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
-
-        return "\n".join([
-            f'import {{ scenario, story }} from "{story_test_import_path}";',
-            "",
-            TypeScriptStoryModel().story_text(cls(story)),
-        ])
 
 
 class TypeScriptEpic(CodeEpic):
@@ -112,7 +100,6 @@ class TypeScriptEpic(CodeEpic):
             f"  email: 'suspended-user@example.com',\n"
             f"}};\n"
         )
-
 
 
 def _story_test_text(tests_root: str) -> str:

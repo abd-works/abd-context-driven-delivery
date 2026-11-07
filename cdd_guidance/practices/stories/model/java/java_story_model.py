@@ -35,7 +35,7 @@ class JavaStoryModel(CodeStoryModel):
                 for extra in step.ands:
                     lines.append(f" * {extra.keyword.upper()}: {extra.text}")
         for scenario in story.scenarios:
-            lines.extend(JavaScenario.create(scenario))
+            lines.extend(scenario.lines())
         lines.append(" */")
         return lines
 
