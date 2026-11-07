@@ -1,6 +1,7 @@
 """Co-located markdown extract and HTML conversion — not assembly."""
 from __future__ import annotations
 
+import functools
 import html
 import inspect
 import re
@@ -8,7 +9,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Literal, TypeVar, get_args, get_origin, get_type_hints
 
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.annotations.annotation import annotation_kinds
 from harness.markdown.format import TEMPLATE_FOLDER_NAMES, Format
 
@@ -82,6 +83,11 @@ class MarkdownText:
 
     def __init__(self, text: str) -> None:
         self._text = text
+
+    @property
+    def text(self) -> str:
+        """The whole document as written."""
+        return self._text
 
     @property
     def yaml_fields(self) -> dict[str, Any]:
@@ -237,7 +243,7 @@ class MarkdownFile:
         if document is None:
             return ""
         if not self._heading:
-            return document._text
+            return document.text
         return document.slice_heading(_section_heading(self._heading))
 
     def read_fidelity_subsection(self, fidelity_name: str) -> str:
@@ -779,7 +785,7 @@ class MarkdownCollection:
     def from_section(cls, markdown: Markdown, return_type: Any, parent: Any = None) -> Any:
         """The collection a property's section holds, as return_type reads it: a list type as this collection's
         entries, a type with its own ``from_markdown`` through that, keeping the section's text."""
-        text = markdown.raw()
+        text = markdown.document.text
         if (get_origin(return_type) or return_type) is list:
             return cls.from_markdown(markdown.extract())
         builder = getattr(return_type, "from_markdown", None)
@@ -858,14 +864,20 @@ class Markdown:
         instance's current ones."""
         return cls(instance, label, fidelity=fidelity, format=format)
 
-    def raw(self) -> str:
-        location = AssetLocator(self._instance, self._label, fidelity=self._fidelity, format=self._format).locate()
-        return location.extract()
+    @functools.cached_property
+    def location(self) -> AssetLocation:
+        """Where this section lives, located once: it depends only on the instance, label, fidelity and format this
+        Markdown was made with."""
+        return AssetLocator(self._instance, self._label, fidelity=self._fidelity, format=self._format).locate()
+
+    @functools.cached_property
+    def document(self) -> MarkdownText:
+        """The section, read once from its location."""
+        return MarkdownText(self.location.extract())
 
     def extract(self) -> str:
-        text = self.raw()
-        YamlFields(self._instance).assign_yaml(text)
-        return MarkdownText(text).without_yaml
+        YamlFields(self._instance).assign_yaml(self.document.text)
+        return self.document.without_yaml
 
     def expand_docstring(self, docstring: str | None) -> str:
         """Plain docstring text, or the markdown section when the docstring is one word."""
@@ -901,10 +913,10 @@ class Markdown:
         """This section read as return_type: its YAML fields go onto the instance it is read for, and onto the object
         it becomes. ``build(markdown, return_type, parent)`` makes that object when given; else ``coerce`` does, from
         the text without its YAML for HTML, a string, or a dict."""
-        raw = self.raw()
+        raw = self.document.text
         YamlFields(self._instance).assign_yaml(raw)
         if build is None and self._reads_plain_text(return_type):
-            return self.coerce(MarkdownText(raw).without_yaml, return_type)
+            return self.coerce(self.document.without_yaml, return_type)
         result = build(self, return_type, self._instance) if build is not None else self.coerce(raw, return_type)
         YamlFields(result).assign_yaml(raw)
         return result
@@ -922,7 +934,7 @@ class Markdown:
     def templates_path_map(self) -> dict[str, str]:
         """Each format's template file under the class's ``templates`` folder, by format name, as a path from the
         class's folder."""
-        class_dir = AssetLocator(self._instance, self._label).class_file_directory()
+        class_dir = self.location.module_dir
         templates = class_dir / "templates"
         if not templates.is_dir():
             return {}

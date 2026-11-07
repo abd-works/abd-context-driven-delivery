@@ -5,7 +5,7 @@ Each format is one class of the same map, in this module: *DrawioUxMap* (the def
 
 - **Purpose:** Keep one UX map that every UX format and fidelity reads, so converting a diagram to a mockup never changes the screens.
 - **Seam (terms):** UxMap, Screen, Region, Control, StoryDemoControl, Interaction, Transition, ContentType, NavComponent, UxContext, DrawioUxMap, HtmlUxMap, JsonUxMap, MarkdownUxMap, ClaudeDesignUxMap
-- **Dependencies (one-way):** `harness/graph` (the map's nodes are graph nodes), `harness/name` (*Name*), `harness/design_canvas` (*DesignCanvas* and the artboard helpers the story canvas draws with), `cdd_guidance/practices/stories` (the story model the story canvas shows). Neither harness nor Stories imports this module.
+- **Dependencies (one-way):** `harness/graph` (the map's nodes are graph nodes), `harness/annotations` (*Name*), `harness/design_canvas` (*DesignCanvas* and the artboard helpers the story canvas draws with), `cdd_guidance/practices/stories` (the story model the story canvas shows). Neither harness nor Stories imports this module.
 
 ## Constraint
 

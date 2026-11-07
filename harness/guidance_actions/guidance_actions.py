@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, NotRequired, TypedDic
 
 from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import InstallDestination
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.documents import load_document
 from harness.guidance.practice_catalogue import PracticeCatalogue

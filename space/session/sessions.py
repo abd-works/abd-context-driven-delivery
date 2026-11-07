@@ -9,7 +9,7 @@ from harness.agent_tools.agent_tools import tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
-from harness.name.name import Name
+from harness.annotations.name import Name
 from space.repo.repo import Repo
 from space.session.session import COMPLETE_FOLDER, MAIN_SESSION_NAME, SESSION_FILE, Session
 from space.work_state import WorkState

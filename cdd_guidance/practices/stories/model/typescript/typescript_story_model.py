@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
-from harness.name.name import Name
+from harness.annotations.name import Name
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError, example_names_of
 from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel

@@ -41,7 +41,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.markdown.format import Format
 from harness.markdown.markdown import MarkdownText
 from harness.mcp.mcp_server import mcp
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.process.git import Git
 
 if TYPE_CHECKING:

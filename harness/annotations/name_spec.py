@@ -1,7 +1,7 @@
 from mamba import description, it
 from expects import equal, expect
 
-from harness.name.name import Name
+from harness.annotations.name import Name
 
 
 with description("a Name") as self:

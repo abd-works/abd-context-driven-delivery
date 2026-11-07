@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.guidance.documents import load_document
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.rule import Rule, RulesCollection

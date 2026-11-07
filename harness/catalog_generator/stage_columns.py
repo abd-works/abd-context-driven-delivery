@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from harness.guidance.stages import DISCOVERY, IMPLEMENTATION, SPECIFICATION, STAGES, ApproachStage, StageScope
-from harness.name.name import Name
+from harness.annotations.name import Name
 
 
 @dataclass(frozen=True)

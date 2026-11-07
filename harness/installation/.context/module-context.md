@@ -8,7 +8,7 @@ A member's destination is chosen with an annotation on it: `@skill`, `@command("
 
 - **Purpose:** Give every channel the annotations, the data, and the writer it publishes a member with, and find the toolsets a repository defines.
 - **Seam (terms):** RepositoryToolsets, ContextConfig, MalformedContextConfigError, `CONTEXT_FOLDER`, Installation, FileInstallation, IdeLayout, LanguageAdapterInstallation, SourceFile; the annotations `@skill`, `@command`, `@rules`, `@noDeploy`, `@noCatalog`, `@language_adapter`, `@identity`, `@data_field`, `@edits`; `data_of(value)`
-- **Dependencies (one-way):** harness/agent_tools, harness/annotations, harness/markdown, harness/name. harness/hooks, harness/mcp, and harness/installer depend on this module; it imports none of them.
+- **Dependencies (one-way):** harness/agent_tools, harness/annotations, harness/markdown. harness/hooks, harness/mcp, and harness/installer depend on this module; it imports none of them.
 
 ## Constraint
 

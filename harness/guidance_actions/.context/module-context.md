@@ -4,7 +4,7 @@
 
 - **Purpose:** Give every guidance action the same way to take guidance, open its session, and run once per listed guidance, so each action holds only its own words and steps.
 - **Seam (terms):** GuidanceAction, GuidanceArg, ActionWorksInNoSession, `injects_rules`; `for_call(call)`, `made_for(session)`, `listed()`, `each(...)`, `run(...)`, `session`, `path_named(path)`, `document_named(content, paths)`, `source_label(content, paths)`
-- **Dependencies (one-way):** harness/agent_tools (*ToolCall*, which opens the session a call works in and the session a `session=` word names; a guidance action explains its `guidance` parameter through `parameter_notes`), harness/guidance (*PracticeCatalogue* turns a slug into a practice and fidelity), harness/hooks (*Hook*, and `rules_toast`, the toast `inject_rules` gives in its result), harness/annotations (`@Toast`), harness/name. Nothing in the framework imports this module, and it imports nothing above the framework.
+- **Dependencies (one-way):** harness/agent_tools (*ToolCall*, which opens the session a call works in and the session a `session=` word names; a guidance action explains its `guidance` parameter through `parameter_notes`), harness/guidance (*PracticeCatalogue* turns a slug into a practice and fidelity), harness/hooks (*Hook*, and `rules_toast`, the toast `inject_rules` gives in its result), harness/annotations (`@Toast`, *Name*). Nothing in the framework imports this module, and it imports nothing above the framework.
 
 ## Constraint
 

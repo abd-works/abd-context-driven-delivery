@@ -2,6 +2,7 @@
 the arguments a call sends turned back into the Python types the callable declares."""
 from __future__ import annotations
 
+import functools
 import inspect
 import types as py_types
 from collections.abc import Callable, Mapping, Sequence
@@ -29,9 +30,9 @@ class ParameterSchema:
     def __init__(self, callable: Callable[..., object]) -> None:
         self._callable = callable
 
-    @property
+    @functools.cached_property
     def json_schema(self) -> dict[str, Any]:
-        """The JSON Schema of the parameters a caller passes; ``self`` and ``cls`` are not among them."""
+        """The JSON Schema of the parameters a caller passes, read once; ``self`` and ``cls`` are not among them."""
         hints = self._hints()
         properties: dict[str, Any] = {}
         required: list[str] = []

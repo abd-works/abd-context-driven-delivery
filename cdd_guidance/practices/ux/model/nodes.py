@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Iterable, List, Mapping, Optional
 
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph, Node
 

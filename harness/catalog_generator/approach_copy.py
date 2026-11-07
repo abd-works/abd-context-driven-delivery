@@ -7,7 +7,7 @@ from pathlib import Path
 
 from harness.catalog_generator.stage_columns import STAGE_COLUMNS
 from harness.guidance.stages import STAGES, StageScope
-from harness.name.name import Name
+from harness.annotations.name import Name
 
 APPROACH_MARKDOWN = Path(__file__).resolve().parent / "markdown" / "cdd-approach.md"
 _LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")

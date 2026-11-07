@@ -8,7 +8,7 @@ import os
 import re
 from pathlib import Path
 
-from harness.name.name import Name
+from harness.annotations.name import Name
 
 # A chat id becomes part of a file pattern, so only the letters, digits, and dashes of an id may reach it.
 _CHAT_ID = re.compile(r"[0-9A-Za-z-]+")

@@ -20,7 +20,7 @@ from harness.catalog_generator.catalog_examples import (
 from harness.catalog_generator.markdown_html import MarkdownHtml
 from harness.catalog_generator.page_shell import PageShell
 from harness.catalog_generator.stage_columns import STAGE_COLUMNS, StageColumn
-from harness.name.name import Name
+from harness.annotations.name import Name
 
 # The colour families the approach cycles through for a stage's first three chips.
 _ITEM_FAMILIES = ("sdd", "uxd", "arc")

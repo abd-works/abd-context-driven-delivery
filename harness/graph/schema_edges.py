@@ -15,7 +15,7 @@ from pathlib import Path
 
 from harness.graph.graph import EdgeType
 from harness.guidance.schema import Schema
-from harness.name.name import Name
+from harness.annotations.name import Name
 
 _ROOT = Path(__file__).resolve().parents[2]
 

@@ -23,7 +23,7 @@ from typing import ClassVar
 _CDD_CHECKOUT = Path(__file__).resolve().parents[2]
 
 from harness.agent_tools.agent_tools import agent_toolset
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.installation.destination import noCatalog
 from harness.annotations.annotation import Toast
 from harness.hooks.hook_server import TOAST_ARROW, HookPayload, HookServer, rules_toast

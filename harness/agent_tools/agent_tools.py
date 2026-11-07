@@ -13,7 +13,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, ClassVar, Mapping, cast, get_args, get_origin, get_type_hints
 
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.agent_tools.parameter_schema import ParameterSchema
 from harness.agent_tools.tool_call import ToolCall
 from harness.markdown.markdown import Markdown, MarkdownCollection
@@ -93,8 +93,12 @@ class ToolSetCollection:
 
     @property
     def tools(self) -> dict[str, AgentTool]:
-        """Tools declared on this collection, not on its entries."""
-        members = ToolsetMembers(type(self))
+        """Tools declared on this collection, not on its entries, made once for this collection."""
+        return self._declared_tools
+
+    @functools.cached_property
+    def _declared_tools(self) -> dict[str, AgentTool]:
+        members = ToolsetMembers.of(type(self))
         return {
             name: AgentTool(name=name, callable=members.callable_on(self, name, member), toolset=self)
             for name, member in members.annotated
@@ -153,34 +157,50 @@ collect = Collect
 
 class ToolsetMembers:
     """The members of one toolset class and which of them its annotations make tools. A class's functions and properties are
-    fixed once it is imported, and every hook dispatch asks this of every toolset, so each class is walked once."""
+    fixed once it is imported, and every hook dispatch asks this of every toolset, so the class holds its members
+    (``ToolsetMembers.of``) and they are walked once."""
 
-    _walked: ClassVar[dict[type, list[tuple[str, Any]]]] = {}
+    _HELD_AS: ClassVar[str] = "_toolset_members"
 
     def __init__(self, owner: type) -> None:
         self._owner = owner
 
-    @property
+    @classmethod
+    def of(cls, owner: type) -> ToolsetMembers:
+        """The members owner holds, made and kept on owner itself the first time they are asked for. A subclass holds
+        its own, because it may add or replace members."""
+        held = owner.__dict__.get(cls._HELD_AS)
+        if held is None or held._owner is not owner:
+            held = cls(owner)
+            try:
+                setattr(owner, cls._HELD_AS, held)
+            except TypeError:  # a built-in type keeps no attributes, so its members are walked for this read alone
+                pass
+        return held
+
+    @functools.cached_property
     def every(self) -> list[tuple[str, Any]]:
         """Every function, class or static method, and property getter on the class, by name."""
-        walked = ToolsetMembers._walked.get(self._owner)
-        if walked is None:
-            walked = ToolsetMembers._walked[self._owner] = self._walk()
-        return walked
+        return self._walk()
 
-    @property
+    @functools.cached_property
     def annotated(self) -> list[tuple[str, Any]]:
         """The members that are tools: annotated ``@agent_tool`` or ``@agent_instructions``, or enlisted by a destination
         such as a hook."""
         return [(name, member) for name, member in self.every if self.is_tool(member)]
 
-    @property
+    @functools.cached_property
     def tool_names(self) -> set[str]:
         return {name for name, member in self.annotated if AgentToolAnnotation.annotates(member)}
 
-    @property
+    @functools.cached_property
     def instruction_names(self) -> frozenset[str]:
         return frozenset(name for name, member in self.annotated if AgentInstructionsAnnotation.annotates(member))
+
+    @functools.cached_property
+    def subject_loader(self) -> ToolSubjectLoader:
+        """How the class finds the object a tool call acts on: its ``@tool_subject`` loader, read once."""
+        return ToolSubjectLoader(self._owner)
 
     def is_tool(self, member: Any) -> bool:
         return AgentToolAnnotation.annotates(member) or AgentInstructionsAnnotation.annotates(member) or annotation_kinds.enlisting(member)
@@ -294,7 +314,7 @@ class ToolsetValidator:
 
     def __init__(self, toolset_class: type) -> None:
         self._toolset_class = toolset_class
-        self._members = ToolsetMembers(toolset_class)
+        self._members = ToolsetMembers.of(toolset_class)
 
     def validate(self) -> None:
         """Raises AgentToolValidationError naming the recipe and what is wrong with it."""
@@ -433,6 +453,11 @@ class AgentToolSetOrigin:
     def description(self) -> str:
         return (self.__class__.__doc__ or "").strip()
 
+    @functools.cached_property
+    def class_markdown(self) -> Markdown:
+        """The markdown beside this toolset's class, which expands a tool's one-word description into its section."""
+        return Markdown.from_label(self, "")
+
 
 class AgentToolSet(AgentToolSetOrigin):
     """Injected by @agent_toolset — the operations, instructions, and nested collections of one toolset as the tools it
@@ -503,7 +528,7 @@ class AgentToolSet(AgentToolSetOrigin):
     def _made(cls, toolset: type, context: dict[str, Any]) -> Any:
         """A toolset with a ``@tool_subject`` loader is a domain class whose constructor needs a real object's
         collaborators. Listing its tools needs none of them, and each tool loads the object it acts on."""
-        if ToolSubjectLoader(toolset).loader is not None:
+        if ToolsetMembers.of(toolset).subject_loader.loader is not None:
             return toolset.__new__(toolset)
         return toolset(**context)
 
@@ -524,18 +549,41 @@ class AgentToolSet(AgentToolSetOrigin):
         for collection in self.toolset_collections:
             yield from collection
 
+    # The tools are read-only properties over parts made once, so a section's settings never overwrite them.
+
     @property
     def operations(self) -> dict[str, AgentOperation]:
-        return self._discover_operations()
+        """Each ``@agent_tool`` member of this toolset, made once for this toolset."""
+        return self._operation_members
 
     @property
     def instructions(self) -> Mapping[str, AgentInstructions]:
-        return self._discover_instruction_members()
+        """Each ``@agent_instructions`` member of this toolset, made once for this toolset."""
+        return self._instruction_members
+
+    def instruction(self, name: str) -> AgentInstructions:
+        """The ``@agent_instructions`` member called name. A recipe names its members by name in its source, and a
+        practice's own ``instructions`` is its prose, so a recipe finds a member here."""
+        return self._instruction_members[name]
 
     @property
     def tools(self) -> dict[str, AgentTool]:
+        """Every tool this toolset publishes, made once for this toolset: its instructions, its operations, the members a
+        destination enlists, and the tools of the collections it holds."""
+        return self._published_tools
+
+    @functools.cached_property
+    def _operation_members(self) -> dict[str, AgentOperation]:
+        return self._discover_operations()
+
+    @functools.cached_property
+    def _instruction_members(self) -> dict[str, AgentInstructions]:
+        return self._discover_instruction_members()
+
+    @functools.cached_property
+    def _published_tools(self) -> dict[str, AgentTool]:
         merged: dict[str, AgentTool] = {}
-        merged.update(self._discover_instruction_members())
+        merged.update(self._instruction_members)
         merged.update(self.operations)  # @agent_tool wins same name — MCP must invoke, not only expand
         for name, tool in self._discover_enlisted_members().items():
             merged.setdefault(name, tool)
@@ -556,7 +604,7 @@ class AgentToolSet(AgentToolSetOrigin):
 
     @property
     def _members(self) -> ToolsetMembers:
-        return ToolsetMembers(type(self))
+        return ToolsetMembers.of(type(self))
 
     def _discover_operations(self) -> dict[str, AgentOperation]:
         return {
@@ -565,10 +613,11 @@ class AgentToolSet(AgentToolSetOrigin):
         }
 
     def _operation_callable(self, name: str, member: Any) -> Any:
-        load = ToolSubjectLoader(type(self)).loader
+        subject_loader = self._members.subject_loader
+        load = subject_loader.loader
         if load is None or isinstance(inspect.getattr_static(type(self), name), classmethod):
-            return ToolSubjectLoader(type(self)).given_the_called_project(self._members.callable_on(self, name, member))
-        return ToolSubjectLoader(type(self)).on_subject(load, member)
+            return subject_loader.given_the_called_project(self._members.callable_on(self, name, member))
+        return subject_loader.on_subject(load, member)
 
     def _discover_instruction_members(self) -> dict[str, AgentInstructions]:
         members = self._members
@@ -615,7 +664,7 @@ class AgentToolSet(AgentToolSetOrigin):
     def _collections_on(self, instance: Any) -> list[tuple[str, Any]]:
         if instance is None:
             return []
-        members = ToolsetMembers(type(instance))
+        members = ToolsetMembers.of(type(instance))
         found: list[tuple[str, Any]] = []
         for name, member in members.every:
             if name in self._COLLECTION_SKIP:
@@ -657,9 +706,9 @@ class ToolSubjectLoader:
     def __init__(self, toolset_class: type) -> None:
         self._toolset_class = toolset_class
 
-    @property
+    @functools.cached_property
     def loader(self) -> Callable[..., Any] | None:
-        """The classmethod annotated ``@tool_subject`` on the class, bound to it; none when it has none."""
+        """The classmethod annotated ``@tool_subject`` on the class, bound to it, found once; none when it has none."""
         for name in dir(self._toolset_class):
             member = inspect.getattr_static(self._toolset_class, name, None)
             if isinstance(member, classmethod) and ToolSubject.annotates(member.__func__):
@@ -785,10 +834,15 @@ class AgentTool(AgentToolDestination):
             suffix = "()"
         return f"Use MCP tool: `{self.mcp_name}{suffix}`"
 
+    @functools.cached_property
+    def parameter_schema(self) -> ParameterSchema:
+        """The parameters a caller passes to this tool's callable, read once from its type hints."""
+        return ParameterSchema(self.callable)
+
     @property
     def input_schema(self) -> dict[str, Any]:
         """The JSON Schema of the arguments a caller passes, read from the callable's type hints."""
-        return ParameterSchema(self.callable).json_schema
+        return self.parameter_schema.json_schema
 
     def invoke(self, arguments: dict[str, Any] | None = None, *, project: Path | str | None = None) -> Any:
         """Run the tool with arguments as a caller sent them, on the checkout of project, the project the calling chat
@@ -800,7 +854,7 @@ class AgentTool(AgentToolDestination):
         argument in the type its parameter declares."""
         tool = self.on(self.toolset.for_call(call))
         tool.log_session_invocation(call)
-        return tool.callable(**ParameterSchema(tool.callable).coerced(call.arguments), **tool._called_project(call))
+        return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._called_project(call))
 
     def on(self, toolset: Any) -> AgentTool:
         """This tool on toolset, a toolset of the same class made for one call; the tool as it is when toolset is its
@@ -876,7 +930,7 @@ class AgentTool(AgentToolDestination):
     @functools.cached_property
     def description(self) -> str:
         """What the tool does, expanded from its docstring once: MCP lists it on every request for the tool list."""
-        expanded = Markdown.from_label(self.toolset, "").expand_docstring(self.docstring)
+        expanded = self.toolset.class_markdown.expand_docstring(self.docstring)
         if expanded:
             return expanded
         if self.name == "instructions":
@@ -976,20 +1030,11 @@ class AgentInstructions(AgentTool):
         return "instructions"
 
     @classmethod
-    def for_callable(
-        cls,
-        callable: Callable[..., Any],
-        instance: AgentToolSet | None = None,
-    ) -> AgentInstructions:
-        if instance is not None:
-            if isinstance(callable, property):
-                callable = callable.fget
-            return instance._discover_instruction_members()[callable.__name__]
-        return cls(
-            name=callable.__name__,
-            callable=callable,
-            toolset=AgentToolSet(),
-        )
+    def for_callable(cls, callable: Callable[..., Any], toolset: AgentToolSet) -> AgentInstructions:
+        """The instructions member of toolset that callable, one of its ``@agent_instructions`` operations, is."""
+        if isinstance(callable, property):
+            callable = callable.fget
+        return toolset.instruction(callable.__name__)
 
     @property
     def prompt(self) -> tuple[str, ...]:
@@ -1011,7 +1056,7 @@ class AgentInstructions(AgentTool):
 
     def _expanded_reply(self, arguments: dict[str, Any]) -> str:
         toolset = self.toolset
-        expanded = AgentInstructions.for_callable(self.callable, toolset).expand(arguments)
+        expanded = self.expand(arguments)
         body = (expanded.instructions or "").strip()
         doc = (inspect.getdoc(self.callable) or "").strip()
         if doc and doc not in body:
@@ -1021,13 +1066,18 @@ class AgentInstructions(AgentTool):
         session = getattr(toolset, "session_context", "")
         return f"{reply}\n\n{session}" if session else reply
 
+    @functools.cached_property
+    def recipe_source(self) -> RecipeSource:
+        """What this operation's recipe says, read once from the callable it holds."""
+        return RecipeSource(self.callable)
+
     @property
     def result_template(self) -> str:
-        source = RecipeSource(self.callable)
+        source = self.recipe_source
         result_template = source.result_template
         if not result_template and source.only_defers_to_parent:
             parent = self.parent_recipe()
-            result_template = RecipeSource(parent[0].callable).result_template if parent is not None else ""
+            result_template = parent[0].recipe_source.result_template if parent is not None else ""
         return result_template or f"Instructions for {self.callable.__name__}"
 
     def expand(self, arguments: dict[str, Any]) -> ExpansionResult:
@@ -1045,11 +1095,11 @@ class AgentInstructions(AgentTool):
 
     def members_of(self, target: Any) -> ToolsetMembers:
         """The members of target, a toolset this recipe names, that are its tools."""
-        return ToolsetMembers(type(target))
+        return ToolsetMembers.of(type(target))
 
-    def member_of(self, target: Any, member: str) -> AgentInstructions:
+    def member_of(self, target: AgentToolSet, member: str) -> AgentInstructions:
         """The instructions operation member on target, a toolset this recipe names."""
-        return AgentToolSet._discover_instruction_members(target)[member]
+        return target.instruction(member)
 
     def provider_of(self, owner: Any, provider_name: str) -> Any:
         """The object owner's provider gives: a toolset it holds as it is, or what a provider operation answers."""

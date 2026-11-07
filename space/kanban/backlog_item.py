@@ -8,7 +8,7 @@ from pathlib import Path
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.destination import data_field, identity, language_adapter
-from harness.name.name import Name
+from harness.annotations.name import Name
 from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
 from space.kanban.ticket import Ticket
 from harness.mcp.mcp_server import mcp

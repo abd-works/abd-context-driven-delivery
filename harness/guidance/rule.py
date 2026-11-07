@@ -12,7 +12,7 @@ from harness.agent_tools.agent_tools import (
     agent_toolset,
     instructions,
 )
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import data_field
 from harness.markdown.markdown import MarkdownCollection, MarkdownText

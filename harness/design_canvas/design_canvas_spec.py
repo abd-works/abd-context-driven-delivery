@@ -8,7 +8,7 @@ from mamba import description, context, it, before, after
 from expects import equal, expect, have_keys
 
 from harness.design_canvas.canvas import DesignCanvas, stem
-from harness.name.name import Name
+from harness.annotations.name import Name
 
 
 with description("Design canvas") as self:

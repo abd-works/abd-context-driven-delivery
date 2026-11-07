@@ -13,7 +13,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 sys.modules.pop("actions", None)
 
 import yaml
-from expects import be_true, contain, equal, expect, have_key, raise_error
+from expects import be, be_true, contain, equal, expect, have_key, raise_error
 from mamba import after, before, context, description, it
 from space.session.throwaway_project import ThrowawayProject
 
@@ -43,7 +43,7 @@ from harness.agent_tools._examples.super_delegation.super_delegation_demo import
     SuperBase,
 )
 from cdd_guidance.practices.agent_bdd.yaml_fence import load_fenced
-from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference, agent_tool as _tool, tool_subject, tools, instructions
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetMembers, ToolsetReference, agent_tool as _tool, tool_subject, tools, instructions
 
 Car = ToolsetReference("cdd_guidance.practices._examples.car.car:Car").toolset_class
 
@@ -391,6 +391,26 @@ with description("AgentToolSet"):
             with it("should mark each operation kind as tool"):
                 for entry in self.car.operations.values():
                     expect(entry.kind).to(equal("tool"))
+
+            with it("should keep the tools it made the first time its tools are read"):
+                expect(self.car.tools["start"]).to(be(self.car.tools["start"]))
+
+            with it("should publish the same operation in its tools and its operations"):
+                expect(self.car.tools["start"]).to(be(self.car.operations["start"]))
+
+            with it("should keep each tool's parameter schema once it is read"):
+                drive = self.car.tools["drive"]
+                expect(drive.parameter_schema).to(be(drive.parameter_schema))
+
+        with context("with the members its class holds"):
+            with it("should hold one set of members for the class"):
+                expect(ToolsetMembers.of(Car)).to(be(ToolsetMembers.of(Car)))
+
+            with it("should give a subclass members of its own"):
+                class FasterCar(Car):
+                    pass
+
+                expect(ToolsetMembers.of(FasterCar)).not_to(be(ToolsetMembers.of(Car)))
 
         with context("with observable state on the example Car"):
             with it("should expose current values on the instance"):
