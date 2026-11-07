@@ -50,17 +50,17 @@ def _session_file(ticket: str) -> str:
 
 def _reports(ticket: dict) -> dict[str, str]:
     """Each fidelity's latest report on a ticket's JSON, by its slug, leaving out the fidelities with none."""
-    return {progress["slug"]: progress["report_file"] for progress in ticket["progress"] if progress["report_file"]}
+    return {progress["fidelity"]["slug"]: progress["report_file"] for progress in ticket["progress"] if progress["report_file"]}
 
 
 def _violation_counts(ticket: dict) -> dict[str, int]:
     """How many violations each fidelity's latest report names on a ticket's JSON, leaving out the ones with none."""
-    return {progress["slug"]: progress["violation_count"] for progress in ticket["progress"] if progress["violation_count"]}
+    return {progress["fidelity"]["slug"]: progress["violation_count"] for progress in ticket["progress"] if progress["violation_count"]}
 
 
 def _next_action(ticket: dict) -> str:
     """The action Run next sends on a ticket's JSON: its next fidelity's next action, none when it has no next fidelity."""
-    return progress_in(ticket, ticket["next"]["slug"])["next_action"] if ticket["next"] else ""
+    return progress_in(ticket, ticket["next"]["fidelity"]["slug"])["next_action"] if ticket["next"] else ""
 STAGE_COLUMNS = {"Discovery": 1, "Specification": 2, "Implementation": 3}
 
 DISCOVERY_DONE = [
@@ -653,8 +653,11 @@ with description("the board tools") as self:
             with before.each:
                 self.help = self.project.call("fidelity-progress.help", ticket="pet-visits", fidelity="stories-story-map")
 
-            with it("should show the fidelity's rules"):
-                expect([rule["slug"] for rule in self.help["rules"]]).to(contain("verb-noun-format"))
+            with it("should show the fidelity's rules, as the fidelity sends them"):
+                expect([rule["slug"] for rule in self.help["fidelity"]["rules"]]).to(contain("verb-noun-format"))
+
+            with it("should show the fidelity's own overview, as the fidelity sends it"):
+                expect(self.help["fidelity"]["overview"]).to(contain("story map"))
 
             with it("should name the stage a fidelity belongs to"):
                 expect(self.help["stage"]["name"]).to(equal("Discovery"))
@@ -666,8 +669,8 @@ with description("the board tools") as self:
             with before.each:
                 self.help = self.project.call("board.help", practice="stories")
 
-            with it("should show the practice's shared rules"):
-                expect([rule["slug"] for rule in self.help["rules"]]).to(contain("do-not-invent-requirements"))
+            with it("should show the practice's shared rules, as the practice sends them"):
+                expect([rule["slug"] for rule in self.help["practice"]["rules"]]).to(contain("do-not-invent-requirements"))
 
             with it("should name no fidelity on a practice's help"):
                 expect((self.help["fidelity"], self.help["stage"])).to(equal((None, None)))
@@ -1146,7 +1149,7 @@ with description("the board tools") as self:
             expect(set(self.project.ticket_json("pet-visits"))).to(equal(set(DataClass(Ticket).fields)))
 
         with it("should send a Ticket's progress as one FidelityProgress per fidelity, each naming its fidelity"):
-            expect([progress["slug"] for progress in self.project.ticket_json("pet-visits")["progress"]][:2]).to(equal(["stories-story-map", "ddd-bounded-context"]))
+            expect([progress["fidelity"]["slug"] for progress in self.project.ticket_json("pet-visits")["progress"]][:2]).to(equal(["stories-story-map", "ddd-bounded-context"]))
 
         with it("should send a Ticket's column by its name alone, since the column sends the ticket"):
             expect(self.project.ticket_json("pet-visits")["column"]).to(equal({"name": "Discovery"}))
@@ -1156,7 +1159,7 @@ with description("the board tools") as self:
             expect(story_map).to(equal({"slug": "stories-story-map", "name": "story_map", "outputs": {"markdown": ".context/story-map.md", "drawio": ".context/story-map.drawio"}, "default_format": "markdown"}))
 
         with it("should send a Ticket's next fidelity by its ticket and slug alone, since its progress sends it"):
-            expect(self.project.ticket_json("pet-visits")["next"]).to(equal({"ticket": "pet-visits", "slug": "stories-story-map"}))
+            expect(self.project.ticket_json("pet-visits")["next"]).to(equal({"ticket": {"name": "pet-visits"}, "fidelity": {"slug": "stories-story-map"}}))
 
         with it("should send the board's active ticket by its name alone, since its column sends it"):
             self.project.call("ticket.activate", ticket="pet-visits")

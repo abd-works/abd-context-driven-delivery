@@ -68,12 +68,18 @@ with description("a Draw.io layout scanner"):
     with context("that reports on every rule for named paths"):
         with before.each:
             path = _diagram_in_examples()
-            scanner = DrawioScanner()
-            scanner.workspace_root = path.parent
-            self.report = scanner.run_report([str(path)])
+            self.report = DrawioScanner(scan_root=path.parent).run_report([str(path)])
 
         with it("should keep the violations of every rule when no rule is named"):
             expect([item["rule"] for item in self.report["violations"]]).to(contain("prefer-short-routes"))
 
         with it("should not call the diagram clean"):
             expect(self.report["ok"]).to(equal(False))
+
+    with context("that reports on named paths with no scan root"):
+        with before.each:
+            path = _diagram_in_examples()
+            self.report = DrawioScanner().run_report([str(path)])
+
+        with it("should scan the folder the paths share"):
+            expect([item["rule"] for item in self.report["violations"]]).to(contain("prefer-short-routes"))

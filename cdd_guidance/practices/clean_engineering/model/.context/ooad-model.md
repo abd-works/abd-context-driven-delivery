@@ -272,6 +272,13 @@ A source file inside a module. It holds the properties and operations that sit a
 ----
 + load_span_facts(source_span: str): None
 	// the facts the operation rules read from its own source lines: private reach, I/O mixed with domain work, swallowed or empty-case exceptions, prose comments
+	-> SourceText
++ load_brace_body_facts(body: str): None
+	// what the rules measure on a brace-language body: control-flow depth, catches, unnamed numbers, reads of a peer's private fields
+	-> SourceText
++ load_python_function_facts(node: FunctionDef): None
+	// the same measures read from Python's syntax tree, plus the parameters a tuple packs
+	-> PythonFunctionBody
 + save(): str
 	// name(parameters): return type, with - for a private name
 + load_parameter(source: Parameter): Parameter
@@ -290,6 +297,42 @@ A rule that must stay true for one property or one operation. The text is the //
 + Invariant(text: str, sequential_order: int = 0)
 ------
 + text: str
+
+## SourceText
+
+A span of source in any language — an operation body, a class, a markdown card — and what the rules measure in it.
+
++ SourceText(text: str)
+------
+----
++ control_flow_depth(): int
++ has_bare_catch(): bool
++ swallows_exceptions(): bool
++ unnamed_numbers(): list[str]
++ reaches_peer_private(parameter_names: frozenset[str]): bool
++ mixes_io_and_domain(): bool
++ calls_io_and_domain(): bool
++ raises_on_empty(): bool
++ exception_without_message(): str
++ generic_exception_message(): bool
++ mutates_without_record(): bool
++ private_reach(): bool
++ has_prose_comment(hash_only: bool = False): bool
++ prototype_swap(start_line: int): dict
++ markdown_bullet_lines(): dict
+
+## PythonFunctionBody
+
+A Python function read from its syntax tree, and what the rules measure in it.
+
++ PythonFunctionBody(node: FunctionDef)
+------
+----
++ control_flow_depth(): int
++ except_flags(): tuple[bool, bool]
++ unnamed_numbers(): list[str]
++ reaches_peer_private(): bool
++ packed_parameters(): dict[str, int]
 
 ## Parameter : OoadNode
 

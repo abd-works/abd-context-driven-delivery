@@ -164,7 +164,7 @@ def names_in(column: dict) -> list[str]:
 
 def next_in(ticket: dict) -> dict:
     """The progress a ticket's data names as its next: the ticket sends it by its slug, since its progress sends it."""
-    return progress_in(ticket, ticket["next"]["slug"])
+    return progress_in(ticket, ticket["next"]["fidelity"]["slug"])
 
 
 def active_in(board: dict) -> dict:
@@ -174,7 +174,7 @@ def active_in(board: dict) -> dict:
 
 def progress_in(ticket: dict, fidelity: str) -> dict:
     """The progress of the fidelity slug names, such as stories-story-map, as the ticket shows it."""
-    return next(progress for progress in ticket["progress"] if progress["slug"] == fidelity)
+    return next(progress for progress in ticket["progress"] if progress["fidelity"]["slug"] == fidelity)
 
 
 def expect_placed(ticket: dict, column: str, is_done: bool) -> None:

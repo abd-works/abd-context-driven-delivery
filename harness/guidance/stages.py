@@ -62,6 +62,9 @@ class ApproachStage:
     # next step. Each but review is an operation in the action catalogue; review is the person's approval.
     _STEPS = (GENERATE, VALIDATE, REVIEW)
     _OTHER_ACTIONS = ("iterate", "sketch", "render", "document")
+    # Generate writes a fidelity in the formats a person picks, and render converts it into them; every other action
+    # writes or reads a fidelity's files in the formats they already have.
+    _ACTIONS_WITH_FORMATS = (GENERATE, "render")
 
     def __init__(self, name: str, scope: StageScope) -> None:
         self._name = name
@@ -101,6 +104,13 @@ class ApproachStage:
     def producing_actions(self) -> list[str]:
         """The actions that write a fidelity's files: every action but validate and review, which check them."""
         return [action for action in self.actions if action not in (VALIDATE, REVIEW)]
+
+    @property
+    @data_field
+    def actions_with_formats(self) -> list[str]:
+        """The actions whose command takes the formats a person picks: generate writes a fidelity in them and render
+        converts it into them."""
+        return list(self._ACTIONS_WITH_FORMATS)
 
 
 class ApproachStages:

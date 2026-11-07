@@ -5,7 +5,7 @@
 
 - **Purpose:** Keep one class model that every format and every practice reads, so converting between formats never changes the classes.
 - **Seam (terms):** CleanEngineeringModel, UnreadableSource, Module, OoadClass, Property, Operation, Parameter, Relationship, CodeBody
-- **Dependencies (one-way):** `harness/graph` (the model's nodes are graph nodes), `harness/agent_tools`, `cdd_guidance/actions/sketch` (*SketchOutline*, for the sketch format), `cdd_guidance/practices/clean_engineering` (the practice and its rules), `cdd_guidance/practices/clean_engineering/model/drawio` (draw.io format). The practice, the draw.io format, and `harness/graph` each import this module back — cycles tracked in `.sessions/_backlog/break-module-dependency-cycles.md`.
+- **Dependencies (one-way):** `harness/graph` (the model's nodes are graph nodes), `cdd_guidance/actions/sketch` (*SketchOutline*, for the sketch format), `cdd_guidance/practices/clean_engineering` (its per-language rule packages import the practice's rules, `BY_SLUG` and `RULES`). The practice imports this module back, so the two depend on each other — the one cycle left, tracked in `.sessions/_backlog/break-module-dependency-cycles.md`; the draw.io format (`model/drawio`) imports this module and nothing here imports it, and nothing in harness imports it. About 39 of its 89 classes are named outside it (43%): the rule classes the practice's `rules` package lists, the per-language models Stories, DDD, and BDD build on, and the diagram layout classes `model/drawio` draws with.
 
 ## Constraint
 

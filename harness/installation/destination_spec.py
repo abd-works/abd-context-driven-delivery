@@ -1,9 +1,9 @@
 """Marks that leave an operation or class out of the catalog or out of install."""
 
-from expects import be_false, be_true, expect
+from expects import be_false, be_true, equal, expect
 from mamba import before, context, description, it
 
-from harness.installation.destination import NoCatalog, NoDeploy, noCatalog, noDeploy
+from harness.installation.destination import NoCatalog, NoDeploy, data_field, data_of, identity, noCatalog, noDeploy
 
 
 class _Shown:
@@ -63,3 +63,54 @@ with description("a class"):
 
         with it("should still be installed"):
             expect(NoDeploy.marks(_HiddenClass)).to(be_false)
+
+
+@identity("name")
+class _Card:
+    def __init__(self, name: str) -> None:
+        self._name = name
+
+    @property
+    @data_field
+    def name(self) -> str:
+        return self._name
+
+    @property
+    @data_field
+    def title(self) -> str:
+        return self._name.replace("-", " ").title()
+
+
+@identity("card", "step")
+class _Progress:
+    def __init__(self, card: _Card, step: str) -> None:
+        self._card = card
+        self._step = step
+
+    @property
+    @data_field
+    def card(self) -> _Card:
+        return self._card
+
+    @property
+    @data_field
+    def step(self) -> str:
+        return self._step
+
+
+class _Holder:
+    def __init__(self, progress: _Progress) -> None:
+        self._progress = progress
+
+    @property
+    @data_field(reference=True)
+    def progress(self) -> _Progress:
+        return self._progress
+
+
+with description("data that refers to an object"):
+    with context("whose identity field is itself an object with an identity"):
+        with it("should send that field by the object's own identity"):
+            expect(data_of(_Holder(_Progress(_Card("pet-visits"), "story-map")))).to(
+                equal({"progress": {"card": {"name": "pet-visits"}, "step": "story-map"}})
+            )

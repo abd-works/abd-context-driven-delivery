@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react'
 
-import type { HelpData } from '@cdd/space/kanban/board'
+import type { FidelityGuidanceData, HelpData, PracticeGuidanceData } from '@cdd/space/kanban/board'
+
+// The guidance a help panel is about: the fidelity it was opened on, else the practice. It sends its own overview,
+// guidance, and rules.
+const subjectOf = (help: HelpData): PracticeGuidanceData | FidelityGuidanceData => help.fidelity ?? help.practice
 
 import { useBoard } from './board-context'
 import type { HelpPanel } from './board-store'
@@ -82,7 +86,7 @@ function HelpGroupView({ heading, children }: { heading: string; children: React
 function HelpRulesView({ help }: { help: HelpData }) {
   return (
     <HelpGroupView heading={help.fidelity ? 'RULES' : 'SHARED RULES'}>
-      {help.rules.map(rule => (
+      {subjectOf(help).rules.map(rule => (
         <div key={rule.slug} className="help-rule">
           <div className="help-rule-name">{rule.slug}</div>
           <div className="help-rule-text">{rule.body.trim()}</div>
@@ -93,17 +97,18 @@ function HelpRulesView({ help }: { help: HelpData }) {
 }
 
 export function HelpPanelBodyView({ panel: { help } }: { panel: HelpPanel }) {
+  const subject = subjectOf(help)
   return (
     <div className="panel-body help-body">
       <div className="help-group">
-        <HelpTextView markdown={help.overview} className="help-overview" />
+        <HelpTextView markdown={subject.overview} className="help-overview" />
       </div>
-      {help.guidance ? (
+      {subject.guidance.trim() ? (
         <HelpGroupView heading="GUIDANCE">
-          <HelpTextView markdown={help.guidance} className="help-guidance" />
+          <HelpTextView markdown={subject.guidance} className="help-guidance" />
         </HelpGroupView>
       ) : null}
-      {help.rules.length ? <HelpRulesView help={help} /> : null}
+      {subject.rules.length ? <HelpRulesView help={help} /> : null}
     </div>
   )
 }

@@ -28,7 +28,7 @@ from cdd_guidance.patterns.lern_domain_driven.tier_facts import (
     test_setup_text,
     web_path_literals,
 )
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import prototype_swap_in_text
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.rules.no_prototype_swapping import NoPrototypeSwapping
 from harness.graph.graph import Node, PracticeGraph, Source
 from harness.graph.graph_practice import GraphPractices
@@ -211,7 +211,7 @@ with description("the lern_domain_driven pattern rules"):
 
     with description("no-prototype-swapping (Clean Engineering)"):
         with it("should flag a prototype swap and pass a factory"):
-            swapped = {"prototype_swap": prototype_swap_in_text("Object.setPrototypeOf(loaded, XNode.prototype);", 1)}
-            factory = {"prototype_swap": prototype_swap_in_text("return this.blank(id);", 1)}
+            swapped = {"prototype_swap": SourceText("Object.setPrototypeOf(loaded, XNode.prototype);").prototype_swap(1)}
+            factory = {"prototype_swap": SourceText("return this.blank(id);").prototype_swap(1)}
             expect(NoPrototypeSwapping().check(tier_node("XRepositoryNode", "OoadClass", swapped), None)).to(have_len(1))
             expect(NoPrototypeSwapping().check(tier_node("XRepositoryNode", "OoadClass", factory), None)).to(equal([]))

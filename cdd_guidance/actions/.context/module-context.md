@@ -13,7 +13,7 @@ The other actions are separate modules with their own cards: `actions/diagnose`,
 
 - **Purpose:** Give every practice the same generate, document, validate, satisfy, and render steps, so a practice owns only its words, rules, and formats.
 - **Seam (terms):** Generate, Document, Validate, Satisfy, Render, `generate.generate`, `document.document`, `validate.validate`, `satisfy.satisfy`, `render.render`
-- **Dependencies (one-way):** `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*, `load_document`), `harness/guidance` (*PracticeGuidance*, *Rule*, *PracticeCatalogue*), `harness/graph` (graph rule checks), `harness/agent_tools`, `harness/installation`, `harness/mcp`
+- **Dependencies (one-way):** `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*, `load_document`), `harness/guidance` (*PracticeGuidance*, *Rule*, *PracticeCatalogue*), `harness/graph` (graph rule checks, and *SavedGraph*, the saved graph a report reads), `harness/markdown` (*Format*), `harness/agent_tools`, `harness/installation`, `harness/mcp`
 
 ## Constraint
 

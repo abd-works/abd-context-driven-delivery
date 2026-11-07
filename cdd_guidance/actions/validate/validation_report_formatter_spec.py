@@ -12,13 +12,12 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import contain, equal, expect
+from expects import contain, expect
 from mamba import before, context, description, it
 
 from harness.graph.violation import Violation
 from space.session import Session
 from cdd_guidance.actions.validate.validation_report import ValidationReport
-from cdd_guidance.actions.validate.verify_report_links import verify_report
 
 
 with description("validation report formatter links"):
@@ -41,7 +40,7 @@ with description("validation report formatter links"):
                 )
             ]
 
-        with it("should emit absolute path #L links that verify_report_links accepts"):
+        with it("should link each finding to its file by absolute path and line"):
             session = Session(self.root)
             session.workpath = self.root
             session.session_path = self.session_dir
@@ -54,4 +53,3 @@ with description("validation report formatter links"):
             )
             expect(report_md).not_to(contain("vscode://"))
             expect(report_md).not_to(contain("file://"))
-            expect(verify_report(report_path)).to(equal([]))

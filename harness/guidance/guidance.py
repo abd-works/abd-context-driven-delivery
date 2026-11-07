@@ -11,7 +11,7 @@ from typing import Any
 from harness.name.name import Name
 from harness.guidance.documents import load_document
 from harness.guidance.practice_catalogue import PracticeCatalogue
-from harness.guidance.rule import RulesCollection
+from harness.guidance.rule import Rule, RulesCollection
 from harness.guidance.schema import Schema
 from harness.agent_tools.agent_tools import (
     collect,
@@ -23,7 +23,7 @@ from harness.agent_tools.agent_tools import (
     toolset_collection,
 )
 from harness.installation.files import rules, skill
-from harness.installation.destination import data_field
+from harness.installation.destination import data_field, identity
 from harness.hooks.hooks import Hook
 from harness.mcp.mcp_server import mcp
 from harness.markdown import (
@@ -97,13 +97,23 @@ class Guidance:
     def __init__(self, format: str | None = None) -> None:
         self.format = format if format is not None else self.default_format
 
-    @markdown
+    @property
+    @data_field
     def overview(self) -> str:
-        """Overview section for this Guidance."""
+        """Its Overview section: what this guidance is for, which a person reads on its help."""
+        return Markdown.from_label(self, "overview").extract()
 
-    @markdown
+    @property
+    @data_field
     def guidance(self) -> str:
-        """Guidance section body."""
+        """Its Guidance section: how to do the work well, which a person reads on its help."""
+        return Markdown.from_label(self, "guidance").extract()
+
+    @property
+    @data_field(key="rules")
+    def listed_rules(self) -> list[Rule]:
+        """Its rules one by one, as its help lists them: a practice's shared rules, or a fidelity's own."""
+        return list(self.rules)
 
     @markdown
     def templates(self) -> str:
@@ -195,6 +205,7 @@ class GuidanceCollection(MarkdownCollection, Guidance):
     def instructions(self) -> str: ...
 
 
+@identity("key")
 class PracticeGuidance(Guidance):
     sketch_titles: tuple[str, ...] = ()
     """The headings that open this practice's section of a sketch, lower case, such as `stories:`."""
@@ -372,6 +383,7 @@ class PracticeGuidance(Guidance):
         return companion if isinstance(companion, FidelityGuidance) else None
 
     @property
+    @data_field
     @agent_instructions
     def guidance(self) -> str:
         examples = str(self.examples or "").strip()
@@ -655,6 +667,7 @@ def _folder_of(paths: list[str] | str) -> str:
     return str(path.parent) if path.parent.is_dir() else ""
 
 
+@identity("slug")
 @agent_toolset
 class FidelityGuidance(Guidance):
     companion_of: FidelityGuidance | None = None
@@ -820,10 +833,6 @@ class FidelityGuidance(Guidance):
         return base / leaf if leaf else base
 
     @property
-    def overview(self) -> str:  # type: ignore[override]
-        return Markdown.from_label(self, "overview").extract()
-
-    @property
     def scaffold(self) -> str:
         """This fidelity's Scaffold subsection: the names a first cut writes, which are what a partition index lists;
         empty when the fidelity has none."""
@@ -839,10 +848,6 @@ class FidelityGuidance(Guidance):
         if not path.is_file():
             return ""
         return MarkdownText(path.read_text(encoding="utf-8")).fidelity_block(self.name)
-
-    @markdown
-    def guidance(self) -> str:
-        """Fidelity guidance section."""
 
     @markdownCollection
     @rules

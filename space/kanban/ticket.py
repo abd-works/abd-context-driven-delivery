@@ -182,7 +182,7 @@ class Ticket(Card):
     @data_field(key="next", reference=True)
     def next_fidelity(self) -> FidelityProgress | None:
         """The first fidelity not done in its current stage or a stage before it, earliest stage first, since later work
-        builds on it; none when it is done in its stage or Complete. Sent by its ticket and slug, since progress sends
+        builds on it; none when it is done in its stage or Complete. Sent by its ticket and fidelity, since progress sends
         it."""
         column = self.column
         if self.is_done or column not in self._stages:
@@ -352,7 +352,7 @@ class Ticket(Card):
         return self
 
 
-@identity("ticket", "slug")
+@identity("ticket", "fidelity")
 @language_adapter(language="typescript")
 @agent_toolset
 class FidelityProgress:
@@ -392,21 +392,16 @@ class FidelityProgress:
         return Ticket.load(ticket, project=project).progress_of(fidelity)
 
     @property
-    @data_field
-    def ticket(self) -> str:
-        """The name of the ticket this progress is on, which with its slug names it."""
-        return self._ticket.name
-
-    @property
-    @data_field(key="slug")
-    def fidelity_slug(self) -> str:
-        """Its practice and fidelity, such as stories-story-map. Named apart from `slug`, which names the toolset its tools are published under."""
-        return self._fidelity.slug
+    @data_field(reference=True)
+    def ticket(self) -> Ticket:
+        """The ticket this progress is on, sent by its name, which with its fidelity names the progress."""
+        return self._ticket
 
     @property
     @data_field
     def fidelity(self) -> FidelityGuidance:
-        """The fidelity this progress is on, as its ticket's session holds it."""
+        """The fidelity this progress is on, as its ticket's session holds it; its slug, such as stories-story-map,
+        names it."""
         return self._fidelity
 
     @property
@@ -416,11 +411,11 @@ class FidelityProgress:
         return self._stage
 
     @property
-    @data_field(key="practice")
-    def practice_key(self) -> str:
-        """Its practice's key, such as clean_engineering, by which the board's practices and its ticket's session name
-        the practice."""
-        return self._practice.key
+    @data_field(reference=True)
+    def practice(self) -> PracticeGuidance:
+        """Its practice, sent by its key, such as clean_engineering, by which the board's practices and its ticket's
+        session name the practice."""
+        return self._practice
 
     @property
     @data_field

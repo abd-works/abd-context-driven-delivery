@@ -83,7 +83,7 @@ with description("Canvas versions") as self:
             expect((self.versions.folder(1) / "project" / "Main.dc.html").read_text(encoding="utf-8")).to(equal("version 2"))
 
 
-with description("a release's canvas") as self:
+with description("a session's canvas") as self:
     with before.each:
         self.folder = tempfile.TemporaryDirectory()
         self.repo = Path(self.folder.name)
@@ -92,10 +92,10 @@ with description("a release's canvas") as self:
     with after.each:
         self.folder.cleanup()
 
-    with it("should keep its versions in the release's session folder"):
-        expect(CanvasVersions.in_release(WorkState(self.repo).sessions_folder / WorkState(self.repo).session).root).to(equal(self.repo.resolve() / ".sessions" / "small-change" / "design-canvas"))
+    with it("should keep its versions in the session's folder"):
+        expect(CanvasVersions.in_session_folder(WorkState(self.repo).sessions_folder / WorkState(self.repo).session).root).to(equal(self.repo.resolve() / ".sessions" / "small-change" / "design-canvas"))
 
-    with it("should open a named release's canvas"):
-        expect(CanvasVersions.in_release(WorkState(self.repo).sessions_folder / "design-system-setup").root).to(
+    with it("should open a named session's canvas"):
+        expect(CanvasVersions.in_session_folder(WorkState(self.repo).sessions_folder / "design-system-setup").root).to(
             equal(self.repo.resolve() / ".sessions" / "design-system-setup" / "design-canvas")
         )

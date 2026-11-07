@@ -75,11 +75,12 @@ class DrawioPage:
 class DrawioScanner:
     """Scans `.drawio` files page by page. Each subclass names one layout RULE and checks it in `scan_page`."""
 
-    def __init__(self, rule: str | None=None, explicit_paths: Iterable[Path]=()) -> None:
+    def __init__(self, rule: str | None=None, explicit_paths: Iterable[Path]=(), scan_root: Path | str | None=None) -> None:
         self.rule = rule or getattr(type(self), 'RULE', '')
         # Paths the caller named itself are scanned even inside folders a workspace scan skips.
         self.explicit_paths = frozenset(Path(path).resolve() for path in explicit_paths)
-        self.workspace_root: Path | str | None = None
+        # The folder a report scans under; without one, the folder the named paths share.
+        self.scan_root = Path(scan_root) if scan_root is not None else None
 
     def is_skipped_path(self, path: Path) -> bool:
         p = Path(path)
@@ -150,8 +151,8 @@ class DrawioScanner:
         return None
 
     def run_report(self, paths: list[str]) -> dict[str, Any]:
-        scan_root = Path(self.workspace_root) if self.workspace_root is not None else Path.cwd()
         files = [Path(path) for path in paths]
+        scan_root = self.scan_root or self._shared_folder(files)
         discovered = self.discover()
         violations: list[Violation] = []
         for slug, scanner_class in discovered.items():
@@ -159,6 +160,14 @@ class DrawioScanner:
         if self.rule:
             violations = [item for item in violations if item.rule == self.rule]
         return {'ok': not violations, 'rules': sorted(discovered), 'violations': data_of(violations)}
+
+    def _shared_folder(self, files: list[Path]) -> Path:
+        """The deepest folder that holds every named path, so a report never scans the server's working folder."""
+        folders = [path.resolve().parent for path in files]
+        shared = folders[0] if folders else Path(__file__).resolve().parent
+        while any(shared != folder and shared not in folder.parents for folder in folders):
+            shared = shared.parent
+        return shared
 
     def run_main(self, argv: list[str] | None=None) -> int:
         parser = argparse.ArgumentParser(description='Run one Draw.io scanner')

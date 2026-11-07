@@ -100,8 +100,7 @@ class Drawio:
     def scan(self, paths: list[str]) -> str:
         """scan layout rules on `.drawio` paths (drawio.md rule slugs)."""
         scan_root = self.scan_root if self.scan_root is not None else str(self.module_dir)
-        scanner = DrawioScanner(self.rule)
-        scanner.workspace_root = scan_root
+        scanner = DrawioScanner(self.rule, scan_root=scan_root)
         return str(scanner.run_report(paths))
 
     @agent_instructions

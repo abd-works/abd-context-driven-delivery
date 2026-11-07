@@ -5,7 +5,7 @@ The spec helpers in `spec_helpers.py` — such as `build_run_request`, `expect_o
 
 - **Purpose:** Test agent behaviour end to end against a real agent, so a spec fails when the agent would actually do the wrong thing.
 - **Seam (terms):** AgentBdd, `agent`, AgentBlock, `instruct`, `instruct_use_tool`, `run_toolset`, `ai_judge`, AgentResult, RunResponse, `agent-bdd.instructions`
-- **Dependencies (one-way):** `cdd_guidance/practices/bdd` (*Bdd*), `cdd_guidance/actions` (*Generate*), `harness/guidance` (*PracticeGuidance*), `harness/agent_tools`, `harness/installation`, `harness/mcp` (spec server)
+- **Dependencies (one-way):** `cdd_guidance/practices/bdd` (*Bdd*), `cdd_guidance/actions` (*Generate*), `harness/guidance` (*PracticeGuidance*), `harness/agent_tools`, `harness/installation`, `harness/installer` (*Installer*, which the spec support installs a throwaway project with), `harness/mcp` (spec server), `space/session` (*Sessions*, the session an agent run works in). This practice is the one part of cdd_guidance that imports space; space imports actions, not this practice, so no module cycle follows.
 
 ## Constraint
 

@@ -306,7 +306,13 @@ with description("a language adapter"):
                 expect(self.board).to(contain("  wip_limit?: number\n"))
 
             with it("should keep a field that may be null nullable"):
-                expect(self.ticket).to(contain("  next: FidelityProgressData | null\n"))
+                expect(self.ticket).to(contain("  next: { ticket: { name: string }; fidelity: { slug: string } } | null\n"))
+
+            with it("should name a referenced object by its identity, and an identity field that is an object by that object's own identity"):
+                expect(self.progress).to(contain("  ticket: { name: string }\n"))
+
+            with it("should read an identity field that is an object by the field that names it"):
+                expect(self.progress).to(contain("ticket: string = state?.ticket?.name ?? '', fidelity: string = state?.fidelity?.slug ?? ''"))
 
             with it("should state a nested shape in the file that uses it"):
                 expect(self.ticket).to(contain("export type ReportData = {"))
@@ -507,6 +513,15 @@ with description("a language adapter"):
 
             with it("should take Monaco from the application"):
                 expect(self.file_views).to(contain("from '@monaco-editor/react'"))
+
+    with description("the installation of a toolset whose objects are named, with an operation that names none"):
+        with before.all:
+            out = Path(tempfile.mkdtemp(prefix="language-adapter-session-"))
+            _install(out, ["space.session.session:Session"])
+            self.session = (out / _ADAPTERS / "space/session/session.ts").read_text(encoding="utf-8")
+
+        with it("should route the operation to the class, since it acts on no one object"):
+            expect(self.session).to(contain("run: (cdd, request) => SessionAdapter.recordDecisionsSession(cdd) }"))
 
     with description("a published schema"):
         with it("should keep only what checking a sent value needs"):

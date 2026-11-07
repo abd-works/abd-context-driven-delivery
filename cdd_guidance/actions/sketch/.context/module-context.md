@@ -7,7 +7,7 @@ The MCP tools `sketch.find_template`, `sketch.save_sketch`, `sketch.list_sketche
 
 - **Purpose:** Agree the rough shape of a solution in a saved file, reviewed after each theme, before formal generation.
 - **Seam (terms):** Sketch, SketchOutline, SketchLens, `sketch.sketch`, `sketch.find_template`, `sketch.save_sketch`, `sketch.list_sketches`, `sketch.review_sketch`
-- **Dependencies (one-way):** `cdd_guidance/actions/grill_context` (*GrillContext*), `cdd_guidance/actions` (*Generate*), `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*, `load_document`), `harness/agent_tools`, `harness/installation`, `harness/mcp`
+- **Dependencies (one-way):** `cdd_guidance/actions/grill_context` (*GrillContext*), `cdd_guidance/actions` (*PathsFromProject*), `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*), `harness/guidance` (*PracticeGuidance*, `load_document`), `harness/agent_tools`, `harness/installation`, `harness/mcp`
 
 ## Constraint
 

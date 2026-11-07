@@ -241,8 +241,11 @@ class TypeScriptOperation:
         self.mcp_name = tool.mcp_name
         self.name = Name(tool.name).camel
         # A class operation is bound to its class; an operation of a toolset with no loader is bound to the toolset.
-        self.is_static = inspect.ismethod(tool.callable) and isinstance(tool.callable.__self__, type)
+        # An operation that names no object of a class whose objects are named, such as a session's instructions,
+        # acts on no one object, so it is written beside the class operations.
         self.identity = owner.identity_of(tool)
+        is_class_operation = inspect.ismethod(tool.callable) and isinstance(tool.callable.__self__, type)
+        self.is_static = is_class_operation or (not self.identity and bool(owner.identity_fields))
         schema = tool.input_schema
         self.properties = {name: value for name, value in schema["properties"].items() if name not in self.identity}
         self.required = [name for name in schema.get("required", []) if name in self.properties]
@@ -457,8 +460,16 @@ class TypeScriptToolset:
             return "null"
         fields = DataClass(hint).fields
         shape = self._shape(hint)
-        named = [f"{name}: {self._hint_type(shape.field_hint(fields[name]))}" for name in DataClass(hint).identity]
+        named = [f"{name}: {self._identity_type(shape.field_hint(fields[name]))}" for name in DataClass(hint).identity]
         return f"{{ {'; '.join(named)} }}"
+
+    def _identity_type(self, hint: object) -> str:
+        """An identity field's type: an object with an identity of its own is named by that identity alone, as
+        `DataClass.reference` sends it, such as a progress's fidelity as `{ slug: string }`."""
+        held = _FieldHint(hint).unwrapped
+        if isinstance(held, type) and DataClass(held).identity:
+            return self._reference_type(held)
+        return self._hint_type(hint)
 
     def _shape_reference(self, shape: type) -> str:
         name = self._shape(shape).name
@@ -549,7 +560,7 @@ class TypeScriptToolset:
         ]
 
     def _client_class(self, operations: list[TypeScriptOperation], identity: tuple[str, ...]) -> list[str]:
-        held = "".join(f", {Name(name).camel}: string = state?.{field} ?? ''" for name, field in zip(identity, self.identity_fields))
+        held = "".join(f", {Name(name).camel}: string = state?.{self._identity_path(field)} ?? ''" for name, field in zip(identity, self.identity_fields))
         return [
             f"export class {self.client_name} extends {self.name} {{",
             *self._private_identity(identity),
@@ -561,6 +572,13 @@ class TypeScriptToolset:
             *[line for operation in operations for line in operation.client_lines()],
             "}",
         ]
+
+    def _identity_path(self, field: str) -> str:
+        """Where the data holds the value of identity field: the field itself, or, for a field holding an object named
+        by one field of its own, that field inside it (`ticket?.name`)."""
+        held = _FieldHint(self._shape(type(self.toolset)).fields.get(field)).unwrapped if self._data_shape else None
+        named = DataClass(held).identity if isinstance(held, type) else ()
+        return f"{field}?.{named[0]}" if len(named) == 1 else field
 
     def _named(self, identity: tuple[str, ...]) -> list[str]:
         """Page code that knows only an object's name can still act on it, before it has read the object."""

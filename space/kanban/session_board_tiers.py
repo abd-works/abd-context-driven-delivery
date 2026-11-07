@@ -206,7 +206,7 @@ class TicketHandle:
         return SessionHandle(self._cdd, self)
 
     def progress_of(self, slug: str) -> FidelityProgressHandle:
-        if slug not in [progress["slug"] for progress in self.data()["progress"]]:
+        if slug not in [progress["fidelity"]["slug"] for progress in self.data()["progress"]]:
             raise FidelityNotFoundError(slug, f"ticket {self.name!r}")
         return FidelityProgressHandle(self._cdd, self, slug)
 
@@ -345,8 +345,8 @@ def _server_data_of(value: Any) -> Any:
 
 
 def _handle_of(cdd: CddTools, answered: Any) -> Any:
-    if isinstance(answered, dict) and {"ticket", "slug", "state"} <= set(answered):
-        return FidelityProgressHandle(cdd, TicketHandle(cdd, answered["ticket"]), answered["slug"])
+    if isinstance(answered, dict) and {"ticket", "fidelity", "state"} <= set(answered):
+        return FidelityProgressHandle(cdd, TicketHandle(cdd, answered["ticket"]["name"]), answered["fidelity"]["slug"])
     if isinstance(answered, dict) and {"name", "column"} <= set(answered):
         return TicketHandle(cdd, answered["name"])
     if isinstance(answered, dict) and {"title", "path", "text"} <= set(answered):

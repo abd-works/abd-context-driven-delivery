@@ -267,11 +267,11 @@ def _(s):
     def _(world):
         world.before = world.data_of(world.Ticket.load(BILLING_REPORT.name))
         world.discovery = column_in(world.data_of(world.Board.load().show()), "Discovery")
-        world.next_fidelity = next(fidelity for fidelity in world.discovery["work_required"] if fidelity["slug"] == world.before["next"]["slug"])
+        world.next_fidelity = next(fidelity for fidelity in world.discovery["work_required"] if fidelity["slug"] == world.before["next"]["fidelity"]["slug"])
 
     @s.then("Run next read Run next: generate before it ran")
     def _(world):
-        expect((next_in(world.before)["next_action"], world.before["next"]["slug"])).to(equal(("generate", STORY_MAP)))
+        expect((next_in(world.before)["next_action"], world.before["next"]["fidelity"]["slug"])).to(equal(("generate", STORY_MAP)))
 
     # The board app writes the command from the stage's default format; the command itself is left to its specs.
     @s.and_("the chat receives the command /actions-generate stories-story-map format=markdown")
@@ -294,7 +294,7 @@ def _(s):
     def _(world):
         ticket = world.Ticket.load(CHECKOUT_FLOW.name)
         world.before = world.data_of(ticket)
-        world.report = world.data_of(ticket.progress_of(world.before["next"]["slug"]).report())
+        world.report = world.data_of(ticket.progress_of(world.before["next"]["fidelity"]["slug"]).report())
 
     @s.then("Run next read Run next: fix violations")
     def _(world):
@@ -319,11 +319,11 @@ def _(s):
     @s.when("the Person runs billing-report's next step")
     def _(world):
         ticket = world.Ticket.load(BILLING_REPORT.name)
-        world.reviewed = world.data_of(ticket.progress_of(world.data_of(ticket)["next"]["slug"]).finish_review())
+        world.reviewed = world.data_of(ticket.progress_of(world.data_of(ticket)["next"]["fidelity"]["slug"]).finish_review())
 
     @s.then("billing-report's story_map marks Review ✓")
     def _(world):
-        expect((world.reviewed["slug"], world.reviewed["actions"]["review"])).to(equal((STORY_MAP, "done")))
+        expect((world.reviewed["fidelity"]["slug"], world.reviewed["actions"]["review"])).to(equal((STORY_MAP, "done")))
 
 
 @shared_stories.scenario("Send Next Fidelity Action", "Go back to an earlier stage's fidelity still to review")
@@ -342,7 +342,7 @@ def _(s):
 
     @s.then("Run next reads Run next: review on stories-story-map")
     def _(world):
-        expect((next_in(world.read)["next_action"], world.read["next"]["slug"])).to(equal(("review", STORY_MAP)))
+        expect((next_in(world.read)["next_action"], world.read["next"]["fidelity"]["slug"])).to(equal(("review", STORY_MAP)))
 
 
 @shared_stories.scenario("Send Next Fidelity Action", "Name nothing to run on a ticket done in its stage")

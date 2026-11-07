@@ -278,7 +278,7 @@ def _(s):
 
     @s.and_("the details say No handoff yet and Next: stories-story-map, generate")
     def _(world):
-        expect((world.selected["session"]["handoff"], world.selected["next"]["slug"], next_in(world.selected)["next_action"])).to(equal(("", "stories-story-map", "generate")))
+        expect((world.selected["session"]["handoff"], world.selected["next"]["fidelity"]["slug"], next_in(world.selected)["next_action"])).to(equal(("", "stories-story-map", "generate")))
 
     @s.and_("the details show a tile for each enabled fidelity with its fidelity progress")
     def _(world):

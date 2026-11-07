@@ -495,7 +495,7 @@ returns      relationship  Operation -> OoadClass its return type names
 
 # DDD
 
-`DddGraph` in `cdd_guidance/practices/ddd/graph_practice.py`. `reads_after = ("clean_engineering",)`: its building blocks are the classes Clean Engineering read, seen through the stereotype their declaration or name gives them (`inferred_tactical_kind`). A building block is a new plain `Node` holding the class's facts plus `tactical_facts`; the class stays Clean Engineering's node.
+`DddGraph` in `cdd_guidance/practices/ddd/graph_practice.py`. `reads_after = ("clean_engineering",)`: its building blocks are the classes Clean Engineering read, seen through the stereotype their declaration or name gives them (`TacticalClass.inferred_kind`); a class with neither is not a building block. A building block is a new plain `Node` holding the class's facts plus `tactical_facts`; the class stays Clean Engineering's node.
 
 ## Nodes
 

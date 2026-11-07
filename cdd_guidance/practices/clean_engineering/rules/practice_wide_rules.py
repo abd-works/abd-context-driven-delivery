@@ -173,7 +173,7 @@ class SourceParses(PracticeGraphRule):
     """A source file its language cannot parse is read into no class, so every other rule passes it without a look."""
 
     slug = "source-parses"
-    node_types = _FOLDER_TYPES
+    node_types = ("Module",)
 
     def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         return [

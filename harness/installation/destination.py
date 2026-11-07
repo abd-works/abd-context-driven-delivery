@@ -108,8 +108,8 @@ edits = Edits
 class DataField(Mark):
     """Mark a property as part of the object's data: what its tools answer with and what a language adapter types.
 
-    Put it under `@property`. key is the name the data uses when it differs from the property's, such as a fidelity's
-    progress's `fidelity_slug` sent as `slug`. reference sends the object the property returns by its `@identity`
+    Put it under `@property`. key is the name the data uses when it differs from the property's, such as a practice's
+    `practice_slug` sent as `slug`. reference sends the object the property returns by its `@identity`
     alone: the object belongs to another, such as the column holding a ticket, which sends it in full.
     """
 
@@ -173,18 +173,23 @@ class DataClass:
 
     def data(self, value: Any) -> dict[str, Any]:
         """value's marked fields as plain data."""
-        return {
-            key: self._referenced(field.fget(value)) if self.sends_by_identity(field) else data_of(field.fget(value))
-            for key, field in self.fields.items()
-        }
+        return {key: self._field_data(field, value) for key, field in self.fields.items()}
 
     def reference(self, value: Any) -> dict[str, Any]:
         """value by its identity alone, such as `{"name": "Discovery"}` for a stage, so data can name an object that is
-        sent in full elsewhere without sending it again."""
+        sent in full elsewhere without sending it again. An identity field that holds an object with an identity of its
+        own sends that object by its reference too, so a fidelity's progress is `{ticket: {name}, fidelity: {slug}}`."""
         if not self.identity:
             raise ReferenceWithoutIdentityError(self.data_class)
         fields = self.fields
-        return {key: data_of(fields[key].fget(value)) for key in self.identity}
+        return {key: self._identity_data(fields[key].fget(value)) for key in self.identity}
+
+    def _field_data(self, field: property, value: Any) -> Any:
+        held = field.fget(value)
+        return self._referenced(held) if self.sends_by_identity(field) else data_of(held)
+
+    def _identity_data(self, held: Any) -> Any:
+        return DataClass(type(held)).reference(held) if held is not None and DataClass(type(held)).identity else data_of(held)
 
     def _referenced(self, held: Any) -> Any:
         if held is None:

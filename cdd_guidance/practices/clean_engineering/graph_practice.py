@@ -71,10 +71,12 @@ class _CodeReading:
         self._link_folders(roles, folders)
 
     def _record_unreadable(self, roles: dict[str, str], folders: dict) -> None:
-        """Each file that did not parse, on the folder that holds it, so validate reports it instead of skipping it."""
+        """Each file that did not parse, on the module that holds it, so validate reports it instead of skipping it.
+        A file in no module is kept on the practice's root, which no rule checks."""
+        modules = {rel: role for rel, role in roles.items() if role == "Module"}
         for file, reason in self.unreadable.items():
             relative = file.relative_to(self.root).as_posix()
-            owner = folders.get(_nearest(str(Path(relative).parent).replace("\\", "/"), roles)) or self.practice.root_node
+            owner = folders.get(_nearest(str(Path(relative).parent).replace("\\", "/"), modules)) or self.practice.root_node
             owner.set_fact("unreadable_sources", (owner.get_fact("unreadable_sources") or []) + [f"{relative}: {reason}"])
 
     def _folder_node(self, rel: str, kind: str):

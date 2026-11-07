@@ -50,8 +50,6 @@ package:
   where:
     - id is the module id, then this package name, joined by dots
     - a package groups classes inside a module
-  rules:
-    - source-parses
 
 class:
   fidelity: model

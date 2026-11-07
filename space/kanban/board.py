@@ -12,7 +12,6 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
-from harness.guidance.rule import Rule
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 from harness.name.name import Name
@@ -405,16 +404,13 @@ class Card(ABC):
 
 
 class Help:
-    """The overview, guidance, and rules of a practice or one of its fidelities, with its stage and its page on the forge."""
+    """Help on a practice or one of its fidelities: the guidance itself, which sends its own overview, guidance, and
+    rules, with the fidelity's stage and its page on the forge."""
 
     def __init__(self, practice: PracticeGuidance, fidelity: FidelityGuidance | None, stage: Stage | None) -> None:
         self._practice = practice
         self._fidelity = fidelity
         self._stage = stage
-
-    @property
-    def _subject(self) -> PracticeGuidance | FidelityGuidance:
-        return self._fidelity or self._practice
 
     @property
     @data_field
@@ -433,21 +429,6 @@ class Help:
     def stage(self) -> Stage | None:
         """The stage the fidelity belongs to, such as Discovery; none on a practice's help."""
         return self._stage
-
-    @property
-    @data_field
-    def overview(self) -> str:
-        return (self._subject.overview or "").strip()
-
-    @property
-    @data_field
-    def guidance(self) -> str:
-        return (self._subject.guidance or "").strip()
-
-    @property
-    @data_field
-    def rules(self) -> list[Rule]:
-        return list(self._subject.rules)
 
     @property
     @data_field

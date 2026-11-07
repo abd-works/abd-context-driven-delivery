@@ -35,9 +35,10 @@ class ReportRule:
         self._violations = list(violations)
 
     @property
-    @data_field
+    @data_field(reference=True)
     def fidelity(self) -> FidelityGuidance:
-        """The fidelity whose report found the rule broken, which a fix of the rule validates again."""
+        """The fidelity whose report found the rule broken, which a fix of the rule validates again; sent by its slug,
+        since the board sends each fidelity in full with its stage."""
         return self._fidelity
 
     @property

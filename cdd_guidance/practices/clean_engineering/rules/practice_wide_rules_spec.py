@@ -86,7 +86,6 @@ with description("modules across the graph"):
             tree.update(_module("shop", {"checkout_spec.py": "from cart.cart import Cart, Line, Price, Discount, Tax\n"}))
             expect(_hits("deep-module", tree)).to(equal([]))
 
-
     with context("source-parses"):
         with it("should report a module's Python file that does not parse"):
             assert_files_rule_pair(
@@ -95,6 +94,6 @@ with description("modules across the graph"):
                 _module("cart", {"cart.py": "class Cart:\n    pass\n"}),
             )
 
-        with it("should report a package's Python file that does not parse"):
-            hits = _hits("source-parses", {"cart/cart.py": "class Cart(:\n    pass\n"})
+        with it("should report a file that does not parse in a package inside the module"):
+            hits = _hits("source-parses", _module("cart", {"lines/line.py": "class Line(:\n    pass\n"}))
             expect(len(hits)).to(equal(1))

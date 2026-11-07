@@ -138,6 +138,8 @@ class Operation(OoadNode):
         self.unnamed_literal_numbers: list[str] = []
         self.narrative_comment_lines: int = 0
         self.peer_private_access: bool = False
+        # Each parameter that packs several values, with how many; only Python's parse measures it.
+        self.packed_parameters: dict[str, int] = {}
         self.private_reach = False
         self.io_and_domain = False
         self.io_and_domain_callees = False

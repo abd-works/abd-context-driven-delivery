@@ -26,7 +26,7 @@ class PublishedVersion(Exception):
 
 
 class CanvasVersions:
-    """The versions of the canvas kept under *root* (for example ``.sessions/<release>/design-canvas``)."""
+    """The versions of the canvas kept under *root* (for example ``.sessions/<session>/design-canvas``)."""
 
     record_name = "versions.json"
 
@@ -34,10 +34,10 @@ class CanvasVersions:
         self.root = Path(root)
 
     @classmethod
-    def in_release(cls, release_folder: str | Path) -> CanvasVersions:
-        """The canvas a release keeps in its folder, such as the open session's folder under
-        ``WorkState(repo).sessions_folder`` for the release being worked on."""
-        return cls(Path(release_folder) / DESIGN_CANVAS_FOLDER)
+    def in_session_folder(cls, session_folder: str | Path) -> CanvasVersions:
+        """The canvas a session keeps in its folder, such as the open session's folder under
+        ``WorkState(repo).sessions_folder``."""
+        return cls(Path(session_folder) / DESIGN_CANVAS_FOLDER)
 
     @property
     def numbers(self) -> List[int]:
