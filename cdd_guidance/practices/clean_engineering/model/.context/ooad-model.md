@@ -616,14 +616,18 @@ The source lines around one block of code that no node holds, kept exactly as re
 + inline: str
 + closing: list[str]
 + close: list[str]
++ << composition >> lead_body: CodeBody
+	// made once when the reader sets lead
++ << composition >> closing_body: CodeBody
+	// made once when the reader sets closing
++ << composition >> inside_body: CodeBody
+	// made once when the reader sets inside or inline
 ----
 + is_in(language: CodeLanguage, key: str | tuple | None): bool
 + split_inside(lines: list[str], inside: tuple[int, int], children: list[tuple[int, int]]): tuple
 	// the lines inside one block as setup, the lines above each child, and the lines after the last child
 + inside_for(body: CodeBody): list[str] | None
 	// the lines exactly as read while the model's body still says the same
-+ lead_body(): CodeBody
-+ closing_body(): CodeBody
 
 ## CallGraphEntry
 

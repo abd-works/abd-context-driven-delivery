@@ -149,12 +149,54 @@ class WrittenBlock:
         self.language = language
         self.key = key
         self.path = ""
-        self.lead = lead
         self.heading = heading
-        self.inside: List[str] = []
-        self.inline = ""
-        self.closing: List[str] = []
         self.close: List[str] = []
+        self._inline = ""
+        self._inside: List[str] = []
+        self.lead = lead
+        self.closing = []
+        self.inside = []
+
+    @property
+    def lead(self) -> List[str]:
+        return self._lead
+
+    @lead.setter
+    def lead(self, lines: List[str]) -> None:
+        self._lead = lines
+        # The lines above the block as a body, made once when the reader sets them.
+        self.lead_body = CodeBody("\n".join(lines), self.language)
+
+    @property
+    def closing(self) -> List[str]:
+        return self._closing
+
+    @closing.setter
+    def closing(self, lines: List[str]) -> None:
+        self._closing = lines
+        self.closing_body = CodeBody("\n".join(lines), self.language)
+
+    @property
+    def inside(self) -> List[str]:
+        return self._inside
+
+    @inside.setter
+    def inside(self, lines: List[str]) -> None:
+        self._inside = lines
+        self._read_inside()
+
+    @property
+    def inline(self) -> str:
+        return self._inline
+
+    @inline.setter
+    def inline(self, text: str) -> None:
+        self._inline = text
+        self._read_inside()
+
+    def _read_inside(self) -> None:
+        """The setup or test body as read: the heading's own text for a one-line block, else the inside lines."""
+        self.inside_body = CodeBody(self._inline or "\n".join(self._inside), self.language)
 
     def is_in(self, language: CodeLanguage, key: WrittenKey) -> bool:
         return self.language is language and self.key == key
@@ -176,14 +218,7 @@ class WrittenBlock:
     def inside_for(self, body: CodeBody) -> List[str] | None:
         """The setup or test body lines exactly as read, while the model's body still says the same.
         A block written on one line keeps its body in the heading, so it has no inside lines."""
-        as_read = CodeBody(self.inline or "\n".join(self.inside), self.language)
-        return self.inside if as_read.text == body.text else None
-
-    def lead_body(self) -> CodeBody:
-        return CodeBody("\n".join(self.lead), self.language)
-
-    def closing_body(self) -> CodeBody:
-        return CodeBody("\n".join(self.closing), self.language)
+        return self.inside if self.inside_body.text == body.text else None
 
 
 PYTHON_SPELLING = CodeSpelling(
