@@ -40,7 +40,7 @@ const storyMapOn = (page: BoardPage): FidelityProgressClient => ticketOn(page).p
 // A ticket the page still holds after the board stopped showing it: its tools name a ticket the board does not have.
 const goneTicket = (page: BoardPage, name: string): TicketClient => {
   const shown = ticketOn(page).toJSON()
-  const progress = shown.progress.map(entry => ({ ...entry, ticket: name }))
+  const progress = shown.progress.map(entry => ({ ...entry, ticket: { name } }))
   return page.ticket({ ...shown, name, progress })
 }
 

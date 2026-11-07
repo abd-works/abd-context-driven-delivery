@@ -154,6 +154,7 @@ Whenever you create, alter, or delete object-oriented boundaries and public seam
 ```yaml
 default_format: python
 stage: specification
+judged_on: graph
 outputs:
   python: "{module}/"
   typescript: "{module}/"
@@ -258,6 +259,7 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 ```yaml
 default_format: python
 stage: implementation
+judged_on: graph
 outputs:
   python: "{module}/"
   typescript: "{module}/"

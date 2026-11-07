@@ -7,7 +7,8 @@ from pathlib import Path
 from mamba import description, context, it, before, after
 from expects import equal, expect, have_keys
 
-from harness.design_canvas.canvas import DesignCanvas, stem, camel
+from harness.design_canvas.canvas import DesignCanvas, stem
+from harness.name.name import Name
 
 
 with description("Design canvas") as self:
@@ -43,4 +44,4 @@ with description("Design canvas") as self:
     with context("artboard names"):
         with it("names a dc-import by the file's stem, and its live flag in camel case"):
             expect(stem("screens/verify-ported-number.dc.html")).to(equal("verify-ported-number"))
-            expect(camel("verify-ported-number")).to(equal("verifyPortedNumber"))
+            expect(Name("verify-ported-number").camel).to(equal("verifyPortedNumber"))

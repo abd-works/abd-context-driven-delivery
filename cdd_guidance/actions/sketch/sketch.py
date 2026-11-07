@@ -8,8 +8,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from cdd_guidance.actions.grill_context.grill_context import GrillContext
-from cdd_guidance.actions.project_paths import PathsFromProject
-from harness.guidance.documents import load_document
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
@@ -19,7 +17,7 @@ from harness.mcp.mcp_server import Mcp
 _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 
 @agent_toolset
-class Sketch(PathsFromProject, GuidanceAction):
+class Sketch(GuidanceAction):
     """Sketch a solution interactively before generating the formal artifact."""
 
     def __init__(self, agent_dir: str = "", session=None) -> None:
@@ -59,7 +57,7 @@ class Sketch(PathsFromProject, GuidanceAction):
         Returns the resolved template contents as a string.
         agent_dir: the wrapped agent's folder, from the project's root or absolute. Omit it for the folder this sketch was made with."""
         agent_dir = agent_dir or self._agent_dir
-        templates_dir = self._from_project(agent_dir) / "templates" if agent_dir else None
+        templates_dir = self.path_named(agent_dir) / "templates" if agent_dir else None
         found = sorted(templates_dir.glob("*-sketch.*")) if templates_dir is not None and templates_dir.is_dir() else []
         return (found[0] if found else _DEFAULT_TEMPLATE).read_text(encoding="utf-8")
 
@@ -78,7 +76,7 @@ class Sketch(PathsFromProject, GuidanceAction):
         module: a module's folder under the session root, for a sketch of that module alone; it goes in that module's .context folder."""
         target = self._context_folder(module) / self._sketch_name
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(load_document(content, paths), encoding="utf-8")
+        target.write_text(self.document_named(content, paths), encoding="utf-8")
         return str(target)
 
     @Mcp

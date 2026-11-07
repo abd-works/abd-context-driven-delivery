@@ -35,7 +35,7 @@ export class FidelityProgressClient {
   // The fidelity's slug, such as ux-mockup: what names its progress to the fidelity-progress tools and its guidance to
   // the actions.
   get slug(): string {
-    return this.progress.slug
+    return this.progress.fidelity.slug
   }
 
   // The fidelity's own name as the session card shows it, such as Scenarios or Front end code.
@@ -73,7 +73,7 @@ export class FidelityProgressClient {
 
   // The practice root this fidelity's files are written under, as the ticket's session holds it.
   get folder(): string {
-    return this.ticket.session.practices[this.progress.practice]?.root ?? ''
+    return this.ticket.session.practices[this.progress.practice.key]?.root ?? ''
   }
 
   get defaultFormat(): string {
@@ -131,7 +131,8 @@ export async function runAction($: EngineInterface, fidelity: FidelityProgressCl
 // Review is the person's own approval, recorded by the Python FidelityProgress, which refuses it until the latest
 // Validate passed.
 export async function reviewFidelity($: EngineInterface, fidelity: FidelityProgressClient): Promise<FidelityProgressClient | ReviewRefused> {
-  const { ticket, slug } = fidelity.progress
+  const ticket = fidelity.progress.ticket.name
+  const slug = fidelity.slug
   try {
     await callTool<FidelityProgressData>($, 'fidelity-progress.finish_review', { ticket, fidelity: slug })
   } catch (failure) {
@@ -146,5 +147,5 @@ export async function reviewFidelity($: EngineInterface, fidelity: FidelityProgr
 // A dot opens the board on this session at that fidelity, and the action button follows it.
 export async function openBoard($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
   await selectFidelity($, fidelity)
-  await runCommand($, `/board ${fidelity.progress.ticket} ${fidelity.slug}`)
+  await runCommand($, `/board ${fidelity.progress.ticket.name} ${fidelity.slug}`)
 }

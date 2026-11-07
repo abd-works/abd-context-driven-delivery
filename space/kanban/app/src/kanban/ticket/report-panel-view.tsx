@@ -4,7 +4,7 @@ import { RuleView } from './report-rule-view'
 
 export function ReportPanelHeadView({ panel }: { panel: ReportPanel }) {
   const { page } = useBoard()
-  const title = panel.progress ? (page.board.practiceNamed(panel.progress.practice)?.name ?? panel.progress.slug) : panel.ticket.name
+  const title = panel.progress ? (page.board.practiceNamed(panel.progress.practice.key)?.name ?? panel.progress.fidelity.slug) : panel.ticket.name
   return (
     <div className="panel-words">
       <div className="panel-kind">

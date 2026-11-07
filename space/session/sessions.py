@@ -84,8 +84,10 @@ class Sessions:
         return bool(name) and name != MAIN_SESSION_NAME and not name.startswith(_SHARED_FOLDER_MARK)
 
     def named(self, name: str) -> Session | None:
-        """The work session called name, open before closed; none when there is none. Only that session's folder is
-        read, so a tool that names one session does not load every other."""
+        """The session called name: the main session, or a work session, open before closed; none when there is none.
+        Only that session's folder is read, so a tool that names one session does not load every other."""
+        if name == MAIN_SESSION_NAME:
+            return self.load(self.folder_of(name))
         if not self._is_work_session(name):
             return None
         found = next((folder for folder in (self.folder / name, self.folder / COMPLETE_FOLDER / name) if folder.is_dir()), None)

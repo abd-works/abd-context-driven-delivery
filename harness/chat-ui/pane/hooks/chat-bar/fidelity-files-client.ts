@@ -24,7 +24,7 @@ export function currentFidelityFiles($: EngineInterface) {
 export async function openFiles($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
   const chatBar = await currentChatBar($)
   try {
-    const files = await callTool<Record<string, FileEntryData[]>>($, 'fidelity-progress.files', { ticket: fidelity.progress.ticket, fidelity: fidelity.slug })
+    const files = await callTool<Record<string, FileEntryData[]>>($, 'fidelity-progress.files', { ticket: fidelity.progress.ticket.name, fidelity: fidelity.slug })
     const paths = [...new Set(Object.values(files).flat().map(entry => entry.path))].sort((a, b) => fileOrder(a) - fileOrder(b))
     await update($, fidelityFiles, () => ({ fidelity: fidelity.slug, tabs: paths.map(path => ({ path, text: null })), shown: paths[0] ?? null }))
     if (paths[0]) await showFile($, paths[0])

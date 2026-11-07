@@ -10,7 +10,7 @@ if str(_REPO) not in sys.path:
 from expects import equal, expect
 from mamba import before, context, description, it
 
-from harness.graph.graph import Node, PracticeGraph, Source
+from harness.graph.graph import EdgeType, Node, PracticeGraph, Source
 from harness.graph.rule_context import RuleCheckContext
 from cdd_guidance.practices.stories.model.story_model import Step, StepType
 from cdd_guidance.practices.stories.rules.scenarios import AndChaining, ScenariosShape
@@ -36,9 +36,9 @@ def _step(practice, semantic: str, text: str, line: int) -> Node:
 
 
 def _record_steps(practice, scenario: Node, steps: list[Node]) -> None:
-    fact = {"kind": "steps", "order": 4, "display": "direct"}
+    edge_type = EdgeType("steps", 4, "direct")
     for step in steps:
-        practice.record(fact, scenario, step)
+        practice.record(edge_type, scenario, step)
 
 
 with description("ScenariosShape"):

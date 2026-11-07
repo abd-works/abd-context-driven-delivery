@@ -12,6 +12,7 @@ from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions
 from harness.agent_tools.agent_tools import InstallDestination
 from harness.name.name import Name
 from harness.agent_tools.tool_call import ToolCall
+from harness.guidance.documents import load_document
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.hooks.hook_server import rules_toast
 from harness.hooks.hooks import Hook
@@ -47,15 +48,6 @@ PATHS_NOTE = (
     "paths: a file, a list of files, or a folder. Pass paths on an MCP call. "
     "This action reads them locally. Leave the document body out of the call."
 )
-
-
-def source_label(content: str = "", paths: list[str] | str | None = None) -> str:
-    """The path names for an instruction. The file bodies stay on disk."""
-    if paths in ("", None, []):
-        return content or ""
-    if isinstance(paths, str):
-        return paths
-    return "\n".join(str(entry) for entry in paths)
 
 
 class GuidanceArgument:
@@ -189,6 +181,23 @@ class GuidanceAction:
         if self._session is None:
             raise ActionWorksInNoSession(type(self).__name__)
         return self._session
+
+    def source_label(self, content: str = "", paths: list[str] | str | None = None) -> str:
+        """What an instruction names as its source: the paths a call names, one per line, else its in-process text. The
+        file bodies stay on disk."""
+        if paths in ("", None, []):
+            return content or ""
+        return paths if isinstance(paths, str) else "\n".join(str(entry) for entry in paths)
+
+    def path_named(self, named: str | Path) -> Path:
+        """named as a path in this action's session's project; an absolute path stays where it is, in no session too."""
+        path = Path(named)
+        return path.resolve() if path.is_absolute() else self.session.path_named(path)
+
+    def document_named(self, content: str = "", paths: list[str] | str | None = None) -> str:
+        """The document a call names: content, or the files at paths read from this action's session's project; an
+        action made for no session, such as one run in process, reads paths as given."""
+        return self._session.document_named(content, paths) if self._session is not None else load_document(content, paths)
 
     def _discover_operations(self) -> dict[str, AgentOperation]:
         from harness.agent_tools.agent_tools import AgentToolMark, GuidanceAgentOperation

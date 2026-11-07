@@ -99,7 +99,7 @@ class _ObservationLinks:
                 by_file.setdefault(node.source.file, []).append(node)
         for file, nodes in by_file.items():
             nodes.sort(key=lambda node: node.source.start_line)
-            path = self.graph._folder / file if self.graph._folder is not None else None
+            path = self.graph.loaded_folder / file if self.graph.loaded_folder is not None else None
             lines = path.read_text(encoding="utf-8").splitlines() if path and path.is_file() else []
             self._link_file(nodes, lines, file.endswith(".py"))
 

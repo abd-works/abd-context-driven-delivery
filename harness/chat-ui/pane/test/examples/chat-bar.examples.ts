@@ -28,7 +28,9 @@ const ROOTS: Record<string, string> = { stories: 'harness/chat-ui/.context', ux:
 const practiceOf = (slug: string): string => PRACTICES.find(practice => slug.startsWith(`${practice.replace('_', '-')}-`)) ?? ''
 // Seed: each practice as Board.practices reports it; a fidelity's slug begins with its practice's slug.
 const SHORT_NAMES: Record<string, [string, string]> = { stories: ['Stories', '#6BCB77'], ddd: ['DDD', '#6C5CE7'], ux: ['UX', '#E84393'], clean_engineering: ['CE', '#4FC3F7'], bdd: ['BDD', '#00B894'] }
-const practiceData = (key: string): PracticeGuidanceData => ({ key, slug: key.replace('_', '-'), short_name: SHORT_NAMES[key][0], colour: SHORT_NAMES[key][1], fidelities: EVERY_FIDELITY.filter(slug => practiceOf(slug) === key) })
+// The chat bar shows no guidance text, so the seed sends none.
+const NO_TEXT = { overview: '', guidance: '', rules: [] }
+const practiceData = (key: string): PracticeGuidanceData => ({ key, slug: key.replace('_', '-'), short_name: SHORT_NAMES[key][0], colour: SHORT_NAMES[key][1], fidelities: EVERY_FIDELITY.filter(slug => practiceOf(slug) === key), ...NO_TEXT })
 // Seed: the stage that requires a fidelity.
 const stageOf = (slug: string): string => STAGE_ORDER.find(stage => (WORK_OF[stage] ?? []).includes(slug)) ?? ''
 // Seed: the fidelities this project writes in TypeScript by default; every other writes markdown.
@@ -38,7 +40,7 @@ const TYPESCRIPT_FIRST = ['stories-scenarios', 'clean-engineering-model']
 export function fidelityOf(slug: string): FidelityGuidanceData {
   const name = slug.slice(practiceOf(slug).length + 1).replace(/-/g, '_')
   const defaultFormat = TYPESCRIPT_FIRST.includes(slug) ? 'typescript' : 'markdown'
-  return { name, outputs: { [defaultFormat]: `.context/${name}` }, default_format: defaultFormat, slug }
+  return { name, outputs: { [defaultFormat]: `.context/${name}` }, default_format: defaultFormat, slug, ...NO_TEXT }
 }
 
 // Seed: one fidelity's progress as the Python FidelityProgress reports it, on a practice the session has turned on or
@@ -48,11 +50,10 @@ export function progressOf(ticket: string, slug: string, state = 'not_started', 
   const nextAction = state === 'violations' ? 'satisfy' : (STEPS.find(step => actions[step] !== 'done') ?? '')
   const practice = practiceOf(slug)
   return {
-    ticket,
-    slug,
+    ticket: { name: ticket },
     fidelity: fidelityOf(slug),
     stage: { name: stageOf(slug) },
-    practice,
+    practice: { key: practice },
     is_enabled: practice in ROOTS,
     next_action: nextAction,
     allowed_actions: [],
@@ -90,7 +91,7 @@ export function checkoutFlow(seed: TicketSeed = {}): TicketData {
     is_active: false,
     drop_targets: ['Backlog'],
     is_done: seed.is_done ?? false,
-    next: next ? { ticket: name, slug: next } : null,
+    next: next ? { ticket: { name }, fidelity: { slug: next } } : null,
     worktree: '',
   }
 }
@@ -104,8 +105,8 @@ export const DONE: FidelityState = { progress: 'done', actions: { generate: 'don
 export function checkoutFlowWith(fidelities: Record<string, FidelityState>, seed: TicketSeed = {}): TicketData {
   const plain = checkoutFlow(seed)
   const changedOf = (progress: FidelityProgressData): FidelityProgressData => {
-    const state = fidelities[progress.slug]
-    return state ? progressOf(plain.name, progress.slug, state.progress, { ...NOT_DONE, ...state.actions }, state.violations ?? 0) : progress
+    const state = fidelities[progress.fidelity.slug]
+    return state ? progressOf(plain.name, progress.fidelity.slug, state.progress, { ...NOT_DONE, ...state.actions }, state.violations ?? 0) : progress
   }
   return { ...plain, progress: plain.progress.map(changedOf) }
 }
@@ -126,7 +127,7 @@ const SCOPES: Record<string, StageScopeData> = {
 const column = (name: string, tickets: TicketData[]): ColumnData => {
   const work = WORK_OF[name] ?? []
   const stage = work.length
-    ? { scope: SCOPES[name], actions: STAGE_ACTIONS, producing_actions: STAGE_ACTIONS.filter(action => action !== 'validate' && action !== 'review'), work_required: work.map(fidelityOf) }
+    ? { scope: SCOPES[name], actions: STAGE_ACTIONS, producing_actions: STAGE_ACTIONS.filter(action => action !== 'validate' && action !== 'review'), actions_with_formats: ['generate', 'render'], work_required: work.map(fidelityOf) }
     : {}
   return { name, in_progress: tickets.filter(ticket => ticket.column.name === name), ...stage }
 }

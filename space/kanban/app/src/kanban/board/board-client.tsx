@@ -11,8 +11,8 @@ const standingOf = ({ column, isDone }: TicketClient): string => (column.name ==
 function changesOf(was: TicketClient, ticket: TicketClient): string[] {
   const moved = standingOf(was) === standingOf(ticket) ? [] : [`${ticket.title} moved to ${standingOf(ticket)}`]
   const done = ticket.progress
-    .filter(progress => progress.state === 'done' && was.progressNamed(progress.slug)?.state !== 'done')
-    .map(progress => `${progress.slug} done on ${ticket.name}`)
+    .filter(progress => progress.state === 'done' && was.progressNamed(progress.fidelity.slug)?.state !== 'done')
+    .map(progress => `${progress.fidelity.slug} done on ${ticket.name}`)
   return [...moved, ...done]
 }
 

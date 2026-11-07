@@ -18,6 +18,7 @@ from harness.name.name import Name
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.repo.repo import Repo
 from space.session.session_log import SessionLog
+from space.session.session import MAIN_SESSION_NAME
 from space.session.sessions import Sessions
 
 if TYPE_CHECKING:
@@ -172,10 +173,10 @@ class Board:
 
     def ticket(self, name: str) -> Ticket | None:
         """The ticket called name, open before closed, read from its own session folder: a tool names one ticket, so
-        the board reads no other session to find it."""
+        the board reads no other session to find it. The main session works on the whole repository and is no ticket."""
         from space.kanban.ticket import Ticket
 
-        session = self.sessions.named(name)
+        session = self.sessions.named(name) if name != MAIN_SESSION_NAME else None
         return Ticket(session, self) if session is not None else None
 
     def backlog_item(self, title: str) -> BacklogItem | None:
@@ -308,6 +309,12 @@ class Stage(Column):
     def producing_actions(self) -> list[str]:
         """The actions that write a fidelity's files, which an action bar offers with formats."""
         return self._approach.producing_actions
+
+    @property
+    @data_field
+    def actions_with_formats(self) -> list[str]:
+        """The actions whose command takes the formats an action bar's chips pick, generate and render."""
+        return self._approach.actions_with_formats
 
     @property
     @data_field

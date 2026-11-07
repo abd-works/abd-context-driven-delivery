@@ -16,10 +16,10 @@ The ticket names, titles, and log lines are those of `fixture-repo.ts` and of th
 from __future__ import annotations
 
 import json
-import subprocess
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+from harness.process.git import Git
 from harness.graph.saved_graph import SavedGraph, SavedNode, SavedPractice
 from harness.graph.violation import Violation
 from space.kanban.board import Board
@@ -289,7 +289,7 @@ class SessionsProject(ThrowawayProject):
     def seed_origin(self) -> None:
         """A bare repository beside the project as its origin, holding main."""
         origin = self.folder / "origin.git"
-        subprocess.run(["git", "init", "-q", "--bare", str(origin)], check=True, capture_output=True)
+        Git(self.folder).run("init", "-q", "--bare", str(origin))
         self.git("remote", "add", "origin", str(origin))
         self.git("push", "-q", "-u", "origin", "main")
 
@@ -305,8 +305,7 @@ class SessionsProject(ThrowawayProject):
         self.git("commit", "-q", "-m", message)
 
     def git(self, *arguments: str, repository: Path | None = None) -> str:
-        done = subprocess.run(["git", *arguments], cwd=repository or self.root, check=True, capture_output=True, text=True)
-        return done.stdout.strip()
+        return Git(repository or self.root).run(*arguments)
 
     def origin_log(self, branch: str) -> list[str]:
         """The commit subjects origin holds on branch, newest first."""

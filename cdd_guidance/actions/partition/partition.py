@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from cdd_guidance.actions.project_paths import PathsFromProject
-from harness.guidance_actions import GuidanceArg, GuidanceAction, source_label
+from harness.guidance_actions import GuidanceArg, GuidanceAction
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
 from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, Segment, SegmentCompletenessConfig
 from harness.agent_tools import agent_instructions, agent_toolset, tools
@@ -15,7 +14,7 @@ from harness.installation.files import Skill
 from harness.mcp.mcp_server import Mcp
 
 @agent_toolset
-class Partition(PathsFromProject, GuidanceAction):
+class Partition(GuidanceAction):
     """Corpus partition: index, segment, completeness.
 
     Slash ``/partition`` runs this action once for each listed guidance, in the session the call works in.
@@ -32,7 +31,7 @@ class Partition(PathsFromProject, GuidanceAction):
     ) -> str:
         """Run named-entry completeness on a ``*-segment.md`` chunk.
         segment_path, index_path: from the project's root, or absolute."""
-        path = self._from_project(segment_path)
+        path = self.path_named(segment_path)
         if not path.is_file():
             return f"completeness: FAIL\nerror: segment not found: {segment_path}\n"
         segment = self._segment_for(path, expected_names, min_body_chars, index_path)
@@ -67,19 +66,19 @@ class Partition(PathsFromProject, GuidanceAction):
         fidelity, have none."""
         if isinstance(item, str) or getattr(item.fidelities, "current", None) is None:
             return ""
-        return self.partition_guidance.replace("{{slug}}", item.context_index_key).replace(
+        return self.partition_guidance.replace("{{slug}}", item.key).replace(
             "{{scaffold}}", item.fidelities.current.scaffold
         )
 
     def _folder(self, out_root: str | None) -> Path:
         """The folder the index and segments go under: out_root when the call names one, else the session's root."""
-        return self._from_project(out_root) if out_root else self.session.root
+        return self.path_named(out_root) if out_root else self.session.root
 
     def _read_partition_index(
         self, segment_path: Path, index_path: str
     ) -> PartitionIndex | None:
         resolved = (
-            self._from_project(index_path)
+            self.path_named(index_path)
             if index_path.strip()
             else PartitionIndex.resolve_near(segment_path)
         )
@@ -101,7 +100,7 @@ class Partition(PathsFromProject, GuidanceAction):
         """Write the partition index for this corpus in the .context folder under out_root (from the project's root, or absolute), or under the session's root when out_root is omitted. Name every expected segment so completeness can be checked later.
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context.
         context: in-process text. Leave this empty on an MCP call."""
-        source = source_label(context, paths)
+        source = self.source_label(context, paths)
         return f"Index the corpus at {source} under {self._folder(out_root).as_posix()}/.context/. Read those files locally."
 
     @Mcp
@@ -124,7 +123,7 @@ class Partition(PathsFromProject, GuidanceAction):
         """Build the index and segment files for one corpus. Fail if any new chunk misses a named entry the index required.
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context.
         out_root: folder for the index and segments. Omit it to use the session's root."""
-        source = source_label(context, paths)
+        source = self.source_label(context, paths)
         tools(self.index)
         tools(self.segment)
         tools(self.verify_segment_completeness)
@@ -156,7 +155,7 @@ class Partition(PathsFromProject, GuidanceAction):
         mode: one_go, or the named partition mode.
         out_root: folder for the index and segments. Omit it to use the session path."""
         self._work_on(guidance)
-        source = source_label(context, paths)
+        source = self.source_label(context, paths)
 
         def on(item) -> str:
             return self._corpus_steps(item, context, out_root, paths)

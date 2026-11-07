@@ -88,12 +88,12 @@ export class ChatBarClient {
     if (!ticket) return []
     return ticket.progress
       .filter(progress => progress.stage.name === this.shownStage && progress.is_enabled)
-      .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice), progress.slug === this.selected))
+      .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice.key), progress.fidelity.slug === this.selected))
   }
 
   // The fidelity the action button acts on: the one a person selected, else the ticket's next, else the first shown.
   get actionFidelity(): FidelityProgressClient | null {
-    return this.selectedFidelity ?? this.fidelities.find(fidelity => fidelity.slug === this.ticket?.next?.slug) ?? this.fidelities[0] ?? null
+    return this.selectedFidelity ?? this.fidelities.find(fidelity => fidelity.slug === this.ticket?.next?.fidelity.slug) ?? this.fidelities[0] ?? null
   }
 
   // Null when the stored fidelity is not one of the shown stage's, so the selection never points into a hidden stage.
@@ -106,7 +106,7 @@ export class ChatBarClient {
     const ticket = this.ticket
     if (!ticket) return ''
     const violations = ticket.progress.filter(progress => progress.state === 'violations').length
-    const next = ticket.next ? `next: ${ticket.next.slug}` : ticket.is_done ? 'done' : ''
+    const next = ticket.next ? `next: ${ticket.next.fidelity.slug}` : ticket.is_done ? 'done' : ''
     return [ticket.name, ticket.column.name, next, violations ? `${violations} with violations` : ''].filter(Boolean).join(' · ')
   }
 
@@ -117,7 +117,7 @@ export class ChatBarClient {
     if (!ticket) return ''
     return (
       `CDD session board: you are working on ticket ${ticket.name} ("${ticket.title}"), in ${ticket.column.name}. ` +
-      (ticket.next ? `Its next guidance is ${ticket.next.slug}. ` : 'Its stage is done and waits for a person to move it. ') +
+      (ticket.next ? `Its next guidance is ${ticket.next.fidelity.slug}. ` : 'Its stage is done and waits for a person to move it. ') +
       'Each fidelity goes through generate, validate, then review, which a person records on the board.'
     )
   }

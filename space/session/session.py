@@ -134,6 +134,20 @@ class Session:
         file manager reads under it."""
         return Path(self.workpath or self.repo_path).resolve()
 
+    def path_named(self, named: str | Path) -> Path:
+        """named as a path in this session's project, the way its agent writes one: from the project's root, or
+        absolute. The cdd server serves every project from its own working folder, so a relative path read as given
+        would name a file in the server's checkout instead of this project's."""
+        path = Path(named)
+        return path.resolve() if path.is_absolute() else (self.repo_path / path).resolve()
+
+    def document_named(self, content: str = "", paths: list[str] | str | None = None) -> str:
+        """The document a call names: content, or the files at paths, read from this session's project."""
+        if paths in ("", None, []):
+            return load_document(content)
+        entries = [paths] if isinstance(paths, (str, Path)) else list(paths)
+        return load_document(content, [str(self.path_named(entry)) for entry in entries])
+
     @property
     @data_field(key="workpath")
     def workpath_from_project(self) -> str:
@@ -368,7 +382,7 @@ class Session:
         Returns the absolute path of the written file.
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the handoff body in content.
         content: in-process text. Leave this empty on an MCP call."""
-        document = load_document(content, paths)
+        document = self.document_named(content, paths)
         if not document.strip():
             return "Nothing written: draft the handoff to a file and pass its path in paths."
         return str(self.handoffs.write(document))
@@ -425,7 +439,7 @@ class Session:
         content: in-process text. Leave this empty on an MCP call.
         slug: kebab-case short name (e.g. 'event-sourced-orders').
         Returns the resolved path. Call immediately when a qualifying decision crystallises - do not batch."""
-        return str(self.decision_records.write(slug, load_document(content, paths)))
+        return str(self.decision_records.write(slug, self.document_named(content, paths)))
 
     @mcp
     @skill

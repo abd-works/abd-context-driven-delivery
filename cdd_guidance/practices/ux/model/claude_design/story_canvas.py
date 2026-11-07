@@ -8,15 +8,17 @@ render returns its files as JSON: ``{"project/<path>": "<file text>"}``.
 
 from __future__ import annotations
 
+import html
 import json
 import re
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 from urllib.parse import quote, urlencode
 
-from harness.design_canvas.canvas import DesignCanvas, artboard, box, camel, escape, stem, thumbnail
+from harness.design_canvas.canvas import DesignCanvas, artboard, box, stem, thumbnail
 from harness.design_canvas.look import BACKGROUND, FONTS, LOOK
 from cdd_guidance.practices.ux.model.claude_design.nodes import ClaudeDesignUxMap
+from harness.name.name import Name
 from cdd_guidance.practices.ux.model.story_link import key_of
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
@@ -209,18 +211,18 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         the screen serves, opened to their scenarios and steps. Nothing in it navigates or edits."""
         lines: List[str] = []
         for epic in self.epics:
-            lines.append(f'<div class="cx-epic">{escape(epic.name)}</div>')
+            lines.append(f'<div class="cx-epic">{html.escape(epic.name)}</div>')
             for sub in epic.leaf_epics():
-                lines.append(f'<div class="cx-sub">{escape(sub.name)}</div>')
+                lines.append(f'<div class="cx-sub">{html.escape(sub.name)}</div>')
                 for story in sub.stories:
                     if story.name not in focus:
-                        lines.append(f'<div class="cx-story">{escape(story.name)}</div>')
+                        lines.append(f'<div class="cx-story">{html.escape(story.name)}</div>')
                         continue
-                    lines.append(f'<div class="cx-story cx-on">{escape(story.name)}</div>')
+                    lines.append(f'<div class="cx-story cx-on">{html.escape(story.name)}</div>')
                     for scenario in self._story_entry(story)["c"]:
-                        lines.append(f'<div class="cx-scenario">{escape(scenario["n"])}</div>')
+                        lines.append(f'<div class="cx-scenario">{html.escape(scenario["n"])}</div>')
                         steps = "\n".join(group["x"] for group in scenario["t"])
-                        lines.append(f'<div class="cx-steps">{escape(steps)}</div>')
+                        lines.append(f'<div class="cx-steps">{html.escape(steps)}</div>')
         style = (f"body{{margin:0;background:{BACKGROUND}}}"
                  ".cx-epic,.cx-sub{font:600 11px/1.6 'JetBrains Mono',ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A4A52;padding:4px 0}"
                  ".cx-sub{padding-left:12px}"
@@ -338,7 +340,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         lines = []
         for prototype in self._prototypes():
             name = stem(prototype)
-            lines.append(f'<sc-if value="{{{{live.{camel(name)}}}}}" hint-placeholder-val="{{{{ false }}}}">'
+            lines.append(f'<sc-if value="{{{{live.{Name(name).camel}}}}}" hint-placeholder-val="{{{{ false }}}}">'
                          f'<dc-import name="{name}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" hint-size="1280px,900px" style="display: block; width: 100%; min-height: 100%"></dc-import></sc-if>')
         return lines
 

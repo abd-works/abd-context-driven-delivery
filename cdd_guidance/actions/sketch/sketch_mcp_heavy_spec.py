@@ -19,9 +19,9 @@ with description("an MCP sketch prompt"):
         from harness.mcp.mcp_server import McpHost
 
         repo = Path(__file__).resolve().parents[3]
-        host = McpHost.standup(repo=repo)
+        host = McpHost.from_repo(repo)
         prose = "Three client perspectives: prospect onboarding and active account."
-        result = str(host._runtime.invoke_prompt("sketch.sketch", {"guidance": prose}))
+        result = str(host.checkout_server.invoke_prompt("sketch.sketch", {"guidance": prose}))
         expect(result).to(contain("Conduct a relentless grilling interview"))
         expect("ModuleNotFoundError" in result).to(equal(False))
 
@@ -29,9 +29,9 @@ with description("an MCP sketch prompt"):
         from harness.mcp.mcp_server import McpHost
 
         repo = Path(__file__).resolve().parents[3]
-        host = McpHost.standup(repo=repo)
+        host = McpHost.from_repo(repo)
         result = str(
-            host._runtime.invoke_prompt(
+            host.checkout_server.invoke_prompt(
                 "sketch.sketch",
                 {"guidance": ["cdd_guidance.practices.bdd.bdd:Bdd"]},
             )
@@ -42,9 +42,9 @@ with description("an MCP sketch prompt"):
         from harness.mcp.mcp_server import McpHost
 
         repo = Path(__file__).resolve().parents[3]
-        host = McpHost.standup(repo=repo)
+        host = McpHost.from_repo(repo)
         result = str(
-            host._runtime.invoke_prompt(
+            host.checkout_server.invoke_prompt(
                 "sketch.sketch",
                 {"guidance": ["stories", "clean-engineering-model"]},
             )

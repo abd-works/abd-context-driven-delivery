@@ -33,9 +33,10 @@ function SegmentsView({ ticket, stage, onSkill }: { ticket: TicketClient; stage:
   return (
     <div className="segments">
       {ticket.progressIn(stage).map(progress => {
-        const { slug, fidelity } = progress
+        const { fidelity } = progress
+        const slug = fidelity.slug
         const { key, label, color } = progress.look
-        const practice = page.board.practiceNamed(progress.practice)
+        const practice = page.board.practiceNamed(progress.practice.key)
         const skill = practice?.skillOf(slug) ?? slug
         const isOpen = state.tiles.some(tile => tile.ticket.name === ticket.name && tile.fidelities.length === 1 && tile.fidelities[0]?.slug === slug)
         const leave = () => onSkill('')
@@ -164,7 +165,7 @@ function OpenCardView({ ticket, stage, spot }: { ticket: TicketClient; stage: Co
     <div ref={card} className={opensLeft ? 'card-open grows-left' : 'card-open'} data-open-card={ticket.name} style={{ ...place, borderColor: borderColorOf(ticket), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}>
       <CardFaceView ticket={ticket} stage={stage} />
       {ticket.progressIn(stage).map(progress => (
-        <TileView key={progress.slug} ticket={ticket} stage={stage} progress={progress} hasPracticeChip opensOnHover />
+        <TileView key={progress.fidelity.slug} ticket={ticket} stage={stage} progress={progress} hasPracticeChip opensOnHover />
       ))}
     </div>
   )

@@ -19,7 +19,7 @@ from cdd_guidance.practices.stories.rules.scenarios import (  # noqa: E402
     GivenNamesComplexStateRootFirst,
     OutlineRequiresManyPermutations,
 )
-from harness.graph.graph import Edge, Graph, Node, Source  # noqa: E402
+from harness.graph.graph import Edge, EdgeType, Graph, Node, Source  # noqa: E402
 from harness.graph.rule_context import RuleCheckContext  # noqa: E402
 
 
@@ -96,9 +96,9 @@ def _order_aggregate(graph: Graph) -> None:
         return node
 
     aggregate = add("Aggregate", "order")
-    ddd.record({"kind": "root", "order": 1, "display": "direct"}, aggregate, add("EntityRoot", "Order"))
+    ddd.record(EdgeType("root", 1, "direct"), aggregate, add("EntityRoot", "Order"))
     for kind, name in (("Entity", "LineItem"), ("ValueObject", "ShippingAddress")):
-        ddd.record({"kind": "owns", "order": 2, "display": "direct"}, aggregate, add(kind, name))
+        ddd.record(EdgeType("owns", 2, "direct"), aggregate, add(kind, name))
 
 
 with description("a scenario on a story graph"):

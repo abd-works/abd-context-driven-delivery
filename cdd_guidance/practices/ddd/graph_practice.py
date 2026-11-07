@@ -23,6 +23,8 @@ class DddGraph(GraphPractice):
     """DDD's nodes, read after Clean Engineering's classes, and its rules with Clean Engineering's."""
 
     reads_after = ("clean_engineering",)
+    extends = "clean_engineering"
+    class_types = ("Entity", "EntityRoot", "ValueObject", "Aggregate", "Repository", "DomainEvent", "DomainService", "Specification")
 
     def own_rules(self) -> dict:
         return {**super().own_rules(), **GraphPractices.named("clean_engineering").rules()}

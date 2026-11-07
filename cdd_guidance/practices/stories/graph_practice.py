@@ -21,6 +21,19 @@ _STEP_LINES = 40
 class StoriesGraph(GraphPractice):
     """The Stories practice's nodes and its rules."""
 
+    source_ordered_types = frozenset({"Background", "Scenario", "Step", "Story"})
+    rule_types = {"SubEpic": ("Epic", "StoryNode"), "Epic": ("StoryNode",), "Story": ("StoryNode",)}
+
+    def align(self, node) -> None:
+        """A step sits on its label's line; a scenario, story, or background runs to the close of its call; an example
+        sits on its export."""
+        if node.type in {"Step", "Given", "When", "Then"}:
+            node.source.align_to_label(node.name)
+        elif node.type in {"Scenario", "Story", "Background"}:
+            node.source.widen_to_call_close()
+        elif node.type == "Example":
+            node.source.align_to_example_export(node.practice.source_root, node.name)
+
     def read(self, practice: PracticeGraph) -> None:
         from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
 

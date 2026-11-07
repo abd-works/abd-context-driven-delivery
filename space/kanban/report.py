@@ -182,8 +182,7 @@ class ReportFile:
     def _described_rules(self) -> list[Rule]:
         """Every rule of the practice, its fidelity's own last: a saved graph holds the whole practice's hits, so every
         fidelity's rules count, and a rule two fidelities share is described as this one describes it."""
-        others = [rule for fidelity in self._practice.fidelities for rule in fidelity.rules]
-        return [*self._practice.rules, *others, *self._fidelity.rules]
+        return [*self._practice.every_rule(), *self._fidelity.rules]
 
     @property
     def _earlier_fidelities(self) -> list[FidelityGuidance]:

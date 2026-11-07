@@ -76,7 +76,6 @@ practice_slug: str
 short_name: str
 colour: str
 fidelity_slugs: list[str]
-context_index_key: str
 clean_engineering_companion: FidelityGuidance | None
 	-> fidelities.current.clean_engineering
 guidance: str
@@ -147,7 +146,6 @@ session_output: FidelitySessionOutput | None
 	// set when a session works on the practice
 slug: str
 	// "{practice slug}-{fidelity name}"
-context_index_key: str
 install_folder: Path
 overview: str
 scaffold: str

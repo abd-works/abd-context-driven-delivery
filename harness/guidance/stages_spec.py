@@ -54,6 +54,9 @@ with description("the stages of the approach"):
             unknown = {action for stage in STAGES for action in stage.actions if action != REVIEW} - set(ActionCatalogue.names())
             expect(unknown).to(equal(set()))
 
+        with it("should name generate and render as the actions that take the formats a person picks"):
+            expect(STAGES.of("specification").actions_with_formats).to(equal(["generate", "render"]))
+
         with it("should leave validate and review out of the actions that write a fidelity's files"):
             expect(STAGES.of("implementation").producing_actions).to(
                 equal(["generate", "iterate", "sketch", "render", "document"])

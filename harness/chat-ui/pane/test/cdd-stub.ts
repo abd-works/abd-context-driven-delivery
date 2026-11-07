@@ -45,7 +45,7 @@ const activeName = (world: World): string | null => world.board.active?.name ?? 
 function changed(world: World, ticket: TicketData, active: string | null = activeName(world)): TicketData {
   // Ticket.next_fidelity is none once the stage is done or the ticket is Complete, and names its progress otherwise.
   const progress = ticket.column.name === 'Complete' || ticket.is_done ? null : nextOf(ticket)
-  const settled = { ...ticket, next: progress && { ticket: progress.ticket, slug: progress.slug } }
+  const settled = { ...ticket, next: progress && { ticket: progress.ticket, fidelity: { slug: progress.fidelity.slug } } }
   world.board = boardOf(active, ...ticketsOf(world.board).map(entry => (entry.name === settled.name ? settled : entry)))
   return settled
 }
@@ -67,9 +67,9 @@ function moveNext(world: World, { ticket }: { ticket: string }): TicketData {
 // FidelityProgress.finish_review: the fidelity is reviewed and done; the stage is done once every fidelity of it is.
 function finishReview(world: World, { ticket, fidelity }: { ticket: string; fidelity: string }): FidelityProgressData {
   const reviewing = named(world, ticket)
-  const progressNamed = (entry: TicketData) => entry.progress.find(progress => progress.slug === fidelity)!
+  const progressNamed = (entry: TicketData) => entry.progress.find(progress => progress.fidelity.slug === fidelity)!
   const actions = { ...progressNamed(reviewing).actions, review: 'done' }
-  const reviewed = { ...reviewing, progress: reviewing.progress.map(progress => (progress.slug === fidelity ? progressOf(ticket, fidelity, 'done', actions) : progress)) }
+  const reviewed = { ...reviewing, progress: reviewing.progress.map(progress => (progress.fidelity.slug === fidelity ? progressOf(ticket, fidelity, 'done', actions) : progress)) }
   return progressNamed(changed(world, { ...reviewed, is_done: nextOf(reviewed) === null }))
 }
 

@@ -39,10 +39,10 @@ with description("stories TypeScript .examples (faultyAsset.ts)"):
         # The executable name check was retired in 49bec82f; the rule is a prompt the agent judges.
         with it("should apply to stories as a prompt rule with no executable check"):
             from cdd_guidance.practices.stories.rules import BY_SLUG
-            from harness.graph.schema_rules import slugs_for_type
+            from harness.graph.schema_rules import PracticeSchema
 
             expect("vocabulary-traces-to-domain-source" in BY_SLUG).to(equal(False))
-            expect(slugs_for_type("stories", "Story")).to(contain("vocabulary-traces-to-domain-source"))
+            expect(PracticeSchema.load("stories").slugs_for("Story")).to(contain("vocabulary-traces-to-domain-source"))
 
 
 with description("stories TypeScript .examples (folders)"):

@@ -9,7 +9,7 @@ from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
 from harness.installation.destination import data_field, language_adapter
 from harness.installation.files import command
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_server import long_call, mcp
 from harness.process.git import Git, RepoConnectError
 from space.repo.latest_release import LatestRelease
 from space.repo.worktree import Worktree, Worktrees
@@ -294,6 +294,7 @@ class Repo:
             raise BranchNameRequiredError()
         return self._main_clone.branch_named(cleaned)
 
+    @long_call
     @agent_tool
     @mcp
     def switch_branch(self, name: str = "") -> str:
@@ -308,6 +309,7 @@ class Repo:
         self._work_state.branch_name = branch.name
         return f"on branch {branch.name!r} at {branch.repo.root}"
 
+    @long_call
     @agent_tool
     @mcp
     def close_branch(self, name: str = "", commit_message: str = "branch: close") -> str:
@@ -328,6 +330,7 @@ class Repo:
         kept = f"; kept {release.release!r} end-to-end results, removed {', '.join(pruned)}" if pruned else ""
         return f"closed branch {branch.name!r}: merged into {branch.repo.default_branch!r}, pushed, and deleted{kept}"
 
+    @long_call
     @agent_tool
     @mcp
     def switch_worktree(self, name: str = "") -> str:
@@ -345,6 +348,7 @@ class Repo:
         behind = f"; not updated from origin: {opened.sync_failure}" if opened.sync_failure else ""
         return f"worktree for {opened.branch.name!r} at {opened.path}{behind}"
 
+    @long_call
     @agent_tool
     @mcp
     def close_worktree(self, commit_message: str = "worktree: close") -> str:
@@ -395,6 +399,7 @@ class Repo:
         Call MCP ``repo.close_worktree``."""
         return ""
 
+    @long_call
     @agent_tool
     @mcp
     def push_commit(

@@ -7,11 +7,6 @@ import { slugsOf } from './tile-client'
 import { chipDoneCount, chipOfferedCount, chipsOf, chosenFormats } from './tile-formats'
 import type { FormatChip } from './tile-formats'
 
-// The actions whose command takes the formats chosen: Generate writes a fidelity in them and Render converts it into
-// them. Every other action the stage offers writes or reads files without a format. Python does not send this yet; it
-// belongs beside Stage.producing_actions, which answers the different question of which actions write files.
-const ACTIONS_WITH_FORMATS = ['generate', 'render']
-
 const namedIn = (tile: Tile): string => slugsOf(tile.fidelities).join(' ')
 
 export type ChipFace = FormatChip & { hint: string; isOn: boolean; isDone: boolean; count: string }
@@ -115,7 +110,8 @@ export class TileActionsClient {
 
   // One command names every fidelity the bar acts on, so a stage's work stays a single turn.
   async run(tile: Tile): Promise<void> {
-    if (!ACTIONS_WITH_FORMATS.includes(tile.action)) return this.sendFor(tile, `/actions-${tile.action} ${namedIn(tile)}`)
+    // The stage says which of its actions take the formats chosen; every other one writes or reads files without one.
+    if (!tile.stage.actionsWithFormats.includes(tile.action)) return this.sendFor(tile, `/actions-${tile.action} ${namedIn(tile)}`)
     const formats = chosenFormats(tile.fidelities, tile.picked)
     this.save(tile, { picked: [] })
     await this.sendFor(tile, `/actions-${tile.action} ${namedIn(tile)} format=${formats.join(',')}`)

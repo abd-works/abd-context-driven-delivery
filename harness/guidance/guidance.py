@@ -115,6 +115,18 @@ class Guidance:
         """Its rules one by one, as its help lists them: a practice's shared rules, or a fidelity's own."""
         return list(self.rules)
 
+    def checked_rule_collections(self) -> list[RulesCollection]:
+        """The rule collections a validate of this guidance checks: its own rules."""
+        return [self.rules] if self.rules is not None else []
+
+    def checked_rules(self) -> list[Rule]:
+        """The rules a validate of this guidance checks, one by one."""
+        return [rule for collection in self.checked_rule_collections() for rule in collection]
+
+    def every_rule(self) -> list[Rule]:
+        """Every rule this guidance holds, which a report describes beside a saved graph's hits."""
+        return list(self.rules or ())
+
     @markdown
     def templates(self) -> str:
         """Active template file for this Guidance format and fidelity."""
@@ -232,12 +244,26 @@ class PracticeGuidance(Guidance):
     def rules(self) -> RulesCollection:
         """Shared rules as a collection."""
 
+    def checked_rule_collections(self) -> list[RulesCollection]:
+        """The rule collections a validate of this practice checks: its shared rules, then its current fidelity's, or
+        every fidelity's when it has no current one. A fidelity that shares the practice's collection is listed once."""
+        current = self.fidelities.current
+        chosen = [current] if current is not None else list(self.fidelities)
+        collections = [self.rules, *(fidelity.rules for fidelity in chosen)]
+        return list({id(collection): collection for collection in collections if collection is not None}.values())
+
+    def every_rule(self) -> list[Rule]:
+        """Its shared rules and every fidelity's: a saved graph holds the whole practice's hits, so each one's rule text
+        is there to show beside it."""
+        collections = (self.rules, *(fidelity.rules for fidelity in self.fidelities))
+        return [rule for collection in collections if collection is not None for rule in collection]
+
     @property
     @data_field
     def key(self) -> str:
         """The practice's folder name, such as `clean_engineering`: how session log action lines and session.json name
         the practice."""
-        return Path(inspect.getfile(type(self))).parent.name
+        return self.module_dir.name
 
     @property
     @data_field(key="slug")
@@ -274,10 +300,6 @@ class PracticeGuidance(Guidance):
         current = getattr(getattr(self, "fidelities", None), "current", None)
         return current.output_paths() if current is not None else {}
 
-    @property
-    def context_index_key(self) -> str:
-        return self.module_dir.name
-
     def project_rules(self) -> list:
         """The custom rules the project keeps for this practice in `.context/rules/{practice}/rules.md`, and for a
         fidelity in a folder named after it, each tagged project; none when the practice works in no folder."""
@@ -288,7 +310,7 @@ class PracticeGuidance(Guidance):
             return []
         rules: list = []
         seen: set[Path] = set()
-        for rules_dir in ProjectRulesets(folder).folders_for(self.context_index_key):
+        for rules_dir in ProjectRulesets(folder).folders_for(self.key):
             rules.extend(self._project_rules_in(rules_dir / "rules.md", None, seen))
             for fidelity in self.fidelities.entries:
                 for spelling in Name(fidelity).spellings:
@@ -302,7 +324,7 @@ class PracticeGuidance(Guidance):
         seen.add(path.resolve())
         collection = RulesCollection.from_markdown(path.read_text(encoding="utf-8"), fidelity=fidelity)
         return [
-            rule.attribute_to(self.context_index_key, tag="project", shared=fidelity is None) for rule in collection
+            rule.attribute_to(self.key, tag="project", shared=fidelity is None) for rule in collection
         ]
 
     def _working_folder(self) -> Path | None:
@@ -498,8 +520,9 @@ class PracticeGuidance(Guidance):
 
 
     def read_paths(self, paths: list[str] | str, source: str | None = None) -> Any:
-        """What render converts from the files at paths: their text, one after another."""
-        return load_document("", paths)
+        """What render converts from the files at paths: their text, one after another, read from the project of the
+        session this practice works in."""
+        return self.session.document_named("", paths) if self.session is not None else load_document("", paths)
 
     @agent_tool
     def render(self, format: str, content: Any = "", source: str | None = None, previous: str = "") -> dict:
@@ -676,6 +699,10 @@ class FidelityGuidance(Guidance):
     session_output: Any = None
     """What this fidelity has in the session its practice works in (a FidelitySessionOutput): where it writes each
     format, the files it declares there, and its reports folder; none until a session works on its practice."""
+    judged_on: str = "artifacts"
+    """What a validate judges this fidelity's rules against, as its practice document's ``judged_on`` says: the
+    ``artifacts`` it writes, read as text, or the ``graph`` validate builds from the code, where rules about the object
+    model the code holds (one model, classes with one job, one-way dependencies) can be checked."""
 
     def __init__(
         self,
@@ -691,6 +718,11 @@ class FidelityGuidance(Guidance):
         self.outputs = {}
         if clean_engineering is not None:
             self.clean_engineering = clean_engineering
+
+    @property
+    def is_judged_on_graph(self) -> bool:
+        """Whether a validate judges this fidelity against the graph it builds from the code."""
+        return self.judged_on == "graph"
 
     @property
     @data_field
@@ -756,13 +788,6 @@ class FidelityGuidance(Guidance):
         while parent is not None and not isinstance(parent, PracticeGuidance):
             parent = getattr(parent, "parent", None)
         return parent
-
-    @property
-    def context_index_key(self) -> str:
-        practice = self.practice_guidance
-        if practice is not None:
-            return practice.context_index_key
-        return self.module_dir.name
 
     @property
     def format(self) -> str | None:

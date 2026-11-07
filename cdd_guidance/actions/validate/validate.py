@@ -14,15 +14,10 @@ from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 
 from cdd_guidance.actions.validate.checked_graph import CheckedGraph, CheckedOutputs
-from cdd_guidance.actions.validate.practice_rules import PracticeRules
 from cdd_guidance.actions.validate.report_files import ReportFiles
 
 _VALIDATE_MARKDOWN = Path(__file__).with_name("validate.md").read_text(encoding="utf-8")
 
-# At these fidelities the rules are about the object model the code holds: one object model, classes with one job,
-# state held on the object, typed relationships, one-way dependencies. Validate builds that model as a graph, so the
-# judge checks the graph; whether a model document matches the code is a separate check.
-_GRAPH_JUDGED_FIDELITIES = frozenset({"model", "code"})
 # How many graph hits a validate line in the session log names; the report holds every one.
 _LOGGED_VIOLATIONS = 40
 
@@ -49,7 +44,8 @@ class Validate(GuidanceAction):
     ) -> str:
         """Check artifacts against rules.
         rule: one Rule to check. Omit it to walk each guidance's rules.
-        graph: true for the workspace's saved graph (.context/graph.json), or path(s) to graph_return_nodes JSON
+        graph: true for the saved graph of the session's folder (.context/graph.json, there only after graph.load_working_copy
+        has run on that folder), or path(s) to graph_return_nodes JSON
         or a saved graph.json. When set, append a graph-rule report for each guidance's practice and still run AI validation.
         paths: the files or folders being edited, named from the project's root or absolute (e.g. src/my-paradise/order.ts).
         For graph-backed guidance, the graph is built from just these files as they are now and its rules run on them;
@@ -68,8 +64,8 @@ class Validate(GuidanceAction):
             sections.append(self._graph_and_ai_rule_report(graph_paths, prefixes))
         elif graph:
             sections.append(
-                "No graph JSON file found. Load the graph (graph_load_working_copy) so the workspace has "
-                ".context/graph.json, or pass graph as a path to graph_return_nodes JSON."
+                "No saved graph found. Run graph.load_working_copy on the session's folder, which saves "
+                ".context/graph.json there, or pass graph as a path to graph_return_nodes JSON."
             )
 
         def on(item) -> str:
@@ -79,7 +75,7 @@ class Validate(GuidanceAction):
                 return item
             if graph_paths:
                 return ""
-            return PracticeRules(item).text()
+            return _rules_text(item)
 
         parts = [part for part in self.run(on, action="validate") if part]
         sections.extend(parts)
@@ -94,7 +90,7 @@ class Validate(GuidanceAction):
         return "\n\n".join(part for part in self.each(self._rules_text_of) if part)
 
     def _rules_text_of(self, item) -> str:
-        return item if isinstance(item, str) else PracticeRules(item).text()
+        return item if isinstance(item, str) else _rules_text(item)
 
     def _fidelities(self) -> list:
         """The fidelity each listed guidance is validated at. A listed practice is the one this action's session holds,
@@ -138,7 +134,7 @@ class Validate(GuidanceAction):
 
     def _judges_graph(self, item) -> bool:
         current = getattr(getattr(item, "fidelities", None), "current", None)
-        return getattr(current, "name", None) in _GRAPH_JUDGED_FIDELITIES
+        return current is not None and current.is_judged_on_graph
 
     def _listed_practices(self) -> list:
         """Each listed practice as this action's session holds it, which logs its own validate line; guidance that is no
@@ -156,12 +152,12 @@ class Validate(GuidanceAction):
 
         violations = self._graph.violations(paths, prefixes)
         self._log_graph_validation(violations)
-        rules = [PracticeRules(item) for item in self.listed() if not isinstance(item, str)]
+        guidance = [item for item in self.listed() if not isinstance(item, str)]
         return ValidationReport(self.session).of_graph_and_ai_rules(
             violations,
-            [rule for practice_rules in rules for rule in practice_rules.checked()],
+            [rule for item in guidance for rule in item.checked_rules()],
             graph_sources=[str(path.resolve()) for path in paths],
-            rule_bodies={rule.slug: rule.body or "" for practice_rules in rules for rule in practice_rules.every()},
+            rule_bodies={rule.slug: rule.body or "" for item in guidance for rule in item.every_rule()},
         )
 
     def _log_graph_validation(self, violations: list) -> None:
@@ -215,3 +211,9 @@ class Validate(GuidanceAction):
             "Then run collection validate on the asset and detect a failure "
             "that matches the Mistake."
         )
+
+
+def _rules_text(guidance) -> str:
+    """The rules a validate of guidance checks, as their markdown, for an agent to judge against."""
+    texts = (collection.validate.strip() for collection in guidance.checked_rule_collections())
+    return "\n\n".join(text for text in texts if text)

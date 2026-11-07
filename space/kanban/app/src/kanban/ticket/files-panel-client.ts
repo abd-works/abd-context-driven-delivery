@@ -8,7 +8,7 @@ const SESSION_ENTRY = 'session'
 const TAB_ORDER = TAB_GROUPS.flatMap(label => FORMAT_GROUPS.find(group => group.label === label)?.formats ?? [])
 
 // The entries a panel's files are read under: the session folder's one, or each fidelity's slug.
-const entriesOf = (panel: Pick<FilesPanel, 'isSession' | 'progress'>): string[] => (panel.isSession ? [SESSION_ENTRY] : panel.progress.map(progress => progress.slug))
+const entriesOf = (panel: Pick<FilesPanel, 'isSession' | 'progress'>): string[] => (panel.isSession ? [SESSION_ENTRY] : panel.progress.map(progress => progress.fidelity.slug))
 
 // One tab per format the fidelity offers, generated or not: a story map always shows its markdown and its diagram.
 export const offeredTabs = (files: FilesByFidelity, slugs: string[]): string[] =>

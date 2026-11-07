@@ -149,7 +149,7 @@ describe('Validate Fidelity', () => {
     board.write(`.sessions/${TICKET}/validation-reports/ddd-bounded-context-20261101T100000.md`, '# Graph rule validation\n')
     const { page, ticket } = await activeTicketPage()
     await page.tiles.open(spot(page, TWO_FIDELITIES, HEAD), true)
-    expect(page.tileActions.barOf(ticket, barAt(page, HEAD)!).report?.slug).toBe(OTHER_SLUG)
+    expect(page.tileActions.barOf(ticket, barAt(page, HEAD)!).report?.fidelity.slug).toBe(OTHER_SLUG)
   })
 })
 

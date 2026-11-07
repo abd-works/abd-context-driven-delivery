@@ -90,7 +90,7 @@ with description("a LernDomainDriven generator"):
             expect(self.tool.default_workspace_folder).to(equal("packages"))
 
         with it("should key context_index on lern_domain_driven"):
-            expect(self.tool.context_index_key).to(equal("lern_domain_driven"))
+            expect(self.tool.key).to(equal("lern_domain_driven"))
 
         with it("should resolve module_dir to this package"):
             expect(self.tool.module_dir).to(equal(_MODULE_DIR))

@@ -31,6 +31,6 @@ export class FidelityProgressClient extends FidelityProgressClientGenerated {
   }
 
   get isNext(): boolean {
-    return this.holder.next?.slug === this.slug
+    return this.holder.next?.fidelity.slug === this.fidelity.slug
   }
 }

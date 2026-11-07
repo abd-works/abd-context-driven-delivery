@@ -9,14 +9,14 @@ so this model asks nodes for their facts and edges for their ends and never read
 
 from __future__ import annotations
 
-import json
 import re
 from typing import List, Optional
 
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
-from harness.graph.graph import Graph, Node, PracticeGraph
+from harness.graph.graph import Node
+from harness.graph.saved_graph import SavedGraph
 
 # Following interactions further than this many calls deep adds lines nobody reads; a cycle is cut where it repeats.
 _DEEPEST_CALL = 6
@@ -29,7 +29,7 @@ class GraphBddModel(BddModel):
     """Reads a saved graph (`Graph.write_json`, `graph.save_json`) into descriptions whose observations carry their realization."""
 
     def parse(self, text: str) -> "GraphBddModel":
-        graph = _restored(text)
+        graph = SavedGraph.from_text(text).restored_graph()
         self._bdd = graph.practice("bdd")
         self._clean = graph.practice("clean_engineering")
         for nodes in self._behavior_by_file().values():
@@ -110,25 +110,6 @@ class GraphBddModel(BddModel):
                 if member.name == name and member.facts.get("owner") == owner:
                     return _member_facts(member)
         return None
-
-
-def _restored(text: str) -> Graph:
-    """The saved graph read back into a graph's own nodes and edges: every practice's nodes first, then the edges
-    between them, which may cross practices."""
-    saved = (json.loads(text) if text.strip() else {}).get("practices", {})
-    graph = Graph()
-    for name, practice in saved.items():
-        _restore_root_facts(graph.practice(name), practice)
-        graph.practice(name).restore(practice)
-    for name, practice in saved.items():
-        graph.practice(name).restore_links(practice)
-    return graph
-
-
-def _restore_root_facts(practice: PracticeGraph, saved: dict) -> None:
-    # The graph saves its root's facts beside the nodes (`Graph._practice_document`) but PracticeGraph.restore does not
-    # read them back yet, so the practice's whole-practice facts, such as the model's members, are restored here.
-    practice.root_node.data.update(json.loads(saved.get("root_facts") or "{}"))
 
 
 def _member_facts(member: Node) -> dict:

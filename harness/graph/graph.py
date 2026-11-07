@@ -13,7 +13,7 @@ from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.progress import report_progress
 from harness.installation.destination import data_field, language_adapter
 from harness.installation.files import command, skill
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_server import long_call, mcp
 from harness.graph.explorer import ExplorerEntry, FilteredNode, GraphLoaded, GraphSaved, NodeSource, Overlay
 from harness.graph.graph_practice import GraphPractices
 from harness.graph.graph_rules_collection import GraphRulesCollection
@@ -1056,6 +1056,7 @@ class Graph:
         practice.graph = self
         return practice
 
+    @long_call
     @mcp
     @agent_tool
     def load_working_copy(
@@ -1233,6 +1234,7 @@ class Graph:
             self._schema_sync_holds -= 1
             self.sync_schema_edges()
 
+    @long_call
     @mcp
     @agent_tool
     def set_overlays(self, overlays: list[str]) -> AppliedOverlays:

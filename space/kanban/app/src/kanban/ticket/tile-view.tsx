@@ -16,9 +16,10 @@ type TileProps = { ticket: TicketClient; stage: ColumnClient; progress: Fidelity
 
 function TileNameView({ ticket, stage, progress }: TileProps) {
   const { page } = useBoard()
-  const { slug, fidelity } = progress
+  const { fidelity } = progress
+  const slug = fidelity.slug
   const place = cellPlace(stage.name, fidelity)
-  const practice = page.board.practiceNamed(progress.practice)
+  const practice = page.board.practiceNamed(progress.practice.key)
   const toggle = () => page.tiles.toggle(ticket, { ticket, stage, place, fidelities: [fidelity] })
   return (
     <button className="tile-name" title={practice?.skillOf(slug)} disabled={!progress.isEnabled} aria-expanded={page.tiles.isOpen(ticket.name, place)} onClick={() => void toggle()}>
@@ -29,7 +30,7 @@ function TileNameView({ ticket, stage, progress }: TileProps) {
 
 function TileHelpView({ progress }: { progress: FidelityProgressClient }) {
   const { page } = useBoard()
-  const name = page.board.practiceNamed(progress.practice)?.fidelityNameOf(progress.slug) ?? progress.slug
+  const name = page.board.practiceNamed(progress.practice.key)?.fidelityNameOf(progress.fidelity.slug) ?? progress.fidelity.slug
   return (
     <button className="help-link" title={`Help for ${name}`} aria-label={`Help for ${name}`} onClick={() => void page.panels.openFidelityHelp(progress)}>
       ?
@@ -40,7 +41,7 @@ function TileHelpView({ progress }: { progress: FidelityProgressClient }) {
 function TileHeadingView(props: TileProps) {
   const { ticket, progress, hasPracticeChip } = props
   const { page } = useBoard()
-  const practice = page.board.practiceNamed(progress.practice)
+  const practice = page.board.practiceNamed(progress.practice.key)
   const { key, label } = progress.look
   return (
     <div className="tile-heading">
@@ -60,9 +61,10 @@ function TileHeadingView(props: TileProps) {
 
 export function TileView(props: TileProps) {
   const { ticket, stage, progress, opensOnHover } = props
-  const { slug, fidelity } = progress
+  const { fidelity } = progress
+  const slug = fidelity.slug
   const { page } = useBoard()
-  const practice = page.board.practiceNamed(progress.practice)
+  const practice = page.board.practiceNamed(progress.practice.key)
   const isOn = progress.isEnabled
   const place = cellPlace(stage.name, fidelity)
   const { key } = progress.look

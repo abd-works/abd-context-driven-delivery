@@ -1300,7 +1300,7 @@ with description("lifecycle actions annotated for installation") as self:
 
                 with it("should not publish an operation annotated not to deploy"):
                     names = [op.mcp_name for op in self.mcp.mcp_operations]
-                    expect("validate.createRule" in names).to(equal(False))
+                    expect("validate.create_rule" in names).to(equal(False))
 
 with description("guidance agents"):
     with before.all:

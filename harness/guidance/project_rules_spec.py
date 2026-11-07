@@ -37,7 +37,7 @@ class _StoriesRules(PracticeGuidance):
             Session(root).practice("stories").guideline = self
 
     @property
-    def context_index_key(self) -> str:
+    def key(self) -> str:
         return "stories"
 
     @property

@@ -29,6 +29,18 @@ _GETTER_MEASURES = ("line_count", "max_control_flow_depth", "has_bare_catch", "s
 class CleanEngineeringGraph(GraphPractice):
     """Clean Engineering's nodes, its rules, and the draw.io rules it checks on a diagram's nodes."""
 
+    class_types = ("OoadClass",)
+    member_types = ("Operation", "Property")
+    class_node_type = "OoadClass"
+    anchor_types = {
+        "module": "Module",
+        "class": "OoadClass",
+        "property": "Property",
+        "operation": "Operation",
+        "parameter": "Parameter",
+        "package": "Package",
+    }
+
     def own_rules(self) -> dict:
         return {**rules_in(f"{self.package}.rules"), **self.language_rules("drawio")}
 

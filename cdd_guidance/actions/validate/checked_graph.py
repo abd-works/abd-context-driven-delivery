@@ -8,7 +8,6 @@ from typing import Any
 from harness.graph.violation import Violation
 from harness.guidance.practice_catalogue import PracticeCatalogue
 
-from cdd_guidance.actions.project_paths import PathsFromProject
 from cdd_guidance.actions.validate.report_files import ReportFiles
 from cdd_guidance.actions.validate.graph_json_reader import (
     filter_violations_by_path_prefix,
@@ -28,7 +27,7 @@ class PathsNotFoundError(FileNotFoundError):
         super().__init__(f"validate found no file under the session's root {session_root} at {named}. Name paths from the project's root, or absolute.")
 
 
-class CheckedGraph(PathsFromProject):
+class CheckedGraph:
     """The graph a validate call checks: built from just the files the call names, or from the folders its fidelities
     have written when it names none, and written beside the call's report; or the saved graph or node lists the call
     names. Graph node files are named from the session's root, so every path is kept that way here too.
@@ -85,7 +84,7 @@ class CheckedGraph(PathsFromProject):
         path that is not there, or not under the session's root, is refused: the graph would be built from nothing,
         and its empty report would read as a clean validate."""
         root = self.session.root
-        named = [(item, self._from_project(item)) for item in paths or []]
+        named = [(item, self.session.path_named(item)) for item in paths or []]
         unreadable = [item for item, path in named if not path.exists() or not self._under_root(path)]
         if unreadable:
             raise PathsNotFoundError(unreadable, self.session.repo_path, root)
@@ -93,7 +92,7 @@ class CheckedGraph(PathsFromProject):
 
     def _other_format_files(self) -> set[str]:
         """The declared files of every format validate does not check, as graph node files record them."""
-        others = [self._from_project(path) for item, outputs in self._checked for format, paths in outputs.items() if format != item.format for path in paths if "{" not in path]
+        others = [self.session.path_named(path) for item, outputs in self._checked for format, paths in outputs.items() if format != item.format for path in paths if "{" not in path]
         return {path.relative_to(self.session.root).as_posix() for path in others if self.session.root in path.parents}
 
     def _written_outputs(self) -> list[str]:
@@ -103,7 +102,7 @@ class CheckedGraph(PathsFromProject):
         if not self._practices:
             return []
         declared = [path for item, outputs in self._checked for path in outputs.get(item.format, [])]
-        found = [self._from_project(path) for path in declared if "{" not in path]
+        found = [self.session.path_named(path) for path in declared if "{" not in path]
         folders = {path.parent if path.is_file() else path for path in found if path.exists()}
         return sorted(str(folder) for folder in folders if self._under_root(folder))
 

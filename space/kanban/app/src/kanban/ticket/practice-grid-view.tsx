@@ -78,7 +78,7 @@ function PracticeLineView({ ticket, practice }: { ticket: TicketClient; practice
       <PracticeLabelView ticket={ticket} practice={practice} />
       {page.board.stages.map(stage => {
         const progress = ticket.progressOn(stage.workRequired.filter(required => practice.has(required.slug)))[0]
-        return progress ? <TileView key={progress.slug} ticket={ticket} stage={stage} progress={progress} hasPracticeChip={false} opensOnHover={false} /> : <span key={stage.name} />
+        return progress ? <TileView key={progress.fidelity.slug} ticket={ticket} stage={stage} progress={progress} hasPracticeChip={false} opensOnHover={false} /> : <span key={stage.name} />
       })}
       <span />
     </div>

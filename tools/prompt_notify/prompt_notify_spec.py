@@ -45,9 +45,9 @@ with description("prompt echo detection"):
             expect(kind).to(equal("action"))
             expect(label).to(equal("generate"))
 
-        with it("should name create-rule from validate.createRule"):
-            kind, label = _prompt_notify.detect(HookPayload({"tool_name": "validate.createRule", "tool_input": {}}))
-            expect(label).to(equal("create-rule"))
+        with it("should name verify-fix from the operation the improvement action publishes"):
+            kind, label = _prompt_notify.detect(HookPayload({"tool_name": "improvement.verify_fix", "tool_input": {}}))
+            expect(label).to(equal("verify-fix"))
 
         with it("should name repair from the operation the improvement action publishes"):
             kind, label = _prompt_notify.detect(HookPayload({"tool_name": "improvement.repair", "tool_input": {}}))

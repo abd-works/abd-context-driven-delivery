@@ -16,7 +16,7 @@ from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.diagnose.diagnose import Diagnose
 from harness.agent_tools.agent_tools import AgentToolSet
-from harness.agent_tools.sub_agent.mark import SUB_AGENT_CALLER_PREAMBLE, marked_as_sub_agent
+from harness.agent_tools.sub_agent.mark import SUB_AGENT_CALLER_PREAMBLE, SubAgentMark
 from space.session.throwaway_project import ThrowawayProject
 
 
@@ -30,7 +30,7 @@ with description("Diagnose toolset"):
             # Arrange / Act
             tool = diagnose_tool()
             # Assert
-            expect(marked_as_sub_agent(tool.callable)).to(equal(True))
+            expect(SubAgentMark.marks(tool.callable)).to(equal(True))
 
         with it("launches non-blocking"):
             # Arrange / Act

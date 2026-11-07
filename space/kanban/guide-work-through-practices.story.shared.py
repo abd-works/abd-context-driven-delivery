@@ -205,8 +205,9 @@ def _(s):
 
     @s.then("a side panel shows story_map's overview, guidance, and rules such as verb-noun-format")
     def _(world):
-        slugs = [rule["slug"] for rule in world.help["rules"]]
-        expect((bool(world.help["overview"]), bool(world.help["guidance"]), "verb-noun-format" in slugs)).to(equal((True, True, True)))
+        fidelity = world.help["fidelity"]
+        slugs = [rule["slug"] for rule in fidelity["rules"]]
+        expect((bool(fidelity["overview"]), bool(fidelity["guidance"]), "verb-noun-format" in slugs)).to(equal((True, True, True)))
 
     @s.and_("it names the stage Discovery")
     def _(world):
@@ -229,8 +230,9 @@ def _(s):
 
     @s.then("a side panel shows Practice overview and SHARED RULES such as do-not-invent-requirements")
     def _(world):
-        slugs = [rule["slug"] for rule in world.help["rules"]]
-        expect((bool(world.help["overview"]), "do-not-invent-requirements" in slugs)).to(equal((True, True)))
+        practice = world.help["practice"]
+        slugs = [rule["slug"] for rule in practice["rules"]]
+        expect((bool(practice["overview"]), "do-not-invent-requirements" in slugs)).to(equal((True, True)))
 
     @s.and_("it names no fidelity")
     def _(world):

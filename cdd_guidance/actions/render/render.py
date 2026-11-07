@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from harness.guidance.documents import load_document
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.installation.files import Skill
@@ -29,7 +28,7 @@ class Render(GuidanceAction):
         content: in-process text when paths is empty. Leave this empty on an MCP call.
         source: the format content is already in. Use sketch for a sketch file. Otherwise markdown, python, typescript, java, javascript, json, or drawio. md is markdown. Omit source when content is already the current format."""
         self._work_on(guidance)
-        loaded = load_document(content, paths)
+        loaded = self.document_named(content, paths)
 
         def on(item):
             if isinstance(item, str):

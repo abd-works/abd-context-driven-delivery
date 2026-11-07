@@ -11,7 +11,6 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from harness.name.name import Name
 
 PROJECT = "project"
 # The date canvas.json gives for its files. It is fixed, so regenerating a canvas whose boards did not change writes
@@ -71,17 +70,9 @@ class DesignCanvas:
         }, indent=1, ensure_ascii=False)
 
 
-def escape(value: str) -> str:
-    return html.escape(value, quote=True)
-
-
 def stem(path: str) -> str:
     """A canvas file name without its folder or its .dc.html ending: the name a dc-import uses."""
     return Path(path).name.removesuffix(".dc.html")
-
-
-def camel(name: str) -> str:
-    return Name(name).camel
 
 
 def artboard(title: str, width: int, height: int, body: str, style: str, root_style: str, head: str = "",
@@ -94,7 +85,7 @@ def artboard(title: str, width: int, height: int, body: str, style: str, root_st
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>{escape(title)}</title>
+<title>{html.escape(title)}</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -137,7 +128,7 @@ def _zoomable_artboard(title: str, width: int, height: int, body: str, style: st
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>{escape(title)}</title>
+<title>{html.escape(title)}</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -206,13 +197,13 @@ def box(left, top, width, height, look: dict, text: str, radius: int = 6, icon: 
             f'box-sizing: border-box; padding: 4px 8px; gap: 6px; display: flex; align-items: center; justify-content: center; '
             f'text-align: center; background: {look["fill"]}; border: 1px solid {look["stroke"]}; border-radius: {radius}px; '
             f'font-family: {look["font"]}; font-size: {look["size"]}px; font-weight: {look["weight"]}; color: {look["color"]}; '
-            f'{look["extra"]}">{icon}<span>{escape(text)}</span></div>')
+            f'{look["extra"]}">{icon}<span>{html.escape(text)}</span></div>')
 
 
 def thumbnail(left: int, top: int, width: int, height: int, caption: str, image: str, href: str) -> str:
     """A screen at thumbnail size that links to *href*."""
-    picture = (f'<img src="{image}" alt="{escape(caption)}" style="display: block; width: 100%; height: 100%; object-fit: cover; object-position: top">' if image
+    picture = (f'<img src="{image}" alt="{html.escape(caption)}" style="display: block; width: 100%; height: 100%; object-fit: cover; object-position: top">' if image
                else '<span style="display: flex; height: 100%; align-items: center; justify-content: center; color: #9B9BA8; font-size: 11px">No screenshot</span>')
-    return (f'<a href="{href}" aria-label="{escape(caption)}" style="position: absolute; left: {left}px; top: {top}px; display: block; '
+    return (f'<a href="{href}" aria-label="{html.escape(caption)}" style="position: absolute; left: {left}px; top: {top}px; display: block; '
             f'width: {width}px; height: {height}px; background: #111113; border: 1px solid #2A2A2A; '
             f'border-radius: 6px; overflow: hidden; box-sizing: border-box">{picture}</a>')

@@ -47,7 +47,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   get violatedSlugs(): string[] {
-    return this.progress.filter(progress => progress.state === 'violations').map(progress => progress.slug)
+    return this.progress.filter(progress => progress.state === 'violations').map(progress => progress.fidelity.slug)
   }
 
   // Its progress on every fidelity the board requires, in stage order, each answering its own tools.
@@ -68,12 +68,12 @@ export class TicketClient extends TicketClientGenerated {
   // The data names a fidelity's progress by its slug, such as the ticket's next or a report rule's fidelity; this is
   // the one place such a name is turned into the progress.
   progressNamed(slug: string): FidelityProgressClient | undefined {
-    return this.fidelityProgress.find(progress => progress.slug === slug)
+    return this.fidelityProgress.find(progress => progress.fidelity.slug === slug)
   }
 
   // The progress Run next works on: the one the ticket names as its next, none when it is done in its stage.
   get nextProgress(): FidelityProgressClient | undefined {
-    return this.next ? this.progressNamed(this.next.slug) : undefined
+    return this.next ? this.progressNamed(this.next.fidelity.slug) : undefined
   }
 
   hasViolationsIn(stage: ColumnClient): boolean {
@@ -119,7 +119,7 @@ export class TicketClient extends TicketClientGenerated {
   async filesOf(progress: FidelityProgressClient[]): Promise<FilesByFidelity | null> {
     const read = await Promise.all(progress.map(entry => entry.files()))
     if (read.some(files => !files)) return null
-    return Object.fromEntries(progress.map((entry, index) => [entry.slug, read[index]!]))
+    return Object.fromEntries(progress.map((entry, index) => [entry.fidelity.slug, read[index]!]))
   }
 
   // One fidelity's latest report, or with none the violations of every fidelity of the ticket's stage.
@@ -140,11 +140,11 @@ export class TicketClient extends TicketClientGenerated {
   get runNextHint(): string {
     if (this.isLocked) return 'Activate this session to run its next step'
     if (!this.next) return 'Nothing to run next'
-    return `${this.runNextLabel} on ${this.next.slug}`
+    return `${this.runNextLabel} on ${this.next.fidelity.slug}`
   }
 
   get nextNote(): string {
-    return this.next ? `Next: ${this.next.slug}, ${this.nextStepName}` : ''
+    return this.next ? `Next: ${this.next.fidelity.slug}, ${this.nextStepName}` : ''
   }
 
   get lockNote(): string {
@@ -282,8 +282,8 @@ export class TicketClient extends TicketClientGenerated {
     if (!next) return
     if (this.nextAction === 'satisfy') return this.page.panels.openReport(this, next)
     if (this.nextAction === 'review') return this.review(next)
-    if (this.nextAction !== 'generate') return this.chat.fill(this.actionCommand(`${RUN_NEXT_COMMANDS[this.nextAction]} ${next.slug}`))
+    if (this.nextAction !== 'generate') return this.chat.fill(this.actionCommand(`${RUN_NEXT_COMMANDS[this.nextAction]} ${next.fidelity.slug}`))
     const format = next.fidelity.default_format
-    await this.chat.command(this.actionCommand(`/actions-generate ${next.slug}${format ? ` format=${format}` : ''}`))
+    await this.chat.command(this.actionCommand(`/actions-generate ${next.fidelity.slug}${format ? ` format=${format}` : ''}`))
   }
 }

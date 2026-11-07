@@ -35,7 +35,7 @@ with description("a Claude Code mod pattern"):
             expect(self.tool.default_workspace_folder).to(equal("harness"))
 
         with it("should key context_index on cdd_claude_mod"):
-            expect(self.tool.context_index_key).to(equal("cdd_claude_mod"))
+            expect(self.tool.key).to(equal("cdd_claude_mod"))
 
         with it("should resolve module_dir to this package"):
             expect(self.tool.module_dir).to(equal(_MODULE_DIR))

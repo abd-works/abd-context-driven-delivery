@@ -521,13 +521,9 @@ class ToolsetInvoke:
     def _session_named(cls, name: str, project: Path) -> Any:
         """The project's session a run request names, which the toolset is made for, so the run works in that session
         and not in whichever session the project has open."""
-        from space.session.session import MAIN_SESSION_NAME
         from space.session.sessions import Sessions
 
-        sessions = Sessions(project)
-        if name == MAIN_SESSION_NAME:
-            return sessions.load(sessions.folder_of(name))
-        session = sessions.named(name)
+        session = Sessions(project).named(name)
         if session is None:
             raise AgentHarnessError(f"request names session {name!r}, which the project does not have")
         return session

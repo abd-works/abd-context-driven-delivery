@@ -25,7 +25,6 @@ Browse the [catalog](index.html) for the full map of practices, actions, fidelit
 - [/satisfy](actions/satisfy.html) — validate, fix, validate again until clean.
 - [/repair](actions/repair.html) — root-cause and fix why the practice produced a violation.
 - [/verify_fix](actions/verify_fix.html) — re-run the regression check for a repair.
-- [/createRule](actions/createRule.html) — add a named rule from a failed example, then validate with it.
 
 **Fidelities** control how deep you go. Each practice has one fidelity in each of the three stages.
 
@@ -144,10 +143,6 @@ Use when artifacts already exist but have violations or need refinement.
   Re-run the regression check for the repair's theme, so the same failure does not recur.
   [/verify_fix clean-engineering-modules](actions/verify_fix.html)
 
-- **[Create a rule](actions/createRule.html) when validate missed the mistake.**
-  Give it the failed example and the wanted behavior; it adds a named rule and validates the asset with it.
-  [/createRule clean-engineering-modules](actions/createRule.html)
-
 ---
 
 ## Quick reference — practices and fidelities
@@ -175,7 +170,6 @@ Use when artifacts already exist but have violations or need refinement.
 | [/satisfy](actions/satisfy.html) | Validate, fix every gap in the artifact, validate again until it passes. |
 | [/repair](actions/repair.html) | Root-cause why the practice produced the violation; fix the practice (context / example / template / rule), not the asset alone. |
 | [/verify_fix](actions/verify_fix.html) | Re-run the regression check for a themed repair. |
-| [/createRule](actions/createRule.html) | Add a named rule from a failed example and the wanted behavior, then validate with it. |
 
 ## Quick reference — session helpers
 

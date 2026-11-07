@@ -42,10 +42,6 @@ def _slug(name: str) -> str:
     return Name(unlink(name)).title_slug
 
 
-def _words(name: str) -> List[str]:
-    return re.findall(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+", name)
-
-
 def _relative(target: Path, base: Path) -> str:
     try:
         return Path(os.path.relpath(target, base)).as_posix()
@@ -210,14 +206,14 @@ class DomainModelLinks:
             return None
         parts: List[str] = []
         for name in sorted(self.terms, key=len, reverse=True):
-            words = _words(name) or [name]
+            words = Name(name).words or [name]
             self._by_key.setdefault(" ".join(w.lower() for w in words), name)
             parts.append(r"\s*".join(re.escape(w) for w in words))
         return re.compile(r"\b(?:" + "|".join(parts) + r")s?\b", re.IGNORECASE)
 
     def target(self, term: str) -> str:
         """``path#anchor`` for *term*, or ``""`` when the model does not define it."""
-        key = " ".join(w.lower() for w in _words(term))
+        key = " ".join(Name(term).words)
         name = self._by_key.get(key) or self._by_key.get(key.removesuffix("s"))
         if name is None:
             return ""

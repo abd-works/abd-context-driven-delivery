@@ -162,6 +162,7 @@ Whenever you create, alter, or delete bounded contexts, aggregates, or the langu
 ```yaml
 default_format: markdown
 stage: specification
+judged_on: graph
 clean_engineering: model
 outputs:
   python: "{bounded_context}/{aggregate}/{aggregate}.py"

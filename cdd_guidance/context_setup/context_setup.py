@@ -13,7 +13,6 @@ from harness.guidance_actions import ActionWorksInNoSession
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 from cdd_guidance.actions.partition.partition import Partition
-from cdd_guidance.actions.project_paths import PathsFromProject
 
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.ddd.ddd import Ddd
@@ -51,7 +50,7 @@ _SUPPORTED = frozenset({".docx", ".doc", ".pdf", ".pptx", ".ppt", ".txt", ".md",
 
 
 @agent_toolset
-class ContextSetup(PathsFromProject):
+class ContextSetup:
     """Convert a folder of documents to markdown and delegate partitioning to selected context tools.
 
     The cdd server makes one for each call, in the session that call works in, so the folders a call names are read
@@ -93,8 +92,8 @@ class ContextSetup(PathsFromProject):
 
     def _capture(self, repo_path: str, capture_repo: str, surface: str, base_url: str, entry_paths: Optional[list[str]]) -> LiveAppCapture:
         """The application this call captures, with its folders read from the session's project."""
-        repository = str(self._from_project(repo_path))
-        written_to = str(self._from_project(capture_repo)) if capture_repo else ""
+        repository = str(self.session.path_named(repo_path))
+        written_to = str(self.session.path_named(capture_repo)) if capture_repo else ""
         return LiveAppCapture(repository, written_to, surface, base_url, entry_paths)
 
     def _apply_tool_modes(self) -> None:
@@ -115,7 +114,7 @@ class ContextSetup(PathsFromProject):
         word_count)."""
         from markitdown import MarkItDown
 
-        root = self._from_project(folder_path)
+        root = self.session.path_named(folder_path)
         out_dir = root / "markdown"
         out_dir.mkdir(parents=True, exist_ok=True)
         converter = MarkItDown()

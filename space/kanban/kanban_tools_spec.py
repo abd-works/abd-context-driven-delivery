@@ -182,6 +182,9 @@ with description("the board tools") as self:
             columns = [column["name"] for column in self.project.call("board.show")["columns"]]
             expect(columns).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
 
+        with it("should say which of a stage's actions take the formats an action bar picks"):
+            expect(self.project.column("Specification")["actions_with_formats"]).to(equal(["generate", "render"]))
+
         with it("should name the project the board belongs to"):
             expect(self.project.call("board.show")["project"]).to(equal(self.project.root.name))
 
@@ -657,7 +660,7 @@ with description("the board tools") as self:
                 expect([rule["slug"] for rule in self.help["fidelity"]["rules"]]).to(contain("verb-noun-format"))
 
             with it("should show the fidelity's own overview, as the fidelity sends it"):
-                expect(self.help["fidelity"]["overview"]).to(contain("story map"))
+                expect(self.help["fidelity"]["overview"]).to(contain("Scope the solution"))
 
             with it("should name the stage a fidelity belongs to"):
                 expect(self.help["stage"]["name"]).to(equal("Discovery"))
@@ -1156,7 +1159,12 @@ with description("the board tools") as self:
 
         with it("should send each fidelity a Stage requires as the fidelity's own data"):
             story_map = self.project.column("Discovery")["work_required"][0]
-            expect(story_map).to(equal({"slug": "stories-story-map", "name": "story_map", "outputs": {"markdown": ".context/story-map.md", "drawio": ".context/story-map.drawio"}, "default_format": "markdown"}))
+            sent = {key: story_map[key] for key in ("slug", "name", "outputs", "default_format")}
+            expect(sent).to(equal({"slug": "stories-story-map", "name": "story_map", "outputs": {"markdown": ".context/story-map.md", "drawio": ".context/story-map.drawio"}, "default_format": "markdown"}))
+
+        with it("should send each fidelity a Stage requires with its overview, guidance, and rules"):
+            story_map = self.project.column("Discovery")["work_required"][0]
+            expect(sorted(story_map)).to(equal(["default_format", "guidance", "name", "outputs", "overview", "rules", "slug"]))
 
         with it("should send a Ticket's next fidelity by its ticket and slug alone, since its progress sends it"):
             expect(self.project.ticket_json("pet-visits")["next"]).to(equal({"ticket": {"name": "pet-visits"}, "fidelity": {"slug": "stories-story-map"}}))
