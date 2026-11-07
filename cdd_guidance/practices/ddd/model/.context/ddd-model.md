@@ -32,6 +32,8 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 + aggregate_type: type
 + every_aggregate: list[Aggregate]
 	// every context's aggregates, nested contexts included
++ every_context: list[BoundedContext]
+	// every context, each before the contexts nested in it
 ----
 + aggregate_reached_by(integration: Integration): Aggregate | None
 	// in the context the target names, its entity or its aggregate; with no such context, the aggregate by name

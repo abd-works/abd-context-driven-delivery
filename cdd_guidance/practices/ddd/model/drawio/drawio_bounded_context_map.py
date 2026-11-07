@@ -12,7 +12,6 @@ from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import D
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from cdd_guidance.practices.ddd.model.markdown.nodes import (
     MarkdownAggregate,
-    MarkdownBoundedContext,
     MarkdownBoundedContextMap,
     MarkdownIntegration,
 )
@@ -50,7 +49,7 @@ class DrawIOBoundedContextMap(MarkdownBoundedContextMap):
         """A module for each context and aggregate on the map, each context before what it holds, in the map's order;
         each integration a dependency of its aggregate's module on the module of the aggregate it reaches."""
         cells: dict[object, DrawIOModule] = {}
-        for context in _every_context(source.contexts):
+        for context in source.every_context:
             cells[context] = DrawIOModule(context.module_path, context.sequential_order, description=CONTEXT_PURPOSE)
             for aggregate in context.aggregates:
                 cells[aggregate] = DrawIOAggregateCell(
@@ -110,7 +109,3 @@ class DrawIOAggregateCell(DrawIOModule):
 
     seam_bullets = 10
 
-
-def _every_context(contexts: list[MarkdownBoundedContext]) -> list[MarkdownBoundedContext]:
-    """Each context, then every context nested in it."""
-    return [found for context in contexts for found in [context] + _every_context(list(context.contexts))]

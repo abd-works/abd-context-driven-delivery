@@ -289,6 +289,11 @@ class BoundedContext(Module):
         return found
 
     @property
+    def every_context(self) -> list["BoundedContext"]:
+        """This context, then every context nested in it."""
+        return [self] + [found for child in self.contexts for found in child.every_context]
+
+    @property
     def enclosing_contexts(self) -> list["BoundedContext"]:
         """The contexts this one is nested in, outermost first, ending with this context."""
         parent = self.parent
@@ -381,6 +386,11 @@ class BoundedContextMap:
     def every_aggregate(self) -> list[Aggregate]:
         """Every aggregate on the map, those in nested contexts included."""
         return [aggregate for context in self.contexts for aggregate in context.every_aggregate]
+
+    @property
+    def every_context(self) -> list[BoundedContext]:
+        """Every context on the map, each before the contexts nested in it."""
+        return [found for context in self.contexts for found in context.every_context]
 
     def aggregate_reached_by(self, integration: Integration) -> Aggregate | None:
         """The aggregate an integration's target names: in the context it names, its entity or its aggregate; with no
