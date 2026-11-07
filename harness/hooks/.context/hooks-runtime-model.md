@@ -223,24 +223,7 @@ Cursor process for every hooked event. `hook_server.py` constructs `HookServer` 
 + ping(): str
 	// "pong"
 - _append_debug(message: str): None
-	// dispatch.debug under the session logs folder
-
-## SessionLogs                                                    <!-- Md -->
-
-Active session name and hook log files under ``.sessions/{name}/logs/``.
-
-+ SessionLogs(repo_root: Path)
-------
-+ repo_root: Path
-----
-+ write_active_session(name: str): None
-+ clear_active_session(): None
-+ active_session_name(): str
-+ session_folder(name: str): Path
-+ ensure_default_session(): Path
-+ session_logs_dir(): Path
-+ session_log_path(filename: str): Path
-+ consolidate_logs_for_close(session_name: str): None
+	// dispatch.debug in the open session's logs folder (Session.hook_log)
 
 ## HookDaemon                                                     <!-- Md -->
 

@@ -33,6 +33,8 @@ from harness.hooks.hook_server import (
 )
 from harness.hooks.hooks import Hook, Hooks
 from harness.installation.installer import Installer
+from space.session.session import Session
+from space.work_state import WorkState
 
 
 def _dispatch(payload: dict, toolsets: list | None = None) -> dict:
@@ -44,7 +46,7 @@ def _dispatch_work_session_inject(tmp: tempfile.TemporaryDirectory):
     """Run a postToolUse hook that injects rules while ``work-session`` is the active session."""
     root = Path(tmp.name)
     (root / ".sessions" / "work-session").mkdir(parents=True)
-    (root / ".sessions" / "_active").write_text("work-session", encoding="utf-8")
+    WorkState(root).session = "work-session"
 
     @agent_toolset
     class _PracticeInject:
@@ -539,25 +541,49 @@ with description("hook dispatch"):
             )
 
 
-with description("session hook logs"):
+def _dispatch_log_folder(root: Path) -> Path:
+    """The folder a stop event's dispatch log lands in, for the project at root."""
+    HookServer(root, HandlerCatalog([], root)).dispatch(HookPayload({"hook_event_name": "stop"}))
+    return next((root / ".sessions").rglob("dispatch.debug")).parent
 
-    with context("when no work session is active"):
 
-        with it("should create main session logs under .sessions/main/logs"):
-            with tempfile.TemporaryDirectory() as tmp:
-                root = Path(tmp)
-                from harness.hooks.session_logs import SessionLogs
+with description("a project's hook logs") as self:
 
-                logs = SessionLogs(root)
-                folder = logs.ensure_main_session()
-                expect(folder.is_dir()).to(be_true)
-                log = logs.session_log_path("prompt-log.txt")
-                expect(log.parent.as_posix()).to(
-                    equal((root / ".sessions/main/logs").as_posix())
-                )
-                log.write_text("probe\n", encoding="utf-8")
-                expect(log.is_file()).to(be_true)
-                expect((folder / "session.md").is_file()).to(be_true)
+    with before.each:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.main_logs = (self.root / ".sessions" / "main" / "logs").as_posix()
+
+    with after.each:
+        self._tmp.cleanup()
+
+    with context("with no work session open"):
+
+        with it("should go to the main session's logs folder"):
+            expect(_dispatch_log_folder(self.root).as_posix()).to(equal(self.main_logs))
+
+    with context("with a work session open"):
+
+        with before.each:
+            self.session = Session(self.root)
+            self.session.switch("checkout", workpath=self.root, repo_path=self.root)
+
+        with it("should go to that session's logs folder"):
+            expect(_dispatch_log_folder(self.root).as_posix()).to(
+                equal((self.root / ".sessions" / "checkout" / "logs").as_posix())
+            )
+
+        with context("that was closed"):
+
+            with it("should go to the main session's logs folder"):
+                self.session.close()
+                expect(_dispatch_log_folder(self.root).as_posix()).to(equal(self.main_logs))
+
+        with context("that was switched to main"):
+
+            with it("should go to the main session's logs folder"):
+                self.session.switch("main", workpath=self.root, repo_path=self.root)
+                expect(_dispatch_log_folder(self.root).as_posix()).to(equal(self.main_logs))
 
 
 with description("a hook server") as self:

@@ -210,10 +210,6 @@ class PracticeGuidance(Guidance):
         the practice."""
         return Path(inspect.getfile(type(self))).parent.name
 
-    session_output: Any = None
-    """What this practice has in the session it works in (a PracticeSessionOutput): its root, the folders it reads,
-    and its saved formats; none until a session works on it. Each fidelity asks it for its outputs and files."""
-
     @property
     @data_field(key="slug")
     def practice_slug(self) -> str:
@@ -354,11 +350,6 @@ class PracticeGuidance(Guidance):
             self.session = session
         if workspace is not None:
             self.workspace = workspace
-
-    @property
-    def active_session(self) -> str | None:
-        """Session name bound on this guidance, when one was given."""
-        return self.session
 
     @agent_instructions
     def generate_output(self) -> str:
@@ -643,6 +634,9 @@ class FidelityGuidance(Guidance):
     host: FidelityGuidance | None = None
     """The fidelity this one is the Clean Engineering companion of, such as Stories' acceptance_tests for code; none
     for a fidelity of its own practice."""
+    session_output: Any = None
+    """What this fidelity has in the session its practice works in (a FidelitySessionOutput): where it writes each
+    format, the files it declares there, and its reports folder; none until a session works on its practice."""
 
     def __init__(
         self,
@@ -663,24 +657,17 @@ class FidelityGuidance(Guidance):
     def output_paths(self) -> dict[str, list[str]]:
         """Where this fidelity writes each format in the session its practice works in: its declared paths under the
         practice's root there. None when its practice works in no session."""
-        output = self._session_output
-        return output.output_paths_of(self) if output is not None else {}
+        return self.session_output.output_paths() if self.session_output is not None else {}
 
     def files(self) -> dict[str, list]:
         """The files this fidelity declares, by format, in the session its practice works in, each with its path from
         the project and whether it exists; none when its practice works in no session."""
-        output = self._session_output
-        return output.files_of(self) if output is not None else {}
+        return self.session_output.files() if self.session_output is not None else {}
 
     def has_declared_output(self) -> bool:
         """Whether a file this fidelity declares is already in the session its practice works in, such as one a person
         wrote; false when its practice works in no session."""
-        output = self._session_output
-        return output is not None and output.has_output_of(self)
-
-    @property
-    def _session_output(self) -> Any:
-        return getattr(self.practice_guidance, "session_output", None)
+        return self.session_output is not None and self.session_output.has_output()
 
     def reports(self) -> list[Path]:
         """This fidelity's validation reports in the session its practice works in, oldest first; report names end with
@@ -698,8 +685,7 @@ class FidelityGuidance(Guidance):
 
     @property
     def _reports_folder(self) -> Path | None:
-        session = getattr(self.practice_guidance, "workspace", None)
-        return getattr(session, "reports_folder", None)
+        return self.session_output.reports_folder if self.session_output is not None else None
 
     @property
     def practice_guidance(self) -> PracticeGuidance | None:

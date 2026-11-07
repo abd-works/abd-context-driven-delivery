@@ -385,14 +385,12 @@ class GuidanceAction:
         """The open session as an agent acting on this command needs it: its session.json, the project root paths
         are named from, the session's root, and where each listed practice writes. The agent works from the project's
         checkout, so every path it sees starts there; told nothing, it guesses where files go under a moved root."""
-        from space.work_state import project_checkout
-
         session = self.session
         if session.session_path is None:
             return ""
-        session_json = Path(session.session_path) / "session.json"
-        root = Path(session.workpath or session.repo_path or project_checkout()).resolve().as_posix()
-        project = Path(session.repo_path or project_checkout()).resolve().as_posix()
+        session_json = session.session_file
+        root = session.root.as_posix()
+        project = session.repo_from_session().as_posix()
         practices = [(item, self._session_practice(item)) for item in self.listed() if not isinstance(item, str)]
         writes = [f"- {item.slug}: {practice.folder.as_posix()}" for item, practice in practices if practice is not None]
         stored = session_json.read_text(encoding="utf-8").strip() if session_json.is_file() else "{}"

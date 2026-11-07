@@ -28,9 +28,9 @@ with description("the current session"):
         self.first = _project()
         self.second = _project()
         with working_on(self.first):
-            Session.switch("alpha")
+            Session().switch("alpha")
         with working_on(self.second):
-            Session.switch("beta")
+            Session().switch("beta")
 
     with after.each:
         shutil.rmtree(self.first, ignore_errors=True)

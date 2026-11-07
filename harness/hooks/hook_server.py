@@ -9,7 +9,10 @@ import time
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from space.session.session import Session
 
 _READY_WAIT_SECONDS = 90
 _READY_POLL_SECONDS = 0.2
@@ -436,9 +439,6 @@ class HookServer:
         self._port = port
         self._catalog = catalog
         self._payload: HookPayload | None = None
-        from space.session import Session
-
-        self.session = Session.current(repo_root)
         if catalog is not None:
             self._absorb_catalog_failures()
 
@@ -612,9 +612,6 @@ class HookServer:
             return HookResult.from_handler(
                 HookDaemon(self._host or "127.0.0.1", self._port).call_handle_stdin(raw)
             )
-        from harness.hooks.session_logs import SessionLogs
-
-        SessionLogs(self._repo_root).ensure_main_session()
         if not raw.strip():
             return HookResult()
         try:
@@ -635,11 +632,16 @@ class HookServer:
     def run(self) -> None:
         print(json.dumps(self.handle_stdin(sys.stdin.buffer.read()).as_dict()))
 
-    def _write_last_chat_injected(self, result: HookResult) -> None:
-        from harness.hooks.session_logs import SessionLogs
+    @property
+    def session(self) -> Session:
+        """The session saved as open in the project's ``.sessions/session.json``, main when none is. It is read for each
+        event, so hooks follow a switch or a close made through MCP at once."""
+        from space.repo.repo import Repo
 
-        logs = SessionLogs(self._repo_root)
-        folder = logs.session_folder(logs.active_session_name())
+        return Repo(self._repo_root).current_session
+
+    def _write_last_chat_injected(self, result: HookResult) -> None:
+        folder = self.session.session_path
         folder.mkdir(parents=True, exist_ok=True)
         dest = folder / "last-chat-injected-rules.md"
         dest.write_text(result.additional_context or "", encoding="utf-8")
@@ -727,10 +729,7 @@ class HookServer:
         return self._payload.conversation_id.strip()
 
     def _chat_injection_path(self, conversation_id: str) -> Path:
-        from harness.hooks.session_logs import SessionLogs
-
-        logs = SessionLogs(self._repo_root)
-        folder = logs.session_folder(logs.active_session_name()) / "chat-injections"
+        folder = self.session.session_path / "chat-injections"
         return folder / f"{self._chat_injection_name(conversation_id)}.md"
 
     def _chat_injection_name(self, conversation_id: str) -> str:
@@ -812,9 +811,7 @@ class HookServer:
         return self
 
     def _append_debug(self, message: str) -> None:
-        from harness.hooks.session_logs import SessionLogs
-
-        path = SessionLogs(self._repo_root).session_log_path("dispatch.debug")
+        path = self.session.hook_log("dispatch.debug")
         stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         with open(path, "a", encoding="utf-8") as log:
             log.write(f"{stamp} {message}\n")
