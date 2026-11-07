@@ -106,4 +106,12 @@ class InstallRecord:
         for dirpath, _dirnames, _filenames in os.walk(skills, topdown=False):
             candidate = Path(dirpath)
             if candidate != skills and not any(candidate.iterdir()):
-                candidate.rmdir()
+                self._remove_empty_folder(candidate)
+
+    def _remove_empty_folder(self, folder: Path) -> None:
+        """A running Claude Code watches its skills folders, so Windows refuses to remove one it holds open; the empty
+        folder stays until the next install."""
+        try:
+            folder.rmdir()
+        except PermissionError:
+            return

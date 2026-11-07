@@ -47,6 +47,26 @@ with story("Open Validation Report"):
             pass
         with and_("it says the report has no saved graph in place of saying it has no violations"):
             pass
+    with scenario("Say a report's saved graph is out of date"):
+        # Evidence: observed: board.show and the chat bar failed with SavedGraphOutdated on a report saved before the graph's shape 2 (chat-ui-defects backlog item).
+        with given("checkout-flow's latest story_map report has a graph saved in a shape the graph no longer writes"):
+            pass
+        with when("the Person opens the story_map report"):
+            # Person -> Ticket.report('stories-story-map') <- rules: [], is_out_of_date: true
+            pass
+        with then("the report panel shows the report's text"):
+            pass
+        with and_("it says the report's saved graph is out of date in place of its graph's rules"):
+            pass
+    with scenario("Read the board with an out-of-date report"):
+        # Evidence: observed: board.show raised SavedGraphOutdated for every ticket whose latest report predates shape 2.
+        with given("checkout-flow's latest story_map report has a graph saved in a shape the graph no longer writes"):
+            pass
+        with when("the session board reads checkout-flow"):
+            # Ticket -> FidelityProgress.violation_count <- the judged findings only
+            pass
+        with then("the story_map bar links that report"):
+            pass
     with scenario("Open a violation's file at its line"):
         # Evidence: observed: story-actions.spec 'should open a violation's file at its line in the Files panel'; side-panel-client.spec 'with a violation in a file its fidelity does not declare'.
         with given("checkout-flow's story_map report is open"):
