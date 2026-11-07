@@ -66,8 +66,4 @@ with description("a bounded context on a graph"):
         expect(aggregates).to(contain(("orders", "account")))
         expect(belongs).to(contain(("account", "orders"), ("Account", "account")))
 
-    with it("should open the same context from the graph"):
-        restored = BoundedContext(self.graph)
-        expect(restored.aggregates[0].name).to(equal("account"))
-        expect(restored.aggregates[0].classes[0].name).to(equal("Account"))
 

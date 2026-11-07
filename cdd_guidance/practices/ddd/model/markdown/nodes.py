@@ -60,6 +60,12 @@ class MarkdownDomainNode:
         return heading.split("|", 1)[1].strip()
 
 
+
+def _ends_aggregate(line: str) -> bool:
+    """An aggregate's section ends at the next aggregate heading or group heading."""
+    return line.startswith(_AGGREGATE) or _GROUP.match(line) is not None
+
+
 class MarkdownIntegration(Integration, MarkdownDomainNode):
     pass
 
@@ -242,6 +248,42 @@ class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
         # The notes under each heading that groups aggregates, by that heading.
         self.group_notes: dict[str, list[str]] = {}
 
+    def read_lines(self, lines: list[str]) -> None:
+        """Read this context's own lines: its notes, its module, the headings that group its aggregates, and each
+        aggregate, which reads its own section."""
+        index = 0
+        group: str | None = None
+        while index < len(lines):
+            line = lines[index].strip()
+            if line.startswith(_AGGREGATE):
+                index = self._read_aggregate(lines, index, group)
+                continue
+            group = self._read_context_line(line, group)
+            index += 1
+
+    def _read_context_line(self, line: str, group: str | None) -> str | None:
+        """Read a line between aggregates: a note, the module, or a group heading. Returns the group in force."""
+        grouped = _GROUP.match(line)
+        if grouped:
+            return grouped.group(1)
+        if line.startswith(_MODULE):
+            self.module_name = line[len(_MODULE):].strip().strip("`")
+        elif line.startswith(_NOTE):
+            self.read_note(line, group)
+        return group
+
+    def _read_aggregate(self, lines: list[str], start: int, group: str | None) -> int:
+        aggregate = MarkdownAggregate(self.plain_name(lines[start].strip()[len(_AGGREGATE):]), len(self.aggregates) + 1)
+        aggregate.group = group
+        after = start + 1
+        while after < len(lines) and not _ends_aggregate(lines[after].strip()):
+            after += 1
+        aggregate.source_lines = lines[start + 1:after]
+        self.append_aggregate(aggregate)
+        aggregate.load_root()
+        return after
+
+
     def lines(self) -> list[str]:
         written = [f"{_CONTEXT}{self.name} | {self.owner or ''}", ""]
         written.extend(_quoted(self.notes))
@@ -305,16 +347,17 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         context.owner = self.owner_from(heading)
         context._map = self
         end = self._next_heading_after(start)
-        self._fill_context(context, start + 1, end)
+        context.read_lines(self._lines[start + 1:end])
         self._index = end
         return context
 
     def parse(self, text: str) -> "MarkdownBoundedContextMap":
-        model = type(self)()
-        model._lines = text.splitlines()
-        model._index = 0
-        model.load_bounded_contexts()
-        return model
+        """Read the text's contexts into this map, and return it."""
+        self.contexts = []
+        self._lines = text.splitlines()
+        self._index = 0
+        self.load_bounded_contexts()
+        return self
 
     def render(self, canonical=None, previous: str | None = None) -> str:
         source = canonical if canonical is not None else self
@@ -405,42 +448,6 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
                 return index
             index += 1
         return len(self._lines)
-
-    def _fill_context(self, context: MarkdownBoundedContext, start: int, end: int) -> None:
-        index = start
-        group: str | None = None
-        while index < end:
-            line = self._lines[index].strip()
-            if line.startswith(_AGGREGATE):
-                index = self._read_aggregate(context, index, end, group)
-                continue
-            group = self._read_context_line(context, line, group)
-            index += 1
-
-    def _read_context_line(self, context: MarkdownBoundedContext, line: str, group: str | None) -> str | None:
-        """Read a line between aggregates: a note, the module, or a group heading. Returns the group in force."""
-        grouped = _GROUP.match(line)
-        if grouped:
-            return grouped.group(1)
-        if line.startswith(_MODULE):
-            context.module_name = line[len(_MODULE):].strip().strip("`")
-        elif line.startswith(_NOTE):
-            context.read_note(line, group)
-        return group
-
-    def _read_aggregate(self, context: MarkdownBoundedContext, start: int, end: int, group: str | None) -> int:
-        aggregate = MarkdownAggregate(self.plain_name(self._lines[start].strip()[len(_AGGREGATE):]), len(context.aggregates) + 1)
-        aggregate.group = group
-        after = start + 1
-        while after < end and not self._ends_aggregate(self._lines[after].strip()):
-            after += 1
-        aggregate.source_lines = self._lines[start + 1:after]
-        context.append_aggregate(aggregate)
-        aggregate.load_root()
-        return after
-
-    def _ends_aggregate(self, line: str) -> bool:
-        return line.startswith(_AGGREGATE) or _GROUP.match(line) is not None
 
     def load_bounded_contexts(self) -> None:
         super().load_bounded_contexts()
