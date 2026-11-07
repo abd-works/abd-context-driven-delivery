@@ -52,10 +52,16 @@ class Brand:
         shutil.copytree(self.folder if self.folder is not None else _BUNDLED_BRAND, destination, dirs_exist_ok=True)
         return destination
 
+    def wear(self, name: str) -> None:
+        """Wear the brand ``name`` names from now on: a folder path, or a brand in the collection; the bundled one for
+        no name."""
+        self.folder = self.resolve(name)
+
     def apply_named(self, out_root: Path, name: str) -> Path:
+        """Wear the brand ``name`` names and copy its marks onto the catalog's commons in ``out_root``."""
         commons = Path(out_root) / "commons"
         commons.mkdir(parents=True, exist_ok=True)
-        self.folder = self.resolve(name)
+        self.wear(name)
         return self.apply(commons)
 
     def copy_commons(self, out_root: Path) -> Path:

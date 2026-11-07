@@ -163,8 +163,7 @@ class Chat:
 
     def _check_in(self, is_busy: bool, name: str, folder: str) -> list[ChatCommand]:
         self._folder.mkdir(parents=True, exist_ok=True)
-        title, title_read = self._title_and_when_read(self._state)
-        self._write({"name": name, "title": title, "is_busy": is_busy, "seen": self.clock(), "title_read": title_read, "folder": folder})
+        self._write({"name": name, "is_busy": is_busy, "seen": self.clock(), "folder": folder, **self._title_state(self._state)})
         self._finish_worked_on(is_busy)
         return self._take_ready(is_busy)
 
@@ -273,12 +272,21 @@ class Chat:
             elif not is_busy and sent.get("is_worked_on"):
                 self._move(path, DONE)
 
-    def _title_and_when_read(self, state: dict) -> tuple[str, float]:
-        """The chat's title and when it was read: read again from the transcript once the last read is older than
-        TITLE_READ_SECONDS, since reading a long transcript on every check-in is slow."""
-        if self.clock() - state.get("title_read", 0) > TITLE_READ_SECONDS:
-            return _latest_title(self._transcript), self.clock()
-        return state.get("title", ""), state["title_read"]
+    def _title_state(self, state: dict) -> dict:
+        """The chat's title, when it was read, and the transcript it was read from: read again once the last read is
+        older than TITLE_READ_SECONDS, since reading a long transcript on every check-in is slow. The transcript is
+        found once and kept in the chat's state, so a later read does not search the Claude projects folder again."""
+        if self.clock() - state.get("title_read", 0) <= TITLE_READ_SECONDS:
+            return {"title": state.get("title", ""), "title_read": state["title_read"], "transcript": state.get("transcript", "")}
+        transcript = self._transcript_kept_in(state)
+        return {"title": _latest_title(transcript), "title_read": self.clock(), "transcript": str(transcript or "")}
+
+    def _transcript_kept_in(self, state: dict) -> Path | None:
+        kept = Path(state["transcript"]) if state.get("transcript") else None
+        if kept is not None and kept.is_file():
+            return kept
+        found = ChatPointer.from_claude_chat(self.id)
+        return found.transcript if found is not None else None
 
     # Windows' clock repeats within a quick burst of sends, so the name moves past every one already sent; it still
     # sorts in the order sent.
@@ -303,11 +311,6 @@ class Chat:
     def _message(self, path: Path, state: MessageState) -> ChatMessage:
         sent = json.loads(path.read_text(encoding="utf-8"))
         return ChatMessage(path.stem, sent["kind"], sent["text"], sent.get("sent_at", 0.0), state, sent.get("reason", ""))
-
-    @property
-    def _transcript(self) -> Path | None:
-        found = ChatPointer.from_claude_chat(self.id)
-        return found.transcript if found is not None else None
 
 
 # A mod that reloads checks in twice at once, and one cdd server answers every chat, so both arrive in this process. Each
