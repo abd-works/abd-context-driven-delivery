@@ -457,7 +457,7 @@ with description("a PartitionIndex"):
         with it("should use the default min_body_chars of 120"):
             expect(self.index.completeness.min_body_chars).to(equal(120))
 
-    with context("with resolve_near called"):
+    with context("found near a segment"):
         with context("that finds an index in a parent .context directory"):
             with before.all:
                 self._tmpdir = tempfile.mkdtemp()
@@ -467,20 +467,20 @@ with description("a PartitionIndex"):
                 _seg = Path(self._tmpdir) / "module" / ".context"
                 _seg.mkdir(parents=True)
                 (_seg / "module-segment.md").write_text("# Segment\n")
-                self._found = PartitionIndex.resolve_near(_seg / "module-segment.md")
+                self._found = PartitionIndex.near(_seg / "module-segment.md")
 
-            with it("should return a path to the index file"):
+            with it("should be the index read from that file"):
                 expect(self._found).not_to(be_none)
 
             with it("should point at the correct index filename"):
-                expect(self._found.name).to(equal("corpus-index.md"))
+                expect(self._found.path.name).to(equal("corpus-index.md"))
 
         with context("that finds no index nearby"):
             with before.all:
                 self._tmpdir2 = tempfile.mkdtemp()
                 _seg2 = Path(self._tmpdir2) / "no-index-segment.md"
                 _seg2.write_text("# Segment\n")
-                self._not_found = PartitionIndex.resolve_near(_seg2)
+                self._not_found = PartitionIndex.near(_seg2)
 
             with it("should return None"):
                 expect(self._not_found).to(be_none)

@@ -26,7 +26,7 @@ from space.kanban.report import Report, ReportFile
 from space.repo.repo import Branch
 from space.session import Session
 from space.session.session_log import LogEntry
-from tools.file_manager.file_manager import FileEntry
+from space.session.file_manager import FileEntry
 
 if TYPE_CHECKING:
     from space.kanban.backlog_item import BacklogItem

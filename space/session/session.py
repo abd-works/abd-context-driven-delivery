@@ -17,15 +17,15 @@ from harness.guidance.documents import load_document
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
-from harness.installation.context_config import CONTEXT_FOLDER
+from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
 from space.repo.repo import Repo
+from space.session.chat_injections import ChatInjections
 from space.session.decision_records import FORMAT_FILE, DecisionRecords
+from space.session.file_manager import FileEntry, FileText
 from space.session.handoffs import HANDOFF_FORMAT_FILE, Handoffs
 from space.session.practice_session_output import PracticeSessionOutput
 from space.session.session_files import SessionFiles
-from space.session.session_log import SessionLog
-from space.work_state import WorkState
-from tools.file_manager.file_manager import FileEntry, FileText
+from space.session.session_log import LogTimestamp, SessionLog
 
 if TYPE_CHECKING:
     from space.session.sessions import Sessions
@@ -61,8 +61,9 @@ class UnknownPracticeError(ValueError):
 @agent_toolset
 class Session:
     """One named piece of work in a project, kept in ``.sessions/{name}/``. It holds where it works, the practices it
-    uses, and its title; its log, files, handoffs, and decision records are objects of their own. Every tool on it acts
-    on the session whose ``session.json`` its ``session`` argument names."""
+    uses, and its title; its log, files, handoffs, decision records, and chat injections are objects of their own, made
+    with it. It holds the *Sessions* that loaded it and their repository. Every tool on it acts on the session whose
+    ``session.json`` its ``session`` argument names."""
 
     # The graph of each session the cdd server works in, by the session's folder, with the root it was opened on. The
     # graph holds the session's one instance of each practice, which its actions work with too. A Session is read from
@@ -70,22 +71,31 @@ class Session:
     _held: ClassVar[dict[Path, tuple[Path, Graph]]] = {}
     _held_lock: ClassVar[threading.Lock] = threading.Lock()
 
-    def __init__(self, repo_root: Path | str) -> None:
+    def __init__(self, repo_root: Path | str, *, sessions: Sessions | None = None) -> None:
         self._session_name = ""
-        self.workpath: Path | None = None
         self.repo_path: Path = Path(repo_root).resolve()
-        self.session_path: Path | None = None
+        # The sessions of the checkout that loaded this one; a session made on its own makes them when first asked.
+        self._sessions = sessions
+        # The repository that holds this session's ``.sessions``: the one its sessions hold.
+        self.repo: Repo = sessions.repo if sessions is not None else Repo(self.repo_path)
+        # The project's ``.context/config.json``, which names the folder each practice writes in.
+        self.context_config = ContextConfig(self.repo_path)
+        self._workpath: Path | None = None
+        self._session_path: Path | None = None
+        self.decision_records = DecisionRecords(self.root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
+        self.handoffs: Handoffs | None = None
         # The chat of the tool call this session was opened for: its log lines point at it.
         self.chat: ChatPointer | None = None
         self._known: dict[str, PracticeSessionOutput] = {}
         self._opened: list[PracticeSessionOutput] = []
         self.log = SessionLog(self)
         self.session_files = SessionFiles(self)
+        self.chat_injections = ChatInjections(self)
 
     @classmethod
-    def load(cls, session_path: Path, repo_path: Path) -> Session:
+    def load(cls, session_path: Path, repo_path: Path, *, sessions: Sessions | None = None) -> Session:
         """The session kept in ``session_path``, read without opening it."""
-        session = cls(repo_path)
+        session = cls(repo_path, sessions=sessions)
         session.session_path = Path(session_path)
         session.name = session.session_path.name
         stored = session.fields.get("workpath", "")
@@ -98,12 +108,15 @@ class Session:
         """The session whose session.json is session, a path from project's checkout or an absolute one, read without
         opening it. A board command names its ticket's session this way, because it runs in whichever chat it is sent
         to, and that chat's open session can be another. A tool call is handed the project the call names."""
-        checkout = Repo(project).checkout_folder
+        # WHY: Sessions makes and loads Session objects, so space.session.sessions imports this module.
+        from space.session.sessions import Sessions
+
+        sessions = Sessions(project)
         named = Path(session)
-        found = named if named.is_absolute() else checkout / named
+        found = named if named.is_absolute() else sessions.root / named
         if not session or not found.is_file():
             raise SessionNotFoundError(session)
-        return cls.load(found.parent, checkout)
+        return sessions.load(found.parent)
 
     @property
     @data_field
@@ -116,9 +129,34 @@ class Session:
         self._session_name = (value or "").strip()
 
     @property
-    def repo(self) -> Repo:
-        """The repository that holds this session's ``.sessions``."""
-        return Repo(self.repo_path)
+    def sessions(self) -> Sessions:
+        """The sessions of this session's checkout: the ones that loaded it, else made once when first asked."""
+        if self._sessions is None:
+            # WHY: Sessions makes and loads Session objects, so space.session.sessions imports this module.
+            from space.session.sessions import Sessions
+
+            self._sessions = Sessions(self.repo_path)
+        return self._sessions
+
+    @property
+    def workpath(self) -> Path | None:
+        """The folder the session works in; none for the whole repository."""
+        return self._workpath
+
+    @workpath.setter
+    def workpath(self, folder: Path | None) -> None:
+        self._workpath = folder
+        self.decision_records = DecisionRecords(self.root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
+
+    @property
+    def session_path(self) -> Path | None:
+        """The session's folder, such as ``.sessions/alpha``; none for a session not yet kept in one."""
+        return self._session_path
+
+    @session_path.setter
+    def session_path(self, folder: Path | None) -> None:
+        self._session_path = folder
+        self.handoffs = Handoffs(folder) if folder is not None else None
 
     @property
     def is_closed(self) -> bool:
@@ -170,7 +208,7 @@ class Session:
     def _unopened(self) -> Session:
         """This session as no call opened it, which the practices it keeps between calls work in, so they never point
         at the chat of the call that first asked for them."""
-        kept = type(self)(self.repo_path)
+        kept = type(self)(self.repo_path, sessions=self._sessions)
         kept.session_path = self.session_path
         kept.name = self.name
         kept.workpath = self.workpath
@@ -249,6 +287,11 @@ class Session:
         folder.mkdir(parents=True, exist_ok=True)
         return folder / filename
 
+    def append_hook_log(self, filename: str, line: str) -> None:
+        """Append line to the hook log called filename, stamped with the time it was written."""
+        with self.hook_log(filename).open("a", encoding="utf-8") as log:
+            log.write(f"{LogTimestamp.now()} {line}\n")
+
     def keep_file(self, file: Path) -> Path:
         """Move ``file`` into this session's folder, where it stays with the session's work until it becomes lasting
         context, such as part of a story map. A started backlog item's text is the only copy of the idea."""
@@ -257,55 +300,44 @@ class Session:
         return kept
 
     def move_to_closed(self) -> Session:
-        return self._move_folder_to(self._sessions_folder / COMPLETE_FOLDER)
+        return self._move_folder_to(self.sessions.folder / COMPLETE_FOLDER)
 
     def move_to_archive(self) -> Session:
-        return self._move_folder_to(self._sessions_folder / ARCHIVE_FOLDER)
+        return self._move_folder_to(self.sessions.folder / ARCHIVE_FOLDER)
 
     def move_to_backlog(self) -> Session:
-        return self._move_folder_to(self._sessions.backlog_folder)
+        return self._move_folder_to(self.sessions.backlog_folder)
 
     def reopen(self) -> Session:
         """Back among the open sessions, from closed or the backlog."""
-        return self._move_folder_to(self._sessions_folder)
-
-    @property
-    def _sessions(self) -> Sessions:
-        """Every session of this session's repository, and which of them is open."""
-        # WHY: Sessions makes and loads Session objects, so space.session.sessions imports this module.
-        from space.session.sessions import Sessions
-
-        return Sessions(self.repo_path)
-
-    @property
-    def _sessions_folder(self) -> Path:
-        return WorkState(self.repo_path).sessions_folder
+        return self._move_folder_to(self.sessions.folder)
 
     def _move_folder_to(self, parent: Path) -> Session:
-        """Move this session's folder under ``parent``, such as ``.sessions/_complete/``; the session as it is there."""
+        """Move this session's folder under ``parent``, such as ``.sessions/_complete/``; this session, now kept there."""
         parent.mkdir(parents=True, exist_ok=True)
         destination = parent / self.name
         shutil.move(str(self.session_path), str(destination))
-        return type(self).load(destination, self.repo_path)
+        self.session_path = destination
+        return self
 
     def practice(self, name: str) -> PracticeSessionOutput:
         """The practice called name in this session, opened, so this session's log lines name it."""
         found = next((opened for opened in self._opened if opened.name == name), None)
         if found is not None:
             return found
-        if not PracticeCatalogue.has(name):
+        opened = self.practices.get(name)
+        if opened is None:
             raise UnknownPracticeError(name)
-        opened = self.practices[name]
         self._opened.append(opened)
         return opened
 
     @property
     @data_field
     def practices(self) -> dict[str, PracticeSessionOutput]:
-        """Every practice CDD has, by practice key, opened or not, each the session's one instance of it."""
-        if len(self._known) < len(PracticeCatalogue.keys()):
-            for key, guidance in self.graph.every_practice.items():
-                self._known.setdefault(key, PracticeSessionOutput(guidance, self))
+        """Every practice CDD has, by practice key, opened or not, each the session's one instance of it, made once from
+        the practices its graph holds."""
+        if not self._known:
+            self._known = {key: PracticeSessionOutput(guidance, self) for key, guidance in self.graph.every_practice.items()}
         return dict(self._known)
 
     @property
@@ -323,21 +355,11 @@ class Session:
         self._opened = []
 
     @property
-    def handoffs(self) -> Handoffs:
-        """The handoffs this session keeps in its folder."""
-        return Handoffs(self.session_path)
-
-    @property
     @data_field(key="handoff")
     def latest_handoff(self) -> str:
         """The newest handoff file, as a path from the project; empty before one is written."""
         latest = self.handoffs.latest
         return self.from_project(latest) if latest is not None else ""
-
-    @property
-    def decision_records(self) -> DecisionRecords:
-        """The Context Decision Records this session keeps, under its workpath's ``.context/cdr/``."""
-        return DecisionRecords(self.root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
 
     @mcp
     @command(name="close-session")
@@ -346,7 +368,7 @@ class Session:
         """Close this work session: when it is the open session of its project, main becomes the open one.
 
         ``session`` is the session's session.json; ask ``sessions.current`` for it when the user names no session."""
-        self._sessions.close(self)
+        self.sessions.close(self)
 
     @mcp
     @agent_tool

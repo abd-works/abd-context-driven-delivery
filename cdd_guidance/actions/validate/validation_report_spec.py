@@ -1,4 +1,4 @@
-"""BDD spec — validation report file links."""
+"""BDD spec — a validation report links each graph hit to its file."""
 
 import sys
 import tempfile
@@ -20,7 +20,7 @@ from space.session import Session
 from cdd_guidance.actions.validate.validation_report import ValidationReport
 
 
-with description("validation report formatter links"):
+with description("a validation report"):
     with context("with a session report folder under the workspace"):
         with before.each:
             self.temp = tempfile.TemporaryDirectory()
@@ -44,7 +44,7 @@ with description("validation report formatter links"):
             session = Session(self.root)
             session.workpath = self.root
             session.session_path = self.session_dir
-            report_md = ValidationReport(session).of_graph_and_ai_rules(self.violations, [])
+            report_md = ValidationReport(session, []).of_graph(self.violations)
             report_path = self.session_dir / "validate-clean-engineering-code-src.md"
             report_path.write_text(report_md, encoding="utf-8")
             account = (self.root / "src/customer/account/account.ts").resolve()

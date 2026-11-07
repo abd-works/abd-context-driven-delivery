@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from harness.guidance.action_catalogue import ActionCatalogue
 from harness.agent_tools.chat_pointer import NO_CHAT, ChatPointer
 
 if TYPE_CHECKING:
@@ -34,6 +33,27 @@ class LoopNotFoundError(LookupError):
 
     def __init__(self, detail: str) -> None:
         super().__init__(detail)
+
+
+class LogTimestamp:
+    """The time a session log line, a hook log entry, or a toast is stamped with: a moment in UTC, to the second, such
+    as ``2026-11-07T17:30:05Z``. Every log a session keeps writes its times this one way, so their lines sort and compare
+    alike."""
+
+    def __init__(self, moment: datetime) -> None:
+        self.moment = moment.astimezone(timezone.utc).replace(microsecond=0)
+
+    @classmethod
+    def now(cls) -> LogTimestamp:
+        return cls(datetime.now(timezone.utc))
+
+    @classmethod
+    def read(cls, text: str) -> LogTimestamp:
+        """The timestamp text names, as a log wrote it; raises ``ValueError`` for text that names no time."""
+        return cls(datetime.strptime(text.strip(), _TIMESTAMP_FORMAT).replace(tzinfo=timezone.utc))
+
+    def __str__(self) -> str:
+        return self.moment.strftime(_TIMESTAMP_FORMAT)
 
 
 class LogEntry:
@@ -82,14 +102,9 @@ class Loop:
     """One span of context, generation, and evaluation inside a session, read from its log: the ``--- N`` marker line
     and every line written after it until the next marker."""
 
-    def __init__(self, number: int, log: SessionLog, entries: list[str] | None = None) -> None:
+    def __init__(self, number: int, entries: list[str] | None = None) -> None:
         self.number = number
         self.entries: list[str] = list(entries or [])
-        self._log = log
-
-    def text(self) -> str:
-        """Log lines for this loop plus any chat injected under them."""
-        return "\n".join(self.entries)
 
     def expanded_text(self) -> str:
         """Log lines for this loop, each followed by the transcript lines its chat pointer covers. A transcript range
@@ -111,33 +126,20 @@ class Loop:
             parts.extend(chat.transcript_text())
         return "\n".join(parts)
 
-    def inject(self, chat_file: Path, *, action: str | None = None) -> None:
-        """Put the chat kept in chat_file under this loop, and point the log's lines for action at it: the action
-        named, else the last one this loop's lines name."""
-        chat, body = ChatPointer.in_chat_file(Path(chat_file))
-        action_name = action or self._action_from_entries()
-        if action_name:
-            self._log.append_chat(action_name, chat)
-        self.entries.append(str(chat))
-        if body:
-            self.entries.extend(body.splitlines())
-
-    def _action_from_entries(self) -> str:
-        names = ActionCatalogue.names()
-        for line in reversed(self.entries):
-            for name in names:
-                if f" {name} " in f" {line} " or line.endswith(f" {name}"):
-                    return name
-        return ""
-
 
 class InjectedRules:
     """The rules a hook gave the agent for the files it edited since the last log line, kept in the session folder's
     ``injected-rules.txt`` until the next line names them. The hook server notes them and the cdd server writes the
     line, so the file is how the two processes hand them over."""
 
-    def __init__(self, log_path: Path | None) -> None:
-        self._path = log_path.with_name(_INJECTED_RULES_FILE) if log_path is not None else None
+    def __init__(self, log: SessionLog) -> None:
+        self._log = log
+
+    @property
+    def _path(self) -> Path | None:
+        """``injected-rules.txt`` beside the log, wherever the session's folder is now; none before it has one."""
+        log_path = self._log.path
+        return log_path.with_name(_INJECTED_RULES_FILE) if log_path is not None else None
 
     def note(self, rules: RulesCollection, matched_path: str) -> None:
         """Note that rules were given for the edited file at matched_path, each named with its practice and fidelity."""
@@ -172,11 +174,9 @@ class SessionLog:
         self._session = session
         # A chat named for the next log line only, ahead of the chat of the tool call being served.
         self._chat: ChatPointer | None = None
-
-    @staticmethod
-    def timestamp(moment: datetime) -> str:
-        """A moment as session logs write it."""
-        return moment.astimezone(timezone.utc).strftime(_TIMESTAMP_FORMAT)
+        # The rules a hook gave the agent since the last line, which the next line names. The file it keeps them in is
+        # shared with the hook server, so it is read on each ask.
+        self.injected_rules = InjectedRules(self)
 
     @property
     def path(self) -> Path | None:
@@ -208,16 +208,11 @@ class SessionLog:
         # A project's main session has no folder until something is written in it.
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8") as handle:
-            handle.write(f"{self.timestamp(datetime.now(timezone.utc))} {line}\n")
+            handle.write(f"{LogTimestamp.now()} {line}\n")
 
     def note_chat(self, chat: ChatPointer) -> None:
         """Point the next log line at chat, in place of the chat of the tool call the session was opened for."""
         self._chat = chat
-
-    @property
-    def injected_rules(self) -> InjectedRules:
-        """The rules a hook gave the agent since the last line, which the next line names."""
-        return InjectedRules(self.path)
 
     def line(self, line: str) -> None:
         """Append line with the noted chat's pointer, such as a practice's validate line."""
@@ -286,20 +281,12 @@ class SessionLog:
         err.parent.mkdir(parents=True, exist_ok=True)
         line_number = len(err.read_text(encoding="utf-8").splitlines()) + 1 if err.is_file() else 1
         trace = "".join(traceback.format_exception(type(failure), failure, failure.__traceback__))
-        header = f"{self.timestamp(datetime.now(timezone.utc))} {tool} {type(failure).__name__}: {failure}".strip()
+        header = f"{LogTimestamp.now()} {tool} {type(failure).__name__}: {failure}".strip()
         with err.open("a", encoding="utf-8") as handle:
             handle.write(f"{header}\n{trace}")
             if not trace.endswith("\n"):
                 handle.write("\n")
         return line_number
-
-    def append_chat(self, action: str, chat: ChatPointer) -> None:
-        """Point action's earlier log lines at chat, and log that the chat was added."""
-        lines = self._lines()
-        if lines:
-            pointed = [f"{line} {chat}" if f" {action} " in f" {line} " or line.endswith(f" {action}") else line for line in lines]
-            self.path.write_text("\n".join(pointed) + "\n", encoding="utf-8")
-        self.record(f"{action} chat {chat}")
 
     @property
     def last_loop_number(self) -> int:
@@ -307,7 +294,7 @@ class SessionLog:
         return max((number for number in self._loop_numbers() if number is not None), default=0)
 
     def _loop_numbers(self) -> list[int | None]:
-        return [LogEntry(line).loop_number for line in self._lines()]
+        return [entry.loop_number for entry in self.entries]
 
     def seed_first_loop(self) -> None:
         """Start a new session's log with ``--- 1`` before any action."""
@@ -322,7 +309,7 @@ class SessionLog:
 
     def loop_at(self, number: int) -> Loop:
         """Loop number with its lines read from session.log; no lines when the log has not marked it."""
-        return Loop(number, self, self._lines_of_loop(number))
+        return Loop(number, self._lines_of_loop(number))
 
     def _lines_of_loop(self, number: int) -> list[str]:
         lines = self._lines()

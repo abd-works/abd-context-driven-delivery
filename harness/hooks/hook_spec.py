@@ -19,7 +19,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 sys.modules.pop("tools", None)
 sys.modules.pop("hooks", None)
 
-from expects import be_true, contain, equal, expect, raise_error
+from expects import be, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 from harness.agent_tools import agent_toolset
 
@@ -388,7 +388,7 @@ with description("hook dispatch"):
             try:
                 root = Path(tmp.name)
                 server = HookServer(root, HandlerCatalog([], root))
-                saved = server.chat_injections.path_for("chat-a")
+                saved = Sessions(root).saved.chat_injections.path_for("chat-a")
                 saved.parent.mkdir(parents=True, exist_ok=True)
                 saved.write_text(
                     "Before you continue, echo the following message to the user:\n\nrules injected for clean-engineering-code\n",
@@ -411,7 +411,7 @@ with description("hook dispatch"):
             try:
                 root = Path(tmp.name)
                 server = HookServer(root, HandlerCatalog([], root))
-                saved = server.chat_injections.path_for("chat-a")
+                saved = Sessions(root).saved.chat_injections.path_for("chat-a")
                 saved.parent.mkdir(parents=True, exist_ok=True)
                 saved.write_text(
                     "You just edited session.py. Check that edit against these rules and fix anything that does not follow them:\n"
@@ -802,6 +802,17 @@ with description("a hook handler"):
     with context("with an event Claude Code sent, which names the folder it ran in"):
         with it("should take that folder as the project"):
             expect(HookPayload({"cwd": str(self.root)}).project).to(equal(self.root))
+
+    with it("should be handed the session open in the project the event happened in"):
+        expect(_PayloadReader.seen[0].session.session_path).to(equal(self.root.resolve() / ".sessions" / "main"))
+
+    with it("should be handed one session for the whole event"):
+        expect(_PayloadReader.seen[0].session).to(be(_PayloadReader.seen[0].session))
+
+    with context("with an event that names no project"):
+        with it("should work in the session open in the checkout of the hook server that received it"):
+            received = HookPayload({"hook_event_name": "stop"}).received_in(self.root)
+            expect(received.session.session_path).to(equal(self.root.resolve() / ".sessions" / "main"))
 
 
 @agent_toolset

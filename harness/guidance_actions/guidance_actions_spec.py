@@ -267,7 +267,7 @@ with description("a guidance action"):
             action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio {self.session_word}", self.project))
             action.run(lambda item: None, action="generate")
             reloaded = Session.load(self.project / ".sessions" / "sign-up", self.project)
-            expect(reloaded.practices["stories"]._saved.get("formats")).to(equal({"story_map": "drawio"}))
+            expect(reloaded.practices["stories"].saved.get("formats")).to(equal({"story_map": "drawio"}))
 
         with it("should work in the kept format when the next command names none"):
             from harness.guidance_actions import GuidanceAction

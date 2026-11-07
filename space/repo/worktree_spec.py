@@ -122,9 +122,6 @@ with description("a Repo and its checkouts") as self:
     with it("should keep one list of its worktrees"):
         expect(self.repo.worktrees).to(be(self.repo.worktrees))
 
-    with it("should keep one file manager"):
-        expect(self.repo.file_manager).to(be(self.repo.file_manager))
-
     with it("should answer the branch it has checked out as a branch"):
         expect(self.repo.current_branch).to(equal(self.repo.branch_named("main")))
 

@@ -9,7 +9,7 @@ from cdd_guidance.patterns.lern_domain_driven.practices.bdd.rules.shared_behavio
     SharedBehaviorStaysTierFree,
     TierRunsSharedBehavior,
 )
-from cdd_guidance.patterns.lern_domain_driven.tier_facts import behavior_file_facts
+from cdd_guidance.patterns.lern_domain_driven.tier_facts import TierFile
 from cdd_guidance.practices.bdd.model.code_spec_model import TypeScriptBddModel
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.pattern_overlays import PatternOverlays
@@ -37,7 +37,7 @@ def checks(practice, *patterns):
 
 def behavior_file(text, node_type):
     node = Node(Graph().practice("bdd"), node_type, f"bdd:{node_type}:tests/x", "x.behavior.ts", Source("tests/x/x.behavior.ts", 1, 1))
-    for key, value in behavior_file_facts(text).items():
+    for key, value in TierFile(text).behavior_facts().items():
         node.set_fact(key, value)
     return node
 
