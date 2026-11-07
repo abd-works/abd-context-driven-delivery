@@ -134,7 +134,7 @@ def _render_kept(model, previous):
 def _create_kept(content, path):
     toolset = Drawio()
     toolset.source_format = 'markdown'
-    toolset.keep_positioning = True
+    toolset.channel.keep_positioning = True
     return toolset.create_diagram(content, path)
 
 

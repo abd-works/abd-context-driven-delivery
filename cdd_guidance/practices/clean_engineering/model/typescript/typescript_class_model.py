@@ -7,18 +7,17 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass, is_interface_name
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import pascal_case_decorator
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.code_class_model import BraceCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
-_TYPESCRIPT = CodeLanguage.named("typescript")
 
 
 class TypeScriptCleanEngineeringModel(BraceCleanEngineeringModel):
-    language = _TYPESCRIPT
+    language = TYPESCRIPT
 
     def class_doc(self, intent: str) -> List[str]:
         notes = [f" * {note.strip()}" for note in intent.splitlines() if note.strip()]

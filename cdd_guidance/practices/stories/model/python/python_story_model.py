@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Optional
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage, WrittenBlock
+from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, WrittenBlock
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError, example_names_of, flat_steps
 from cdd_guidance.practices.stories.model.python.nodes import PythonEpic, PythonStory, quote
 from cdd_guidance.practices.stories.model.python.story_reader import PythonStoryReader
@@ -19,7 +19,7 @@ class PythonStoryModel(CodeStoryModel):
     LEAF_EXTENSION = "_story.test.py"
     epic_type = PythonEpic
     story_type = PythonStory
-    language = CodeLanguage.named("python")
+    language = PYTHON
     scenario_indent = "        "
     scenario_gap: List[str] = []
 

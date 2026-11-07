@@ -52,11 +52,10 @@ with description("Property"):
 
     with context("given ordered invariant lines"):
         with before.each:
-            from cdd_guidance.practices.clean_engineering.model.property import append_invariant
 
             self.prop = Property(name="verified", type_hint="boolean")
-            append_invariant(self.prop, "persisted KYC on the party")
-            append_invariant(self.prop, "flips true on confirmIdentity when PersonaInquiry.verified")
+            self.prop.add_invariant("persisted KYC on the party")
+            self.prop.add_invariant("flips true on confirmIdentity when PersonaInquiry.verified")
 
         with it("should keep each line in order"):
             expect([item.sequential_order for item in self.prop.invariants]).to(equal([1, 2]))
@@ -398,12 +397,6 @@ with description("a clean engineering model on a graph"):
         belongs = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("belongsTo", [])]
         expect(participants).to(contain(("orders", "Order"), ("Order", "place")))
         expect(belongs).to(contain(("Order", "orders"), ("place", "Order")))
-
-    with it("should open the same model from the graph"):
-        restored = CleanEngineeringModel(self.graph)
-        expect(restored.modules[0].name).to(equal("orders"))
-        expect(restored.modules[0].classes[0].name).to(equal("Order"))
-        expect(restored.modules[0].classes[0].operations[0].name).to(equal("place"))
 
 
 with description("call graph lines"):

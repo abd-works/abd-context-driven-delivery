@@ -11,8 +11,8 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 import cdd_guidance.practices  # noqa: F401
+from cdd_guidance.practices.clean_engineering.model.code_body import JAVA, JAVASCRIPT, PYTHON, TYPESCRIPT, CodeBody
 from harness.agent_tools.agent_tools import AgentToolSet
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 
 _TOOLSET = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
 
@@ -92,48 +92,50 @@ def _bodies(language: str, text: str) -> dict:
     }
 
 
+_LANGUAGES = {"python": PYTHON, "typescript": TYPESCRIPT, "javascript": JAVASCRIPT, "java": JAVA}
+
 with description("an operation body"):
     with context("that was read from python"):
         with before.each:
-            self.body = CodeBody("self.items.append(item)", CodeLanguage.named("python"))
+            self.body = CodeBody("self.items.append(item)", PYTHON)
 
         with context("that is written back in python"):
             with it("should keep the statements as read"):
-                expect(self.body.lines_in(CodeLanguage.named("python"), "        ", "raise NotImplementedError")).to(
+                expect(self.body.lines_in(PYTHON, "        ", "raise NotImplementedError")).to(
                     equal(["        self.items.append(item)"])
                 )
 
         with context("that is written in typescript"):
             with before.each:
-                typescript = CodeLanguage.named("typescript")
+                typescript = TYPESCRIPT
                 self.lines = self.body.lines_in(typescript, "    ", typescript.unfinished)
 
             with it("should keep the python statements commented out under a note naming python"):
                 expect(self.lines[:2]).to(equal(["    // python body to translate:", "    // self.items.append(item)"]))
 
             with it("should end with the line that fails until the body is written"):
-                expect(self.lines[-1]).to(equal(f"    {CodeLanguage.named('typescript').unfinished}"))
+                expect(self.lines[-1]).to(equal(f"    {TYPESCRIPT.unfinished}"))
 
     with context("that holds a multi-line string starting at the left margin"):
         with it("should move the code lines and leave the string's lines as written"):
-            body = CodeBody('    text = """\nfirst\n  second\n"""\n    return text', CodeLanguage.named("python"))
-            expect(body.lines_in(CodeLanguage.named("python"), "        ", "")).to(
+            body = CodeBody('    text = """\nfirst\n  second\n"""\n    return text', PYTHON)
+            expect(body.lines_in(PYTHON, "        ", "")).to(
                 equal(['        text = """', "first", "  second", '"""', "        return text"])
             )
 
     with context("that is only a placeholder"):
         with it("should be empty"):
-            expect(CodeBody("...", CodeLanguage.named("python")).is_empty).to(be_true)
+            expect(CodeBody("...", PYTHON).is_empty).to(be_true)
 
     with context("that is empty"):
         with it("should write only the line that marks it still to write"):
-            expect(CodeBody("", None).lines_in(CodeLanguage.named("java"), "    ", "// BDD: SIGNATURE")).to(
+            expect(CodeBody("", None).lines_in(JAVA, "    ", "// BDD: SIGNATURE")).to(
                 equal(["    // BDD: SIGNATURE"])
             )
 
     with context("that is kept against the previous file's body"):
         with before.each:
-            self.python = CodeLanguage.named("python")
+            self.python = PYTHON
             self.previous = CodeBody("return 1", self.python)
 
         with context("with a model body in the target language"):
@@ -143,7 +145,7 @@ with description("an operation body"):
 
         with context("with a model body from another language"):
             with it("should keep the previous file's body"):
-                other = CodeBody("return 2;", CodeLanguage.named("typescript"))
+                other = CodeBody("return 2;", TYPESCRIPT)
                 expect(other.in_language_of(self.previous, self.python).text).to(equal("return 1"))
 
 
@@ -176,7 +178,7 @@ with description("a class model rendered to code"):
                 expect(self.rendered).to(contain(f"    // {_PYTHON_TOTAL}"))
 
             with it("should make each operation fail until it is written"):
-                expect(self.rendered).to(contain(f"    {CodeLanguage.named('typescript').unfinished}"))
+                expect(self.rendered).to(contain(f"    {TYPESCRIPT.unfinished}"))
 
     with context("that was read from a typescript file"):
         with context("that is rendered back to typescript"):
@@ -206,9 +208,9 @@ with description("a class model rendered to code"):
 
         with context("that is rendered to each code language"):
             with it("should make every operation fail until it is written, in each language"):
-                languages = ("python", "typescript", "javascript", "java")
+                languages = tuple(_LANGUAGES)
                 unfinished = [
-                    CodeLanguage.named(language).unfinished in _render(language, _CART_MARKDOWN, "markdown")
+                    _LANGUAGES[language].unfinished in _render(language, _CART_MARKDOWN, "markdown")
                     for language in languages
                 ]
                 expect(unfinished).to(equal([True] * len(languages)))

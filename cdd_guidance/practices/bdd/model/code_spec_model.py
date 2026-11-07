@@ -7,10 +7,10 @@ import re
 import textwrap
 from typing import Callable, List, Optional, Tuple, Union
 
+from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, TYPESCRIPT, CodeBody, CodeLanguage, WrittenBlock
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
 from cdd_guidance.practices.clean_engineering.model.call_graph import render_call_graph_block
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock
 
 _SIGNATURE = "BDD: SIGNATURE"
 _SPEC = "spec"
@@ -195,7 +195,7 @@ class CodeBddModel(BddModel):
 class PythonBddModel(CodeBddModel):
     """Mamba specs: `with description(...)`, `with context(...)`, `with it(...)` blocks."""
 
-    language = CodeLanguage.named("python")
+    language = PYTHON
 
     def check_readable(self, text: str) -> None:
         try:
@@ -281,7 +281,7 @@ class PythonBddModel(CodeBddModel):
 class TypeScriptBddModel(CodeBddModel):
     """Vitest / Jest specs: `describe(...)`, `it(...)`, `test(...)` blocks found by bracket matching."""
 
-    language = CodeLanguage.named("typescript")
+    language = TYPESCRIPT
 
     def parse_code(self, text: str) -> "TypeScriptBddModel":
         self._text = text

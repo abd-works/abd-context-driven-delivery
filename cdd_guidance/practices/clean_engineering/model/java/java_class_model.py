@@ -8,13 +8,12 @@ from __future__ import annotations
 import re
 from typing import List, Optional
 
+from cdd_guidance.practices.clean_engineering.model.code_body import JAVA
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.code_class_model import BraceCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
-_JAVA = CodeLanguage.named("java")
 
 
 def _pascal(name: str) -> str:
@@ -22,7 +21,7 @@ def _pascal(name: str) -> str:
 
 
 class JavaCleanEngineeringModel(BraceCleanEngineeringModel):
-    language = _JAVA
+    language = JAVA
 
     def interface_declaration(self, oclass: OoadClass) -> List[str]:
         return [f"public interface {oclass.name} {{"]

@@ -154,7 +154,7 @@ The `python` format: Mamba `with description(...)`, `with context(...)`, `with i
 
 ------
 + language: CodeLanguage
-	// CodeLanguage.named("python")
+	// PYTHON (the code_body constant)
 ----
 + check_readable(text: str): None
 + parse_code(text: str): PythonBddModel
@@ -167,7 +167,7 @@ The `typescript` format: `describe`, `context`, `it`, and Playwright's `test.des
 
 ------
 + language: CodeLanguage
-	// CodeLanguage.named("typescript")
+	// TYPESCRIPT (the code_body constant)
 ----
 + parse_code(text: str): TypeScriptBddModel
 + default_imports, block_open, block_close

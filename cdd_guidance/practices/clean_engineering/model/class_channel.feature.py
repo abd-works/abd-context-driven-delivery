@@ -12,16 +12,15 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from expects import equal, expect
+from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
 from cdd_guidance.practices.output_folder import OutputFolder
 from mamba import before, context, describe, included_context, it, shared_context
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, is_interface_name
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 
-_TYPESCRIPT = CodeLanguage.named("typescript")
 
 EXPECTED = Path(__file__).resolve().parent / "_examples" / "expected"
 ACTUAL = Path(__file__).resolve().parent / "_examples" / "actual"
@@ -443,7 +442,7 @@ with shared_context("a typescript file"):
                     continue
                 expect("constructor(" in block).to(equal(True))
                 for name in _constructor_parameter_names(loaded):
-                    camel = _TYPESCRIPT.identifier(name)
+                    camel = TYPESCRIPT.identifier(name)
                     expect(f"this.{camel} = {camel};" in block).to(equal(True))
 
     with it("should put the stereotype, cardinality, and origin on the lines above the field"):
@@ -454,7 +453,7 @@ with shared_context("a typescript file"):
                 for prop in loaded.properties:
                     if not prop.type_hint:
                         continue
-                    field = f"{_TYPESCRIPT.identifier(prop.name)}: {_TYPESCRIPT.type_name(prop.type_hint)};"
+                    field = f"{TYPESCRIPT.identifier(prop.name)}: {TYPESCRIPT.type_name(prop.type_hint)};"
                     notes = _comments_above(block, field)
                     if prop.stereotype:
                         expect(f"<< {prop.stereotype} >>" in notes).to(equal(True))
@@ -474,7 +473,7 @@ with shared_context("a typescript file"):
                     if operation.name in {loaded.name, "constructor"} or not operation.return_type:
                         continue
                     signature = re.search(
-                        rf"{re.escape(_TYPESCRIPT.identifier(operation.name))}\([^)]*\):\s*{re.escape(operation.return_type)}(?:\s|\{{)",
+                        rf"{re.escape(TYPESCRIPT.identifier(operation.name))}\([^)]*\):\s*{re.escape(operation.return_type)}(?:\s|\{{)",
                         block,
                     )
                     expect(signature is not None).to(equal(True))

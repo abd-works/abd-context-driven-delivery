@@ -35,8 +35,6 @@ class CodeSpelling:
 class CodeLanguage:
     """How one programming language spells what every code channel writes the same way."""
 
-    _languages: Dict[str, "CodeLanguage"] = {}
-
     def __init__(
         self,
         name: str,
@@ -52,11 +50,6 @@ class CodeLanguage:
         self.unfinished = unfinished
         self._spelling = spelling
         self._type_names = type_names
-        CodeLanguage._languages[name] = self
-
-    @classmethod
-    def named(cls, name: str) -> "CodeLanguage":
-        return cls._languages[name.lower()]
 
     def comment(self, text: str) -> str:
         return f"{self.line_comment} {text}".rstrip()

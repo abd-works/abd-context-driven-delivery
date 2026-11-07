@@ -16,7 +16,7 @@
 
 ## Constraint
 
-Callers type `Drawio.create_diagram`, `Drawio.scan`, `Drawio.render`, and the format's `DrawIOCleanEngineeringModel.load` / `parse` / `render` and the `sync` every class model inherits. They do not set cell HTML, anchors, or private layout fields. `keep_positioning` on `Drawio` and on `DrawIOCleanEngineeringModel` is the only layout policy they pass.
+Callers type `Drawio.create_diagram`, `Drawio.scan`, `Drawio.render`, and the format's `DrawIOCleanEngineeringModel.load` / `parse` / `render` and the `sync` every class model inherits. They do not set cell HTML, anchors, or private layout fields. `keep_positioning` on the `DrawIOCleanEngineeringModel` that `Drawio` holds as its `channel` is the only layout policy they pass.
 
 ## DrawioVertex
 
@@ -42,8 +42,8 @@ The rounded modules-view cell.
 	-> DiagramModule.shown_seam_terms
 + style(): str
 	// a nested module uses the child style
-+ parse_html(value: str): tuple[str | None, str, list[str]]
-	// the name, purpose, and seam terms read back from a cell label
++ from_cell(value: str, sequential_order: int): DrawIOModule | None
+	// class operation: the module a cell label names, with its purpose and seam terms; None when it names none
 + load_class(source: OoadClass): DrawIOClass
 	-> DrawIOClass.translate_from
 
@@ -88,18 +88,20 @@ The `drawio` format. A modules view when the model has modules and no class memb
 	// cards and arrows already on previous stay where they are; only new ones are laid out
 ----
 + parse(text: str): DrawIOCleanEngineeringModel
-	// a modules diagram, one page whose cards name their module in their style, or one module per page; dashed import cards are skipped
+	// fills this model and returns it: a modules diagram, one page whose cards name their module in their style, or one module per page; dashed import cards are skipped
 + render(canonical: CleanEngineeringModel): str
+	// becomes the canonical model once (translate_from), then writes its own Draw.io modules and classes
 	-> CardPlacement.place
 	-> ArrowRouter.route
 + load(path: str): DrawIOCleanEngineeringModel
 	-> parse
-+ save(canonical: CleanEngineeringModel | None = None): str
++ save(): str
 	-> render
 + kept_previous(): str | None
 	// previous when this render keeps its positions
 + load_module(source: Module): DrawIOModule
-+ load_class(source: OoadClass): DrawIOClass
++ load_module_cell(source: Module): DrawIOModule
+	// a Draw.io cell for a container module the containment forest made
 + imported_class(source: OoadClass, from_module: str = ""): DrawIOImportedClass
 
 ## Drawio
@@ -110,8 +112,8 @@ The toolset a caller types. Create writes a path. Scan judges layout. Repair fix
 ------
 + source_format: str
 	// markdown, json, python, or drawio: the format create_diagram parses its content from
-+ previous: str
-+ keep_positioning: bool
++ << composition >> channel: DrawIOCleanEngineeringModel
+	// the one Draw.io model it writes; its previous and keep_positioning are the layout policy
 + scan_root: str | None
 + rule: str | None
 ----
@@ -150,6 +152,7 @@ Layout audit for an existing mxfile. It reads cells; it does not render them. Ea
 	// each subclass checks its one rule here
 + violation(page: DrawioPage, message: str): Violation
 + discover(): dict[str, type[DrawioScanner]]
+	// class operation
 	// every *_scanner.py beside this file, by its RULE
 + run_report(paths: list[str]): dict
 	// every discovered scanner over paths: ok, the rule names, and the violations

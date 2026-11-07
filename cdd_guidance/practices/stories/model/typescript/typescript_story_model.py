@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
+from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
 from harness.name.name import Name
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError, example_names_of
@@ -26,7 +26,7 @@ class TypeScriptStoryModel(BraceStoryModel):
     LEAF_EXTENSION = ".ts"
     epic_type = TypeScriptEpic
     story_type = TypeScriptStory
-    language = CodeLanguage.named("typescript")
+    language = TYPESCRIPT
 
     def __init__(
         self,
