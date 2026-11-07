@@ -236,12 +236,20 @@ Each format class below is a *StoryModel* subclass. Its node subclasses (`Markdo
 
 ## SketchStoryModel : StoryModel
 
-The `sketch` format: the stories section of an integrated sketch.
+The `sketch` format: the stories section of an integrated sketch. Nodes: SketchEpic and SketchStory, which write their own sketch lines (`sketch_lines(depth)`).
 
+------
++ epic_type: SketchEpic
++ story_type: SketchStory
 ----
 + parse(text: str): SketchStoryModel
+	// fills this map and returns it
 	-> SketchOutline.body_for
 + render(story_map: StoryModel | None = None, previous: str | None = None): str
+	// copies the story map into a sketch map, which writes itself
+	-> save
++ save(): str
+	-> SketchEpic.sketch_lines
 
 ## MarkdownStoryModel : StoryModel
 
@@ -260,12 +268,17 @@ The `markdown` format: `story-map.md`, the scenario files beside it, and the inc
 
 ## JsonStoryModel : StoryModel
 
-The `json` format. Nodes: JsonEpic, JsonStory, JsonIncrement, JsonScenario.
+The `json` format. Nodes: JsonEpic, JsonStory, JsonIncrement, JsonScenario; each reads its own record (`from_record`) and writes it (`as_record`).
 
 ----
 + from_workspace(root: Path): JsonStoryModel | None
 + parse(text: str): JsonStoryModel
+	// fills this map and returns it
 + render(story_map: StoryModel, previous: str | None = None): str
+	// copies the story map into a JSON map, which writes itself
+	-> save
++ save(): str
+	// this map as story-graph.json text
 + attach_source_locations(file_name: str): None
 
 ## DiagramStoryModel : StoryModel

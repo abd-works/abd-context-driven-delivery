@@ -902,12 +902,6 @@ with description("a story map on a graph") as self:
             ("Create Account", "Authenticate User"),
         ))
 
-    with it("should open the same map from the graph"):
-        restored = StoryModel(self.graph)
-        expect([epic.name for epic in restored.epics]).to(equal(["Onboard A Customer"]))
-        expect(restored.epics[0].epics[0].name).to(equal("Authenticate User"))
-        expect(restored.epics[0].epics[0].stories[0].name).to(equal("Create Account"))
-        expect(restored.epics[0].epics[0].stories[0].scenarios[0].name).to(equal("Create account"))
 
     with it("should record ands from the schema"):
         continued = Step("the email is saved", StepType.WHEN, 1, keyword="and")

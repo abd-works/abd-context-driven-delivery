@@ -915,9 +915,6 @@ class StoryModel(StoryNode):
         self.examples = Examples(self)
         if isinstance(source, StoryModel):
             self._copy_map(source)
-            return
-        if graph is not None:
-            self._copy_map_on_graph()
 
     @property
     def epics(self) -> List[Epic]:
@@ -943,14 +940,6 @@ class StoryModel(StoryNode):
         for increment in source.increments:
             self.append_increment(increment_type(increment, story_class=self.story_type))
 
-    def _copy_map_on_graph(self) -> None:
-        maps = [
-            node
-            for node in self.practice.nodes.get("StoryModel", [])
-            if node is not self and isinstance(node, StoryModel) and node.epics
-        ]
-        if maps:
-            self._copy_map(maps[0])
 
     @classmethod
     def load(cls, root, *, on_file=None) -> "StoryModel":
