@@ -24,9 +24,9 @@ from harness.catalog_generator.catalog_generator import (
     CatalogTool,
     CatalogPractice,
     CatalogUtility,
-    RegistryEntry,
     SkillSlashName,
-    resolve_lifecycle_actions,
+    Utility,
+    catalog_actions,
 )
 from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.actions.diagnose.diagnose import Diagnose
@@ -38,7 +38,7 @@ _REF = "abc123"
 with description("Render Action Page With Fixed Sections"):
     with description("given an action's own name, tools-called list, guide, and module overview"):
         with before.all:
-            self.actions = {action.name: action for action in resolve_lifecycle_actions()}
+            self.actions = {action.name: action for action in catalog_actions()}
             catalog_tool = CatalogTool(_REPO_URL, _REF)
             hrefs = {name: action.href for name, action in self.actions.items()}
             self.catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
@@ -65,7 +65,7 @@ with description("Render Action Page With Fixed Sections"):
 with description("Render Fidelity Page With Quick-Invoke And Illustrated Example"):
     with description("given a fidelity's skill name, its own key, and the ten lifecycle actions"):
         with before.all:
-            self.lifecycle_actions = resolve_lifecycle_actions()
+            self.lifecycle_actions = catalog_actions()
             self.owner = Ddd()
             catalog_tool = CatalogTool(_REPO_URL, _REF)
             hrefs = {action.name: f"../{action.href}" for action in self.lifecycle_actions}
@@ -98,7 +98,7 @@ with description("Render Fidelity Page With Quick-Invoke And Illustrated Example
 with description("Render Context Tool Page"):
     with description("given one toolset's Purpose prose and its resolved fidelity cards"):
         with before.all:
-            self.lifecycle_actions = resolve_lifecycle_actions()
+            self.lifecycle_actions = catalog_actions()
             self.owner = Ddd()
             catalog_tool = CatalogTool(_REPO_URL, _REF)
             hrefs = {action.name: f"../{action.href}" for action in self.lifecycle_actions}
@@ -131,11 +131,11 @@ with description("Render Utility Page"):
     with description("given a utility's Purpose prose and its optional {utility}.md guide"):
         with before.all:
             catalog_tool = CatalogTool(_REPO_URL, _REF)
-            lifecycle_actions = resolve_lifecycle_actions()
+            lifecycle_actions = catalog_actions()
             hrefs = {action.name: action.href for action in lifecycle_actions}
             catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
             self.catalog_utility = CatalogUtility(_REPO_URL, _REF, catalog_tool, catalog_action)
-            diagnose = RegistryEntry("diagnose", Diagnose.__module__, "Diagnose", Diagnose)
+            diagnose = Utility(Diagnose)
             self.page = self.catalog_utility.generate_catalog(diagnose)
 
         with it("shows the utility's Purpose/Seam prose"):
@@ -147,7 +147,7 @@ with description("Render Hub Board With Actions And Utilities Rows"):
     with description("given the CDD header row, the five context-tool rows, and the assembled rows"):
         with before.all:
             self.tmp = Path(tempfile.mkdtemp())
-            lifecycle_actions = resolve_lifecycle_actions()
+            lifecycle_actions = catalog_actions()
             catalog_tool = CatalogTool(_REPO_URL, _REF)
             hrefs = {action.name: action.href for action in lifecycle_actions}
             catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
@@ -232,7 +232,7 @@ with description("Render Flat Grid Pages"):
     with description("given every rendered tool, fidelity, action, and utility card"):
         with before.all:
             self.tmp = Path(tempfile.mkdtemp())
-            lifecycle_actions = resolve_lifecycle_actions()
+            lifecycle_actions = catalog_actions()
             catalog_tool = CatalogTool(_REPO_URL, _REF)
             hrefs = {action.name: action.href for action in lifecycle_actions}
             catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)

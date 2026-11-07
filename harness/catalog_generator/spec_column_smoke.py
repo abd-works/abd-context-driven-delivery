@@ -8,6 +8,8 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
+from cdd_guidance.practices.stages import STAGES
+
 CATALOG = Path(__file__).resolve().parents[2] / "cdd_guidance" / "catalog"
 
 
@@ -24,7 +26,7 @@ def main() -> None:
         page.goto(f"http://127.0.0.1:{port}/cdd-approach.html", wait_until="networkidle")
         page.locator('[data-principle="iterate-and-learn"] .approach-principle__toggle').click()
         page.wait_for_timeout(400)
-        for stage_id in ("discovery", "specification", "implementation"):
+        for stage_id in STAGES.names:
             page.locator(f'[data-stage-id="{stage_id}"].approach-window__stage').click()
             page.wait_for_timeout(1800 if stage_id == "implementation" else 900)
 

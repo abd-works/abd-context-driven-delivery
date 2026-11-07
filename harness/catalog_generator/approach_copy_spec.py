@@ -64,6 +64,20 @@ with description("load_approach_copy"):
         expect(copy.practices[0]["slug"]).to(equal("product-engineering"))
         expect(copy.practices[0]["bullets"][0]).to(equal("HAND-EDITABLE-BULLET"))
 
+    with it("keeps the scope a stage of the page alone gives in its metadata"):
+        path = Path(tempfile.mkdtemp()) / "cdd-approach.md"
+        path.write_text(_MINIMAL_MD, encoding="utf-8")
+        context_stage = load_approach_copy(path).stages[0]
+        expect((context_stage["shape"], context_stage["scope_name"])).to(equal(("square", "Context")))
+
+    with it("takes a CDD stage's scope from the approach's stages"):
+        path = Path(tempfile.mkdtemp()) / "cdd-approach.md"
+        path.write_text(_BOARD_STAGE_MD, encoding="utf-8")
+        discovery = load_approach_copy(path).stages[0]
+        expect((discovery["shape"], discovery["scope_name"], discovery["scope_width"])).to(
+            equal(("solution", "Whole solution", "wide / shallow"))
+        )
+
 
 _BOARD_STAGE_MD = """# Approach
 

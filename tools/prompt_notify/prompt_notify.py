@@ -9,8 +9,6 @@ Off when the class is annotated ``@Hooks(disabled=True)``.
 
 from __future__ import annotations
 
-import importlib
-import inspect
 import json
 import os
 import re
@@ -22,7 +20,6 @@ from pathlib import Path
 from typing import ClassVar
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_ACTIONS_FOLDER = _REPO_ROOT / "cdd_guidance" / "actions"
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.agent_tools.name import Name
@@ -86,21 +83,10 @@ class PromptNotify:
         return names
 
     def _action_names(self) -> dict[str, str]:
-        """Each operation an action folder under cdd_guidance/actions publishes as a skill, such as generate, grill, and
-        create-rule."""
-        folders = [folder for folder in sorted(_ACTIONS_FOLDER.iterdir()) if folder.is_dir() and folder.name[0] not in "_."]
-        return {self._compact(operation): "action" for folder in folders for operation in self._skills_in(folder)}
+        """Each action in the action catalogue, such as generate, grill, and create-rule."""
+        from harness.guidance.action_catalogue import ActionCatalogue
 
-    def _skills_in(self, folder: Path) -> list[str]:
-        from harness.guidance_actions import GuidanceAction
-        from harness.installation.files import Skill
-
-        module = importlib.import_module(f"cdd_guidance.actions.{folder.name}.{folder.name}")
-        actions = [
-            member for member in vars(module).values()
-            if inspect.isclass(member) and issubclass(member, GuidanceAction) and member.__module__ == module.__name__
-        ]
-        return [name for action in actions for name, member in vars(action).items() if Skill.marks(member)]
+        return {self._compact(name): "action" for name in ActionCatalogue.names()}
 
     @Hook("preToolUse")
     def on_pre_tool_use(self, hook_payload: dict) -> dict:

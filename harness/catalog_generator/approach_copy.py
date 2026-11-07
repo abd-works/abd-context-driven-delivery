@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from cdd_guidance.practices.stages import STAGES
 from harness.agent_tools.name import Name
 
 _LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
@@ -114,21 +115,33 @@ def _parse_stages(body: str) -> list[dict]:
             item.strip() for item in meta.get("items", "").split("|") if item.strip()
         )
         paras = tuple(p.strip() for p in re.split(r"\n\s*\n", remainder) if p.strip())
+        stage_id = meta.get("id", _slug(title))
         stages.append(
             {
-                "id": meta.get("id", _slug(title)),
+                "id": stage_id,
                 "label": title,
                 "detail_title": title,
                 "items": items,
                 "item_fams": ("sdd", "uxd", "arc"),
-                "shape": meta.get("shape", "square"),
-                "scope_name": meta.get("scope_name", title),
-                "scope_width": meta.get("scope_width", ""),
+                **_stage_scope(stage_id, meta, title),
                 "paras": paras,
                 "example": meta.get("example", ""),
             }
         )
     return stages
+
+
+def _stage_scope(stage_id: str, meta: dict[str, str], title: str) -> dict[str, str]:
+    """A CDD stage's scope comes from the approach's stages, so the page and the boards draw the same one; a stage of
+    the page alone, such as Context or Validate, gives its own in its metadata."""
+    stage = STAGES.of(stage_id)
+    if stage is not None:
+        return {"shape": stage.scope.shape, "scope_name": stage.scope.name, "scope_width": stage.scope.reach}
+    return {
+        "shape": meta.get("shape", "square"),
+        "scope_name": meta.get("scope_name", title),
+        "scope_width": meta.get("scope_width", ""),
+    }
 
 
 def _parse_practices(body: str) -> list[dict]:

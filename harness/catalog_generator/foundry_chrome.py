@@ -17,6 +17,15 @@ import zlib
 from dataclasses import dataclass
 from pathlib import Path
 
+from cdd_guidance.practices.stages import (
+    DISCOVERY,
+    IMPLEMENTATION,
+    SPECIFICATION,
+    STAGES,
+    ApproachStage,
+    StageScope,
+)
+
 _TEMPLATES = Path(__file__).resolve().parent / "templates"
 _COMMONS_SRC = _TEMPLATES / "commons"
 _DEFAULT_BRAND = _COMMONS_SRC / "brand"
@@ -25,26 +34,25 @@ _FOUNDRY_CSS_SRC = _TEMPLATES / "foundry-catalog.css"
 
 @dataclass(frozen=True)
 class StageColumn:
-    """One column of the catalog board: the fidelity stage it holds and how the board draws it.
+    """One column of the catalog board: a stage of the approach and the names the catalog gives it.
 
-    ``stage`` is the value a ``FidelityGuidance.stage`` carries (discovery, specification, implementation). ``key``
-    is the column's name in the page markup and its scripts (discovery, spec, engineer), so the board scripts keep
-    working whatever the stage is called. The scope shape is the Foundry picture of how wide and deep the work is.
+    The stage's name, title, and scope come from the approach's stages. ``key`` is the column's name in the page
+    markup, its styles, and its scripts (discovery, spec, engineer), so they keep working whatever the stage is called.
+    ``template_tokens`` are the words a practice template's front matter uses for the stage.
     """
 
-    stage: str
+    stage: ApproachStage
     key: str
-    title: str
-    scope_shape: str
-    scope_name: str
-    scope_width: str
-    scope_bullets: str
     template_tokens: tuple[str, ...]
 
     @property
     def label(self) -> str:
         """The lowercase column heading on the board."""
-        return self.title.lower()
+        return self.stage.title.lower()
+
+    @property
+    def scope(self) -> StageScope:
+        return self.stage.scope
 
 
 class StageColumns:
@@ -58,45 +66,24 @@ class StageColumns:
 
     def of(self, stage: str) -> StageColumn | None:
         """The column that holds fidelities whose stage is ``stage``; none for a stage the board has no column for."""
-        return next((column for column in self._columns if column.stage == stage), None)
+        return next((column for column in self._columns if column.stage.name == stage), None)
 
     @property
     def stages(self) -> tuple[str, ...]:
-        return tuple(column.stage for column in self._columns)
+        return tuple(column.stage.name for column in self._columns)
 
 
-STAGE_COLUMNS = StageColumns((
-    StageColumn(
-        stage="discovery",
-        key="discovery",
-        title="Discovery",
-        scope_shape="solution",
-        scope_name="Whole solution",
-        scope_width="wide / shallow",
-        scope_bullets="outcomes · scope · boundaries",
-        template_tokens=("discovery",),
-    ),
-    StageColumn(
-        stage="specification",
-        key="spec",
-        title="Specification",
-        scope_shape="sprint",
-        scope_name="Sprint",
-        scope_width="narrow / deeper",
-        scope_bullets="behaviour · design · logic",
-        template_tokens=("exploration", "specification", "spec"),
-    ),
-    StageColumn(
-        stage="implementation",
-        key="engineer",
-        title="Implementation",
-        scope_shape="story",
-        scope_name="Story",
-        scope_width="narrowest / deep",
-        scope_bullets="tests · code · interface",
-        template_tokens=("engineering", "engineer"),
-    ),
-))
+# The catalog's own names for each stage's column, by the stage's name: its key in the page markup, and the words
+# practice templates' front matter use for it.
+_COLUMN_KEYS = {DISCOVERY: "discovery", SPECIFICATION: "spec", IMPLEMENTATION: "engineer"}
+_TEMPLATE_TOKENS = {
+    DISCOVERY: ("discovery",),
+    SPECIFICATION: ("exploration", "specification", "spec"),
+    IMPLEMENTATION: ("engineering", "engineer"),
+}
+STAGE_COLUMNS = StageColumns(
+    tuple(StageColumn(stage, _COLUMN_KEYS[stage.name], _TEMPLATE_TOKENS[stage.name]) for stage in STAGES)
+)
 
 _STORY_EXAMPLES = (
     Path(__file__).resolve().parents[2] / "cdd_guidance" / "practices" / "stories" / "catalog-examples"
@@ -235,7 +222,7 @@ def _approach_label(practice) -> str:
 
 def _approach_column_head(column: StageColumn) -> str:
     return (
-        f'<div class="approach-grid__head"><span class="approach-grid__shape approach-grid__shape--{column.scope_shape}"></span>'
+        f'<div class="approach-grid__head"><span class="approach-grid__shape approach-grid__shape--{column.scope.shape}"></span>'
         f'<span class="approach-grid__head-title">{html.escape(column.label)}</span></div>'
     )
 
@@ -495,14 +482,14 @@ def _family_toggle(practice, href: str) -> str:
 
 
 def _scope_shape_html(column: StageColumn) -> str:
-    name = column.scope_name
-    width = column.scope_width
-    bullets = column.scope_bullets
+    name = column.scope.name
+    width = column.scope.reach
+    bullets = column.scope.covers
     title = f"{name} — {width} — {bullets}"
     aria = f"{name}. {width}. {bullets.replace(' · ', ', ')}"
     return (
         f'<span class="kb-col-scope-shape-wrap">'
-        f'<span class="kb-col-scope-shape kb-col-scope-shape--{html.escape(column.scope_shape)}" '
+        f'<span class="kb-col-scope-shape kb-col-scope-shape--{html.escape(column.scope.shape)}" '
         f'title="{html.escape(title)}" aria-label="{html.escape(aria)}"></span>'
         f'<span class="kb-col-shape-tooltip" role="tooltip">'
         f'<span class="kb-col-shape-tooltip__name">{html.escape(name)}</span>'
@@ -1480,12 +1467,12 @@ def refine_stage_row(
     copies: list[str] = []
     examples: list[str] = []
     for column in STAGE_COLUMNS:
-        stage_id = column.stage
+        stage_id = column.stage.name
         heads.append(
             f'<button type="button" class="approach-window__stage" '
             f'data-stage-id="{html.escape(stage_id)}" aria-pressed="false" '
             f'aria-expanded="false">'
-            f"{html.escape(column.title)}</button>"
+            f"{html.escape(column.stage.title)}</button>"
         )
         copies.append(_refine_opening(stage_id, overviews.get(stage_id, "")))
         examples.append(

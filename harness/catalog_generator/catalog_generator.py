@@ -6,9 +6,9 @@ no separate scraped schema. See ``catalog/cdd-catalog-plan.md`` and
 ``catalog/cdd-catalog-sketch.md`` for the full design; this module implements
 the "Assemble Catalog Page Data" epic's four discover-step stories:
 
-- ``catalog_practices`` / ``catalog_utilities`` - Load Context Tool And Utility Registry
+- ``catalog_practices`` / ``catalog_utilities`` - the practice catalogue's practices and the installer's utilities
 - each practice's live ``FidelityGuidance`` gives the fidelity name, stage, default format, and ``section`` text
-- ``resolve_lifecycle_actions`` - each lifecycle action's kit, its live tool, and its folder
+- ``catalog_actions`` - each action in the action catalogue: its kit, its live tool, and its folder
 - ``SkillSlashName`` - Collect Skill Slash-Command Map From SKILL Frontmatter
 
 It also implements "Render Self-Contained Catalog Pages" (``CatalogTool`` /
@@ -34,6 +34,7 @@ from typing import Any, Iterable
 
 from harness.agent_tools.name import Name
 from harness.catalog_generator.foundry_chrome import STAGE_COLUMNS, StageColumn
+from harness.guidance.action_catalogue import Action, ActionCatalogue
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.markdown.format import Format
@@ -164,23 +165,25 @@ def catalog_practices() -> list[CatalogPractice]:
     return sorted(shown, key=lambda practice: (practice.order, practice.display_name))
 
 
-# Installer owns install. Diagnose, echo, handoff, and workspace are live utilities.
-UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
-    ("installer", "harness.installation.installer", "Installer"),
-    ("diagnose", "cdd_guidance.actions.diagnose.diagnose", "Diagnose"),
-    ("echo", "tools.echo.echo", "Echo"),
-    ("repo", "space.repo.repo", "Repo"),
-)
+# -- Utilities ----------------------------------------------------------------
+#
+# The utilities are the toolsets the installer finds in ``space`` (sessions, the board, the repository) and ``tools``
+# (chat, echo, Granola, the file manager), unless marked @noCatalog. The harness's own toolsets are the framework the
+# practices and actions run on, and the guidance under ``cdd_guidance`` has its own pages.
+
+_UTILITY_PACKAGES = ("space.", "tools.")
 
 
-@dataclass
-class RegistryEntry:
-    """One utility the catalog shows: a real, importable class, not a stub."""
+class Utility:
+    """One utility the catalog shows: a toolset a person uses beside the practices and actions, such as Repo."""
 
-    name: str
-    module_path: str
-    class_name: str
-    cls: type = type
+    def __init__(self, toolset_class: type) -> None:
+        self.toolset_class = toolset_class
+
+    @property
+    def name(self) -> str:
+        """The utility's kebab-case name, such as ``file-manager``: its page and board ticket use it."""
+        return Name(self.toolset_class.__name__).kebab
 
     @property
     def href(self) -> str:
@@ -190,25 +193,20 @@ class RegistryEntry:
     def owner(self) -> object:
         """An instance of the utility, or the class itself when it cannot be built without arguments."""
         try:
-            return self.cls()
+            return self.toolset_class()
         except TypeError as error:
             logging.debug("Utility %s is not constructible: %s", self.name, error)
-            return self.cls
+            return self.toolset_class
 
 
-def catalog_utilities() -> list[RegistryEntry]:
-    """Every utility in ``UTILITY_REGISTRY``, less those marked ``@noCatalog``. A utility that cannot be imported
-    raises (``ImportError`` / ``AttributeError``) rather than leaving a silent gap."""
-    entries = [
-        RegistryEntry(name, module_path, class_name, getattr(importlib.import_module(module_path), class_name))
-        for name, module_path, class_name in UTILITY_REGISTRY
-    ]
-    return [entry for entry in entries if keep_in_catalog(entry)]
+def catalog_utilities() -> list[Utility]:
+    """Every toolset the installer finds in ``space`` and ``tools``, less those marked ``@noCatalog``, in the order
+    the installer finds them. A toolset that cannot be imported raises rather than leaving a silent gap."""
+    from harness.installation.installer import Installer
 
-
-def keep_in_catalog(entry: RegistryEntry) -> bool:
-    """Registry rows marked ``@noCatalog`` stay deployed and stay out of the catalog."""
-    return not NoCatalog.marks(entry.cls)
+    refs = [ref for ref in Installer().collect_toolsets() if ref.startswith(_UTILITY_PACKAGES)]
+    classes = [getattr(importlib.import_module(module), name) for module, name in (ref.split(":") for ref in refs)]
+    return [Utility(toolset_class) for toolset_class in classes if not NoCatalog.marks(toolset_class)]
 
 
 # -- Fidelity templates -------------------------------------------------------
@@ -429,20 +427,22 @@ def _first_prose_paragraph(text: str) -> str:
 
 
 class LifecycleAction:
-    """One lifecycle action the catalog gives a page: its name, the action kit class that owns it, and that kit's
-    live ``AgentTool``. The kit's folder holds the action's guide and module overview."""
+    """One action as the catalog gives it a page: the action catalogue's ``Action``, its kit built once, and that
+    kit's live ``AgentTool`` for it. The kit's folder holds the action's guide and module overview."""
 
-    def __init__(self, name: str, module: str, class_name: str) -> None:
-        self.name = name
-        self.module = module
-        self.class_name = class_name
+    def __init__(self, action: Action) -> None:
+        self.action = action
         self._kit: object | None = None
+
+    @property
+    def name(self) -> str:
+        return self.action.name
 
     @property
     def kit(self) -> object:
         """The action kit, built once."""
         if self._kit is None:
-            self._kit = getattr(importlib.import_module(self.module), self.class_name)()
+            self._kit = self.action.kit_class()
         return self._kit
 
     @property
@@ -457,40 +457,18 @@ class LifecycleAction:
     @property
     def source_dir(self) -> Path:
         """The kit's folder under ``cdd_guidance/actions``."""
-        return Path(inspect.getfile(type(self.kit))).resolve().parent
+        return self.action.folder
 
     @property
     def href(self) -> str:
         return f"actions/{self.name}.html"
 
-    @property
-    def request_toolset(self) -> str:
-        """The kit as a run request names it, by the module's full name so the run loads it only once, such as
-        ``cdd_guidance.actions.generate.generate:Generate``."""
-        return f"{self.module}:{self.class_name}"
 
-
-# Every lifecycle action, in the order the catalog lists them. createRule is an action of the Validate kit.
-LIFECYCLE_ACTIONS: tuple[LifecycleAction, ...] = (
-    LifecycleAction("partition", "cdd_guidance.actions.partition.partition", "Partition"),
-    LifecycleAction("grill", "cdd_guidance.actions.grill_context.grill_context", "GrillContext"),
-    LifecycleAction("sketch", "cdd_guidance.actions.sketch.sketch", "Sketch"),
-    LifecycleAction("generate", "cdd_guidance.actions.generate.generate", "Generate"),
-    LifecycleAction("document", "cdd_guidance.actions.document.document", "Document"),
-    LifecycleAction("iterate", "cdd_guidance.actions.iterate.iterate", "Iterate"),
-    LifecycleAction("validate", "cdd_guidance.actions.validate.validate", "Validate"),
-    LifecycleAction("satisfy", "cdd_guidance.actions.satisfy.satisfy", "Satisfy"),
-    LifecycleAction("repair", "cdd_guidance.actions.improvement.improvement", "Improvement"),
-    LifecycleAction("createRule", "cdd_guidance.actions.validate.validate", "Validate"),
-)
-
-# The actions a run request routes through their kit, with the practice passed as the ``guidance`` argument.
-_ACTIONS_TAKING_GUIDANCE = frozenset({"generate", "validate", "satisfy", "document"})
-
-
-def resolve_lifecycle_actions() -> list[LifecycleAction]:
-    """The lifecycle actions whose kit has a live tool for them that the catalog shows."""
-    return [action for action in LIFECYCLE_ACTIONS if action.tool is not None]
+def catalog_actions() -> list[LifecycleAction]:
+    """Every action in the action catalogue whose kit has a live tool for it that the catalog shows: a kit or an
+    operation marked ``@noCatalog`` stays out."""
+    shown = [LifecycleAction(action) for action in ActionCatalogue.actions() if not NoCatalog.marks(action.kit_class)]
+    return [action for action in shown if action.tool is not None]
 
 
 def _declared_parameters(fn: object) -> dict[str, str]:
@@ -535,13 +513,6 @@ def _is_guidance_class(cls: type) -> bool:
     return isinstance(cls, type) and issubclass(cls, Guidance)
 
 
-def _kit_taking_guidance(action: str) -> LifecycleAction | None:
-    return next(
-        (kit for kit in LIFECYCLE_ACTIONS if kit.name == action and action in _ACTIONS_TAKING_GUIDANCE),
-        None,
-    )
-
-
 def build_run_request(
     cls: type,
     *,
@@ -554,10 +525,10 @@ def build_run_request(
     become ``arguments``. ``fidelity`` (when the constructor accepts it) is
     filled with the given fidelity key.
 
-    Guidance (practices) do not own generate / validate / satisfy / document —
-    those live on the action kits. A request for one of those actions on a
-    Guidance class is rewritten to the kit with ``arguments.guidance`` carrying
-    that Guidance.
+    Guidance (practices) do not own the actions — each lives on its action kit,
+    whose operation takes the guidance it works on. A request for an action in
+    the action catalogue on a Guidance class is rewritten to the action's kit
+    with ``arguments.guidance`` carrying that Guidance.
     """
 
     def _context() -> dict[str, object]:
@@ -569,10 +540,10 @@ def build_run_request(
                 context[name] = _example_value(name, type_str)
         return context
 
-    kit = _kit_taking_guidance(action)
+    kit = ActionCatalogue.action(action)
     if kit is not None and _is_guidance_class(cls):
         return {
-            "toolset": kit.request_toolset,
+            "toolset": kit.kit_ref,
             "action": action,
             "arguments": {
                 "guidance": [
@@ -668,7 +639,7 @@ _TABLE_ROW_RE = re.compile(r"^\|(.+)\|\s*$")
 # Each renderer below is built once with what every page shares (the repository
 # citation, the action page links) and exposes one operation, generate_catalog,
 # which renders the live object it is given: a LifecycleAction, a CatalogPractice
-# and one of its fidelities, or a utility's RegistryEntry. Nothing is copied into
+# and one of its fidelities, or a Utility. Nothing is copied into
 # the renderer between pages, so a page shows exactly what its object holds.
 # See catalog/cdd-catalog-sketch.md's Clean Engineering pass for the model.
 
@@ -1111,7 +1082,7 @@ class CatalogUtility:
         self.catalog_tool = catalog_tool
         self.catalog_action = catalog_action
 
-    def generate_catalog(self, utility: RegistryEntry) -> str:
+    def generate_catalog(self, utility: Utility) -> str:
         """Render one utility page body — fidelity-style dark callouts."""
         import html as html_mod
 
@@ -1281,7 +1252,7 @@ class Catalog:
             self.catalog_action = catalog_action
             self.catalog_utility = catalog_utility
         self._practices: list[CatalogPractice] | None = None
-        self._utilities: list[RegistryEntry] | None = None
+        self._utilities: list[Utility] | None = None
         self._lifecycle_actions: list[LifecycleAction] | None = None
         self._loaded_approach_copy = None
         self._tool_bodies: list[str] = []
@@ -1290,7 +1261,7 @@ class Catalog:
         self.pages: dict[str, str] = {}
 
     def _wire_catalog_renderers(self) -> tuple[CatalogContextTool, CatalogAction, CatalogUtility]:
-        lifecycle_actions = resolve_lifecycle_actions()
+        lifecycle_actions = catalog_actions()
         catalog_tool = CatalogTool(self.repo_url, self.ref)
         hrefs = {action.name: action.href for action in lifecycle_actions}
         catalog_action = CatalogAction(self.repo_url, self.ref, catalog_tool, hrefs)
@@ -1319,7 +1290,7 @@ class Catalog:
         return self._practices
 
     @property
-    def utilities(self) -> list[RegistryEntry]:
+    def utilities(self) -> list[Utility]:
         if self._utilities is None:
             self._utilities = catalog_utilities()
         return self._utilities
@@ -1327,7 +1298,7 @@ class Catalog:
     @property
     def lifecycle_actions(self) -> list[LifecycleAction]:
         if self._lifecycle_actions is None:
-            self._lifecycle_actions = resolve_lifecycle_actions()
+            self._lifecycle_actions = catalog_actions()
         return self._lifecycle_actions
 
     @classmethod
@@ -1605,7 +1576,7 @@ class Catalog:
         page = self._detail_page(f"{action.name} — lifecycle action", body, "actions", self._kanban_embed())
         self.write_page(action.href, page)
 
-    def _write_utility_page(self, utility: RegistryEntry) -> None:
+    def _write_utility_page(self, utility: Utility) -> None:
         body = self.catalog_utility.generate_catalog(utility)
         self._utility_bodies.append(body)
         page = self._detail_page(f"{utility.name} — utility", body, "tools", self._kanban_embed())

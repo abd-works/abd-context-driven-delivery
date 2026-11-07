@@ -74,3 +74,26 @@ class PracticeCatalogue:
             if practice.slug == slug or any(fidelity.slug == slug for fidelity in practice.fidelities):
                 return practice
         return None
+
+    @classmethod
+    def toolset_ref(cls, slug: str) -> str | dict[str, str] | None:
+        """The toolset ref a guidance action lists for slug: the practice's ``module:Class`` for a practice's slug, such
+        as ``stories``; that ref with the fidelity's name for a fidelity's slug, such as ``stories-story-map``, or for a
+        fidelity's bare name, such as ``story_map`` or ``story-map``. A bare name two practices share, such as
+        ``model``, is the first practice's in catalogue order. None when no practice goes by slug."""
+        for key in cls._REFS:
+            practice = cls.practice(key)
+            if practice.slug == slug:
+                return cls._REFS[key]
+            fidelity = next((fidelity for fidelity in practice.fidelities if fidelity.slug == slug), None)
+            if fidelity is not None:
+                return {"toolset": cls._REFS[key], "fidelity": fidelity.name}
+        return cls._bare_fidelity_ref(slug)
+
+    @classmethod
+    def _bare_fidelity_ref(cls, name: str) -> dict[str, str] | None:
+        for key in cls._REFS:
+            for fidelity in cls.practice(key).fidelities:
+                if name in (fidelity.name, fidelity.name.replace("_", "-")):
+                    return {"toolset": cls._REFS[key], "fidelity": fidelity.name}
+        return None

@@ -21,18 +21,16 @@ from expects import be_false, be_none, be_true, contain, equal, expect
 from mamba import after, before, description, it
 
 from harness.catalog_generator.catalog_generator import (
-    UTILITY_REGISTRY,
     LifecycleAction,
-    RegistryEntry,
     SkillSlashName,
     build_run_request,
+    catalog_actions,
     catalog_practices,
     catalog_utilities,
-    keep_in_catalog,
     noCatalog,
     NoCatalog,
-    resolve_lifecycle_actions,
 )
+from harness.guidance.action_catalogue import Action
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.installation.files import Skill, skill
 from harness.installation.installer import Installer
@@ -73,18 +71,9 @@ with description("Build Run Request From Live Toolset Manifest"):
 
 with description("noCatalog"):
     with description("a class or operation marked not ready for the catalog"):
-        with it("drops the class from registry resolution"):
-            @noCatalog
-            class LaterUtility:
-                pass
-
-            class ShownUtility:
-                pass
-
-            hidden = RegistryEntry("later", "later", "LaterUtility", LaterUtility)
-            shown = RegistryEntry("shown", "shown", "ShownUtility", ShownUtility)
-            expect(keep_in_catalog(hidden)).to(equal(False))
-            expect(keep_in_catalog(shown)).to(be_true)
+        with it("drops the toolset from the utilities"):
+            names = [utility.toolset_class.__name__ for utility in catalog_utilities()]
+            expect("Echo" in names).to(be_false)
 
         with it("drops the operation from the lifecycle actions"):
             @agent_toolset
@@ -103,7 +92,7 @@ with description("noCatalog"):
             sys.modules[module.__name__] = module
             shown = [
                 action.name
-                for action in (LifecycleAction(name, module.__name__, "Kit") for name in ("sketch", "generate"))
+                for action in (LifecycleAction(Action(name, Kit)) for name in ("sketch", "generate"))
                 if action.tool is not None
             ]
             expect(shown).to(equal(["generate"]))
@@ -132,7 +121,7 @@ with description("noCatalog"):
 
 
 with description("Load Context Tool And Utility Registry"):
-    with description("given the hardcoded registry lists"):
+    with description("given the practice catalogue and the toolsets the installer finds"):
         with before.all:
             self.practices = catalog_practices()
             self.utilities = catalog_utilities()
@@ -150,9 +139,20 @@ with description("Load Context Tool And Utility Registry"):
             expect("LernDomainDriven" in names).to(be_false)
             expect("CreatePracticeGuidance" in names).to(be_false)
 
+        with it("shows the toolsets in space and tools as utilities"):
+            names = [utility.toolset_class.__name__ for utility in self.utilities]
+            expect(names).to(contain("Repo", "Session", "Board", "Chat", "FileManager"))
+
+        with it("names each utility in kebab case for its page"):
+            expect([utility.href for utility in self.utilities]).to(contain("tools/file-manager.html"))
+
+        with it("leaves the harness's own toolsets out"):
+            names = {utility.toolset_class.__name__ for utility in self.utilities}
+            expect(names & {"Graph", "Catalog", "Guidance", "GuidanceAction"}).to(equal(set()))
+
         with it("omits utilities marked noCatalog"):
-            expect(len(UTILITY_REGISTRY) > 0).to(be_true)
-            expect([entry.class_name for entry in self.utilities]).to(equal(["Repo"]))
+            names = {utility.toolset_class.__name__ for utility in self.utilities}
+            expect(names & {"Installer", "Echo"}).to(equal(set()))
 
         with it("names and orders each context tool from its own catalog card"):
             expect([practice.display_name for practice in self.practices]).to(
@@ -188,16 +188,21 @@ with description("Read Fidelity Names, Default Formats, And Sections From The Li
 with description("Resolve Lifecycle Actions From Their Action Kits"):
     with description("given lifecycle action kits"):
         with before.all:
-            self.actions = resolve_lifecycle_actions()
+            self.actions = catalog_actions()
             self.by_name = {action.name: action for action in self.actions}
 
-        with it("lists each kit's lifecycle action in catalog order"):
+        with it("lists each skill of each action folder's kit, folder by folder"):
             names = [action.name for action in self.actions]
             expect(names).to(equal([
-                "partition", "grill", "sketch", "generate", "document",
-                "iterate", "validate", "satisfy", "repair", "createRule",
+                "document", "generate", "grill", "repair", "verify_fix", "iterate",
+                "partition", "render", "satisfy", "sketch", "validate", "createRule",
             ]))
-            expect("generate_fixes_from_validate" in names).to(equal(False))
+
+        with it("leaves out a kit's tools that are not skills"):
+            expect("generate_fixes_from_validate" in [action.name for action in self.actions]).to(equal(False))
+
+        with it("leaves out a kit marked noCatalog"):
+            expect("diagnose" in [action.name for action in self.actions]).to(equal(False))
 
         with it("resolves partition to its delegate kit dir under actions/partition/"):
             expect(self.by_name["partition"].source_dir.name).to(equal("partition"))

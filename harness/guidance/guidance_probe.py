@@ -175,9 +175,9 @@ class GuidanceProbe:
         slug = mcp_name[: -len(".instructions")] if mcp_name.endswith(".instructions") else mcp_name
         try:
             from harness.agent_tools.agent_tools import AgentToolSet
-            from harness.guidance_actions.guidance_actions import GuidanceCatalog
+            from harness.guidance.practice_catalogue import PracticeCatalogue
 
-            ref = GuidanceCatalog.ref_for(slug)
+            ref = PracticeCatalogue.toolset_ref(slug)
             if ref is None:
                 return {"mcp": mcp_name, "color": "red", "failure": "not a guidance slug"}
             text = AgentToolSet.instantiate(ref).instructions
