@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
@@ -68,13 +67,12 @@ class MissingModuleContext(PracticeGraphRule):
 
 
     def _enclosing_card(self, folder: "Node", context: "RuleCheckContext") -> bool:
-        if context.source_root is None:
-            return False
-        for parent in Path(folder.source.file or "").parents:
-            if parent == Path("."):
-                return False
-            if (Path(context.source_root) / parent / ".context" / "module-context.md").is_file():
+        """True when a folder that owns this one, short of the project's root, holds a module card."""
+        parent = context.graph.direct_parent(folder)
+        while parent is not None and parent.type in ("Module", "Package"):
+            if parent.get_fact("has_module_context"):
                 return True
+            parent = context.graph.direct_parent(parent)
         return False
 
 

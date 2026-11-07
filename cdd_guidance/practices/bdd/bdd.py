@@ -2,8 +2,15 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
+
+if TYPE_CHECKING:
+    from cdd_guidance.practices.bdd.model.bdd_model import BddModel
+    from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
 
 @agent_toolset
@@ -55,7 +62,28 @@ class Bdd(PracticeGuidance):
         read_specs(self)
 
     def link_to_other_practices(self) -> None:
-        """Link each observation to the operations and properties of the code it drives."""
-        from cdd_guidance.practices.bdd.model.graph_reading import link_observations
+        """Link each observation to the operations and properties of the code it drives, when the graph reads Clean
+        Engineering too."""
+        from cdd_guidance.practices.bdd.model.graph_reading import ObservationLinks
 
-        link_observations(self.graph)
+        clean = self.clean_engineering_practice
+        if clean is not None and clean in self.graph.practices.values():
+            ObservationLinks(self, clean).link()
+
+    @property
+    def clean_engineering_practice(self) -> CleanEngineering | None:
+        """The Clean Engineering practice the graph this practice is read in holds: the code each observation drives."""
+        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+
+        held = self.graph.every_practice.values() if self.graph is not None else ()
+        return next((practice for practice in held if isinstance(practice, CleanEngineering)), None)
+
+    def spec_model_for(self, file: Path) -> BddModel:
+        """A new model of the spec file's language: the code format among this practice's formats that reads the file's
+        extension."""
+        suffix = file.suffix.lower()
+        for name in self.formats:
+            adapter = self._format_adapter(name)
+            if suffix in getattr(adapter, "suffixes", ()):
+                return adapter()
+        raise ValueError(f"No BDD format reads {file.name}")

@@ -5,12 +5,12 @@ from xml.etree import ElementTree as ET
 
 from harness.graph.violation import Violation
 
-from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import (
     DrawioPage,
-    DrawioScanner,
     Point,
     Segment,
 )
+from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
 # A few crossings are hard to avoid on a busy page; more than this many make it hard to read.
 MOST_CROSSINGS_ON_A_PAGE = 5

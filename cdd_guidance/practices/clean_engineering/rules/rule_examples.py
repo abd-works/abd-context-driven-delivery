@@ -47,7 +47,9 @@ def practice_from_class_text(name: str, text: str, relative: str) -> tuple[Pract
     from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
 
     oclass = OoadClass(name=name, sequential_order=1, line=1)
-    oclass.load_source_facts(text)
+    oclass.end_line = text.count("\n") + 1
+    oclass.take_lines(text.split("\n"))
+    oclass.load_source_facts()
     practice, root = practice_from_files({relative: text})
     practice.graph.add(practice, oclass, f"clean_engineering:OoadClass:{relative}:{name}", relative, 1, text.count("\n") + 1)
     return practice, root

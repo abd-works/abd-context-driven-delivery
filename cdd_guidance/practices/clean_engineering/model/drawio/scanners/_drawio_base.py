@@ -2,9 +2,7 @@
 from __future__ import annotations
 
 import argparse
-import html
 import importlib
-import re
 import sys
 from collections.abc import Iterable
 from pathlib import Path
@@ -14,62 +12,12 @@ from xml.etree import ElementTree as ET
 from harness.graph.violation import Violation
 from harness.installation.destination import data_of
 
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import DrawioPage
+
 DRAWIO_EXTENSIONS = frozenset({'.drawio', '.xml'})
 SKIP_DIR_NAMES = frozenset({'node_modules', '.git', 'dist', 'build', 'coverage', '__pycache__', '.venv', 'venv', 'examples'})
 _REPAIR_FIXTURE_NAMES = frozenset({'faultyasset', 'repairedasset'})
 _REPAIR_FIXTURE_DIRS = frozenset({'faultyassets', 'repairedassets'})
-# A segment counts as horizontal or vertical when it moves less than this many pixels across.
-STRAIGHT_TOLERANCE = 1
-
-Point = tuple[float, float]
-Segment = tuple[Point, Point]
-Box = tuple[float, float, float, float]
-
-
-class DrawioPage:
-    """One diagram page of a scanned file: the class boxes on it and the edges between them."""
-
-    def __init__(self, file_path: Path, name: str, root: ET.Element) -> None:
-        self.file_path = file_path
-        self.name = name
-        self.root = root
-        self.boxes: dict[str, Box] = {}
-        self.class_names: dict[str, str] = {}
-        for cell in root.iter('mxCell'):
-            name_in_cell = class_name_in(cell.get('value', '')) if cell.get('vertex') == '1' else None
-            box = cell_box(cell)
-            if name_in_cell and box:
-                self.boxes[cell.get('id')] = box
-                self.class_names[cell.get('id')] = name_in_cell
-        self.edges = [cell for cell in root.findall('mxCell') if cell.get('edge') == '1']
-
-    def describe(self, edge: ET.Element) -> str:
-        """`Source->Target (kind)`, the way every edge message names the edge."""
-        source = self.class_names.get(edge.get('source', ''), '?')
-        target = self.class_names.get(edge.get('target', ''), '?')
-        return f"{source}->{target} ({edge_kind(edge.get('style', ''))})"
-
-    def segments(self, edge: ET.Element) -> tuple[list[Segment], bool]:
-        """The polyline an edge draws, and whether it is a guess.
-
-        Straight edges run anchor to anchor. Orthogonal edges follow their waypoints, turning at right angles; without
-        waypoints Draw.io's router picks the route, so the middle-split route returned here is only an approximation."""
-        style = edge.get('style', '')
-        source_box = self.boxes.get(edge.get('source', ''))
-        target_box = self.boxes.get(edge.get('target', ''))
-        if source_box is None or target_box is None:
-            return ([], False)
-        start = anchor_point(style, source_box, 'exit')
-        end = anchor_point(style, target_box, 'entry')
-        if 'orthogonal' not in style.lower():
-            return ([(start, end)], False)
-        waypoints = [(float(point.get('x', '0')), float(point.get('y', '0'))) for point in edge.findall('mxGeometry/Array/mxPoint')]
-        if waypoints:
-            return (_orthogonal_through([start] + waypoints + [end]), False)
-        if abs(end[0] - start[0]) < STRAIGHT_TOLERANCE or abs(end[1] - start[1]) < STRAIGHT_TOLERANCE:
-            return ([(start, end)], False)
-        middle_x = (start[0] + end[0]) / 2
-        return ([(start, (middle_x, start[1])), ((middle_x, start[1]), (middle_x, end[1])), ((middle_x, end[1]), end)], True)
 
 
 class DrawioScanner:
@@ -116,11 +64,8 @@ class DrawioScanner:
         except (OSError, ET.ParseError) as exc:
             return [Violation(self.rule, f'Could not load drawio file: {exc}', practice='clean_engineering', location=str(file_path))]
         violations = []
-        for diagram in mxfile.findall('diagram'):
-            page_root = diagram.find('mxGraphModel/root')
-            if page_root is None:
-                continue
-            violations.extend(self.scan_page(DrawioPage(file_path, diagram.get('name') or '(unnamed)', page_root)))
+        for page in DrawioPage.pages_in(mxfile, file_path):
+            violations.extend(self.scan_page(page))
         return violations
 
     def scan_page(self, page: DrawioPage) -> list[Violation]:
@@ -128,7 +73,7 @@ class DrawioScanner:
 
     def violation(self, page: DrawioPage, message: str) -> Violation:
         """A violation on this page, prefixed with the page name and located at the scanned file."""
-        return Violation(self.rule, f'[{page.name}] {message}', practice='clean_engineering', location=str(page.file_path))
+        return Violation(self.rule, f'[{page.name or "(unnamed)"}] {message}', practice='clean_engineering', location=str(page.file_path))
 
     @classmethod
     def discover(cls) -> dict[str, type[DrawioScanner]]:
@@ -192,128 +137,3 @@ class DrawioScanner:
                 continue
             files.append(path)
         return files
-
-
-def class_title_in(value: str) -> str | None:
-    """The raw HTML inside the class cell's `<b>` title, or None for a cell with no title."""
-    if not value:
-        return None
-    match = re.search('<b[^>]*>(.*?)</b>', html.unescape(html.unescape(value)), re.IGNORECASE | re.DOTALL)
-    return match.group(1) if match else None
-
-
-def class_name_in(value: str) -> str | None:
-    """The class name in a class cell's title; a stereotype or ` : Base` beside it is not part of the name."""
-    if not value:
-        return None
-    match = re.search('<b[^>]*>(.*?)</b>', html.unescape(value), re.IGNORECASE | re.DOTALL)
-    if not match:
-        return None
-    name = re.sub('\\s+', ' ', match.group(1)).strip()
-    return name.split(' : ')[0].strip() or None
-
-
-def cell_box(cell: ET.Element) -> Box | None:
-    """(x, y, width, height) from a cell's mxGeometry, or None when the cell has none."""
-    geometry = cell.find('mxGeometry')
-    if geometry is None:
-        return None
-    return (float(geometry.get('x', '0')), float(geometry.get('y', '0')), float(geometry.get('width', '0')), float(geometry.get('height', '0')))
-
-
-def edge_kind(style: str) -> str:
-    """The UML relationship an edge style draws."""
-    is_orthogonal = 'orthogonalEdgeStyle' in style
-    if 'endFill=0' in style and 'endArrow=block' in style:
-        return 'inheritance-orthogonal' if is_orthogonal else 'inheritance'
-    if 'startFill=1' in style and 'diamondThin' in style:
-        return 'composition'
-    if 'startFill=0' in style and 'diamondThin' in style:
-        return 'aggregation'
-    if 'dashed=1' in style and 'endArrow=open' in style:
-        return 'dependency-orthogonal' if is_orthogonal else 'dependency'
-    if 'endArrow=open' in style:
-        return 'association'
-    return 'unknown'
-
-
-def is_inheritance(edge: ET.Element) -> bool:
-    return edge_kind(edge.get('style', '')).startswith('inheritance')
-
-
-def anchor_fractions(edge: ET.Element, end: str) -> tuple[float | None, float | None]:
-    """The `exit` or `entry` anchor fractions an edge's style sets, or None for each one it leaves to Draw.io."""
-    style = edge.get('style', '')
-    return (style_number(style, f'{end}X'), style_number(style, f'{end}Y'))
-
-
-def share_inheritance_trunk(first: ET.Element, second: ET.Element) -> bool:
-    """True when two inheritance edges end at the same anchor on the same base: subclasses joined into one shared
-    line to their base, the UML tree style, which draws as one line and one arrowhead."""
-    return (
-        is_inheritance(first) and is_inheritance(second)
-        and first.get('target') == second.get('target')
-        and None not in anchor_fractions(first, 'entry')
-        and anchor_fractions(first, 'entry') == anchor_fractions(second, 'entry')
-    )
-
-
-def style_number(style: str, key: str) -> float | None:
-    """A number set in a Draw.io style string, such as `exitX=0.3`."""
-    match = re.search(f'(?:^|;){key}=(-?[0-9.]+)', style)
-    return float(match.group(1)) if match else None
-
-
-def box_center(box: Box) -> Point:
-    x, y, width, height = box
-    return (x + width / 2, y + height / 2)
-
-
-def anchor_point(style: str, box: Box, end: str) -> Point:
-    """Where one end of an edge meets its box: the exit or entry anchor in the style, else the box centre."""
-    x, y, width, height = box
-    fraction_x = style_number(style, f'{end}X')
-    fraction_y = style_number(style, f'{end}Y')
-    if fraction_x is not None and fraction_y is not None:
-        return (x + width * fraction_x, y + height * fraction_y)
-    return box_center(box)
-
-
-def segments_cross(first: Segment, second: Segment) -> bool:
-    """True when two straight segments cross each other."""
-    (a, b), (c, d) = first, second
-    return _turns_left(a, c, d) != _turns_left(b, c, d) and _turns_left(a, b, c) != _turns_left(a, b, d)
-
-
-def segment_hits_box(segment: Segment, box: Box, margin: float) -> bool:
-    """True when the segment cuts the box grown by margin on every side, or starts inside it."""
-    start = segment[0]
-    left, top = box[0] - margin, box[1] - margin
-    right, bottom = box[0] + box[2] + margin, box[1] + box[3] + margin
-    corners = [(left, top), (right, top), (right, bottom), (left, bottom)]
-    if any(segments_cross(segment, (corners[index], corners[(index + 1) % 4])) for index in range(4)):
-        return True
-    return left <= start[0] <= right and top <= start[1] <= bottom
-
-
-def _turns_left(a: Point, b: Point, c: Point) -> bool:
-    return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
-
-
-def _orthogonal_through(points: list[Point]) -> list[Segment]:
-    """Segments through each point in turn, adding a corner wherever two points are not in line."""
-    expanded = [points[0]]
-    previous_direction = None
-    for following in points[1:]:
-        corners, previous_direction = _orthogonal_step(expanded[-1], following, previous_direction)
-        expanded.extend(corners)
-    return list(zip(expanded, expanded[1:]))
-
-
-def _orthogonal_step(start: Point, end: Point, previous_direction: str | None) -> tuple[list[Point], str]:
-    """The points after start that reach end at right angles, turning away from the previous segment's direction."""
-    if abs(end[0] - start[0]) < STRAIGHT_TOLERANCE or abs(end[1] - start[1]) < STRAIGHT_TOLERANCE:
-        return ([end], 'v' if abs(end[0] - start[0]) < STRAIGHT_TOLERANCE else 'h')
-    if previous_direction == 'v':
-        return ([(start[0], end[1]), end], 'h')
-    return ([(end[0], start[1]), end], 'v')

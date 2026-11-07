@@ -16,6 +16,18 @@ class RuleCheckContext:
         self.practice = practice
         self.graph = practice.graph
         self.source_root = source_root
+        self._indexes: dict[type, object] = {}
+
+    def index(self, kind: type):
+        """The index of kind over the checked practice, such as every class by name: made from this context the first
+        time a rule asks, then kept, so the rules of one check share it instead of each rebuilding it."""
+        if kind not in self._indexes:
+            self._indexes[kind] = kind(self)
+        return self._indexes[kind]
+
+    def targets(self, node, kind: str) -> list:
+        """The nodes an edge of kind leads to from node."""
+        return [edge.child for edge in self.graph.edges_from(kind, node)]
 
     def nodes(self, type: str | None = None) -> list:
         """The checked practice's nodes, or only those of type."""

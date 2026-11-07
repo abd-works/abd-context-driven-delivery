@@ -5,11 +5,11 @@ import re
 
 from harness.graph.violation import Violation
 
-from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import (
     Box,
     DrawioPage,
-    DrawioScanner,
 )
+from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
 Y_TOLERANCE = 30
 MIN_ROW_SIZE = 4
@@ -40,7 +40,7 @@ class LeafNodesNotInHorizontalRowScanner(DrawioScanner):
 
 def _sized_vertex_boxes(page: DrawioPage) -> dict[str, Box]:
     boxes: dict[str, Box] = {}
-    for cell in page.root.findall("mxCell"):
+    for cell in page.cells:
         geometry = cell.find("mxGeometry")
         if cell.get("vertex") != "1" or geometry is None or geometry.get("width") is None or geometry.get("height") is None:
             continue
@@ -74,7 +74,7 @@ def _wide_line_message(hub_name: str, members: list[str], boxes: dict[str, Box])
 
 
 def _hub_name(page: DrawioPage, hub_id: str) -> str:
-    hub_cell = page.root.find(f"mxCell[@id='{hub_id}']")
+    hub_cell = page.cell(hub_id)
     if hub_cell is None:
         return hub_id
     text = re.sub("<[^>]+>", "", hub_cell.get("value") or hub_id)

@@ -3,12 +3,12 @@ from __future__ import annotations
 
 from harness.graph.violation import Violation
 
-from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import (
     Box,
     DrawioPage,
-    DrawioScanner,
     cell_box,
 )
+from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
 SHORT_ROUTE_MAX_WAYPOINTS = 2
 SHORT_ROUTE_MAX_BOX_GAP = 320
@@ -21,7 +21,7 @@ class PreferShortRoutesScanner(DrawioScanner):
         """Edges that dog-leg across a short gap, and related boxes placed too far apart."""
         boxes = _vertex_boxes(page)
         violations = []
-        for edge in page.root.iter("mxCell"):
+        for edge in page.cells:
             source, target = edge.get("source", ""), edge.get("target", "")
             if edge.get("edge") != "1" or source not in boxes or target not in boxes:
                 continue
@@ -43,7 +43,7 @@ class PreferShortRoutesScanner(DrawioScanner):
 def _vertex_boxes(page: DrawioPage) -> dict[str, Box]:
     """Every vertex with a geometry, class or not, since an edge may end on any of them."""
     boxes: dict[str, Box] = {}
-    for cell in page.root.iter("mxCell"):
+    for cell in page.cells:
         box = cell_box(cell) if cell.get("vertex") == "1" else None
         if box and cell.get("id"):
             boxes[cell.get("id")] = box

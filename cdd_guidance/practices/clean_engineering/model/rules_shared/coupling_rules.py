@@ -52,7 +52,7 @@ class ShapeClassesAroundResources(PracticeGraphRule):
     node_types = ("OoadClass",)
 
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
-        classes = ClassGraph(context)
+        classes = context.index(ClassGraph)
         bags = {node.name for node in classes.classes if classes.fields(node) and not classes.has_behavior(node)}
         hits: list[tuple[str, str]] = []
         for service in classes.classes:
@@ -87,7 +87,7 @@ class DoNotInventParallelObjectModels(PracticeGraphRule):
     node_types = ("OoadClass",)
 
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
-        classes = ClassGraph(context)
+        classes = context.index(ClassGraph)
         fields = {node.node_id: classes.fields(node) for node in classes.classes}
         holders: dict[str, list["Node"]] = {}
         for node in classes.classes:
@@ -182,7 +182,7 @@ class LayerSeparation(PracticeGraphRule):
     node_types = ("OoadClass", "Module", "Package")
 
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
-        classes = ClassGraph(context)
+        classes = context.index(ClassGraph)
         targets = {node.node_id: _forwarding_target(node, classes) for node in classes.classes}
         names = {node.node_id: node.name for node in context.nodes("OoadClass")}
         hits = [

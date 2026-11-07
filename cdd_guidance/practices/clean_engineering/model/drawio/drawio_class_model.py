@@ -49,6 +49,7 @@ from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import 
     module_tab_label,
 )
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry, MODULE_CELL_MIN_HEIGHT, MODULE_CELL_WIDTH
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import DrawioPage
 from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
     DrawIOClass,
     DrawIOModule,
@@ -128,15 +129,14 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         except ET.ParseError as error:
             raise UnreadableSource(f'draw.io diagram is not valid XML: {error}') from error
         self.modules = []
-        mxcells = list(root_el.iter('mxCell'))
-        if _looks_like_modules_diagram(mxcells):
-            self._read_modules(mxcells)
+        document = DrawioPage(None, '', root_el)
+        if _looks_like_modules_diagram(document.cells):
+            self._read_modules(document)
             return self
-        diagrams = list(root_el.findall('diagram'))
-        if len(diagrams) > 1:
-            _ClassDiagramReader(self).read_pages(diagrams)
+        if len(root_el.findall('diagram')) > 1:
+            _ClassDiagramReader(self).read_pages(DrawioPage.pages_in(root_el))
         else:
-            _ClassDiagramReader(self).read_single_page(mxcells)
+            _ClassDiagramReader(self).read_single_page(document)
         return self
 
     def render(self, canonical: CleanEngineeringModel) -> str:
@@ -151,12 +151,10 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         """The previous diagram when this render keeps its positions, else None."""
         return self.previous if self.keep_positioning else None
 
-    def _read_modules(self, mxcells: List[ET.Element]) -> None:
+    def _read_modules(self, document: DrawioPage) -> None:
         order = 1
         id_to_module: dict[str, Module] = {}
-        for cell in mxcells:
-            if cell.get('vertex') != '1':
-                continue
+        for cell in document.vertices:
             style = cell.get('style', '')
             if 'text;' in style or style.startswith('text;'):
                 if cell.get('id') == 'title':
@@ -175,18 +173,18 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
             if not cell_id.startswith('nest-'):
                 self.modules.append(module)
             order += 1
-        _add_module_dependencies(self, mxcells, id_to_module)
+        _add_module_dependencies(self, document, id_to_module)
 
 
-def _add_module_dependencies(model: DrawIOCleanEngineeringModel, mxcells: List[ET.Element], id_to_module: dict[str, Module]) -> None:
+def _add_module_dependencies(model: DrawIOCleanEngineeringModel, document: DrawioPage, id_to_module: dict[str, Module]) -> None:
     """A child cell depends on the top-level cell it sits in; then each edge source depends on its target."""
     nested = [
         (id_to_module.get(cell.get('id', '')), id_to_module.get(cell.get('parent', '')))
-        for cell in mxcells if cell.get('vertex') == '1'
+        for cell in document.vertices
     ]
     drawn = [
         (id_to_module.get(cell.get('source', '')), id_to_module.get(cell.get('target', '')))
-        for cell in mxcells if cell.get('edge') == '1'
+        for cell in document.edges
     ]
     nested = [(child, parent) for child, parent in nested if parent is None or parent in model.modules]
     for dependent, depended_on in nested + drawn:
@@ -205,10 +203,10 @@ class _ClassDiagramReader:
         self._names_by_cell: dict[str, str] = {}
         self._seen_names: set[str] = set()
 
-    def read_single_page(self, mxcells: List[ET.Element]) -> None:
+    def read_single_page(self, page: DrawioPage) -> None:
         """One page: each card names its module in its style."""
         modules: Dict[str, DrawIOModule] = {}
-        for cell, oclass in self._class_cards(mxcells):
+        for cell, oclass in self._class_cards(page):
             self._names_by_cell[cell.get('id', '')] = oclass.name
             if 'dashed=1' in cell.get('style', ''):
                 continue
@@ -218,20 +216,19 @@ class _ClassDiagramReader:
             module.classes.append(oclass)
             self._classes_by_cell[cell.get('id', '')] = oclass
         self.model.modules.extend(modules.values())
-        self._read_arrows(mxcells)
+        self._read_arrows(page)
 
-    def read_pages(self, diagrams: List[ET.Element]) -> None:
+    def read_pages(self, pages: List[DrawioPage]) -> None:
         """One Draw.io page → one module; skip dashed «from:» import cards."""
-        for diagram in diagrams:
-            module = DrawIOModule(name=diagram.get('name') or f'module-{len(self.model.modules) + 1}', sequential_order=len(self.model.modules) + 1)
-            page_cells = list(diagram.iter('mxCell'))
-            self._read_page_cards(page_cells, module)
+        for page in pages:
+            module = DrawIOModule(name=page.name or f'module-{len(self.model.modules) + 1}', sequential_order=len(self.model.modules) + 1)
+            self._read_page_cards(page, module)
             if module.classes:
                 self.model.modules.append(module)
-            self._read_arrows(page_cells)
+            self._read_arrows(page)
 
-    def _read_page_cards(self, page_cells: List[ET.Element], module: DrawIOModule) -> None:
-        for cell, oclass in self._class_cards(page_cells):
+    def _read_page_cards(self, page: DrawioPage, module: DrawIOModule) -> None:
+        for cell, oclass in self._class_cards(page):
             self._names_by_cell[cell.get('id', '')] = oclass.name
             if 'dashed=1' in cell.get('style', '') or oclass.name in self._seen_names:
                 continue
@@ -240,12 +237,10 @@ class _ClassDiagramReader:
             module.classes.append(oclass)
             self._classes_by_cell[cell.get('id', '')] = oclass
 
-    def _class_cards(self, cells: List[ET.Element]) -> List[Tuple[ET.Element, DrawIOClass]]:
+    def _class_cards(self, page: DrawioPage) -> List[Tuple[ET.Element, DrawIOClass]]:
         """Each class card on the page, with the class it shows; the caller numbers the classes it keeps."""
         cards = []
-        for cell in cells:
-            if cell.get('vertex') != '1':
-                continue
+        for cell in page.vertices:
             name, stereotypes, props, ops = _class_card_members(cell.get('value', ''))
             if not name:
                 continue
@@ -254,16 +249,16 @@ class _ClassDiagramReader:
             cards.append((cell, oclass))
         return cards
 
-    def _read_arrows(self, cells: List[ET.Element]) -> None:
+    def _read_arrows(self, page: DrawioPage) -> None:
         """Each arrow marks the property it stands for with its kind; the properties then derive their relationships."""
-        for cell in cells:
+        for cell in page.edges:
             source = self._classes_by_cell.get(cell.get('source', ''))
-            if cell.get('edge') != '1' or source is None:
+            if source is None:
                 continue
             target_id = cell.get('target', '')
             target = self._classes_by_cell.get(target_id)
             target_name = target.name if target is not None else self._names_by_cell.get(target_id, target_id)
-            kind = _classify_edge(cell.get('style', ''))
+            kind = page.kind_of(cell)
             if kind == 'inheritance' and target_name not in source.bases:
                 source.bases.append(target_name)
             for label in _DEPENDENCY_LABEL.findall(html.unescape(cell.get('value', '') or '')):
@@ -305,7 +300,8 @@ class _ModulesDiagramWriter:
         self._drawing_order: List[str] = []
 
     def write(self) -> str:
-        previous_positions = _read_positions(self._channel.previous) if self._channel.previous else {}
+        previous = DrawioPage.whole(self._channel.previous) if self._channel.previous else None
+        previous_positions = previous.positions() if previous is not None else {}
         self._lay_out()
         mxfile = ET.Element('mxfile')
         mxfile.set('host', 'CleanEngineering.diagram.drawio')
@@ -538,8 +534,9 @@ class _ClassDiagramWriter:
         graph = _add_diagram_page(mxfile, 'CleanEngineering Model', 'CleanEngineering-model')
         page = _ClassDiagramPage(self, set(self.classes_by_cell), None, [])
         previous = self.channel.kept_previous()
-        positions = _read_positions(previous) if previous else {}
-        previous_edges = _read_edges(previous) if previous else {}
+        drawn = DrawioPage.whole(previous) if previous else None
+        positions = drawn.positions() if drawn is not None else {}
+        previous_edges = drawn.edges_by_ends() if drawn is not None else {}
         page.write(graph, positions, previous_edges)
 
     def _write_module_page(self, mxfile: ET.Element, module: Module) -> None:
@@ -812,41 +809,6 @@ def _style_module(style: str) -> str:
     return found.group(1) if found else ''
 
 
-def _read_positions(previous: str) -> Dict[str, Tuple[float, float]]:
-    """Where each vertex sat on the previous diagram, by cell id."""
-    out: Dict[str, Tuple[float, float]] = {}
-    try:
-        root = ET.fromstring(previous)
-    except ET.ParseError:
-        return out
-    for cell in root.iter('mxCell'):
-        geo = cell.find('mxGeometry')
-        if cell.get('vertex') != '1' or geo is None or not cell.get('id'):
-            continue
-        try:
-            out[cell.get('id')] = (float(geo.get('x')), float(geo.get('y')))
-        except (TypeError, ValueError):
-            continue
-    return out
-
-
-def _read_edges(previous: str) -> Dict[Tuple[str, str], ET.Element]:
-    """Index existing DrawIO edges by (source, target) so they can be reused."""
-    out: Dict[Tuple[str, str], ET.Element] = {}
-    try:
-        root = ET.fromstring(previous)
-    except ET.ParseError:
-        return out
-    for cell in root.iter('mxCell'):
-        if cell.get('edge') != '1':
-            continue
-        src = cell.get('source')
-        tgt = cell.get('target')
-        if src and tgt:
-            out[src, tgt] = cell
-    return out
-
-
 def _edge_waypoints(edge: ET.Element) -> List[Tuple[int, int]]:
     return [(int(float(point.get('x', 0))), int(float(point.get('y', 0)))) for point in edge.iter('mxPoint')]
 
@@ -893,15 +855,3 @@ def _card_operation(line: str) -> Optional[Operation]:
         return None
     parameters = [part.strip() for part in match.group(2).split(',') if part.strip()]
     return Operation(name=match.group(1), parameters=parameters, return_type=(match.group(3) or '').strip())
-
-
-def _classify_edge(style: str) -> str:
-    if 'dashed=1' in style and 'endArrow=open' in style and 'diamondThin' not in style:
-        return 'dependency'
-    if 'endFill=0' in style and 'endArrow=block' in style:
-        return 'inheritance'
-    if 'startFill=1' in style and 'diamondThin' in style:
-        return 'composition'
-    if 'startFill=0' in style and 'diamondThin' in style:
-        return 'aggregation'
-    return 'association'

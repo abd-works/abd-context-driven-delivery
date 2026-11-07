@@ -196,6 +196,8 @@ class PythonBddModel(CodeBddModel):
     """Mamba specs: `with description(...)`, `with context(...)`, `with it(...)` blocks."""
 
     language = PYTHON
+    # The spec files this model reads.
+    suffixes = (".py",)
 
     def check_readable(self, text: str) -> None:
         try:
@@ -282,6 +284,8 @@ class TypeScriptBddModel(CodeBddModel):
     """Vitest / Jest specs: `describe(...)`, `it(...)`, `test(...)` blocks found by bracket matching."""
 
     language = TYPESCRIPT
+    # The spec files this model reads: a JavaScript spec's describe tree is written the same way.
+    suffixes = (".ts", ".tsx", ".js", ".jsx")
 
     def parse_code(self, text: str) -> "TypeScriptBddModel":
         self._text = text

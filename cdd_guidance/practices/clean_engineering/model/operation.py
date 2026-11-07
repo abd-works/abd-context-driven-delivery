@@ -15,29 +15,16 @@ def operation_body_fingerprint(body: str) -> str:
     return hashlib.sha256(normalized.encode()).hexdigest()[:24]
 
 
-def operation_source_span(operation: "Operation") -> tuple[int, int] | None:
-    """1-based inclusive source lines for this operation when the model recorded them."""
-    start = operation.line
-    if not start:
-        return None
-    end = operation.end_line
-    if end is not None and end >= start:
-        return start, end
-    if operation.line_count and operation.line_count > 0:
-        return start, start + operation.line_count - 1
-    return None
-
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from harness.graph.model_node import ModelChildren
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass, OoadNode
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
     MIN_DELEGATION_LINES,
-    PythonFunctionBody,
     SourceText,
+    names_call_io_and_domain,
 )
 from cdd_guidance.practices.clean_engineering.model.property import InvariantHolder
-from cdd_guidance.practices.clean_engineering.model.translation import ChildCollectionPair
 
 
 class Parameter(OoadNode):
@@ -47,8 +34,19 @@ class Parameter(OoadNode):
     def __init__(self, name: str, sequential_order: int = 0, type_hint: str = "") -> None:
         super().__init__(name, sequential_order)
         self.type_hint = type_hint
-        self.operation_name = ""
-        self.property_setter = False
+        # The operation that declares it, which it keeps after the graph places it in its explorer tree.
+        self.operation: Operation | None = None
+
+    @property
+    def operation_name(self) -> str:
+        """The name of the operation that declares this parameter; empty before one holds it."""
+        return self.operation.name if self.operation is not None else ""
+
+    @property
+    def property_setter(self) -> bool:
+        """True for the one parameter of a property's setter."""
+        operation = self.operation
+        return operation is not None and operation.is_property and len(operation.parameters) == 1
 
     def clone(self) -> "Parameter":
         return type(self)(self.name, self.sequential_order, self.type_hint)
@@ -69,14 +67,6 @@ class Parameter(OoadNode):
         self.name = source.name
         self.sequential_order = source.sequential_order
         self.type_hint = source.type_hint
-
-    def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
-        return []
-
-    def load_operation_facts(self, operation: "Operation") -> None:
-        """Fill the facts this parameter owns about the operation that declares it."""
-        self.operation_name = operation.name
-        self.property_setter = operation.is_property and len(operation.parameters) == 1
 
 
 class Operation(InvariantHolder, OoadNode):
@@ -129,6 +119,8 @@ class Operation(InvariantHolder, OoadNode):
         self.line_count: int | None = None
         self.body_fingerprint: str = ""
         self.body = CodeBody()
+        # The source this operation spans in its file, kept once its parser reads the file.
+        self.span = SourceText("")
         self.constructed_types: list[tuple[str, int]] = []
         self.is_property = False
         self.is_static = False
@@ -155,6 +147,12 @@ class Operation(InvariantHolder, OoadNode):
             setattr(self, key, value)
         if parameters:
             self._take_parameters(parameters)
+
+    def _link(self, child, kind: str) -> None:
+        """A parameter it takes keeps it as the operation that declares it."""
+        super()._link(child, kind)
+        if isinstance(child, Parameter):
+            child.operation = self
 
     @property
     def owner(self) -> str:
@@ -208,12 +206,28 @@ class Operation(InvariantHolder, OoadNode):
         cloned.peer_private_access = self.peer_private_access
         return cloned
 
-    def load_span_facts(self, source_span: str) -> None:
+    @property
+    def source_lines(self) -> tuple[int, int]:
+        """The first and last line of its file this operation spans: its line through its end line, or as many lines
+        as its body counts; its line alone when its parser recorded no end."""
+        start = self.line or 1
+        if self.end_line is not None and self.end_line >= start:
+            return start, self.end_line
+        if self.line_count and self.line_count > 0:
+            return start, start + self.line_count - 1
+        return start, start
+
+    def take_lines(self, lines: List[str]) -> None:
+        """Keep the lines of its file this operation spans."""
+        start, end = self.source_lines
+        self.span = SourceText("\n".join(lines[start - 1 : end]))
+
+    def load_span_facts(self) -> None:
         """Fill the facts this operation's own source span carries, beyond what the parser measured."""
+        span = self.span
         if not self.body_fingerprint:
-            self.body_fingerprint = _span_fingerprint(source_span)
+            self.body_fingerprint = _span_fingerprint(span.text)
         self.io_and_domain_callees = self._delegates_io_and_domain()
-        span = SourceText(source_span)
         self.private_reach = span.private_reach()
         self.io_and_domain = span.mixes_io_and_domain()
         self.raises_on_empty = span.raises_on_empty()
@@ -234,21 +248,11 @@ class Operation(InvariantHolder, OoadNode):
         self.unnamed_literal_numbers = measured.unnamed_numbers()
         self.peer_private_access = measured.reaches_peer_private(frozenset(p.name for p in self.parameters if p.name))
 
-    def load_python_function_facts(self, node) -> None:
-        """Fill the facts the rules measure on a Python function, from its syntax tree."""
-        measured = PythonFunctionBody(node)
-        self.max_control_flow_depth = measured.control_flow_depth()
-        self.has_bare_catch, self.swallows_exceptions = measured.except_flags()
-        self.unnamed_literal_numbers = measured.unnamed_numbers()
-        self.narrative_comment_lines = 0
-        self.peer_private_access = measured.reaches_peer_private()
-        self.packed_parameters = measured.packed_parameters()
-
     def _delegates_io_and_domain(self) -> bool:
         """A long operation that calls both I/O and domain calculations does two jobs, even when it only delegates."""
         if (self.line_count or 0) < MIN_DELEGATION_LINES:
             return False
-        return SourceText("\n".join(f"{callee}(" for callee in self.callees if callee)).calls_io_and_domain()
+        return names_call_io_and_domain(self.callees)
 
     def save(self) -> str:
         params = ", ".join(parameter.save() for parameter in self.parameters)
@@ -311,17 +315,20 @@ class Operation(InvariantHolder, OoadNode):
             source.name, source.sequential_order, source.type_hint
         )
 
-    def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
+    def reconcile_children(self, source: OoadNode) -> None:
         assert isinstance(source, Operation)
         if source.parameters:
-            return [
-                ChildCollectionPair(
-                    self_children=self.parameters,
-                    source_children=source.parameters,
-                    load=self.load_parameter,
-                )
-            ]
-        return []
+            self._parameters.reconcile(source.parameters, self.load_parameter)
+
+    def model_member(self, file: str) -> dict:
+        """This operation as the graph saves it for the model document at file."""
+        return {
+            "kind": "Operation",
+            "interactions": list(self.callees),
+            "model_parameters": [[parameter.name, (parameter.type_hint or "").strip()] for parameter in self.parameters],
+            "model_returns": (self.return_type or "").strip(),
+            "model_file": file,
+        }
 
 
 def _span_fingerprint(source_span: str) -> str:

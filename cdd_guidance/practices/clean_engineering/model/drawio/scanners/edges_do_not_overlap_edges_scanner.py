@@ -3,12 +3,12 @@ from __future__ import annotations
 
 from harness.graph.violation import Violation
 
-from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import (
     DrawioPage,
-    DrawioScanner,
     Segment,
     share_inheritance_trunk,
 )
+from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
 # Pixels a segment may lean and still count as horizontal or vertical.
 ALIGNMENT_TOLERANCE = 2

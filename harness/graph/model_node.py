@@ -7,7 +7,7 @@ Pass a graph the same way you pass another model.
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import Iterable, Iterator, Optional
+from typing import Callable, Iterable, Iterator, Optional
 
 from harness.graph.graph import EdgeType, Graph, Node, Source
 
@@ -47,6 +47,29 @@ class ModelChildren(list):
             return
         list.__setitem__(self, index, child)
         self.owner._link(child, self.kind)
+
+    def reconcile(self, sources: Iterable, load: Callable) -> None:
+        """Become sources, in their order, keeping the children already held: each source is translated into the child
+        of the same name, else the one at the same place, and a source no child matches is loaded as a new child. A
+        child no source matches is dropped. Keeping the matched child keeps what only this format knows about it, such
+        as a card's position on a diagram."""
+        consumed: set[int] = set()
+        reconciled = []
+        for source in sources:
+            match = self._match(source, consumed)
+            if match is None:
+                match = load(source)
+            else:
+                consumed.add(id(match))
+            match.translate_from(source)
+            reconciled.append(match)
+        self.owner._refill(self, reconciled)
+
+    def _match(self, source, consumed: set[int]):
+        free = [child for child in self if id(child) not in consumed]
+        return next((child for child in free if child.name == source.name), None) or next(
+            (child for child in free if child.sequential_order == source.sequential_order), None
+        )
 
 
 class ModelWithoutPractice(TypeError):
