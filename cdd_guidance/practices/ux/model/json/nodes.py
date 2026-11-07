@@ -27,28 +27,32 @@ class JsonUxMap(UxMap):
         return JsonUxMapReader(ux_map, data).read()
 
     def render(self, ux_map: UxMap) -> str:
-        return json.dumps(self.map_record(ux_map), indent=2) + "\n"
+        """ux_map in this format: copied into a map of this format, which writes itself."""
+        return type(self).copy_of(ux_map).save()
 
-    def map_record(self, ux_map: UxMap) -> dict[str, Any]:
-        """The map as the JSON document JsonUxMapReader reads. A link to a screen is written as that screen's name."""
+    def save(self) -> str:
+        return json.dumps(self.map_record(), indent=2) + "\n"
+
+    def map_record(self) -> dict[str, Any]:
+        """This map as the JSON document JsonUxMapReader reads. A link to a screen is written as that screen's name."""
         return {
-            "name": ux_map.name,
-            "scope": ux_map.scope,
-            "story_references": ux_map.story_references.as_list(),
-            "object_references": ux_map.object_references.as_list(),
-            "notes": list(ux_map.context.notes),
-            "invariants": list(ux_map.context.invariants),
-            "screens": [self._screen_record(screen) for screen in ux_map.screens],
-            "transitions": [self._transition_record(transition) for transition in ux_map.transitions],
+            "name": self.name,
+            "scope": self.scope,
+            "story_references": self.story_references.as_list(),
+            "object_references": self.object_references.as_list(),
+            "notes": list(self.context.notes),
+            "invariants": list(self.context.invariants),
+            "screens": [self._screen_record(screen) for screen in self.screens],
+            "transitions": [self._transition_record(transition) for transition in self.transitions],
             "content_types": [
                 {"name": content_type.name, "hierarchy": content_type.hierarchy,
                  "key_actions": list(content_type.key_actions)}
-                for content_type in ux_map.content_types
+                for content_type in self.content_types
             ],
             "nav_components": [
                 {"name": nav.name, "ux_type": nav.ux_type,
                  "destinations": [screen.name for screen in nav.destinations]}
-                for nav in ux_map.nav_components
+                for nav in self.nav_components
             ],
         }
 
@@ -139,7 +143,7 @@ class JsonUxMapReader:
         self.ux_map.context.invariants = list(self.data.get("invariants", []))
 
     def _screen_shell(self, screen_data: dict[str, Any], index: int) -> Screen:
-        return Screen(
+        return self.ux_map.screen_type(
             screen_data.get("name", f"Screen {index}"),
             index,
             screen_data.get("slug", ""),
@@ -165,7 +169,7 @@ class JsonUxMapReader:
             screen.append_region(self._region(region_data, index))
 
     def _region(self, region_data: dict[str, Any], index: int) -> Region:
-        region = Region(region_data.get("name", f"Region {index}"), index, region_data.get("area", ""), self.ux_map.graph)
+        region = self.ux_map.region_type(region_data.get("name", f"Region {index}"), index, region_data.get("area", ""), self.ux_map.graph)
         for control_index, control_data in enumerate(region_data.get("controls", [])):
             region.append_control(self._control(control_data, control_index))
         return region
@@ -175,7 +179,7 @@ class JsonUxMapReader:
         common = (name, index, control_data.get("control_type", ""), control_data.get("label", ""),
                   control_data.get("bound_field", ""))
         if control_data.get("kind") == "StoryDemoControl" or control_data.get("story_steps"):
-            control: Control = StoryDemoControl(
+            control: Control = self.ux_map.story_demo_control_type(
                 *common,
                 control_data.get("story_steps"),
                 control_data.get("set_input", ""),
@@ -185,7 +189,7 @@ class JsonUxMapReader:
                 graph=self.ux_map.graph,
             )
         else:
-            control = Control(*common, graph=self.ux_map.graph)
+            control = self.ux_map.control_type(*common, graph=self.ux_map.graph)
         control.states = list(control_data.get("states", []))
         for interaction_index, interaction_data in enumerate(control_data.get("interactions", [])):
             control.append_interaction(self._interaction(interaction_data, interaction_index))

@@ -18,6 +18,7 @@ from cdd_guidance.practices.stories.model.json.nodes import JsonStoryModel
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStoryModel
 from cdd_guidance.practices.stories.model.miro.nodes import MiroStoryModel
 from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.stories.model.java.java_story_model import JavaStoryModel
 from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
 from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
@@ -191,7 +192,8 @@ def _read_tree(folder: Path) -> dict:
 
 
 def _write_markdown(source: StoryModel, folder: Path) -> None:
-    _write(folder / "story-map.md", MarkdownStoryModel(source).save())
+    markdown = MarkdownStoryModel(source)
+    _write(folder / "story-map.md", markdown.save())
 
     def visit(epic, parts: list) -> None:
         for story in epic.stories:
@@ -199,16 +201,12 @@ def _write_markdown(source: StoryModel, folder: Path) -> None:
                 continue
             _write(
                 folder.joinpath(*parts, f"{_kebab(story.name)}_story.spec.md"),
-                MarkdownScenario.render_scenarios(
-                    story.scenarios,
-                    story_name=story.name,
-                    story_backgrounds=story.backgrounds,
-                ),
+                story.scenarios_text(),
             )
         for child in epic.epics:
             visit(child, parts + [_kebab(child.name)])
 
-    for epic in source.epics:
+    for epic in markdown.epics:
         visit(epic, [_kebab(epic.name)])
 
 
@@ -227,7 +225,7 @@ def _expected_typescript() -> dict:
 
 def load_source(name: str) -> StoryModel:
     if name == "markdown":
-        return StoryModel.load(EXPECTED)
+        return Stories().read_folder(EXPECTED)
     if name == "drawio":
         return DrawIOStoryModel().load((EXPECTED / "story-map.drawio").read_text(encoding="utf-8"))
     return TypeScriptStoryModel().load(_expected_typescript())

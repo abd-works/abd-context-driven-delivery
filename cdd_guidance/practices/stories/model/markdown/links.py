@@ -67,13 +67,15 @@ class _Anchors:
 
 
 class StoryMapLinks:
-    """Where each story map node links: its ``story-map.md`` entry and the story's own file.
+    """Where each node of one story map placed in a folder links: its ``story-map.md`` entry there and the story's own
+    file. The links are made once, when the map is placed in the folder.
 
     Paths are written relative to ``base``, the folder of the file being rendered.
     """
 
     def __init__(
         self,
+        story_map,
         base: Path | str,
         map_file: Optional[Path | str] = None,
         story_files: Optional[Dict[str, Path | str]] = None,
@@ -81,14 +83,13 @@ class StoryMapLinks:
         self.base = Path(base).resolve()
         self.map_file = Path(map_file).resolve() if map_file else None
         self.story_files = {_slug(k): Path(v).resolve() for k, v in (story_files or {}).items()}
+        self._entries = self._entries_of(story_map)
 
     @classmethod
-    def from_workspace(cls, root: Path | str, base: Optional[Path | str] = None) -> "StoryMapLinks":
-        """Find ``story-map.md`` and every ``*_story.test.md`` / ``*_story.spec.md`` under *root*.
-
-        Paths are written relative to *base*; by default the folder that holds ``story-map.md``,
-        where the rendered story map sits beside it.
-        """
+    def from_workspace(cls, story_map, root: Path | str) -> "StoryMapLinks":
+        """The links of story_map placed in the folder root: its ``story-map.md`` and every ``*_story.test.md`` /
+        ``*_story.spec.md`` under root, written relative to the folder that holds ``story-map.md``, where the rendered
+        story map sits beside it."""
         root = Path(root).resolve()
         map_file = root / "story-map.md"
         if not map_file.is_file():
@@ -100,9 +101,7 @@ class StoryMapLinks:
             for suffix in _STORY_FILE_SUFFIXES:
                 stem = stem.removesuffix(suffix)
             story_files.setdefault(_slug(stem), path)
-        if base is None:
-            base = map_file.parent if map_file is not None else root
-        return cls(base, map_file, story_files)
+        return cls(story_map, map_file.parent if map_file is not None else root, map_file, story_files)
 
     def story_file(self, story) -> str:
         """Relative path to the story's own markdown file, or ``""`` when it has none."""
@@ -111,8 +110,12 @@ class StoryMapLinks:
             return ""
         return _relative(path, self.base)
 
-    def entries(self, story_map) -> Dict[int, str]:
-        """``id(node)`` to its ``story-map.md#anchor`` link, for every epic, sub-epic, and story.
+    def entry_for(self, node) -> str:
+        """The node's ``story-map.md#anchor`` link; empty for a node the map does not hold, or with no story map."""
+        return next((entry for held, entry in self._entries if held is node), "")
+
+    def _entries_of(self, story_map) -> List[tuple]:
+        """Each epic, sub-epic, and story of story_map with its ``story-map.md#anchor`` link, in map order.
 
         Anchors follow the outline headings the markdown story map renders:
         ``(E) {name}`` for an epic or sub-epic, ``(S) {actor} --> {name}`` for a story, its mark naming the kind
@@ -120,25 +123,25 @@ class StoryMapLinks:
         Empty when there is no ``story-map.md``.
         """
         if self.map_file is None or not self.map_file.is_file():
-            return {}
+            return []
         target = _relative(self.map_file, self.base)
         anchors = _Anchors()
-        links: Dict[int, str] = {}
+        entries: List[tuple] = []
 
         def story_entries(epic) -> None:
             for story in epic.stories:
                 actor = f"{unlink(story.actors[0]).strip()} " if story.actors else ""
                 heading = f"{story.story_type.outline_mark} {actor}--> {story.name}"
-                links[id(story)] = f"{target}#{anchors.next(heading)}"
+                entries.append((story, f"{target}#{anchors.next(heading)}"))
 
         def sub_epic_entries(epics) -> None:
             for sub in epics:
-                links[id(sub)] = f"{target}#{anchors.next(f'(E) {sub.name}')}"
+                entries.append((sub, f"{target}#{anchors.next(f'(E) {sub.name}')}"))
                 story_entries(sub)
                 sub_epic_entries(sub.epics)
 
         for epic in story_map.epics:
-            links[id(epic)] = f"{target}#{anchors.next(f'(E) {epic.name}')}"
+            entries.append((epic, f"{target}#{anchors.next(f'(E) {epic.name}')}"))
             story_entries(epic)
             sub_epic_entries(epic.epics)
-        return links
+        return entries

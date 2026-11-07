@@ -155,7 +155,7 @@ with description("a ContextSetup"):
             fixture._name = "notes.md"
             fixture._content = "# Title\n\nSome body text with several words.\n"
             fixture.write()
-            self._result = ContextSetup().convert(str(self._root))
+            self._result = fixture.context_setup_for_a_call().convert(str(self._root))
 
         with after.each:
             fixture.release()
@@ -196,7 +196,7 @@ with description("a ContextSetup"):
             fixture._name = "deep.md"
             fixture._content = "# H1\n\n## H2\n\n### H3\n\nsome content words here\n"
             fixture.write()
-            self._result = ContextSetup().convert(str(self._root))
+            self._result = fixture.context_setup_for_a_call().convert(str(self._root))
 
         with after.each:
             fixture.release()
@@ -216,7 +216,7 @@ with description("a ContextSetup"):
             fixture._name = "flat.md"
             fixture._content = "Just plain prose with no headings at all.\n"
             fixture.write()
-            self._result = ContextSetup().convert(str(self._root))
+            self._result = fixture.context_setup_for_a_call().convert(str(self._root))
 
         with after.each:
             fixture.release()
@@ -239,7 +239,7 @@ with description("a ContextSetup"):
             fixture._name = "kept.md"
             fixture._content = "# Kept\n\nContent.\n"
             fixture.write()
-            self._result = ContextSetup().convert(str(self._root))
+            self._result = fixture.context_setup_for_a_call().convert(str(self._root))
 
         with after.each:
             fixture.release()
@@ -252,7 +252,7 @@ with description("a ContextSetup"):
 
     with context("whose convert tool is given an empty folder"):
         with before.each:
-            self._result = ContextSetup().convert(str(fixture.temporary_folder()))
+            self._result = fixture.context_setup_for_a_call().convert(str(fixture.temporary_folder()))
 
         with after.each:
             fixture.release()
@@ -273,7 +273,7 @@ with description("a ContextSetup"):
             fixture._name = "beta.md"
             fixture._content = "# Beta\n\nBeta content.\n"
             fixture.write()
-            self._result = ContextSetup().convert(str(self._root))
+            self._result = fixture.context_setup_for_a_call().convert(str(self._root))
 
         with after.each:
             fixture.release()
@@ -421,7 +421,7 @@ with description("a ContextSetup"):
             self._folder = str(fixture.temporary_folder())
             port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
-            self._result = ContextSetup().smoke_test(
+            self._result = fixture.context_setup_for_a_call().smoke_test(
                 repo_path=self._folder,
                 surface="web",
                 base_url=self._base_url,
@@ -454,7 +454,7 @@ with description("a ContextSetup"):
     with context("whose smoke_test tool is probing a non-existent server"):
         with before.each:
             self._folder = str(fixture.temporary_folder())
-            self._result = ContextSetup().smoke_test(
+            self._result = fixture.context_setup_for_a_call().smoke_test(
                 repo_path=self._folder,
                 surface="web",
                 base_url="http://localhost:19999",
@@ -475,7 +475,7 @@ with description("a ContextSetup"):
             self._folder = str(fixture.temporary_folder())
             port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
-            self._result = ContextSetup().smoke_test(
+            self._result = fixture.context_setup_for_a_call().smoke_test(
                 repo_path=self._folder,
                 surface="web",
                 base_url=self._base_url,
@@ -498,7 +498,7 @@ with description("a ContextSetup"):
             self._folder = str(fixture.temporary_folder())
             port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
-            self._result = ContextSetup().scout_app(
+            self._result = fixture.context_setup_for_a_call().scout_app(
                 repo_path=self._folder,
                 surface="web",
                 base_url=self._base_url,
@@ -543,7 +543,7 @@ with description("a ContextSetup"):
             self._folder = str(fixture.temporary_folder())
             port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
-            cs = ContextSetup()
+            cs = fixture.context_setup_for_a_call()
             self._scout = cs.scout_app(
                 repo_path=self._folder,
                 surface="web",

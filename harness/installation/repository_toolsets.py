@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
-from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.annotations.name import Name
 
 logger = logging.getLogger(__name__)
@@ -139,7 +139,7 @@ class RepositoryToolsets:
             f"{module}:{node.name}"
             for node in tree.body
             if isinstance(node, ast.ClassDef)
-            and node.name not in AgentToolSet.HOSTED_ONLY_CLASS_NAMES
+            and not self._is_hosted_only(node)
             and self._class_is_installable(node)
         ]
 
@@ -171,6 +171,10 @@ class RepositoryToolsets:
         if isinstance(target, ast.Attribute):
             return target.attr
         return None
+
+    def _is_hosted_only(self, class_def: ast.ClassDef) -> bool:
+        """Whether the class is annotated ``@hosted_only``: its tools run only through what holds it."""
+        return any(self._annotation_id(dec) == "hosted_only" for dec in class_def.decorator_list)
 
     def _class_is_installable(self, class_def: ast.ClassDef) -> bool:
         if any(self._annotation_id(dec) == "agent_toolset" for dec in class_def.decorator_list):

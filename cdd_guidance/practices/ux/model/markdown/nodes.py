@@ -28,11 +28,15 @@ class MarkdownUxMap(UxMap):
         return ux_map
 
     def render(self, ux_map: UxMap) -> str:
+        """ux_map's context: copied into a markdown map, which writes itself."""
+        return type(self).copy_of(ux_map).save()
+
+    def save(self) -> str:
         lines = [_TITLE, ""]
-        if ux_map.scope:
-            lines.extend([f"{_SCOPE}{ux_map.scope}", ""])
-        lines.extend(self._section(_INVARIANTS, ux_map.context.invariants))
-        lines.extend(self._section(_NOTES, ux_map.context.notes))
+        if self.scope:
+            lines.extend([f"{_SCOPE}{self.scope}", ""])
+        lines.extend(self._section(_INVARIANTS, self.context.invariants))
+        lines.extend(self._section(_NOTES, self.context.notes))
         return "\n".join(lines).rstrip() + "\n"
 
     def _section(self, heading: str, items: List[str]) -> List[str]:

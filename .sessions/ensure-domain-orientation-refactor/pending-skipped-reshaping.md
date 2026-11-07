@@ -47,3 +47,25 @@ From session agent (0e435a9a):
 - validate_spec.py:75 mutates repo_path after the session is made: fix the spec.
 - Declared-file matching in FidelitySessionOutput: replace with FidelityGuidance.declares after the guidance merge.
 - Regenerate the catalog HTML and reinstall after the merges.
+
+From guidance agent (4b6076e9) - lead does these after the merges:
+- Actions still read the practice's current fidelity: generate.py:90 item.instructions; document.py:27, improvement.py:34, validate.py:215 item.templates; validate.py:167,169,227 checked_rules/every_rule/checked_rule_collections; validate.py:114 item.format -> self.fidelity_of(item).<x>.
+- ddd.py overrides _skip_inactive_fidelity; stories.py and ddd.py call _activate(stage=...): move them onto held fidelities and delete the hooks.
+- FidelitySessionOutput declared-file matching -> FidelityGuidance.declares(path).
+- Format as a Format object (11 places) - public string read by cdd_guidance and space.
+- Clean Engineering companion per fidelity - one CE practice per session needs a design.
+- McpServer practice_guidance probe and FileInstallation probing toolset attributes - belong on AgentToolSet (agent_tools).
+- Lead tried `self.fidelity_of(item).templates` in the action recipes and reverted it: recipe expansion is AST-based and only expands `item.member` on the loop's item, so the text silently disappears (no spec caught it). The fix is for `each` to hand the recipe the held FidelityGuidance as its item (the fidelity answers instructions, templates, examples, generate_output), plus a spec that asserts the expanded text holds the fidelity's templates and instructions.
+
+From DDD + overlays agent (73ca30e1):
+- DDD draw.io output rebuilt on CE's diagram base classes (DiagramModule, DiagramClass), replacing DrawIOAggregateModel, _DiagramWriter, ContextLayout and the arrow_style mismatch: about 850 lines, its own pass.
+- CE TypeScript parser drops comments on constructor parameters, so `// foreign Name` can't be recorded by the CE parser yet (c_family_parse.py).
+- DDD arcs ride in the first class's doc comment; a typed part needs Python/TypeScript adapters to know DDD.
+- SketchLens.of("ddd") still by name (with the other SketchLens items).
+- Stale comment naming Graph.write_json in space/kanban save_validation_report_story.test.py:21.
+
+From CE + BDD agent (e880d325):
+- CE `folder` fact held as a node id because ddd/model/graph_reading.py:94 copies it; DDD should read the belongsTo edge, then CE stops writing it.
+- spec_model_for (Bdd) and code_model_for (CE) are the same suffix lookup: one method on PracticeGuidance.
+- Behaviour change: a draw.io edge with no UML marks now reads as association (scanners used to say unknown).
+- Catalog and install not regenerated.

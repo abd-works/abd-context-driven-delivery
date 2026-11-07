@@ -1,4 +1,4 @@
-"""Context example - generate_output override for nested action expansion specs."""
+"""ChronicleWithOutput — a practice that overrides generate_output with a recipe calling its own tool."""
 
 from __future__ import annotations
 
@@ -9,10 +9,6 @@ from harness.guidance.guidance import PracticeGuidance
 @agent_toolset
 class ChronicleWithOutput(PracticeGuidance):
     """A driving chronicle whose generate appends each trip to the driving log."""
-
-    @property
-    def toolset_name(self) -> str:
-        return "car_chronicle"
 
     @agent_instructions
     def generate_output(self) -> str:

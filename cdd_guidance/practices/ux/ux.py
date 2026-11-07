@@ -6,11 +6,15 @@ from typing import Any
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
-from harness.guidance.practice_catalogue import PracticeCatalogue
 
 
 class NoJavascriptPractice(ValueError):
     """ensure_javascript was asked for JavaScript from a practice that does not write the JavaScript a mockup imports."""
+
+
+class UxOutsideSession(ValueError):
+    """ensure_javascript was asked of a Ux that works in no session, so it has no Stories or Clean Engineering of its
+    own to render the JavaScript through."""
 
 
 @agent_toolset
@@ -73,9 +77,11 @@ class Ux(PracticeGuidance):
         return self.javascript_practice(practice).render("javascript", content, source=source_format)
 
     def javascript_practice(self, key: str) -> PracticeGuidance:
-        """The practice key, which writes the JavaScript a mockup imports: this session's own copy of it, made for the
-        session, or a new copy while Ux works in no session."""
-        practice = self.session.practices[key].guidance if self.session is not None else PracticeCatalogue.create(key)
+        """The practice key, which writes the JavaScript a mockup imports: the session's own, with the fidelity and
+        format it works at there."""
+        if self.session is None:
+            raise UxOutsideSession(f"Ux works in no session, so it holds no {key!r} practice to write JavaScript through.")
+        practice = self.session.practices[key].guidance
         if "javascript" not in practice.formats:
             raise NoJavascriptPractice(f"Practice {key!r} writes no JavaScript; Stories and Clean Engineering do.")
         return practice

@@ -122,3 +122,28 @@ with description("a ux map on a graph"):
         with it("should keep its link when a screen is renamed"):
             self.cart.name = "Basket"
             expect(self.opens_cart.to_screen.name).to(equal("Basket"))
+
+
+with description("a UxMap copied into a format"):
+    with before.each:
+        from cdd_guidance.practices.ux.model.drawio.nodes import DrawioRegion, DrawioScreen, DrawioUxMap
+        from cdd_guidance.practices.ux.model.ux_map_spec_fixture import OrderingMap, outline
+
+        self.source = OrderingMap().build(UxMap.create())
+        self.copy = DrawioUxMap.copy_of(self.source)
+        self.outline = outline
+        self.screen_type = DrawioScreen
+        self.region_type = DrawioRegion
+
+    with it("should hold the same screens, regions, controls, links, and context"):
+        expect(self.outline(self.copy)).to(equal(self.outline(self.source)))
+
+    with it("should make its screens of the format's screen type"):
+        expect(all(isinstance(screen, self.screen_type) for screen in self.copy.screens)).to(equal(True))
+
+    with it("should make its regions of the format's region type"):
+        regions = [region for screen in self.copy.screens for region in screen.regions]
+        expect(all(isinstance(region, self.region_type) for region in regions)).to(equal(True))
+
+    with it("should keep its nodes on a graph of its own"):
+        expect(self.copy.graph).not_to(be(self.source.graph))

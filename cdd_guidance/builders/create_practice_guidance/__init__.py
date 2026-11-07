@@ -1,2 +1,1 @@
-"""Catalog-folder import: `from create_practice_guidance import ...`."""
-from .create_practice_guidance import *  # noqa: F403
+"""The CreatePracticeGuidance builder. Import its class from cdd_guidance.builders.create_practice_guidance.create_practice_guidance."""

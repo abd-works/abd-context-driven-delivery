@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import html
 import json
-import re
 import shutil
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -23,46 +22,13 @@ _EXAMPLES_MANIFEST = Path(".context") / "project-approach-examples.json"
 # Folders that hold generated output, dependencies, or tool state, never an example.
 _NOT_EXAMPLE_FOLDERS = frozenset({".git", "node_modules", ".codeql", "dist", "build", "catalog", "catalog-fresh"})
 _NOT_EXAMPLE_SUFFIXES = frozenset({".pyc", ".log"})
-_DECLARED_PART = re.compile(r"(\{[^{}/]+\}/?|\*\*/|\*)")
 
 Examples = dict[CatalogFidelity, Path]
 
 
-class DeclaredFile:
-    """A file a fidelity declares in its outputs, such as ``{bounded_context}/{aggregate}/{aggregate}.ts``, as a
-    pattern that matches the end of a path. As in the session, a named folder matches folders at any depth and a named
-    part of a file name matches within it; a name used twice must be the same text both times, and ``**/`` and ``*``
-    keep their glob meaning."""
-
-    def __init__(self, declared: str) -> None:
-        self._declared = declared
-
-    @property
-    def pattern(self) -> re.Pattern[str]:
-        named: set[str] = set()
-        parts = [self._part(token, named) for token in _DECLARED_PART.split(self._declared) if token]
-        return re.compile(r"(?:^|/)" + "".join(parts) + "$", re.I)
-
-    def _part(self, token: str, named: set[str]) -> str:
-        """The pattern for one part; ``named`` holds the names earlier parts of the same path used."""
-        if token == "**/":
-            return r"(?:[^/]+/)*"
-        if token == "*":
-            return r"[^/]*"
-        if not token.startswith("{"):
-            return re.escape(token)
-        name = re.sub(r"\W", "_", token.strip("{}/"))
-        folder = "/" if token.endswith("/") else ""
-        if name in named:
-            return f"(?P={name}){folder}"
-        named.add(name)
-        return f"(?P<{name}>[^/]+(?:/[^/]+)*)/" if folder else f"(?P<{name}>[^/]+)"
-
-
 class ExampleClassifier:
-    """Which board fidelity a project file shows: the first, in the practice catalogue's order, whose declared outputs
-    name it, read from the same declarations the session uses to find a fidelity's files. Made for the project and the
-    catalog's practices."""
+    """Which board fidelity a project file shows: the first, in the practice catalogue's order, that declares it, as the
+    fidelity itself answers. Made for the project and the catalog's practices."""
 
     def __init__(self, project_root: Path, practices: list[CatalogPractice]) -> None:
         self.project_root = project_root
@@ -73,7 +39,7 @@ class ExampleClassifier:
         relative = self._relative(Path(path).resolve())
         for practice in self.practices:
             for shown in practice.board_fidelities:
-                if any(pattern.search(relative) for pattern in self._declared_patterns(shown)):
+                if shown.fidelity.declares(relative):
                     return shown
         return None
 
@@ -81,16 +47,6 @@ class ExampleClassifier:
         if path.is_relative_to(self.project_root):
             return path.relative_to(self.project_root).as_posix()
         return path.as_posix()
-
-    def _declared_patterns(self, shown: CatalogFidelity) -> list[re.Pattern[str]]:
-        """A declared folder, such as ``{module}/``, names no file, so it gives no pattern."""
-        declared = [
-            name
-            for names in shown.fidelity.outputs.values()
-            for name in ([names] if isinstance(names, str) else names)
-            if name and not name.endswith("/")
-        ]
-        return [DeclaredFile(name).pattern for name in declared]
 
 
 class ProjectFiles:

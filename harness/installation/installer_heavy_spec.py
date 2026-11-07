@@ -59,7 +59,7 @@ from harness.hooks.hooks import Hook, HookInstallation, hook
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_server import McpInstallation, McpServer
 from harness.mcp.mcp_daemon import McpDaemon
-from harness.mcp.spec_support import SpecServer, ThrowawayMachine, UserHome
+from harness.mcp.spec_support import ThrowawayMachine
 from harness.installation.ide_layout import IdeLayout
 
 
@@ -701,14 +701,11 @@ with description("an agent toolset") as self:
 
             with context("whose install standup has finished on the IDE path"):
                 with before.each:
-                    self.home = UserHome()
-                    self.home.enter()
-                    self.server = SpecServer()
-                    self.server.install()
+                    self.machine = ThrowawayMachine()
+                    self.machine.enter()
 
                 with after.each:
-                    self.server.stop()
-                    self.home.leave()
+                    self.machine.leave()
 
                 with it("should leave the hook server and the cdd server answering"):
                     installer = Installer(ide="Cursor", path=_REPO_ROOT / ".cursor", repo=_REPO_ROOT)

@@ -98,18 +98,16 @@ def stage_invoke_commands(repo_root: Path) -> None:
     cdd server, so both go to a throwaway home and ``~/.cdd`` that are removed afterwards."""
     from harness.installation.installer import Installer
     from harness.agent_tools.agent_tools import AgentToolSet
-    from harness.mcp.spec_support import SpecServer, UserHome
+    from harness.mcp.spec_support import ThrowawayMachine
 
     car = AgentToolSet.instantiate(CAR)
     car_story = AgentToolSet.instantiate("cdd_guidance.actions._examples.car_story.car_story:CarStory")
-    home, server = UserHome(), SpecServer()
-    home.enter()
-    server.install()
+    machine = ThrowawayMachine()
+    machine.enter()
     try:
         Installer("Cursor", path=repo_root / ".cursor", repo=repo_root_from(__file__, parents=3)).install([car, car_story], replace=False)
     finally:
-        server.stop()
-        home.leave()
+        machine.leave()
 
 
 def ensure_invoke_staged(repo_root: Path) -> None:

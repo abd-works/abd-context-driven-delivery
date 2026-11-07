@@ -662,7 +662,6 @@ with description("a Story Map") as self:
         with context("with a story added to the first Increment"):
             with before.each:
                 added = Story("Route transfer before cutoff", 1)
-                added.increment = self.story_map.increments[0]
                 self.story_map.increments[0].stories.append(added)
 
             with context("the first Increment"):

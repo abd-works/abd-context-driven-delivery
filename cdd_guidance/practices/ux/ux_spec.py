@@ -18,7 +18,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 
 import cdd_guidance.practices  # noqa: F401
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
-from cdd_guidance.practices.ux.ux import NoJavascriptPractice, Ux
+from cdd_guidance.practices.ux.ux import NoJavascriptPractice, Ux, UxOutsideSession
 from cdd_guidance.practices.ux.model.nodes import Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from space.session.sessions import Sessions
@@ -95,11 +95,11 @@ with description("Ux transform tool"):
 
 
 with description("Ux ensure_javascript tool"):
-    with context("a practice that writes no mockup JavaScript"):
-        with it("should refuse it as a practice with no JavaScript"):
+    with context("with Ux working in no session"):
+        with it("should refuse it as a Ux with no practices of its own"):
             expect(
-                lambda: Ux().ensure_javascript("ddd", "markdown", "")
-            ).to(raise_error(NoJavascriptPractice))
+                lambda: Ux().ensure_javascript("stories", "markdown", "")
+            ).to(raise_error(UxOutsideSession))
 
     with context("with Ux working in a session"):
         with before.each:
@@ -114,6 +114,12 @@ with description("Ux ensure_javascript tool"):
 
         with it("should get the JavaScript from that session's own Stories practice"):
             expect(self.ux.javascript_practice("stories")).to(be(self.session.practices["stories"].guidance))
+
+        with context("asked for a practice that writes no mockup JavaScript"):
+            with it("should refuse it as a practice with no JavaScript"):
+                expect(
+                    lambda: self.ux.ensure_javascript("ddd", "markdown", "")
+                ).to(raise_error(NoJavascriptPractice))
 
 
 with description("Ux contexts instruction"):
