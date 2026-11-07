@@ -24,7 +24,7 @@ from harness.mcp._examples.parameter_types.parameter_types import ParameterTypes
 from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.mcp_server import McpHost, McpInstallation
 from harness.mcp.spec_support import UserHome
-from cdd_guidance.actions.iterate.iterate import Iterate
+from harness.graph.graph import Graph
 from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
 from harness.mcp._examples.illegitimate_name.illegitimate_name import (
     IllegitimateName,
@@ -315,11 +315,11 @@ with description("an MCP host input schema"):
                     )
                 )
 
-    with context("that has been derived from iterate.iterate"):
-        with context("with a tools list parameter"):
+    with context("that has been derived from the graph's set_overlays operation"):
+        with context("with an overlays list parameter"):
             with it("should advertise JSON Schema array of string"):
-                schema = ParameterSchema(Iterate.iterate).json_schema
-                expect(schema["properties"]["tools"]).to(
+                schema = ParameterSchema(Graph.set_overlays).json_schema
+                expect(schema["properties"]["overlays"]).to(
                     equal({"type": "array", "items": {"type": "string"}})
                 )
 
@@ -433,15 +433,15 @@ with description("an MCP host") as self:
             expect(self.host.diagnose()["ping"]).to(equal("pong"))
 
         with it("should omit that tool from advertised tools"):
-            expect(self.host.diagnose()["tools"]).not_to(contain("bad name.report"))
+            expect(self.host.diagnose()["tools"]).not_to(contain("illegitimate-name.résumé"))
 
         with it("should diagnose the skipped tool as an exception"):
             expect(self.host.diagnose()["exceptions"][0]["tool"]).to(
-                equal("bad name.report")
+                equal("illegitimate-name.résumé")
             )
 
         with it("should keep a chat notice naming the skipped tool"):
-            expect(self.host.diagnose()["notice"]).to(contain("bad name.report"))
+            expect(self.host.diagnose()["notice"]).to(contain("illegitimate-name.résumé"))
 
     with context("that has stood up with a toolset that cannot be loaded"):
         with before.each:

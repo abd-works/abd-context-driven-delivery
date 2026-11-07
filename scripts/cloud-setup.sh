@@ -5,4 +5,6 @@ set -e
 cd "$(dirname "$0")/.."
 python3 -m venv .venv
 .venv/bin/pip install -q -e .
+# Context Setup's scout_app captures pages in Chromium.
+.venv/bin/python -m playwright install chromium
 .venv/bin/python scripts/install.py --ide Claude

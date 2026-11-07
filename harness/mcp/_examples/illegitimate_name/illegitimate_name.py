@@ -7,10 +7,11 @@ from harness.mcp.mcp_server import mcp
 
 @agent_toolset
 class IllegitimateName:
-    domain_slug = "bad name"
+    """A toolset slug is always kebab case, so only an operation's own name can make a published name illegal: Python
+    accepts a letter outside ASCII in a name, and MCP clients such as Cursor refuse a tool named with one."""
 
     @mcp
     @agent_tool
-    def report(self) -> str:
-        """Should not be enrolled — the toolset slug is not a legal MCP name."""
+    def résumé(self) -> str:
+        """Should not be enrolled — the operation name is not a legal MCP name."""
         return "skipped"

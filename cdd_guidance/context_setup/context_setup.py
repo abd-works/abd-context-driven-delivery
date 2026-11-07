@@ -9,6 +9,7 @@ from typing import Optional
 
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tools
+from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 from cdd_guidance.actions.partition.partition import Partition
@@ -129,6 +130,13 @@ class ContextSetup:
             partition=Partition(),
             context_index=ContextIndex(),
         )
+
+    def for_call(self, call: ToolCall) -> ContextSetup:
+        """A ContextSetup made for call. Its partition is made for the session the call works in, so the index and
+        segments it asks for land in that session's folder; and the capture fields a tool sets, such as repo_path, stay
+        with this call instead of reaching a call from another chat."""
+        partition = self.partition.for_call(call) if self.partition is not None else None
+        return type(self)(self.stories, self.clean_engineering, self.ddd, self.ux, partition, self.context_index)
 
     def _apply_tool_modes(self) -> None:
         for kit in (self.stories, self.clean_engineering, self.ddd, self.ux):

@@ -29,6 +29,10 @@ dependencies = [
   "uvicorn>=0.31.1",
   "mamba>=0.11.3",
   "nltk>=3.9",
+  # Context Setup: convert reads documents, smoke_test probes a running app, scout_app captures its pages.
+  "markitdown[docx,pdf,pptx]>=0.1.8",
+  "requests>=2.32",
+  "playwright>=1.50",
 ]
 
 [tool.setuptools.packages.find]
