@@ -1,18 +1,12 @@
-# grill_context — module context
+# cdd_guidance/actions/grill_context
+*Grill* is an interview about a plan that is grounded in the project's context files: every question names the files it was drawn from and frames the decision before offering options, and each resolved answer is written straight to the session root's `.context/grill-answers.md`, so the answers outlast the chat. `grill-context.grill(guidance)` (slash `/grill`) interviews the plan and then generates each listed Guidance; the `grill_with_context` instructions are the interview alone, which `actions/sketch` and `actions/iterate` wrap with their own cadence.
 
-## Purpose
-`GrillContext` drives the codebase-aware interview loop used by sketch, iterate, and any other stage that needs to ground design decisions in existing context files. It scans a directory tree for context-named files and `.context/` folders, reads them on demand, and persists each resolved insight immediately to `{path}/.context/grill-answers.md` (durable across sessions). The `grill_with_context` action enforces a strict prove-read gate: options are never presented until the relevant context files have been read and cited. `grill(tools)` is the practice grill body (open, record decisions, grill_with_context, generate) run once per passed context tool via inherited `AgenticToolset.context_tools`. `/grill` invokes this toolset — not each context tool's host `grill`.
+The MCP tools `grill-context.explore_context_files(folder)`, `grill-context.read_context_file(path)`, and `grill-context.write_grill_answer(heading, body)` find context files under the session's root, confirm a file before it is read, and record an answer.
 
-## Seam
-`GrillContext`
+- **Purpose:** Turn a vague plan into decisions grounded in what the codebase already says, one framed question at a time, with every answer kept.
+- **Seam (terms):** GrillContext, `grill-context.grill`, `grill_with_context`, `grill-context.explore_context_files`, `grill-context.read_context_file`, `grill-context.write_grill_answer`
+- **Dependencies (one-way):** `cdd_guidance/actions` (*Generate*), `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*), `harness/agent_tools`, `harness/installation`, `harness/mcp`
 
-## Dependencies
-`harness.agent_tools`, `tools.tool`, `sessions`
+## Constraint
 
-## Public API
-- `explore_context_files`, `read_context_file`, `write_grill_answer`
-- `grill_with_context(plan)`
-- `grill(tools)` — practice grill body once per passed context tool
-
-## Mechanism
-Prove-read gate — every question turn must name the context file(s) read and ground options in concrete terms from them before asking; skimming titles or relying on memory is treated as a defect.
+Read the cited context files before asking: a question must name the files read and use their terms, because a question from a skim or from memory asks the person to decide without the facts. Ask one framed question at a time and write each answer as soon as it is resolved; do not batch answers at the end.

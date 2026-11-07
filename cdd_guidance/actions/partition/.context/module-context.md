@@ -1,21 +1,12 @@
-# PartitionPipeline
+# cdd_guidance/actions/partition
+*Partition* splits a large source — a document set or a codebase — into an *index* and verbatim *segments*, so later work reads exactly the part of the source it needs instead of a summary. The index, `{subject}-index.md`, names every segment and the entries each must hold; a segment, `*-segment.md`, is one verbatim chunk of source, and it is complete only when every entry the index named for it is present with a body. Each practice partitions through its own lens: `partition.partition(guidance, paths)` (slash `/partition`) runs once per listed Guidance, guided by the practice's `partition.md` or its Overview.
 
-**Purpose:** Thin, additive partition of source corpora into index + verbatim segments, with named-entry completeness on catalog chunks.
+The MCP tools `partition.index`, `partition.segment`, and `partition.verify_segment_completeness` write the index, write the segments, and fail a segment that drops a named entry.
 
-**Primary use case:** Call `partition` / `index` / `segment`; hard-fail new catalog chunks via `verify_segment_completeness`.
+- **Purpose:** Turn a large source into an index plus verbatim chunks that every later stage can cite, with a hard check that no named entry was lost.
+- **Seam (terms):** Partition, `partition.partition`, `partition.index`, `partition.segment`, `partition.verify_segment_completeness`
+- **Dependencies (one-way):** `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*), `harness/markdown` (`@markdown`), `harness/agent_tools`, `harness/installation`, `harness/mcp`
 
-**Rationale:** Durable artifacts are resources — `PartitionIndex` (root index + project config) and `Segment` / `SegmentEntry` (chunks). Project-specific completeness knobs live in the index config block, never hardcoded in the kit.
+## Constraint
 
-**Seam:** `PartitionPipeline`, `PartitionIndex`, `Segment`, `SegmentEntry`
-
-**Constraint:** Do not treat span length alone as completeness PASS. Do not hardcode corpus/project header lists in kit code — put them in `{subject}-index.md` `<!-- partition-config -->`. Later lenses must add to the shared index/chunks — they must not wipe or re-chunk existing segments.
-
-## Public API
-
-- `PartitionPipeline` — `partition`, `index`, `segment`, `verify_segment_completeness`, `partition_guidance`
-- `PartitionIndex` — props: `path`, `text`, `completeness`; ops: `from_text`, `resolve_near`
-- `SegmentCompletenessConfig` — `min_body_chars`, `non_entry_headers`, `short_body_pattern` (from index `<!-- partition-config -->`)
-- `Segment` — props: `path`, `text`, `config`, `expected_names`, `has_expected_names`, `is_complete`; ops: `from_text`, `entries`, `completeness_report`
-- `SegmentEntry` — props: `name`, `body`, `body_chars`, `status`, `is_complete`
-
-**Dependencies:** (none)
+Pass the source by path; never put the corpus on an MCP call. Index by the practice's lens, not by the source's own table of contents. Judge a segment complete by its named entries, never by its length. Put project-specific completeness settings in the index's `<!-- partition-config -->` block, not in code. A later practice adds its columns to the shared index and segments; it never wipes or re-chunks what an earlier practice wrote.

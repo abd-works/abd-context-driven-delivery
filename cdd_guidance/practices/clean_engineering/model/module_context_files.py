@@ -1,4 +1,4 @@
-"""Read the module card (`.context/module-context.md`, or `.context/modules.md`) next to a class source file.
+"""Read the module card (`.context/module-context.md`) next to a class source file.
 
 These helpers open the sibling module-context file and apply the same text
 checks the scanners use.
@@ -34,16 +34,12 @@ _PRIVATE_NAME = re.compile(r"(?<![A-Za-z0-9*])(_(?!is_)[A-Za-z][A-Za-z0-9_]*)\b"
 _SIX_DASHES = re.compile(r"^------\s*$", re.MULTILINE)
 _SOURCES = re.compile(r"^\s*\*\*Sources\s*/\s*context:\*\*", re.MULTILINE | re.IGNORECASE)
 _LIVE_INSTANCE = re.compile(r"Live instance:", re.IGNORECASE)
-_CARD_NAMES = ("module-context.md", "modules.md")
+_CARD_NAME = "module-context.md"
 
 
 def module_card(folder: Path) -> Path:
-    """The folder's module card: `module-context.md`, else `modules.md`, in its `.context`."""
-    context = folder / ".context"
-    for name in _CARD_NAMES:
-        if (context / name).is_file():
-            return context / name
-    return context / _CARD_NAMES[0]
+    """The folder's module card: `module-context.md` in its `.context`."""
+    return folder / ".context" / _CARD_NAME
 
 
 class ModuleContext:

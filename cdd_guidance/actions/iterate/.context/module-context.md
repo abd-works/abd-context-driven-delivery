@@ -1,18 +1,10 @@
-# iterate — module context
+# cdd_guidance/actions/iterate
+*Iterate* builds the formal artifacts in short cycles: a few grill questions, then only the slice of the deliverable those answers unlocked, validated, with one fix pass and the person's feedback before the next questions. `iterate.iterate(guidance, tools)` (slash `/iterate`) runs the cycles for each listed Guidance; `iterate.mark_iterate_tick` records that a cycle's generate-validate-fix step is due.
 
-## Purpose
-`Iterate` enforces a disciplined grill-then-generate loop over formal output, producing only one small, scanner-validated slice per tick. It wraps `GrillContext.grill_with_context` and applies a hard gate before each generate step: the last two or three grill answers must name a concrete slice boundary grounded in a prove-read of the relevant context files. After each generate, it runs validate and applies one fix pass before returning to the grill. Dumping a whole artifact in a single tick is explicitly a defect. `iterate(tools)` is the practice iterate body (open, record decisions, iterate_session, generate) run once per passed context tool via inherited `AgenticToolset.context_tools`. `/iterate` invokes this toolset — not each context tool's host `iterate`.
+- **Purpose:** Deliver a large artifact in small agreed slices instead of one unreviewed dump.
+- **Seam (terms):** Iterate, `iterate.iterate`, `iterate.mark_iterate_tick`
+- **Dependencies (one-way):** `cdd_guidance/actions/grill_context` (*GrillContext*), `cdd_guidance/actions` (*Generate*), `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*), `harness/agent_tools`, `harness/installation`, `harness/mcp`
 
-## Seam
-`Iterate`
+## Constraint
 
-## Dependencies
-`grill_context.grill_context`, `harness.agent_tools`, `tools.tool`
-
-## Public API
-- `mark_iterate_tick`
-- `iterate_session(plan)`
-- `iterate(tools)` — practice iterate body once per passed context tool
-
-## Mechanism
-Tick discipline — each cycle is grill → mark_iterate_tick → generate one slice → validate → one fix pass → stop; the loop never chains ticks or pre-authors output while grilling.
+Generate only after two or three answers name one concrete slice, and stop after that slice's validation and fix pass for feedback. Never chain cycles or write output ahead of the questions. Iterate works on the formal artifacts; use `actions/sketch` for a rough draft.

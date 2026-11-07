@@ -1,11 +1,10 @@
 # harness/health
+*ServerHealth* tells a person whether the parts of CDD that run beside the MCP server are up — the Session Board app, the graph app, and the hook server — and which port each app answers on, so the server health band in the chat can show them without anyone opening a terminal. A caller asks with the `server-health.report` MCP operation, or through its TypeScript language adapter.
 
-- **Purpose:** Tell a person whether the parts of CDD that run outside the MCP host are up, so the server health band can show them without anyone opening a terminal.
-- **Seam (terms):** ServerHealth, with the `cdd` MCP tool `server-health.report`
-- **Dependencies (one-way):** harness/hooks (HookDaemon, HookServer), harness/mcp (`mcp`), scripts/instances (the graph app's ports)
+- **Purpose:** Report whether the board app, the graph app, and the hook server are running, for the chat's server health band.
+- **Seam (terms):** ServerHealth; the MCP operation `server-health.report`
+- **Dependencies (one-way):** harness/agent_tools, harness/installation (`@language_adapter`, `@data_field`), harness/mcp, harness/hooks (*HookDaemon*, *HookServer*), space/work_state (the project being worked on), `scripts/instances.py` (the graph app's ports). It reads the board app's port as a number and imports nothing from harness/kanban.
 
 ## Constraint
 
-This tool can only answer while the MCP host is up, so it reports the graph app and the hook server and nothing about the host itself. The server health band in `harness/chat-ui/pane/hooks/health/` works out that the MCP host is lost or that tools are missing from how its own calls fail, and counts the loaded tools from the session's tool list.
-
-The band is drawn by the `cdd-board` plugin in `harness/chat-ui/pane`, which already runs in every chat.
+The report answers only while the MCP server is up, so it says nothing about the server itself; the band in harness/chat-ui/pane works out that the server is lost, or that tools are missing, from how its own calls fail. The band calls the report after every cdd call and every prompt, so the operation stays out of the session log (`@noSessionLog`).

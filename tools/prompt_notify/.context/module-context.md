@@ -1,29 +1,12 @@
-## Language
-
-*Prompt notify* toasts the invoked action, practice, fidelity, or guideline on Cursor `preToolUse`. Authors mark members with `@echo`; PromptNotify writes `.cursor/prompt-notify-toast.json`.
-
-Object model: [prompt-notify-model.md](prompt-notify-model.md).
-
-### Echo
-
-- Put `@echo` on an AgentOperation or AgentInstructions so that invoke toasts.
-- One mark on `GuidanceAction.begin` covers every kit because every kit runs `begin`.
-- **Invariant:** practice and fidelity `instructions` toast only when those members are marked — never because `begin` is marked.
-
-### PromptNotify
-
-- Cursor fires `preToolUse`. PromptNotify names the invoked member from Echo, or from catalog when no mark hits, then writes the IDE notice.
-- **Invariant:** `show_ide_toast` joins same-burst inject lines. A later matching glob must never overwrite an earlier Guidance.
-
-Build order: `harness/hooks` → `tools/prompt_notify`
-
----
-
 # tools/prompt_notify
-- **Purpose:** Mark members with *Echo* and toast the invoked action, practice, fidelity, or guideline on `preToolUse`.
-- **Seam (terms):** Echo, PromptNotify
-- **Dependencies (one-way):** `installation` (*Destination*), `harness/hooks` (*Hook*), `harness/agent_tools`
+*PromptNotify* shows an IDE toast naming the action, practice, fidelity, or guideline an agent has just invoked, so a person watching the chat sees which guidance is being used. It handles the `preToolUse` hook, writes the notice to `.cursor/prompt-notify-toast.json` in each workspace folder, and installs the IDE toast extension that shows it. The model behind it is in [prompt-notify-model.md](prompt-notify-model.md).
+
+*Echo* is the mark `@echo` an author puts on an `@agent_tool` or `@agent_instructions` member so that calling it toasts. `harness/guidance_actions` marks the step every guidance action starts with, so each action toasts without its own mark.
+
+- **Purpose:** Make the guidance an agent is following visible to the person while it runs.
+- **Seam (terms):** PromptNotify, Echo (`@echo`)
+- **Dependencies (one-way):** `harness/agent_tools`, `harness/installation` (*Destination*, *Installer*), `harness/hooks` (*Hook*). `harness/guidance_actions` imports `@echo` and *PromptNotify* from this module, so the framework reaches up into `tools`.
 
 ## Constraint
 
-Callers mark members with `@echo`. They must not treat inherited begin as the echo for practice or fidelity instructions. They must not overwrite an earlier Guidance when joining same-burst toasts.
+Mark members with `@echo`. Practice and fidelity `instructions` toast only when those members are marked, never because the step every action starts with is marked. Toasts that arrive in the same burst join their rule lines under one `rules :` prefix; a later matching guideline never overwrites an earlier one.

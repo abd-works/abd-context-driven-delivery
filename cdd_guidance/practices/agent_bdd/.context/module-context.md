@@ -1,22 +1,12 @@
-# Module: agent_bdd
+# cdd_guidance/practices/agent_bdd
+*Agent BDD* specs are mamba tests that drive a real agent and assert on what it actually did. Inside `with agent(workspace, session_file):`, `instruct(prompt)` gives the agent a natural-language step and returns an *AgentResult*; `instruct_use_tool(prompt)` runs a toolset request in-process and returns a parsed *RunResponse* to assert on; `ai_judge(output, rubric)` fails the spec when an AI judge finds the prose does not meet the rubric. The same block runs either through the agent CLI or in the chat, chosen by `AGENT_BDD_IN_CHAT` or the spec's manifest.
 
-**Purpose:** Drive real-agent BDD specs through a shared `agent(...)` harness that routes to CLI or in-chat execution, then assert on parsed `RunResponse` fields and AI-judged prose.
+The spec helpers — such as `run_toolset`, `expect_ok_action`, `expect_tools_include`, `expect_instructions_contain`, and `generate_and_judge` — hold the request, assertion, and judging steps specs repeat. *AgentBdd* is the practice that writes these specs, layering the agent harness rules on BDD's test discipline (`agent-bdd.instructions`).
 
-**Seam:** `agent`, `instruct`, `instruct_use_tool`, `ai_judge`; `spec_helpers` for shared YAML/prompt/assert helpers; generator `AgentBdd` for scaffolding agent specs that compose vanilla `Bdd`.
+- **Purpose:** Test agent behaviour end to end against a real agent, so a spec fails when the agent would actually do the wrong thing.
+- **Seam (terms):** AgentBdd, `agent`, `instruct`, `instruct_use_tool`, `ai_judge`, AgentResult, RunResponse, `agent-bdd.instructions`
+- **Dependencies (one-way):** `cdd_guidance/practices/bdd` (*Bdd*), `cdd_guidance/actions` (*Generate*), `harness/guidance` (*PracticeGuidance*), `harness/agent_tools`, `harness/installation`, `harness/mcp` (spec server)
 
-**Constraint:** Specs must call the free harness functions only inside `with agent(...)`. Never mock the harness or agent output. Do not import CLI/chat backends directly from specs — use the package seam. Prefer `spec_helpers` (`run_toolset`, `expect_ok_action`, …) over copying prompt/assert boilerplate.
+## Constraint
 
-## Public API
-
-- `agent(workspace, session_file, *, in_chat=None)`
-- `instruct(prompt, *, timeout_seconds=300) -> AgentResult`
-- `instruct_use_tool(prompt, *, timeout_seconds=300) -> RunResponse`
-- `ai_judge(output, rubric, *, timeout_seconds=180)`
-- `AgentResult`, `RunResponse`, `JudgeResult`, `AgentSession`
-- `AgentSpecManifest`, `AgentSpecRunbook`, `read_manifest`, `build_runbook`
-- Spec helpers: `repo_root_from`, `sessions_dir`, `dump_run_yaml`, `tools_run_prompt`, `run_toolset`, `read_workspace`, `follow_instructions`, `manifest_command_from_header`, `run_manifest_from_header`, `expect_ok_action`, `expect_ok_tool`, `expect_tools_include`, `expect_tools_exclude`, `expect_instructions_contain`, `expect_instructions_contain_any`, `tools_run_captures`, `combined_capture_text`, `expect_capture_mentions`, `generate_similar_prompt`, `generate_similar_rubric`, `generate_and_judge` (pass-file generate + AI judge; mistake specs use this instead of a parallel eval harness)
-- `AgentBdd` generator: `generate_output` composes vanilla `Bdd` via the Generate kit. Lifecycle validate / satisfy / repair live on kits (`Generate().generate(tools=[agent_bdd])`).
-
-**Dependencies:** `Bdd` / `BaseContextTool` (generator); `cli_agent.CursorCli` for cursor-agent spawn; in-chat inbox; fenced YAML CLI envelope parsing.
-
-**Mechanism:** Thread-local free functions delegate into the active harness block. Specs stay end-to-end — never mock the harness.
+Call `instruct`, `instruct_use_tool`, and `ai_judge` only inside `with agent(...)`; outside it they raise `RuntimeError`. Never mock the harness or the agent's output. Import the harness from `agent_bdd`, never the CLI or chat implementation directly. Use the spec helpers instead of copying request and assertion code into each spec.

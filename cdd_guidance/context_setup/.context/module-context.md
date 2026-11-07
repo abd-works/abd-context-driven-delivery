@@ -1,30 +1,12 @@
-# Modules
+# cdd_guidance/context_setup
+*Context Setup* captures a project's existing knowledge — a folder of documents, or a live application — and turns it into context the practices can work from: documents are converted to markdown, partitioned through the selected practices (Stories, DDD, UX, Clean Engineering), and embedded into one searchable index. `context-setup.capture_from_documents` runs that whole pipeline for a folder; `context-setup.capture_from_live_app` captures a running web, desktop, or API application through `context-setup.smoke_test`, `context-setup.scout_app`, and `context-setup.complete_capture`; `context-setup.convert` converts a folder of documents to markdown on its own.
 
-*ContextSetup* converts a folder of documents to markdown, partitions through selected practices, and embeds a FAISS index you can ask.
-## cdd_guidance.context_setup
-### Public Seam
-#### ContextSetup
-#### ContextIndex
-#### RankedChunk
-#### EmbedResult
-#### SearchResult
-#### EmbeddingProvider
-#### OpenAIEmbeddingProvider
-#### StructureNote
-#### ConversionResult
-#### ScreenResult
-#### SmokeTestResult
-#### PageCapture
-#### ScoutResult
-#### CaptureResult
-### Dependencies
- - `cdd_guidance.actions.partition` — uses
- - `cdd_guidance.practices.clean_engineering` — uses
- - `cdd_guidance.practices.ddd` — uses
- - `cdd_guidance.practices.stories` — uses
- - `cdd_guidance.practices.ux` — uses
----
+*Context Index* is the searchable index of those segments: `context-index.embed` embeds segment files into a FAISS index, `context-index.search` returns the chunks most relevant to a query, and `context-index.ask` answers a question from the index with citations. *EmbeddingProvider* is the interface an embedding service implements to be used by the index; OpenAI embeddings are the default.
 
-### Constraint
+- **Purpose:** Turn existing documents or a running application into partitioned, indexed context that later stages can search and cite.
+- **Seam (terms):** ContextSetup, ContextIndex, EmbeddingProvider, `context-setup.capture_from_documents`, `context-setup.capture_from_live_app`, `context-setup.convert`, `context-setup.smoke_test`, `context-setup.scout_app`, `context-setup.complete_capture`, `context-index.embed`, `context-index.search`, `context-index.ask`
+- **Dependencies (one-way):** `cdd_guidance/actions/partition` (*Partition*), `cdd_guidance/practices/stories`, `cdd_guidance/practices/ddd`, `cdd_guidance/practices/ux`, `cdd_guidance/practices/clean_engineering`, `harness/agent_tools`, `harness/installation`, `harness/mcp`; FAISS and an embedding service (OpenAI by default)
 
-*(none named in this file yet)*
+## Constraint
+
+Partition through the practices before embedding; the index holds practice segments, not raw documents. Ask and search against an index built by `context-index.embed`, passing its folder as `index_path`. Context Setup is a plain toolset of pipeline steps, not a practice: it has no fidelities to generate or validate (decision `.context/cdr/0001-plain-toolset-not-context-domain.md`).

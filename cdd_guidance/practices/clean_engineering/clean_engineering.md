@@ -98,6 +98,8 @@ Do not inventory names with no job (“Live instance: operations, instructions�
 
 Never document internals in module-context. The caller-facing contract is the only thing that should survive into documentation; implementation details live in source code and session notes. If someone needs to read the internals to use the module, the interface is too shallow.
 
+Write each module's card once, in that module's own `.context/module-context.md`; a folder that only groups modules is carded in its parent's card file, and no card is copied into a second file, because two copies drift apart. Write the dependencies the imports actually have, cycles included, and name the cycle rather than the intended direction, because a card that hides a cycle tells the next reader the module can change on its own when it cannot.
+
 **When you correct `module-context.md`.** Every mistake found in that file — this pass or a later one — is a gap in this fidelity. Name the prohibition in modules Guidance or Rules in the **same turn** as the file fix. Do not patch only the artifact.
 
 #### Scaffold
@@ -137,11 +139,11 @@ Whenever you create, alter, or delete object-oriented boundaries and public seam
 - `use-typed-signatures` — Use typed public signatures. Do not put vanilla `dict`, `Any`, or untyped lists on them — an untyped bag moves every shape error to runtime and leaves the caller guessing which keys are required.
 - `general-purpose-surface` — Do not shape the seam for one caller’s UI or workflow. The second caller then either needs a near-duplicate operation or has to reshape its data to look like the first caller’s.
 - `temporal-independence` — Leave the module valid after every public operation. Do not require a call order unless you document it, because an undocumented order fails on the first untested path.
+- `seam-names-current-code` — Every class, operation, constructor parameter, decorator, and module path a card names exists in the code today; when code is renamed or removed, the card changes in the same pass. A card that cites a removed name sends callers to code that is gone.
 
 **Define dependencies**
 
-- `one-way-deps` — Make dependencies flow in one direction without cycles. A cycle prevents either module from changing or being tested independently.
-- `extensions-live-with-the-domain` — Domain extensions of a framework belong in the domain module — a nested package under that domain is fine. Do not host them in the base framework package. `GraphEpic` lives with Stories, not in Knowledge Graph; otherwise the framework depends on every practice and cannot stay generic.
+- `one-way-deps` — Make dependencies flow in one direction without cycles. A cycle prevents either module from changing or being tested independently.- `extensions-live-with-the-domain` — Domain extensions of a framework belong in the domain module — a nested package under that domain is fine. Do not host them in the base framework package. `GraphEpic` lives with Stories, not in Knowledge Graph; otherwise the framework depends on every practice and cannot stay generic.
 - `low-coupling` — Depend only through other modules’ seams. Keep sibling imports few. Reaching past a seam freezes that module’s internals — it can no longer change them without breaking you.
 - `layer-separation` — keep dependent modules at different levels of abstractions. Collapse pass-through modules — a module that only forwards turns every signature change into an edit in three files instead of one.
 

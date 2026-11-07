@@ -1,41 +1,13 @@
-## Language
+# harness/installation
+*Installer* publishes every marked toolset member in the repository into an IDE's folder (`.claude`, `.cursor`, `.github`, Kilo), so an author never writes a skill, command, rules file, MCP entry, or hook entry by hand. A person runs it as `/install`, or `python scripts/install.py --ide Claude`, and `/clean` removes what it wrote.
+*Destination* is where a member is published, and the author chooses it with a mark on the member: `@skill`, `@command("name")`, `@rules`, `@mcp` (harness/mcp), or `@Hook("event")` (harness/hooks). A member with no destination mark stays in-process. `@noDeploy` keeps a member out of every destination, and `@noCatalog` keeps it out of the generated catalog without changing what is installed.
+*Installation* writes one destination's files; harness/mcp and harness/hooks each extend it and *Destination* for their own channel, so a new channel is one more pair rather than a change to *Installer*.
+`@language_adapter(language="typescript")` on a toolset class publishes its `@mcp` operations as typed TypeScript, so an application outside Python calls the same tools as typed objects; `identity` names the data fields a tool loads the object by. `@data_field` under `@property` marks a property as part of the object's data, `@edits("field")` names the field an operation changes when its argument is called something else, and *SourceFile* marks a field that holds a path in the session's workspace. `data_of(value)` is the one way an object becomes JSON data, for every MCP answer and every language adapter type alike.
 
-*Installation* publishes marked toolset members into an IDE tree so an author does not write those files by hand. Cursor’s MCP host and hook process live under `harness/`.
-
-### Installer
-
-- Collects installable toolsets from the repo and writes each marked member to the current *Installation*.
-- `/install` is this kit. Point it at an IDE path that exists.
-- `diagnose_after_install` is the last install step: it runs `diagnose_install`, grades green / yellow / red, and appends an install section to `diagnostics.json` on the install path. Guidance probes are `/guidance-diagnostics` on *GuidanceDiagnostics*; workspace MCP probes (space, harness, tools only) are `/agent-tools-diagnostics` on *AgentToolsDiagnostics* (`diagnostics.json` → `agent_tools`), not *Installer*.
-- Installer instructions live in `installer.md`. `@markdown` properties load each section. `diagnose_instructions` returns the Diagnose section.
-
-### Destination
-
-- Put `@skill`, `@command`, `@rules`, `@mcp`, or `@Hook` on a member when that channel should receive it. Unmarked members stay in-process.
-- Put `@language_adapter(language="typescript")` on a toolset class when an application outside Python needs its `@mcp` operations as typed code, and name its `identity` when its tools load one object by name. It marks the class, not a member, because the installer writes the whole object as one file of code.
-- Put `@data_field` under `@property` for each property that is part of an object's data. `data_of(value)` is the one way an object becomes JSON data, for every MCP answer and the language adapter's types alike, so a path always reads with forward slashes.
-
-### Installation
-
-- One write channel per destination. Subclasses implement **write**; callers ask `install(tool)`.
-
-### FileInstallation
-
-- Writes skill, command, and rules markdown. Marks live on the member (`@skill`, `@command`, `@rules`).
-
-### LanguageAdapterInstallation
-
-- Writes typed code for a toolset marked `@language_adapter(language="typescript")` to `{install path}/language-adapters/typescript/`, in the folders its source sits in: its data, typed from the properties it marks with `@data_field`, a class that reads it, and a class that calls its MCP tools. It records toolsets during the walk and writes them together, because their files import each other. The mark sits on the class, not a member, because the whole object is one file.
-
-Build order: `harness/installation` → `harness/mcp` → `harness/hooks`
-
----
-
-# installation
-- **Purpose:** Publish a toolset’s marked members into Cursor (or VS Code / Kilo) so the agent can invoke them as skills, MCP, hooks, commands, or rules.
-- **Seam (terms):** Installer, Destination, Installation, FileInstallation, LanguageAdapterInstallation, Skill, Command, Rules
-- **Dependencies (one-way):** `harness/agent_tools`, `harness/mcp`, `harness/hooks`
+- **Purpose:** Publish the members authors mark into each IDE as skills, commands, rules, MCP tools, hooks, and typed language adapters, from one walk of the repository.
+- **Seam (terms):** Installer, Destination, Installation, SourceFile; the marks `@skill`, `@command`, `@rules`, `@noDeploy`, `@noCatalog`, `@language_adapter`, `@data_field`, `@edits`; `data_of(value)`; `/install` and `/clean`
+- **Dependencies (one-way):** harness/agent_tools, harness/markdown, harness/guidance (*RulesCollection*, when rules files are written), harness/mcp, harness/hooks. Every one of these imports this module back, so it sits in one dependency cycle with them (`.sessions/_backlog/break-module-dependency-cycles.md`).
 
 ## Constraint
 
-Do not subclass *AgentToolSet* here. Marks live on members; *Installer* walks them, including `harness/`. If `.install-state.json` points at a missing directory, install to `{repo}/.cursor`. Import this package as `harness.installation`. Do not put `harness/` on `PYTHONPATH` as a catalog root — `import mcp` must load the MCP SDK, not `harness.mcp`.
+Put the destination mark on the member, never in a list on the toolset, so moving a member moves its publication with it. Change installed files only by changing the marked source and installing again; `.claude/`, `.cursor/`, `.github/`, `.mcp.json`, and the `cdd` entry in `~/.claude.json` are overwritten on every install. Install into an IDE folder that exists: when `.install-state.json` names a folder that is gone, the install goes to `{repo}/.cursor`. Import this package as `harness.installation`, and leave `harness/` off `PYTHONPATH`, so `import mcp` loads the MCP SDK.

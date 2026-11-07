@@ -1,28 +1,12 @@
-# story-demo
+# cdd_guidance/practices/ux/story-demo
+*Story Demo* runs a mockup against its stories in the browser, so a person can watch a story play through the screens or drive the screens themselves. `StoryDemoPage.load(createStory, mode)` loads a story into the page in one of two modes: *Play*, where the explorer steps through the story's scenarios with `playNext`, and *Interactive*, where using a *StoryDemoControl* runs the story steps attached to it. The mockup's HTML marks which controls, lists, and inputs take part through `data-` attributes the generated mockup already writes.
 
-UX Story Demo: shell (`StoryDemoPage` / frames / controls) + `play-dual-runner/`.
+*PlayDualRunner* collects a story's Given/When/Then steps and plays them one at a time in the browser, reporting a failed Then without stopping the page. `story-test-core` defines stories with `story`, `scenario`, and `collect` in a form that runs both in the browser and under Node's test runner (`story-test-node`), and `soft-assert` gives browser-safe Then assertions.
 
-## Seam
+- **Purpose:** Show a mockup working through its stories, step by step or by hand, without a backend.
+- **Seam (terms):** StoryDemoPage, PlayDualRunner, StoryDemoControl, `story-test-core`, `story-test-node`, `soft-assert`
+- **Dependencies (one-way):** `cdd_guidance/practices/ux/model` (*StoryDemoControl*, which the HTML mockup is rendered from)
 
-Callers load a story via `StoryDemoPage.load(createStory, mode)`, Play via explorer `playNext`, Interactive via `StoryDemoControl` `story_steps` → When `fn`.
+## Constraint
 
-**Model:** Python `ux_model.StoryDemoControl : Control`. HTML emits `data-bound-field` / `data-story-steps` / Interactive extras. JS hydrates via `fromElement`.
-
-**Bound lists (generic):** `[data-bound-list]` + `data-bound-field` (expose array path). Optional:
-- `data-item-story-steps` — shared When; row click runs When (`input` via `data-set-input` / `data-item-value`)
-- `data-set-input` alone — row selects only; a button When reads `input(...)`
-- `data-item-label` — `{field}` template for row text
-
-**Interactive inputs:** `data-input-field` / `data-set-input` → `input(key, default)`.
-
-**Interactive session:** mount keeps expose domain (`cart`, `product`, …) across story switches; stories use `session("cart", () => factory…)`. Reset clears session.
-
-**Interactive story jump:** control When label → owning story on the map, then run When.
-
-**Runner:** `play-dual-runner/` (same UX Story Demo package — not Stories).
-
-Constraint: vanilla `Control` has no `story_steps`. HTML imports `story-test-core` only.
-
-Worked UX example (not part of this package): `practices/ux/_examples/manage-customer-orders/`.
-
-Engagement wire (e.g. Create Character HTML) lives under `sandbox/…`.
+A plain *Control* has no story steps; only a *StoryDemoControl* runs them. A mockup's HTML imports `story-test-core` only, never the Node backend, so it runs in the browser. Keep the domain objects a story exposes across story switches in the page's session, and reset clears them.

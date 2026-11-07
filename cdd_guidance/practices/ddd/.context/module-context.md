@@ -1,26 +1,12 @@
-# Module: ddd
+# cdd_guidance/practices/ddd
+*Ddd* (domain-driven design) organizes the solution around how the business works, in the words the business already uses. Its fidelities deepen one domain: the *bounded context* map draws where the language changes — business areas, departments, and systems — and the aggregates that protect rules inside each (`ddd-bounded-context`); the *model* draws each aggregate's root, the entities and values it owns, its repository, and its domain operations, with nothing technical (`ddd-model`); *tactics* classifies the remaining building blocks — factories, specifications, domain services, domain events, interfaces to other systems — picks one implementation pattern for each, and implements the domain (`ddd-tactics`). `ddd.instructions` is the practice's guidance at its current fidelity.
 
-**Purpose:** Apply DDD — bounded contexts, aggregates, building blocks — on top of CleanEngineering. CE owns the OO ladder; Ddd overlays strategic/domain vocabulary and fidelity mapping.
+*BoundedContextMap* is the domain model every DDD format reads — sketch, markdown, and draw.io. The code formats, Python and TypeScript, write the same domain as Clean Engineering's class model, and `render(format, content)` converts between the bounded-context map and that class model.
 
-**Primary use case:** Author or repair bounded-context maps, aggregate models, and building-block stereotypes, then hand off to CleanEngineering at the mapped fidelity for OO deepen / code.
+- **Purpose:** Keep the software in the business's language, with each rule held in the aggregate that owns it, before any technical detail is added.
+- **Seam (terms):** Ddd, BoundedContextMap, `ddd.instructions`, `ddd-bounded-context`, `ddd-model`, `ddd-tactics`, `render`
+- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `harness/markdown`, `cdd_guidance/actions/sketch` (*SketchOutline*), `cdd_guidance/practices/clean_engineering/model` (class model, its markdown and draw.io formats). The class model imports DDD's stereotypes back and `harness/graph` imports DDD's model back — cycles tracked in `.sessions/_backlog/break-module-dependency-cycles.md`.
 
-**Rationale:** Keep domain language and context maps in DDD fidelities (`bounded_context` → `model` → `tactics`) while reusing CE for modules/model/code work through `ce()`.
+## Constraint
 
-## Seam
-
-`Ddd` is the seam: construct at a DDD fidelity, expand lifecycle actions, and transform sideways via CE channels.
-
-Constraint: do not restate CleanEngineering class/module analysis in DDD artifacts — use the fidelity's Clean Engineering companion instead. Constraint: do not invent detail from a deeper DDD fidelity than the active one. Fidelity map: bounded_context→modules, model→model, tactics→code.
-
-## Public API
-
-- `Ddd(fidelity, format=None, path=None, session=None, workspace=None)`
-- `diagnostic() -> Diagnose`
-- `contexts` instruction
-- `guidance` — domain generate prose plus the current fidelity's Clean Engineering companion when one is named
-- `render(format, content)` — `PracticeGuidance.render`; class and module conversion uses the companion practice. Code format writes each bounded context as a folder containing `.context/bounded-context.md`, with aggregate folders underneath
-- Scan rules discovered under `practices/ddd/scanners/` (`screen-interface-not-a-domain-object`, `private-method-naming`, `every-class-carries-ddd-stereotype`, `flaccid-data-object-no-behavior`, `no-orphaned-objects`)
-
-## Dependencies
-
-PracticeGuidance; CleanEngineering companion on each fidelity; Diagnose (lazy via `diagnostic()`); Scan (binds this package's `scanners/`)
+Do not restate Clean Engineering's class analysis in DDD artifacts; use the fidelity's Clean Engineering companion. Do not add detail from a deeper DDD fidelity than the active one. Run lifecycle steps through the actions with this practice as guidance, not as methods on *Ddd*.

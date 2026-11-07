@@ -363,7 +363,7 @@ def _fact_row(row: list, facts: dict) -> list:
 
 
 def _code_folders(root: Path, scope: list[Path] | None = None) -> dict[str, str]:
-    """A module owns a module card (`.context/module-context.md` or `modules.md`). Any other folder with source is a package.
+    """A module owns a module card (`.context/module-context.md`). Any other folder with source is a package.
 
     With a ``scope``, only those folders are read, not the whole tree.
     """

@@ -74,7 +74,7 @@ def _write(root: Path, relative: str, text: str) -> None:
 def _working_copy() -> Path:
     root = Path(tempfile.mkdtemp(prefix="cdd-scan-"))
     _write(root, "src/orders/order.ts", _OVER_LIMIT.format(name="Order"))
-    _write(root, "src/orders/.context/modules.md", _CARD.format(name="orders", cls="Order"))
+    _write(root, "src/orders/.context/module-context.md", _CARD.format(name="orders", cls="Order"))
     _write(root, "src/billing/invoice.ts", _WITHIN_LIMIT.format(name="Invoice"))
     _write(root, "src/billing/.context/module-context.md", _CARD.format(name="billing", cls="Invoice"))
     _write(root, "src/shared/.examples/sample.ts", _WITHIN_LIMIT.format(name="Sample"))
@@ -126,10 +126,10 @@ with description("a working copy scan") as self:
                 expect(skipped in names).to(equal(False))
 
     with context("over module cards"):
-        with it("should make a module of a folder with .context/modules.md or module-context.md"):
+        with it("should make a module of a folder with .context/module-context.md"):
             expect(_module_names(self.graph)).to(equal(["billing", "orders"]))
 
-        with it("should pass named-seam-and-constraint on a modules.md card"):
+        with it("should pass named-seam-and-constraint on a module card"):
             returned = data_of(self.graph.return_nodes({"types": ["Module"], "name": "orders"}))
             rows = [rule for node in returned for rule in node["rules"] if rule["name"] == "named-seam-and-constraint"]
             expect(len(rows)).to(be_above(0))

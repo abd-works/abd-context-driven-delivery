@@ -1,16 +1,12 @@
-# record_decisions — module context
+# space/record_decisions
+*Context Decision Record* (CDR) is a short, numbered markdown file that records a design choice a later reader would otherwise question: one that is hard to reverse, surprising without its context, and a real trade-off. Records live in `.context/cdr/{NNNN}-{slug}.md` under the workpath of the session they belong to, and `CDR-FORMAT.md` beside this module is their template.
 
-## Purpose
-`RecordDecisions` manages Context Decision Records (CDRs) — short, durable markdown files that capture design choices that are hard to reverse, surprising without context, and represent a real trade-off. It numbers records with four sequential digits, writes them to `.context/cdr/` under the workpath of the session the records are for, and gates every offer against those three criteria so CDRs are never batched or invented. The `CDR-FORMAT.md` template file co-located with the module defines the canonical structure.
+*RecordDecisions* offers and writes those records while an action runs. `RecordDecisions.for_session(session)` is the records of the session called `session`, such as a board ticket's; a blank name means the open session of the project the call names. The MCP tools are `record-decisions.read_cdr_format`, `record-decisions.list_cdrs(session)`, and `record-decisions.write_cdr(session, slug, paths)`; the MCP instructions `record-decisions.record_decisions_session(session)` wrap an action's turn.
 
-## Seam
-`RecordDecisions`. Its `@tool_subject` loader `RecordDecisions.for_session(session)` makes the records of the session called `session`, such as a board ticket's, read through `Repo.current().session_named(session)`; a blank name means the current session of the project the call names. The MCP tools are `record-decisions.read_cdr_format`, `list_cdrs`, and `write_cdr(session, slug, content, paths)`, each taking `session` first; `record_decisions_session(session)` is the instructions that wrap a turn.
+- **Purpose:** Keep the reasons behind hard-to-reverse design choices next to the work they shaped, one record per decision.
+- **Seam (terms):** RecordDecisions, `RecordDecisions.for_session`, `record-decisions.read_cdr_format`, `record-decisions.list_cdrs`, `record-decisions.write_cdr`, `record-decisions.record_decisions_session`
+- **Dependencies (one-way):** `space/session`, `space/repo`, `harness/agent_tools`, `harness/installation`, `harness/mcp`, `harness/guidance_actions` (`load_document`)
 
 ## Constraint
-A record for a named session goes under that session's workpath, never under whichever session the chat has open. A name the project has no session for raises `SessionNotFoundError`.
 
-## Dependencies
-`harness.agent_tools`, `harness.guidance_actions.load_document`, `space.repo` (`Repo.session_named`), `space.session`
-
-## Mechanism
-Three-criteria gate — a CDR is offered only when all three hold: hard to reverse, surprising without context, genuine trade-off. Any missing criterion means skipping the CDR entirely.
+Offer a record only when all three criteria hold, write it as soon as the decision is made, and never invent or batch decisions. Draft the record to a file and pass its path in `paths`. A record for a named session goes under that session's workpath, never under whichever session the chat has open; a name the project has no session for raises `SessionNotFoundError`.

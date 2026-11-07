@@ -1,132 +1,20 @@
-## Language
+# cdd_guidance/actions
+*Actions* are the shared verbs every practice is worked with: you pass one or more *Guidance* — a practice at its current fidelity, such as `stories-story-map` or `clean-engineering-modules` — and the action runs once for each, so no practice reimplements opening the session, reading its rules, or saving its reports. Each action is a toolset built on *GuidanceAction* from `harness/guidance_actions`.
 
-*Actions* are first-order kits. You pass *Guidance* (or a string) and they run once per item — generate, document, scan, grill — so each practice does not reimplement the prelude.
+This module holds the core lifecycle verbs; their folders have no card of their own and roll up to this one:
 
-### GuidanceAction
+- *Generate* writes each listed Guidance's artifact at its current fidelity, with that fidelity's rules, then has the result validated (`generate.generate`).
+- *Document* records what already exists for each listed Guidance without correcting it, so violations are flagged, not fixed (`document.document`).
+- *Validate* checks artifacts against each listed Guidance's rules, adds the graph rules' hits for graph-backed practices, and saves a report in the session's `validation-reports/` folder (`validate.validate`); `createRule` adds a named rule from a failed example and the behaviour wanted.
+- *Satisfy* validates, applies the fixes the report implies, and validates again (`satisfy.satisfy`).
+- *Render* converts content a practice already generated into another format, such as markdown into drawio (`render.render`).
 
-- Bind the list, optionally open a work session, run the operation, inject rules when that kit should. Subclass this; do not copy `run` / `open_workspace` onto the practice.
+The other actions are separate modules with their own cards: `actions/diagnose`, `actions/grill_context`, `actions/improvement`, `actions/iterate`, `actions/partition`, and `actions/sketch`.
 
-### GuidanceArg
-
-- A list of Guidance, one Guidance (ref or `{toolset, …}`), or a string to act on directly.
-
-Build order: `actions/scan` → `actions/document` → `actions/generate` → `actions/validate` → `actions/satisfy` → `actions/render` → `actions/partition` → `actions/grill_context` → `actions/sketch` → `actions/sketch_render` → `actions/iterate` → `actions/improvement`
-
----
-
-# actions
-- **Purpose:** Give every practice the same slash kits (`/generate`, `/document`, `/scan`, …) so the practice owns words, not session plumbing.
-- **Seam (terms):** GuidanceAction, GuidanceArg
-- **Dependencies (one-way):** `harness/guidance_actions`
+- **Purpose:** Give every practice the same generate, document, validate, satisfy, and render steps, so a practice owns only its words, rules, and formats.
+- **Seam (terms):** Generate, Document, Validate, Satisfy, Render, `generate.generate`, `document.document`, `validate.validate`, `validate.createRule`, `satisfy.satisfy`, `render.render`
+- **Dependencies (one-way):** `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*, `load_document`), `harness/guidance` (*PracticeGuidance*, *Rule*, *PracticeCatalogue*), `harness/graph` (graph rule checks), `harness/agent_tools`, `harness/installation`, `harness/mcp`
 
 ## Constraint
 
-Slash names match the operation (`/grill`, not `/grill-context`). Inner helpers stay `@agent_instructions` only — they are not slash files. Echo and handoff live under `tools/`.
-
----
-
-# actions/scan
-- **Purpose:** Run a Guidance’s scanners over paths so rules fire on disk, not only in chat.
-- **Seam (terms):** Scan, Scanner, ScannerCollection
-- **Dependencies (one-way):** `harness/guidance_actions`
-
-## Constraint
-
-`Scan` needs Guidance (or a collection bound from it) to know which scanners run. `/scan` lists Guidance; hosts call `self.scanner.scan(paths)`.
-
----
-
-# actions/document
-- **Purpose:** Record what already exists for listed Guidance without correcting it.
-- **Seam (terms):** Document
-- **Dependencies (one-way):** `harness/guidance_actions`, `actions/scan`
-
-## Constraint
-
-Flag violations; do not fix them. Write under the session (or the path the caller named).
-
----
-
-# actions/generate
-- **Purpose:** Write each listed Guidance’s artifact at its current fidelity.
-- **Seam (terms):** Generate
-- **Dependencies (one-way):** `harness/guidance_actions`
-
----
-
-# actions/validate
-- **Purpose:** Check artifacts against rules, or add a named rule from a failed example.
-- **Seam (terms):** Validate, createRule, Rule, RulesCollection, AppliesTo
-- **Dependencies (one-way):** `harness/guidance_actions`, `actions/scan`
-
----
-
-# actions/satisfy
-- **Purpose:** Validate, apply the implied fixes, validate again.
-- **Seam (terms):** Satisfy
-- **Dependencies (one-way):** `actions/validate`, `harness/guidance_actions`
-
----
-
-# actions/render
-- **Purpose:** Turn already-generated content into another format on that Guidance.
-- **Seam (terms):** Render
-- **Dependencies (one-way):** `harness/guidance_actions`
-
-## Constraint
-
-Bind hosts and convert. Do not open a session or commit a turn.
-
----
-
-# actions/partition
-- **Purpose:** Split source into an index plus verbatim segments, and fail a chunk that drops a named entry.
-- **Seam (terms):** Partition, PartitionIndex, Segment
-- **Dependencies (one-way):** `harness/guidance_actions`
-
----
-
-# actions/grill_context
-- **Purpose:** Interview the plan against files you have actually read, and persist each answer.
-- **Seam (terms):** GrillContext
-- **Dependencies (one-way):** `harness/guidance_actions`
-
-## Constraint
-
-Do not offer options until the cited context files are read. Answers go to `{path}/.context/grill-answers.md`.
-
----
-
-# actions/sketch
-- **Purpose:** Persist a rough draft through grill before generate, so the sketch is a file, not chat.
-- **Seam (terms):** Sketch
-- **Dependencies (one-way):** `actions/grill_context`
-
----
-
-# actions/sketch_render
-- **Purpose:** Sketch through grill; on approval render the sketch in a background sub-agent with explicit render calls.
-- **Seam (terms):** SketchRender, build_render_calls, render_approved_sketch
-- **Dependencies (one-way):** `actions/sketch`, `actions/render`, `actions/grill_context`
-
-## Constraint
-
-`build_render_calls` owns render parameters — the sub-agent runs that JSON verbatim. Required format pairs: discovery → drawio and markdown (both); specification → typescript and markdown (both).
-
----
-
-# actions/iterate
-- **Purpose:** Grill, then generate one small validated slice per tick — not the whole artifact.
-- **Seam (terms):** Iterate
-- **Dependencies (one-way):** `actions/grill_context`, `actions/generate`, `actions/validate`
-
----
-
-# actions/improvement
-- **Purpose:** Open a repair on a Guidance and re-check the same scanner theme after the fix.
-- **Seam (terms):** Improvement, repair, verify_fix
-- **Dependencies (one-way):** `harness/guidance_actions`, `actions/scan`
-
-## Constraint
-
-`/repair` does not finish the session turn. Domain *Repair* on a work session is workspace, not this kit.
+Pass the practice into the action — `generate.generate(guidance=["clean-engineering-modules"])` — rather than putting a lifecycle verb on the practice class. Pass files by path; an MCP call never carries a document body. Name the files being edited in `paths` when validating, so the graph is built from just those files. An action's slash name is the operation's name (`/generate`, `/validate`), and helper instructions such as `generate_fixes_from_validate` are reached from an action's own instructions, not as slash commands.
