@@ -1,9 +1,7 @@
 """Links a story map and its story files carry.
 
 A story map node links to its entry in ``story-map.md`` and to the story's own
-markdown file. A domain term in a story file links to the heading that defines
-it in the domain model markdown (``class-model.md`` or ``domain-model.md``).
-A link is written only when its target file exists; otherwise the text stays plain.
+markdown file. A link is written only when its target file exists; otherwise the text stays plain.
 """
 
 from __future__ import annotations
@@ -11,19 +9,14 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional
 
 from harness.name.name import Name
 
 _LINK = re.compile(r"\[([^\]\n]+)\]\(([^)\s]*)\)")
-_CODE_SPAN = re.compile(r"`[^`\n]+`")
-_HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
-_STEREOTYPE = re.compile(r"<<[^>]*>>")
 _STORY_FILE_SUFFIXES = ("_story.test.md", "_story.spec.md")
 _SKIP_DIRS = {".git", "node_modules", ".venv", "__pycache__", ".pycache"}
 
-MODEL_FILES = ("domain-model.md", "class-model.md")
-_MODEL_SECTIONS = {"layout", "event map", "invariants", "interactions"}
 
 
 def unlink(text: str) -> str:
@@ -149,101 +142,3 @@ class StoryMapLinks:
             story_entries(epic)
             sub_epic_entries(epic.epics)
         return links
-
-
-class DomainModelLinks:
-    """Domain terms and the model heading that defines each one.
-
-    A term is a class, aggregate, or context heading (level 2 or deeper) in ``domain-model.md``
-    (DDD) or ``class-model.md`` (Clean Engineering). The anchor is the heading's own anchor,
-    stereotypes included: ``#### Sim <<Aggregate Root>> <<Entity>>`` is ``#sim-aggregate-root-entity``.
-    """
-
-    def __init__(self, base: Path | str, terms: Optional[Dict[str, Tuple[Path | str, str]]] = None) -> None:
-        self.base = Path(base).resolve()
-        self.terms = {name: (Path(path).resolve(), anchor) for name, (path, anchor) in (terms or {}).items()}
-        self._by_key: Dict[str, str] = {}
-        self._pattern = self._compile()
-
-    @classmethod
-    def from_workspace(cls, root: Path | str, base: Optional[Path | str] = None) -> "DomainModelLinks":
-        root = Path(root).resolve()
-        terms: Dict[str, Tuple[Path, str]] = {}
-        for path in _walk(root, names=MODEL_FILES):
-            found = cls.headings(path.read_text(encoding="utf-8"))
-            classes = [(name, anchor) for name, anchor, is_class in found if is_class]
-            sections = [(name, anchor) for name, anchor, is_class in found if not is_class]
-            for name, anchor in classes + sections:
-                terms.setdefault(name, (path, anchor))
-        return cls(base if base is not None else root, terms)
-
-    @classmethod
-    def headings(cls, text: str) -> List[Tuple[str, str, bool]]:
-        """``(term, anchor, is_class)`` for each class or term heading in a model markdown file.
-        A class heading carries a ``<<stereotype>>``; it wins over a section of the same name."""
-        anchors = _Anchors()
-        found: List[Tuple[str, str, bool]] = []
-        fenced = False
-        for line in text.splitlines():
-            if line.lstrip().startswith("```"):
-                fenced = not fenced
-                continue
-            match = _HEADING.match(line) if not fenced else None
-            if match is None:
-                continue
-            raw = match.group(2)
-            anchor = anchors.next(raw)
-            if len(match.group(1)) < 2:
-                continue
-            name = _STEREOTYPE.sub("", unlink(raw)).split("|", 1)[0].split(" : ", 1)[0]
-            name = name.replace("**", "").replace("`", "").strip()
-            if name and name.casefold() not in _MODEL_SECTIONS:
-                found.append((name, anchor, "<<" in raw))
-        return found
-
-    def _compile(self) -> Optional[re.Pattern]:
-        if not self.terms:
-            return None
-        parts: List[str] = []
-        for name in sorted(self.terms, key=len, reverse=True):
-            words = Name(name).words or [name]
-            self._by_key.setdefault(" ".join(w.lower() for w in words), name)
-            parts.append(r"\s*".join(re.escape(w) for w in words))
-        return re.compile(r"\b(?:" + "|".join(parts) + r")s?\b", re.IGNORECASE)
-
-    def target(self, term: str) -> str:
-        """``path#anchor`` for *term*, or ``""`` when the model does not define it."""
-        key = " ".join(Name(term).words)
-        name = self._by_key.get(key) or self._by_key.get(key.removesuffix("s"))
-        if name is None:
-            return ""
-        path, anchor = self.terms[name]
-        if not path.is_file():
-            return ""
-        return f"{_relative(path, self.base)}#{anchor}"
-
-    def link(self, text: str) -> str:
-        """*text* with each domain term linked to its model heading; existing links and other code stay as written."""
-        if self._pattern is None or not text:
-            return text
-        out: List[str] = []
-        position = 0
-        for match in re.finditer(f"{_LINK.pattern}|{_CODE_SPAN.pattern}", text):
-            out.append(self._link_plain(text[position:match.start()]))
-            out.append(self._link_code(match.group(0)))
-            position = match.end()
-        out.append(self._link_plain(text[position:]))
-        return "".join(out)
-
-    def _link_code(self, span: str) -> str:
-        if not span.startswith("`"):
-            return span
-        target = self.target(span.strip("`").strip())
-        return f"[{span}]({target})" if target else span
-
-    def _link_plain(self, text: str) -> str:
-        def replace(match: re.Match) -> str:
-            target = self.target(match.group(0))
-            return f"[{match.group(0)}]({target})" if target else match.group(0)
-
-        return self._pattern.sub(replace, text)

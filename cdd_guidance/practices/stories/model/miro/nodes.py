@@ -306,6 +306,14 @@ class MiroStoryModel(DiagramStoryModel):
     The thin-slice table is MiroIncrement.save and MiroIncrement.load.
     """
 
+    def render(self, canonical: StoryModel | None = None, previous: str | None = None) -> str:
+        """Draw canonical, or this story map when none is given, as a Miro canvas-composer SVG."""
+        return type(self)(canonical if canonical is not None else self).save()
+
+    def parse(self, text: str) -> "MiroStoryModel":
+        """Read a canvas-composer SVG into a Miro story map; the format-adapter entry point Stories renders through."""
+        return self.load(text)
+
     def save(self) -> str:
         """Write this story map's nodes as a Miro canvas-composer SVG."""
         lines = self._build_rect_lines()

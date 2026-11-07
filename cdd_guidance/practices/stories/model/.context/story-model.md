@@ -310,7 +310,11 @@ The `drawio` format. Nodes: DrawIOEpic, DrawIOStory, DrawIOIncrement.
 The `miro` format: a canvas-composer SVG, with increments as a thin-slice table. Nodes: MiroEpic, MiroStory, MiroIncrement.
 
 ----
++ parse(text: str): MiroStoryModel
+	-> load(text)
 + load(text: str): MiroStoryModel
++ render(canonical: StoryModel | None = None, previous: str | None = None): str
+	-> save
 + save(): str
 
 ## CodeStoryModel : StoryModel
@@ -389,12 +393,3 @@ The `story-map.md` entry and story file each epic, sub-epic, and story links to.
 ----
 + story_file(story: Story): str
 + entries(story_map: StoryModel): dict[int, str]
-
-## DomainModelLinks
-
-Links domain terms in story text to the heading that defines each in `domain-model.md` (DDD) or `class-model.md` (Clean Engineering).
-
-+ DomainModelLinks.from_workspace(root: Path, base: Path | None = None): DomainModelLinks
-----
-+ target(term: str): str
-+ link(text: str): str

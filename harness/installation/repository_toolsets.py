@@ -55,7 +55,7 @@ class RepositoryToolsets:
     # The annotations install reads on members, by name, because it reads the source without importing it. An annotation is matched
     # by its snake-case name, so its class name (``Mcp``) and its lowercase alias (``mcp``) both count.
     ANNOTATIONS = frozenset(
-        {"skill", "command", "rules", "agent", "agent_guidance", "mcp", "hook", "hooks", "agent_tool", "agent_instructions"}
+        {"skill", "command", "rules", "mcp", "hook", "hooks", "agent_tool", "agent_instructions"}
     )
 
     def __init__(self, root: Path | str) -> None:

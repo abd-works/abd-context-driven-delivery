@@ -21,7 +21,6 @@ from cdd_guidance.actions.partition.partition_index import PartitionIndex
 from cdd_guidance.actions.partition.partition import Partition
 from cdd_guidance.actions.partition.segment import Segment, SegmentCompletenessConfig, SegmentEntry
 
-from harness.agent_tools.agent_tools import AgentInstructions
 from harness.markdown import Markdown
 from space.session.throwaway_project import ThrowawayProject
 from harness.agent_tools.agent_tools import AgentToolSet
@@ -79,15 +78,6 @@ with description("a partition action"):
 
     with after.each:
         ThrowawayProject.close_all()
-
-    with context("that expands"):
-        with it("should include the partition_corpus body in partition"):
-            body = AgentInstructions.for_callable(
-                Partition.partition_corpus, Partition()
-            )
-            joined = "\n".join(body.prompt)
-            expect("Hard fail" in joined or "partition" in joined.lower()).to(be_true)
-            expect("index" in body.tools or "segment" in body.tools).to(be_true)
 
     with context("that runs on a practice"):
         with it("should finish partitioning the corpus for that practice"):

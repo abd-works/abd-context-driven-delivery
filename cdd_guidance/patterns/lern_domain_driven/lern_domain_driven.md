@@ -3,7 +3,7 @@
 Implementation fidelity for a **domain-module-organized LERN stack** ([lowdb](https://github.com/typicode/lowdb)
 JSON files / Express / React / Node, TypeScript everywhere) on an already-designed
 vertical slice — story map, module boundaries, and screens all exist before this
-tool runs. `generate` calls `self._stories()` at `acceptance_tests` /
+tool runs. Generate writes the acceptance tests first with Stories at `acceptance_tests` /
 `typescript` — specs first, then Stories' own `ce()` wires matching
 production TypeScript. The rules below are additive on top of what Stories
 and CleanEngineering already enforce, not a restatement of them.

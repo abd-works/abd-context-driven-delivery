@@ -7,7 +7,7 @@
 
 - **Purpose:** Turn existing documents or a running application into partitioned, indexed context that later stages can search and cite.
 - **Seam (terms):** ContextSetup, LiveAppCapture, ContextIndex, EmbeddingProvider, `context-setup.capture_from_documents`, `context-setup.capture_from_live_app`, `context-setup.convert`, `context-setup.smoke_test`, `context-setup.scout_app`, `context-setup.complete_capture`, `context-index.embed`, `context-index.search`, `context-index.ask`
-- **Dependencies (one-way):** `cdd_guidance/actions/partition` (*Partition*), `cdd_guidance/practices/stories`, `cdd_guidance/practices/ddd`, `cdd_guidance/practices/ux`, `cdd_guidance/practices/clean_engineering`, `harness/agent_tools`, `harness/installation`, `harness/mcp`; FAISS and an embedding service (OpenAI by default)
+- **Dependencies (one-way):** `cdd_guidance/actions/partition` (*Partition*, which partitions through the practices the user selects), `harness/agent_tools`, `harness/installation`, `harness/mcp`; FAISS and an embedding service (OpenAI by default)
 
 ## Constraint
 

@@ -51,7 +51,6 @@ Every description, context, and observation. It knows its own source lines and t
 ----
 + clone(): Description
 	// a copy with its contexts and observations
-+ load_context(source: Context): Context
 
 ## Context : BehaviorNode
 
@@ -62,8 +61,6 @@ Every description, context, and observation. It knows its own source lines and t
 + observations: ModelChildren[Observation]
 ----
 + clone(): Context
-+ load_context(source: Context): Context
-+ load_observation(source: Observation): Observation
 
 ## Observation : BehaviorNode
 

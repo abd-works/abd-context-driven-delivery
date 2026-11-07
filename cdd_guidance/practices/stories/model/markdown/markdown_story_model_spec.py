@@ -477,33 +477,6 @@ _LINKED_MAP = """# (E) Onboard A Customer
 ### (S) Customer --> Activate Sim
 """
 
-_DOMAIN_MODEL = """# Domain Model — Telco
-
-## Inventory | Operations
-
-### Sim
-
-#### Sim <<Aggregate Root>> <<Entity>>
-
-#### SimCard <<Entity>>
-"""
-
-_SIM_SCENARIO = """## Story: Select Sim
-
-### Scenario: picks a card
-
-*Given* a customer with no sim card
-*When* the customer selects a sim card
-*Then* the sim card shows as reserved
-
-### Examples
-
-| example | sim card |
-| --- | --- |
-| reserved | SimCard 1 |
-"""
-
-
 def _workspace(files: dict) -> Path:
     import tempfile
 
@@ -537,41 +510,3 @@ with description("a Markdown story map rendered in a workspace") as self:
             parsed = MarkdownStoryModel().parse(self.text)
             names = [story.name for story in parsed.epics[0].epics[0].stories]
             expect(names).to(equal(["Select Sim", "Activate Sim"]))
-
-
-with description("a scenario markdown file rendered with domain links") as self:
-    with context("when the domain model markdown defines the terms"):
-        with before.each:
-            from cdd_guidance.practices.stories.model.markdown.links import DomainModelLinks
-
-            root = _workspace({"domain/domain-model.md": _DOMAIN_MODEL})
-            links = DomainModelLinks.from_workspace(root, base=root / "onboard" / "get-sim")
-            scenarios = MarkdownScenario.from_text(_SIM_SCENARIO, "select_sim_story.test.md")
-            self.text = MarkdownScenario.render_scenarios(
-                scenarios, story_name="Select Sim", domain_links=links,
-            )
-
-        with it("should link a term in a step to its class heading"):
-            expect(
-                "selects a [sim card](../../domain/domain-model.md#simcard-entity)" in self.text
-            ).to(be_true)
-
-        with it("should link a term in an example cell"):
-            expect("[SimCard](../../domain/domain-model.md#simcard-entity) 1" in self.text).to(be_true)
-
-        with it("should keep the example table header plain"):
-            expect("| example | sim card |" in self.text).to(be_true)
-
-        with it("should read the linked steps back as plain text"):
-            scenario = MarkdownScenario.from_text(self.text, "select_sim_story.test.md")[0]
-            when = scenario.steps_in(StepType.WHEN)[0]
-            expect(when.text).to(equal("the customer selects a sim card"))
-
-    with context("when there is no domain model markdown"):
-        with it("should leave every term as plain text"):
-            from cdd_guidance.practices.stories.model.markdown.links import DomainModelLinks
-
-            links = DomainModelLinks.from_workspace(_workspace({"notes.md": "# Notes\n"}))
-            scenarios = MarkdownScenario.from_text(_SIM_SCENARIO, "select_sim_story.test.md")
-            text = MarkdownScenario.render_scenarios(scenarios, domain_links=links)
-            expect("](" in text).to(be_false)

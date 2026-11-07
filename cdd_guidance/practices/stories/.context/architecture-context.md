@@ -24,7 +24,7 @@ The code formats write a story map as runnable story tests and read those tests 
 
 Each story file opens with a comment naming its epic and its order on the map, imports `story` and `scenario` from the step library and the example values it uses, then holds one `story(...)` block per story with its backgrounds and `scenario(...)` blocks, each step written as a Given, When, Then, And, or But call with its code inside. Java writes no step library: each story is a doc comment listing its steps, with no code to keep.
 
-The step library is written only for a new tree. A tree read from code already has its own, so rendering never replaces it. The runner files each language starts from are in `practices/stories/model/{language}/seeds/`.
+The step library is written only for a new tree. A tree read from code already has its own, so rendering never replaces it. TypeScript and JavaScript start a new tree's step library from `practices/stories/model/{typescript,javascript}/seeds/story-test.{ts,js}`; Python's comes from `practices/stories/templates/py/story_test.py`.
 
 ## Why the code survives
 

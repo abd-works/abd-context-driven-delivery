@@ -17,7 +17,6 @@ from mamba import before, context, description, it
 from cdd_guidance.patterns.mern_domain_driven.mern_domain_driven import (
     MernDomainDriven,
 )
-from cdd_guidance.practices.stories.stories import Stories
 from harness.guidance.rule import RulesCollection
 from harness.hooks.hook_server import HookPayload
 
@@ -64,23 +63,6 @@ with description("a MernDomainDriven generator"):
         with it("should not expose generate, iterate, or satisfy"):
             for name in ("generate", "iterate", "satisfy"):
                 expect(name in self.tool.tools).to(equal(False))
-
-    with context("whose _stories() companion is resolved"):
-        with before.each:
-            self.stories = self.tool._stories()
-
-        with it("should be a Stories instance"):
-            expect(isinstance(self.stories, Stories)).to(be_true)
-
-        with it("should pin fidelity to acceptance_tests"):
-            expect(self.stories.fidelities.current.name).to(equal("acceptance_tests"))
-
-        with it("should pin format to typescript"):
-            expect(self.stories.format).to(equal("typescript"))
-
-        with it("should carry that format through to the Clean Engineering companion"):
-            companion = self.stories.fidelities.current.clean_engineering
-            expect(companion.format).to(equal("typescript"))
 
     with context("whose contexts section is expanded"):
         with before.each:

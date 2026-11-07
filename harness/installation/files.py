@@ -1,4 +1,4 @@
-"""The skill, command, rule, and agent annotations, and the installation that writes their markdown files."""
+"""The skill, command, and rule annotations, and the installation that writes their markdown files."""
 from __future__ import annotations
 
 import os
@@ -30,19 +30,9 @@ class Rules(Destination):
     channel = InstallDestination.RULE
 
 
-class Agent(NamedDestination):
-    flag = "_agent"
-
-
-class AgentGuidance(NamedDestination):
-    flag = "_agent_guidance"
-
-
 skill = Skill
 command = Command
 rules = Rules
-agent = Agent
-agent_guidance = AgentGuidance
 
 
 # The channels a file installation writes an ``@agent_tool`` to; its other channels take only instructions.

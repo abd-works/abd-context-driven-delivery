@@ -7,7 +7,7 @@ from pathlib import Path
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
 from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, Segment, SegmentCompletenessConfig
-from harness.agent_tools import agent_instructions, agent_toolset, tools
+from harness.agent_tools import agent_instructions, agent_toolset
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import skill
@@ -111,26 +111,6 @@ class Partition(GuidanceAction):
             f"Verbatim source chunks written under {self._folder(out_root).as_posix()}/{{artifact}}/.context/ "
             "from {subject}-index.md. "
             "Named-entry completeness verified (length-only is a false PASS)."
-        )
-
-    @agent_instructions
-    def partition_corpus(self,
-        context: str = "",
-        mode: str = "one_go",
-        paths: list[str] | str | None = None,
-        out_root: str | None = None,
-    ) -> str:
-        """Build the index and segment files for one corpus. Fail if any new chunk misses a named entry the index required.
-        paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context.
-        out_root: folder for the index and segments. Omit it to use the session's root."""
-        source = self.source_label(context, paths)
-        tools(self.index)
-        tools(self.segment)
-        tools(self.verify_segment_completeness)
-        return (
-            f"Partition of {source} finished (mode {mode}). "
-            "Read those files locally. "
-            "Hard fail if any new chunk fails named-entry completeness."
         )
 
     def _corpus_steps(self, item, context: str, out_root: str | None, paths: list[str] | str | None) -> str:

@@ -4,7 +4,7 @@
 
 A format is one subclass of *CleanEngineeringModel*: markdown, JSON, sketch, Python, TypeScript, JavaScript, Java, and draw.io. Each format reads text with `parse(text)` and writes a model with `render(canonical, previous)`. Markdown also reads a file through the walk on the base nodes: `load(path)` asks `has_more_module` / `get_next_module_from_file`, each module asks `has_more_class` / `get_next_class_from_file`, and each class loads its properties, operations, and relationships the same way. A format overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its text contains.
 
-One format's model becomes another's through `translate_from(source)`: each node copies what it says itself (`update_self`), then matches the source's children to its own by name, else by order, and builds each new child in its own format through `load_module`, `load_class`, `load_property`, `load_operation`, or `load_parameter`. The `UpdateReport` it returns lists what matched, what was added, and what was removed. `sync(text, canonical)` parses text in this format and translates canonical from it.
+One format's model becomes another's through `translate_from(source)`: each node copies what it says itself (`update_self`), then matches the source's children to its own by name, else by order, and builds each new child in its own format through `load_module`, `load_class`, `load_property`, `load_operation`, or `load_parameter`.
 
 Callers use the base nodes. The practice picks a format by name from `CleanEngineering(...).formats`. A class's bases and stereotypes are part of what it says itself, so every format writes and reads them and `update_self`, `clone`, and `as_record` copy them. Text a format cannot read raises *UnreadableSource*; the graph read records each such file on its folder, where the `source-parses` rule reports it.
 
@@ -34,7 +34,7 @@ A source file its language cannot read, such as Python that does not parse. Read
 + name: str
 + sequential_order: int
 ----
-+ translate_from(source: OoadNode): UpdateReport
++ translate_from(source: OoadNode): None
 	Invariant: source has the same semantic type as this node, else TranslationError
 	// update_self, then reconcile each child collection: match by name, else by order; a source child with no match is built by the pair's load
 	-> update_self
@@ -51,18 +51,6 @@ One child list on this node, the same list on the source, and the operation that
 + self_children: list[OoadNode]
 + source_children: list[OoadNode]
 + load: Callable[[OoadNode], OoadNode]
-
-## UpdateReport
-
-------
-+ changes: list[Change]
-	// each Change has a kind (exact_match, add, remove) and the node and parent names
-----
-+ add_exact_match(name: str): None
-+ add_new(node: OoadNode, parent_name: str | None): None
-+ add_removed(node: OoadNode, parent_name: str | None): None
-+ adds(): list[Change]
-+ removes(): list[Change]
 
 ## TranslationError : Exception
 
@@ -86,9 +74,6 @@ Raised when `translate_from` is given a node of another semantic type.
 + parse(text: str): CleanEngineeringModel
 	// every format reads its own text
 + save(): str
-+ sync(text: str, canonical: CleanEngineeringModel): UpdateReport
-	-> parse
-	-> canonical.translate_from
 + every_class(): list[OoadClass]
 	// every class in every module, nested modules included, in module order
 + clone(): CleanEngineeringModel
@@ -155,14 +140,6 @@ Raised when `translate_from` is given a node of another semantic type.
 	-> oclass.load_operations
 	-> oclass.load_relationships
 + get_next_class_from_file(): OoadClass
-
-## File : OoadNode
-
-A source file inside a module. It holds the properties and operations that sit at file scope rather than on a class.
-
-------
-+ properties: list
-+ operations: list
 
 ## OoadClass : OoadNode
 
@@ -320,6 +297,10 @@ A span of source in any language — an operation body, a class, a markdown card
 + has_prose_comment(hash_only: bool = False): bool
 + prototype_swap(start_line: int): dict
 + markdown_bullet_lines(): dict
++ line_of(index: int): int
+	// the line, counted from 1, holding the character at index
++ hits(pattern: Pattern): list[list]
+	// [line, matched code] for each match
 
 ## PythonFunctionBody
 
@@ -359,7 +340,7 @@ Optional on a property. Cardinality lives here. A class reads these from its pro
 + description: str
 + sequential_order: int
 ----
-+ translate_from(source: Relationship): UpdateReport
++ translate_from(source: Relationship): None
 + clone(): Relationship
 + as_record(): dict
 
@@ -423,10 +404,7 @@ The `markdown` format: a `#` heading per module and a `##` card per class, or a 
 + render(canonical: CleanEngineeringModel | None = None, previous: str | None = None): str
 	-> translate_from
 	-> MarkdownModule.render
-+ from_workspace(root: Path): MarkdownCleanEngineeringModel | None
-	// the first markdown file under root marked as the Clean Engineering toolset's manifest
 + load_module(source: Module): MarkdownModule
-+ load_class(source: OoadClass): MarkdownOoadClass
 + load_content(): None
 	// cursor is the # headings in the file. One file
 + has_more_module(): bool
@@ -481,7 +459,6 @@ The `json` format: one array of module records.
 	// raises JsonParseError when the text is not the module array
 	-> JsonModule.from_record
 + render(canonical: CleanEngineeringModel | None = None, previous: str | None = None): str
-+ from_workspace(root: Path): JsonCleanEngineeringModel | None
 + load_module(source: Module): JsonModule
 
 ## JsonModule : Module
