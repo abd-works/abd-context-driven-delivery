@@ -38,7 +38,7 @@ class StoryNode(ModelNode, ABC):
     keeps a graph of its own until a parent adopts it.
     """
 
-    _graph_practice = "stories"
+    _practice_key = "stories"
     _semantic_type_name: str = "StoryNode"
     graph_facts = (
         "opening_token",

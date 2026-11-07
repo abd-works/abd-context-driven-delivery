@@ -11,8 +11,8 @@ from cdd_guidance.patterns.lern_domain_driven.practices.bdd.rules.shared_behavio
 )
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import behavior_file_facts
 from cdd_guidance.practices.bdd.model.code_spec_model import TypeScriptBddModel
-from harness.graph.graph import Node, PracticeGraph, Source
-from harness.graph.graph_practice import GraphPractices
+from harness.graph.graph import Graph, Node, Source
+from harness.graph.pattern_overlays import PatternOverlays
 
 _SHARED = """
 export const ticketBehavior = shareBehavior<TicketDriver>(({ describe, it, before, driver, expect }) => {
@@ -28,8 +28,15 @@ export const ticketBehavior = shareBehavior<TicketDriver>(({ describe, it, befor
 """
 
 
+def checks(practice, *patterns):
+    """The graph rules practice checks in a graph that applies patterns."""
+    graph = Graph()
+    graph.overlays = PatternOverlays(list(patterns)).paths
+    return graph.practice(practice).checks()
+
+
 def behavior_file(text, node_type):
-    node = Node(PracticeGraph("bdd"), node_type, f"bdd:{node_type}:tests/x", "x.behavior.ts", Source("tests/x/x.behavior.ts", 1, 1))
+    node = Node(Graph().practice("bdd"), node_type, f"bdd:{node_type}:tests/x", "x.behavior.ts", Source("tests/x/x.behavior.ts", 1, 1))
     for key, value in behavior_file_facts(text).items():
         node.set_fact(key, value)
     return node
@@ -37,8 +44,8 @@ def behavior_file(text, node_type):
 
 with description("the lern_domain_driven behavior rules"):
     with it("should load into the bdd practice only when the overlay is active"):
-        expect(list(GraphPractices.named("bdd").checks(("lern_domain_driven",)))).to(contain("tier-runs-shared-behavior"))
-        expect("tier-runs-shared-behavior" in GraphPractices.named("bdd").checks()).to(equal(False))
+        expect(list(checks("bdd", "lern_domain_driven"))).to(contain("tier-runs-shared-behavior"))
+        expect("tier-runs-shared-behavior" in checks("bdd")).to(equal(False))
 
     with description("a shared behavior"):
         with it("should read as the same describe tree the bdd practice reads from any spec"):

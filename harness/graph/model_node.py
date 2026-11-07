@@ -53,14 +53,14 @@ class ModelWithoutPractice(TypeError):
     """A model object class that names no practice, so the graph cannot tell which practice graph it belongs to."""
 
     def __init__(self, model_class: type) -> None:
-        super().__init__(f"{model_class.__name__} names no practice: set _graph_practice on it or a base class.")
+        super().__init__(f"{model_class.__name__} names no practice: set _practice_key on it or a base class.")
         self.model_class = model_class
 
 
 class ModelNode(Node):
     """Base model object for one practice. Subclasses name the practice and the belongsTo pairs."""
 
-    _graph_practice: str = ""
+    _practice_key: str = ""
     _semantic_type_name: str = "Node"
     _belongs: set[tuple[str, str]] = set()
     _schema_edge_fields: frozenset[str] = frozenset({"source", "collaborators", "dependencies", "type_hint", "return_type", "callees"})
@@ -81,10 +81,10 @@ class ModelNode(Node):
         cls.__init__ = wrapped
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
-        if not type(self)._graph_practice:
+        if not type(self)._practice_key:
             raise ModelWithoutPractice(type(self))
         graph = graph or Graph()
-        practice = graph.practice(type(self)._graph_practice)
+        practice = graph.practice(type(self)._practice_key)
         if practice.root_node.node_id not in practice.by_id:
             practice.by_id[practice.root_node.node_id] = practice.root_node
         semantic = type(self)._semantic_type_name

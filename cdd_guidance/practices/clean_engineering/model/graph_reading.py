@@ -10,10 +10,8 @@ from pathlib import Path
 
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.graph import Graph, Node, PracticeGraph, Source
-from harness.graph.graph_practice import GraphPractice, GraphPractices, rules_in
 from harness.graph.skipped_folders import scanned_files, skips_folder
 
-_PACKAGE = "cdd_guidance.practices.clean_engineering"
 CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py"}
 _GETTER = re.compile(r"\bget\s+(\w+)\s*\(")
 _CLASS_NAMES = re.compile(r"\bclass\s+(\w+)")
@@ -26,31 +24,12 @@ _STATIC_LINE = re.compile(r"^\s*(?:(?:public|private|protected|readonly|declare|
 _GETTER_MEASURES = ("line_count", "max_control_flow_depth", "has_bare_catch", "swallows_exceptions")
 
 
-class CleanEngineeringGraph(GraphPractice):
-    """Clean Engineering's nodes, its rules, and the draw.io rules it checks on a diagram's nodes."""
-
-    class_types = ("OoadClass",)
-    member_types = ("Operation", "Property")
-    class_node_type = "OoadClass"
-    anchor_types = {
-        "module": "Module",
-        "class": "OoadClass",
-        "property": "Property",
-        "operation": "Operation",
-        "parameter": "Parameter",
-        "package": "Package",
-    }
-
-    def own_rules(self) -> dict:
-        return {**rules_in(f"{self.package}.rules"), **self.language_rules("drawio")}
-
-    def language_rules(self, language: str) -> dict:
-        return rules_in(f"{self.package}.model.drawio.rules") if language == "drawio" else {}
-
-    def read(self, practice: PracticeGraph) -> None:
-        with schema_sync_paused():
-            _CodeReading(practice).read()
-            _ModelReading(practice).read()
+def read_code_and_models(practice: PracticeGraph) -> None:
+    """Add the folders, classes, properties, operations, and parameters the graph's source files hold to the Clean
+    Engineering practice graph, then the members the model documents in scope describe, on its root."""
+    with schema_sync_paused():
+        _CodeReading(practice).read()
+        _ModelReading(practice).read()
 
 
 class _CodeReading:
@@ -72,15 +51,17 @@ class _CodeReading:
         self.class_names = {cls.name for module, _text in modules.values() for cls in module.classes}
         self.class_names |= self._class_names(self._unparsed_declaring_files(files))
         folders = {rel: self._folder_node(rel, kind) for rel, kind in roles.items()}
+        # The folders this read imports from, by folder; a refresh keeps what a folder's other files already import.
+        imports: dict[str, list[str]] = {rel: [] for rel in roles}
         for file, (module, text) in modules.items():
             relative = file.relative_to(self.root).as_posix()
             owner = _nearest(str(Path(relative).parent).replace("\\", "/"), roles)
             if owner:
-                folders[owner].dependencies.extend(module.dependencies)
+                imports[owner].extend(module.dependencies)
             for cls in module.classes:
                 self._class(text, relative, folders.get(owner) or self.practice.root_node, cls)
         self._record_unreadable(roles, folders)
-        self._link_folders(roles, folders)
+        self._link_folders(roles, folders, imports)
 
     def _record_unreadable(self, roles: dict[str, str], folders: dict) -> None:
         """Each file that did not parse, on the module that holds it, so validate reports it instead of skipping it.
@@ -89,7 +70,8 @@ class _CodeReading:
         for file, reason in self.unreadable.items():
             relative = file.relative_to(self.root).as_posix()
             owner = folders.get(_nearest(str(Path(relative).parent).replace("\\", "/"), modules)) or self.practice.root_node
-            owner.set_fact("unreadable_sources", (owner.get_fact("unreadable_sources") or []) + [f"{relative}: {reason}"])
+            kept = owner.get_fact("unreadable_sources") or []
+            owner.set_fact("unreadable_sources", list(dict.fromkeys([*kept, f"{relative}: {reason}"])))
 
     def _folder_node(self, rel: str, kind: str):
         from cdd_guidance.practices.clean_engineering.model.base_class_model import Module
@@ -99,12 +81,20 @@ class _CodeReading:
         module.type = kind
         return self.practice.add(module, f"clean_engineering:{kind}:{rel}", rel, 1, 1)
 
-    def _link_folders(self, roles: dict[str, str], folders: dict) -> None:
-        ids = {rel: folder.node_id for rel, folder in folders.items()}
+    def _link_folders(self, roles: dict[str, str], folders: dict, imports: dict[str, list[str]]) -> None:
+        held = [*self.practice.nodes.get("Module", []), *self.practice.nodes.get("Package", [])]
+        ids = {node.source.file: node.node_id for node in held}
+        ids.update({rel: folder.node_id for rel, folder in folders.items()})
         for rel in sorted(roles, key=lambda item: (item.count("/"), item)):
             parent = _enclosing(rel, roles, folders) or self.practice.root_node
             folder = folders[rel]
-            folder.dependencies = sorted(_imported_folders(folder.dependencies, ids, rel))
+            # A folder read back from a saved graph is a plain node, whose dependencies are a saved fact.
+            kept = getattr(folder, "dependencies", None) or folder.get_fact("dependencies") or []
+            resolved = sorted(set(kept) | _imported_folders(imports[rel], ids, rel))
+            if hasattr(folder, "dependencies"):
+                folder.dependencies = resolved
+            else:
+                folder.set_fact("dependencies", resolved)
             self.practice.link("owns", parent, folder)
             if roles[rel] == "Package":
                 self.practice.link("belongsTo", folder, parent, "relationship")
@@ -231,7 +221,9 @@ class _ModelReading:
             self.graph.report_progress(f"clean_engineering · model · {relative}")
             descriptions.read(MarkdownCleanEngineeringModel(name="", sequential_order=1).parse(file.read_text(encoding="utf-8")), relative)
         if not descriptions.is_empty:
-            self.practice.root_node.set_fact("model_members", descriptions.model_members)
+            # A refresh reads only some model documents, so the members the others describe stay.
+            kept = self.practice.root_node.get_fact("model_members") or {}
+            self.practice.root_node.set_fact("model_members", {**kept, **descriptions.model_members})
 
     def _model_files(self) -> list[Path]:
         """Each scoped folder's and each of its parents' ``.context/*-model.md``, up to the root. ``.context`` is a
@@ -420,6 +412,3 @@ def _scanned_span(text: str, operation) -> tuple[int, int]:
     start = getattr(operation, "line", None) or span[0]
     line_count = getattr(operation, "line_count", None)
     return start, start + line_count - 1 if line_count and line_count > 0 else span[1]
-
-
-GraphPractices.register(CleanEngineeringGraph("clean_engineering", _PACKAGE))

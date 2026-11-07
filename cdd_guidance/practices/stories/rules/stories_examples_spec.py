@@ -40,9 +40,10 @@ with description("stories TypeScript .examples (faultyAsset.ts)"):
         with it("should apply to stories as a prompt rule with no executable check"):
             from cdd_guidance.practices.stories.rules import BY_SLUG
             from harness.graph.schema_rules import PracticeSchema
+            from harness.guidance.practice_catalogue import PracticeCatalogue
 
             expect("vocabulary-traces-to-domain-source" in BY_SLUG).to(equal(False))
-            expect(PracticeSchema.load("stories").slugs_for("Story")).to(contain("vocabulary-traces-to-domain-source"))
+            expect(PracticeSchema.load(PracticeCatalogue.practice("stories")).slugs_for("Story")).to(contain("vocabulary-traces-to-domain-source"))
 
 
 with description("stories TypeScript .examples (folders)"):

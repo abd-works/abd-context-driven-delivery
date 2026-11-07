@@ -60,6 +60,26 @@ class Ddd(PracticeGuidance):
         if stage is not None:
             self._activate(stage=stage)
 
+    # In the knowledge graph: DDD's nodes are read after Clean Engineering's classes, and it checks its rules with
+    # Clean Engineering's.
+    reads_after = ("clean_engineering",)
+    extends = "clean_engineering"
+    class_types = ("Entity", "EntityRoot", "ValueObject", "Aggregate", "Repository", "DomainEvent", "DomainService", "Specification")
+
+    def own_graph_checks(self) -> dict:
+        """DDD's own graph rules, then the rules of the practice it extends, which are the same in every graph."""
+        from harness.guidance.practice_catalogue import PracticeCatalogue
+
+        return {**super().own_graph_checks(), **PracticeCatalogue.practice(self.extends).graph_checks()}
+
+    def read_working_copy(self, practice_graph) -> None:
+        """Bounded contexts come from the folders that hold ``.context/bounded-context.md``, aggregates from the folders
+        that hold domain classes, and building blocks from the classes Clean Engineering read, each seen through the DDD
+        stereotype its declaration or name gives it."""
+        from cdd_guidance.practices.ddd.model.graph_reading import read_contexts_and_blocks
+
+        read_contexts_and_blocks(practice_graph)
+
     def _skip_inactive_fidelity(self, current_name: str | None, name: str) -> bool:
         del current_name, name
         return False

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -217,11 +216,10 @@ class ReportFile:
 
     def _scanned_rules(self) -> set[str]:
         """The rules a scanner checks now; a saved graph keeps the hits of a scanner deleted since it was saved."""
-        from harness.graph.graph_practice import GraphPractices
-        from harness.graph.pattern_overlays import PatternOverlays
+        from harness.graph.saved_graph import SavedGraph
 
-        overlays = json.loads(self._graph.read_text(encoding="utf-8")).get("overlays", [])
-        return set(GraphPractices.named(self._practice.key).checks(PatternOverlays(overlays).patterns))
+        restored = SavedGraph.from_text(self._graph.read_text(encoding="utf-8"), str(self._graph)).restored_graph()
+        return set(restored.practice(self._practice.key).checks())
 
     def _judged_rules(self, text: str) -> list[ReportRule]:
         """Each rule the judgment fails, once however many judged files fail it, with its findings at the judged files' lines."""

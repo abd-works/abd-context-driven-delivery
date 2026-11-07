@@ -379,7 +379,7 @@ export class NumberExamples {
             import tempfile
 
             from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import NamedSeamAndConstraint
-            from harness.graph.graph import Node, PracticeGraph, Source
+            from harness.graph.graph import Graph, Node, Source
             from harness.graph.rule_context import RuleCheckContext
 
             temp = tempfile.TemporaryDirectory()
@@ -390,7 +390,7 @@ export class NumberExamples {
                 "# Customer\n\nAccount, Customer Profile, Identity verification\n",
                 encoding="utf-8",
             )
-            practice = PracticeGraph("ddd")
+            practice = Graph().practice("ddd")
             practice.source_root = str(root)
             practice._temp_dir = temp  # type: ignore[attr-defined]
             rel = "src/customer/.context/bounded-context.md"
@@ -409,7 +409,7 @@ export class NumberExamples {
             import tempfile
 
             from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import NamedSeamAndConstraint
-            from harness.graph.graph import Node, PracticeGraph, Source
+            from harness.graph.graph import Graph, Node, Source
             from harness.graph.rule_context import RuleCheckContext
 
             temp = tempfile.TemporaryDirectory()
@@ -420,7 +420,7 @@ export class NumberExamples {
                 "# numbers\n\n- **Seam (terms):** NumberInventory\n\n## Constraint\n\nUse search flows.\n",
                 encoding="utf-8",
             )
-            practice = PracticeGraph("ddd")
+            practice = Graph().practice("ddd")
             practice.source_root = str(root)
             practice._temp_dir = temp  # type: ignore[attr-defined]
             rel = "src/inventory/numbers"

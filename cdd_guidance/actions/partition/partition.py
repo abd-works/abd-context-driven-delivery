@@ -161,6 +161,9 @@ class Partition(GuidanceAction):
             return self._corpus_steps(item, context, out_root, paths)
 
         self.run(on, action="partition")
+        "After writing the index and segments, call refresh with exactly the files you wrote, so the session's graph holds them as they are now; nothing watches the files."
+        if self._session is not None:
+            tools(self.graph.refresh)
         return (
             f"Partition of {source} finished (mode {mode}); "
             f"docs under {self._folder(out_root).as_posix()}/.context/. "

@@ -11,7 +11,7 @@ from harness.graph.graph import Graph
 class UxNode(ModelNode):
     """Subclasses declare `_semantic_type_name`, the node type the graph records, and each child belongs to its owner."""
 
-    _graph_practice = "ux"
+    _practice_key = "ux"
     _semantic_type_name: str = "UxNode"
     _belongs = {
         ("Screen", "UxMap"),

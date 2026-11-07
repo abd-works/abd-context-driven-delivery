@@ -30,13 +30,20 @@ from cdd_guidance.patterns.lern_domain_driven.tier_facts import (
 )
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.rules.no_prototype_swapping import NoPrototypeSwapping
-from harness.graph.graph import Node, PracticeGraph, Source
-from harness.graph.graph_practice import GraphPractices
+from harness.graph.graph import Graph, Node, Source
+from harness.graph.pattern_overlays import PatternOverlays
+
+
+def checks(practice, *patterns):
+    """The graph rules practice checks in a graph that applies patterns."""
+    graph = Graph()
+    graph.overlays = PatternOverlays(list(patterns)).paths
+    return graph.practice(practice).checks()
 
 
 def tier_node(name, node_type, facts, file="src/a/a-node.ts"):
     """A graph node carrying the facts the LERN recorder would set on it."""
-    node = Node(PracticeGraph("ddd"), node_type, f"ddd:{node_type}:{file}", name, Source(file, 1, 1))
+    node = Node(Graph().practice("ddd"), node_type, f"ddd:{node_type}:{file}", name, Source(file, 1, 1))
     for key, value in facts.items():
         node.set_fact(key, value)
     return node
@@ -56,10 +63,10 @@ def story_file(text, node_type="StoryShared"):
 
 with description("the lern_domain_driven pattern rules"):
     with it("should load into the ddd and stories practices only when the overlay is active"):
-        expect(list(GraphPractices.named("ddd").checks(("lern_domain_driven",)))).to(contain("node-repository-parses-on-read"))
-        expect(list(GraphPractices.named("stories").checks(("lern_domain_driven",)))).to(contain("no-expect-in-given"))
-        expect(list(GraphPractices.named("stories").checks(("lern_domain_driven",)))).to(contain("domain-operations-inline-in-steps"))
-        expect("node-repository-parses-on-read" in GraphPractices.named("ddd").checks()).to(equal(False))
+        expect(list(checks("ddd", "lern_domain_driven"))).to(contain("node-repository-parses-on-read"))
+        expect(list(checks("stories", "lern_domain_driven"))).to(contain("no-expect-in-given"))
+        expect(list(checks("stories", "lern_domain_driven"))).to(contain("domain-operations-inline-in-steps"))
+        expect("node-repository-parses-on-read" in checks("ddd")).to(equal(False))
         expect(sorted(BY_SLUG)).to(have_len(5))
 
     with description("node-repository-parses-on-read"):

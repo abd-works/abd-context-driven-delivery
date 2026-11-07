@@ -182,6 +182,18 @@ class GuidanceAction:
             raise ActionWorksInNoSession(type(self).__name__)
         return self._session
 
+    @property
+    def graph(self) -> Any:
+        """The knowledge graph of the session this action works in, which the cdd server holds between calls; an action
+        whose agent writes files lists its ``refresh`` as the tool to call with exactly those files."""
+        return self.session.graph
+
+    def wrote(self, paths: list[str | Path]) -> None:
+        """Refresh the session's graph with exactly the files this action just wrote, so the graph holds them as they
+        are now; nothing watches the files. An action made for no session holds no graph to refresh."""
+        if self._session is not None:
+            self.graph.refresh([str(path) for path in paths])
+
     def source_label(self, content: str = "", paths: list[str] | str | None = None) -> str:
         """What an instruction names as its source: the paths a call names, one per line, else its in-process text. The
         file bodies stay on disk."""

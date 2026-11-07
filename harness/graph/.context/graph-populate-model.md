@@ -1,6 +1,6 @@
 # Graph
 
-`Graph` reads a working copy into one `PracticeGraph` per practice. The graph names no practice: each practice registers a `GraphPractice` from its own `graph_practice.py`, and each pattern a `GraphOverlay` from its `graph_overlay.py`. `GraphPractices` imports that module the first time the graph asks for the practice or pattern, so the practices depend on the graph and never the other way round.
+`Graph` reads a working copy into one `PracticeGraph` per practice, each holding a `PracticeGuidance` the graph made from `PracticeCatalogue` at no fidelity. The graph names no practice: each practice's `PracticeGuidance` class says what the graph reads from it, and each pattern keeps a `GraphOverlay` as `OVERLAY` in its `graph_overlay.py`, which `GraphOverlay.of` imports the first time the graph asks for that pattern, so the practices depend on the graph and never the other way round.
 
 A practice reader parses its files with the practice's own model and adds each parsed object (a class, an operation, a story, a spec's observation) to its practice graph as the node itself, so a rule reads its measurements from the same object the explorer shows. A node with no parsed object behind it, such as a story's example or a LERN tier file, is a plain `Node` made with `PracticeGraph.add_named`. Edges are recorded with `PracticeGraph.link`; an edge's place under its parent in the explorer tree comes from `EDGE_ORDER`.
 
@@ -24,17 +24,25 @@ The toolset the graph tools run on. Each project's cdd runtime holds one, so one
 - _scope: list[Path] | None
 	// the edited files a load_files reads; None when the whole folder loads
 ----
-+ of_practice(folder, name, source_root): Graph
-	// a source root over _LOAD_FILE_BUDGET source files opens without reading them, so an action's log line on a large repository is immediate
++ of_session(session_folder, root): Graph
+	// the graph the cdd server holds in memory for one session, opened on its root with every practice; reads nothing until a load or refresh
++ for_call(call): Graph
+	// the call's session's graph, so every graph tool a call in that session makes runs on it
++ practice(name): PracticeGraph
+	// made the first time with a PracticeGuidance of the graph's own, at no fidelity, that knows this graph
++ nodes_of(guidance): list[Node]
+	// every node the graph holds for one of its practices
 + load_working_copy(folder, practices, database=None, overlays=None, force=False): GraphLoaded
-	// @mcp. reuse the saved graph when it holds every requested practice on the same roots and overlays, and neither the roots nor any rule file is newer
+	// @mcp. reuse the saved graph when it holds every requested practice on the same roots and overlays; no date is compared
 	// else -> _build_working_copy, -> save_json
 + load_files(folder, practices, files, overlays=None): GraphLoaded
 	// @mcp, /load-files. build from only the edited files; never reads or writes the saved graph
++ refresh(paths): GraphLoaded
+	// @mcp. drop the nodes read from exactly paths, read them as they are now, link them, run every rule again
 + save_json(): GraphSaved
 	// @mcp. merge into .context/graph.json through SavedGraphFile; practices already saved and not loaded now stay
-+ write_json(path): str
-	// this graph alone, without merging
++ write_json(path, files=None): str
+	// this graph alone, without merging; with files, only the nodes read from them
 + loaded_folder: Path | None
 	// where practices and overlays read from
 + overlay_patterns: tuple[str, ...]
@@ -158,16 +166,16 @@ A parsed object a practice reader added, or a plain node read back from `graph.j
 	// python, typescript, javascript, drawio, or graph
 + failed_rules: list[str]
 + passing_rules: list[str]
-+ fidelity: str
-+ fidelities: list[str]
-	// from the practice's schema.yaml
++ fidelity: FidelityGuidance | None
++ fidelities: list[FidelityGuidance]
+	// the practice's fidelities its schema.yaml says create this node type, and every higher one
 ----
 + get_fact(key, default=None): object
 	// this node's fact, else the nearest ancestor's: a fact a whole file owns is kept once, on the file's top node
 + set_fact(key, value): None
 + has_fact(key): bool
 + place(file, start_line, end_line): None
-	// -> GraphPractices.named(practice).align(node): the practice moves a node it found by a nearby line onto the lines that declare it
+	// -> practice.guidance.align_node(node): the practice moves a node it found by a nearby line onto the lines that declare it
 + populate(parent=None): None
 	// for each edge kind by order, for each edge leaving this node:
 	//   direct: edge.child.populate(this)
@@ -182,7 +190,7 @@ A parsed object a practice reader added, or a plain node read back from `graph.j
 
 Extends `Node`. A model object that is its own node in the graph it was made on (`model_node.py`). Appending a child to one of its `ModelChildren` lists records the edge.
 
-+ _graph_practice: str
++ _practice_key: str
 	// required; a model class that names no practice raises ModelWithoutPractice
 + _semantic_type_name: str
 + _belongs: set[tuple[str, str]]
@@ -288,27 +296,26 @@ The text the explorer's source view shows.
 + narrowed_by(request): Filter
 + matches(node): bool
 
-## GraphPractice
+## A practice in the graph (PracticeGuidance)
 
-What one practice gives the graph (`graph_practice.py`). The base reads nothing and checks the rules in `{package}.rules`, so a practice that only checks rules needs no subclass.
+What one practice gives the graph is declared on its own `PracticeGuidance` class (`harness/guidance/guidance.py`); the base reads nothing and checks the rules in `{package}.rules`, so a practice that only checks rules overrides nothing. Each practice's readers live in `{practice}/model/graph_reading.py`.
 
-+ name: str
++ graph: Graph | None
+	// the graph that holds this practice; none for the practice an action works with
 + package: str
 	// the practice's Python package, from PracticeCatalogue
 + reads_after: tuple[str, ...]
 + node_types: tuple[str, ...]
 	// offered by the explorer before any node of them is read
-----
-+ read(practice: PracticeGraph): None
-+ link(graph: Graph): None
-+ rules(): dict[str, PracticeGraphRule]
-+ own_rules(): dict[str, PracticeGraphRule]
++ read_working_copy(practice_graph: PracticeGraph): None
++ link_to_other_practices(graph: Graph): None
++ align_node(node): None
++ graph_checks(): dict[str, PracticeGraphRule]
++ own_graph_checks(): dict[str, PracticeGraphRule]
 	// -> rules_in(f"{package}.rules"): the module's BY_SLUG, else its RULES
-+ language_rules(language): dict[str, PracticeGraphRule]
-+ checks(patterns=()): dict[str, PracticeGraphRule]
-	// own rules plus each active overlay's rules_for(name)
-+ checks_for(node, patterns): dict[str, PracticeGraphRule]
-	// those whose node_types hold the node's type, or the Clean Engineering type a pattern's schema anchors it to
++ language_checks(language): dict[str, PracticeGraphRule]
+
+`PracticeGraph.checks()` adds each active overlay's `rules_for(name)` to the practice's own; `node.rules` keeps those whose `node_types` hold the node's type, its file language's, or the Clean Engineering type a pattern's schema anchors it to.
 
 ## GraphOverlay
 
@@ -321,19 +328,6 @@ What one pattern gives the graph on top of the practices.
 	// gives each overlay rule its prose
 + rules_for(practice): dict[str, PracticeGraphRule]
 	// -> rules_in(f"cdd_guidance.patterns.{pattern}.practices.{practice}.rules")
-
-## GraphPractices
-
-Every registered practice and overlay.
-
-----
-+ register(practice: GraphPractice): None
-+ register_overlay(overlay: GraphOverlay): None
-+ named(name): GraphPractice
-	// imports {PracticeCatalogue.module_of(name)}.graph_practice the first time; a practice that registers nothing gets the base GraphPractice
-+ overlay(pattern): GraphOverlay
-	// imports cdd_guidance.patterns.{pattern}.graph_overlay the first time
-+ in_reading_order(names): list[GraphPractice]
 
 ## PracticeGraphRule
 
@@ -425,7 +419,7 @@ One place a rule is broken (`violation.py`). The saved graph keeps it, the explo
 
 - `ExplorerEntry` — one node at one place in the explorer tree, with the entries below it there.
 - `FilteredNode` — a node `return_nodes` matched, with its practice, ancestors, children, and rules.
-- `NodeSource` — a node's file, text, lines, and owning class; the opened node also lists every class, operation, and property the loaded graph holds, each as its own `NodeSource`, so a call in it can be opened. The practices name those types in their `GraphPractice.class_types` and `member_types`.
+- `NodeSource` — a node's file, text, lines, and owning class; the opened node also lists every class, operation, and property the loaded graph holds, each as its own `NodeSource`, so a call in it can be opened. The practices name those types in their `PracticeGuidance.class_types` and `member_types`.
 - `GraphLoaded`, `GraphSaved`, `Overlay` — the message, path, or overlay root a tool answers with.
 
 ## graph.json
@@ -442,16 +436,16 @@ violation: { rule, practice, node_id, subject, location, line, end_line, message
 
 `root_facts` holds the practice root's facts, such as Clean Engineering's `model_members`. A document of any other `version` is `SavedGraphOutdated`: the loader reads the folder again, and a reader of its violations is told to load the working copy again.
 
-## What a practice declares on its GraphPractice
+## What a practice declares on its PracticeGuidance
 
-The graph names no practice, so each practice's `GraphPractice` says what only it knows:
+The graph names no practice, so each practice's `PracticeGuidance` class says what only it knows:
 
 - `class_types`, `member_types` — the classes and their operations and properties a source view can open.
 - `class_node_type` — the type its checks run on as a whole class; another practice's node inside one skips those checks.
 - `source_ordered_types` — the types the explorer lists in file order.
 - `extends`, `anchor_types` — the practice whose types its schema builds on with `is:`, and the `is:` words another practice uses for its own types.
 - `rule_types` — node types that also carry the rules the schema gives other types.
-- `align(node)` — moves a node found by a nearby line onto the lines that declare it.
+- `align_node(node)` — moves a node found by a nearby line onto the lines that declare it.
 
 A pattern's `GraphOverlay` declares `direct_kinds`, the relationship kinds of its schema the explorer shows as children.
 
@@ -459,7 +453,7 @@ A pattern's `GraphOverlay` declares `direct_kinds`, the relationship kinds of it
 
 # Clean Engineering
 
-`CleanEngineeringGraph` in `cdd_guidance/practices/clean_engineering/graph_practice.py`. It reads each source file with its language's class model, then the model documents `{folder}/.context/*-model.md` of the folders in scope.
+*CleanEngineering*, with its readers in `cdd_guidance/practices/clean_engineering/model/graph_reading.py`. It reads each source file with its language's class model, then the model documents `{folder}/.context/*-model.md` of the folders in scope.
 
 ## Nodes
 
@@ -495,7 +489,7 @@ returns      relationship  Operation -> OoadClass its return type names
 
 # DDD
 
-`DddGraph` in `cdd_guidance/practices/ddd/graph_practice.py`. `reads_after = ("clean_engineering",)`: its building blocks are the classes Clean Engineering read, seen through the stereotype their declaration or name gives them (`TacticalClass.inferred_kind`); a class with neither is not a building block. A building block is a new plain `Node` holding the class's facts plus `tactical_facts`; the class stays Clean Engineering's node.
+*Ddd*, with its readers in `cdd_guidance/practices/ddd/model/graph_reading.py`. `reads_after = ("clean_engineering",)`: its building blocks are the classes Clean Engineering read, seen through the stereotype their declaration or name gives them (`TacticalClass.inferred_kind`); a class with neither is not a building block. A building block is a new plain `Node` holding the class's facts plus `tactical_facts`; the class stays Clean Engineering's node.
 
 ## Nodes
 
@@ -522,7 +516,7 @@ associates  relationship  EntityRoot -> EntityRoot it names with a `// foreign N
 
 # Stories
 
-`StoriesGraph` in `cdd_guidance/practices/stories/graph_practice.py`. It reads the TypeScript and JavaScript story tests into a story model (`TypeScriptStoryModel`), or the story maps (`StoryModel`) when there are none, and `GraphStoryModel.record` adds its objects to the practice graph.
+*Stories*, with its readers in `cdd_guidance/practices/stories/model/graph_reading.py`. It reads the TypeScript and JavaScript story tests into a story model (`TypeScriptStoryModel`), or the story maps (`StoryModel`) when there are none, and `GraphStoryModel.record` adds its objects to the practice graph.
 
 ## Nodes
 
@@ -563,7 +557,7 @@ retrievedUsing  relationship  Example -> Property it reads        (and back on C
 
 # BDD
 
-`BddGraph` in `cdd_guidance/practices/bdd/graph_practice.py`. Each spec file's language model (`PythonBddModel`, `TypeScriptBddModel`) parses its describe tree, whose objects are added as they are.
+*Bdd*, with its readers in `cdd_guidance/practices/bdd/model/graph_reading.py`. Each spec file's language model (`PythonBddModel`, `TypeScriptBddModel`) parses its describe tree, whose objects are added as they are.
 
 ## Nodes
 
@@ -589,7 +583,7 @@ invokes       relationship  Observation -> Operation|Property it drives   (link;
 
 # UX
 
-`UxGraph` in `cdd_guidance/practices/ux/graph_practice.py`. A working-copy load reads no UX files. It offers the node types `UxMap`, `Screen`, `Region`, `Control`, `StoryDemoControl`, `Interaction`, `Transition`, `ContentType`, `NavComponent`, `UxContext`, and checks `cdd_guidance.practices.ux.rules` on UX maps put on a graph.
+*Ux*. A working-copy load reads no UX files. It offers the node types `UxMap`, `Screen`, `Region`, `Control`, `StoryDemoControl`, `Interaction`, `Transition`, `ContentType`, `NavComponent`, `UxContext`, and checks `cdd_guidance.practices.ux.rules` on UX maps put on a graph.
 
 # Pattern overlays
 

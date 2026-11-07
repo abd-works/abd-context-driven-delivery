@@ -1,10 +1,65 @@
-"""PatternOverlays. The pattern overlays a graph applies on top of the practices, such as ``lern_domain_driven``."""
+"""PatternOverlays and GraphOverlay. The pattern overlays a graph applies on top of the practices, such as
+``lern_domain_driven``, and what each pattern gives the graph.
+
+A pattern gives the graph a *GraphOverlay*: the nodes it adds on top of the practices and the rules it adds to each. A
+pattern keeps its overlay as ``OVERLAY`` in its own ``graph_overlay`` module, which the graph imports the first time it
+asks for that pattern, so the patterns depend on the graph and never the other way round.
+"""
 
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from harness.guidance.guidance import rules_in
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Graph
 
 _PATTERNS_ROOT = Path(__file__).resolve().parents[2] / "cdd_guidance" / "patterns"
+_PATTERNS_PACKAGE = "cdd_guidance.patterns"
+
+
+class GraphOverlay:
+    """What one pattern gives the graph on top of the practices: the nodes it reads and the rules it adds to each
+    practice, which live in ``<pattern>/practices/<practice>/rules``. A pattern that adds no nodes keeps none, and this
+    base gives its rules."""
+
+    direct_kinds: frozenset[str] = frozenset()
+    """Relationship kinds of the pattern's schema that place a node as a child in the explorer tree; every other kind is
+    listed under its kind's name."""
+
+    def __init__(self, pattern: str) -> None:
+        self.pattern = pattern
+
+    @classmethod
+    def of(cls, pattern: str) -> GraphOverlay:
+        """The overlay the pattern called pattern keeps as ``OVERLAY`` in its ``graph_overlay`` module; this base for a
+        pattern that keeps none."""
+        module_path = f"{_PATTERNS_PACKAGE}.{pattern}.graph_overlay"
+        try:
+            module = importlib.import_module(module_path)
+        except ModuleNotFoundError as missing:
+            if not (missing.name and module_path.startswith(missing.name)):
+                raise
+            return cls(pattern)
+        overlay = getattr(module, "OVERLAY", None)
+        return overlay if isinstance(overlay, GraphOverlay) else cls(pattern)
+
+    def display_of(self, kind: str) -> str:
+        """How the explorer tree shows an edge of this pattern's kind: as a child, or under the kind's name."""
+        return "direct" if kind in self.direct_kinds else "relationship"
+
+    def read(self, graph: Graph) -> None:
+        """Add this pattern's nodes and edges to the practices ``graph`` holds."""
+
+    def guidance(self) -> Any:
+        """The pattern's guidance, whose rules give each of its graph rules its prose; none when it has no guidance."""
+        return None
+
+    def rules_for(self, practice: str) -> dict[str, Any]:
+        return rules_in(f"{_PATTERNS_PACKAGE}.{self.pattern}.practices.{practice}.rules")
 
 
 class PatternOverlays:
