@@ -27,6 +27,20 @@ _AT_TO_STEREOTYPE: dict[str, str] = {
 }
 
 
+# The stereotypes DDD gives a class, lower-cased; a class's other stereotypes, such as a dataclass mark, are not DDD's.
+_TACTICAL_STEREOTYPES = frozenset(set(_AT_TO_STEREOTYPE.values()) | {"service", "system"})
+
+
+def tactical_stereotypes(stereotypes: List[str]) -> List[str]:
+    """The class's stereotypes that are DDD building blocks, as written."""
+    return [item for item in stereotypes if item.lower() in _TACTICAL_STEREOTYPES]
+
+
+def decorated_name(class_name: str, stereotypes: List[str]) -> str:
+    """The class name followed by its DDD stereotypes as `<<Mark>>`s, the form the tactical kind readers take."""
+    return " ".join([class_name] + [f"<<{item}>>" for item in tactical_stereotypes(stereotypes)])
+
+
 def class_declaration_decorated_name(text: str, class_name: str) -> str:
     """Class name plus tactical markers from <<tags>>, @stereotype decorators, or # comments."""
     match = re.search(rf"(?:export\s+)?(?:abstract\s+)?class\s+{re.escape(class_name)}\b", text)
@@ -213,10 +227,9 @@ def name_reflects_tactical_kind(class_name: str, kind: str, names: set[str]) -> 
     return False
 
 
-def declares_tactical_stereotype(file_text: str, class_name: str, graph_kind: str, peer_names: set[str]) -> bool:
-    """True when the declaration carries <<tags>> / @decorators, or the name itself says the tactical kind."""
-    decorated = class_declaration_decorated_name(file_text, class_name)
-    if class_stereotypes(decorated):
+def declares_tactical_stereotype(class_name: str, stereotypes: List[str], graph_kind: str, peer_names: set[str]) -> bool:
+    """True when the class carries a DDD stereotype, or its name itself says the tactical kind."""
+    if tactical_stereotypes(stereotypes):
         return True
-    kind = inferred_tactical_kind(decorated, peer_names) or graph_kind
+    kind = inferred_tactical_kind(class_name, peer_names) or graph_kind
     return name_reflects_tactical_kind(class_name, kind if kind in _TAGGED_KINDS else graph_kind, peer_names)

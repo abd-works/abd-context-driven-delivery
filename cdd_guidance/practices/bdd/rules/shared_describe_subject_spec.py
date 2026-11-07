@@ -3,16 +3,13 @@
 import sys
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-_REPO = _HERE.parents[3]
-_GRAPH = _REPO / "harness" / "graph"
-for path in (_GRAPH, _REPO):
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
+_REPO = Path(__file__).resolve().parents[4]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
 
 from mamba import context, description, it
 
-from bdd_example_harness import assert_bdd_source_pair
+from harness.graph.bdd_example_harness import assert_bdd_source_pair
 
 _FAULT = """
 with description("a bare agentic toolset registered for deploy"):

@@ -1,5 +1,8 @@
 // === KYC ===
 
+/**
+ * One required Identity / Address field row (`field`, `requirement`).
+ */
 class ProfileRequirement {
   field: string;
   requirement: string;
@@ -10,6 +13,9 @@ class ProfileRequirement {
   }
 }
 
+/**
+ * Catalog of required Identity / Address rows. Optional preferredName, otherPhoneNumber, complement, city, country are not in this catalog. Persona does not create these rows. `mapInquiry` copies a `# Care` ++PersonaInquiry++ onto the party's Identity / Address; `missing` then lists which catalog rows are still unmet.
+ */
 class ProfileRequirements {
   // << association >>
   nameRequired: ProfileRequirement;

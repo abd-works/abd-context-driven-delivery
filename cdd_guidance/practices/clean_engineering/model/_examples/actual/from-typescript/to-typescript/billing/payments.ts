@@ -37,6 +37,9 @@ class Payment {
   }
 }
 
+/**
+ * Commit failures after `Payment.enter` / `Cart.checkout` (card). Billing-account create is `# Billing` on the Customer.
+ */
 class PaymentErrors {
   // always Failed to load — It's not you, it's me. Please refresh the page.
   load: string | null;
@@ -50,6 +53,9 @@ class PaymentErrors {
   }
 }
 
+/**
+ * Invoice vs upfront copy plus charged amount. From GrowthBook `PAY_UP_FRONT` plus Cart.bundle, Cart.portability, and Cart.voucher.
+ */
 class PaymentCharge {
   // when invoicePayment: Time to add your payment
   // when upfrontPayment: Complete your payment
@@ -69,6 +75,9 @@ class PaymentCharge {
   }
 }
 
+/**
+ * Wrap target. FAC hosted payment page. No Paradise types.
+ */
 class PaymentIframe {
   html: string;
   transactionId: string;
@@ -79,6 +88,9 @@ class PaymentIframe {
   }
 }
 
+/**
+ * FAC CCS builds the ++PaymentIframe++. Midtier maps; it is not a type. POST `fac/cards/spi/auth`; GET `getTokenizedCard`.
+ */
 class FAC {
   constructor() {
   }
@@ -103,6 +115,9 @@ class FAC {
   }
 }
 
+/**
+ * Outcome of a tokenized-card read. No Paradise types. No repository.
+ */
 class PaymentStatus {
   // completed | failed
   status: string;
@@ -115,6 +130,9 @@ class PaymentStatus {
   }
 }
 
+/**
+ * Wrap target. Apple / DigiCert BM domain certificate Midtier serves. No Paradise types.
+ */
 class ApplePayCertificate {
   // bmApplePayCert serial CertificateSerialNumber=08b3a3b7b23c2c56a625e95211699f0b
   // live JSON wraps serial in []
@@ -128,6 +146,9 @@ class ApplePayCertificate {
   }
 }
 
+/**
+ * Midtier serves the ++ApplePayCertificate++. Apple / DigiCert builds it; Midtier is not a type. POST `/apple/cert` `getCert`.
+ */
 class Apple {
   constructor() {
   }

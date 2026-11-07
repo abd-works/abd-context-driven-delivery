@@ -17,7 +17,7 @@ _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from harness.hooks.running_process import RunningProcess  # noqa: E402
+from harness.process.running_process import RunningProcess  # noqa: E402
 
 GRAPH_WEB_PORTS: tuple[int, ...] = (3000,)
 GRAPH_APP_PORTS: tuple[int, ...] = (5173, 5174, 5175, 5176)
@@ -186,7 +186,7 @@ class RepoProcesses:
             timeout=60,
             check=False,
         )
-        return self._rows_from_json(completed.stdout)
+        return self._processes_from_json(completed.stdout)
 
     def _posix_processes(self) -> list[Process]:
         completed = subprocess.run(
@@ -208,7 +208,7 @@ class RepoProcesses:
             found.append(Process(int(pid_text), int(ppid_text), command.strip()))
         return found
 
-    def _rows_from_json(self, raw: str) -> list[Process]:
+    def _processes_from_json(self, raw: str) -> list[Process]:
         text = (raw or "").lstrip("\ufeff").strip()
         if not text:
             return []
@@ -216,14 +216,14 @@ class RepoProcesses:
             data = json.loads(text)
         except json.JSONDecodeError:
             return []
-        rows = data if isinstance(data, list) else [data]
+        entries = data if isinstance(data, list) else [data]
         found: list[Process] = []
-        for row in rows:
-            if not isinstance(row, dict):
+        for entry in entries:
+            if not isinstance(entry, dict):
                 continue
-            command = str(row.get("CommandLine") or "").strip()
-            pid = row.get("ProcessId")
-            ppid = row.get("ParentProcessId")
+            command = str(entry.get("CommandLine") or "").strip()
+            pid = entry.get("ProcessId")
+            ppid = entry.get("ParentProcessId")
             if not command or not isinstance(pid, int):
                 continue
             parent = ppid if isinstance(ppid, int) and ppid > 0 else 0

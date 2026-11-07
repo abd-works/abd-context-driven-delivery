@@ -66,8 +66,6 @@ class Ddd(PracticeGuidance):
 
     def _parse_content(self, source_format: str, content):
         parsed = super()._parse_content(source_format, content)
-        if Format(source_format).is_code and isinstance(content, str):
-            _take_doc_comments(parsed, content)
         if Format(source_format).name == "markdown" and not _has_aggregates(parsed):
             # Plain class-model markdown with no contexts or aggregates reads as Clean Engineering.
             from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (
@@ -99,24 +97,6 @@ def _has_aggregates(parsed) -> bool:
     from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
 
     return isinstance(parsed, BoundedContextMap) and bool(parsed.every_aggregate)
-
-
-_DOC_COMMENT = r"/\*\*((?:(?!\*/)[\s\S])*)\*/\s*(?:@\w+(?:\([^)]*\))?\s*)*(?:export\s+)?(?:abstract\s+)?class\s+{name}\b"
-
-
-def _take_doc_comments(parsed, text: str) -> None:
-    # Brace-language parsers skip the JSDoc above a class; the aggregate model keeps its stereotypes and place there.
-    import re
-
-    for module in getattr(parsed, "modules", []):
-        for oclass in module.classes:
-            if oclass.intent:
-                continue
-            found = re.search(_DOC_COMMENT.format(name=re.escape(oclass.name)), text)
-            if found is None:
-                continue
-            lines = [line.strip().lstrip("*").strip() for line in found.group(1).splitlines()]
-            oclass.intent = "\n".join(line for line in lines if line)
 
 
 def _python_generics(model) -> None:

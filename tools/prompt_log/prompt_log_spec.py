@@ -15,7 +15,8 @@ if _tools not in sys.path:
 
 from expects import contain, equal, expect, have_key
 from mamba import after, before, context, description, it
-from harness.installation.installer import Installer
+from harness.installer.installer import Installer
+from harness.hooks.hook_server import HookPayload
 from space.session.throwaway_project import ThrowawayProject
 
 import tools.prompt_log.prompt_log as pl  # noqa: E402
@@ -53,7 +54,7 @@ with description("a prompt log hook"):
         with it("should record both attachment kinds in the log"):
             with tempfile.TemporaryDirectory() as tmp:
                 log_file = Path(tmp) / "prompt-log.txt"
-                payload = {
+                payload = HookPayload({
                     "hook_event_name": "beforeSubmitPrompt",
                     "conversation_id": "conv-test-001",
                     "generation_id": "gen-test-001",
@@ -63,7 +64,7 @@ with description("a prompt log hook"):
                         {"type": "rule", "file_path": str(_BEHAVIOR_RULE)},
                         {"type": "file", "file_path": str(_SKILL)},
                     ],
-                }
+                })
                 out = pl.PromptLog(log_file).before_submit_prompt(payload)
                 text = log_file.read_text(encoding="utf-8")
                 expect(out).to(equal({"continue": True}))
@@ -78,7 +79,7 @@ with description("a prompt log hook"):
             with tempfile.TemporaryDirectory() as tmp:
                 log_file = Path(tmp) / "prompt-log.txt"
                 content = _BEHAVIOR_RULE_CONTENT
-                payload = {
+                payload = HookPayload({
                     "hook_event_name": "beforeReadFile",
                     "conversation_id": "conv-test-002",
                     "generation_id": "gen-test-002",
@@ -88,7 +89,7 @@ with description("a prompt log hook"):
                     "attachments": [
                         {"type": "rule", "file_path": str(_BEHAVIOR_RULE)},
                     ],
-                }
+                })
                 out = pl.PromptLog(log_file).before_read_file(payload)
                 text = log_file.read_text(encoding="utf-8")
                 expect(out).to(equal({"permission": "allow"}))
@@ -101,14 +102,14 @@ with description("a prompt log hook"):
         with it("should record the skill path"):
             with tempfile.TemporaryDirectory() as tmp:
                 log_file = Path(tmp) / "prompt-log.txt"
-                payload = {
+                payload = HookPayload({
                     "hook_event_name": "preToolUse",
                     "conversation_id": "conv-test-003",
                     "generation_id": "gen-test-003",
                     "model": "composer-2.5",
                     "tool_name": "Read",
                     "tool_input": {"path": str(_SKILL)},
-                }
+                })
                 out = pl.PromptLog(log_file).pre_tool_use(payload)
                 text = log_file.read_text(encoding="utf-8")
                 expect(out).to(equal({"permission": "allow"}))
@@ -120,7 +121,7 @@ with description("a prompt log hook"):
         with it("should record the task prompt text"):
             with tempfile.TemporaryDirectory() as tmp:
                 log_file = Path(tmp) / "prompt-log.txt"
-                payload = {
+                payload = HookPayload({
                     "hook_event_name": "preToolUse",
                     "conversation_id": "conv-test-004",
                     "generation_id": "gen-test-004",
@@ -131,7 +132,7 @@ with description("a prompt log hook"):
                         "prompt": "Find all hook scripts under harness/hooks",
                         "subagent_type": "explore",
                     },
-                }
+                })
                 out = pl.PromptLog(log_file).pre_tool_use(payload)
                 text = log_file.read_text(encoding="utf-8")
                 expect(out).to(equal({"permission": "allow"}))
@@ -142,7 +143,7 @@ with description("a prompt log hook"):
         with it("should record the subagent task"):
             with tempfile.TemporaryDirectory() as tmp:
                 log_file = Path(tmp) / "prompt-log.txt"
-                payload = {
+                payload = HookPayload({
                     "hook_event_name": "subagentStart",
                     "conversation_id": "conv-test-005",
                     "generation_id": "gen-test-005",
@@ -150,7 +151,7 @@ with description("a prompt log hook"):
                     "subagent_type": "engineer",
                     "subagent_model": "composer-2.5",
                     "task": "Review prompt_log.py for clean engineering",
-                }
+                })
                 out = pl.PromptLog(log_file).subagent_start(payload)
                 text = log_file.read_text(encoding="utf-8")
                 expect(out).to(equal({"permission": "allow"}))
@@ -161,7 +162,7 @@ with description("a prompt log hook"):
         with it("should record the prompt and attachments"):
             with tempfile.TemporaryDirectory() as tmp:
                 log_file = Path(tmp) / "prompt-log.txt"
-                payload = {
+                payload = HookPayload({
                     "hook_event_name": "beforeSubmitPrompt",
                     "conversation_id": "conv-test-006",
                     "generation_id": "gen-test-006",
@@ -170,23 +171,25 @@ with description("a prompt log hook"):
                     "attachments": [
                         {"type": "rule", "file_path": str(_AGENT)},
                     ],
-                }
+                })
                 out = pl.PromptLog(log_file).before_submit_prompt(payload)
                 expect(out).to(equal({"continue": True}))
                 expect(log_file.read_text(encoding="utf-8")).to(contain("engineer.md"))
 
-    with context("that was made with no log in a project being worked on"):
+    with context("that was made with no log and hears an event from a project"):
         with before.each:
             self.saved_override = os.environ.pop("PROMPT_LOG_PATH", None)
             self.project = ThrowawayProject()
-            pl.PromptLog().subagent_start({"hook_event_name": "subagentStart", "task": "Audit the project log"})
+            pl.PromptLog().subagent_start(
+                HookPayload({"hook_event_name": "subagentStart", "cwd": str(self.project.root), "task": "Audit the project log"})
+            )
 
         with after.each:
             ThrowawayProject.close_all()
             if self.saved_override is not None:
                 os.environ["PROMPT_LOG_PATH"] = self.saved_override
 
-        with it("should write the entry into the log of the session open in that project"):
+        with it("should write the entry into the log of the session open in the project the event names"):
             log = self.project.root / ".sessions" / "main" / "logs" / "prompt-log.txt"
             expect(log.read_text(encoding="utf-8")).to(contain("Audit the project log"))
 

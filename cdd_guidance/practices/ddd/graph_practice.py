@@ -65,7 +65,7 @@ class _DddReading:
 
     def _members_by_folder(self) -> dict[str, list[tuple[Node, str]]]:
         """The classes Clean Engineering read that DDD names a building block, by folder, each with its kind."""
-        from cdd_guidance.practices.ddd.model.stereotypes import class_declaration_decorated_name, inferred_tactical_kind
+        from cdd_guidance.practices.ddd.model.stereotypes import decorated_name, inferred_tactical_kind
 
         clean = self.practice.graph.practices.get("clean_engineering")
         classes = clean.nodes.get("OoadClass", []) if clean is not None else []
@@ -73,7 +73,7 @@ class _DddReading:
         members: dict[str, list[tuple[Node, str]]] = {}
         for cls in classes:
             folder = str(Path(cls.source.file).parent).replace("\\", "/")
-            kind = inferred_tactical_kind(class_declaration_decorated_name(self._text(cls), cls.name), names)
+            kind = inferred_tactical_kind(decorated_name(cls.name, cls.get_fact("stereotypes") or []), names)
             if kind is not None and not f"{folder}/".startswith(_TEST_FOLDERS):
                 members.setdefault(folder, []).append((cls, kind))
         return members
@@ -104,14 +104,9 @@ class _DddReading:
         return node
 
     def _block_node(self, cls: Node, kind: str) -> Node:
-        """The building block the class is; a kind DDD has no block for keeps the class's facts on a node of that kind."""
+        """The building block the class is, at the class's lines."""
         node_id = f"ddd:{kind}:{cls.source.file}:{cls.name}"
-        block = _tactical_block(cls, kind, self._text(cls))
-        if block is not None:
-            return self.practice.add(block, node_id, cls.source.file, cls.source.start_line, cls.source.end_line)
-        node = self.practice.add_named(kind, node_id, cls.name, cls.source)
-        node.data.update(cls.facts)
-        return node
+        return self.practice.add(_tactical_block(cls, kind), node_id, cls.source.file, cls.source.start_line, cls.source.end_line)
 
     def _associate(self, cls: Node) -> None:
         """An entity root names each other root it holds a reference to with a ``// foreign Name`` comment."""
@@ -127,26 +122,14 @@ class _DddReading:
         return self._texts[file]
 
 
-def _tactical_block(cls: Node, kind: str, text: str):
-    """The DDD building block for a class, with its tactical facts loaded; none when DDD has no block for its kind."""
-    from cdd_guidance.practices.ddd.model.nodes import DomainService, Entity, Factory, Repository, Specification, ValueObject
+def _tactical_block(cls, kind: str) -> Node:
+    """The building block node of kind for a parsed class: the class's own facts, then the tactical facts DDD reads
+    from it. The class stays Clean Engineering's node; this node is how DDD sees it."""
+    from cdd_guidance.practices.ddd.model.nodes import tactical_facts
 
-    block_types = {
-        "EntityRoot": Entity,
-        "Entity": Entity,
-        "ValueObject": ValueObject,
-        "Repository": Repository,
-        "DomainService": DomainService,
-        "Factory": Factory,
-        "Specification": Specification,
-    }
-    block_type = block_types.get(kind)
-    if block_type is None:
-        return None
-    block = block_type(name=cls.name, sequential_order=1)
-    block.type = kind
-    block.is_root = kind == "EntityRoot"
-    block.load_tactical_facts(cls, text)
+    block = Node(cls.practice, kind, "", cls.name, cls.source)
+    block.data.update(cls.facts)
+    block.data.update(tactical_facts(cls, kind))
     return block
 
 

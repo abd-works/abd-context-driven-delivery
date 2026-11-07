@@ -1,5 +1,8 @@
 // === Billing ===
 
+/**
+ * Paradise view of the party's billing account. Onboarding keeps `{ id, defaultPayment }`. Self-care adds state, invoices, balance, transactions. Lives on `Customer.billing`. `CustomerRepository.load` signs out when `state` is `terminated`.
+ */
 class Billing {
   id: string;
   // active | suspended | terminated
@@ -41,6 +44,9 @@ class Billing {
   }
 }
 
+/**
+ * Owns `Collection<Billing>`. Associates to `PortalGateway` to create and read ++MavenirBillingAccount++ and to post credit.
+ */
 class BillingRepository {
   // << aggregation >>
   billings: Collection<Billing>;
@@ -63,6 +69,9 @@ class BillingRepository {
   }
 }
 
+/**
+ * Self-care row from `v1/invoice/history` FINAL_BILL (~6 months).
+ */
 class Invoice {
   invoiceId: string;
   billDate: string;
@@ -79,6 +88,9 @@ class Invoice {
   }
 }
 
+/**
+ * Self-care Processed AR row.
+ */
 class Transaction {
   id: string;
   paymentDate: string;
@@ -91,6 +103,9 @@ class Transaction {
   }
 }
 
+/**
+ * `v1/billingAccount`. POSTPAID party account. Create payload: ratingType POSTPAID, billCycle `1st of every month`, billingTemplate Summary, communicationMedium Email, Consumer Dunning, Primary contact from ContactMedium, defaultPaymentMethod from the FAC token already on the party. The wrap does not know Cart or Billing.
+ */
 class MavenirBillingAccount {
   id: string;
   name: string;
@@ -125,6 +140,9 @@ class MavenirBillingAccount {
   }
 }
 
+/**
+ * `v1/invoice/history` FINAL_BILL. PDF is `v1/invoice/invoicePDF`.
+ */
 class MavenirInvoice {
   invoiceId: string;
   billDate: string;
@@ -141,6 +159,9 @@ class MavenirInvoice {
   }
 }
 
+/**
+ * `paymentManagement/v4/refund/allARTransaction`. Self-care lists Processed rows. Credit adjustment posts here.
+ */
 class ArTransaction {
   id: string;
   status: string;
@@ -155,6 +176,9 @@ class ArTransaction {
   }
 }
 
+/**
+ * AR credit **on the billing account**. `creditPayload.account` is that account's id / href. `PortalGateway.applyCredit` POSTs `allARTransaction` (`transactionType` creditAdjustment). Cook (voucher / pay-upfront) and later Pay Now use this. After it posts, self-care lists it as a Processed *ArTransaction* on the same account. The wrap does not know Cart.
+ */
 class MavenirCreditAdjustment {
   amount: number;
   // always BMD
@@ -181,6 +205,9 @@ class MavenirCreditAdjustment {
   }
 }
 
+/**
+ * Billing on the Mavenir party. Party create / read / profile live in `# Customer`.
+ */
 class PortalGateway {
   constructor() {
   }

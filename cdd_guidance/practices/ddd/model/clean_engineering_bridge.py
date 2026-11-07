@@ -1,9 +1,9 @@
 """Bridge between the DDD aggregate model and the Clean Engineering class model.
 
 Code channels (python, typescript) speak Clean Engineering: modules of classes. The aggregate model speaks
-bounded contexts, aggregates, and stereotyped class cards. Each class carries where it lives and what it is
-in its intent's first line — `<<Aggregate Root>> <<Entity>> Customer · Customer Profile` — so the docstring
-or JSDoc that the code channels already write is enough to rebuild the aggregate view from code.
+bounded contexts, aggregates, and stereotyped class cards. Each card's stereotypes are the class's stereotypes, which
+the code channels write as decorators, and where the class lives rides in its intent's first line —
+`Customer · Customer Profile` — so the code is enough to rebuild the aggregate view.
 """
 
 from __future__ import annotations
@@ -20,14 +20,14 @@ from cdd_guidance.practices.ddd.model.markdown.nodes import (
     MarkdownIntegration,
 )
 from cdd_guidance.practices.ddd.model.nodes import BoundedContext, BoundedContextMap
-from cdd_guidance.practices.ddd.model.stereotypes import stereotypes_in, without_stereotypes
+from cdd_guidance.practices.ddd.model.stereotypes import tactical_stereotypes
 
 _PLACE = " · "
 _DEFAULT_CONTEXT = "Domain"
 
 
 def to_clean_engineering(bounded_context_map: BoundedContextMap) -> CleanEngineeringModel:
-    """One module per aggregate; each class keeps its stereotypes and place in its intent."""
+    """One module per aggregate; each class keeps its card's stereotypes, and its place in its intent."""
     model = CleanEngineeringModel("model", 1)
     for aggregate in bounded_context_map.every_aggregate:
         place = _PLACE.join([_label(context) for context in aggregate.parent.enclosing_contexts] + [aggregate.name])
@@ -75,23 +75,21 @@ def _label(context: BoundedContext) -> str:
 
 
 def _class_from_card(card: ClassCard, place: str, order: int) -> OoadClass:
-    tags = " ".join(f"<<{item}>>" for item in card.stereotypes)
-    intent = f"{tags} {place}".strip()
-    if card.node.intent:
-        intent = f"{intent}\n{card.node.intent}"
+    intent = f"{place}\n{card.node.intent}" if card.node.intent else place
     oclass = OoadClass(card.node.name, order, intent=intent)
+    oclass.stereotypes = list(card.stereotypes)
     oclass.properties = [item.clone() for item in plain_properties(card.node)]
     oclass.operations = [item.clone() for item in card.node.operations]
     return oclass
 
 
 def _card_from_class(oclass: OoadClass) -> tuple[ClassCard, list[str]]:
+    """The class's card, and the place its intent's first line names: a context and an aggregate at least."""
     first, _, rest = (oclass.intent or "").partition("\n")
-    marks = stereotypes_in(first)
-    place_text = without_stereotypes(first) if marks else ""
-    place = [part.strip() for part in place_text.split("·") if part.strip()] if place_text else []
-    if not marks:
-        rest = oclass.intent or ""
+    place = [part.strip() for part in first.split(_PLACE.strip()) if part.strip()]
+    if len(place) < 2:
+        place, rest = [], oclass.intent or ""
+    marks = tactical_stereotypes(oclass.stereotypes)
     card = ClassCard.from_name(oclass.name, marks or _stereotypes_by_name(oclass.name))
     node = card.node
     node.sequential_order = oclass.sequential_order

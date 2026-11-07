@@ -1,4 +1,5 @@
-"""Operation rules measure every operation a file defines: public methods, private methods, and module functions."""
+"""Operation rules measure every operation a file defines: public and private methods, constructors, getters, and
+module functions."""
 
 from pathlib import Path
 import sys
@@ -70,9 +71,18 @@ with description("Operation rules over a file's operations"):
                 "class Sketch:\n    def _parse(self, total: int) -> int:\n        return total\n",
             )
 
-        with it("should name the line of an operation the graph keeps no node for"):
+        with it("should measure a module function as its own operation"):
             source = "class Sketch:\n    def read(self) -> int:\n        return 1\n\n\ndef _parse(total: int) -> int:\n" + _long_body(25) + "    return total\n"
-            expect(_hits("keep-operations-small-focused", source)).to(contain("Operation '_parse' (line 6) is 27 lines (max 20)."))
+            expect(_hits("keep-operations-small-focused", source)).to(equal(["Operation '_parse' is 27 lines (max 20)."]))
+
+        with it("should flag a long property getter"):
+            source = "class Sketch:\n    @property\n    def total(self) -> int:\n        total = 0\n" + _long_body(25, "        ") + "        return total\n"
+            expect(_hits("keep-operations-small-focused", source)).to(equal(["Property 'total' is 28 lines (max 20)."]))
+
+        with it("should flag a long TypeScript constructor"):
+            body = "".join(f"    this.total = this.total + {index % 2};\n" for index in range(25))
+            source = "export class Sketch {\n  total = 0;\n  constructor() {\n" + body + "  }\n}\n"
+            expect(_hits("keep-operations-small-focused", source, lang="typescript")).to(have_len(1))
 
         with it("should measure a public method once"):
             source = "class Sketch:\n    def parse(self, total: int) -> int:\n" + "".join(

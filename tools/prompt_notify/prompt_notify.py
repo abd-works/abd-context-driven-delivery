@@ -22,8 +22,10 @@ from typing import ClassVar
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 from harness.agent_tools.agent_tools import agent_toolset
-from harness.agent_tools.name import Name
-from harness.installation.destination import Destination
+from harness.name.name import Name
+from harness.installation.destination import noCatalog
+from harness.marks.mark import Destination
+from harness.hooks.hook_server import HookPayload
 from harness.hooks.hooks import Hook
 
 
@@ -42,6 +44,7 @@ _SKILL_DIRS = ("/.cursor/skills/", "/.claude/skills/")
 _RULE_DIRS = ("/.cursor/rules/", "/.claude/rules/")
 
 
+@noCatalog
 @agent_toolset
 class PromptNotify:
     """Echo detected action, practice, fidelity, and guideline names on preToolUse."""
@@ -50,9 +53,9 @@ class PromptNotify:
     _echo_toolsets: ClassVar[list | None] = None
     _installed_extension: ClassVar[Path | None] = None
 
-    def __init__(self) -> None:
+    def __init__(self, toast_roots: list[Path] | None = None) -> None:
         self.repo: Path | None = None
-        self.toast_roots: list | None = None
+        self.toast_roots = toast_roots
         self.echo = ""
         self.toast_stamp = ""
         self._begin_tools: dict = {}
@@ -89,29 +92,29 @@ class PromptNotify:
         return {self._compact(name): "action" for name in ActionCatalogue.names()}
 
     @Hook("preToolUse")
-    def on_pre_tool_use(self, hook_payload: dict) -> dict:
+    def on_pre_tool_use(self, payload: HookPayload) -> dict:
+        """Toast what the tool call uses in every workspace folder of the chat that made it."""
         self.install_ide_toast_extension()
-        result = self.handle(hook_payload, toolsets=self.echo_toolsets())
+        result = self.handle(payload, toolsets=self.echo_toolsets())
         message = result.get("user_message")
         if message:
-            self.show_ide_toast(str(message))
+            PromptNotify(toast_roots=payload.workspace_roots).show_ide_toast(str(message))
         return result
 
-    def handle(self, hook_payload: dict, toolsets: list | None = None) -> dict:
-        tool_name = hook_payload.get("tool_name", "")
-        if not tool_name:
+    def handle(self, payload: HookPayload, toolsets: list | None = None) -> dict:
+        if not payload.tool_name:
             return {"permission": "allow"}
-        detected = self._detected(hook_payload, toolsets)
+        detected = self._detected(payload, toolsets)
         if not detected:
             return {"permission": "allow"}
         kind, label = detected
-        self._log_echo(str(tool_name), kind, label)
+        self._log_echo(payload.tool_name, kind, label)
         return {"permission": "allow", "user_message": f"{kind.title()}{_ARROW}{label}"}
 
     def detect_echo(
-        self, hook_payload: dict, toolsets: list | None = None
+        self, payload: HookPayload, toolsets: list | None = None
     ) -> tuple[str, str] | None:
-        invoked = self._mcp_tool_name(hook_payload)
+        invoked = self._mcp_tool_name(payload)
         if not invoked:
             return None
         searched = self._walk_toolsets(
@@ -123,14 +126,12 @@ class PromptNotify:
                 return found
         return None
 
-    def detect(self, hook_payload: dict) -> tuple[str, str] | None:
-        named = self._yaml_action(hook_payload)
+    def detect(self, payload: HookPayload) -> tuple[str, str] | None:
+        named = self._yaml_action(payload)
         if named:
             return "action", named
-        invoked = self._mcp_tool_name(hook_payload)
-        tool_name = str(hook_payload.get("tool_name") or "")
-        action_names = {invoked, tool_name}
-        return self._catalog_match(self._haystacks(hook_payload), action_names)
+        action_names = {self._mcp_tool_name(payload), payload.tool_name}
+        return self._catalog_match(self._haystacks(payload), action_names)
 
     def echo_toolsets(self, repo: Path | None = None) -> list:
         if repo is None and type(self)._echo_toolsets is not None:
@@ -155,22 +156,22 @@ class PromptNotify:
     def inject_rules_toast(self, source: str, labels: list[str]) -> str:
         return f"{source}{_ARROW}rules : {', '.join(labels)}"
 
-    def chat_edit_source(self, hook_payload: dict | None) -> str:
+    def chat_edit_source(self, payload: HookPayload) -> str:
         """Name the chat that edited the file, so the toast is not shared across chats."""
-        title = self._chat_title(hook_payload or {})
+        title = self._chat_title(payload)
         if not title:
             return "chat edit"
         return f"chat {title} edited file"
 
-    def _chat_title(self, hook_payload: dict) -> str:
+    def _chat_title(self, payload: HookPayload) -> str:
         for key in ("conversation_title", "composer_title", "chat_title", "title"):
-            value = hook_payload.get(key)
+            value = payload.get(key)
             if isinstance(value, str) and value.strip() and not self._looks_like_path(value):
                 return " ".join(value.split())
-        named = self._composer_name(str(hook_payload.get("conversation_id") or ""))
+        named = self._composer_name(payload.conversation_id)
         if named:
             return named
-        return self._title_from_transcript(str(hook_payload.get("transcript_path") or ""))
+        return self._title_from_transcript(str(payload.get("transcript_path") or ""))
 
     def _looks_like_path(self, text: str) -> bool:
         compact = " ".join(text.split())
@@ -253,12 +254,12 @@ class PromptNotify:
         type(self)._installed_extension = dest
         return dest
 
-    def _detected(self, hook_payload: dict, toolsets: list | None) -> tuple[str, str] | None:
+    def _detected(self, payload: HookPayload, toolsets: list | None) -> tuple[str, str] | None:
         if toolsets is not None:
-            marked = self.detect_echo(hook_payload, toolsets=toolsets)
+            marked = self.detect_echo(payload, toolsets=toolsets)
             if marked:
                 return marked
-        return self.detect(hook_payload)
+        return self.detect(payload)
 
     def _log_echo(self, tool_name: str, kind: str, label: str) -> None:
         stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -311,11 +312,11 @@ class PromptNotify:
         return "action", str(getattr(self._begin_toolset, "slug", match.name)).replace("_", "-")
 
     def _load_echo_toolsets(self, repo: Path | None) -> list:
-        from harness.installation.installer import Installer
+        from harness.installer.installer import Installer
         from harness.agent_tools.agent_tools import AgentToolSet
 
         installer = Installer(repo=repo or _REPO_ROOT)
-        return AgentToolSet.from_items(installer.collect_toolsets(), skip_errors=True)
+        return AgentToolSet.from_items(installer.toolsets.collect(), skip_errors=True)
 
     def _toast_path(self, repo: Path | None) -> Path:
         root = Path(repo) if repo is not None else _REPO_ROOT
@@ -377,10 +378,9 @@ class PromptNotify:
     def _compact(self, text: str) -> str:
         return Name(text).kebab
 
-    def _mcp_tool_name(self, hook_payload: dict) -> str:
-        name = str(hook_payload.get("tool_name") or "")
-        raw = hook_payload.get("tool_input")
-        inp = raw if isinstance(raw, dict) else {}
+    def _mcp_tool_name(self, payload: HookPayload) -> str:
+        name = payload.tool_name
+        inp = payload.tool_input
         nested = inp.get("toolName") or inp.get("tool_name") or inp.get("name")
         if isinstance(nested, str) and nested.strip():
             if "mcp" in name.lower() or name in {"CallMcpTool", "call_mcp_tool"}:
@@ -389,9 +389,8 @@ class PromptNotify:
                 return nested.strip()
         return name
 
-    def _paths(self, hook_payload: dict) -> list[str]:
-        raw = hook_payload.get("tool_input")
-        inp = raw if isinstance(raw, dict) else {}
+    def _paths(self, payload: HookPayload) -> list[str]:
+        inp = payload.tool_input
         found: list[str] = []
         for key in ("path", "file_path", "command"):
             value = inp.get(key)
@@ -399,9 +398,9 @@ class PromptNotify:
                 found.append(value)
         return found
 
-    def _haystacks(self, hook_payload: dict) -> list[str]:
-        values = [self._mcp_tool_name(hook_payload), str(hook_payload.get("tool_name") or "")]
-        for path in self._paths(hook_payload):
+    def _haystacks(self, payload: HookPayload) -> list[str]:
+        values = [self._mcp_tool_name(payload), payload.tool_name]
+        for path in self._paths(payload):
             if self._skill_or_rule_path(path):
                 values.append(path)
         return [item for item in values if item]
@@ -415,8 +414,8 @@ class PromptNotify:
         compacted_token = f"-{self._compact(token)}-"
         return compacted_token in compacted_hay
 
-    def _yaml_action(self, hook_payload: dict) -> str | None:
-        for text in self._paths(hook_payload):
+    def _yaml_action(self, payload: HookPayload) -> str | None:
+        for text in self._paths(payload):
             match = _YAML_ACTION.search(text)
             if match:
                 return match.group(1).replace("_", "-")

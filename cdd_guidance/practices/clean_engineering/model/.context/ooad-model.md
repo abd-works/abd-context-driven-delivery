@@ -125,6 +125,9 @@ model = CleanEngineeringModelFactory.load(path)
 	// each source property, operation, and relationship becomes this channel's property, operation, and relationship
 ------
 + intent: str
++ stereotypes: list[str]
+	// the UML stereotypes the class carries, as words: Aggregate Root, Value Object
+	// code writes each as a decorator with no arguments (@aggregate_root, @AggregateRoot()); a language without decorators marks <<Aggregate Root>> in the doc comment
 + properties: list[Property]
 	// composition
 + operations: list[Operation]

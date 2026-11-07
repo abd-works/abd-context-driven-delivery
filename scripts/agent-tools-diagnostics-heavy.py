@@ -10,8 +10,8 @@ if str(_REPO) not in sys.path:
 
 
 def main() -> int:
-    from harness.agent_tools.agent_tools_probe import AgentToolsProbe
-    from harness.installation.installer import Installer
+    from harness.diagnostics.agent_tools_probe import AgentToolsProbe
+    from harness.installer.installer import Installer
 
     installer = Installer(repo=_REPO)
     report = AgentToolsProbe(installer).run_standalone()

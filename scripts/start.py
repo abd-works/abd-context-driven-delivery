@@ -179,7 +179,7 @@ class ServiceStart:
             "close_fds": True,
         }
         if sys.platform == "win32":
-            from harness.hooks.process import detached_creationflags, hidden_process_startupinfo
+            from harness.process.process import detached_creationflags, hidden_process_startupinfo
 
             kwargs["creationflags"] = detached_creationflags()
             kwargs["startupinfo"] = hidden_process_startupinfo()

@@ -9,7 +9,7 @@ under actual/from-{source}/to-{target}, and walks every node.
 from pathlib import Path
 
 from expects import equal, expect
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 from cdd_guidance.practices.output_folder import OutputFolder
 from mamba import describe, context, it, before, shared_context, included_context
 

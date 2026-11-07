@@ -10,7 +10,7 @@ import html
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional
 
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,

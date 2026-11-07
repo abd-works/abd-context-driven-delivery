@@ -9,6 +9,7 @@ from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
 from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import pascal_case_decorator
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
@@ -31,6 +32,12 @@ class TypeScriptCleanEngineeringModel(CodeCleanEngineeringModel):
     def class_doc(self, intent: str) -> List[str]:
         notes = [f" * {note.strip()}" for note in intent.splitlines() if note.strip()]
         return ["/**", *notes, " */"] if notes else []
+
+    def class_intent(self, oclass: OoadClass) -> str:
+        return oclass.intent
+
+    def stereotype_decorators(self, oclass: OoadClass) -> List[str]:
+        return [f"@{pascal_case_decorator(item)}()" for item in oclass.stereotypes]
 
     def interface_declaration(self, oclass: OoadClass) -> List[str]:
         return [f"interface {oclass.name} {{"]

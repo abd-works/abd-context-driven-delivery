@@ -18,6 +18,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.tool_call import ToolCall
 import cdd_guidance.practices  # noqa: F401 - generator package on path
 from harness.markdown import Markdown
 
@@ -113,7 +114,7 @@ class CleanEngineeringKit:
 with description("CleanEngineering action expansion"):
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
-        ThrowawayProject()
+        self.project = ThrowawayProject()
 
     with after.each:
         ThrowawayProject.close_all()
@@ -154,7 +155,7 @@ with description("CleanEngineering action expansion"):
             with before.each:
                 self.kit.action_name = "validate"
                 self.kit.arguments = {"guidance": [self.clean_engineering]}
-                self.response = self.kit.expand(Validate())
+                self.response = self.kit.expand(Validate(session=ToolCall(project=self.project.root).session))
 
             with it("should inline validate.md from the validate kit"):
                 self.kit.kit_dir = _VALIDATE_DIR
@@ -167,7 +168,7 @@ with description("CleanEngineering action expansion"):
             with before.each:
                 self.kit.action_name = "satisfy"
                 self.kit.arguments = {"guidance": [self.clean_engineering]}
-                self.response = self.kit.expand(Satisfy())
+                self.response = self.kit.expand(Satisfy(session=ToolCall(project=self.project.root).session))
 
             with it("should inline satisfy.md from the satisfy kit"):
                 self.kit.kit_dir = _SATISFY_DIR

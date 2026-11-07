@@ -20,6 +20,12 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 )
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import (
+    ClassHead,
+    DocumentedIntent,
+    snake_case_decorator,
+    stereotype_named,
+)
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
@@ -67,6 +73,13 @@ class PythonModule(Module):
             elif isinstance(node, ast.ImportFrom):
                 targets.extend(_from_import_targets(node, package))
         return targets
+
+
+def _bare_decorator_name(decorator: ast.expr) -> str:
+    """The name of a decorator written with no arguments, `@entity` or `@entity()`; empty for any other."""
+    if isinstance(decorator, ast.Call) and not decorator.args and not decorator.keywords:
+        decorator = decorator.func
+    return decorator.id if isinstance(decorator, ast.Name) else ""
 
 
 def _syntax_tree(text: str) -> ast.Module | None:
@@ -173,20 +186,28 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         return model
 
     def _class_from_ast(self, node: ast.ClassDef, class_order: int) -> OoadClass:
-        intent = ast.get_docstring(node) or ""
+        documented = DocumentedIntent.read(ast.get_docstring(node) or "")
         oclass = OoadClass(
             name=node.name,
             sequential_order=class_order,
-            intent=intent.strip(),
+            intent=documented.intent,
             line=node.lineno,
         )
+        oclass.stereotypes = list(dict.fromkeys(self._stereotypes_above(node) + documented.stereotypes))
         oclass.end_line = getattr(node, "end_lineno", None) or node.lineno
         oclass.bases = [ast.unparse(base) for base in node.bases]
         oclass.operations = self._operations_from_class(node)
         oclass.properties = self._properties_from_class(node)
         return oclass
 
+    def _stereotypes_above(self, node: ast.ClassDef) -> list[str]:
+        """The stereotypes a comment line above the class marks, then each decorator with no arguments."""
+        first = min([node.lineno] + [decorator.lineno for decorator in node.decorator_list])
+        above = ClassHead.above("\n".join(self._text.split("\n")[: first - 1])).stereotypes
+        return above + [stereotype_named(name) for name in map(_bare_decorator_name, node.decorator_list) if name]
+
     def _attach_top_level_ops(self, module: PythonModule, tree: ast.AST) -> None:
+        """The file's module functions, on a `_module` holder after its classes, as every language puts them."""
         top_ops = [
             self._operation_from_function(n)
             for n in tree.body
@@ -194,12 +215,9 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         ]
         if not top_ops:
             return
-        if not module.classes:
-            holder = OoadClass(name="_module", sequential_order=1)
-            holder.operations = top_ops
-            module.classes.append(holder)
-            return
-        module.classes[0].operations.extend(top_ops)
+        holder = OoadClass(name="_module", sequential_order=len(module.classes) + 1)
+        holder.operations = top_ops
+        module.classes.append(holder)
 
 
     def _operations_from_class(self, class_node: ast.ClassDef) -> list[Operation]:
@@ -343,7 +361,7 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         self._known_names = known_names
         bases = self._bases(oclass)
         heading = f"class {oclass.name}({bases}):" if bases else f"class {oclass.name}:"
-        lines = ["", "", heading]
+        lines = ["", ""] + [f"@{snake_case_decorator(item)}" for item in oclass.stereotypes] + [heading]
         if oclass.intent:
             lines.extend([f'    """{oclass.intent}"""', ""])
         return lines

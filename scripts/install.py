@@ -1,4 +1,4 @@
-"""Install CDD toolsets by calling harness/installation/installer.py."""
+"""Install CDD toolsets by calling harness/installer/installer.py."""
 from __future__ import annotations
 
 import argparse
@@ -42,7 +42,7 @@ def main() -> int:
         "Only switches the server: run a plain install as well when skills, rules, or commands changed.",
     )
     args = parser.parse_args()
-    from harness.installation.installer import Installer
+    from harness.installer.installer import Installer
     from harness.mcp.mcp_server import McpInstallation
 
     installer = Installer(ide=args.ide, path=args.path, repo=_REPO)

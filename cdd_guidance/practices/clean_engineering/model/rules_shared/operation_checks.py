@@ -7,10 +7,6 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from cdd_guidance.practices.clean_engineering.model.rules_shared.measured_operation import (
-    MeasuredOperation,
-    OperationMeasureRule,
-)
 from cdd_guidance.practices.clean_engineering.model.rules_shared.operation_semantics import SEMANTIC_RULES
 
 if TYPE_CHECKING:
@@ -110,48 +106,72 @@ class UseExplicitDependencies(PracticeGraphRule):
         return []
 
 
+class OperationMeasureRule(PracticeGraphRule):
+    """Measures each operation body the graph records: every Operation node, and each Property node a getter backs,
+    whose node records the getter's measurements."""
+
+    node_types = ("Operation", "Property")
+
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+        return self.measure(node)
+
+    def measure(self, operation: "Node") -> list[str]:
+        return []
+
+
+def operation_label(operation: "Node") -> str:
+    """How a message names the measured operation: `Operation 'load'`, or `Property 'total'` for a getter."""
+    return f"{operation.type} '{operation.name}'"
+
+
+def operation_line_count(operation: "Node") -> int:
+    """The parser's count; for a node without one, the lines its source span covers."""
+    span = operation.source.end_line - operation.source.start_line + 1
+    return operation.get_fact("line_count") or (span if span > 1 else 0)
+
+
 class KeepOperationsSmall(OperationMeasureRule):
     slug = "keep-operations-small-focused"
     limit = 20
 
-    def measure(self, operation: MeasuredOperation) -> list[str]:
-        size = operation.line_count
+    def measure(self, operation: "Node") -> list[str]:
+        size = operation_line_count(operation)
         if size <= self.limit:
             return []
-        return [f"{operation.label} is {size} lines (max {self.limit})."]
+        return [f"{operation_label(operation)} is {size} lines (max {self.limit})."]
 
 
 class SimplifyControlFlow(OperationMeasureRule):
     slug = "simplify-control-flow"
     limit = 3
 
-    def measure(self, operation: MeasuredOperation) -> list[str]:
+    def measure(self, operation: "Node") -> list[str]:
         if operation.name.startswith("register") and operation.name.endswith("Route"):
             return []
         if operation.name.startswith("create") and operation.name.endswith("Routes"):
             return []
-        depth = operation.fact("max_control_flow_depth", 0) or 0
+        depth = operation.get_fact("max_control_flow_depth", 0) or 0
         if depth <= self.limit:
             return []
-        return [f"{operation.label} nests control flow {depth} levels deep (max {self.limit})."]
+        return [f"{operation_label(operation)} nests control flow {depth} levels deep (max {self.limit})."]
 
 
 class UseExceptionsProperly(OperationMeasureRule):
     slug = "use-exceptions-properly"
 
-    def measure(self, operation: MeasuredOperation) -> list[str]:
-        if not operation.fact("has_bare_catch"):
+    def measure(self, operation: "Node") -> list[str]:
+        if not operation.get_fact("has_bare_catch"):
             return []
-        return [f"{operation.label} catches every exception (a bare except, or except Exception that never re-raises)."]
+        return [f"{operation_label(operation)} catches every exception (a bare except, or except Exception that never re-raises)."]
 
 
 class NeverSwallowExceptions(OperationMeasureRule):
     slug = "never-swallow-exceptions"
 
-    def measure(self, operation: MeasuredOperation) -> list[str]:
-        if not operation.fact("swallows_exceptions"):
+    def measure(self, operation: "Node") -> list[str]:
+        if not operation.get_fact("swallows_exceptions"):
             return []
-        return [f"{operation.label} swallows a caught failure or hands back a fallback in its place."]
+        return [f"{operation_label(operation)} swallows a caught failure or hands back a fallback in its place."]
 
 
 class ProvideMeaningfulContext(PracticeGraphRule):

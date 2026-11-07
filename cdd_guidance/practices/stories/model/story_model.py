@@ -13,7 +13,7 @@ from typing import Any, Dict, Iterable, List, Optional
 from harness.graph.bound_node import BoundChildren as _BoundChildren
 from harness.graph.bound_node import BoundNode
 from harness.graph.graph import Graph
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock

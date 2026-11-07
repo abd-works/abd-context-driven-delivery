@@ -22,7 +22,7 @@ _SAVED_GRAPH = Path(__file__).with_name("fixtures") / "saved-graph" / ".context"
 
 with description("graph JSON reader"):
     with context("a saved graph document"):
-        with it("should read every practice's violating rule rows"):
+        with it("should read every practice's violations"):
             violations = violations_from_graph_json_files([_SAVED_GRAPH])
             expect([violation.rule for violation in violations]).to(
                 equal(["limit-operation-parameters", "load-with-identity-in-hand"])

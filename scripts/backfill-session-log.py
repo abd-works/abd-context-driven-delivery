@@ -48,19 +48,20 @@ def main() -> int:
     args = parser.parse_args()
 
     from harness.installation.bootstrap import ensure_import_path
-    from space.session import Session
+    from space.session import Sessions
     from space.session.chat_pointer import ChatPointer
 
     ensure_import_path(_REPO)
     transcript = Path(args.transcript).resolve()
     line_numbers = _transcript_line_count(transcript)
     workpath = _REPO / "space"
-    session = Session(_REPO)
-    session.switch(args.session, workpath=workpath, repo_path=_REPO)
+    sessions = Sessions(_REPO)
+    sessions.switch(args.session, workpath)
+    log = sessions.current().log
 
     chat = ChatPointer(args.chat_id, transcript, line_numbers)
-    session.note_chat(chat)
-    session.log_line("--- retroactive backfill")
+    log.note_chat(chat)
+    log.line("--- retroactive backfill")
 
     reparented: list[str] = []
     for name in args.from_session:
@@ -73,7 +74,7 @@ def main() -> int:
                 continue
             reparented.append(_reparent_no_chat(cleaned, args.chat_id, transcript, line_numbers))
 
-    log_path = session.log_path
+    log_path = log.path
     existing = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
     existing_lines = {line.strip() for line in existing.splitlines() if line.strip()}
     new_lines = [line for line in reparented if line not in existing_lines]
@@ -101,8 +102,8 @@ def main() -> int:
         ("satisfy", [harness, ce]),
         ("validate", [harness / "agent_tools_probe.py"]),
     ):
-        session.note_chat(chat)
-        session.log_action(action, paths)
+        log.note_chat(chat)
+        log.action(action, paths)
 
     print(f"backfilled {len(new_lines)} line(s) into {log_path}")
     return 0

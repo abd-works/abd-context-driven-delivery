@@ -20,17 +20,51 @@ _EXPORT_CONST = re.compile(r"export const (\w+)")
 _DOMAIN_CLASS = re.compile(r"\bclass\s+([A-Z]\w*)\b")
 _ORCHESTRATION_EXPORT = re.compile(r"export function (?:activate|handle|process)\w*\s*\(")
 _NAMED_IMPORT = re.compile(r"import\s*(?:type\s*)?\{(?P<names>[^}]+)\}\s*from\s*['\"](?P<module>[^'\"]+)['\"]")
+# Python `from .examples.customers_examples import valid_customer, (a as b)`.
+_PYTHON_FROM_IMPORT = re.compile(r"^\s*from\s+(?P<module>\.*[\w.]*)\s+import\s+(?P<names>\([^)]*\)|[^#\r\n]+)", re.M)
+# Java `import static shop.onboard.examples.CustomersExamples.validCustomer;` or `import shop.onboard.examples.CustomersExamples;`.
+_JAVA_IMPORT = re.compile(r"^\s*import\s+(?P<static>static\s+)?(?P<path>[\w.]+)\s*;", re.M)
 
 
 def _imported_modules(text: str) -> dict[str, str]:
-    """Each name the story file imports, mapped to the module it comes from."""
+    """Each name the story file imports, mapped to the module it comes from, written as a path without its extension
+    the way the story test's language names it: TypeScript and JavaScript as the import says, Python and Java with
+    their dots turned into folders."""
     imported: dict[str, str] = {}
-    for match in _NAMED_IMPORT.finditer(text):
-        for part in match.group("names").split(","):
-            name = part.strip().split(" as ")[-1].removeprefix("type ").strip()
-            if name:
-                imported.setdefault(name, match.group("module"))
+    for name, module in [*_script_imports(text), *_python_imports(text), *_java_imports(text)]:
+        if name and name != "*":
+            imported.setdefault(name, module)
     return imported
+
+
+def _script_imports(text: str) -> list[tuple[str, str]]:
+    return [
+        (part.strip().split(" as ")[-1].removeprefix("type ").strip(), match.group("module"))
+        for match in _NAMED_IMPORT.finditer(text)
+        for part in match.group("names").split(",")
+    ]
+
+
+def _python_imports(text: str) -> list[tuple[str, str]]:
+    found = []
+    for match in _PYTHON_FROM_IMPORT.finditer(text):
+        dotted = match.group("module")
+        level = len(dotted) - len(dotted.lstrip("."))
+        folders = dotted.lstrip(".").replace(".", "/")
+        module = folders if level == 0 else ("./" if level == 1 else "../" * (level - 1)) + folders
+        for part in match.group("names").strip("()").split(","):
+            found.append((part.strip().split(" as ")[-1].strip(), module))
+    return found
+
+
+def _java_imports(text: str) -> list[tuple[str, str]]:
+    """A static import names a member of a class file; any other import names the class file itself."""
+    found = []
+    for match in _JAVA_IMPORT.finditer(text):
+        parts = match.group("path").split(".")
+        file_parts = parts[:-1] if match.group("static") else parts
+        found.append((parts[-1], "/".join(file_parts)))
+    return found
 
 
 _EVIDENCE_LINE = re.compile(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)")
@@ -220,8 +254,8 @@ class _StoryGraphRecording:
             self._step(file, node, step, "steps")
 
     def _scenario(self, file: str, parent: Node, scenario: Scenario, scoped: list[str]) -> None:
-        """Record the scenario with its own examples and those its story's Background scopes. A scenario read from a
-        story test sits in that file, not in the story map its Story came from."""
+        """Record the scenario with its own examples, those its own Background holds, and those its story's Background
+        scopes. A scenario read from a story test sits in that file, not in the story map its Story came from."""
         file = self.story_graph._file(scenario) or file
         node_id = f"stories:Scenario:{file}:{scenario.name}"
         line, end = self.story_graph._source_span(scenario, self.root, file)
@@ -232,7 +266,8 @@ class _StoryGraphRecording:
         self.practice.link("scenarios", parent, node)
         for step in scenario.steps:
             self._step(file, node, step, "steps")
-        for name in dict.fromkeys([*scenario.examples, *scoped]):
+        own_background = [name for background in scenario.backgrounds for name in background.examples]
+        for name in dict.fromkeys([*scenario.examples, *own_background, *scoped]):
             source = Source(file or ".", line, end, self.root)
             example = self.practice.add_named("Example", f"stories:Example:{file}:{name}", name, source)
             self.practice.link("examples", node, example)

@@ -73,6 +73,8 @@
 
 ## MidtierCustomerService
 
+My Paradise HTTP boundary to Midtier. Midtier validates the account token and forwards customer operations to Mavenir.
+
 + MidtierCustomerService()
 ------
 ----
@@ -82,6 +84,8 @@
 + read(accountToken: AccountToken): MavenirCustomer | Error
 
 ## CustomerException
+
+One typed Customer failure carrying enough domain context for callers to handle and report repository and aggregate failures safely.
 
 + CustomerException(operation: CustomerOperation, accountCredentials: AccountCredentials, message: string, cause: Error)
 ------
@@ -121,6 +125,8 @@
 ----
 
 ## AccountCredentials
+
+Paradise wrap of ++CognitoUser++. Own aggregate: constructed through `AccountRepository.newAccount()`. Auth operations live on this object and persist through the wired repository. `verified` is Cognito confirmed / unconfirmed.
 
 + AccountCredentials(email: string, password: string, confirmPassword: string, validationCode: string, verified: boolean, token: AccountToken | null, customerId: string | null, validationCodeWasSent: boolean, canActivate: boolean, isUpdatable: boolean, isPersistable: boolean, resendMessage: string | null, errors: AccountCredentialsErrors, requirements: AccountCredentialRequirements)
 	// from CognitoUser: email and verified come from the user; do not re-pass them
@@ -182,6 +188,8 @@
 
 ## AccountRepository
 
+Wraps the Cognito agent. Credentials exist before a Customer. `newAccount` is the canonical constructor: it returns AccountCredentials with the repository wired so register / activate / authenticateAccount / resendValidationCode persist.
+
 + AccountRepository(accountCredentials: Collection<AccountCredentials>, amplifyService: AmplifyService)
 ------
 + << aggregation >> accountCredentials: Collection<AccountCredentials>
@@ -207,6 +215,8 @@
 
 ## AccountCredentialsErrors
 
+Commit failures after `AccountCredentials.register` / `activate` / `AccountRepository.authenticateAccount`. Field rules are `missingRequirements()`.
+
 + AccountCredentialsErrors(register: string | null, signIn: string | null, validationCode: string | null)
 ------
 + register: string | null
@@ -215,6 +225,8 @@
 ----
 
 ## ValidationCodeResendWaitException
+
+Thrown by `AccountCredentials.resendValidationCode` when the 60-second wait has not elapsed. No Cognito call is made.
 
 + ValidationCodeResendWaitException(availableAt: Date)
 ------
@@ -231,6 +243,8 @@
 
 ## AccountCredentialRequirements
 
+Catalog of rules. `missingRequirements()` returns the unmet subset.
+
 + AccountCredentialRequirements(emailRequired: AccountCredentialRequirement, emailFormat: AccountCredentialRequirement, passwordRequired: AccountCredentialRequirement, passwordLetters: AccountCredentialRequirement, passwordNumber: AccountCredentialRequirement, passwordSymbol: AccountCredentialRequirement, passwordLength: AccountCredentialRequirement, confirmRequired: AccountCredentialRequirement, confirmMismatch: AccountCredentialRequirement)
 ------
 + << association >> emailRequired: AccountCredentialRequirement
@@ -246,6 +260,8 @@
 
 ## AmplifyService
 
+AWS Amplify Auth in My Paradise. Talks to Cognito. Not a hosted record store.
+
 + AmplifyService()
 ------
 ----
@@ -259,6 +275,8 @@
 + getUser(email: string): CognitoUser | null
 
 ## CognitoUser
+
+Cognito confirmed status is `confirmed`; Paradise reads it as `AccountCredentials.verified`. `AccountCredentials` `` this type.
 
 + CognitoUser(email: string, confirmed: boolean, customerId: string | null, validationCodeSentAt: Date | null, accountToken: AccountToken | null)
 ------
@@ -285,6 +303,8 @@
 ----
 
 ## ValidationCodeSend
+
+Timestamped record of every initial or repeated validation-code send performed by Amplify.
 
 + ValidationCodeSend(code: string, sentAt: Date, kind: initial | resend)
 ------
@@ -322,6 +342,8 @@
 ----
 
 ## PortalGateway
+
+Mavenir `portalGateway`. Party create / read / profile. Cart, catalog, billing, and order slices live on the same service in their modules.
 
 + PortalGateway()
 ------
@@ -399,6 +421,8 @@
 
 ## ProfileRequirement
 
+One required Identity / Address field row (`field`, `requirement`).
+
 + ProfileRequirement(field: string, requirement: string)
 ------
 + field: string
@@ -406,6 +430,8 @@
 ----
 
 ## ProfileRequirements
+
+Catalog of required Identity / Address rows. Optional preferredName, otherPhoneNumber, complement, city, country are not in this catalog. Persona does not create these rows. `mapInquiry` copies a `# Care` ++PersonaInquiry++ onto the party's Identity / Address; `missing` then lists which catalog rows are still unmet.
 
 + ProfileRequirements(nameRequired: ProfileRequirement, lastNameRequired: ProfileRequirement, dateOfBirthRequired: ProfileRequirement, idNationalityRequired: ProfileRequirement, idTypeRequired: ProfileRequirement, idNumberRequired: ProfileRequirement, expiryRequired: ProfileRequirement, streetRequired: ProfileRequirement, parishRequired: ProfileRequirement, postalCodeRequired: ProfileRequirement)
 ------
@@ -563,8 +589,19 @@
 
 ## OnboardingStep
 
+Cart-module constants. Not open strings.
+OnboardingStep.SelectPlan
+OnboardingStep.PickNumber
+OnboardingStep.VerifyPortedNumber
+OnboardingStep.SelectSim
+OnboardingStep.ProfileKyc
+OnboardingStep.Checkout
+OnboardingStep.Done
+
 
 ## Bundle
+
+Snapshot of a `# Plans` *Plan* at pick time. Part of the Cart aggregate. PortalGateway cart read maps the Mavenir bundle cartItem onto `Cart.bundle` (`id`, `name`, `description`, `price`, `fees`, `totalPrice`, `features`). `id` is *Plan.id*. Catalog *Plan* changes do not rewrite a cart that already has a bundle.
 
 + Bundle(id: string, name: string, description: string, price: number, fees: number, totalPrice: number, features: any, plan: Plan)
 ------
@@ -584,6 +621,8 @@
 ----
 
 ## GrowthBook
+
+Flags Cart consults. Get Sim: `DISABLE_ESIM` / `DISABLE_PSIM`. `Cart.checkout` / `Payment.enter` read `PAY_UP_FRONT` and `PAYMENT_ATTEMPTS` from this type (Payment does not own GrowthBook). `Cart.createOrder` reads `PAY_UP_FRONT` and `ROAMING_PLAN_TICKET`. No Paradise types. No repository.
 
 + GrowthBook(DISABLEEsim: string, DISABLEPsim: string, PAYUpFront: string, PAYMENTAttempts: string, ROAMINGPlanTicket: string)
 ------
@@ -617,6 +656,8 @@
 
 ## CartRepository
 
+Owns `Collection<Cart>`. Associates to `PortalGateway` to read and create ++MavenirShoppingCart++. Cart itself has no shopping-cart edge. The Customer already holds AccountCredentials.
+
 + CartRepository(carts: Collection<Cart>, portalGateway: PortalGateway, customerRepository: CustomerRepository)
 ------
 + << aggregation >> carts: Collection<Cart>
@@ -649,6 +690,8 @@
 
 ## Voucher
 
+Wrap target. Vouchera ++Voucher++. No Paradise types. Cart wraps the selected code until cook.
+
 + Voucher(code: string, campaign: string, expired: boolean, redeemed: boolean)
 ------
 + code: string
@@ -658,6 +701,8 @@
 ----
 
 ## Vouchera
+
+Vouchera builds the ++Voucher++. Vouchera GET /vouchers/{code}. `read` is catalog `Voucher.apply` through `VoucherRepository.get`. `redeem` is Subscription cook and returns `# Subscription` *VoucherRedemption*.
 
 + Vouchera()
 ------
@@ -676,6 +721,8 @@
 
 ## MavenirShoppingCart
 
+Wrap target. Empty at create (no cart items). Mavenir shoppingCart create: MavenirCustomer id, lineCount 1, empty cartItem, serviceProviderId, ON-BOARDING channel. *Get Plan On Cart* writes the bundle cartItem. *Get Data Freedom Upgrade* replaces that bundle. *Get Review Plan* replaces that bundle. Patch writes the MSISDN *ProductCharacteristic* and, on bring, ++portability++ characteristics. *Get Esim* writes the `SIM_TYPE` *ProductCharacteristic* (`'eSIM'`). *Get Paradise Sim Card* writes `SIM_TYPE` (`'pSIM'`); no ICCID characteristic. *Get Existing Iccid* writes `SIM_TYPE` (`'pSIM'`) and `ICCID` on the existing bundle cartItem. *Activate Sim From Almost There* PATCH shoppingCart billing then POST productOrderFromCart; SIM_TYPE `'pSIM'` and ICCID already on bundle. The wrap does not know Cart.
+
 + MavenirShoppingCart(id: string, customerId: string, lineCount: number, serviceProviderId: string, cartItem: bundle, productCharacteristic: ProductCharacteristic, channel: Channel)
 ------
 + id: string
@@ -693,6 +740,8 @@
 ----
 
 ## PortalGateway
+
+Mavenir `portalGateway` shopping cart.
 
 + PortalGateway()
 ------
@@ -736,6 +785,8 @@
 
 ## ProductCharacteristic
 
+MSISDN, ++portability++, SIM_TYPE, and ICCID characteristics on the bundle cartItem.
+
 + ProductCharacteristic(name: string, value: string)
 ------
 + name: string
@@ -743,6 +794,8 @@
 ----
 
 ## Channel
+
+ON-BOARDING channel on shoppingCart create.
 
 + Channel(id: string, name: string, role: string)
 ------
@@ -754,6 +807,8 @@
 # Plans
 
 ## Plan
+
+Paradise *Plan* `` ++MavenirProductOffering++.
 
 + Plan(id: string, name: string, price: number, isSellable: boolean, bypassVerified: boolean)
 ------
@@ -767,6 +822,8 @@
 ----
 
 ## PlanRepository
+
+Maps `PortalGateway` catalog rows to Paradise *Plan*. Midtier maps; it is not a type.
 
 + PlanRepository(plans: Collection<Plan>, portalGateway: PortalGateway)
 ------
@@ -799,6 +856,8 @@
 
 ## PortalGateway
 
+Mavenir `portalGateway` catalog. `productOfferings/100000000?channelName=CRM`.
+
 + PortalGateway()
 ------
 ----
@@ -809,6 +868,8 @@
 # Numbers and SIMs
 
 ## MsisdnInventoryRepository
+
+Paradise collection of ++AvailableNumber++. Mavenir builds the wrap target. List locks five resources when picking a new number (category always `standard`), or one when bringing a number; listing premium inventory category is always `premium`. Reserve moves locked to reserved and may release a previous reserved id. Premium selected id uses the same locked-to-reserved hop; `portin` is false (same as `pickNumber`). Category is on list. When `portin`, Mavenir marks the reserved resource `kv_tempNumber`.
 
 + MsisdnInventoryRepository(availableNumbers: Collection<AvailableNumber>, inventoryGateway: InventoryGateway)
 ------
@@ -837,6 +898,8 @@
 
 ## IccidInventoryRepository
 
+Paradise collection of ++AvailableSim++. Mavenir builds the wrap target. Available only. Empty or not-available is miss. No reserve this epic.
+
 + IccidInventoryRepository(availableSims: Collection<AvailableSim>, inventoryGateway: InventoryGateway)
 ------
 + << aggregation >> availableSims: Collection<AvailableSim>
@@ -849,12 +912,16 @@
 
 ## AvailableNumber
 
+Paradise *AvailableNumber* `` ++MavenirMsisdnResource++.
+
 + AvailableNumber(id: string)
 ------
 + id: string
 ----
 
 ## AvailableSim
+
+Paradise *AvailableSim* `` ++MavenirSimResource++.
 
 + AvailableSim(id: string)
 ------
@@ -873,6 +940,8 @@
 
 ## MavenirMsisdnResource
 
+Wrap target. ++MSISDN++ resource in Mavenir inventory.
+
 + MavenirMsisdnResource(id: string, resourceStatus: string)
 ------
 + id: string
@@ -881,6 +950,8 @@
 ----
 
 ## InventoryGateway
+
+Mavenir `inventoryGateway` (`.../msisdn/resource`, `.../sim/resource`).
 
 + InventoryGateway()
 ------
@@ -918,6 +989,8 @@
 
 ## Portability
 
+Donor / account / device / verified live here. Cart **links** this type (``). `planSelected` is the cart bundle name.
+
 + Portability(donorOperator: string, portNumber: string, accountNumber: string | null, userType: string, accountType: string, device: string, planSelected: string, verified: boolean)
 ------
 + donorOperator: string
@@ -947,6 +1020,8 @@
 
 ## TwilioService
 
+Twilio Verify. Port-in SMS.
+
 + TwilioService()
 ------
 ----
@@ -961,6 +1036,8 @@
 ----
 
 ## PortingErrors
+
+Commit failures after `Portability.verify`.
 
 + PortingErrors(portingSmsCode: string | null)
 ------
@@ -999,6 +1076,8 @@
 
 ## PaymentErrors
 
+Commit failures after `Payment.enter` / `Cart.checkout` (card). Billing-account create is `# Billing` on the Customer.
+
 + PaymentErrors(load: string | null, unverified: string | null)
 ------
 + load: string | null
@@ -1009,6 +1088,8 @@
 ----
 
 ## PaymentCharge
+
+Invoice vs upfront copy plus charged amount. From GrowthBook `PAY_UP_FRONT` plus Cart.bundle, Cart.portability, and Cart.voucher.
 
 + PaymentCharge(title: string, submit: string, chargedValue: number)
 ------
@@ -1026,6 +1107,8 @@
 
 ## PaymentIframe
 
+Wrap target. FAC hosted payment page. No Paradise types.
+
 + PaymentIframe(html: string, transactionId: string)
 ------
 + html: string
@@ -1033,6 +1116,8 @@
 ----
 
 ## FAC
+
+FAC CCS builds the ++PaymentIframe++. Midtier maps; it is not a type. POST `fac/cards/spi/auth`; GET `getTokenizedCard`.
 
 + FAC()
 ------
@@ -1055,6 +1140,8 @@
 
 ## PaymentStatus
 
+Outcome of a tokenized-card read. No Paradise types. No repository.
+
 + PaymentStatus(status: string, reason: string)
 ------
 + status: string
@@ -1064,6 +1151,8 @@
 ----
 
 ## ApplePayCertificate
+
+Wrap target. Apple / DigiCert BM domain certificate Midtier serves. No Paradise types.
 
 + ApplePayCertificate(keyIdentifier: string, certificate: string)
 ------
@@ -1075,6 +1164,8 @@
 ----
 
 ## Apple
+
+Midtier serves the ++ApplePayCertificate++. Apple / DigiCert builds it; Midtier is not a type. POST `/apple/cert` `getCert`.
 
 + Apple()
 ------
@@ -1088,6 +1179,8 @@
 # Billing
 
 ## Billing
+
+Paradise view of the party's billing account. Onboarding keeps `{ id, defaultPayment }`. Self-care adds state, invoices, balance, transactions. Lives on `Customer.billing`. `CustomerRepository.load` signs out when `state` is `terminated`.
 
 + Billing(id: string, state: string, balance: string, defaultPayment: any, invoices: Invoice[], transactions: Transaction[])
 ------
@@ -1118,6 +1211,8 @@
 
 ## BillingRepository
 
+Owns `Collection<Billing>`. Associates to `PortalGateway` to create and read ++MavenirBillingAccount++ and to post credit.
+
 + BillingRepository(billings: Collection<Billing>, portalGateway: PortalGateway)
 ------
 + << aggregation >> billings: Collection<Billing>
@@ -1132,6 +1227,8 @@
 
 ## Invoice
 
+Self-care row from `v1/invoice/history` FINAL_BILL (~6 months).
+
 + Invoice(invoiceId: string, billDate: string, dueDate: string, dueAmount: string, status: string)
 ------
 + invoiceId: string
@@ -1143,6 +1240,8 @@
 
 ## Transaction
 
+Self-care Processed AR row.
+
 + Transaction(id: string, paymentDate: string, totalAmount: string)
 ------
 + id: string
@@ -1151,6 +1250,8 @@
 ----
 
 ## MavenirBillingAccount
+
+`v1/billingAccount`. POSTPAID party account. Create payload: ratingType POSTPAID, billCycle `1st of every month`, billingTemplate Summary, communicationMedium Email, Consumer Dunning, Primary contact from ContactMedium, defaultPaymentMethod from the FAC token already on the party. The wrap does not know Cart or Billing.
 
 + MavenirBillingAccount(id: string, name: string, href: string, state: string, ratingType: string, billCycle: string, defaultPaymentMethod: any, relatedParty: any, accountBalance: any, creditAdjustments: MavenirCreditAdjustment[])
 ------
@@ -1175,6 +1276,8 @@
 
 ## MavenirInvoice
 
+`v1/invoice/history` FINAL_BILL. PDF is `v1/invoice/invoicePDF`.
+
 + MavenirInvoice(invoiceId: string, billDate: string, dueDate: string, dueAmount: string, status: string)
 ------
 + invoiceId: string
@@ -1186,6 +1289,8 @@
 
 ## ArTransaction
 
+`paymentManagement/v4/refund/allARTransaction`. Self-care lists Processed rows. Credit adjustment posts here.
+
 + ArTransaction(id: string, status: string, totalAmount: string, paymentDate: string)
 ------
 + id: string
@@ -1195,6 +1300,8 @@
 ----
 
 ## MavenirCreditAdjustment
+
+AR credit **on the billing account**. `creditPayload.account` is that account's id / href. `PortalGateway.applyCredit` POSTs `allARTransaction` (`transactionType` creditAdjustment). Cook (voucher / pay-upfront) and later Pay Now use this. After it posts, self-care lists it as a Processed *ArTransaction* on the same account. The wrap does not know Cart.
 
 + MavenirCreditAdjustment(amount: number, unit: string, glCode: string, transactionType: string, transactionSubType: string, serviceProviderId: string, reason: string)
 ------
@@ -1214,6 +1321,8 @@
 ----
 
 ## PortalGateway
+
+Billing on the Mavenir party. Party create / read / profile live in `# Customer`.
 
 + PortalGateway()
 ------
@@ -1238,6 +1347,8 @@
 # Subscription
 
 ## Line
+
+The phone line on a Cart or Subscription. Owns number, SIM type, ICCID, and portability.
 
 + Line(msisdn: string | null, simType: SimType | null, iccid: string | null, availableNumbers: string[], portability: Portability | null)
 ------
@@ -1270,6 +1381,8 @@
 
 ## Subscription
 
+Paradise view of one line. Self-care: `{ id, bundle, number, simType, status, usage }`. Onboarding thinner: `{ type, number, status }` until agreement is live. `` ++MavenirAgreement++ (`agreementManagement/agreement`).
+
 + Subscription(id: string, status: string, line: Line, bundle: Bundle, usage: Usage, portability: Portability | null, productOrder: MavenirProductOrder | null, voucherRedemption: VoucherRedemption | null)
 ------
 + id: string
@@ -1296,11 +1409,15 @@
 
 ## Usage
 
+Local / roaming data on the line. Loaded with the subscription (`getUsageRequest`).
+
 + Usage()
 ------
 ----
 
 ## SubscriptionRepository
+
+Owns `Collection<Subscription>`. Associates to `PortalGateway` for agreements / product order. Associates to `CcsGateway` for usage.
 
 + SubscriptionRepository(subscriptions: Collection<Subscription>, portalGateway: PortalGateway, ccsGateway: CcsGateway)
 ------
@@ -1318,6 +1435,8 @@
 
 ## MavenirAgreement
 
+`agreementManagement/agreement?customerId=&productValues=true`. The wrap does not know Subscription.
+
 + MavenirAgreement(id: string, status: string, agreementType: string, initialDate: string, characteristic: any, agreementItem: MavenirAgreementProduct[])
 ------
 + id: string
@@ -1331,6 +1450,8 @@
 
 ## MavenirAgreementProduct
 
+Product on the agreement. Latest `orderDate` is Paradise *Bundle* (`productOffering.id` is Plan.id).
+
 + MavenirAgreementProduct(id: string, name: string, description: string, orderDate: any, productPrice: any)
 ------
 + id: string
@@ -1342,6 +1463,8 @@
 
 ## MavenirProductOrder
 
+Cook: PATCH shoppingCart with billingAccount then `POST v2/productOrderFromCart`. Created by `Cart.createOrder`. Lives with the line after cook. The wrap does not know Cart.
+
 + MavenirProductOrder(id: string)
 ------
 + id: string
@@ -1349,11 +1472,15 @@
 
 ## MsisdnDataUsage
 
+CCS `subscriber/serviceUsage/.../subscribers/{msisdn}`.
+
 + MsisdnDataUsage()
 ------
 ----
 
 ## PortalGateway
+
+Agreements and product order on the Mavenir party. Party create / read / profile live in `# Customer`. Billing commits live in `# Billing`. Cart shopping-cart slice lives in `# Cart`.
 
 + PortalGateway()
 ------
@@ -1382,6 +1509,8 @@
 
 ## CcsGateway
 
+Usage on the MSISDN. Midtier maps; it is not a type.
+
 + CcsGateway()
 ------
 ----
@@ -1389,6 +1518,8 @@
 	// GET ccsGateway/subscriber/serviceUsage/.../subscribers/{msisdn}
 
 ## VoucherRedemption
+
+Vouchera redeem at cook. Written on Subscription. Cart.voucher is the code.
 
 + VoucherRedemption(success: boolean, discountAmount: number, totalAmount: number)
 ------
@@ -1401,6 +1532,8 @@
 # Care
 
 ## Case
+
+Paradise *Case* `` a Zendesk ++Ticket++. One subject per open. Not stored on the Customer session.
 
 + Case(subject: string)
 ------
@@ -1424,6 +1557,8 @@
 
 ## Ticket
 
+Wrap target. Zendesk ++Ticket++. No Paradise types.
+
 + Ticket(id: string, subject: string, requesterName: string, requesterEmail: string)
 ------
 + id: string
@@ -1435,6 +1570,8 @@
 ----
 
 ## Zendesk
+
+Zendesk builds the ++Ticket++. Midtier maps; it is not a type. POST tickets.json.
 
 + Zendesk()
 ------
@@ -1448,6 +1585,8 @@
 	// requesterEmail Identity.email
 
 ## PersonaInquiry
+
+Wrap target. Persona inquiry. Care owns the inquiry record. KYC `ProfileRequirements.mapInquiry` writes Identity / Address.
 
 + PersonaInquiry(inquiryId: string, status: string, verified: boolean, email: string, nameFirst: string, nameLast: string, birthdate: string, selectedCountryCode: string, identificationNumber: string, identificationClass: string, expiryDate: string, addressStreet1: string, addressStreet2: string, addressCity: string, addressSubdivision: string, addressPostalCode: string, addressCountryCode: string, currentGovernmentId: string | null)
 ------
@@ -1473,6 +1612,8 @@
 
 ## PersonaDocument
 
+Wrap target. Persona government-id document. Care owns the document. KYC reads expiry onto Identity.
+
 + PersonaDocument(documentId: string, expirationDate: string, email: string)
 ------
 + documentId: string
@@ -1481,6 +1622,8 @@
 ----
 
 ## PersonaService
+
+Persona builds the ++PersonaInquiry++. Midtier maps; it is not a type.
 
 + PersonaService()
 ------

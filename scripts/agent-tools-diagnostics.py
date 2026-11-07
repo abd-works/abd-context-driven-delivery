@@ -14,8 +14,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Agent-tools diagnostics (MCP host process only).")
     parser.add_argument("--guidance", action="append", default=None)
     args = parser.parse_args()
-    from harness.agent_tools.agent_tools_probe import AgentToolsProbe, ProbeRequiresServingHost
-    from harness.installation.installer import Installer
+    from harness.diagnostics.agent_tools_probe import AgentToolsProbe, ProbeRequiresServingHost
+    from harness.installer.installer import Installer
     from harness.mcp.mcp_server import serving_mcp_host
 
     if serving_mcp_host() is None:

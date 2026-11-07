@@ -25,6 +25,7 @@ import cdd_guidance.practices  # noqa: F401
 from harness.markdown import Markdown
 from harness.agent_tools import AgentToolSet
 from cdd_guidance.actions.validate.validate import Validate
+from harness.agent_tools.tool_call import ToolCall
 from cdd_guidance.practices.bdd.bdd import Bdd
 
 _AGENT_BDD_TOOLSET = "cdd_guidance.practices.agent_bdd.agent_bdd:AgentBdd"
@@ -70,7 +71,7 @@ def _assert_text_inlined(instructions: str, source: str) -> None:
 with description("AgentBdd action expansion"):
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
-        ThrowawayProject()
+        self.project = ThrowawayProject()
 
     with after.each:
         ThrowawayProject.close_all()
@@ -106,7 +107,7 @@ with description("AgentBdd action expansion"):
         with context("the Validate kit is expanded with this Guidance"):
             with before.each:
                 self.response = _expand_action(
-                    Validate(),
+                    Validate(session=ToolCall(project=self.project.root).session),
                     "validate",
                     arguments={"guidance": [self.bdd]},
                 )

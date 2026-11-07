@@ -20,7 +20,7 @@ from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     read_manifest,
     yaml_from_prompt,
 )
-from space.session.session import Session
+from space.session.sessions import Sessions
 from space.session.throwaway_project import ThrowawayProject
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -116,8 +116,8 @@ with description("an in-process toolset run with a timeout"):
 with description("a toolset run request") as self:
     with before.each:
         self.project = ThrowawayProject()
-        Session(self.project.root).switch("checkout-flow", repo_path=self.project.root)
-        Session(self.project.root).switch("main", repo_path=self.project.root)
+        Sessions(self.project.root).switch("checkout-flow")
+        Sessions(self.project.root).switch("main")
 
     with after.each:
         self.project.close()

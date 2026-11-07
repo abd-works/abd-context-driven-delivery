@@ -102,49 +102,28 @@ _AMBIENT_STATE = re.compile(
 )
 
 
-class TacticalBuildingBlock(OoadClass):
-    """A class-shaped DDD building block. Loads the tactical facts DDD rules read from its graph node.
+def tactical_facts(parsed: OoadClass, kind: str) -> dict:
+    """The facts DDD's tactical rules read about a class its language parser read, seen as a building block of kind:
+    which operations reach into other objects, which helpers are public, which only delegate, which loads find their
+    identity in ambient state, and whether the class says which building block it is."""
+    from cdd_guidance.practices.ddd.model.stereotypes import declares_tactical_stereotype
 
-    The block is the parsed class seen through DDD, so it also carries that class's own facts.
-    """
-
-    graph_facts = OoadClass.graph_facts + (
-        "peer_private_operations",
-        "public_derive_operations",
-        "delegating_operations",
-        "identity_free_loads",
-        "tactical_stereotype",
-    )
-
-    def load_tactical_facts(self, parsed: OoadClass, file_text: str) -> None:
-        """Fill the facts this building block owns, from the class its language parser read and the file around it.
-
-        Each operation's body is the one the parser already read; only the class declaration's stereotype marks,
-        which sit above the class, come from the file text."""
-        from cdd_guidance.practices.ddd.model.stereotypes import declares_tactical_stereotype
-
-        for name in OoadClass.graph_facts:
-            if hasattr(parsed, name):
-                setattr(self, name, getattr(parsed, name))
-        operations = parsed.own_operations()
-        public = [op for op in operations if op.name and not op.name.startswith("_")]
-        self.peer_private_operations = [op.name for op in operations if op.peer_private_access]
-        self.public_derive_operations = [op.name for op in public if _DERIVE_PREFIX.match(op.name)]
-        self.delegating_operations = [op.name for op in public if _ONLY_DELEGATES.search(op.body.text)]
-        self.identity_free_loads = [
+    operations = list(parsed.operations)
+    public = [op for op in operations if op.name and not op.name.startswith("_")]
+    return {
+        "peer_private_operations": [op.name for op in operations if op.peer_private_access],
+        "public_derive_operations": [op.name for op in public if _DERIVE_PREFIX.match(op.name)],
+        "delegating_operations": [op.name for op in public if _ONLY_DELEGATES.search(op.body.text)],
+        "identity_free_loads": [
             op.name
             for op in operations
             if op.name.lower() in _LOAD_NAMES and not op.parameters and _AMBIENT_STATE.search(op.body.text)
-        ]
-        self.tactical_stereotype = declares_tactical_stereotype(
-            file_text, parsed.name, self.tactical_kind(), set(parsed.peer_names)
-        )
-
-    def tactical_kind(self) -> str:
-        return "EntityRoot" if getattr(self, "is_root", False) else self._semantic_type_name
+        ],
+        "tactical_stereotype": declares_tactical_stereotype(parsed.name, parsed.stereotypes, kind, set(parsed.peer_names)),
+    }
 
 
-class Entity(TacticalBuildingBlock):
+class Entity(OoadClass):
     """Identity that stays the same when its values change."""
 
     _semantic_type_name = "Entity"
@@ -183,7 +162,7 @@ class Entity(TacticalBuildingBlock):
         return self.invariant_object_type(sequential_order=len(self.invariant_objects))
 
 
-class ValueObject(TacticalBuildingBlock):
+class ValueObject(OoadClass):
     """No write operations and no setters. create, clone, and mix return a new instance."""
 
     _semantic_type_name = "ValueObject"
@@ -205,7 +184,7 @@ class ValueObject(TacticalBuildingBlock):
         return type(self)(self.name, self.sequential_order, intent=other.intent or self.intent)
 
 
-class Repository(TacticalBuildingBlock):
+class Repository(OoadClass):
     """A collection. Operations are any of create, read, update, delete, and search."""
 
     _semantic_type_name = "Repository"
@@ -225,7 +204,7 @@ class Repository(TacticalBuildingBlock):
             self.accesses = None
 
 
-class DomainService(TacticalBuildingBlock):
+class DomainService(OoadClass):
     """No state. An operation here is one no domain object can perform."""
 
     _semantic_type_name = "DomainService"
@@ -273,7 +252,7 @@ class DomainEvent(Property):
             self.subject = Property("subject", 0, description="the state of the event")
 
 
-class Specification(TacticalBuildingBlock):
+class Specification(OoadClass):
     _semantic_type_name = "Specification"
     _graph_practice = "ddd"
 
@@ -281,7 +260,7 @@ class Specification(TacticalBuildingBlock):
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
 
-class Factory(TacticalBuildingBlock):
+class Factory(OoadClass):
     _semantic_type_name = "Factory"
     _graph_practice = "ddd"
 

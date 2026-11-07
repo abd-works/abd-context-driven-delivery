@@ -11,6 +11,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     companion_interface_name,
     is_interface_name,
 )
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marked_intent
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property, property_notes
@@ -88,11 +89,12 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         return preamble.lines_in(self.language, "", "")
 
     def class_open(self, oclass: OoadClass, known_names: List[str]) -> List[str]:
-        """A blank line, the class's doc comment, then the declaration for its kind: an interface, a class with its
-        interface, a subclass, or a plain class. A language spells each piece."""
-        lines = [""] + self.class_doc(oclass.intent)
+        """A blank line, the class's doc comment, its stereotype decorators, then the declaration for its kind: an
+        interface, a class with its interface, a subclass, or a plain class. A language spells each piece; an
+        interface takes no decorators, so its stereotypes are marked in its doc comment."""
         if is_interface_name(oclass.name):
-            return lines + self.interface_declaration(oclass)
+            return [""] + self.class_doc(marked_intent(oclass.stereotypes, oclass.intent)) + self.interface_declaration(oclass)
+        lines = [""] + self.class_doc(self.class_intent(oclass)) + self.stereotype_decorators(oclass)
         interface = companion_interface_name(oclass.name, known_names)
         if interface:
             return lines + self.implementing_declaration(oclass, interface)
@@ -100,6 +102,14 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
 
     def class_doc(self, intent: str) -> List[str]:
         return [f"/** {intent} */"] if intent else []
+
+    def class_intent(self, oclass: OoadClass) -> str:
+        """What the class's doc comment says. A language with no decorators marks the stereotypes there."""
+        return marked_intent(oclass.stereotypes, oclass.intent)
+
+    def stereotype_decorators(self, oclass: OoadClass) -> List[str]:
+        """The decorator lines that carry the class's stereotypes; none for a language that marks them in the doc."""
+        return []
 
     def interface_declaration(self, oclass: OoadClass) -> List[str]:
         raise NotImplementedError(f"{type(self).__name__} must spell interface_declaration")

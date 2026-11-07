@@ -12,7 +12,7 @@ _REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from cdd_guidance.practices.stories.model.javascript.spec_file import render_story_spec_file
+from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptStory
 from cdd_guidance.practices.stories.model.story_model import Example, StepType, Scenario, Step, Story
 
 
@@ -65,7 +65,7 @@ def emit_story_javascript(
 ) -> Path:
     """Write `<stem>.js` next to a Python story-dict file using the Stories JS renderer."""
     story = dict_to_story(load_story_dict(path))
-    body = render_story_spec_file(story, relative_types_path=relative_types_path)
+    body = JavaScriptStory.create(story, relative_types_path=relative_types_path)
     body += f"\nexport const storyNames = ['{story.name}']\n"
     out = path.with_suffix(".js")
     out.write_text(body, encoding="utf-8")

@@ -31,6 +31,7 @@ from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import (
 )
 from cdd_guidance.practices.stories.stories import Stories
 from harness.guidance.rule import RulesCollection
+from harness.hooks.hook_server import HookPayload
 
 _ALL_RULE_SLUGS = (
     "screens-live-in-their-domain",
@@ -170,10 +171,10 @@ with description("a LernDomainDriven generator"):
     with context("whose rules collection injects on matching paths"):
         with before.each:
             self.rules = self.tool.rules
-            self.payload = {
+            self.payload = HookPayload({
                 "tool_name": "Write",
                 "tool_input": {"path": "src/customer/customer-node.ts"},
-            }
+            })
 
         with it("should load shared rules as a RulesCollection"):
             expect(self.rules).to(be_a(RulesCollection))

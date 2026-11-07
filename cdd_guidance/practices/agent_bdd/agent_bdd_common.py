@@ -502,45 +502,50 @@ def yaml_from_prompt(prompt: str) -> str | None:
 class ToolsetInvoke:
     """Expand an action or invoke a tool on a live toolset instance."""
 
-    def __init__(self, instance: Any, toolset_path: str) -> None:
+    def __init__(self, instance: Any, toolset_path: str, project: Path) -> None:
         self._instance = instance
         self._toolset_path = toolset_path
+        self._project = project
         self._arguments: dict[str, Any] = {}
         self._action_name: str | None = None
         self._tool_name: str | None = None
 
     @classmethod
     def create(cls, request: dict[str, Any]) -> ToolsetInvoke:
+        """The run a request names, on the project it names; a request that names none runs on the project the spec
+        works on, the one ``CDD_PROJECT`` names."""
         from harness.agent_tools.agent_tools import AgentToolSet
+        from space.work_state import project_checkout
 
         toolset_path = request.get("toolset")
         if not toolset_path:
             raise AgentHarnessError("request missing toolset")
+        project = Path(request["project"]) if request.get("project") else project_checkout()
         context = dict(request.get("context") or {})
         if request.get("session"):
-            context["session"] = cls._session_named(str(request["session"]))
+            context["session"] = cls._session_named(str(request["session"]), project)
         arguments = dict(request.get("arguments") or {})
         try:
             instance = AgentToolSet.instantiate({"toolset": str(toolset_path), "context": context})
         except TypeError as exc:
             raise AgentHarnessError(str(exc)) from exc
-        invoke = cls(instance, str(toolset_path))
+        invoke = cls(instance, str(toolset_path), project)
         invoke._arguments = arguments
         invoke._action_name = str(request["action"]) if request.get("action") else None
         invoke._tool_name = str(request["tool"]) if request.get("tool") else None
         return invoke
 
     @classmethod
-    def _session_named(cls, name: str) -> Any:
+    def _session_named(cls, name: str, project: Path) -> Any:
         """The project's session a run request names, which the toolset is made for, so the run works in that session
         and not in whichever session the project has open."""
-        from space.repo.repo import Repo
-        from space.session.session import MAIN_SESSION_NAME, Session
+        from space.session.session import MAIN_SESSION_NAME
+        from space.session.sessions import Sessions
 
-        repo = Repo.current()
+        sessions = Sessions(project)
         if name == MAIN_SESSION_NAME:
-            return Session.load(repo.session_folder(name), repo.root)
-        session = repo.work_session(name)
+            return sessions.load(sessions.folder_of(name))
+        session = sessions.named(name)
         if session is None:
             raise AgentHarnessError(f"request names session {name!r}, which the project does not have")
         return session
@@ -597,7 +602,7 @@ class ToolsetInvoke:
         from harness.agent_tools.agent_tools import AgentOperation
 
         if isinstance(member, AgentOperation):
-            return member.invoke(self._arguments)
+            return member.invoke(self._arguments, project=self._project)
         return getattr(self._instance, self._tool_name)(**self._arguments)
 
 

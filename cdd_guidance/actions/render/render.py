@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from harness.guidance_actions import GuidanceArg, GuidanceAction, load_document
+from harness.guidance.documents import load_document
+from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.installation.files import Skill
 from harness.mcp.mcp_server import Mcp

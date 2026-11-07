@@ -11,9 +11,10 @@ from expects import contain, equal, expect  # noqa: E402
 from mamba import before, context, description, it  # noqa: E402
 
 from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel  # noqa: E402
-from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, StepType, Story, StoryModel  # noqa: E402
+from cdd_guidance.practices.stories.model.story_model import Background, Epic, Scenario, Step, StepType, Story, StoryModel  # noqa: E402
 from cdd_guidance.practices.stories.rules.scenarios import (  # noqa: E402
     AndChaining,
+    ExamplesTraceDomainModel,
     FlaggedWritesIntendedGwt,
     GivenNamesComplexStateRootFirst,
     OutlineRequiresManyPermutations,
@@ -33,6 +34,17 @@ def _scenario(steps: list[tuple[str, str]], *, examples: int = 0, outline: bool 
         scenario.examples[f"order {number + 1}"] = f"order {number + 1}"
     scenario.is_outline = outline
     scenario.evidence = list(evidence)
+    return scenario
+
+
+def _naming_an_order(*, background_examples: int = 0) -> Scenario:
+    """A scenario whose When names the Order concept, with a Background of its own holding background_examples."""
+    scenario = _scenario([("When", "the customer places the Order"), ("Then", "the order is placed")])
+    scenario.steps[0].concepts = ["Order"]
+    background = Background("an open order", 1)
+    for number in range(background_examples):
+        background.examples[f"order {number + 1}"] = f"order {number + 1}"
+    scenario.backgrounds = [background]
     return scenario
 
 
@@ -169,3 +181,21 @@ with description("a scenario on a story graph"):
             with it("should be told to open with the Order root"):
                 given = "a ShippingAddress in Leeds"
                 expect(len(_given_hits(_loaded(_scenario([("Given", given)]), self.graph)))).to(equal(1))
+
+    with context("that names a domain concept"):
+        with context("with no examples anywhere"):
+            with it("should be told to give an examples table"):
+                expect(_scenario_hits(ExamplesTraceDomainModel(), _loaded(_naming_an_order()))).to(equal(
+                    ["Scenario 'Place the order' names domain concepts ['Order'] but has no examples table."]
+                ))
+
+        with context("with examples in its own Background"):
+            with before.each:
+                self.context = _loaded(_naming_an_order(background_examples=2))
+
+            with it("should pass"):
+                expect(_scenario_hits(ExamplesTraceDomainModel(), self.context)).to(equal([]))
+
+            with context("that is read back from graph.json"):
+                with it("should still pass"):
+                    expect(_scenario_hits(ExamplesTraceDomainModel(), _read_back(self.context))).to(equal([]))

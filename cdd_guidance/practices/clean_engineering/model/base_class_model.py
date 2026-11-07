@@ -29,6 +29,8 @@ _SCRIPT_IMPORT = re.compile(r"""(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(?\s*
 _IS_A = re.compile(r"\*is a type of\*", re.I)
 _CHILD_PARENT = re.compile(r"^\s*#{1,6}\s+\S.+\s+:\s+\S", re.MULTILINE)
 _INTERNAL_MARKDOWN = re.compile(r"^##\s+Internal\b", re.MULTILINE | re.IGNORECASE)
+# A class with one of these stereotypes owns the peers it builds, so building them is not a hidden dependency.
+_PEER_COMPOSING_STEREOTYPES = frozenset({"entity", "aggregate root"})
 
 
 def _internal_design_in(paths: List[Path]) -> str:
@@ -176,6 +178,7 @@ class OoadClass(OoadNode):
     _semantic_type_name = "OoadClass"
     graph_facts = (
         "bases",
+        "stereotypes",
         "method_count",
         "operation_shapes",
         "property_names",
@@ -204,6 +207,8 @@ class OoadClass(OoadNode):
         super().__init__(name, sequential_order, graph)
         self.intent = intent
         self.line = line
+        # The stereotypes the class carries, as words: `Aggregate Root`, `Value Object`.
+        self.stereotypes: List[str] = []
         # Parser facts for the graph: last source line and declared base classes.
         self.end_line: int | None = None
         self.bases: List[str] = []
@@ -235,15 +240,9 @@ class OoadClass(OoadNode):
     def operations(self, operations: List["Operation"]) -> None:
         self._refill(self._operations, operations)
 
-    def own_operations(self) -> List["Operation"]:
-        """Operations declared inside this class; parsers may hang module-level functions on a class too."""
-        if not self.line or not self.end_line:
-            return list(self.operations)
-        return [op for op in self.operations if not op.line or self.line <= op.line <= self.end_line]
-
     def load_source_facts(self, class_text: str) -> None:
         """Fill the shape and source-span facts this class owns."""
-        operations = self.own_operations()
+        operations = list(self.operations)
         constructor = next((op for op in operations if op.name in {"__init__", "constructor"}), None)
         self.method_count = len(operations)
         self.operation_shapes = [
@@ -262,6 +261,7 @@ class OoadClass(OoadNode):
         """Copy what the class itself says; its properties and operations are reconciled as children."""
         assert isinstance(source, OoadClass)
         self.intent = source.intent
+        self.stereotypes = list(source.stereotypes)
         self.collaborators = list(source.collaborators)
 
     def clone(self) -> "OoadClass":
@@ -272,6 +272,7 @@ class OoadClass(OoadNode):
             collaborators=list(self.collaborators),
             line=self.line,
         )
+        cloned.stereotypes = list(self.stereotypes)
         cloned.properties = [item.clone() for item in self.properties]
         cloned.operations = [item.clone() for item in self.operations]
         return cloned
@@ -281,6 +282,7 @@ class OoadClass(OoadNode):
             "name": self.name,
             "sequentialOrder": self.sequential_order,
             "intent": self.intent,
+            "stereotypes": list(self.stereotypes),
             "properties": [item.as_record() for item in self.properties],
             "operations": [item.as_record() for item in self.operations],
             "relationships": [item.as_record() for item in self.relationships],
@@ -552,19 +554,12 @@ class Module(OoadNode):
 
     def load_source_facts(self, text: str, file: Path, root: Path) -> None:
         """Fill the facts one parsed source file owns: what it imports, which classes share it,
-        and which of them the file declares as <<Entity>> / <<Aggregate Root>>."""
-        from cdd_guidance.practices.ddd.model.stereotypes import (
-            class_declaration_decorated_name,
-            is_aggregate_root,
-            is_entity,
-        )
-
+        and which of them carry the Entity or Aggregate Root stereotype, which may build the peers they own."""
         self.dependencies = self.import_targets(text, file, root)
         peer_names = [oclass.name for oclass in self.classes]
         for oclass in self.classes:
             oclass.peer_names = peer_names
-            decorated = class_declaration_decorated_name(text, oclass.name)
-            oclass.composes_peers = is_entity(decorated) or is_aggregate_root(decorated)
+            oclass.composes_peers = bool(_PEER_COMPOSING_STEREOTYPES & {item.lower() for item in oclass.stereotypes})
 
     def import_targets(self, text: str, file: Path, root: Path) -> List[str]:
         """Root-relative paths named by relative script imports (`./x`, `../y`)."""

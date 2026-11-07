@@ -109,6 +109,7 @@ class Operation(OoadNode):
         "bold_interaction_lines",
         "bold_invariant_lines",
         "owner",
+        "packed_parameters",
     )
 
     def __init__(

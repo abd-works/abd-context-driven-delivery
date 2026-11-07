@@ -15,7 +15,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from harness.agent_tools.agent_tools import agent_toolset
+from harness.hooks.hook_server import HookPayload
 from harness.hooks.hooks import Hook, Hooks
+from harness.installation.destination import noCatalog
 _PREVIEW_LINES = 8
 _PREVIEW_CHARS = 600
 _LOG_NAME = "prompt-log.txt"
@@ -69,11 +71,11 @@ def _preview(text: str | None) -> str:
     return f"{head}\n... [{len(lines)} lines, {len(text)} chars total]"
 
 
-def _header(event: str, data: dict) -> str:
+def _header(event: str, payload: HookPayload) -> str:
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    gen = (data.get("generation_id") or "")[:8]
-    conv = (data.get("conversation_id") or "")[:8]
-    model = data.get("model", "")
+    gen = payload.generation_id[:8]
+    conv = payload.conversation_id[:8]
+    model = payload.get("model", "")
     return (
         f"\n{'=' * 78}\n"
         f"{ts}  {event}  conv={conv}  gen={gen}  model={model}\n"
@@ -81,11 +83,11 @@ def _header(event: str, data: dict) -> str:
     )
 
 
-def format_before_submit(data: dict) -> str:
-    lines = [_header("beforeSubmitPrompt", data)]
+def format_before_submit(payload: HookPayload) -> str:
+    lines = [_header("beforeSubmitPrompt", payload)]
     lines.append("USER PROMPT:")
-    lines.append(_preview(data.get("prompt", "")))
-    attachments = data.get("attachments") or []
+    lines.append(_preview(payload.get("prompt", "")))
+    attachments = payload.get("attachments") or []
     if attachments:
         lines.append("\nATTACHMENTS:")
         for att in attachments:
@@ -94,17 +96,17 @@ def format_before_submit(data: dict) -> str:
     return "\n".join(lines)
 
 
-def format_before_read_file(data: dict) -> str:
-    path = data.get("file_path", "")
+def format_before_read_file(payload: HookPayload) -> str:
+    path = payload.get("file_path", "")
     kind = classify_path(path)
-    content = data.get("content", "")
-    lines = [_header("beforeReadFile", data)]
+    content = payload.get("content", "")
+    lines = [_header("beforeReadFile", payload)]
     lines.append(f"READ [{kind}]: {path}")
     lines.append(f"size: {len(content)} chars")
     if content:
         lines.append("preview:")
         lines.append(_preview(content))
-    attachments = data.get("attachments") or []
+    attachments = payload.get("attachments") or []
     if attachments:
         lines.append("\nPROMPT ATTACHMENTS (bundled with read):")
         for att in attachments:
@@ -113,10 +115,10 @@ def format_before_read_file(data: dict) -> str:
     return "\n".join(lines)
 
 
-def format_pre_tool_use(data: dict) -> str:
-    tool_name = data.get("tool_name", "")
-    tool_input = data.get("tool_input") or {}
-    lines = [_header(f"preToolUse:{tool_name}", data)]
+def format_pre_tool_use(payload: HookPayload) -> str:
+    tool_name = payload.tool_name
+    tool_input = payload.tool_input
+    lines = [_header(f"preToolUse:{tool_name}", payload)]
 
     if tool_name == "Task":
         for key in ("description", "prompt", "subagent_type", "model"):
@@ -137,74 +139,74 @@ def format_pre_tool_use(data: dict) -> str:
     return "\n".join(lines)
 
 
-def format_subagent_start(data: dict) -> str:
-    lines = [_header("subagentStart", data)]
+def format_subagent_start(payload: HookPayload) -> str:
+    lines = [_header("subagentStart", payload)]
     for key in ("subagent_type", "subagent_model", "task", "git_branch"):
-        val = data.get(key)
+        val = payload.get(key)
         if val:
             lines.append(f"{key}: {_preview(str(val))}")
     return "\n".join(lines)
 
 
-def format_after_agent_response(data: dict) -> str:
-    lines = [_header("afterAgentResponse", data)]
-    text = data.get("text")
+def format_after_agent_response(payload: HookPayload) -> str:
+    lines = [_header("afterAgentResponse", payload)]
+    text = payload.get("text")
     if text:
         lines.append(f"text: {_preview(str(text))}")
     return "\n".join(lines)
 
 
+@noCatalog
 @Hooks(disabled=True)
 @agent_toolset
 class PromptLog:
     """Audit what Cursor sends the model — one ``@Hook`` per event, each writing that event's entry to the log.
 
     The log is the file the toolset was made with; made with none, ``PROMPT_LOG_PATH`` when set, else
-    ``prompt-log.txt`` in the logs folder of the session open in the project being worked on, read for each event so
-    the log follows a session switch."""
+    ``prompt-log.txt`` in the logs folder of the session open in the project the event happened in, read for each
+    event so the log follows a session switch."""
 
     def __init__(self, log: Path | None = None) -> None:
         self._log = log
 
-    @property
-    def log(self) -> Path:
+    def log_for(self, payload: HookPayload) -> Path:
+        """The file payload's entry is written to."""
         if self._log is not None:
             return self._log
         override = os.environ.get("PROMPT_LOG_PATH")
         if override:
             return Path(override)
-        from space.repo.repo import Repo
-        from space.work_state import project_checkout
+        from space.session.sessions import Sessions
 
-        return Repo(project_checkout()).current_session.hook_log(_LOG_NAME)
+        return Sessions(payload.project).saved.hook_log(_LOG_NAME)
 
-    def _append(self, entry: str) -> None:
-        path = self.log
+    def _append(self, payload: HookPayload, entry: str) -> None:
+        path = self.log_for(payload)
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "a", encoding="utf-8") as log:
             log.write(entry if entry.endswith("\n") else f"{entry}\n")
 
     @Hook("beforeSubmitPrompt")
-    def before_submit_prompt(self, payload: dict) -> dict:
-        self._append(format_before_submit(payload))
+    def before_submit_prompt(self, payload: HookPayload) -> dict:
+        self._append(payload, format_before_submit(payload))
         return {"continue": True}
 
     @Hook("beforeReadFile")
-    def before_read_file(self, payload: dict) -> dict:
-        self._append(format_before_read_file(payload))
+    def before_read_file(self, payload: HookPayload) -> dict:
+        self._append(payload, format_before_read_file(payload))
         return {"permission": "allow"}
 
     @Hook("preToolUse")
-    def pre_tool_use(self, payload: dict) -> dict:
-        self._append(format_pre_tool_use(payload))
+    def pre_tool_use(self, payload: HookPayload) -> dict:
+        self._append(payload, format_pre_tool_use(payload))
         return {"permission": "allow"}
 
     @Hook("subagentStart")
-    def subagent_start(self, payload: dict) -> dict:
-        self._append(format_subagent_start(payload))
+    def subagent_start(self, payload: HookPayload) -> dict:
+        self._append(payload, format_subagent_start(payload))
         return {"permission": "allow"}
 
     @Hook("afterAgentResponse")
-    def after_agent_response(self, payload: dict) -> dict:
-        self._append(format_after_agent_response(payload))
+    def after_agent_response(self, payload: HookPayload) -> dict:
+        self._append(payload, format_after_agent_response(payload))
         return {}

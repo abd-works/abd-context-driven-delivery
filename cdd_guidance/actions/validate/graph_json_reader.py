@@ -54,14 +54,14 @@ def _violating_node(violation: Violation) -> dict[str, Any]:
 
 
 def _violations_from_saved_graph(documents: dict[str, Any], practices: list[str] | None) -> list[Violation]:
-    """A saved practice keeps its node rows and its violations; a violation saved before it kept its own place sits at
+    """A saved practice keeps its nodes and its violations; a violation saved before it kept its own place sits at
     its node's."""
     violations: list[Violation] = []
     for name, document in documents.items():
         if practices and name not in practices:
             continue
-        rows = {row[0]: row for row in (document or {}).get("nodes") or [] if row}
-        violations.extend(Violation.from_saved(name, saved, rows) for saved in (document or {}).get("rules") or [])
+        nodes = {node[0]: node for node in (document or {}).get("nodes") or [] if node}
+        violations.extend(Violation.from_saved(name, saved, nodes) for saved in (document or {}).get("rules") or [])
     return violations
 
 

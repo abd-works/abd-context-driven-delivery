@@ -22,8 +22,8 @@ _FIELD_INIT = re.compile(
     re.M,
 )
 _STATIC_LINE = re.compile(r"^\s*(?:(?:public|private|protected|readonly|declare|override)\s+)*static\b")
-# Construction and accessor heads are how a class is built or read, not operations a rule measures.
-_NOT_OPERATIONS = frozenset({"constructor", "get", "set"})
+# What the operation rules measure on a body; a getter's Property node records them for its getter.
+_GETTER_MEASURES = ("line_count", "max_control_flow_depth", "has_bare_catch", "swallows_exceptions")
 
 
 class CleanEngineeringGraph(GraphPractice):
@@ -130,8 +130,8 @@ class _CodeReading:
         self.practice.link("belongsTo", node, folder, "relationship")
         for prop in _properties_of(cls, text):
             self._property(relative, node, prop)
-        for operation in cls.own_operations():
-            if operation.name not in _NOT_OPERATIONS and not getattr(operation, "is_property", False):
+        for operation in cls.operations:
+            if not getattr(operation, "is_property", False):
                 self._operation(lines, relative, node, operation)
 
     def _property(self, relative: str, cls: Node, prop: dict) -> None:
@@ -144,6 +144,8 @@ class _CodeReading:
         )
         # A property found only by a getter or field has no parsed object to name its class, so the node does.
         node.set_fact("owner", cls.name)
+        if prop.get("getter") is not None:
+            self._measure_getter(node, prop["getter"])
         self.practice.link("properties", cls, node, "grouped")
         if not _names_class(prop["hint"], self.class_names):
             return
@@ -153,6 +155,11 @@ class _CodeReading:
             if other_node is not None:
                 self.practice.link("hasType", node, other_node, "relationship")
                 self.practice.link("dependsOn", cls, other_node, "relationship")
+
+    def _measure_getter(self, node: Node, getter) -> None:
+        """A getter's body is an operation's body, so its Property node records what the operation rules measure."""
+        for fact in _GETTER_MEASURES:
+            node.set_fact(fact, getattr(getter, fact, None))
 
     def _operation(self, lines: list[str], relative: str, cls: Node, operation) -> None:
         from cdd_guidance.practices.clean_engineering.model.operation import operation_source_span
@@ -326,7 +333,7 @@ def _properties_of(cls, text: str) -> list[dict]:
         if not getattr(operation, "is_property", False) or operation.name in seen or str(operation.name).startswith("_"):
             continue
         seen.add(operation.name)
-        found.append({"name": operation.name, "hint": operation.name[:1].upper() + operation.name[1:], "line": getattr(operation, "line", None) or 1, "parsed": None})
+        found.append({"name": operation.name, "hint": operation.name[:1].upper() + operation.name[1:], "line": getattr(operation, "line", None) or 1, "parsed": None, "getter": operation})
     for match in _GETTER.finditer(body):
         name = match.group(1)
         if name in seen or name.startswith("_"):

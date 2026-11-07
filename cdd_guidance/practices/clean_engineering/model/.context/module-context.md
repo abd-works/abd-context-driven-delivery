@@ -5,7 +5,7 @@
 
 - **Purpose:** Keep one class model that every format and every practice reads, so converting between formats never changes the classes.
 - **Seam (terms):** CleanEngineeringModelFactory, CleanEngineeringModel, Module, OoadClass, Property, Operation, Parameter, Relationship, CodeBody
-- **Dependencies (one-way):** `harness/graph` (the model's nodes are graph nodes), `harness/agent_tools`, `cdd_guidance/actions/sketch` (*SketchOutline*, for the sketch format), `cdd_guidance/practices/clean_engineering` (the practice and its rules), `cdd_guidance/practices/clean_engineering/model/drawio` (draw.io format), `cdd_guidance/practices/ddd` (stereotypes). The practice, the draw.io format, `cdd_guidance/practices/ddd`, and `harness/graph` each import this module back — cycles tracked in `.sessions/_backlog/break-module-dependency-cycles.md`.
+- **Dependencies (one-way):** `harness/graph` (the model's nodes are graph nodes), `harness/agent_tools`, `cdd_guidance/actions/sketch` (*SketchOutline*, for the sketch format), `cdd_guidance/practices/clean_engineering` (the practice and its rules), `cdd_guidance/practices/clean_engineering/model/drawio` (draw.io format). The practice, the draw.io format, and `harness/graph` each import this module back — cycles tracked in `.sessions/_backlog/break-module-dependency-cycles.md`.
 
 ## Constraint
 

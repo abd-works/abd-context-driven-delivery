@@ -445,7 +445,7 @@ with description("a validate action on practice guidance") as self:
 
         with it("should leave an earlier report's saved graph as it was"):
             folder = self.session / "validation-reports"
-            folder.mkdir()
+            folder.mkdir(parents=True)
             earlier = folder / "ddd-tactics-20200101T000000.json"
             earlier.write_text("[]", encoding="utf-8")
             self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])

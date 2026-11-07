@@ -11,18 +11,17 @@ if str(_REPO) not in sys.path:
 
 
 def main() -> int:
-    from harness.agent_tools.agent_tools_probe import (
+    from harness.diagnostics.agent_tools_probe import (
         AgentToolsProbe,
         _invoke_skip_reason,
         _probe_mcp_ping_host,
     )
-    from harness.guidance.guidance_probe import GuidanceProbe
-    from harness.installation.installer import Installer
+    from harness.diagnostics.guidance_probe import GuidanceProbe
+    from harness.installer.installer import Installer
     from harness.mcp.mcp_server import McpHost
 
     installer = Installer(repo=_REPO)
-    installer.ensure_import_path()
-    refs = tuple(installer.collect_toolsets())
+    refs = tuple(installer.toolsets.collect())
     print(f"standing host ({len(refs)} toolsets)", flush=True)
     started = time.perf_counter()
     host = McpHost.from_refs(refs, repo=str(_REPO), project=str(_REPO))

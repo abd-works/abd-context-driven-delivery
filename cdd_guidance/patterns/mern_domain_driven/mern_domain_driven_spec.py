@@ -19,6 +19,7 @@ from cdd_guidance.patterns.mern_domain_driven.mern_domain_driven import (
 )
 from cdd_guidance.practices.stories.stories import Stories
 from harness.guidance.rule import RulesCollection
+from harness.hooks.hook_server import HookPayload
 
 _MODULE_DIR = Path(__file__).resolve().parent
 
@@ -95,10 +96,10 @@ with description("a MernDomainDriven generator"):
     with context("whose rules collection injects on matching package paths"):
         with before.each:
             self.rules = self.tool.rules
-            self.payload = {
+            self.payload = HookPayload({
                 "tool_name": "Write",
                 "tool_input": {"path": "packages/onboard-a-customer/carts/cart-server.ts"},
-            }
+            })
 
         with it("should load shared rules as a RulesCollection"):
             expect(self.rules).to(be_a(RulesCollection))

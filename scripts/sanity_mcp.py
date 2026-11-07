@@ -55,11 +55,11 @@ class McpSanity:
         )
 
     def _host(self) -> Any:
-        from harness.installation.installer import Installer
+        from harness.installer.installer import Installer
         from harness.mcp.mcp_server import McpHost
 
         installer = Installer(repo=self.repo)
-        refs = tuple(installer.collect_toolsets())
+        refs = tuple(installer.toolsets.collect())
         return McpHost.from_refs(refs, repo=str(self.repo), project=str(self.repo))
 
     def _ping(

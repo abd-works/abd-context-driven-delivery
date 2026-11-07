@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import re
 
-from cdd_guidance.practices.clean_engineering.model.rules_shared.measured_operation import (
-    MeasuredOperation,
+from cdd_guidance.practices.clean_engineering.model.rules_shared.operation_checks import (
     OperationMeasureRule,
+    operation_label,
 )
 
 MAX_DOMAIN_PARAMETERS = 3
@@ -38,13 +38,13 @@ def counted_parameters(names: list[str], packed: dict[str, int] | None = None) -
 class LimitOperationParameters(OperationMeasureRule):
     slug = "limit-operation-parameters"
 
-    def measure(self, operation: MeasuredOperation) -> list[str]:
+    def measure(self, operation) -> list[str]:
         if _parameter_count_exempt(operation.name):
             return []
-        names = [name for name, _hint in operation.fact("parameters", None) or []]
-        packed = operation.fact("packed_parameters", None) or {}
+        names = [name for name, _hint in operation.get_fact("parameters", None) or []]
+        packed = operation.get_fact("packed_parameters", None) or {}
         count = counted_parameters(names, packed)
         if count <= MAX_DOMAIN_PARAMETERS:
             return []
         packing = " A packed tuple or *args counts each value it carries." if packed else ""
-        return [f"{operation.label} takes {count} parameters (maximum {MAX_DOMAIN_PARAMETERS}, excluding self).{packing}"]
+        return [f"{operation_label(operation)} takes {count} parameters (maximum {MAX_DOMAIN_PARAMETERS}, excluding self).{packing}"]

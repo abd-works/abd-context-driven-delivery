@@ -13,7 +13,7 @@ import re
 from html import escape
 from typing import Dict, List, Optional, Tuple
 
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import (
     GROUP_FILL_COLORS,
     ArrowRouter,

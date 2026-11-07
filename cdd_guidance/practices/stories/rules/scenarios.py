@@ -35,21 +35,6 @@ _ALTERNATIVES_WITHOUT_AN_OUTLINE = 2
 _OWNED_PART_TYPES = ("Entity", "ValueObject")
 
 
-def story_of(node: Node, context: RuleCheckContext):
-    """The story that owns the scenario node; its Background state applies to the scenario too."""
-    return context.practice.direct_parent(node)
-
-
-def example_count(scenario) -> int:
-    examples = getattr(scenario, "examples", None)
-    if examples is None:
-        return 0
-    try:
-        return len(examples)
-    except TypeError:
-        return 0
-
-
 class AndChaining(PracticeGraphRule):
     slug = "and-chaining"
     node_types = ("Scenario",)
@@ -111,39 +96,39 @@ class OutlineRequiresManyPermutations(PracticeGraphRule):
         return []
 
 def scenario_domain_concepts(steps) -> set[str]:
-    """The bold terms a scenario names, less its actors: who acts (Customer, My Paradise) is not a concept to give an example of."""
+    """The bold terms the steps name, less their actors: who acts (Customer, My Paradise) is not a concept to give an
+    example of."""
     concepts: set[str] = set()
     actors: set[str] = set()
     for step in steps:
-        for each in (step, *step.ands):
-            concepts.update(each.concepts)
-            if each.actor:
-                actors.add(each.actor)
+        concepts.update(step.get_fact("concepts") or [])
+        if step.get_fact("actor"):
+            actors.add(step.get_fact("actor"))
     return concepts - actors
 
 
+def _named_concepts(scenario: Node, context: RuleCheckContext) -> set[str]:
+    """The domain concepts a scenario's steps and their And continuations name."""
+    steps = [
+        each
+        for step in context.children(scenario, "steps")
+        for each in (step, *context.children(step, "ands"))
+    ]
+    return scenario_domain_concepts(steps)
+
+
 class ExamplesTraceDomainModel(PracticeGraphRule):
-    """Reads the scenario the loader parsed, not the graph: examples a scenario's own Background holds are not
-    recorded on the graph, so a graph reloaded from graph.json is not checked."""
+    """A scenario's examples edges hold its own examples and those its own and its story's Backgrounds hold, so the
+    rule reads only the graph."""
 
     slug = "examples-trace-domain-model"
     node_types = ("Scenario",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        scenario = node
-        if not hasattr(scenario, "steps"):
+        concepts = _named_concepts(node, context)
+        if not concepts or context.child_count(node, ("examples",)):
             return []
-        concepts = scenario_domain_concepts(scenario.steps)
-        if not concepts:
-            return []
-        story = story_of(node, context)
-        backgrounds = [*getattr(scenario, "backgrounds", []), *getattr(story, "backgrounds", [])]
-        background_examples = sum(example_count(background) for background in backgrounds)
-        if example_count(scenario) == 0 and background_examples == 0 and context.child_count(node, ("examples",)) == 0:
-            return [
-                f"Scenario {node.name!r} names domain concepts {sorted(concepts)} but has no examples table."
-            ]
-        return []
+        return [f"Scenario {node.name!r} names domain concepts {sorted(concepts)} but has no examples table."]
 
 class WhenNamesIntentNotInterfaceGesture(PracticeGraphRule):
     slug = "when-names-intent-not-interface-gesture"

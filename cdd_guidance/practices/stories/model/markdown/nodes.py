@@ -681,12 +681,12 @@ class MarkdownScenario(Scenario):
             headers = tuple(cells.keys())
             group = str(cells.get("group") or "")
             key = (group, headers)
-            slot = index.get(key)
-            if slot is None:
+            position = index.get(key)
+            if position is None:
                 index[key] = len(buckets)
                 buckets.append((group, headers, []))
-                slot = index[key]
-            buckets[slot][2].append(cells)
+                position = index[key]
+            buckets[position][2].append(cells)
         lines = ["### Examples", ""]
         for group, headers, rows in buckets:
             if group:

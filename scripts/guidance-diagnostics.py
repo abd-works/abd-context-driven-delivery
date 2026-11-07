@@ -21,8 +21,8 @@ def main() -> int:
         help="Practice and fidelity slugs to filter probes.",
     )
     args = parser.parse_args()
-    from harness.guidance.guidance_probe import GuidanceProbe
-    from harness.installation.installer import Installer
+    from harness.diagnostics.guidance_probe import GuidanceProbe
+    from harness.installer.installer import Installer
 
     probe = GuidanceProbe.filtered_by(Installer(repo=_REPO), args.guidance)
     report = "\n\n".join((probe.instructions(), probe.actions()))

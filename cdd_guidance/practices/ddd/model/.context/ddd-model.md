@@ -2,9 +2,9 @@
 
 *BoundedContextMap* reads text into bounded contexts and aggregates, the way the class model reads files and folders. A nested bounded context is a bounded context whose parent is a bounded context. Each bounded context holds one or more aggregates. When the text has no bounded context, the map has one bounded context and there is no folder for it; the aggregates sit in that context. A bounded context is a module. An aggregate is a module. Entity, value object, repository, domain service, specification, and factory are classes; a domain event and an invariant object are properties. An aggregate's root is an entity with `is_root` true. Markdown continues through a class card when the file has one, and stops at the class name when the file has only the name.
 
-The graph (`DddGraph` in `practices/ddd/graph_practice.py`) reads a bounded context from each folder holding `.context/bounded-context.md`, through `BoundedContext.load_context_folder`, and a building block from each class Clean Engineering read whose declaration or name gives it a DDD stereotype, through `TacticalBuildingBlock.load_tactical_facts`.
+The graph (`DddGraph` in `practices/ddd/graph_practice.py`) reads a bounded context from each folder holding `.context/bounded-context.md`, through `BoundedContext.load_context_folder`, and a building block from each class Clean Engineering read whose stereotypes or name give it a DDD kind. The building block's node holds the class's own facts and the tactical facts `tactical_facts(parsed, kind)` reads from the parsed class; the class itself stays Clean Engineering's node.
 
-Callers use the base nodes. The practice's formats (`Ddd(...).formats`: sketch, markdown, drawio) each name the map class that reads and writes that format; `parse` reads text into a `BoundedContextMap` and `render` writes one back. The python and typescript formats are Clean Engineering's class models: `Ddd` converts the map with `to_clean_engineering` and back with `from_clean_engineering`.
+Callers use the base nodes. The practice's formats (`Ddd(...).formats`: sketch, markdown, drawio) each name the map class that reads and writes that format; `parse` reads text into a `BoundedContextMap` and `render` writes one back. The python and typescript formats are Clean Engineering's class models: `Ddd` converts the map with `to_clean_engineering` and back with `from_clean_engineering`. A card's stereotypes are the class's `stereotypes`, which the code channels write as decorators (`@aggregate_root`, `@AggregateRoot()`) and read back; where the class lives rides in its intent's first line (`Customer · Customer Profile`).
 
 ```
 bounded_context_map = MarkdownBoundedContextMap().parse(text)
@@ -13,7 +13,7 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 # practices/ddd/model
 
 - **Purpose:** Structure the software as DDD building blocks — bounded contexts, aggregates, and the stereotyped classes — so the model answers domain logic questions.
-- **Seam (terms):** BoundedContextMap, BoundedContext, Aggregate, Integration, TacticalBuildingBlock, Entity, InvariantObject, ValueObject, Repository, DomainService, DomainEvent, Specification, Factory, MarkdownBoundedContextMap, SketchDddModel, DrawIOBoundedContextMap, ClassCard
+- **Seam (terms):** BoundedContextMap, BoundedContext, Aggregate, Integration, Entity, InvariantObject, ValueObject, Repository, DomainService, DomainEvent, Specification, Factory, MarkdownBoundedContextMap, SketchDddModel, DrawIOBoundedContextMap, ClassCard
 - **Dependencies (one-way):** practices/clean_engineering/model — Module, OoadClass, Property, Operation, CleanEngineeringModel; harness/graph — Graph, BoundChildren; actions/sketch — SketchOutline, SketchLens
 
 *Module*, *OoadClass*, *Property*, *Operation*, and *CleanEngineeringModel* belong to Clean Engineering; this model only extends or uses them.
@@ -126,9 +126,7 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 + target_name: str
 	// the entity when the target names one, else the aggregate
 
-## TacticalBuildingBlock : OoadClass
-
-A class-shaped DDD building block. It is the parsed class seen through DDD, so it carries that class's facts and the tactical facts DDD rules read.
+`tactical_facts(parsed: OoadClass, kind: str): dict` — the facts DDD's tactical rules read about a parsed class seen as a building block of kind, recorded on the building block's graph node:
 
 ------
 + peer_private_operations: list[str]
@@ -137,12 +135,9 @@ A class-shaped DDD building block. It is the parsed class seen through DDD, so i
 + identity_free_loads: list[str]
 	// load, get, find, or fetch with no parameters that reads ambient state such as the session or request
 + tactical_stereotype: bool
-----
-+ load_tactical_facts(parsed: OoadClass, file_text: str): None
-+ tactical_kind(): str
-	// EntityRoot for a root entity, else the building block's name
+	// the class carries a DDD stereotype, or its name says its kind
 
-## Entity : TacticalBuildingBlock
+## Entity : OoadClass
 
 + Entity(name: str, sequential_order: int, source: Entity | None = None)
 	// copies identity, is_root, and the aggregate
@@ -173,7 +168,7 @@ A class-shaped DDD building block. It is the parsed class seen through DDD, so i
 + stereotype: str
 	// invariant
 
-## ValueObject : TacticalBuildingBlock
+## ValueObject : OoadClass
 
 + ValueObject(name: str, sequential_order: int, source: ValueObject | None = None)
 	// no write operations and no setters
@@ -184,7 +179,7 @@ A class-shaped DDD building block. It is the parsed class seen through DDD, so i
 + clone(): ValueObject
 + mix(other: ValueObject): ValueObject
 
-## Repository : TacticalBuildingBlock
+## Repository : OoadClass
 
 + Repository(name: str, sequential_order: int, source: Repository | None = None)
 	// a repository is a collection; it copies the root it collects
@@ -195,7 +190,7 @@ A class-shaped DDD building block. It is the parsed class seen through DDD, so i
 	// any of create, read, update, delete, and search. Not all of them
 	// a search may appear more than once. Its name is search and what it searches
 
-## DomainService : TacticalBuildingBlock
+## DomainService : OoadClass
 
 + DomainService(name: str, sequential_order: int, source: DomainService | None = None)
 	// no state
@@ -212,9 +207,9 @@ A class-shaped DDD building block. It is the parsed class seen through DDD, so i
 + subject: Property
 	// the state of the event. A domain event always has one
 
-## Specification : TacticalBuildingBlock
+## Specification : OoadClass
 
-## Factory : TacticalBuildingBlock
+## Factory : OoadClass
 
 `building_block_type(stereotypes)` names the class a card with those stereotypes is read into: specification, value object, repository, domain service (or service), factory, entity, or aggregate root (an entity); a card with none is a plain *OoadClass*.
 

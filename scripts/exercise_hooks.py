@@ -115,10 +115,10 @@ class HookExercise:
         """Every installed practice with fidelities, found the way the installer finds toolsets."""
         from harness.agent_tools.agent_tools import AgentToolSet
         from harness.guidance.guidance import PracticeGuidance
-        from harness.installation.installer import Installer
+        from harness.installation.repository_toolsets import RepositoryToolsets
 
         loaded = []
-        for ref in Installer(repo=self.repo).collect_toolsets():
+        for ref in RepositoryToolsets(self.repo).collect():
             try:
                 practice = AgentToolSet.instantiate(ref)
             except Exception:  # noqa: BLE001
@@ -189,11 +189,11 @@ class HookExercise:
         }
 
     def _fire(self, path: Path) -> tuple[str, str]:
-        from space.repo.repo import Repo
+        from space.session.sessions import Sessions
 
         result = self._server().handle_stdin(json.dumps(self._payload(path)).encode("utf-8"))
         injected = result.additional_context or ""
-        folder = Repo(self.repo).current_session.session_path
+        folder = Sessions(self.repo).saved.session_path
         chat = folder / "last-chat-injected-rules.md"
         remembered = folder / "chat-injections" / "hook-exercise.md"
         chat_text = chat.read_text(encoding="utf-8") if chat.is_file() else ""

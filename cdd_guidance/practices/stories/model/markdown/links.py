@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from harness.agent_tools.name import Name
+from harness.name.name import Name
 
 _LINK = re.compile(r"\[([^\]\n]+)\]\(([^)\s]*)\)")
 _CODE_SPAN = re.compile(r"`[^`\n]+`")

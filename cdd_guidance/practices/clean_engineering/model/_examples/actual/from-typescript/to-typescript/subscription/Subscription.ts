@@ -1,5 +1,8 @@
 // === Subscription ===
 
+/**
+ * The phone line on a Cart or Subscription. Owns number, SIM type, ICCID, and portability.
+ */
 class Line {
   msisdn: string | null;
   // << association >>
@@ -44,6 +47,10 @@ class Line {
   }
 }
 
+/**
+ * Paradise view of one line. Self-care: `{ id, bundle, number, simType, status, usage }`. Onboarding thinner: `{ type, number, status }` until agreement is live. `` ++MavenirAgreement++ (`agreementManagement/agreement`).
+ */
+@Represents()
 class Subscription {
   // MavenirAgreement.id
   id: string;
@@ -86,11 +93,17 @@ class Subscription {
   }
 }
 
+/**
+ * Local / roaming data on the line. Loaded with the subscription (`getUsageRequest`).
+ */
 class Usage {
   constructor() {
   }
 }
 
+/**
+ * Owns `Collection<Subscription>`. Associates to `PortalGateway` for agreements / product order. Associates to `CcsGateway` for usage.
+ */
 class SubscriptionRepository {
   // << aggregation >>
   subscriptions: Collection<Subscription>;
@@ -115,6 +128,9 @@ class SubscriptionRepository {
   }
 }
 
+/**
+ * `agreementManagement/agreement?customerId=&productValues=true`. The wrap does not know Subscription.
+ */
 class MavenirAgreement {
   id: string;
   status: string;
@@ -135,6 +151,9 @@ class MavenirAgreement {
   }
 }
 
+/**
+ * Product on the agreement. Latest `orderDate` is Paradise *Bundle* (`productOffering.id` is Plan.id).
+ */
 class MavenirAgreementProduct {
   id: string;
   name: string;
@@ -151,6 +170,9 @@ class MavenirAgreementProduct {
   }
 }
 
+/**
+ * Cook: PATCH shoppingCart with billingAccount then `POST v2/productOrderFromCart`. Created by `Cart.createOrder`. Lives with the line after cook. The wrap does not know Cart.
+ */
 class MavenirProductOrder {
   id: string;
 
@@ -159,11 +181,17 @@ class MavenirProductOrder {
   }
 }
 
+/**
+ * CCS `subscriber/serviceUsage/.../subscribers/{msisdn}`.
+ */
 class MsisdnDataUsage {
   constructor() {
   }
 }
 
+/**
+ * Agreements and product order on the Mavenir party. Party create / read / profile live in `# Customer`. Billing commits live in `# Billing`. Cart shopping-cart slice lives in `# Cart`.
+ */
 class PortalGateway {
   constructor() {
   }
@@ -197,6 +225,9 @@ class PortalGateway {
   }
 }
 
+/**
+ * Usage on the MSISDN. Midtier maps; it is not a type.
+ */
 class CcsGateway {
   constructor() {
   }
@@ -206,6 +237,9 @@ class CcsGateway {
   }
 }
 
+/**
+ * Vouchera redeem at cook. Written on Subscription. Cart.voucher is the code.
+ */
 class VoucherRedemption {
   // flagged 5xx: false; cook continues
   success: boolean;

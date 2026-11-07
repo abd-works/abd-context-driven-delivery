@@ -9,6 +9,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     Module,
     OoadClass,
 )
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import ClassHead
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
@@ -104,11 +105,14 @@ class CFamilyParse:
             if body is None:
                 continue
             self._body_start = body_start
+            head = ClassHead.above(self._text[: match.start()])
             oclass = self._class_factory(
                 name=match.group(1),
                 sequential_order=class_order,
+                intent=head.doc,
                 line=self._line_at(self._text, match.start()),
             )
+            oclass.stereotypes = head.stereotypes
             oclass.end_line = self._line_at(self._text, body_start + len(body))
             oclass.bases = _EXTENDS_RE.findall(self._text[match.end() : body_start])
             oclass.operations = self._methods_from_body(body, match.group(1))
