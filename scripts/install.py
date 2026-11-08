@@ -36,6 +36,12 @@ def main() -> int:
         "Only pins: run a plain install as well when skills, rules, or commands changed.",
     )
     serving.add_argument(
+        "--update",
+        action="store_true",
+        help="Bring this checkout onto its latest commit (a fast-forward pull) and serve that commit from "
+        "~/.cdd/runtime to every chat, restarting the cdd server. The Session Board's Update runs this.",
+    )
+    serving.add_argument(
         "--serve-from-checkout",
         action="store_true",
         help="Serve this checkout as it is on disk to every chat, for working on CDD itself; cdd.restart reloads it. "
@@ -43,15 +49,19 @@ def main() -> int:
     )
     args = parser.parse_args()
     # The MCP and hook installations register with the Installer when their modules are imported.
-    import harness.hooks.hooks  # noqa: F401
+    import harness.hooks.hook_installation  # noqa: F401
     from harness.installation.installer import Installer
     from harness.mcp.mcp_server import McpInstallation
 
     installer = Installer(ide=args.ide, path=args.path, repo=_REPO)
     server = McpInstallation(installer.layout, installer.path, repo=_REPO)
     # Switching the code the server runs takes seconds; a full install takes a minute, so the switch runs alone.
-    if args.pin_runtime or args.serve_from_checkout:
-        print(f"cdd server: {server.pin_server() if args.pin_runtime else server.serve_from_checkout()}")
+    if args.update:
+        from space.repo.repo import Repo
+
+        Repo.of_project(_REPO).pull()
+    if args.pin_runtime or args.update or args.serve_from_checkout:
+        print(f"cdd server: {server.serve_from_checkout() if args.serve_from_checkout else server.pin_server()}")
         if installer.layout.is_claude_code:
             print(f"cdd-board: {server.claude_plugins.install_board()}")
         return 0

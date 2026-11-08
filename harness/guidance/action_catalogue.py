@@ -1,22 +1,17 @@
-"""The one list of CDD actions, found from the action folders under ``cdd_guidance/actions``."""
+"""The one list of CDD actions: the action toolsets the package that defines them registers."""
 
 from __future__ import annotations
 
-import importlib
 import inspect
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Protocol
 
-from harness.agent_tools.agent_tools import InstallDestination
-from harness.annotations.name import Name
+from harness.agent_tools.agent_tools import InstallDestination, ToolsetReference
 from harness.installation.files import Skill  # noqa: F401 - defining Skill registers the skill channel this reads
 from harness.annotations.annotation import annotation_kinds
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
-
-_ACTIONS_FOLDER = Path(__file__).resolve().parents[2] / "cdd_guidance" / "actions"
-
 
 class ActionRunner(Protocol):
     """How an action runs on one fidelity. The framework names no action class: the module that defines how actions
@@ -51,7 +46,7 @@ class Action:
     def toolset_ref(self) -> str:
         """The toolset as a toolset ref names it, by its module's full name, such as
         ``cdd_guidance.actions.generate.generate:Generate``."""
-        return f"{self._toolset_class.__module__}:{self._toolset_class.__name__}"
+        return str(ToolsetReference.of(self._toolset_class))
 
     @property
     def operation(self):
@@ -59,7 +54,7 @@ class Action:
 
     @property
     def folder(self) -> Path:
-        """The toolset's folder under ``cdd_guidance/actions``, which holds its guide and module context."""
+        """The toolset's own folder, which holds its guide and module context."""
         return Path(inspect.getfile(self._toolset_class)).resolve().parent
 
     def run_on(self, fidelity: FidelityGuidance, **arguments: Any) -> Any:
@@ -113,17 +108,21 @@ class FidelityActions:
 
 
 class ActionCatalogue:
-    """Every action CDD ships, read from its action folders: each folder under ``cdd_guidance/actions`` whose name
-    does not start with ``_`` holds its toolset in the module of the folder's name, as the class of that name in Pascal
-    case (``grill_context/grill_context.py`` holds ``GrillContext``). Each operation the toolset installs as a skill is
-    one action; an operation annotated ``@noDeploy`` is not installed, so it is no action an agent or a person can run. A
-    new action folder joins the catalogue by being there, so no other list has to learn about it.
+    """Every action CDD ships. The framework names no action: the package that defines the action toolsets registers
+    them here when it is imported (``register``), as every process that loads the repository's toolsets imports it. Each
+    operation a toolset installs as a skill is one action; an operation annotated ``@noDeploy`` is not installed, so it
+    is no action an agent or a person can run. The actions are made once from the registered toolsets and kept for the
+    process, as the practice catalogue keeps its practices."""
 
-    The toolsets are imported on first use and kept for the process, as the practice catalogue keeps its practices."""
-
-    _toolsets: tuple[type, ...] | None = None
-    _actions: tuple[Action, ...] | None = None
+    _toolsets: ClassVar[tuple[type, ...]] = ()
+    _actions: ClassVar[tuple[Action, ...] | None] = None
     _runner: ClassVar[ActionRunner | None] = None
+
+    @classmethod
+    def register(cls, *toolset_classes: type) -> None:
+        """Hold toolset_classes as the action toolsets CDD ships, in the order they are listed."""
+        ActionCatalogue._toolsets = tuple(toolset_classes)
+        ActionCatalogue._actions = None
 
     @classmethod
     def run_actions_with(cls, runner: ActionRunner) -> None:
@@ -132,8 +131,7 @@ class ActionCatalogue:
 
     @classmethod
     def runner(cls) -> ActionRunner:
-        """The runner the actions registered; the action folders are imported first, which registers it."""
-        cls.toolsets()
+        """The runner the module that defines how actions run registered when it was imported."""
         if ActionCatalogue._runner is None:
             raise ActionsNotRegistered()
         return ActionCatalogue._runner
@@ -141,15 +139,12 @@ class ActionCatalogue:
     @classmethod
     def fidelity_actions(cls) -> tuple[Action, ...]:
         """The actions that work on a fidelity, in catalogue order; none while no runner is registered."""
-        cls.toolsets()
         runner = ActionCatalogue._runner
         return tuple(action for action in cls.actions() if runner is not None and runner.works_on_fidelities(action))
 
     @classmethod
     def toolsets(cls) -> tuple[type, ...]:
-        """Each action folder's toolset class, in folder order."""
-        if cls._toolsets is None:
-            cls._toolsets = tuple(cls._toolset_in(folder.name) for folder in cls._folders())
+        """Each registered action toolset class, in the order it was registered."""
         return cls._toolsets
 
     @classmethod
@@ -157,7 +152,7 @@ class ActionCatalogue:
         """Every action, toolset by toolset in folder order, and within a toolset in the order it declares them; made
         once and kept."""
         if cls._actions is None:
-            cls._actions = tuple(
+            ActionCatalogue._actions = tuple(
                 Action(name, toolset)
                 for toolset in cls.toolsets()
                 for name, member in vars(toolset).items()
@@ -178,14 +173,3 @@ class ActionCatalogue:
         """The action called name, such as repair; none when no toolset installs it."""
         return next((action for action in cls.actions() if action.name == name), None)
 
-    @classmethod
-    def _folders(cls) -> list[Path]:
-        return [
-            folder for folder in sorted(_ACTIONS_FOLDER.iterdir())
-            if folder.is_dir() and folder.name[0] not in "_." and (folder / f"{folder.name}.py").is_file()
-        ]
-
-    @classmethod
-    def _toolset_in(cls, folder: str) -> type:
-        module = importlib.import_module(f"cdd_guidance.actions.{folder}.{folder}")
-        return getattr(module, Name(folder).title_pascal)

@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.annotations.name import Name
 from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
-from space.kanban.ticket import Ticket
 from harness.mcp.mcp_server import mcp
+
+if TYPE_CHECKING:
+    from space.kanban.ticket import Ticket
 
 
 class BacklogItemNotFoundError(LookupError):
@@ -87,6 +90,14 @@ class BacklogItem(Card):
     @property
     def column(self) -> Column:
         return self._board.column(BACKLOG_COLUMN)
+
+    @property
+    @data_field
+    def ticket(self) -> str:
+        """The name of the ticket whose folder the item holds, a ticket moved back with its work; empty for an idea that
+        has never been a ticket."""
+        kept_folder = self._held_ticket_folder
+        return kept_folder.name if kept_folder.is_dir() else ""
 
     @property
     @data_field

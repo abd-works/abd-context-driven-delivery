@@ -12,6 +12,7 @@ import re
 from typing import List, Optional
 
 from cdd_guidance.actions.sketch.sketch_outline import SketchOutline
+from harness.guidance.sketch_lens import SketchLens
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
     Epic,
@@ -23,9 +24,10 @@ from cdd_guidance.practices.stories.model.story_model import (
     StoryModel,
     StoryType,
 )
-from cdd_guidance.practices.stories.stories import Stories
 
 _NESTING_INDENT = 4
+# The headings that open the stories section of a sketch; the Stories practice declares them from here.
+_LENS = SketchLens(("stories:",))
 _STORY = re.compile(r"^(?:\(S(?::(?P<kind>\w+))?\)\s+)?(?P<actor>.*?)\s*-->\s+(?P<name>.+)$")
 _OUTLINE_EPIC = re.compile(r"^\(E\)\s+(.+)$")
 _ESTIMATE = re.compile(r"^\*\s+(\S.+)$")
@@ -34,17 +36,38 @@ _STEP = re.compile(r"^(given|when|then|and|but)\s+(.+)$", re.I)
 _STEP_TYPES = {"given": StepType.GIVEN, "when": StepType.WHEN, "then": StepType.THEN}
 
 
-def _step_lines(steps: List[Step], pad: str, lowered: bool) -> List[str]:
-    lines: List[str] = []
-    for step in steps:
-        keyword = step.keyword.lower() if lowered else "given"
-        lines.append(f"{pad}{keyword} {step.text}")
-        lines.extend(f"{pad}    {extra.keyword.lower()} {extra.text}" for extra in step.ands)
-    return lines
+class SketchStep(Step):
+    """A step in the sketch: `{keyword} {text}` at pad, then each step chained onto it one level in."""
+
+    def sketch_lines(self, pad: str, keyword: str) -> List[str]:
+        return [f"{pad}{keyword} {self.text}"] + [f"{pad}    {extra.keyword.lower()} {extra.text}" for extra in self.ands]
+
+
+class SketchBackground(Background):
+    """A story's background in the sketch: each of its steps as a `given` line."""
+
+    step_type = SketchStep
+
+    def sketch_lines(self, pad: str) -> List[str]:
+        return [line for step in self.steps for line in step.sketch_lines(pad, "given")]
+
+
+class SketchScenario(Scenario):
+    """A scenario in the sketch: its name, then its steps one level in, each under its own keyword."""
+
+    step_type = SketchStep
+    background_type = SketchBackground
+
+    def sketch_lines(self, pad: str) -> List[str]:
+        steps = [line for step in self.steps for line in step.sketch_lines(pad + "    ", step.keyword.lower())]
+        return [f"{pad}{self.name}"] + steps
 
 
 class SketchStory(Story):
     """A story in the sketch: `{actor} --> {story}`, its background steps, then each scenario with its steps."""
+
+    scenario_type = SketchScenario
+    background_type = SketchBackground
 
     def sketch_lines(self, depth: int) -> List[str]:
         pad = "    " * depth
@@ -53,10 +76,9 @@ class SketchStory(Story):
         lines = [f"{pad}{mark}{actor} --> {self.name}" if actor else f"{pad}{mark}--> {self.name}"]
         body = "    " * (depth + 1)
         for background in self.backgrounds:
-            lines.extend(_step_lines(background.steps, body, lowered=False))
+            lines.extend(background.sketch_lines(body))
         for scenario in self.scenarios:
-            lines.append(f"{body}{scenario.name}")
-            lines.extend(_step_lines(scenario.steps, body + "    ", lowered=True))
+            lines.extend(scenario.sketch_lines(body))
         return lines
 
 
@@ -78,8 +100,8 @@ class SketchEpic(Epic):
 class SketchStoryModel(StoryModel):
     epic_type = SketchEpic
     story_type = SketchStory
-    lens = Stories.sketch_lens
-    """The section of a sketch Stories writes, opened by the headings the Stories practice declares."""
+    lens = _LENS
+    """The section of a sketch Stories writes, opened by its `stories:` heading."""
 
     def parse(self, text: str) -> "SketchStoryModel":
         """Read the sketch's stories section into this map, and return it."""
@@ -89,11 +111,11 @@ class SketchStoryModel(StoryModel):
         _SketchReader(self).read(body)
         return self
 
-    def render(self, story_map: StoryModel | None = None, previous: str | None = None) -> str:
-        """Write *story_map* (this map when none is given) as a sketch: copied into a sketch map, which writes
-        itself. A sketch keeps no previous text."""
-        source = story_map or self
-        return (source if isinstance(source, SketchStoryModel) else type(self)(source)).save()
+    def render(self, canonical: StoryModel | None = None, previous: str | None = None) -> str:
+        """Write canonical (this map when none is given) as a sketch: copied into a sketch map, which writes itself.
+        A sketch keeps no previous text."""
+        source = canonical or self
+        return (source if isinstance(source, SketchStoryModel) else self.copy_of(source)).save()
 
     def save(self) -> str:
         lines = [line for epic in self.epics for line in epic.sketch_lines(0)]
@@ -195,16 +217,16 @@ class _SketchReader:
         return self.nested[-1] if self.nested else self.epic
 
     def _add_scenario(self, name: str) -> None:
-        self.scenario = Scenario(name, len(self.story.scenarios) + 1, self.story.name)
+        self.scenario = SketchScenario(name, len(self.story.scenarios) + 1, self.story.name)
         self.story.scenarios.append(self.scenario)
         self.last_step = None
 
     def _add_step(self, keyword: str, text: str) -> None:
         if keyword in {"and", "but"} and self.last_step is not None:
-            extra = Step(text, self.last_step.step_type, len(self.last_step.ands) + 1, keyword=keyword)
+            extra = SketchStep(text, self.last_step.step_type, len(self.last_step.ands) + 1, keyword=keyword)
             self.last_step.ands = [*self.last_step.ands, extra]
             return
-        step = Step(text, _STEP_TYPES.get(keyword, StepType.THEN), 1, keyword=keyword)
+        step = SketchStep(text, _STEP_TYPES.get(keyword, StepType.THEN), 1, keyword=keyword)
         self.last_step = step
         if keyword == "given" and self.scenario is None:
             self._add_background_step(step)
@@ -217,7 +239,7 @@ class _SketchReader:
 
     def _add_background_step(self, step: Step) -> None:
         if not self.story.backgrounds:
-            self.story.backgrounds.append(Background("background", 1))
+            self.story.backgrounds.append(SketchBackground("background", 1))
         background = self.story.backgrounds[-1]
         step.sequential_order = len(background.steps) + 1
         background.steps = [*background.steps, step]

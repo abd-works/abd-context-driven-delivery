@@ -17,6 +17,7 @@ from harness.installation.destination import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
 from harness.graph.graph import Graph
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 # Five parameters, over the three limit-operation-parameters allows.
 _OVER_LIMIT = "export class {name} {{\n  place(a: string, b: string, c: string, d: string, e: string): void {{}}\n}}\n"
@@ -78,6 +79,8 @@ def _working_copy() -> Path:
     _write(root, "src/billing/invoice.ts", _WITHIN_LIMIT.format(name="Invoice"))
     _write(root, "src/billing/.context/module-context.md", _CARD.format(name="billing", cls="Invoice"))
     _write(root, "src/shared/.examples/sample.ts", _WITHIN_LIMIT.format(name="Sample"))
+    _write(root, "src/orders/_examples/faulty/order.ts", _OVER_LIMIT.format(name="FaultyOrder"))
+    _write(root, "src/billing/fixtures/invoice.ts", _OVER_LIMIT.format(name="FixtureInvoice"))
     _write(root, "test-results/run-1/trace/resources/trace.js", _OVER_LIMIT.format(name="TraceBundle"))
     _write(root, "playwright-report/data/report.js", _OVER_LIMIT.format(name="ReportBundle"))
     _write(root, "packages/app/dist/bundle.js", _OVER_LIMIT.format(name="DistBundle"))
@@ -90,15 +93,15 @@ def _working_copy() -> Path:
 
 
 def _story_nodes(graph: Graph, name: str) -> list:
-    return [node for node in graph.nodes_of(graph.practice("stories")) if node.name == name]
+    return [node for node in graph.practice("stories").in_graph.nodes() if node.name == name]
 
 
 def _class_names(graph: Graph) -> list[str]:
-    return sorted(node.name for node in graph.nodes_of(graph.practice("clean_engineering"), "OoadClass"))
+    return sorted(node.name for node in graph.practice("clean_engineering").in_graph.nodes("OoadClass"))
 
 
 def _module_names(graph: Graph) -> list[str]:
-    return sorted(node.name for node in graph.nodes_of(graph.practice("clean_engineering"), "Module"))
+    return sorted(node.name for node in graph.practice("clean_engineering").in_graph.nodes("Module"))
 
 
 with description("a working copy scan") as self:
@@ -121,6 +124,10 @@ with description("a working copy scan") as self:
             names = _class_names(self.graph)
             for skipped in ("TraceBundle", "ReportBundle", "DistBundle", "WorktreeOrder"):
                 expect(skipped in names).to(equal(False))
+
+        with it("should leave a rule's _examples and a test's fixtures out"):
+            names = _class_names(self.graph)
+            expect([name in names for name in ("FaultyOrder", "FixtureInvoice")]).to(equal([False, False]))
 
     with context("over module cards"):
         with it("should make a module of a folder with .context/module-context.md"):
@@ -253,5 +260,5 @@ with description("a working copy scan") as self:
                 os.chdir(cwd)
 
         with it("should resolve the root against the folder"):
-            source_root = Path(self.relative.source_root_of(self.relative.practice("clean_engineering")))
+            source_root = Path(self.relative.practice("clean_engineering").in_graph.source_root)
             expect(source_root).to(equal((self.root / "src").resolve()))

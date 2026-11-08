@@ -32,6 +32,7 @@ from harness.hooks.hook_server import (
 )
 from harness.hooks.hooks import Hook, Hooks, hook
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.repository_toolsets import RepositoryToolsets
 from space.session.sessions import Sessions
 from space.work_state import WorkState
 
@@ -127,15 +128,11 @@ class _CoreInject:
         return {"additional_context": "core rules"}
 
 
-def _guidelines_dispatch(root: Path, toolsets: list, config: str | dict | None = None) -> dict:
-    if config is not None:
+def _guidelines_dispatch(root: Path, toolsets: list, guidelines: dict | None = None) -> dict:
+    if guidelines is not None:
         from harness.installation.context_config import ContextConfig
 
-        cfg = ContextConfig(root)
-        if isinstance(config, dict):
-            cfg.save(config)
-        else:
-            cfg.set_guidelines(config)
+        ContextConfig(root).update(guidelines=guidelines)
     server = HookServer(root, HandlerCatalog(toolsets, root))
     return server.dispatch(
         HookPayload(
@@ -209,7 +206,7 @@ with description("hook dispatch"):
                 out = _guidelines_dispatch(
                     Path(tmp),
                     [_PatternInject],
-                    "lern_domain_driven: disabled\n",
+                    {"lern_domain_driven": "disabled"},
                 )
             expect(_PatternInject.calls).to(equal([]))
             expect(out).to(equal({"permission": "allow"}))
@@ -227,7 +224,7 @@ with description("hook dispatch"):
                 out = _guidelines_dispatch(
                     Path(tmp),
                     [_PatternInject],
-                    "lern-domain-driven: enabled\n",
+                    {"lern-domain-driven": "enabled"},
                 )
             expect(_PatternInject.calls).to(equal(["lern"]))
             expect(out["additional_context"]).to(equal("lern rules"))
@@ -239,7 +236,7 @@ with description("hook dispatch"):
                 out = _guidelines_dispatch(
                     Path(tmp),
                     [_PatternInject, _CoreInject],
-                    "lern_domain_driven: disabled\n",
+                    {"lern_domain_driven": "disabled"},
                 )
             expect(_PatternInject.calls).to(equal([]))
             expect(_CoreInject.calls).to(equal(["core"]))
@@ -388,7 +385,7 @@ with description("hook dispatch"):
             try:
                 root = Path(tmp.name)
                 server = HookServer(root, HandlerCatalog([], root))
-                saved = Sessions(root).saved.chat_injections.path_for("chat-a")
+                saved = Sessions(root).current().chat_injections.path_for("chat-a")
                 saved.parent.mkdir(parents=True, exist_ok=True)
                 saved.write_text(
                     "Before you continue, echo the following message to the user:\n\nrules injected for clean-engineering-code\n",
@@ -411,7 +408,7 @@ with description("hook dispatch"):
             try:
                 root = Path(tmp.name)
                 server = HookServer(root, HandlerCatalog([], root))
-                saved = Sessions(root).saved.chat_injections.path_for("chat-a")
+                saved = Sessions(root).current().chat_injections.path_for("chat-a")
                 saved.parent.mkdir(parents=True, exist_ok=True)
                 saved.write_text(
                     "You just edited session.py. Check that edit against these rules and fix anything that does not follow them:\n"
@@ -856,14 +853,14 @@ with description("a hook that gives a toast"):
 with description("hook process helpers"):
 
     with it("should use python.exe for the Cursor dispatch command so stdout is returned"):
-        from harness.hooks.hooks import HookInstallation
+        from harness.hooks.hook_installation import HookInstallation
         from harness.process.process import PythonInterpreter
 
         install = HookInstallation(IdeLayout("Cursor"), _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
         command = install.dispatch_command.replace("\\", "/")
         python = PythonInterpreter(sys.executable).console.replace("\\", "/")
         expect(command).to(contain(python))
-        expect(command).to(contain("harness/hooks/hook_server.py"))
+        expect(command).to(contain("harness/hooks/hook_daemon.py"))
         if sys.platform == "win32":
             expect(command).to(contain("python.exe"))
             expect(command).not_to(contain("pythonw.exe"))
@@ -950,7 +947,7 @@ with description("a hook server whose project registers no sessions"):
 with description("a hook install"):
 
     with before.each:
-        from harness.hooks.hooks import HookInstallation
+        from harness.hooks.hook_installation import HookInstallation
 
         @agent_toolset
         class _StopHook:
@@ -996,3 +993,56 @@ with description("a hook install"):
             except HooksFileUnreadable:
                 pass
             expect(self.manifest.read_text(encoding="utf-8")).to(contain("my-own-hook"))
+
+
+with description("a checkout's hook server"):
+
+    with before.each:
+        self.root = Path(tempfile.mkdtemp())
+
+    with after.each:
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    with context("with hooks installed for Kilo only"):
+
+        with before.each:
+            handlers = self.root / IdeLayout("Kilo").folder_name / "hook-handlers.json"
+            handlers.parent.mkdir()
+            handlers.write_text(
+                json.dumps(
+                    {
+                        "handlers": [
+                            {
+                                "event": "stop",
+                                "operation": "auto_turn",
+                                "ref": "harness.guidance.fixtures.agentic_ops.hook_ops:SampleHookOps",
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.server = HookServer.from_repository(RepositoryToolsets(self.root))
+
+        with it("should serve the events the Kilo install registered"):
+            expect(self.server.diagnose()["events"]).to(contain("stop"))
+
+        with it("should keep the daemon's address outside every IDE folder"):
+            from harness.hooks.hook_daemon import HookDaemon
+
+            expect(HookDaemon(self.root).state_path.parent.name).to(equal(".hook-server"))
+
+    with context("with a toolset whose hooks are kept out of install"):
+
+        with before.each:
+            @Hooks(deploy=False)
+            @agent_toolset
+            class _Undeployed:
+                @hook("stop")
+                def on_stop(self, payload: HookPayload) -> dict:
+                    return {"agent_message": "should not run"}
+
+            self.catalog = HandlerCatalog([_Undeployed], self.root)
+
+        with it("should serve none of its events"):
+            expect(self.catalog.event_names).to(equal([]))

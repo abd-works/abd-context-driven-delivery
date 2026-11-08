@@ -17,7 +17,7 @@ with story("Open Practice Tile"):
             pass
         with when("the Person rests the pointer on the story_map tile for half a second"):
             # Person -> TileClient.open(spot, false)
-            # Board page -> Ticket.files(['stories-story-map'])
+            # Board page -> Ticket.format_choices(['stories-story-map'])
             pass
         with then("the story_map tile's action bar opens above the grid, at full width"):
             pass

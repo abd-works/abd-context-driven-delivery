@@ -5,6 +5,7 @@ the classes and properties it shows."""
 from __future__ import annotations
 
 import re
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,8 +16,6 @@ if TYPE_CHECKING:
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 _FUNCTION_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b")
-# A step's own lines and the calls just after it: the lines a step's operations are read from.
-_STEP_LINES = 40
 
 
 def align_story_node(node) -> None:
@@ -27,7 +26,7 @@ def align_story_node(node) -> None:
     elif node.type in {"Scenario", "Story", "Background"}:
         node.source.widen_to_call_close()
     elif node.type == "Example":
-        node.source.align_to_example_export(node.graph.source_root_of(node.practice), node.name)
+        node.source.align_to_example_export(node.practice.in_graph.source_root, node.name)
 
 
 class StoriesReading:
@@ -37,7 +36,7 @@ class StoriesReading:
     def __init__(self, practice: Stories) -> None:
         self.practice = practice
         self.graph = practice.graph
-        self.root = Path(self.graph.source_root_of(practice))
+        self.root = Path(practice.in_graph.source_root)
 
     def story_map(self):
         model = self._story_tests()
@@ -90,54 +89,72 @@ class StoryLinks:
         self.graph = stories.graph
         self.texts: dict[str, str] = stories.recorded_map.source_texts
 
+    @cached_property
+    def operations(self) -> dict[str, list]:
+        """Clean Engineering's operations by name, read from the graph once."""
+        found: dict[str, list] = {}
+        for operation in self.clean.in_graph.nodes("Operation"):
+            found.setdefault(operation.name, []).append(operation)
+        return found
+
+    @cached_property
+    def modules(self) -> set:
+        """Clean Engineering's modules, read from the graph once."""
+        return set(self.clean.in_graph.nodes("Module"))
+
+    @cached_property
+    def examples(self) -> list:
+        """The examples on the Stories graph, read once."""
+        return self.stories.in_graph.nodes("Example")
+
     def link(self) -> None:
-        operations: dict[str, list] = {}
-        for operation in self.graph.nodes_of(self.clean, "Operation"):
-            operations.setdefault(operation.name, []).append(operation)
-        steps = [node for node in self.graph.nodes_of(self.stories) if node.type in {"Step", "Given", "When", "Then"}]
-        examples = self.graph.nodes_of(self.stories, "Example")
+        steps = [node for node in self.stories.in_graph.nodes() if node.type in {"Step", "Given", "When", "Then"}]
         for index, step in enumerate(steps, start=1):
             self.graph.report_progress(f"stories · steps · {index}/{len(steps)} · {step.name}")
-            self._link_step(step, operations, examples)
+            self._link_step(step)
         sources = self._function_sources()
-        for index, example in enumerate(examples, start=1):
-            self.graph.report_progress(f"stories · examples · {index}/{len(examples)} · {example.name}")
+        for index, example in enumerate(self.examples, start=1):
+            self.graph.report_progress(f"stories · examples · {index}/{len(self.examples)} · {example.name}")
             self._link_example(example, sources.get(example.name, ""))
 
-    def _link_step(self, step, operations: dict[str, list], examples: list) -> None:
+    def _link_step(self, step) -> None:
         body = self._step_body(step)
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
-        matched = [operation for name in called for operation in operations.get(name, ())]
+        matched = [operation for name in called for operation in self.operations.get(name, ())]
         epic = self._epic_for(step) if matched else None
-        modules = {node.name: node for node in self.graph.nodes_of(self.clean, "Module")}
         for operation in matched:
             self.graph.link("invokes", step, operation, "relationship")
             self.graph.link("invokedBy", operation, step, "relationship")
-            module = modules.get(Path(operation.source.file).parent.name)
+            module = self._module_of(operation)
             if module is not None and epic is not None:
                 self.graph.link("usedBy", module, epic, "relationship")
                 self.graph.link("uses", epic, module, "relationship")
         if step.get_fact("phase"):
-            for example in examples:
+            for example in self.examples:
                 if re.search(rf"\b{re.escape(example.name)}\b", body):
                     self.graph.link("observes", step, example, "relationship")
 
     def _link_example(self, example, text: str) -> None:
-        for class_node in self.graph.nodes_of(self.clean, "OoadClass"):
+        for class_node in self.clean.in_graph.nodes("OoadClass"):
             if re.search(rf"\b{re.escape(class_node.name)}\b", text):
                 self.graph.link("demonstrates", example, class_node, "grouped")
                 self.graph.link("demonstrates", class_node, example, "grouped")
                 self.graph.link("demonstratedThrough", class_node, example, "relationship")
-        for prop in self.graph.nodes_of(self.clean, "Property"):
+        for prop in self.clean.in_graph.nodes("Property"):
             if re.search(rf"\.{re.escape(prop.name)}\b", text):
                 self.graph.link("retrievedUsing", example, prop, "relationship")
                 self.graph.link("retrievedUsing", prop, example, "relationship")
 
     def _step_body(self, step) -> str:
-        """The step's line and the lines after it, from the text of the file it was read from."""
-        lines = self.texts.get(step.source.file, "").splitlines() if step.source.file else []
-        start = max(0, step.source.start_line - 1)
-        return "\n".join(lines[start : start + _STEP_LINES])
+        """The step's own text and the body its story test gives it."""
+        return f"{step.name}\n{step.body.text}"
+
+    def _module_of(self, operation):
+        """The Clean Engineering module that holds the operation: the nearest module above it in the graph."""
+        owner = self.graph.direct_parent(operation)
+        while owner is not None and owner not in self.modules:
+            owner = self.graph.direct_parent(owner)
+        return owner
 
     def _function_sources(self) -> dict[str, str]:
         """Each declared ``function name`` in the TypeScript the story map was read from, mapped to the first file's
@@ -158,3 +175,4 @@ class StoryLinks:
         while node is not None and not (isinstance(node, Epic) and not isinstance(node.parent, Epic)):
             node = node.parent
         return node
+

@@ -21,7 +21,7 @@ story('Create New Session', CHAT_BAR, () => {
     when('the Person creates the [session](../../../../../../../space/kanban/.context/kanban-model.md#session) payment-retry', async ($, on, scene) => {
       await scene.ui.input({ key: 'new-session', text: NEW_SESSION_NAME })
     })
-    // session list field -> createSession($, 'payment-retry') -> $.mcp.call('ticket.create', { title: 'payment-retry' }) -> Ticket.create()
+    // session list field -> createSession($, chatBar, 'payment-retry') -> $.mcp.call('ticket.create', { title: 'payment-retry' }) -> Ticket.create()
     then('payment-retry is created', async ($, on, scene) => {
       expect(called(scene.world, 'ticket.create')).toEqual({ title: NEW_SESSION_NAME })
     })

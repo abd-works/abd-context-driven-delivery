@@ -25,6 +25,7 @@ from harness.installation.destination import (  # noqa: E402
     language_adapter,
 )
 from harness.installation.ide_layout import IdeLayout  # noqa: E402
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 from harness.installation.language_adapter import (  # noqa: E402
     LanguageAdapterInstallation,
     MissingIdentityError,
@@ -410,6 +411,9 @@ with description("a language adapter"):
 
             with it("should type a reference field as the identity of the object it names"):
                 expect(self.ticket).to(contain("  column: { name: string }"))
+
+            with it("should type a reference field that names several objects as a list of their identities"):
+                expect(self.board).to(contain("  open_tickets: { name: string }[]\n"))
 
             with it("should show a reference field in its view by the field that names the object it refers to"):
                 views = (self.root / "space/kanban/ticket-views.tsx").read_text(encoding="utf-8")

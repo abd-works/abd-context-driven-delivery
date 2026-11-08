@@ -91,13 +91,10 @@ describe('Display Board', () => {
         return page
       }
 
-      it('should get the latest code, rebuild the page, then pin cdd to it', async () => {
+      // The installer pulls through the repository and pins cdd; the board server only builds its own page.
+      it('should have the installer get the latest code and pin cdd to it, then rebuild the page', async () => {
         await updated()
-        expect(board.board.updates.steps).toEqual([
-          'git pull --ff-only',
-          expect.stringMatching(/vite\.js build$/),
-          expect.stringMatching(/scripts\/install\.py --ide Claude --pin-runtime$/),
-        ])
+        expect(board.board.updates.steps).toEqual([expect.stringMatching(/scripts\/install\.py --ide Claude --update$/), expect.stringMatching(/vite\.js build$/)])
       })
 
       it('should restart the board server once the update has answered', async () => {
@@ -112,11 +109,11 @@ describe('Display Board', () => {
 
       describe('with a step that fails', () => {
         beforeEach(() => {
-          board.board.updates.failingStep = 'pull'
+          board.board.updates.failingStep = '--update'
         })
 
         it('should say in a toast which step failed', async () => {
-          expect(toastsOf(await updated()).at(-1)).toBe('Update failed at get latest: pull could not run')
+          expect(toastsOf(await updated()).at(-1)).toBe('Update failed at get latest and re-pin: --update could not run')
         })
 
         it('should keep the page it has', async () => {

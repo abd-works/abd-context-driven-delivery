@@ -1,6 +1,6 @@
 """The two Python tiers the Session Board's shared scenarios replay on.
 
-The domain tier hands a scenario's steps the domain classes themselves: `Board`, `Ticket`, `BacklogItem`, `Session`,
+The domain tier hands a scenario's steps the domain classes themselves: `Board`, `Ticket`, `BacklogItem`, `Sessions`,
 and the `Validate` and `Generate` actions, on a throwaway project.
 
 The server tier hands them the same operations reached through the cdd server, the way an agent or the board app
@@ -59,7 +59,7 @@ class DomainTier:
         return World(
             project=project,
             **on_project,
-            Session=Session,
+            Sessions=Sessions,
             Validate=lambda: Validate(sessions.current()),
             Generate=lambda: Generate(sessions.current()),
             data_of=data_of,

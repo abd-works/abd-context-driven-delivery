@@ -2,25 +2,28 @@
 
 from __future__ import annotations
 
+import ast
+import io
 import re
+import tokenize
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, List, Optional
+from typing import Iterable, List, Optional
 
-from harness.graph.model_node import ModelChildren, ModelNode
+from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
+from cdd_guidance.practices.clean_engineering.model.code_body import SOURCE_SUFFIXES, CodeBody
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
+from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
+from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
-from cdd_guidance.practices.clean_engineering.model.translation import TranslationError
-
-if TYPE_CHECKING:
-    from cdd_guidance.practices.clean_engineering.model.operation import Operation
-    from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
+from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 
 
 _EXAMPLE_EXTENSION_PREFIXES = ("Fake", "Isolated", "Production")
-_CODE_SUFFIXES = (".py", ".ts", ".tsx", ".js", ".jsx")
 _SCRIPT_IMPORT = re.compile(r"""(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(?\s*)['"](\.{1,2}/[^'"]+)['"]""")
 _PY_FROM_IMPORT = re.compile(r"^\s*from\s+[\w.]+\s+import\s+(\([^)]*\)|[^\n]+)", re.M)
 _JS_IMPORT = re.compile(r"\bimport\s+(?:type\s+)?([\w$]+)?\s*,?\s*(?:\{([^}]*)\})?\s*from\b")
@@ -39,8 +42,10 @@ class UnreadableSource(ValueError):
 
 
 def _internal_design_in(paths: List[Path]) -> str:
-    """'heading' for an `## Internal` section, 'mixed' for internal notes inline, else ''."""
-    text = "\n".join(_readable_text(path) for path in sorted(paths))
+    """'heading' for an internal-design section heading in the files' documentation, 'mixed' for internal notes inline
+    in it, else ''. Only docstrings and comments document a file; a string the code holds, such as the marker this
+    function looks for, is not documentation."""
+    text = "\n".join(_documentation_in(path) for path in sorted(paths))
     if _INTERNAL_MARKDOWN.search(text):
         return "heading"
     if "## Internal" in text or "_ holds " in text:
@@ -48,11 +53,29 @@ def _internal_design_in(paths: List[Path]) -> str:
     return ""
 
 
-def _readable_text(path: Path) -> str:
+def _documentation_in(path: Path) -> str:
+    """The docstrings and comments of a Python file; empty when it cannot be read or does not parse."""
     try:
-        return path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
+        text = path.read_text(encoding="utf-8")
+        tree = ast.parse(text)
+        comments = [token.string for token in tokenize.generate_tokens(io.StringIO(text).readline) if token.type == tokenize.COMMENT]
+    except (OSError, UnicodeDecodeError, SyntaxError, tokenize.TokenError):
         return ""
+    documented = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+    docstrings = [ast.get_docstring(node, clean=False) or "" for node in ast.walk(tree) if isinstance(node, documented)]
+    return "\n".join(docstrings + comments)
+
+
+def class_names_imported_by(source_text: str) -> set:
+    """The names a source file imports (`from x import A`, `import { A } from`) or reaches as `module.Class`."""
+    names: set = set(_QUALIFIED_CLASS.findall(source_text))
+    for match in _PY_FROM_IMPORT.finditer(source_text):
+        names.update(_IMPORT_ALIAS.sub("", item).strip() for item in match.group(1).strip("()").split(","))
+    for default, braced in _JS_IMPORT.findall(source_text):
+        names.add(default)
+        names.update(_IMPORT_ALIAS.sub("", item).strip() for item in (braced or "").split(","))
+    names.discard("")
+    return names
 
 
 def path_parent(name: str) -> Optional[str]:
@@ -111,45 +134,6 @@ def companion_interface_name(class_name: str, known_names: Iterable[str]) -> str
         if iface in known:
             return iface
     return None
-
-
-class OoadNode(ModelNode):
-    _semantic_type_name: str = "OoadNode"
-    _belongs = {
-        ("OoadClass", "Module"),
-        ("OoadClass", "CleanEngineeringModel"),
-        ("Module", "Module"),
-        ("Module", "CleanEngineeringModel"),
-        ("Operation", "OoadClass"),
-        ("Property", "OoadClass"),
-        ("Parameter", "Operation"),
-        ("Invariant", "Operation"),
-        ("Invariant", "Property"),
-    }
-
-    @classmethod
-    def practice_kind(cls) -> type:
-        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-
-        return CleanEngineering
-
-    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
-        super().__init__(name, sequential_order, graph)
-
-    def translate_from(self, source: "OoadNode") -> None:
-        if self.semantic_type() != source.semantic_type():
-            raise TranslationError(
-                f"Cannot translate from {source.semantic_type()} into {self.semantic_type()}"
-            )
-        self.update_self(source)
-        self.reconcile_children(source)
-
-    def update_self(self, source: "OoadNode") -> None:
-        raise NotImplementedError(f"{type(self).__name__} must implement update_self")
-
-    def reconcile_children(self, source: "OoadNode") -> None:
-        """Make each child list this node holds the matching list of source's; a node with no children has none."""
-
 
 
 class OoadClass(OoadNode):
@@ -303,19 +287,15 @@ class OoadClass(OoadNode):
         loaded.update_self(source)
         return loaded
 
-    def load_property(self, source: "Property") -> "Property":
+    def load_property(self, source: Property) -> Property:
         """A new property for this class's channel, filled from source."""
-        from cdd_guidance.practices.clean_engineering.model.property import Property as PropertyNode
-
-        loaded = PropertyNode(source.name, source.sequential_order)
+        loaded = Property(source.name, source.sequential_order)
         loaded.update_self(source)
         return loaded
 
-    def load_operation(self, source: "Operation") -> "Operation":
+    def load_operation(self, source: Operation) -> Operation:
         """A new operation for this class's channel, filled from source."""
-        from cdd_guidance.practices.clean_engineering.model.operation import Operation as OperationNode
-
-        loaded = OperationNode(source.name, source.sequential_order)
+        loaded = Operation(source.name, source.sequential_order)
         loaded.update_self(source)
         return loaded
 
@@ -324,34 +304,25 @@ class OoadClass(OoadNode):
         self._properties.reconcile(source.properties, self.load_property)
         self._operations.reconcile(source.operations, self.load_operation)
 
-    def load_properties(self) -> None:
-        while self.has_more_property():
-            self.properties.append(self.load_next_property())
+    def declares(self, member: OoadNode) -> bool:
+        """True when member is one of this class's own operations or properties."""
+        return any(member is held for held in [*self._operations, *self._properties])
 
-    def has_more_property(self) -> bool:
-        return False
-
-    def load_next_property(self) -> "Property":
-        return self.get_next_property_from_file()
-
-    def get_next_property_from_file(self) -> "Property":
-        raise NotImplementedError(f"{type(self).__name__} must implement get_next_property_from_file")
-
-    def load_operations(self) -> None:
-        while self.has_more_operation():
-            operation = self.load_next_operation()
-            self.operations.append(operation)
-
-    def has_more_operation(self) -> bool:
-        return False
-
-    def load_next_operation(self) -> "Operation":
-        operation = self.get_next_operation_from_file()
-        operation.load_parameters()
-        return operation
-
-    def get_next_operation_from_file(self) -> "Operation":
-        raise NotImplementedError(f"{type(self).__name__} must implement get_next_operation_from_file")
+    @property
+    def public_properties(self) -> List[Operation | Property]:
+        """What its instances show as properties, each once, in line order: the fields it declares, then its getters,
+        each an operation read as a property. A static field belongs to the class, not to its instances, and a name
+        starting with `_` is private."""
+        found: List[Operation | Property] = []
+        seen: set = set()
+        fields = [prop for prop in self.properties if not prop.is_static]
+        getters = [operation for operation in self.operations if operation.is_property]
+        for member in [*fields, *getters]:
+            if str(member.name).startswith("_") or member.name in seen:
+                continue
+            seen.add(member.name)
+            found.append(member)
+        return sorted(found, key=lambda member: (member.line or 1, member.name))
 
     @property
     def relationships(self) -> List[Relationship]:
@@ -364,8 +335,6 @@ class OoadClass(OoadNode):
 
     def place_relationship(self, relationship: Relationship) -> None:
         """Put this relationship on every property whose type names the target."""
-        from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
-
         if (relationship.kind or "").lower() == "inheritance":
             return
         if (relationship.kind or "").lower() == "dependency":
@@ -382,19 +351,6 @@ class OoadClass(OoadNode):
             return
         self.dependencies.append(Relationship(target=target, kind="dependency", label=label))
 
-    def load_relationships(self) -> None:
-        while self.has_more_relationship():
-            self.place_relationship(self.load_next_relationship())
-
-    def has_more_relationship(self) -> bool:
-        return False
-
-    def load_next_relationship(self) -> Relationship:
-        return self.get_next_relationship_from_file()
-
-    def get_next_relationship_from_file(self) -> Relationship:
-        raise NotImplementedError(f"{type(self).__name__} must implement get_next_relationship_from_file")
-
 
 class Module(OoadNode):
     """A named module boundary grouping closely related classes."""
@@ -404,6 +360,8 @@ class Module(OoadNode):
         "has_module_context",
         "has_bounded_context",
         "modules_heading",
+        "names_seam",
+        "names_constraint",
         "model_blocks",
         "is_a_in_context",
         "child_parent_in_context",
@@ -437,7 +395,6 @@ class Module(OoadNode):
         self.imported_names: List[str] = []
         self._modules = ModelChildren(self, "participants")
         self._classes = ModelChildren(self, "participants")
-        self._class_blocks: List[str] = []
 
     @property
     def modules(self) -> List["Module"]:
@@ -516,48 +473,6 @@ class Module(OoadNode):
     def load_class(self, source: OoadClass) -> OoadClass:
         return OoadClass(name=source.name, sequential_order=source.sequential_order)
 
-    def load(self) -> None:
-        self.load_modules()
-        self.load_classes()
-
-    def load_modules(self) -> None:
-        while self.has_more_module():
-            self.append_module(self.load_next_module())
-
-    def has_more_module(self) -> bool:
-        return False
-
-    def load_next_module(self) -> "Module":
-        child = self.get_next_module_from_file()
-        child.load()
-        return child
-
-    def get_next_module_from_file(self) -> "Module":
-        raise NotImplementedError(f"{type(self).__name__} must implement get_next_module_from_file")
-
-    def append_module(self, module: "Module") -> None:
-        self.modules.append(module)
-
-    def append_class(self, oclass: OoadClass) -> None:
-        self.classes.append(oclass)
-
-    def load_classes(self) -> None:
-        while self.has_more_class():
-            self.append_class(self.load_next_class())
-
-    def has_more_class(self) -> bool:
-        return bool(self._class_blocks)
-
-    def load_next_class(self) -> OoadClass:
-        oclass = self.get_next_class_from_file()
-        oclass.load_properties()
-        oclass.load_operations()
-        oclass.load_relationships()
-        return oclass
-
-    def get_next_class_from_file(self) -> OoadClass:
-        raise NotImplementedError(f"{type(self).__name__} must implement get_next_class_from_file")
-
     def take_lines(self, text: str) -> None:
         """Keep the text of the file this module was read from, and the span of each class in it."""
         self.source_text = text
@@ -569,20 +484,10 @@ class Module(OoadNode):
         """Fill the facts the file this module was read from owns: what it imports, the class names it imports, and
         which classes share it. The graph keeps each class apart from its module, so each class keeps its peers' names."""
         self.dependencies = self.import_targets(file, root)
-        self.imported_names = sorted(self._imported_names())
+        self.imported_names = sorted(class_names_imported_by(self.source_text))
         peer_names = [oclass.name for oclass in self.classes]
         for oclass in self.classes:
             oclass.peer_names = peer_names
-
-    def _imported_names(self) -> set:
-        names: set = set(_QUALIFIED_CLASS.findall(self.source_text))
-        for match in _PY_FROM_IMPORT.finditer(self.source_text):
-            names.update(_IMPORT_ALIAS.sub("", item).strip() for item in match.group(1).strip("()").split(","))
-        for default, braced in _JS_IMPORT.findall(self.source_text):
-            names.add(default)
-            names.update(_IMPORT_ALIAS.sub("", item).strip() for item in (braced or "").split(","))
-        names.discard("")
-        return names
 
     def import_targets(self, file: Path, root: Path) -> List[str]:
         """Root-relative paths named by relative script imports (`./x`, `../y`)."""
@@ -595,21 +500,21 @@ class Module(OoadNode):
 
     def load_folder_facts(self, folder: Path) -> None:
         """Fill the facts a code folder owns: its context files and its own source files."""
-        from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
-
         self.module_context = module_context = ModuleContext(folder)
         content = module_context.read()
-        sources = [path for path in folder.iterdir() if path.is_file() and path.suffix.lower() in _CODE_SUFFIXES]
+        sources = [path for path in folder.iterdir() if path.is_file() and path.suffix.lower() in SOURCE_SUFFIXES]
         self.has_module_context = module_context.exists()
         self.has_bounded_context = (folder / ".context" / "bounded-context.md").is_file()
         self.modules_heading = module_context.has_modules_heading()
+        self.names_seam = module_context.names_seam()
+        self.names_constraint = module_context.names_constraint()
         self.model_blocks = module_context.model_blocks()
         self.is_a_in_context = bool(_IS_A.search(content))
         self.child_parent_in_context = bool(_CHILD_PARENT.search(content))
         self.public_source_internal = _internal_design_in(
-            [path for path in sources if path.suffix == ".py" and not path.name.startswith("_")]
+            [path for path in sources if path.suffix == ".py" and not path.name.startswith("_") and not is_test_code(path.name)]
         )
-        self.public_source_files = len([path for path in sources if not path.name.startswith(("_", "test_"))])
+        self.public_source_files = len([path for path in sources if not path.name.startswith("_") and not is_test_code(path.name)])
 
     def reconcile_children(self, source: "OoadNode") -> None:
         assert isinstance(source, Module)
@@ -626,7 +531,6 @@ class CleanEngineeringModel(OoadNode):
             graph = name
             name = "model"
         super().__init__(name, sequential_order, graph)
-        self.path = ""
         self._modules = ModelChildren(self, "participants")
 
     @property
@@ -654,14 +558,16 @@ class CleanEngineeringModel(OoadNode):
             return True
         return all(not oclass.properties and not oclass.operations and not oclass.relationships for oclass in classes)
 
-    def described_members(self, file: str) -> dict:
-        """Each member this model describes, by `Class.member`, as the graph saves it for the document at file."""
-        return {
-            f"{oclass.name}.{member.name}": member.model_member(file)
-            for module in self.modules
-            for oclass in module.classes
-            for member in [*oclass.properties, *oclass.operations]
-        }
+    def described_member(self, owner: str, name: str) -> Operation | Property | None:
+        """The operation or property this model's class owner describes as name; none when it describes no such member.
+        An operation is the one a call runs, so it comes before a property of the same name."""
+        for oclass in self.every_class():
+            if oclass.name != owner:
+                continue
+            found = next((member for member in [*oclass.operations, *oclass.properties] if member.name == name), None)
+            if found is not None:
+                return found
+        return None
 
     def every_class(self) -> List[OoadClass]:
         """Every class in every module, nested modules included, in module order."""
@@ -689,36 +595,11 @@ class CleanEngineeringModel(OoadNode):
             cloned.modules.append(module.clone())
         return cloned
 
-    def load(self, path: str) -> "CleanEngineeringModel":
-        self.path = path
-        self.modules = []
-        self.load_content()
-        self.load_modules()
-        return self
-
     def save(self) -> str:
         raise NotImplementedError(f"{type(self).__name__} must implement save")
 
     def parse(self, text: str) -> "CleanEngineeringModel":
         raise NotImplementedError(f"{type(self).__name__} must implement parse")
-
-    def load_content(self) -> None:
-        return None
-
-    def load_modules(self) -> None:
-        while self.has_more_module():
-            self.modules.append(self.load_next_module())
-
-    def has_more_module(self) -> bool:
-        return False
-
-    def load_next_module(self) -> "Module":
-        module = self.get_next_module_from_file()
-        module.load()
-        return module
-
-    def get_next_module_from_file(self) -> "Module":
-        raise NotImplementedError(f"{type(self).__name__} must implement get_next_module_from_file")
 
     def load_module(self, source: Module) -> Module:
         return Module(name=source.name, sequential_order=source.sequential_order)

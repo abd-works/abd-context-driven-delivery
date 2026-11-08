@@ -5,29 +5,24 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-_SPEC_SUFFIXES = (".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".java")
-_SIGNATURE_MARKERS = ("# BDD: SIGNATURE", "// BDD: SIGNATURE")
+from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, TYPESCRIPT
+
+# The comment a signature-only test body carries, spelt in each language's own comment.
+SIGNATURE = "BDD: SIGNATURE"
 _CODE_LIKE_NAME = re.compile(r"\b[A-Z][a-z]+(?:[A-Z][a-z]+)+\b")
 _BLOCK_CALL = re.compile(r"\b(?:describe|description|context|it)\(")
+_SPEC_NAME_PARTS = ("_spec.", ".test.", ".spec.", ".e2e.")
+_JAVA_TEST_ENDINGS = ("test.java", "tests.java")
 
 
 def is_spec_file(path: Path) -> bool:
+    """A file named as a spec or a test. Which extensions are read at all is the practice's formats' to say."""
     name = path.name.lower()
-    if path.suffix.lower() not in _SPEC_SUFFIXES:
-        return False
-    return (
-        name.endswith("_spec.py")
-        or "_spec." in name
-        or ".test." in name
-        or ".spec." in name
-        or ".e2e." in name
-        or name.endswith("test.java")
-        or name.endswith("tests.java")
-    )
+    return any(part in name for part in _SPEC_NAME_PARTS) or name.endswith(_JAVA_TEST_ENDINGS)
 
 
 def has_signature_marker(text: str) -> bool:
-    return any(marker in text for marker in _SIGNATURE_MARKERS)
+    return any(language.comment(SIGNATURE) in text for language in (PYTHON, TYPESCRIPT))
 
 
 def code_like_describe_lines(text: str) -> list[int]:

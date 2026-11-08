@@ -13,6 +13,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from harness.graph.graph import Graph  # noqa: E402
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 _CART = """\
 export class Cart {
@@ -57,7 +58,7 @@ with description("a basket"):
 
 
 def _invoked(graph: Graph, observation: str) -> list[str]:
-    node = next(node for node in graph.nodes_of(graph.practice("bdd")) if node.type == "Observation" and node.name == observation)
+    node = next(node for node in graph.practice("bdd").in_graph.nodes() if node.type == "Observation" and node.name == observation)
     group = next((child for child in node.children if child.name == "invokes"), None)
     return [child.node_id.rsplit(":", 2)[-2] + ":" + child.node_id.rsplit(":", 1)[-1] for child in (group.children if group else [])]
 

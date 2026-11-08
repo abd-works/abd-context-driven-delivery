@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from harness.agent_tools import agent_tool, agent_toolset
-from harness.agent_tools.sub_agent.annotation import subAgent
+from harness.agent_tools.agent_tools import subAgent
 from harness.guidance_actions import GuidanceAction, GuidanceArg
 from harness.installation.destination import noCatalog
 from harness.installation.files import skill
@@ -126,12 +126,5 @@ class Diagnose(GuidanceAction):
         if guidance is None:
             return ""
         self._work_on(guidance)
-        parts = [part for part in self.run(self._guidance_rules, action="diagnose") if part]
-        return "\n\n".join(parts)
-
-    def _guidance_rules(self, item) -> str:
-        """The rules that govern the fix and the regression test: the shared and current-fidelity rules Validate lists
-        for item, or item itself when it is text."""
-        from cdd_guidance.actions.validate.validate import Validate
-
-        return self._inside(Validate, item if isinstance(item, str) else [item]).listed_rules()
+        self.log_running("diagnose")
+        return self.rules_to_follow()

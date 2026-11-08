@@ -1,5 +1,5 @@
 """
-Prompt notify hook — detect CDD action, practice, fidelity, and guideline use.
+Prompt notify hook — detect CDD action, practice, fidelity, and rule use.
 
 Fires on preToolUse. Matches MCP names (`sketch.sketch`, `bdd-behavior()`),
 CallMcpTool wrappers, and skill/rule paths.
@@ -18,9 +18,6 @@ from functools import cached_property
 from pathlib import Path
 from typing import ClassVar
 
-# The CDD checkout this hook runs from: its installed toolsets are the code the hook server runs, so their @Toast annotations
-# are read from here whichever project the event came from.
-_CDD_CHECKOUT = Path(__file__).resolve().parents[2]
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.annotations.name import Name
@@ -41,7 +38,7 @@ _RULE_DIRS = ("/.cursor/rules/", "/.claude/rules/")
 @noCatalog
 @agent_toolset
 class PromptNotify:
-    """Echo detected action, practice, fidelity, and guideline names on preToolUse."""
+    """Echo detected action, practice, fidelity, and rule names on preToolUse."""
 
     _catalog: ClassVar[list[tuple[str, str]] | None] = None
     _installed_extension: ClassVar[Path | None] = None
@@ -69,7 +66,7 @@ class PromptNotify:
             names[practice.slug] = "practice"
             for fidelity in practice.fidelities:
                 names[fidelity.slug] = "fidelity"
-                names[f"{practice.slug}-{fidelity.slug}"] = "guideline"
+                names[f"{practice.slug}-{fidelity.slug}"] = "rule"
         return names
 
     def _action_names(self) -> dict[str, str]:
@@ -119,13 +116,14 @@ class PromptNotify:
 
     @cached_property
     def echo_toolsets(self) -> list:
-        """The toolsets the CDD checkout defines, whose @Toast annotations say which tool calls toast; loaded once by the
+        """The toolsets the CDD checkout this hook runs from defines, the code the hook server runs, whose @Toast
+        annotations say which tool calls toast whichever project the event came from; loaded once by the
         hook server's one notifier. A toolset that fails to load raises, so a broken toolset is seen rather than silently
         not toasting."""
         from harness.agent_tools.agent_tools import AgentToolSet
         from harness.installation.repository_toolsets import RepositoryToolsets
 
-        return AgentToolSet.from_items(RepositoryToolsets(_CDD_CHECKOUT).collect())
+        return AgentToolSet.from_items(RepositoryToolsets.of_running_checkout().collect())
 
     def show_toast(self, toast: str, workspace_roots: list[Path]) -> list[Path]:
         """Show toast in every workspace folder of the chat it is for, the toast files written. The hook server hands
@@ -170,12 +168,12 @@ class PromptNotify:
                     continue
                 if kind == "action" and hay not in action_names:
                     continue
-                if kind == "guideline" and in_skills:
+                if kind == "rule" and in_skills:
                     # Rule tokens join folder and file (bdd-bdd-behavior); a skill path's
                     # nested folders can spell the same token without being a rule.
                     continue
                 if "/rules/" in hay.replace("\\", "/").lower():
-                    return "guideline", token
+                    return "rule", token
                 return kind, token
         return None
 

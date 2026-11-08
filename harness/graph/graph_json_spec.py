@@ -14,13 +14,14 @@ from harness.installation.destination import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
 from harness.graph.graph import Graph
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 _CLASS = "export class Cart {\n  total() { return 1; }\n}\n"
 
 
 def _names(graph: Graph) -> list[str]:
     practice = graph.practice("clean_engineering")
-    return [node.name for node in practice.graph.nodes_of(practice)]
+    return [node.name for node in practice.in_graph.nodes()]
 
 
 def _stamp_saved(root: Path, name: str, stamp: float) -> None:

@@ -2,9 +2,9 @@
 
 `Graph` reads a working copy into the practices it holds: the `PracticeGuidance` objects it is given, which a session gives from its own practices and a graph no session holds makes with `PracticeCatalogue.create_all`. Each practice holds the graph (`practice.graph`), and the graph keeps every practice's nodes and edges itself, indexed by the practice. The graph names no practice: each practice's `PracticeGuidance` class says what the graph reads from it, and each pattern is a *PracticeGuidance* that makes its `GraphOverlay` once and keeps it as `graph_overlay`; the graph holds the pattern objects its overlays name, which *PatternOverlays* makes once per process, and the graph asks for them when its overlays are set, so the practices depend on the graph and never the other way round.
 
-A practice reader parses its files with the practice's own model and adds each parsed object (a class, an operation, a story, a spec's observation) to its practice in the graph as the node itself (`graph.add(practice, node, ...)`), so a rule reads its measurements from the same object the explorer shows. A node with no parsed object behind it, such as a story's example or a LERN tier file, is a plain `Node` made with `Graph.add_named`. Edges are recorded with `Graph.link`, on the parent's practice; an edge's place under its parent in the explorer tree comes from `EDGE_ORDER`.
+A practice reader parses its files with the practice's own model and adds each parsed object (a class, an operation, a story, a spec's observation) to its practice in the graph as the node itself (`practice.in_graph.add(node, ...)`), so a rule reads its measurements from the same object the explorer shows. A node with no parsed object behind it, such as a story's example or a LERN tier file, is a plain `Node` made with `practice.in_graph.add_named`. Edges are recorded with `Graph.link`, on the parent's practice; an edge's place under its parent in the explorer tree comes from `EDGE_ORDER`.
 
-A load runs in this order (`WorkingCopy.fill` in `working_copy.py`): each practice `read`s, in the order its `reads_after` needs; then each practice `link`s its nodes to other practices' nodes; then each applied overlay `read`s; then `PracticeChecks` (`rules.py`) runs every practice's checks and records each finding as a `Violation` on its node; then each practice `rebuild_tree`s. `save_json` writes the result to `{folder}/.context/graph.json`, and a later `load_working_copy` reads that file back instead of parsing when it is still current.
+A load runs in this order (`Graph._read_working_copy` in `graph.py`): each practice `read`s, in the order its `reads_after` needs; then each practice `link`s its nodes to other practices' nodes; then each applied overlay `read`s; then each practice's `in_graph.check()` runs its checks and records each finding as a `Violation` on its node; then each practice `rebuild_tree`s. `save_json` writes the result to `{folder}/.context/graph.json`, and a later `load_working_copy` reads that file back instead of parsing when it is still current.
 
 A node's id is `{practice}:{type}:{file or folder}:{name}`, with the owning class or operation added when the name alone is not unique. The practice sections below give each one.
 
@@ -45,36 +45,36 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 	// every practice rooted on folder, holding its root node alone
 + practice(key): PracticeGuidance
 	// the held practice of that key, opened in this graph the first time; never made here
-+ root_of(practice): Node
++ PracticeNodes.root: Node
 	// type Practice, id {practice}:Practice:.:{practice}. Facts about the practice as a whole live here
-+ source_root_of(practice): str
-+ nodes_of(practice, type=None): list[Node]
-+ node_types_of(practice): set[str]
-+ edges_of(practice, kind=None): list[Edge]
-+ edge_types_of(practice): dict[str, EdgeType]
++ PracticeNodes.source_root: str
++ PracticeNodes.nodes(type=None): list[Node]
++ PracticeNodes.node_types: set[str]
++ PracticeNodes.edges(kind=None): list[Edge]
++ PracticeNodes.edge_types: dict[str, EdgeType]
 + node(node_id): Node | None
-+ holds(practice, node_id): bool
-+ schema_of(practice): PracticeSchema
++ PracticeNodes.holds(node_id): bool
++ PracticeNodes.schema: PracticeSchema
 	// the practice's schema with the graph's overlays applied
-+ overlay_checks_of(practice): dict
++ PracticeNodes.overlay_checks: dict
 	// each applied overlay's rules_for(practice.key)
-+ rule_labels_of(practice): list[str]
++ PracticeNodes.rule_labels: list[str]
 	// practice.NodeType.slug, with the owning pattern in front
-+ add(practice, node, node_id, file, start_line, end_line): Node
-	// the node practice already calls node_id when there is one; else release it from the throwaway graph its parser built it in, place it, hold it
-+ add_named(practice, type, node_id, name, source): Node
-+ hold(node): None
++ PracticeNodes.add(node, node_id, file, start_line, end_line): Node
+	// the node practice already calls node_id when there is one; else release it from any graph it was held in, place it, hold it
++ PracticeNodes.add_named(type, node_id, name, source): Node
++ PracticeNodes.hold(node): None
 	// keep the node among its practice's nodes, by type and id
 + link(kind, parent, child, display="direct"): None
 	// -> record(EdgeType.from_kind(kind, display), parent, child)
 + record(edge_type, parent, child): None
 	// on the parent's practice
-+ drop_edges(practice, dropped): list[Edge]
-+ unused_node_id(practice, type, name): str
++ PracticeNodes.drop_edges(dropped): list[Edge]
++ PracticeNodes.unused_node_id(type, name): str
 	// practice:type:name, numbered from 2 when taken
 + edges_from(kind, parent): list[Edge]
 + direct_parent(child): Node | None
-+ rebuild_tree(practice): None
++ PracticeNodes.rebuild_tree(): None
 	// clear every node's children, then the practice's root populates
 + restored_from(saved: SavedGraph): None
 	// the saved nodes back as plain Nodes at their saved lines, then the edges and violations
@@ -92,7 +92,6 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 	// this graph alone, without merging; with files, only the nodes read from them
 + loaded_folder: Path | None
 	// where practices and overlays read from
-+ loaded_practice(kind: type): PracticeGuidance | None
 	// the practice of that class the last load reads; an overlay asks for the practices it adds to this way
 	// the applied overlays' pattern names
 + sync_schema_edges(): None
@@ -145,9 +144,9 @@ One loaded practice as the explorer's inventory shows it, read from the graph th
 + edge_types: list[str]
 	// in EDGE_ORDER
 + rules: list[str]
-	// -> graph.rule_labels_of(practice)
+	// -> practice.in_graph.rule_labels
 + tree: ExplorerEntry
-	// -> graph.root_of(practice).serialize()
+	// -> practice.in_graph.root.serialize()
 
 ## Node
 
@@ -198,8 +197,10 @@ A parsed object a practice reader added, or a plain node read back from `graph.j
 
 Extends `Node`. A model object that is its own node in the graph it was made on (`model_node.py`). Appending a child to one of its `ModelChildren` lists records the edge.
 
++ register_practice(practice_class: type): None
+	// class operation: a practice's module registers itself on its model's base class when it is imported (`StoryNode.register_practice(Stories)`), so the model never imports its practice
 + practice_kind(): type
-	// class operation: the practice class its node belongs to; the graph holds that practice (Graph.practice_of). A model class that names none raises ModelWithoutPractice
+	// class operation: the practice class registered for this class or its nearest base; the graph holds that practice (Graph.practice_of). A model class with none registered raises ModelWithoutPractice
 + _semantic_type_name: str
 + _belongs: set[tuple[str, str]]
 	// (child type, parent type) pairs that also record a belongsTo edge back
@@ -332,9 +333,8 @@ What one practice gives the graph is declared on its own `PracticeGuidance` clas
 + graph_checks(): dict[str, PracticeGraphRule]
 + own_graph_checks(): dict[str, PracticeGraphRule]
 	// -> rules_in(f"{package}.rules"): the module's BY_SLUG, else its RULES
-+ language_checks(language): dict[str, PracticeGraphRule]
 
-`PracticeGuidance.checks()` adds each active overlay's `rules_for(practice)` (through `graph.overlay_checks_of`) to the practice's own; `node.rules` keeps those whose `node_types` hold the node's type, its file language's, or the Clean Engineering type a pattern's schema anchors it to.
+`PracticeGuidance.checks()` adds each active overlay's `rules_for(practice)` (through `practice.in_graph.overlay_checks`) to the practice's own; `node.rules` keeps those whose `node_types` hold the node's type, its file language's, or the Clean Engineering type a pattern's schema anchors it to.
 
 ## GraphOverlay
 
@@ -462,7 +462,7 @@ edge:      { parent, child, kind, order, display }
 violation: { rule, practice, node_id, subject, location, line, end_line, message, severity, source }
 ```
 
-`root_facts` holds the practice root's facts, such as Clean Engineering's `model_members`. A document of any other `version` is `SavedGraphOutdated`: the loader reads the folder again, and a reader of its violations is told to load the working copy again.
+`root_facts` holds the practice root's facts, such as a file another practice could not read. A document of any other `version` is `SavedGraphOutdated`: the loader reads the folder again, and a reader of its violations is told to load the working copy again.
 
 ## What a practice declares on its PracticeGuidance
 
@@ -494,7 +494,7 @@ Operation   clean_engineering:Operation:{file}:{name}:{class} facts: parameters,
 Parameter   clean_engineering:Parameter:{file}:{name}:{class}.{operation}
 ```
 
-A file's top-level functions are operations of the `_module` class its language model gives that file. The root holds `model_members`: every member the model documents describe, by `Class.member`.
+A file's top-level functions are operations of the `_module` class its language model gives that file. The Clean Engineering practice keeps the class model each model document describes and answers `described_member(owner, name)`; the graph holds no copy of those members.
 
 ## Edges
 
@@ -513,7 +513,7 @@ returns      relationship  Operation -> OoadClass its return type names
 
 ## Rules
 
-`cdd_guidance.practices.clean_engineering.rules`, plus `model.drawio.rules` for nodes read from a `.drawio` file.
+`cdd_guidance.practices.clean_engineering.rules`.
 
 # DDD
 

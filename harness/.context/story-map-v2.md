@@ -164,7 +164,7 @@ Observed: `/review` records that a person reviewed and approved each listed guid
 
 ## (E) Inject Guidance Into Chat Lifecycle
 
-Hooks run Python at named Cursor events, so CDD can act at key moments of a chat without anyone calling a tool. Cursor starts `harness/hooks/hook_server.py` for each event, which runs every enabled hook for that event and returns one merged answer. The Claude install registers no hooks; in Claude Code, the cdd-board mod does this work (Move Work Forward From Chat Bar).
+Hooks run Python at named Cursor events, so CDD can act at key moments of a chat without anyone calling a tool. Cursor starts `harness/hooks/hook_daemon.py` for each event, which runs every enabled hook for that event and returns one merged answer. The Claude install registers no hooks; in Claude Code, the cdd-board mod does this work (Move Work Forward From Chat Bar).
 
 ### (S) Cursor --> Start CDD Server On Session Start
 
@@ -1216,7 +1216,7 @@ Observed: `graph.load_files` builds each practice from only the named files or f
 
 ### (S) Knowledge Graph --> Skip Build And Cache Folders
 
-Observed: a scan leaves out `node_modules`, `dist`, test-run output, caches and dot-folders but still reads `.examples` folders (`skipped_folders.py`, `working_copy_scan_spec.py` "over build and test-run output").
+Observed: a scan leaves out `node_modules`, `dist`, test-run output, caches, dot-folders, and the `_examples` and `fixtures` folders, but still reads `.examples` folders (`skipped_folders.py`, `working_copy_scan_spec.py` "over build and test-run output").
 
 ### (S) Knowledge Graph --> Report Load Progress
 

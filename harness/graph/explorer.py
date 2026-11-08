@@ -11,7 +11,7 @@ from harness.graph.graph_rules_collection import GraphRule
 from harness.installation.destination import SourceFile, data_field
 
 if TYPE_CHECKING:
-    from harness.graph.graph import Graph, Node
+    from harness.graph.graph import Filter, Graph, Node
     from harness.guidance.guidance import PracticeGuidance
 
 
@@ -77,6 +77,15 @@ class ExplorerEntry(NodeAnswer):
         """The entries below this one, and last the node's rules when it has any to show."""
         return list(self._children)
 
+    def kept_by(self, wanted: Filter) -> ExplorerEntry | None:
+        """This entry with only what the filter keeps below it: a node the filter matches keeps its rules, a practice's
+        root always stays, and any other node stays, without its rules, only as the way to an entry kept below it."""
+        entries = [kept for child in self._children if isinstance(child, ExplorerEntry) and (kept := child.kept_by(wanted)) is not None]
+        rules = [child for child in self._children if not isinstance(child, ExplorerEntry)]
+        if self._node.type == "Practice" or wanted.matches(self._node):
+            return ExplorerEntry(self._node, [*entries, *rules])
+        return ExplorerEntry(self._node, entries) if entries else None
+
 
 class PracticeInventory:
     """One loaded practice as the explorer's inventory shows it, read from the graph that holds it: how many nodes of
@@ -90,37 +99,37 @@ class PracticeInventory:
     @data_field
     def node_counts(self) -> dict[str, int]:
         """How many nodes of each type the practice holds."""
-        return {type: len(self._graph.nodes_of(self._practice, type)) for type in self._graph.node_types_of(self._practice)}
+        return {type: len(self._practice.in_graph.nodes(type)) for type in self._practice.in_graph.node_types}
 
     @property
     @data_field
     def edge_count(self) -> int:
-        return len(self._graph.edges_of(self._practice))
+        return len(self._practice.in_graph.edges())
 
     @property
     @data_field
     def node_types(self) -> list[str]:
         """The node types the practice holds, sorted by name."""
-        return sorted(self._graph.node_types_of(self._practice))
+        return sorted(self._practice.in_graph.node_types)
 
     @property
     @data_field
     def edge_types(self) -> list[str]:
-        """The edge kinds the practice holds, in the order the explorer tree shows them."""
-        ordered = sorted(self._graph.edge_types_of(self._practice).values(), key=lambda edge_type: edge_type.order)
-        return [edge_type.kind for edge_type in ordered]
+        """The edge kinds the practice holds that a person filters by, in the order the explorer tree shows them."""
+        ordered = sorted(self._practice.in_graph.edge_types.values(), key=lambda edge_type: edge_type.order)
+        return [edge_type.kind for edge_type in ordered if edge_type.is_offered]
 
     @property
     @data_field
     def rules(self) -> list[str]:
         """Each rule the practice runs, named ``practice.node.rule`` with the pattern that owns it in front."""
-        return self._graph.rule_labels_of(self._practice)
+        return self._practice.in_graph.rule_labels
 
     @property
     @data_field
     def tree(self) -> ExplorerEntry:
         """The explorer tree, from the practice's root."""
-        return self._graph.root_of(self._practice).serialize()
+        return self._practice.in_graph.root.serialize()
 
 
 class Overlay:

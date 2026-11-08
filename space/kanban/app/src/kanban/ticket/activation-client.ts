@@ -1,17 +1,9 @@
-import type { BranchData } from '@cdd/space/kanban/ticket'
-
 import type { BoardPage } from '../board/board-page'
 import type { Activation } from '../board/board-store'
 import type { TicketClient } from './ticket-client'
 
-// Leaving writes a handoff for the session left, and commits and pushes the branch its work is on while that branch is
-// checked out; merge waits for the person to choose it.
-const FIRST_LEAVING = ['handoff', 'commit', 'push']
-const HANDOFF_ONLY = ['handoff']
 const LEFT_STEPS: Record<string, string> = { handoff: 'handoff written', commit: 'committed', push: 'pushed', merge: 'merged to main' }
 const OPENED_STEPS: Record<string, string> = { branch: 'branch created', worktree: 'worktree created' }
-// A branch read that failed is offered as missing, since the page has already shown the failure.
-const missingBranch = (name: string): BranchData => ({ name, exists: false, is_checked_out: false })
 
 const toggled = (chosen: string[], option: string): string[] => (chosen.includes(option) ? chosen.filter(entry => entry !== option) : [...chosen, option])
 
@@ -46,18 +38,27 @@ export class ActivationClient {
 
   async start(ticket: TicketClient, isClosing: boolean): Promise<void> {
     ticket.select()
-    const active = this.page.board.activeTicket
-    // The branch the work being left is on, its own or main, which leaving commits and pushes.
-    const [branch, leavingBranch] = await Promise.all([ticket.branch(), active ? active.workBranch() : null])
-    const leavingTitle = isClosing ? ticket.title : (active?.title ?? '')
+    const left = isClosing ? ticket : this.page.board.activeTicket
+    // Python says what closing the ticket left can do with its work now, on the branch its work is on; leaving it for
+    // another can merge that branch too. A read that failed offers only what needs no branch, since the page has shown
+    // the failure.
+    const [branch, closing] = await Promise.all([ticket.branch(), left ? left.closeChoices() : null])
+    const leavingBranch = closing?.branch ?? ''
+    const offeredLeaving = !left ? [] : isClosing ? (closing?.choices ?? []) : left.leaveChoices.filter(choice => closing?.choices.includes(choice) || (choice === 'merge' && leavingBranch !== ''))
+    const firstLeaving = isClosing ? offeredLeaving : (left?.firstLeaveChoices ?? [])
+    // Opening offers what the ticket does not have yet, each chosen at first, as Python sends its open choices.
+    const hasBranch = Boolean(branch?.exists)
+    const offeredOpening = ticket.openChoices.filter(choice => (choice === 'branch' ? !hasBranch : ticket.worktree === ''))
     this.show({
       ticket,
       isClosing,
-      leavingTitle,
-      leaving: leavingBranch?.is_checked_out ? FIRST_LEAVING : HANDOFF_ONLY,
-      opening: branch?.exists ? [] : ['branch'],
-      branch: branch ?? missingBranch(ticket.name),
+      leavingTitle: left?.title ?? '',
+      leaving: firstLeaving.filter(choice => offeredLeaving.includes(choice)),
+      opening: offeredOpening,
+      offeredLeaving,
+      offeredOpening,
       leavingBranch,
+      hasBranch,
     })
   }
 

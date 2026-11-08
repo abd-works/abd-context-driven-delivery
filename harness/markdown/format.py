@@ -15,8 +15,14 @@ class Format:
     _SHORT_NAMES = {"markdown": "md", "python": "py", "typescript": "ts", "javascript": "js"}
     _NAMES_BY_SHORT_NAME = {short: name for name, short in _SHORT_NAMES.items()}
     CODE = frozenset({"python", "typescript", "java", "javascript"})
-    KNOWN = frozenset({"markdown", *CODE, "drawio", "miro", "html", "json"})
     TEMPLATED = frozenset({"markdown", *CODE})
+    # The groups a person picks formats by, in the order an action bar offers them: a diagram, the markdown, or the
+    # code. Any other format is a group of its own, under its own name.
+    GROUPS: dict[str, tuple[str, ...]] = {
+        "diagram": ("drawio",),
+        "markdown": ("markdown",),
+        "code": ("python", "typescript", "javascript", "java", "html"),
+    }
 
     def __init__(self, name: str | None) -> None:
         folded = (name or "").strip().casefold()
@@ -43,13 +49,19 @@ class Format:
         return f".{self.short}" if self._name else ""
 
     @property
-    def is_known(self) -> bool:
-        """Whether CDD writes artifacts in this format; a folder or extension that is not one is not a format."""
-        return self._name in self.KNOWN
-
-    @property
     def is_code(self) -> bool:
         return self._name in self.CODE
+
+    @property
+    def group(self) -> str:
+        """The group a person picks this format by, `code` for `python`; a format in no group is a group of its own."""
+        return next((group for group, members in self.GROUPS.items() if self._name in members), self._name)
+
+    @property
+    def group_order(self) -> int:
+        """Where this format's group comes among the groups an action bar offers; a group of its own comes after them."""
+        groups = list(self.GROUPS)
+        return groups.index(self.group) if self.group in groups else len(groups)
 
     @property
     def is_templated(self) -> bool:

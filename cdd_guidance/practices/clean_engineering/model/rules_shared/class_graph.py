@@ -10,7 +10,8 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.model.rules_shared.typed_and_comments import is_test_code
+from cdd_guidance.practices.clean_engineering.model.operation import CONSTRUCTOR_NAMES
+from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -18,9 +19,33 @@ if TYPE_CHECKING:
 
 # `self.column_name = ...` or `this.columnName: string = ...` in a constructor: a field the class holds.
 _ASSIGNED_FIELD = re.compile(r"(?:self|this)\.(\w+)\s*(?::\s*([^=\n]+?))?\s*=(?!=)")
-_CONSTRUCTORS = frozenset({"__init__", "constructor"})
 _IDENTIFIER = re.compile(r"[A-Za-z_]\w*")
 _HOLDER = "_module"
+# Standard value types: Python's paths, dates, and numbers, and the script values a constructor fills a field with.
+_STANDARD_VALUES = frozenset(
+    {
+        "Path",
+        "PurePath",
+        "PurePosixPath",
+        "PureWindowsPath",
+        "datetime",
+        "date",
+        "time",
+        "timedelta",
+        "Decimal",
+        "Fraction",
+        "UUID",
+        "Date",
+        "Map",
+        "Set",
+        "URL",
+        "RegExp",
+    }
+)
+# A failure is a value the class raises or keeps, not a collaborator it calls.
+_FAILURE_SUFFIXES = ("Error", "Exception")
+# Bases that make a class a value: a named tuple or an enumeration.
+_VALUE_BASES = frozenset({"NamedTuple", "Enum", "IntEnum", "StrEnum", "Flag"})
 
 
 class ClassGraph:
@@ -59,18 +84,32 @@ class ClassGraph:
         for prop in getattr(model, "properties", None) or []:
             found[prop.name] = getattr(prop, "type_hint", "") or found.get(prop.name, "")
         for operation in getattr(model, "operations", None) or []:
-            if operation.name not in _CONSTRUCTORS:
+            if not operation.is_constructor:
                 continue
             for name, hint in _ASSIGNED_FIELD.findall(getattr(operation.body, "text", "") or ""):
                 found.setdefault(name, (hint or "").strip())
         return found
 
+    def is_value(self, type_name: str) -> bool:
+        """True for a value type: a standard one such as a path, a date, or a number, a failure being raised, or a
+        class of the graph its stereotype or base marks as a value object. A class makes values from what it holds;
+        only a collaborator it builds is a dependency the caller cannot see."""
+        if type_name in _STANDARD_VALUES or type_name.endswith(_FAILURE_SUFFIXES):
+            return True
+        return any(_declares_value(node) for node in self.by_name.get(type_name, []))
+
     def has_behavior(self, node: "Node") -> bool:
         """A class with any operation beyond construction and property access."""
         return any(
-            not shape.get("is_property") and shape["name"] not in _CONSTRUCTORS and not shape["name"].startswith("__")
+            not shape.get("is_property") and shape["name"] not in CONSTRUCTOR_NAMES and not shape["name"].startswith("__")
             for shape in node.get_fact("operation_shapes", []) or []
         )
+
+
+def _declares_value(node: "Node") -> bool:
+    stereotypes = {str(item).lower() for item in node.get_fact("stereotypes", []) or []}
+    bases = {str(base).rsplit(".", 1)[-1] for base in node.get_fact("bases", []) or []}
+    return "value object" in stereotypes or bool(bases & _VALUE_BASES)
 
 
 def names_in(type_hint: str) -> set[str]:

@@ -26,6 +26,9 @@ with description("a format") as self:
         with it("should end its templates with its extension"):
             expect(Format("python").template_extension).to(equal(".py"))
 
+        with it("should be picked in the code group"):
+            expect(Format("python").group).to(equal("code"))
+
     with description("that is a diagram format"):
         with it("should not say it is code"):
             expect(Format("drawio").is_code).to(equal(False))
@@ -36,9 +39,12 @@ with description("a format") as self:
         with it("should still name its file extension"):
             expect(Format("drawio").extension).to(equal(".drawio"))
 
-    with description("that CDD does not write"):
-        with it("should not be known"):
-            expect(Format("sub").is_known).to(equal(False))
+        with it("should be picked in the diagram group, which comes first"):
+            expect((Format("drawio").group, Format("drawio").group_order)).to(equal(("diagram", 0)))
+
+    with description("that is in no group"):
+        with it("should be a group of its own, after the others"):
+            expect((Format("sub").group, Format("sub").group_order)).to(equal(("sub", 3)))
 
     with description("that was not given"):
         with it("should have no name"):

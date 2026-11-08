@@ -9,7 +9,8 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import Callable, Iterable, Iterator, Optional
 
-from harness.graph.graph import EdgeType, Graph, Node, Source
+from harness.graph.edge import EdgeType
+from harness.graph.graph import Graph, Node, Source
 
 # The file a new model object names until a loader tells it which file it came from.
 NO_SOURCE_FILE = "."
@@ -120,15 +121,20 @@ class ModelReferences(_RecordedList):
 
 
 class ModelWithoutPractice(TypeError):
-    """A model object class that names no practice, so the graph cannot tell which practice graph it belongs to."""
+    """A model object class no practice registered, so the graph cannot tell which practice graph it belongs to."""
 
     def __init__(self, model_class: type) -> None:
-        super().__init__(f"{model_class.__name__} names no practice: give it or a base class a practice_kind.")
+        super().__init__(f"{model_class.__name__} names no practice: its practice's module registers itself with register_practice on it or a base class.")
         self.model_class = model_class
 
 
 class ModelNode(Node):
-    """Base model object for one practice. Subclasses name the practice and the belongsTo pairs."""
+    """Base model object for one practice. Its practice registers it (``register_practice``), and subclasses name the
+    belongsTo pairs.
+
+    An object made without a graph is detached: it belongs to no practice yet and records no edge. It joins a graph,
+    with its whole tree, when a part of a graph adopts it or when something asks for its graph; only then are the edges
+    its lists hold recorded, so parsing a file into objects builds no graph."""
 
     _semantic_type_name: str = "Node"
     _belongs: set[tuple[str, str]] = set()
@@ -149,31 +155,57 @@ class ModelNode(Node):
         wrapped._schema_wrapped = True
         cls.__init__ = wrapped
 
+    _practice_class: type | None = None
+    """The practice class registered for this model class and its subclasses; see ``register_practice``."""
+
+    @classmethod
+    def register_practice(cls, practice_class: type) -> None:
+        """Make practice_class the practice of this model class and of every subclass that registers none of its own.
+        A practice's module calls it on its model's base class when it is imported, so the model never imports its
+        practice and the dependency runs one way, from the practice to its model."""
+        cls._practice_class = practice_class
+
     @classmethod
     def practice_kind(cls) -> type:
-        """The class of the practice this object's graph node belongs to, such as ``Stories``. Each practice's base model
-        class answers it, importing its practice's class when asked, since the practice's own module may import its
-        model."""
-        raise ModelWithoutPractice(cls)
+        """The class of the practice this object's graph node belongs to, such as ``Stories``: the one registered for
+        this class or the nearest base class that has one."""
+        if cls._practice_class is None:
+            raise ModelWithoutPractice(cls)
+        return cls._practice_class
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
-        graph = graph or Graph()
-        # The graph holds the practice of that class, so this finds it, never makes one.
-        practice = graph.practice_of(type(self).practice_kind())
-        semantic = type(self)._semantic_type_name
         self._child_lists: list[ModelChildren] = []
         self._reference_lists: list[ModelReferences] = []
         Node.__init__(
             self,
-            practice,
-            semantic,
-            graph.unused_node_id(practice, semantic, name),
+            None,
+            type(self)._semantic_type_name,
+            "",
             name,
             Source(NO_SOURCE_FILE, sequential_order or 1, sequential_order or 1),
         )
         self.sequential_order = sequential_order
-        graph.hold(self)
         self._ready = False
+        if graph is not None:
+            self._join(graph.practice_of(type(self).practice_kind()))
+
+
+    @property
+    def graph(self) -> Graph:
+        """The graph that holds this object. A detached object's tree joins a graph of its own the first time it is
+        asked; the catalogue's practices that graph makes register every model class (``register_practice``)."""
+        if self.practice is None:
+            root = self._detached_root()
+            graph = Graph()
+            root._join(graph.practice_of(type(root).practice_kind()))
+        return self.practice.graph
+
+    def _detached_root(self) -> "ModelNode":
+        """The outermost detached object above this one, whose whole tree joins a graph together."""
+        node = self
+        while isinstance(node.parent, ModelNode) and node.parent.practice is None:
+            node = node.parent
+        return node
 
     @property
     def has_source_file(self) -> bool:
@@ -191,64 +223,81 @@ class ModelNode(Node):
     def _link(self, child, kind: str) -> None:
         if not isinstance(child, ModelNode) or child is self:
             return
-        self._adopt(child)
         child.parent = self
+        if self.practice is None:
+            # A detached owner records its edges when its tree joins a graph.
+            return
+        if child.practice is not self.practice:
+            child._join(self.practice)
+        self._record_child_edge(child, kind)
+        self._sync_schema_edges()
+
+    def _record_child_edge(self, child: "ModelNode", kind: str) -> None:
         self.graph.record(EdgeType.from_kind(kind), self, child)
         if (child.semantic_type(), self.semantic_type()) in type(self)._belongs:
             self.graph.record(EdgeType.from_kind("belongsTo", "relationship"), child, self)
-        self._sync_schema_edges()
 
     def _unlink(self, child, kind: str) -> None:
-        if not isinstance(child, ModelNode):
+        if not isinstance(child, ModelNode) or self.practice is None:
             return
-        self.graph.drop_edges(
-            self.practice,
-            lambda edge: (edge.parent is self and edge.child is child and edge.kind == kind)
-            or (edge.parent is child and edge.child is self and edge.kind == "belongsTo"),
-        )
+        self.practice.in_graph.drop_edges(lambda edge: (edge.parent is self and edge.child is child and edge.kind == kind)
+            or (edge.parent is child and edge.child is self and edge.kind == "belongsTo"),)
 
     def _refer(self, target, kind: str) -> None:
-        """Record a relationship edge of kind to target when both are on one graph; an owner that moves to another
-        graph records it there (``_adopt``)."""
-        if isinstance(target, ModelNode) and target is not self and target.graph is self.graph:
+        """Record a relationship edge of kind to target when both are on one graph; an owner that joins another graph
+        records it there (``_join``)."""
+        if not isinstance(target, ModelNode) or target is self or self.practice is None or target.practice is None:
+            return
+        if target.graph is self.graph:
             self.graph.record(EdgeType.from_kind(kind, "relationship"), self, target)
 
-    def _adopt(self, child: "ModelNode") -> None:
-        if child.practice is self.practice:
-            return
-        subtree = child._subtree()
+    def _join(self, practice) -> None:
+        """Make this object and its whole tree practice's nodes: each leaves the graph it was in, carrying the edges
+        between them, and the edges its own lists hold are recorded in practice's graph."""
+        subtree = self.subtree()
         members = {id(node) for node in subtree}
-        carried = child.graph.drop_edges(child.practice, lambda edge: id(edge.parent) in members and id(edge.child) in members)
+        carried = []
+        for held in {id(node.practice): node.practice for node in subtree if node.practice is not None}.values():
+            carried.extend(held.in_graph.drop_edges(lambda edge: id(edge.parent) in members and id(edge.child) in members))
         with schema_sync_paused():
             for node in subtree:
-                node._move_to(self.practice)
+                node._move_to(practice)
+        graph = practice.graph
         for edge in carried:
-            self.graph.record(EdgeType(edge.kind, edge.order, edge.display), edge.parent, edge.child)
+            graph.record(EdgeType(edge.kind, edge.order, edge.display), edge.parent, edge.child)
         for node in subtree:
-            for references in node._reference_lists:
-                references.record_all()
+            node._record_held_edges()
+
+    def _record_held_edges(self) -> None:
+        """Record the edge to each part and each reference this object's lists hold."""
+        for children in self._child_lists:
+            for child in children:
+                if isinstance(child, ModelNode) and child is not self:
+                    self._record_child_edge(child, children.kind)
+        for references in self._reference_lists:
+            references.record_all()
 
     def _move_to(self, practice) -> None:
         if self.practice is practice:
             return
-        graph = practice.graph
-        node_id = graph.unused_node_id(practice, self.type, self.name) if graph.holds(practice, self.node_id) else self.node_id
+        unnamed = not self.node_id or practice.in_graph.holds(self.node_id)
+        node_id = practice.in_graph.unused_node_id(self.type, self.name) if unnamed else self.node_id
         # add places a parsed node at its lines; a bound object keeps the source it already has, whatever its kind.
         source = self.source
-        graph.add(practice, self, node_id, NO_SOURCE_FILE, 1, 1)
+        practice.in_graph.add(self, node_id, NO_SOURCE_FILE, 1, 1)
         self.source = source
 
-    def _subtree(self) -> list["ModelNode"]:
+    def subtree(self) -> list["ModelNode"]:
         found: list[ModelNode] = [self]
         for children in list(self._child_lists):
             for child in list(children):
                 if isinstance(child, ModelNode):
-                    found.extend(child._subtree())
+                    found.extend(child.subtree())
         examples = getattr(self, "examples", None)
         if isinstance(examples, dict):
             for example in examples.values():
                 if isinstance(example, ModelNode):
-                    found.extend(example._subtree())
+                    found.extend(example.subtree())
         return found
 
     def __setattr__(self, name: str, value) -> None:

@@ -1,7 +1,11 @@
-"""Axis-aligned box for a placed diagram node. Shared by Draw.io and Miro."""
+"""Axis-aligned box for a placed diagram node, and whether two straight lines cross. The layout writer and the
+draw.io layout scanners both measure diagrams with these."""
 from __future__ import annotations
 
 from typing import NamedTuple
+
+Point = tuple[float, float]
+Segment = tuple[Point, Point]
 
 
 class Geometry(NamedTuple):
@@ -27,8 +31,19 @@ class Geometry(NamedTuple):
         return Geometry(x, y, self.width, self.height)
 
     @property
-    def center(self) -> tuple[float, float]:
+    def center(self) -> Point:
         return (self.x + self.width / 2, self.y + self.height / 2)
+
+
+def segments_cross(first: Segment, second: Segment) -> bool:
+    """True when two straight segments cross each other; an end that lies on the other segment's line touches it, and
+    touching counts."""
+    (a, b), (c, d) = first, second
+    return _turns_left(a, c, d) != _turns_left(b, c, d) and _turns_left(a, b, c) != _turns_left(a, b, d)
+
+
+def _turns_left(a: Point, b: Point, c: Point) -> bool:
+    return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
 
 
 CELL_WIDTH = 260

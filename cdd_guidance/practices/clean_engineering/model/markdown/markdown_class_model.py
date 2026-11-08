@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import parse_arrow_line
@@ -48,7 +47,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
-from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names, split_top_level
+from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
 
 
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
@@ -323,11 +322,8 @@ class MarkdownOoadClass(OoadClass):
             if re.match(r"^_?\w+\s*\(", stripped):
                 continue
             # Optional props may be written `name?: Type` or `name: Type | null`.
-            m = re.match(r"^(\w+)\??:\s*(.+)", stripped)
-            if m:
-                prop_name = m.group(1)
-                type_raw = m.group(2).strip()
-                prop = Property(name=prop_name, type_hint=type_raw)
+            prop = Property.from_signature(stripped)
+            if prop is not None:
                 if rel_kind:
                     prop.stereotype = rel_kind
                 props.append(prop)
@@ -357,24 +353,16 @@ class MarkdownOoadClass(OoadClass):
             private = stripped.startswith("- ")
             body = stripped[2:].strip() if private else stripped
             body, ret_kind = self._strip_ce_prefix(body)
-            m = re.match(r"^(_?\w+)\(([^)]*)\)(?::\s*(.+))?", body)
-            if not m:
+            operation = Operation.from_signature(body)
+            if operation is None:
                 continue
-            op_name = ("_" if private and not m.group(1).startswith("_") else "") + m.group(1)
-            params = split_top_level(m.group(2))
-            ret = (m.group(3) or "").strip()
-            ops.append(Operation(name=op_name, parameters=params, return_type=ret))
+            if private and not operation.name.startswith("_"):
+                operation.name = f"_{operation.name}"
+            ops.append(operation)
         return ops
 
 
 class MarkdownModule(Module):
-    def get_next_class_from_file(self) -> MarkdownOoadClass:
-        class_block = self._class_blocks.pop(0)
-        heading = re.match(r"^#{2,3}\s+(.+)", class_block)
-        class_heading = ClassHeading.read(heading.group(1)) if heading else ClassHeading("")
-        body = class_block[heading.end():].lstrip("\n") if heading else class_block
-        return MarkdownOoadClass.read_card(class_heading, body, len(self.classes) + 1)
-
     def load_class(self, source: OoadClass) -> MarkdownOoadClass:
         loaded = MarkdownOoadClass(name=source.name, sequential_order=source.sequential_order)
         loaded.update_self(source)
@@ -442,34 +430,6 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         loaded = MarkdownModule(name=source.name, sequential_order=source.sequential_order)
         loaded.update_self(source)
         return loaded
-
-    def load_content(self) -> None:
-        from pathlib import Path
-
-        text = Path(self.path).read_text(encoding="utf-8")
-        self._blocks = [block for block in re.split(r"(?m)^(?=#\s)", text) if block.strip()]
-        self._block_index = 0
-        self._module_order = 1
-
-    def has_more_module(self) -> bool:
-        return self._block_index < len(getattr(self, "_blocks", []))
-
-    def get_next_module_from_file(self) -> "MarkdownModule":
-        block = self._blocks[self._block_index].strip()
-        self._block_index += 1
-        heading = re.match(r"^#\s+(.+)", block)
-        if heading is None:
-            module = MarkdownModule(name="", sequential_order=self._module_order)
-            self._module_order += 1
-            return module
-        body = block[heading.end():].lstrip("\n")
-        module = MarkdownModule(name=heading.group(1).strip(), sequential_order=self._module_order)
-        self._module_order += 1
-        parts = re.split(r"(?m)^(?=##\s)", body, maxsplit=1)
-        self._apply_module_preamble(module, parts[0].strip())
-        classes_text = parts[1] if len(parts) > 1 else ""
-        module._class_blocks = self._class_blocks_in(module, classes_text)
-        return module
 
     def parse(self, text: str) -> "MarkdownCleanEngineeringModel":
         headings = self._headings(text)

@@ -4,7 +4,7 @@ Scenarios: move-work-forward-on-session-board/generate-fidelity-outputs/*/*_stor
 Map: .context/story-map.md#e-generate-fidelity-outputs. Model: .context/kanban-model.md.
 
 Steps reach the board and the session only through the World a tier hands them (`world.Ticket`, `world.Generate`,
-`world.Session`), so the domain spec and the cdd tools spec replay the same steps.
+`world.Sessions`), so the domain spec and the cdd tools spec replay the same steps.
 
 Covered by the board app's TypeScript client specs in space/kanban/app, not here, because they have no Python
 operation: Choose Action And Formats (all seven: the tile's action bar and its chips); Generate Fidelity Output "Send
@@ -78,7 +78,7 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's files go")
     def _(world):
-        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).practices["stories"].fidelities["story_map"].output_paths()
+        world.outputs = world.Sessions(world.project.root).load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["story_map"].output_paths()
 
     @s.then("the markdown file is /work/.context/story-map.md")
     def _(world):
@@ -94,7 +94,7 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's files go")
     def _(world):
-        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).practices["stories"].fidelities["story_map"].output_paths()
+        world.outputs = world.Sessions(world.project.root).load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["story_map"].output_paths()
 
     @s.then("the markdown file is /work/docs/stories/.context/story-map.md")
     def _(world):
@@ -110,7 +110,7 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's files go")
     def _(world):
-        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).practices["stories"].fidelities["story_map"].output_paths()
+        world.outputs = world.Sessions(world.project.root).load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["story_map"].output_paths()
 
     @s.then("the drawio file is /work/docs/map/.context/story-map.drawio")
     def _(world):
@@ -126,8 +126,8 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's and scenarios' files go")
     def _(world):
-        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).practices["stories"].fidelities["story_map"].output_paths()
-        world.scenario_outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).practices["stories"].fidelities["scenarios"].output_paths()
+        world.outputs = world.Sessions(world.project.root).load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["story_map"].output_paths()
+        world.scenario_outputs = world.Sessions(world.project.root).load(world.project.sessions / ALPHA.name).practices["stories"].fidelities["scenarios"].output_paths()
 
     @s.then("story_map's markdown is /work/.context/our-map.md and its drawio stays /work/.context/story-map.drawio")
     def _(world):

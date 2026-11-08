@@ -2,12 +2,18 @@
 and every MCP answer read, and the Installation that writes one destination's files."""
 from __future__ import annotations
 
+import functools
 import inspect
+import logging
+import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Callable
 
 from harness.annotations.annotation import Annotation, OmissionAnnotation
 from harness.installation.ide_layout import IdeLayout
+
+_logger = logging.getLogger(__name__)
 
 InstallTracker = Callable[[Path], None]
 
@@ -37,7 +43,7 @@ noCatalog = NoCatalog
 noDeploy = NoDeploy
 
 
-class LanguageAdapter:
+class LanguageAdapter(Annotation):
     """Deploy typed code in language for this toolset's MCP operations, so an application outside Python reaches them.
 
     The adapter names the object its operations act on by the class's `@identity` fields. `shares_file_views=True`
@@ -46,12 +52,16 @@ class LanguageAdapter:
 
     flag = "_language_adapters"
     file_views_flag = "_language_adapter_file_views"
+    copied = False
+
+    def __new__(cls, *, language: str, shares_file_views: bool = False):
+        return object.__new__(cls)
 
     def __init__(self, *, language: str, shares_file_views: bool = False) -> None:
         self.language = language
         self.shares_file_views = shares_file_views
 
-    def __call__(self, toolset: Any) -> Any:
+    def annotate(self, toolset: Any) -> Any:
         setattr(toolset, self.flag, (*getattr(toolset, self.flag, ()), self.language))
         if self.shares_file_views:
             setattr(toolset, self.file_views_flag, True)
@@ -61,7 +71,7 @@ class LanguageAdapter:
 language_adapter = LanguageAdapter
 
 
-class Identity:
+class Identity(Annotation):
     """Name the data fields (`@data_field`) that name one object of this class, such as a ticket's `name`; a fidelity's
     progress is named by its `ticket` and its `slug`. A subclass is named as its base is.
 
@@ -72,11 +82,15 @@ class Identity:
     """
 
     flag = "_identity_fields"
+    copied = False
+
+    def __new__(cls, *fields: str):
+        return object.__new__(cls)
 
     def __init__(self, *fields: str) -> None:
         self.fields = fields
 
-    def __call__(self, data_class: type) -> type:
+    def annotate(self, data_class: type) -> type:
         setattr(data_class, self.flag, self.fields)
         return data_class
 
@@ -91,7 +105,7 @@ class ReferenceWithoutIdentityError(TypeError):
         super().__init__(f"{data_class.__name__} is sent as a reference, so annotate the fields that name it with @identity")
 
 
-class Edits:
+class Edits(Annotation):
     """Name the fields of the object's data this operation changes, when its argument names do not match them.
 
     A generated view shows a field as an input only where an operation changes it, so this is how an operation whose
@@ -99,11 +113,15 @@ class Edits:
     """
 
     flag = "_language_adapter_edits"
+    copied = False
+
+    def __new__(cls, *fields: str):
+        return object.__new__(cls)
 
     def __init__(self, *fields: str) -> None:
         self.fields = fields
 
-    def __call__(self, operation: Any) -> Any:
+    def annotate(self, operation: Any) -> Any:
         setattr(operation, self.flag, self.fields)
         return operation
 
@@ -143,12 +161,31 @@ data_field = DataField
 class DataClass:
     """What the annotations on one class declare about its objects' data: the properties that are its data (`@data_field`),
     the fields that name one object (`@identity`), and the languages its operations are typed in
-    (`@language_adapter`). A language adapter types the data from it, and `data_of` sends an object's data by it."""
+    (`@language_adapter`). A language adapter types the data from it, and `data_of` sends an object's data by it. A class's
+    annotations are fixed once it is defined, and every answer an MCP tool sends reads them, so the class holds its
+    DataClass (``DataClass.of``) and its fields are read once."""
+
+    _HELD_AS = "_data_class"
 
     def __init__(self, data_class: type) -> None:
         self.data_class = data_class
 
-    @property
+    @classmethod
+    def of(cls, data_class: type) -> DataClass:
+        """The DataClass data_class holds, made and kept on data_class itself the first time it is asked for. A subclass
+        holds its own, since it may annotate more fields."""
+        if not isinstance(data_class, type):  # a generic alias such as list[str] holds nothing of its own
+            return cls(data_class)
+        held = data_class.__dict__.get(cls._HELD_AS)
+        if held is None:
+            held = cls(data_class)
+            try:
+                setattr(data_class, cls._HELD_AS, held)
+            except TypeError:  # a built-in type keeps no attributes, so its data is read for this value alone
+                pass
+        return held
+
+    @functools.cached_property
     def fields(self) -> dict[str, property]:
         """The properties the class annotates as its data, by the name each takes in the data; a base class's come first.
         A subclass that overrides an annotated property, such as a card's title, is read through its own."""
@@ -200,14 +237,14 @@ class DataClass:
         return self._referenced(held) if self.sends_by_identity(field) else data_of(held)
 
     def _identity_data(self, held: Any) -> Any:
-        return DataClass(type(held)).reference(held) if held is not None and DataClass(type(held)).identity else data_of(held)
+        return DataClass.of(type(held)).reference(held) if held is not None and DataClass.of(type(held)).identity else data_of(held)
 
     def _referenced(self, held: Any) -> Any:
         if held is None:
             return None
         if isinstance(held, (list, tuple)):
             return [self._referenced(item) for item in held]
-        return DataClass(type(held)).reference(held)
+        return DataClass.of(type(held)).reference(held)
 
 
 def data_of(value: Any) -> Any:
@@ -215,13 +252,15 @@ def data_of(value: Any) -> Any:
 
     This is the one way a value of any type becomes data, for MCP results and every other JSON answer, so a path reads
     the same wherever it is sent: with forward slashes."""
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
     if isinstance(value, Path):
         return value.as_posix()
     if isinstance(value, dict):
         return {key: data_of(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
         return [data_of(item) for item in value]
-    data_class = DataClass(type(value))
+    data_class = DataClass.of(type(value))
     return data_class.data(value) if not isinstance(value, type) and data_class.fields else value
 
 
@@ -231,6 +270,17 @@ class SourceFile:
     A generated view draws an annotated field as a link that opens the file in the shared source view, at the `line`, or
     the `start_line` to `end_line` range, that the same data holds.
     """
+
+
+def is_temporary(folder: Path) -> bool:
+    """Whether folder is in the system's temporary folder, as a spec's install is: such an install keeps its record and
+    its MCP entry in the folder itself, so it never touches the person's own."""
+    try:
+        temp = Path(tempfile.gettempdir()).resolve()
+        resolved = Path(folder).resolve()
+    except OSError:
+        return False
+    return resolved == temp or temp in resolved.parents
 
 
 class Installation:
@@ -243,6 +293,8 @@ class Installation:
         self.layout = layout
         self.path = Path(path)
         self.repo = Path(repo).resolve() if repo is not None else None
+        self.is_temporary = is_temporary(self.path)
+        """Whether this installation writes into a temporary folder, as a spec's install does."""
         self._install_tracker: InstallTracker | None = None
 
     def track_writes_with(self, tracker: InstallTracker) -> None:
@@ -254,11 +306,7 @@ class Installation:
 
     def folder_for(self, toolset: Any) -> Path:
         """Repo-relative package folder the toolset already knows (practice dir, fidelity leaf)."""
-        raw = getattr(toolset, "install_folder", None)
-        if raw is None:
-            slug = getattr(toolset, "slug", None) or "toolset"
-            return Path(str(slug))
-        folder = self._guidance_source_folder(Path(raw))
+        folder = self._guidance_source_folder(Path(toolset.install_folder))
         repo = self.repo
         if repo is None:
             return folder
@@ -280,6 +328,55 @@ class Installation:
 
     def write(self, tool: Any) -> None:
         raise NotImplementedError
+
+
+class SkippedTool(Exception):
+    """One published tool, handler, or toolset a server skipped so it could serve the rest: its toolset could not be
+    loaded, its name or arguments were wrong, or it raised while answering."""
+
+    def __init__(self, tool: str, reason: str, cause: BaseException | None = None) -> None:
+        super().__init__(f"{tool}: {reason}")
+        self.tool = tool
+        self.reason = reason
+        self.cause = cause
+
+
+class SkippedTools:
+    """What one server skipped while it stood up or answered, so it kept serving the rest: the cdd server's tools, the
+    hook server's handlers. A diagnosis reports them, and the notice names them for whoever started the server."""
+
+    def __init__(self, server: str, kind: str) -> None:
+        self._server = server
+        self._kind = kind
+        self._items: list[SkippedTool] = []
+
+    def skip(self, tool: str, error: BaseException) -> None:
+        """Record tool as skipped because of error, with its traceback in the log."""
+        skipped = error if isinstance(error, SkippedTool) else SkippedTool(tool, str(error), error)
+        self._items.append(skipped)
+        _logger.error("%s standup exception: skipped %s: %s", self._server, skipped.tool, skipped.reason, exc_info=skipped.cause)
+
+    def clear(self) -> None:
+        self._items.clear()
+
+    @property
+    def as_data(self) -> list[dict[str, str]]:
+        """Each skipped tool and why, as a diagnosis reports it."""
+        return [{"tool": item.tool, "reason": item.reason} for item in self._items]
+
+    @property
+    def notice(self) -> str:
+        """The lines that name each skipped tool; empty when nothing was skipped."""
+        if not self._items:
+            return ""
+        lines = [f"{self._server} standup skipped illegitimate {self._kind} and continued:"]
+        lines.extend(f"- {item.tool}: {item.reason}" for item in self._items)
+        return "\n".join(lines)
+
+    def notify(self) -> None:
+        """Print the notice for whoever started the server, when something was skipped."""
+        if self._items:
+            print(self.notice, file=sys.stderr)
 
 
 class ServerInstallation(Installation):

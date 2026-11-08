@@ -31,11 +31,11 @@ import copy
 import html
 import re
 import xml.etree.ElementTree as ET
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in, without_marks
+from cdd_guidance.practices.clean_engineering.model.field_types import RELATIONSHIP_STRENGTH
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import (
     GROUP_FILL_COLORS,
     SMALLEST_PORT_SPACING,
@@ -49,7 +49,7 @@ from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import 
     module_tab_label,
 )
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry, MODULE_CELL_MIN_HEIGHT, MODULE_CELL_WIDTH
-from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import DrawioPage
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import DrawioPage, class_name_in
 from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
     DrawIOClass,
     DrawIOModule,
@@ -57,7 +57,6 @@ from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
 )
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.type_refs import pascal_type_names
 
 _EDGE_BASE_STYLE = 'edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;'
 EDGE_STYLES = {'inheritance': f'{_EDGE_BASE_STYLE}endArrow=block;endSize=16;endFill=0;', 'composition': f'{_EDGE_BASE_STYLE}startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;', 'aggregation': f'{_EDGE_BASE_STYLE}startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;', 'association': f'{_EDGE_BASE_STYLE}endArrow=open;endSize=12;', 'dependency': f'{_EDGE_BASE_STYLE}dashed=1;endArrow=open;endSize=12;'}
@@ -81,11 +80,9 @@ MODULE_TITLE_STYLE = 'text;html=1;align=center;verticalAlign=middle;fontSize=18;
 MODULE_SUBTITLE_STYLE = 'text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;'
 _MODULE_MARKER = 'fillColor=#1a3a6e'
 _MODULE_CHILD_MARKER = 'fillColor=#dae8fc'
-_RELATIONSHIP_STRENGTH = {'inheritance': 4, 'composition': 3, 'aggregation': 2, 'association': 1, 'relative': 1, 'dependency': 0}
 # The interaction a dependency names, written on its arrow as `«runs»` on `Repo ---<<runs>>--> Git`.
 _DEPENDENCY_LABEL = re.compile('«([^»]+)»')
 
-Box = Tuple[float, float, float, float]
 Relationships = List[Tuple[str, str, str]]
 
 
@@ -99,10 +96,6 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
 
     def load_module(self, source: Module) -> DrawIOModule:
         return DrawIOModule(name=source.name, sequential_order=source.sequential_order)
-
-    def load(self, path: str) -> "DrawIOCleanEngineeringModel":
-        self.path = path
-        return self.parse(Path(path).read_text(encoding="utf-8"))
 
     def save(self) -> str:
         return self.render(self)
@@ -173,28 +166,30 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
             if not cell_id.startswith('nest-'):
                 self.modules.append(module)
             order += 1
-        _add_module_dependencies(self, document, id_to_module)
+        self._add_module_dependencies(document, id_to_module)
+
+    def _add_module_dependencies(self, document: DrawioPage, id_to_module: dict[str, Module]) -> None:
+        """A child cell depends on the top-level cell it sits in; then each edge source depends on its target, keeping
+        the words written on the edge."""
+        nested = [
+            (id_to_module.get(cell.get('id', '')), id_to_module.get(cell.get('parent', '')))
+            for cell in document.vertices
+        ]
+        drawn = [
+            (id_to_module.get(cell.get('source', '')), id_to_module.get(cell.get('target', '')), html.unescape(cell.get('value', '') or ''))
+            for cell in document.edges
+        ]
+        nested = [(child, parent, '') for child, parent in nested if parent is None or parent in self.modules]
+        for dependent, depended_on, label in nested + drawn:
+            if dependent is None or depended_on is None or dependent not in self.modules:
+                continue
+            if depended_on.name not in dependent.dependencies:
+                dependent.dependencies.append(depended_on.name)
+            if label:
+                dependent.dependency_labels[depended_on.name] = label
 
 
-def _add_module_dependencies(model: DrawIOCleanEngineeringModel, document: DrawioPage, id_to_module: dict[str, Module]) -> None:
-    """A child cell depends on the top-level cell it sits in; then each edge source depends on its target, keeping the
-    words written on the edge."""
-    nested = [
-        (id_to_module.get(cell.get('id', '')), id_to_module.get(cell.get('parent', '')))
-        for cell in document.vertices
-    ]
-    drawn = [
-        (id_to_module.get(cell.get('source', '')), id_to_module.get(cell.get('target', '')), html.unescape(cell.get('value', '') or ''))
-        for cell in document.edges
-    ]
-    nested = [(child, parent, '') for child, parent in nested if parent is None or parent in model.modules]
-    for dependent, depended_on, label in nested + drawn:
-        if dependent is None or depended_on is None or dependent not in model.modules:
-            continue
-        if depended_on.name not in dependent.dependencies:
-            dependent.dependencies.append(depended_on.name)
-        if label:
-            dependent.dependency_labels[depended_on.name] = label
+
 
 
 class _ClassDiagramReader:
@@ -266,24 +261,10 @@ class _ClassDiagramReader:
                 source.bases.append(target_name)
             for label in _DEPENDENCY_LABEL.findall(html.unescape(cell.get('value', '') or '')):
                 source.depend_on(target_name, label.strip())
-            _mark_relationship_kind(source, target_name, kind)
+            source.take_arrow(target_name, kind)
         for oclass in self._classes_by_cell.values():
             for prop in oclass.properties:
                 prop.derive_relationship()
-
-
-def _mark_relationship_kind(oclass: OoadClass, target: str, kind: str) -> None:
-    """The arrow is the property whose type names the target. The strongest kind drawn to it stays on that property.
-    Inheritance and a dependency stand for no property."""
-    if (kind or "").lower() in {"inheritance", "dependency"}:
-        return
-    for prop in oclass.properties:
-        if target not in pascal_type_names(prop.type_hint or ""):
-            continue
-        current = (getattr(prop, "stereotype", "") or "").lower()
-        if _RELATIONSHIP_STRENGTH.get((kind or "").lower(), 0) >= _RELATIONSHIP_STRENGTH.get(current, 0):
-            prop.stereotype = (kind or "association").lower()
-        prop.derive_relationship()
 
 
 class _ModulesDiagramWriter:
@@ -297,7 +278,7 @@ class _ModulesDiagramWriter:
             name: module if isinstance(module, DrawIOModule) else channel.load_module_cell(module)
             for name, module in self._forest.by_name.items()
         }
-        self._bounds: Dict[str, Box] = {}
+        self._bounds: Dict[str, Geometry] = {}
         self._parent_ids: Dict[str, str] = {}
         self._cell_ids: Dict[str, str] = {}
 
@@ -389,7 +370,7 @@ class _ModulesDiagramWriter:
 
     def _place(self, name: str, position: Tuple[float, float], parent_id: str) -> None:
         if parent_id == '1':
-            self._bounds[name] = (position[0], position[1], *self._size(name))
+            self._bounds[name] = Geometry(position[0], position[1], *self._size(name))
         cell_id = f'nest-{_slug(name)}' if name in self._forest.synthetic else _slug(name) or name
         self._cell_ids[name] = cell_id
         self._parent_ids[name] = parent_id
@@ -404,7 +385,7 @@ class _ModulesDiagramWriter:
             column, line = index % columns, index // columns
             relative_x = MODULE_CHILD_PAD_X + sum(widths[:column]) + MODULE_CHILD_GAP * column
             relative_y = header_height + MODULE_CHILD_PAD_Y + sum(heights[:line]) + MODULE_CHILD_GAP * line
-            self._bounds[child] = (relative_x, relative_y, *sizes[index])
+            self._bounds[child] = Geometry(relative_x, relative_y, *sizes[index])
             self._place(child, (position[0] + relative_x, position[1] + relative_y), cell_id)
 
     def _size(self, name: str) -> Tuple[float, float]:
@@ -615,7 +596,7 @@ class _ClassDiagramPage:
                 continue
             label = self._writer.arrow_label((source, target))
             arrow = arrows.setdefault((source, target), DiagramArrow(source, target, kind, label))
-            if _RELATIONSHIP_STRENGTH[kind] > _RELATIONSHIP_STRENGTH[arrow.kind]:
+            if RELATIONSHIP_STRENGTH[kind] > RELATIONSHIP_STRENGTH[arrow.kind]:
                 arrow.kind = kind
         drawn = {
             pair: arrow for pair, arrow in arrows.items()
@@ -721,7 +702,7 @@ def _is_weaker_than_opposite(pair: Tuple[str, str], arrows: Dict[Tuple[str, str]
     if arrows[pair].kind == 'dependency':
         return False
     opposite = arrows.get((pair[1], pair[0]))
-    return opposite is not None and _RELATIONSHIP_STRENGTH[opposite.kind] > _RELATIONSHIP_STRENGTH[arrows[pair].kind]
+    return opposite is not None and RELATIONSHIP_STRENGTH[opposite.kind] > RELATIONSHIP_STRENGTH[arrows[pair].kind]
 
 
 def _append_edge(root_el: ET.Element, arrow: DiagramArrow, cards: Dict[str, DrawIOClass], edge_id: str) -> ET.Element:
@@ -831,16 +812,15 @@ def _class_card_members(value: str) -> Tuple[Optional[str], List[str], List[Prop
     if ('\u2022' in text or '-' in text) and 'hr size="1"' not in text.lower() and ('<hr size=' not in text.lower()):
         if re.search('<i[^>]*>', text, re.IGNORECASE):
             return (None, [], [], [])
-    m = re.search('<b[^>]*>([^<]+)</b>', text)
-    name = m.group(1).strip() if m else None
+    name = class_name_in(value)
     if not name:
         return (None, [], [], [])
     sections = re.split('<hr\\s+size="1"\\s*/?>', text, flags=re.IGNORECASE)
     stereotypes = marks_in(sections[0])
     if len(sections) < 3:
         return (name, stereotypes, [], [])
-    props = [_card_property(line) for line in _card_lines(sections[1])]
-    ops = [operation for operation in (_card_operation(line) for line in _card_lines(sections[2])) if operation is not None]
+    props = [Property.from_signature(line) or Property(name=line.strip()) for line in _card_lines(sections[1])]
+    ops = [operation for operation in (Operation.from_signature(line) for line in _card_lines(sections[2])) if operation is not None]
     return (name, stereotypes, props, ops)
 
 
@@ -853,16 +833,3 @@ def _card_lines(section: str) -> List[str]:
     ]
 
 
-def _card_property(line: str) -> Property:
-    if ':' not in line:
-        return Property(name=line)
-    name, type_hint = line.split(':', 1)
-    return Property(name=name.strip(), type_hint=type_hint.strip())
-
-
-def _card_operation(line: str) -> Optional[Operation]:
-    match = re.match('(_?\\w+)\\(([^)]*)\\)(?::\\s*(.+))?', line)
-    if not match:
-        return None
-    parameters = [part.strip() for part in match.group(2).split(',') if part.strip()]
-    return Operation(name=match.group(1), parameters=parameters, return_type=(match.group(3) or '').strip())

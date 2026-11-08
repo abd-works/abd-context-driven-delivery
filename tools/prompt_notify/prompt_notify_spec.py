@@ -1,4 +1,4 @@
-"""BDD specs for prompt echo against MCP and guideline signatures."""
+"""BDD specs for prompt echo against MCP and rule signatures."""
 import json
 import sys
 from pathlib import Path
@@ -21,6 +21,8 @@ from harness.annotations.annotation import Toast
 from tools.prompt_notify.prompt_notify import PromptNotify
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.hooks.hook_server import HookPayload
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 _prompt_notify = PromptNotify()
 
@@ -104,7 +106,7 @@ with description("prompt echo detection"):
             expect(label).to(equal("bdd-behavior"))
 
     with context("that receives a practice rules file"):
-        with it("should name the guideline from the rules path"):
+        with it("should name the rule from the rules path"):
             kind, label = _prompt_notify.detect(
                 HookPayload({
                     "tool_name": "Read",
@@ -115,7 +117,7 @@ with description("prompt echo detection"):
                     },
                 })
             )
-            expect(kind).to(equal("guideline"))
+            expect(kind).to(equal("rule"))
             expect(label).to(equal("bdd"))
 
     with context("that receives a source file whose path names a practice"):

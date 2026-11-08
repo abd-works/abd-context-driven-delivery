@@ -9,16 +9,6 @@ const STARTING_CHAT_MILLISECONDS = 120_000
 // The Claude app opens a new session on a folder from this link, with its prompt filled in for the person to send.
 const NEW_CHAT_LINK = 'claude://code/new'
 
-// A folder as the mod and as git each write it, so the two compare: one kind of slash, no trailing one, one case.
-const folderKey = (folder: string): string => folder.replaceAll('\\', '/').replace(/\/+$/, '').toLowerCase()
-
-// A chat works in a checkout from its root or from any folder inside it, since its working folder can move.
-export const isWorkingIn = (chatFolder: string, checkout: string): boolean => {
-  if (!chatFolder || !checkout) return false
-  const [chat, root] = [folderKey(chatFolder), folderKey(checkout)]
-  return chat === root || chat.startsWith(`${root}/`)
-}
-
 // The link that opens a ticket's new chat on its worktree. The link names no title, so its prompt asks for the ticket's.
 export const newChatLink = (ticket: string, worktree: string): string => {
   const prompt = `Title this session "${ticket}". You are the chat of the session board's ticket ${ticket}; work on that ticket.`
@@ -26,9 +16,6 @@ export const newChatLink = (ticket: string, worktree: string): string => {
 }
 
 type CommandKind = 'submit' | 'fill' | 'command'
-
-// What a ticket's chat is found by: the ticket's name and the worktree its work is in.
-type ChatOwner = { readonly name: string; readonly worktree: string }
 
 const shortened = (text: string): string => (text.length > SHOWN_COMMAND ? `${text.slice(0, SHOWN_COMMAND)}…` : text)
 
@@ -60,11 +47,9 @@ export class ChatClient {
     await this.readMessages()
   }
 
-  // A ticket's chat: the connected chat working in its worktree or a folder inside it, else the chat titled by the ticket,
-  // which the board names it when it opens it. A chat whose mod is older than the folder it works in sends none.
-  chatFor(ticket: string, worktree: string): ChatData | undefined {
-    const { chats } = this.store.state
-    return chats.find(chat => isWorkingIn(chat.folder, worktree)) ?? chats.find(chat => !chat.folder && chat.name === ticket)
+  // A connected chat by its id, as Python names the chat working on a ticket.
+  connected(chat: string): ChatData | undefined {
+    return this.store.state.chats.find(entry => entry.id === chat)
   }
 
   // Opening a ticket's worktree and then its chat in the Claude app takes a while, so the click shows at once that the chat
@@ -76,10 +61,10 @@ export class ChatClient {
     return true
   }
 
+  // Until the ticket's chat checks in, which the ticket then names, it is on its way.
   isOpeningFor(ticket: string): boolean {
     const asked = this.store.state.startingChats[ticket]
-    if (asked === undefined || Date.now() - asked >= STARTING_CHAT_MILLISECONDS) return false
-    return !this.store.state.chats.some(chat => chat.name === ticket)
+    return asked !== undefined && Date.now() - asked < STARTING_CHAT_MILLISECONDS
   }
 
   // A ticket's new chat opens in the Claude app on the ticket's worktree; the app asks the person to confirm the folder and send.
@@ -153,20 +138,21 @@ export class ChatClient {
   }
 }
 
-// One ticket's chat: the connected chat working in its worktree, else the one titled by its name. The ticket owns it,
-// so whatever the board sends for the ticket goes to that chat without a caller naming the ticket's worktree again.
+// One ticket's chat, the connected chat Python names as working on it. The ticket owns it, so whatever the board sends
+// for the ticket goes to that chat without a caller finding it again.
 export class TicketChat {
   constructor(
     private readonly chats: ChatClient,
-    private readonly owner: ChatOwner,
+    private readonly ticket: string,
+    private readonly working: { id: string } | null,
   ) {}
 
   get found(): ChatData | undefined {
-    return this.chats.chatFor(this.owner.name, this.owner.worktree)
+    return this.working ? this.chats.connected(this.working.id) : undefined
   }
 
   get isOpening(): boolean {
-    return this.chats.isOpeningFor(this.owner.name)
+    return !this.found && this.chats.isOpeningFor(this.ticket)
   }
 
   command(text: string): Promise<void> {
@@ -178,11 +164,11 @@ export class TicketChat {
   }
 
   beginOpening(): boolean {
-    return this.chats.beginOpening(this.owner.name)
+    return this.chats.beginOpening(this.ticket)
   }
 
   // The new chat opens on the worktree given, which can have been opened only now.
   start(worktree: string): void {
-    this.chats.startFor(this.owner.name, worktree)
+    this.chats.startFor(this.ticket, worktree)
   }
 }

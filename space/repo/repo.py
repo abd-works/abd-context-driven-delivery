@@ -117,13 +117,21 @@ class Repo:
     def of_project(cls, project: Path) -> Repo:
         """The clone holding project, the project a tool call names. One cdd server answers every chat, so each call is
         handed its project and acts on that project's clone, never on a clone named by an earlier call."""
-        found = cls(project)
-        checkout = found.checkout_folder
-        return found if checkout == found.root else cls(checkout)
+        folder = Path(project).resolve()
+        return cls(cls._marked_checkout(folder) or folder)
+
+    @staticmethod
+    def _marked_checkout(folder: Path) -> Path | None:
+        """The nearest folder at or above folder that git marks as a checkout's top; none when no folder is marked."""
+        current = folder.parent if folder.is_file() else folder
+        return next((candidate for candidate in (current, *current.parents) if (candidate / ".git").exists()), None)
 
     def find_root(self) -> Path | None:
-        current = self.root.parent if self.root.is_file() else self.root
-        return next((candidate for candidate in (current, *current.parents) if (candidate / ".git").exists()), None)
+        return self._marked_checkout(self.root)
+
+    def checkout_at(self, folder: Path | str) -> Repo:
+        """The repository as checked out at folder, another checkout of this one, such as a linked worktree beside it."""
+        return Repo(folder)
 
     @property
     def is_clone(self) -> bool:
@@ -246,14 +254,20 @@ class Repo:
         there, never inside a linked worktree. A folder in no repository is its own main clone, which keeps the sessions
         of a project that is no clone; a branch command there fails the way git does."""
         primary = self.primary_root()
-        return self if primary == self.root else Repo(primary)
+        return self if primary == self.root else self.checkout_at(primary)
+
+    @cached_property
+    def own_work_state(self) -> WorkState:
+        """The ``.sessions/session.json`` of this checkout itself, made once. In the main clone it is the repository's
+        ``work_state``; a linked worktree keeps its own, where it saves the session open there, so a chat in a worktree
+        never changes the session open in the main clone."""
+        return WorkState(self.root)
 
     @cached_property
     def work_state(self) -> WorkState:
         """The branch, worktree, and session saved as open in the main clone's ``.sessions/session.json``; every checkout
-        of the repository reads the main clone's one."""
-        main = self.main_clone
-        return WorkState(self.root) if main is self else main.work_state
+        of the repository reads the main clone's ``own_work_state``."""
+        return self.main_clone.own_work_state
 
     @property
     def open_worktree(self) -> Worktree | None:

@@ -35,8 +35,9 @@ def _kind_of(tactical: TacticalClass, names: set[str]) -> str:
 
 
 def _ddd_node(source: str, class_name: str, kind: str | None, lang: str, filename: str | None):
-    clean, root = practice_from_source(source, lang=lang, filename=filename)
-    classes = clean.graph.nodes_of(clean, "OoadClass")
+    fixture = practice_from_source(source, lang=lang, filename=filename)
+    clean = fixture.practice
+    classes = clean.in_graph.nodes("OoadClass")
     class_node = next((node for node in classes if node.name == class_name), None)
     if class_node is None:
         raise ValueError(f"class {class_name!r} not found in parsed source")
@@ -44,8 +45,8 @@ def _ddd_node(source: str, class_name: str, kind: str | None, lang: str, filenam
     tactical = TacticalClass(class_node)
     kind = kind or _kind_of(tactical, {node.name for node in classes})
     place = class_node.source
-    node = clean.graph.add(ddd, BuildingBlock(ddd, tactical, kind), f"ddd:{kind}:{place.file}:{class_name}", place.file, place.start_line, place.end_line)
-    return node, ddd, root
+    node = ddd.in_graph.add(BuildingBlock(ddd, tactical, kind), f"ddd:{kind}:{place.file}:{class_name}", place.file, place.start_line, place.end_line)
+    return node, ddd, fixture
 
 
 def violations_for_ddd_rule(
@@ -57,8 +58,8 @@ def violations_for_ddd_rule(
     lang: str = "python",
     filename: str | None = None,
 ) -> list[str]:
-    node, practice, root = _ddd_node(source, class_name, node_type, lang, filename)
-    return list(rule.check(node, RuleCheckContext(practice, root)))
+    node, practice, fixture = _ddd_node(source, class_name, node_type, lang, filename)
+    return list(rule.check(node, RuleCheckContext(practice, fixture.root)))
 
 
 def assert_ddd_example_pair(

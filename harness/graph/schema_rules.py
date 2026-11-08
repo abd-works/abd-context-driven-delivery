@@ -11,16 +11,12 @@ from __future__ import annotations
 
 from functools import cached_property
 from pathlib import Path
-from typing import ClassVar
 
 from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.schema_edges import SchemaKey
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.schema import Schema
 
-_ROOT = Path(__file__).resolve().parents[2]
-_PRACTICES_ROOT = _ROOT / "cdd_guidance" / "practices"
-_PATTERNS_ROOT = _ROOT / "cdd_guidance" / "patterns"
 # Fields every schema type may carry that describe the type itself, not a relationship.
 _TYPE_FIELDS = frozenset({"is", "fidelity", "name", "path"})
 
@@ -29,22 +25,23 @@ class PracticeSchema:
     """One practice's schema with the applied patterns' schemas on top: which rules each node type carries, which type
     of the extended practice it is, and the fidelities that create it."""
 
-    # One schema per practice class and overlays: a practice's schema is the same whichever graph holds it.
-    _loaded: ClassVar[dict[tuple[type, tuple[GraphOverlay, ...]], PracticeSchema]] = {}
+    # Each practice holds its own schemas, one per set of overlays, so a schema reads only the practice it was made for,
+    # never another session's practice of the same class.
+    _HELD_AS = "_practice_schemas"
 
     def __init__(self, practice: PracticeGuidance, overlays: tuple[GraphOverlay, ...] = ()) -> None:
-        self.guidance = practice
-        self.practice = practice.key
+        self.practice = practice
+        self.key = practice.key
         self.overlays = tuple(overlays)
-        self._declared = practice
 
     @classmethod
     def load(cls, practice: PracticeGuidance, overlays: tuple[GraphOverlay, ...] = ()) -> PracticeSchema:
-        """The schema of practice with the patterns' overlays applied; each is read once per process."""
-        key = (type(practice), tuple(overlays))
-        if key not in cls._loaded:
-            cls._loaded[key] = cls(practice, tuple(overlays))
-        return cls._loaded[key]
+        """The schema of practice with the patterns' overlays applied, made once and held by practice itself."""
+        held: dict[tuple[GraphOverlay, ...], PracticeSchema] = vars(practice).setdefault(cls._HELD_AS, {})
+        key = tuple(overlays)
+        if key not in held:
+            held[key] = cls(practice, key)
+        return held[key]
 
     @cached_property
     def types(self) -> frozenset[str]:
@@ -59,25 +56,37 @@ class PracticeSchema:
     @cached_property
     def rules(self) -> dict[str, tuple[str, ...]]:
         """Each node type with the rule slugs it carries: its own, its supertypes', and its anchored type's."""
-        extended = self._declared.extended
+        extended = self.practice.extended
         if extended is None:
             return dict(self._direct_rules)
-        anchored_rules = PracticeSchema.load(extended, self.overlays)._direct_rules
+        anchored_rules = self._extended_schema._direct_rules
         return {node_type: self._carried_rules(node_type, anchored_rules) for node_type in sorted(self.types)}
+
+    @cached_property
+    def _extended_schema(self) -> PracticeSchema:
+        return PracticeSchema.load(self.practice.extended, self.overlays)
+
+    @cached_property
+    def _without_overlays(self) -> PracticeSchema:
+        return self if not self.overlays else PracticeSchema.load(self.practice)
+
+    @cached_property
+    def _each_overlay(self) -> list[tuple[GraphOverlay, PracticeSchema]]:
+        return [(overlay, PracticeSchema.load(self.practice, (overlay,))) for overlay in self.overlays]
 
     def slugs_for(self, node_type: str) -> tuple[str, ...]:
         """The rule slugs a node of this type carries, with those of each type its practice says it also carries."""
         table = self.rules
-        listed = self._declared.rule_types.get(node_type, ())
+        listed = self.practice.rule_types.get(node_type, ())
         return self._merged(table.get(node_type, ()), *(table.get(other, ()) for other in listed))
 
     def anchor_type(self, node_type: str) -> str | None:
         """The extended practice's type this node type is, such as ``OoadClass`` for a DDD entity; a practice's own
         anchor type is itself."""
-        own = self._declared.anchor_types
+        own = self.practice.anchor_types
         if own:
             return node_type if node_type in own.values() else None
-        extended = self._declared.extended
+        extended = self.practice.extended
         if extended is None:
             return None
         anchors = extended.anchor_types
@@ -94,7 +103,7 @@ class PracticeSchema:
         carry it."""
         found: dict[str, list[str]] = {}
         carried = [(node_type, slugs) for node_type, slugs in self.rules.items()]
-        carried.extend((node_type, self.slugs_for(node_type)) for node_type in self._declared.rule_types)
+        carried.extend((node_type, self.slugs_for(node_type)) for node_type in self.practice.rule_types)
         for node_type, slugs in carried:
             for slug in slugs:
                 types = found.setdefault(slug, [])
@@ -104,7 +113,7 @@ class PracticeSchema:
 
     def rule_label(self, node_type: str, slug: str) -> str:
         """``practice.node.rule``, or ``lern.domain.driven.practice.node.rule`` for a rule a pattern adds."""
-        body = f"{self.practice}.{node_type}.{slug}"
+        body = f"{self.key}.{node_type}.{slug}"
         owner = self._pattern_owning_rule(node_type, slug)
         return body if owner is None else f"{owner.replace('_', '.')}.{body}"
 
@@ -121,7 +130,7 @@ class PracticeSchema:
     @cached_property
     def rule_prose(self) -> dict[str, str]:
         """Each rule slug with its prose from the practice's guidance (shared and per fidelity) and the patterns'."""
-        guidances = [self.guidance]
+        guidances = [self.practice]
         guidances.extend(overlay.pattern for overlay in self.overlays)
         merged: dict[str, str] = {}
         for guidance in guidances:
@@ -132,7 +141,8 @@ class PracticeSchema:
 
     @cached_property
     def _base(self) -> Schema:
-        return Schema.load(_PRACTICES_ROOT / self.practice / "model" / "schema.yaml")
+        """The practice's own schema, as the practice reads it."""
+        return self.practice.schema_types
 
     @cached_property
     def _overlay_schemas(self) -> list[Schema]:
@@ -143,7 +153,7 @@ class PracticeSchema:
         return [Schema.load(path) for path in self._overlay_files("rules.yaml")]
 
     def _overlay_files(self, name: str) -> list[Path]:
-        found = (_PATTERNS_ROOT / overlay.name / "practices" / self.practice / "model" / name for overlay in self.overlays)
+        found = (overlay.practice_file(self.key, name) for overlay in self.overlays)
         return sorted(path for path in found if path.is_file())
 
     @cached_property
@@ -167,7 +177,7 @@ class PracticeSchema:
 
     @cached_property
     def _fidelities(self) -> dict[str, list[str]]:
-        return self.guidance.schema_node_fidelities()
+        return self.practice.schema_node_fidelities()
 
     def _carried_rules(self, node_type: str, anchored_rules: dict[str, tuple[str, ...]]) -> tuple[str, ...]:
         inherited = [self._direct_rules.get(step, ()) for step in self._supertype_chain(node_type)]
@@ -178,7 +188,7 @@ class PracticeSchema:
 
     def _supertype_chain(self, node_type: str) -> tuple[str, ...]:
         """node_type, then each local supertype its ``is:`` names, up to the first anchor word."""
-        anchors = self._declared.extended.anchor_types if self._declared.extended is not None else {}
+        anchors = self.practice.extended.anchor_types if self.practice.extended is not None else {}
         chain: list[str] = []
         current = node_type
         while current and current not in chain:
@@ -191,14 +201,13 @@ class PracticeSchema:
 
     def _names_itself(self, node_type: str, reference: str) -> bool:
         prefix, _, tail = reference.partition(".")
-        return bool(tail) and prefix == self.practice and SchemaKey(tail).node_type == node_type
+        return bool(tail) and prefix == self.key and SchemaKey(tail).node_type == node_type
 
     def _pattern_owning_rule(self, node_type: str, slug: str) -> str | None:
         """The name of the applied pattern whose schema declares the rule on this type, or declares a type the
         practice lacks."""
-        base_types = PracticeSchema.load(self.guidance).types
-        for overlay in self.overlays:
-            declared = PracticeSchema.load(self.guidance, (overlay,))
+        base_types = self._without_overlays.types
+        for overlay, declared in self._each_overlay:
             if slug in declared._overlay_rules.get(node_type, ()):
                 return overlay.name
             if node_type in declared._overlay_types and node_type not in base_types:

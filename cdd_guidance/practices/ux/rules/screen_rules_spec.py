@@ -48,7 +48,7 @@ with description("a screen checked against the screen-story-budget rule"):
 
         with it("should record that it shows each story"):
             practice = self.example.graph.practice("ux")
-            expect([edge.child.name for edge in practice.graph.edges_of(practice, "shows")]).to(have_len(5))
+            expect([edge.child.name for edge in practice.in_graph.edges("shows")]).to(have_len(5))
 
         with it("should be over the budget"):
             expect(self.example.violations(ScreenStoryBudget())).to(

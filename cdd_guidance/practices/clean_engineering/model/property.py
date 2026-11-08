@@ -5,8 +5,8 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, List, Optional
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
-from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
+from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
+from cdd_guidance.practices.clean_engineering.model.field_types import RELATIONSHIP_STRENGTH, Relationship
 from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
 
 if TYPE_CHECKING:
@@ -53,6 +53,8 @@ class InvariantHolder:
         return [line.strip() for line in (self.description or "").splitlines() if line.strip()]
 
 
+# `identity: Identity`, or `nickname?: string` for an optional field, as a model line writes a property.
+_SIGNATURE = re.compile(r"^(\w+)\??\s*:\s*(.+)$")
 _CARDINALITY = re.compile(r"^(?:\d+\.\.\*|\d+\.\.\d+|\*|\d+)$")
 _ORIGIN = re.compile(r"^from\s+([A-Z][\w ]*)$")
 _STEREOTYPE_NOTE = re.compile(r"^<<\s*(composition|aggregation|association)\s*>>$", re.I)
@@ -60,6 +62,7 @@ _STEREOTYPE_NOTE = re.compile(r"^<<\s*(composition|aggregation|association)\s*>>
 
 class Property(InvariantHolder, OoadNode):
     _semantic_type_name = "Property"
+    graph_facts = ("owner",)
 
     def __init__(
         self,
@@ -83,6 +86,19 @@ class Property(InvariantHolder, OoadNode):
         # The line its parser read it from, and whether it is a static field, which the class's instances do not hold.
         self.line: int | None = None
         self.is_static = False
+
+    @classmethod
+    def from_signature(cls, text: str) -> "Property | None":
+        """The property a typed model line such as `identity: Identity` writes; none for a line that is no typed
+        property. Every format that writes members as such lines reads them here."""
+        match = _SIGNATURE.match(text.strip())
+        return cls(match.group(1), type_hint=match.group(2).strip()) if match else None
+
+    @property
+    def owner(self) -> str:
+        """The name of the class that declares this property; empty before a class holds it."""
+        parent = self.parent
+        return parent.name if isinstance(parent, OoadNode) and parent.declares(self) else ""
 
     def clone(self) -> "Property":
         cloned = type(self)(self.name, self.sequential_order, self.type_hint, self.description)
@@ -121,6 +137,14 @@ class Property(InvariantHolder, OoadNode):
             self.cardinality = relationship.cardinality
         if relationship.description and not self.origin:
             self.origin = relationship.description
+        self.derive_relationship()
+
+    def take_drawn_kind(self, kind: str) -> None:
+        """Become the field an arrow of kind drawn to its type stands for, unless a stronger kind already marks it."""
+        drawn = (kind or "association").lower()
+        current = (self.stereotype or "").lower()
+        if RELATIONSHIP_STRENGTH.get(drawn, 0) >= RELATIONSHIP_STRENGTH.get(current, 0):
+            self.stereotype = drawn
         self.derive_relationship()
 
     def notes(self) -> List[str]:
@@ -181,7 +205,3 @@ class Property(InvariantHolder, OoadNode):
         self.relationship = source_relationship.clone() if source_relationship is not None else None
         self.invariants = [item.clone() for item in getattr(source, "invariants", [])]
         self.callees = list(getattr(source, "callees", []))
-
-    def model_member(self, file: str) -> dict:
-        """This property as the graph saves it for the model document at file."""
-        return {"kind": "Property", "interactions": list(self.callees), "model_parameters": [], "model_returns": (self.type_hint or "").strip(), "model_file": file}

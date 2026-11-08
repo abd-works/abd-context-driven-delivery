@@ -7,6 +7,8 @@ from typing import Any
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 
+from cdd_guidance.practices.ux.model.ux_node import UxNode
+
 
 class NoJavascriptPractice(ValueError):
     """ensure_javascript was asked for JavaScript from a practice that does not write the JavaScript a mockup imports."""
@@ -85,3 +87,6 @@ class Ux(PracticeGuidance):
         if "javascript" not in practice.formats:
             raise NoJavascriptPractice(f"Practice {key!r} writes no JavaScript; Stories and Clean Engineering do.")
         return practice
+
+
+UxNode.register_practice(Ux)

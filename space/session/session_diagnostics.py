@@ -19,7 +19,8 @@ class SessionDiagnostics:
     the install of the project that call names."""
 
     def __init__(self, call: ToolCall | None = None) -> None:
-        self._call = call or ToolCall()
+        # The call this was made for; none for the one the installer lists, which serves no call.
+        self._call = call
 
     def for_call(self, call: ToolCall) -> SessionDiagnostics:
         return type(self)(call)

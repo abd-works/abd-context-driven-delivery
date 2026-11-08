@@ -17,9 +17,9 @@ with story("Save Validation Report"):
             pass
         with when("Claude Code validates ddd-tactics on that file"):
             # Validate -> Graph.load_files(folder, ['ddd'], [file], [])
-            # Graph -> PracticeChecks(Ddd).run()
+            # Graph -> Ddd.in_graph.check()
             # Validate -> Graph.saved(files) written to <report>.json
-            # Validate -> PracticeSessionOutput(Ddd tactics).log_validation(['private-method-naming ...'])
+            # Validate -> SessionLog.validation(PracticeSessionOutput(Ddd tactics), ['private-method-naming ...'])
             pass
         with then("the validation report is saved as validation-reports/ddd-tactics-20261101T100000.md naming private-method-naming"):
             pass

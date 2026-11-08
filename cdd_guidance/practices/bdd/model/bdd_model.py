@@ -12,7 +12,8 @@ from cdd_guidance.practices.clean_engineering.model.call_graph import (
     CallGraphEntry,
     parse_arrow_line,
 )
-from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
+from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation, private_probe_in_text
+from cdd_guidance.practices.bdd.model.spec_source import code_like_describe_lines, has_signature_marker
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 
 
@@ -20,12 +21,6 @@ class BddModel(ModelNode):
     _semantic_type_name = "Spec"
     graph_facts = ("patches_infrastructure", "signature_marker", "top_level_describes", "code_like_describe_lines", "private_probe")
     _belongs = {("Description", "Spec")}
-
-    @classmethod
-    def practice_kind(cls) -> type:
-        from cdd_guidance.practices.bdd.bdd import Bdd
-
-        return Bdd
 
     def __init__(self, graph: Graph | None = None) -> None:
         super().__init__("spec", 0, graph)
@@ -43,8 +38,15 @@ class BddModel(ModelNode):
 
 
     def parse(self, text: str) -> "BddModel":
-        self.descriptions = _SketchReader().read(text)
+        self.descriptions = []
+        _SketchReader(self).read(text)
         return self
+
+    def add_description(self, name: str, order: int | None = None) -> Description:
+        """A new outermost describe named name, after the others unless order places it."""
+        description = Description(name, order or len(self.descriptions) + 1)
+        self.descriptions.append(description)
+        return description
 
     def parse_code(self, text: str) -> "BddModel":
         """Read the describe tree out of spec code; each language model knows its own syntax."""
@@ -52,9 +54,6 @@ class BddModel(ModelNode):
 
     def load_source_facts(self, text: str) -> None:
         """Fill the facts the whole spec file owns."""
-        from cdd_guidance.practices.bdd.model.nodes import private_probe_in_text
-        from cdd_guidance.practices.bdd.model.spec_source import code_like_describe_lines, has_signature_marker
-
         self.patches_infrastructure = bool(_PATCH_DECORATOR.search(text) or _MOCK_PATCH_IMPORT.search(text))
         self.signature_marker = has_signature_marker(text)
         self.top_level_describes = _MAMBA_DESCRIBE.findall(text)
@@ -136,25 +135,20 @@ _MOCK_PATCH_IMPORT = re.compile(r"from unittest\.mock import patch")
 _MAMBA_DESCRIBE = re.compile(r'^with description\("([^"]+)"\)', re.MULTILINE)
 
 
-class MarkdownBddModel(BddModel):
-    pass
-
-
 class _SketchReader:
     """Reads one sketch's indented describe tree. It keeps what a read tracks from line to line: the contexts still
     open, the fenced realization being collected, and surface lines waiting for the observation below them."""
 
-    def __init__(self) -> None:
-        self.descriptions: list[Description] = []
+    def __init__(self, spec: BddModel) -> None:
+        self.spec = spec
         self._description: Description | None = None
         self._open: list[tuple[int, Context]] = []
         self._fence: list[str] | None = None
         self._pending_surface: list[str] = []
 
-    def read(self, text: str) -> list[Description]:
+    def read(self, text: str) -> None:
         for raw in text.splitlines():
             self._read_line(raw)
-        return self.descriptions
 
     def _read_line(self, raw: str) -> None:
         stripped = raw.strip()
@@ -194,9 +188,8 @@ class _SketchReader:
             if not stripped or stripped.startswith("//"):
                 continue
             if stripped.startswith("it "):
-                observation = Observation(stripped[3:].strip(), len(owner.observations) + 1)
+                observation = owner.add_child("it", stripped[3:].strip())
                 observation.call_graph, call_graph = call_graph, CallGraph()
-                owner.observations.append(observation)
                 continue
             call_graph.append(self._call_graph_entry(raw, stripped))
 
@@ -220,24 +213,20 @@ class _SketchReader:
         owner = self._owner()
         if owner is None:
             return
-        observation = Observation(name, len(owner.observations) + 1)
+        observation = owner.add_child("it", name)
         observation.surface_lines, self._pending_surface = self._pending_surface, []
-        owner.observations.append(observation)
 
     def _read_block(self, name: str, level: int) -> None:
         """A line at the margin opens a description; an indented line opens a context inside the nearest open block."""
         if level == 0:
-            self._description = Description(name, len(self.descriptions) + 1)
-            self.descriptions.append(self._description)
+            self._description = self.spec.add_description(name)
             self._open = []
             return
         if self._description is None:
             return
         self._close_to(level)
-        siblings = self._open[-1][1].contexts if self._open else self._description.contexts
-        context = Context(name, len(siblings) + 1)
-        siblings.append(context)
-        self._open.append((level, context))
+        holder = self._open[-1][1] if self._open else self._description
+        self._open.append((level, holder.add_child("context", name)))
 
     def _close_to(self, level: int) -> None:
         while self._open and self._open[-1][0] >= level:

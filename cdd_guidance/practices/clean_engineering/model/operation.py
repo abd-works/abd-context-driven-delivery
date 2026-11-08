@@ -18,13 +18,21 @@ def operation_body_fingerprint(body: str) -> str:
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from harness.graph.model_node import ModelChildren
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass, OoadNode
+from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
     MIN_DELEGATION_LINES,
     SourceText,
     names_call_io_and_domain,
 )
 from cdd_guidance.practices.clean_engineering.model.property import InvariantHolder
+from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
+
+# `save(cart: Cart, note: str = ""): Receipt` as a model line writes an operation.
+_SIGNATURE = re.compile(r"^(_?\w+)\s*\((.*)\)\s*(?::\s*(.+))?$")
+
+
+# The names a constructor goes by: Python's and the C-family languages'.
+CONSTRUCTOR_NAMES = frozenset({"__init__", "constructor"})
 
 
 class Parameter(OoadNode):
@@ -46,7 +54,9 @@ class Parameter(OoadNode):
     def property_setter(self) -> bool:
         """True for the one parameter of a property's setter."""
         operation = self.operation
-        return operation is not None and operation.is_property and len(operation.parameters) == 1
+        if operation is None or len(operation.parameters) != 1:
+            return False
+        return operation.is_setter or operation.is_property
 
     def clone(self) -> "Parameter":
         return type(self)(self.name, self.sequential_order, self.type_hint)
@@ -71,6 +81,11 @@ class Parameter(OoadNode):
 
 class Operation(InvariantHolder, OoadNode):
     _semantic_type_name = "Operation"
+
+    @property
+    def is_constructor(self) -> bool:
+        """True for the operation that builds its class: `__init__` or `constructor`."""
+        return self.name in CONSTRUCTOR_NAMES
     graph_facts = (
         "line_count",
         "max_control_flow_depth",
@@ -80,6 +95,7 @@ class Operation(InvariantHolder, OoadNode):
         "is_static",
         "is_classmethod",
         "is_property",
+        "is_setter",
         "body_fingerprint",
         "callees",
         "peer_private_access",
@@ -123,6 +139,8 @@ class Operation(InvariantHolder, OoadNode):
         self.span = SourceText("")
         self.constructed_types: list[tuple[str, int]] = []
         self.is_property = False
+        # A property's setter, such as Python's `@total.setter`; a getter is `is_property`.
+        self.is_setter = False
         self.is_static = False
         self.is_classmethod = False
         self.max_control_flow_depth: int = 0
@@ -148,6 +166,20 @@ class Operation(InvariantHolder, OoadNode):
         if parameters:
             self._take_parameters(parameters)
 
+    @classmethod
+    def from_signature(cls, text: str) -> "Operation | None":
+        """The operation a model line such as `save(cart: Cart, note: str = ""): Receipt` writes, each parameter with
+        its type and without its default; none for a line that is no operation. Every format that writes members as
+        such lines reads them here."""
+        match = _SIGNATURE.match(text.strip())
+        if match is None:
+            return None
+        operation = cls(match.group(1), return_type=(match.group(3) or "").strip())
+        for order, part in enumerate(split_top_level(match.group(2) or ""), start=1):
+            name, _, hint = part.partition(":")
+            operation.parameters.append(Parameter(name.strip(), order, hint.split("=")[0].strip()))
+        return operation
+
     def _link(self, child, kind: str) -> None:
         """A parameter it takes keeps it as the operation that declares it."""
         super()._link(child, kind)
@@ -157,7 +189,8 @@ class Operation(InvariantHolder, OoadNode):
     @property
     def owner(self) -> str:
         """The name of the class that declares this operation; ``_module`` for a module function; empty before a class holds it."""
-        return self.parent.name if isinstance(self.parent, OoadClass) else ""
+        parent = self.parent
+        return parent.name if isinstance(parent, OoadNode) and parent.declares(self) else ""
 
     @property
     def parameters(self) -> List[Parameter]:
@@ -196,6 +229,7 @@ class Operation(InvariantHolder, OoadNode):
         cloned.body = self.body
         cloned.constructed_types = list(self.constructed_types)
         cloned.is_property = self.is_property
+        cloned.is_setter = self.is_setter
         cloned.is_static = self.is_static
         cloned.is_classmethod = self.is_classmethod
         cloned.max_control_flow_depth = self.max_control_flow_depth
@@ -288,6 +322,7 @@ class Operation(InvariantHolder, OoadNode):
         self.body = copied.body
         self.constructed_types = list(copied.constructed_types)
         self.is_property = copied.is_property
+        self.is_setter = copied.is_setter
         self.is_static = copied.is_static
         self.is_classmethod = copied.is_classmethod
         self.max_control_flow_depth = copied.max_control_flow_depth
@@ -296,19 +331,6 @@ class Operation(InvariantHolder, OoadNode):
         self.unnamed_literal_numbers = list(copied.unnamed_literal_numbers)
         self.narrative_comment_lines = copied.narrative_comment_lines
         self.peer_private_access = copied.peer_private_access
-
-    def load_parameters(self) -> None:
-        while self.has_more_parameter():
-            self.parameters.append(self.load_next_parameter())
-
-    def has_more_parameter(self) -> bool:
-        return False
-
-    def load_next_parameter(self) -> Parameter:
-        return self.get_next_parameter_from_file()
-
-    def get_next_parameter_from_file(self) -> Parameter:
-        raise NotImplementedError(f"{type(self).__name__} must implement get_next_parameter_from_file")
 
     def load_parameter(self, source: Parameter) -> Parameter:
         return type(self.parameters[0])(source.name, source.sequential_order, source.type_hint) if self.parameters else Parameter(
@@ -319,16 +341,6 @@ class Operation(InvariantHolder, OoadNode):
         assert isinstance(source, Operation)
         if source.parameters:
             self._parameters.reconcile(source.parameters, self.load_parameter)
-
-    def model_member(self, file: str) -> dict:
-        """This operation as the graph saves it for the model document at file."""
-        return {
-            "kind": "Operation",
-            "interactions": list(self.callees),
-            "model_parameters": [[parameter.name, (parameter.type_hint or "").strip()] for parameter in self.parameters],
-            "model_returns": (self.return_type or "").strip(),
-            "model_file": file,
-        }
 
 
 def _span_fingerprint(source_span: str) -> str:

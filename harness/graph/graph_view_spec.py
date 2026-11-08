@@ -8,8 +8,10 @@ from expects import contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import before, context, description, it
 
-from harness.graph.graph import EdgeType, Graph, Node, Source
+from harness.graph.edge import EdgeType
+from harness.graph.graph import Graph, Node, Source
 from harness.graph.saved_graph import SavedGraph, SavedPractice
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 
 def _saved_node(node_id: str, name: str, type: str, file: str, end_line: int, stage: str) -> dict:
@@ -29,7 +31,7 @@ with description("a graph"):
             self.register = Node(
                 self.practice, "Operation", "clean_engineering:Operation:register.ts:register:Account", "register", Source(".", 1, 1)
             )
-            root = self.graph.root_of(self.practice)
+            root = self.practice.in_graph.root
             root.children.extend([self.failure, self.register])
             self.graph.filter.select_rules(["limit-operation-parameters"])
             self.graph.filter.select_violations()
@@ -58,7 +60,7 @@ with description("a graph"):
             self.other = Node(self.practice, "OoadClass", "id:other", "Customer", Source(".", 1, 1))
             self.module.stage = "discovery"
             self.class_node.stage = "implementation"
-            root = self.graph.root_of(self.practice)
+            root = self.practice.in_graph.root
             root.children.extend([self.module, self.class_node, self.other])
             self.graph.record(EdgeType("owns", 2, "direct"), self.module, self.class_node)
             self.graph.filter.select_relationships(["owns"])
@@ -67,7 +69,7 @@ with description("a graph"):
             expect(self.class_node.stage).to(equal("implementation"))
 
         with it("should give the edge the child node's stage"):
-            edge = self.graph.edges_of(self.practice, "owns")[0]
+            edge = self.practice.in_graph.edges("owns")[0]
             expect(edge.stage).to(equal("implementation"))
 
         with it("should return the nodes on the selected edge"):
@@ -88,7 +90,7 @@ with description("a graph"):
     with context("with a package between a module and a class"):
         with before.all:
             graph = Graph()
-            root = graph.root_of(graph.practice("clean_engineering"))
+            root = graph.practice("clean_engineering").in_graph.root
             module, package = "clean_engineering:Module:src/domain:domain", "clean_engineering:Package:src/domain/customer:customer"
             customer = "clean_engineering:OoadClass:src/domain/customer/Customer.ts:Customer"
             saved = SavedPractice.from_record("clean_engineering", {

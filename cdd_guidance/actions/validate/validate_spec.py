@@ -20,7 +20,7 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
-from space.session import Session
+from space.session import Session, Sessions
 from space.session.throwaway_project import ThrowawayProject
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
@@ -29,6 +29,8 @@ import harness.guidance.guidance as guidance_module
 from cdd_guidance.actions.validate.graph_json_reader import violations_from_graph_json_files
 from cdd_guidance.actions.validate.checked_graph import CheckedGraph, PathsNotFoundError
 from cdd_guidance.actions.validate.validate import Validate
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 
 _SAMPLE = _REPO_ROOT / "harness" / "graph" / "_examples" / "input"
@@ -72,7 +74,7 @@ def _working_in(throwaway: ThrowawayProject, project: Path, root: Path) -> Sessi
     """The main session of the spec's own project, where its logs and reports go, made to work in root, a folder of the
     project checked out at project."""
     kept_in = ToolCall(project=throwaway.root).session.session_path
-    session = Session.load(kept_in, Path(project).resolve())
+    session = Sessions(Path(project).resolve()).load(kept_in)
     session.workpath = Path(root).resolve()
     return session
 
@@ -402,7 +404,10 @@ with description("a validate action on practice guidance") as self:
 
     with context("with edited files of a working copy that every graph practice reads"):
         with before.each:
-            self.action = Validate(session=_working_in(self.project, _SAMPLE, _SAMPLE))
+            # A copy of the sample in a folder of its own, so it is a project of its own as a checked-out one is.
+            sample = Path(tempfile.mkdtemp()) / "input"
+            shutil.copytree(_SAMPLE, sample)
+            self.action = Validate(session=_working_in(self.project, sample, sample))
             self.session = Path(self.action.session.session_path)
 
         with it("should report the private-method-naming violation on the edited entity root"):

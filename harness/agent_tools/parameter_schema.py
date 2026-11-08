@@ -45,6 +45,11 @@ class ParameterSchema:
             result["required"] = required
         return result
 
+    @functools.cached_property
+    def names(self) -> tuple[str, ...]:
+        """The name of each parameter a caller passes, in the order the callable declares them."""
+        return tuple(self._parameters())
+
     def coerced(self, arguments: Mapping[str, object]) -> dict[str, object]:
         """arguments with each text sent for a ``Path`` parameter made a ``Path``, because JSON carries paths as text."""
         hints = self._hints()

@@ -16,6 +16,8 @@ from mamba import after, before, context, description, it
 from harness.agent_tools.agent_tools import AgentToolSet
 from space.session import Session, Sessions
 from space.session.file_manager import FileManager, PathOutsideRootsError
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 ORDER = b"export class Order {}\n"
 
@@ -38,7 +40,7 @@ with description("a session's file manager"):
             folder = self.workpath / ".sessions" / "orders"
             folder.mkdir(parents=True)
             (folder / "session.json").write_text(json.dumps({"name": "orders", "outputs": {"stories": {"root": "src"}}}), encoding="utf-8")
-            self.session = Session(self.workpath)
+            self.session = Session(Sessions(self.workpath))
             self.session.workpath = self.workpath
             self.session.session_path = folder
 

@@ -5,8 +5,8 @@ from __future__ import annotations
 import html
 import json
 from pathlib import Path
-from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
-from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, StoryDemoControl, StoryStep
+from cdd_guidance.practices.ux.model.json.nodes import JsonControl, JsonStoryDemoControl, JsonUxMap
+from cdd_guidance.practices.ux.model.nodes import Region, Screen, StoryStep
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 _SHELL_PATH = Path(__file__).resolve().parents[2] / "templates" / "html" / "mockup_shell.html"
@@ -22,7 +22,7 @@ class UxMapNotEmbedded(ValueError):
 _VISUAL_STATES = frozenset({"selected", "disabled", "primary", "expanded", "collapsed", "hidden", "checked", "error"})
 
 
-class HtmlControl(Control):
+class HtmlControl(JsonControl):
     """A control in the review page: a visible affordance for its control type, with the data attributes the
     mockup's scripts read to follow its interactions."""
 
@@ -127,7 +127,7 @@ class HtmlControl(Control):
         )
 
 
-class HtmlStoryDemoControl(StoryDemoControl, HtmlControl):
+class HtmlStoryDemoControl(JsonStoryDemoControl, HtmlControl):
     """A Story Demo control in the review page: it also carries the steps it runs and the input it fills."""
 
     def input_key(self) -> str:

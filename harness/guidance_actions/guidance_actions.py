@@ -13,7 +13,7 @@ from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions
 from harness.agent_tools.agent_tools import InstallDestination
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.action_catalogue import ActionCatalogue
-from harness.guidance.documents import load_document
+from harness.guidance.documents import document_in
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.hooks.hook_server import rules_toast
 from harness.hooks.hooks import hook
@@ -247,7 +247,7 @@ class GuidanceAction:
     def document_named(self, content: str = "", paths: list[str] | str | None = None) -> str:
         """The document a call names: content, or the files at paths read from this action's session's project; an
         action made for no session, such as one run in process, reads paths as given."""
-        return self._session.document_named(content, paths) if self._session is not None else load_document(content, paths)
+        return document_in(self._session, content, paths)
 
     def _discover_operations(self) -> dict[str, AgentOperation]:
         from harness.agent_tools.agent_tools import AgentToolAnnotation, GuidanceAgentOperation
@@ -387,6 +387,21 @@ class GuidanceAction:
             return [operation(text)]
         return [operation(self.at_fidelity(item)) for item in self.listed()]
 
+    def as_tool(self) -> GuidanceAction:
+        """This action as another action's recipe names it: a tool the agent calls, listed by name, rather than its own
+        recipe pasted into the other's instructions with none of the call's arguments."""
+        self.mode = "tool"
+        return self
+
+    def rules_to_follow(self) -> str:
+        """The rules each listed guidance holds the agent to, read from the fidelity this action works at on it: its
+        shared rules and that fidelity's, or the guidance text itself. It checks nothing, so it saves no report and logs
+        no validate line, which would tell the session board the work had been checked."""
+        return "\n\n".join(part for part in self.each(self._rules_of) if part)
+
+    def _rules_of(self, item: Any) -> str:
+        return item if isinstance(item, str) else item.checked_rules_text()
+
     def at_fidelity(self, item: Any) -> Any:
         """item, one of the Guidance this action lists, as the fidelity this action works at on it; item itself when it
         has none."""
@@ -429,11 +444,11 @@ class GuidanceAction:
         if session is None or session.session_path is None:
             return ""
         session_json = session.session_file
-        root = session.root.as_posix()
+        root = session.work_root.as_posix()
         project = session.repo_path.as_posix()
         practices = [(item, self._session_practice(item)) for item in self.listed() if not isinstance(item, str)]
         writes = [f"- {item.slug}: {practice.folder.as_posix()}" for item, practice in practices if practice is not None]
-        stored = session_json.read_text(encoding="utf-8").strip() if session_json.is_file() else "{}"
+        stored = json.dumps(session.fields, indent=2)
         return "\n".join([
             "## Session",
             "",

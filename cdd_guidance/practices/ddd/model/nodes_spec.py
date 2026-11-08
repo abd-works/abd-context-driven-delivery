@@ -12,13 +12,15 @@ for _cat in ("cdd_guidance/practices", "tools"):
         sys.path.insert(0, _p)
 
 from expects import be, contain, equal, expect
-from mamba import before, description, it
+from mamba import before, context, description, it
 
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.ddd.model.markdown.class_cards import ClassCard
-from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, Entity
+from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, Entity, ValueObject
 from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
 
@@ -69,9 +71,32 @@ with description("a bounded context on a graph"):
 
     with it("should record the aggregate and belongsTo"):
         practice = self.graph.practice("ddd")
-        aggregates = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "aggregates")]
-        belongs = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "belongsTo")]
+        aggregates = [(edge.parent.name, edge.child.name) for edge in practice.in_graph.edges("aggregates")]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.in_graph.edges("belongsTo")]
         expect(aggregates).to(contain(("orders", "account")))
         expect(belongs).to(contain(("account", "orders"), ("Account", "account")))
 
 
+
+
+with description("a module holding a value object"):
+    with before.each:
+        self.module = Aggregate("cart")
+        money = ValueObject("Money", 1, intent="an amount in one currency")
+        money.stereotypes = ["Value Object"]
+        money.properties.append(Property("amount", 1, "int"))
+        money.operations.append(Operation("add", 1))
+        self.module.classes.append(money)
+
+    with context("that is cloned"):
+        with before.each:
+            self.cloned = self.module.clone().classes[0]
+
+        with it("should keep the value object's stereotypes"):
+            expect(self.cloned.stereotypes).to(equal(["Value Object"]))
+
+        with it("should keep the value object's properties"):
+            expect([item.name for item in self.cloned.properties]).to(equal(["amount"]))
+
+        with it("should keep the value object's operations"):
+            expect([item.name for item in self.cloned.operations]).to(equal(["add"]))

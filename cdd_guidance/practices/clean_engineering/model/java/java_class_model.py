@@ -79,4 +79,4 @@ class JavaModule(CodeModule):
 class JavaCleanEngineeringModel(BraceCleanEngineeringModel):
     language = JAVA
     module_type = JavaModule
-    suffixes = (".java",)
+    suffixes = language.suffixes

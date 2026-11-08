@@ -7,7 +7,7 @@
 from expects import be_true, expect
 from mamba import context, description, it
 
-from cdd_guidance.practices.agent_bdd.agent_block import agent
+from cdd_guidance.practices.agent_bdd.agent import agent
 from cdd_guidance.practices.agent_bdd.spec_helpers import (
     expect_instructions_contain,
     expect_ok_action,

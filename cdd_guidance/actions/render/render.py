@@ -28,7 +28,6 @@ class Render(GuidanceAction):
         content: in-process text when paths is empty. Leave this empty on an MCP call.
         source: the format content is already in. Use sketch for a sketch file. Otherwise markdown, python, typescript, java, javascript, json, or drawio. md is markdown. Omit source when content is already the current format."""
         self._work_on(guidance)
-        loaded = self.document_named(content, paths)
 
         def on(item):
             if isinstance(item, str):
@@ -36,7 +35,7 @@ class Render(GuidanceAction):
             practice = self.practice_of(item)
             if paths:
                 return practice.render_files(format, paths, source)
-            return practice.render(format, practice if loaded in ("", None) else loaded, source=source)
+            return practice.render(format, content, source=source)
 
         converted = self.each(on)
         tools(self.act_quickly)

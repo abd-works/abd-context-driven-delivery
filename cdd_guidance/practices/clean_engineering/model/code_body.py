@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Optional, Tuple, Union
 
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
+
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _PROSE = re.compile(
     r"\b(the|and|is|are|a|an|of|to|for|that|this|with|from|into|each|same|only|like)\b",
@@ -43,8 +45,11 @@ class CodeLanguage:
         unfinished: str,
         spelling: CodeSpelling,
         type_names: Dict[str, str],
+        suffixes: tuple[str, ...] = (),
     ) -> None:
         self.name = name
+        # The file extensions source in this language is written with; the one table every reader of code asks.
+        self.suffixes = suffixes
         self.line_comment = line_comment
         self.indent = indent
         self.unfinished = unfinished
@@ -137,6 +142,36 @@ class CodeBody:
 
 WrittenKey = Union[str, Tuple, None]
 # What a node says in code when it is read: a name, or a tuple of names, steps, and bodies.
+
+
+_QUOTED_START = re.compile(r"""\s*(['"`])(?:\\.|(?!\1).)*\1""")
+
+
+class BraceCall:
+    """One call whose last argument is a callback, such as `describe("a cart", () => { ... })` or `story(...)`: where it
+    starts, its parentheses, its callback's braces, and where it ends. A quoted first argument, the block's name, is
+    skipped, so a brace or an arrow inside the name is not taken for the callback's."""
+
+    def __init__(self, text: str, start: int, open_paren: int, name: str) -> None:
+        source = SourceText(text)
+        self.start = start
+        self.name = name
+        self.close = source.closing_bracket(open_paren, "(", ")")
+        limit = self.close if self.close is not None else len(text)
+        quoted = _QUOTED_START.match(text, open_paren + 1)
+        head = quoted.end() if quoted else open_paren
+        arrow = text.find("=>", head, limit)
+        self.brace = text.find("{", arrow if arrow >= 0 else head, limit)
+        self.inner_end = source.closing_bracket(self.brace) if self.brace >= 0 else None
+        end = (self.close + 1) if self.close is not None else start
+        self.end = end + 1 if text.startswith(";", end) else end
+
+    @property
+    def is_whole(self) -> bool:
+        return self.close is not None and self.brace >= 0 and self.inner_end is not None
+
+    def body(self, text: str) -> str:
+        return text[self.brace + 1 : self.inner_end] if self.is_whole else ""
 
 
 class WrittenBlock:
@@ -237,6 +272,7 @@ PYTHON = CodeLanguage(
     "raise NotImplementedError",
     PYTHON_SPELLING,
     type_names={},
+    suffixes=(".py",),
 )
 TYPESCRIPT = CodeLanguage(
     "typescript",
@@ -254,6 +290,7 @@ TYPESCRIPT = CodeLanguage(
         "dict": "Record<string, any>",
         "object": "any",
     },
+    suffixes=(".ts", ".tsx"),
 )
 JAVASCRIPT = CodeLanguage(
     "javascript",
@@ -262,6 +299,7 @@ JAVASCRIPT = CodeLanguage(
     'throw new Error("not implemented");',
     C_FAMILY_SPELLING,
     type_names={},
+    suffixes=(".js", ".jsx"),
 )
 JAVA = CodeLanguage(
     "java",
@@ -279,4 +317,9 @@ JAVA = CodeLanguage(
         "dict": "Map<String, Object>",
         "object": "Object",
     },
+    suffixes=(".java",),
 )
+
+# Every programming language the code channels read, and every extension their source is written with.
+CODE_LANGUAGES = (PYTHON, TYPESCRIPT, JAVASCRIPT, JAVA)
+SOURCE_SUFFIXES = frozenset(suffix for language in CODE_LANGUAGES for suffix in language.suffixes)

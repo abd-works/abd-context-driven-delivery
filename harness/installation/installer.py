@@ -1,9 +1,7 @@
 """Installer: install every toolset a repository defines into one IDE folder, through every destination."""
 from __future__ import annotations
 
-import re
 import sys
-import tempfile
 from pathlib import Path
 from typing import Any, ClassVar, Iterable, TypeVar
 
@@ -16,7 +14,7 @@ from harness.agent_tools.agent_tools import (
     agent_toolset,
     tool_subject,
 )
-from harness.installation.destination import Installation, ServerInstallation, noCatalog
+from harness.installation.destination import Installation, ServerInstallation, is_temporary, noCatalog
 from harness.installation.files import FileInstallation, command
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.install_diagnostics import InstallDiagnostics
@@ -49,7 +47,7 @@ class ServersNotRegistered(LookupError):
     def __init__(self) -> None:
         super().__init__(
             "no server installation is registered with the Installer in this process: import harness.mcp.mcp_server "
-            "and harness.hooks.hooks before installing"
+            "and harness.hooks before installing"
         )
 
 
@@ -71,6 +69,8 @@ class InstallChannels:
         self.standing_rules = FileInstallation(layout, path, InstallDestination.RULE, repo=repo)
         for installation in (*self.servers, self.language_adapters, *self._files.values(), self.standing_rules):
             installer.track(installation)
+        # The toolsets the server channels publish into every install, such as the hooks that start the cdd server.
+        self.toolsets: list[Any] = [AgentToolSet.instantiate(toolset) for server in self.servers for toolset in server.toolsets]
 
     def of(self, kind: type[_Server]) -> _Server:
         """The run's installation of kind, such as its *McpInstallation*."""
@@ -88,11 +88,6 @@ class InstallChannels:
         return [*(server for server in self.servers if server.accepts(tool)), *files]
 
     @property
-    def toolsets(self) -> list[Any]:
-        """The toolsets the server channels publish into every install, such as the hooks that start the cdd server."""
-        return [AgentToolSet.instantiate(toolset) for server in self.servers for toolset in server.toolsets]
-
-    @property
     def published(self) -> dict[str, list[str]]:
         """What each server channel published in this run, by its channel, such as the MCP operations it enrolled."""
         return {server.channel: server.published for server in self.servers}
@@ -108,7 +103,6 @@ class Installer:
     the IDE at a server, and harness/mcp and harness/hooks register their installation with ``installs_through`` when
     they are imported, so this module never imports them."""
 
-    _SKILL_MCP_NAME = re.compile(r"Use MCP tool:\s*`([A-Za-z0-9_.-]+)")
     _servers: ClassVar[list[type[ServerInstallation]]] = []
 
     @classmethod
@@ -123,7 +117,7 @@ class Installer:
         self.ide = ide or last.get("ide") or IdeLayout.DEFAULT_IDE
         self.layout = IdeLayout(self.ide)
         self.path = Path(path) if path is not None else self._last_or_default_folder(last.get("path"))
-        self.record = InstallRecord(self.path / InstallRecord.NAME if self._is_temporary(self.path) else _SHARED_RECORD)
+        self.record = InstallRecord(self.path / InstallRecord.NAME if is_temporary(self.path) else _SHARED_RECORD)
         self.diagnostics = InstallDiagnostics(self.path, self.layout)
         self.toolsets = RepositoryToolsets(self.repo)
         self._channels: InstallChannels | None = None
@@ -269,7 +263,7 @@ class Installer:
         enrolled = set(self._published().get(InstallDestination.MCP, []))
         removed: list[str] = []
         for path in skills.rglob("SKILL.md"):
-            names = self._SKILL_MCP_NAME.findall(path.read_text(encoding="utf-8"))
+            names = AgentTool.invoked_names(path.read_text(encoding="utf-8"))
             if not names or all(name in enrolled for name in names):
                 continue
             relative = path.resolve().relative_to(self.path.resolve()).as_posix()
@@ -287,7 +281,7 @@ class Installer:
         for server in channels.servers:
             server.standup()
             self._print_channel_notice(server.diagnose())
-        if not self._is_temporary(self.path) and not self._runs_inside_a_server():
+        if not is_temporary(self.path) and not self._runs_inside_a_server():
             self.ensure_runtimes()
 
     def ensure_runtimes(self) -> dict[str, str]:
@@ -337,14 +331,9 @@ class Installer:
         return "\n".join(line for server in self._channels_of_run().servers for line in server.status())
 
     def _last_or_default_folder(self, last: str | None) -> Path:
-        if last and Path(last).exists() and not self._is_temporary(Path(last)):
+        if last and Path(last).exists() and not is_temporary(Path(last)):
             return Path(last)
         return self.repo / self.layout.folder_name
-
-    def _is_temporary(self, folder: Path) -> bool:
-        temp = Path(tempfile.gettempdir()).resolve()
-        resolved = folder.resolve()
-        return resolved == temp or temp in resolved.parents
 
     @markdown("install")
     def install_instructions(self) -> str:

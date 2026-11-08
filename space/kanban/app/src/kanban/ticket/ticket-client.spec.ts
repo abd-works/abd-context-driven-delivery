@@ -148,7 +148,7 @@ describe('Send Next Fidelity Action', () => {
 
     it('should send the generate command in the default format', async () => {
       const { chat } = await ran()
-      expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map format=markdown session=.sessions/billing-report/session.json' }])
+      expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map session=.sessions/billing-report/session.json' }])
     })
   })
 
@@ -166,7 +166,7 @@ describe('Send Next Fidelity Action', () => {
 
     it("should generate it in its own stage's default format", async () => {
       const { chat } = await ran()
-      expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map format=markdown session=.sessions/billing-report/session.json' }])
+      expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map session=.sessions/billing-report/session.json' }])
     })
 
     it('should mark its tile as the next one', async () => {
@@ -208,7 +208,7 @@ describe('Choose Ticket Practices', () => {
     const { page } = await board.page()
     const discovery = page.board.stageNamed('Discovery')!
     const boundedContext = discovery.workRequired.find(fidelity => fidelity.slug === 'ddd-bounded-context')!
-    page.store.change({ tiles: [{ ticket: ticketOn(page, ACTIVE), place: 'cell-Discovery-ddd-bounded-context', stage: discovery, fidelities: [boundedContext], action: 'generate', picked: [], isPinned: true, files: {} }] })
+    page.store.change({ tiles: [{ ticket: ticketOn(page, ACTIVE), place: 'cell-Discovery-ddd-bounded-context', stage: discovery, fidelities: [boundedContext], action: 'generate', picked: [], isPinned: true, choices: [] }] })
     await ticketOn(page, ACTIVE).enablePractice('ddd', false)
     return page
   }

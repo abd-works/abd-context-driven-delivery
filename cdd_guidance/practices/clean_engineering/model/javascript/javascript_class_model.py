@@ -89,4 +89,4 @@ class JavaScriptModule(CodeModule):
 class JavaScriptCleanEngineeringModel(BraceCleanEngineeringModel):
     language = JAVASCRIPT
     module_type = JavaScriptModule
-    suffixes = (".js", ".jsx")
+    suffixes = language.suffixes

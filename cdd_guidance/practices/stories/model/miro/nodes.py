@@ -10,7 +10,6 @@ import html
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional
 
-from harness.annotations.name import Name
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
@@ -40,10 +39,6 @@ class MiroStory(DiagramStory):
     size = 60
     actor_height = size
     column_pad = 5
-
-    @property
-    def slug(self) -> str:
-        return Name(self.name).title_slug or "node"
 
     @property
     def x(self) -> int:
@@ -94,10 +89,6 @@ class MiroEpic(DiagramEpic):
     right edge, so the nesting reads as a bar under the epic that owns it."""
 
     tighten = 10
-
-    @property
-    def slug(self) -> str:
-        return Name(self.name).title_slug or "node"
 
     @property
     def width(self) -> int:
@@ -206,7 +197,7 @@ class MiroStoryModel(DiagramStoryModel):
 
     def render(self, canonical: StoryModel | None = None, previous: str | None = None) -> str:
         """Draw canonical, or this story map when none is given, as a Miro canvas-composer SVG."""
-        return type(self)(canonical if canonical is not None else self).save()
+        return self.copy_of(canonical if canonical is not None else self).save()
 
     def parse(self, text: str) -> "MiroStoryModel":
         """Read a canvas-composer SVG into a Miro story map; the format-adapter entry point Stories renders through."""

@@ -12,7 +12,6 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from harness.annotations.name import Name
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
@@ -69,10 +68,6 @@ class DrawIOStory(DiagramStory):
     )
 
     @property
-    def slug(self) -> str:
-        return Name(self.name).title_slug or "node"
-
-    @property
     def cell_slug(self) -> str:
         parent = self.parent
         if not isinstance(parent, Epic):
@@ -125,10 +120,6 @@ class DrawIOEpic(DiagramEpic):
         "fillColor=none;strokeColor=none;fontColor=#333333;fontSize=8;"
         "align=left;spacingLeft=4;"
     )
-
-    @property
-    def slug(self) -> str:
-        return Name(self.name).title_slug or "node"
 
     @property
     def cell_id(self) -> str:
@@ -299,6 +290,7 @@ class _PlacedCell:
 
 
 class DrawIOStoryModel(DiagramStoryModel):
+    suffixes = (".drawio",)
     epic_type = DrawIOEpic
     story_type = DrawIOStory
     increment_type = DrawIOIncrement
@@ -378,7 +370,7 @@ class DrawIOStoryModel(DiagramStoryModel):
         """Draw the story map. In a *workspace* folder, each epic, sub-epic, and story cell links to its
         ``story-map.md`` entry there, and a story to its own file when one exists. With no target file,
         the cell has no link."""
-        drawn = type(self)(canonical if canonical is not None else self)
+        drawn = self.copy_of(canonical if canonical is not None else self)
         if workspace:
             drawn.links = StoryMapLinks.from_workspace(drawn, workspace)
         return drawn.save()
@@ -558,7 +550,7 @@ class DrawIOStoryModel(DiagramStoryModel):
         )
         lane_y = DrawIOIncrement.lane_top_y(header_bottom)
         for inc in self.increments:
-            inc_slug = inc.slug if hasattr(inc, "slug") else Name(inc.name).title_slug or "node"
+            inc_slug = inc.slug
             # Background strip (no text).
             background = self._cell(f"inc-lane/{inc_slug}/bg", "")
             background.x = lane_start_x
@@ -583,7 +575,7 @@ class DrawIOStoryModel(DiagramStoryModel):
                 if seen >= len(xs):
                     continue
                 x = xs[seen]
-                slug = Name(story_name).title_slug or "node"
+                slug = story.slug
                 story_vertex = self._cell(
                     f"inc-lane/{inc_slug}/{slug}" if seen == 0 else f"inc-lane/{inc_slug}/{slug}-{seen + 1}",
                     story_name,

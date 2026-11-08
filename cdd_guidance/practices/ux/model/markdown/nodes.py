@@ -27,9 +27,9 @@ class MarkdownUxMap(UxMap):
         MarkdownContextReader(ux_map).read(content)
         return ux_map
 
-    def render(self, ux_map: UxMap) -> str:
-        """ux_map's context: copied into a markdown map, which writes itself."""
-        return type(self).copy_of(ux_map).save()
+    def render(self, canonical: UxMap) -> str:
+        """canonical's context: copied into a markdown map, which writes itself."""
+        return type(self).copy_of(canonical).save()
 
     def save(self) -> str:
         lines = [_TITLE, ""]

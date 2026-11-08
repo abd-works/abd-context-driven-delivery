@@ -55,7 +55,8 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
     SamplePracticeWithFidelities,
 )
-from harness.hooks.hooks import Hook, HookInstallation, hook
+from harness.hooks.hook_installation import HookInstallation
+from harness.hooks.hooks import Hook, hook
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_server import McpInstallation, McpServer
 from harness.mcp.mcp_daemon import McpDaemon
@@ -313,7 +314,7 @@ with description("an agent toolset") as self:
                         expect(data["version"]).to(equal(1))
                         expect(data["hooks"]).to(have_key("stop"))
                         command = data["hooks"]["stop"][0]["command"]
-                        expect(command.replace("\\", "/")).to(contain("harness/hooks/hook_server.py"))
+                        expect(command.replace("\\", "/")).to(contain("harness/hooks/hook_daemon.py"))
 
                     with it("should write the skill file for the skill-annotated operation"):
                         skill_files = [

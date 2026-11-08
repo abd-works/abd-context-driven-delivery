@@ -1,5 +1,7 @@
 # Grill Answers
 
+> **Historical.** These are the answers from the grill that designed this pattern, kept as the record of why it is shaped as it is. Two of them describe a design that was later dropped: the pattern no longer composes Stories and Clean Engineering through `self._stories().generate()` (Generate takes the pattern as guidance like any practice), and the old TypeScript scanners were never ported, so the pattern's rules are judged by the validating agent. `mern_domain_driven.md` and `mern_domain_driven.py` describe the pattern as it is.
+
 ### Scope — implementation-only
 
 Covers **acceptance tests + production code** for an already-designed vertical

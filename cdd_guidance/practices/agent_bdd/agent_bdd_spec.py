@@ -10,7 +10,7 @@ from pathlib import Path
 from expects import be_true, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from cdd_guidance.practices.agent_bdd.agent_block import agent
+from cdd_guidance.practices.agent_bdd.agent import agent
 from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     AgentHarnessError,
     ToolRunDeadline,
@@ -50,7 +50,7 @@ with description("the agent bdd practice"):
     with context("that runs an agent for a spec"):
         with it("should load the agent's secrets"):
             statement = (
-                "from pathlib import Path\nfrom cdd_guidance.practices.agent_bdd.agent_block import agent\n"
+                "from pathlib import Path\nfrom cdd_guidance.practices.agent_bdd.agent import agent\n"
                 "with agent(Path('.'), Path('.agent_bdd_sessions/conf-spec.json'), in_chat=True):\n    pass"
             )
             expect(_secret_loaded_after(statement)).to(equal("True"))

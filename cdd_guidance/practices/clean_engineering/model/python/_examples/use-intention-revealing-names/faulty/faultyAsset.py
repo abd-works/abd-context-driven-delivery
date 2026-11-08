@@ -1,4 +1,3 @@
 class Checkout:
-    def total(self, line_items):
-        to = line_items
-        return to
+    def total(self, val):
+        return sum(val)
