@@ -13,7 +13,6 @@ from harness.guidance.practice_catalogue import PracticeCatalogue, UnknownPracti
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
-_STORIES = "cdd_guidance.practices.stories.stories:Stories"
 
 
 with description("the practice catalogue"):
@@ -23,29 +22,42 @@ with description("the practice catalogue"):
     with it("should name a practice key it does not hold as an unknown practice"):
         expect(lambda: PracticeCatalogue.create("clean-engineering")).to(raise_error(UnknownPractice))
 
-    with description("that is asked for the toolset a slug names"):
-        with it("should name the practice's toolset for the practice's slug"):
-            expect(PracticeCatalogue.toolset_ref("stories")).to(equal(_STORIES))
+    with description("whose practice is asked for the guidance a slug names"):
+        with before.all:
+            self.stories = PracticeCatalogue.create("stories")
 
-        with it("should name the practice's toolset and the fidelity for a fidelity's slug"):
-            expect(PracticeCatalogue.toolset_ref("stories-story-map")).to(
-                equal({"toolset": _STORIES, "fidelity": "story_map"})
-            )
+        with it("should answer itself for the practice's slug"):
+            expect(self.stories.answers_to("stories")).to(be(self.stories))
 
-        with it("should name the fidelity for its bare name in kebab case"):
-            expect(PracticeCatalogue.toolset_ref("story-map")).to(equal({"toolset": _STORIES, "fidelity": "story_map"}))
+        with it("should answer its own fidelity for a fidelity's slug"):
+            expect(self.stories.answers_to("stories-story-map")).to(be(self.stories.fidelities["story_map"]))
 
-        with it("should name the fidelity for its bare name in snake case"):
-            expect(PracticeCatalogue.toolset_ref("story_map")).to(equal({"toolset": _STORIES, "fidelity": "story_map"}))
+        with it("should answer its own fidelity for the fidelity's bare name in kebab case"):
+            expect(self.stories.fidelity_called("story-map")).to(be(self.stories.fidelities["story_map"]))
 
-        with it("should name nothing for a slug no practice goes by"):
-            expect(PracticeCatalogue.toolset_ref("astrology")).to(be_none)
+        with it("should answer its own fidelity for the fidelity's bare name in snake case"):
+            expect(self.stories.fidelity_called("story_map")).to(be(self.stories.fidelities["story_map"]))
+
+        with it("should answer nothing for a slug it does not go by"):
+            expect(self.stories.answers_to("astrology")).to(be_none)
+
+    with description("whose practice is asked to work at a fidelity"):
+        with before.all:
+            self.stories = PracticeCatalogue.create("stories")
+            self.ddd = PracticeCatalogue.create("ddd")
+
+        with it("should hold that fidelity as its current one"):
+            fidelity = self.stories.fidelities["scenarios"]
+            expect(self.stories.work_at(fidelity)).to(be(self.stories.fidelities.current))
+
+        with it("should refuse a fidelity of another practice"):
+            expect(lambda: self.stories.work_at(self.ddd.fidelities["model"])).to(raise_error(ValueError))
 
     with description("that makes a set of practices together"):
         with before.all:
             self.made = {practice.key: practice for practice in PracticeCatalogue.create_all()}
             stories = self.made["stories"]
-            stories.work_at("acceptance_tests")
+            stories.work_at(stories.fidelities["acceptance_tests"])
             self.companion = stories.fidelities.current.clean_engineering
 
         with it("should give a fidelity's companion from the Clean Engineering practice of the same set"):

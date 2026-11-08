@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Callable
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
 from harness.agent_tools.tool_call import ToolCall
-from harness.guidance.declared_file import DeclaredFile
-from harness.installation.destination import data_field, identity, language_adapter
+from harness.guidance.guidance import DeclaredFile
+from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 from harness.installation.context_config import CONTEXT_FOLDER
 from space.session.file_manager import FileEntry
@@ -50,10 +50,10 @@ class PracticeSessionOutput:
 
     @classmethod
     @tool_subject
-    def load(cls, session: str, practice: str, project: Path) -> PracticeSessionOutput:
-        """The practice named practice in the session whose session.json is session, a path from project, the project
-        the tool call names."""
-        return ToolCall(project=project).session_named(session).practice(practice)
+    def load(cls, session: str, practice: str, *, call: ToolCall) -> PracticeSessionOutput:
+        """The practice named practice in the session whose session.json is session, a path from the call's project,
+        opened for the call it serves, so what it logs names that call's chat."""
+        return call.session_named(session).practice(practice)
 
     @property
     @data_field

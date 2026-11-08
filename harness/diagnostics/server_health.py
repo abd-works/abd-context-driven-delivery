@@ -8,7 +8,7 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.graph.graph_app import GraphAppPorts
 from harness.hooks.hook_daemon import HookDaemon
-from harness.installation.destination import data_field, language_adapter
+from harness.installation.data_class import data_field, language_adapter
 from harness.mcp.mcp_server import mcp
 
 PROBE_SECONDS = 0.2

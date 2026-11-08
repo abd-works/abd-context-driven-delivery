@@ -14,7 +14,7 @@ from typing import Annotated
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.agent_tools.tool_call import ToolCall
-from harness.installation.destination import SourceFile, data_field, language_adapter
+from harness.installation.data_class import SourceFile, data_field, language_adapter
 from harness.mcp.mcp_server import mcp
 
 
@@ -134,10 +134,10 @@ class FileManager:
 
     @classmethod
     @tool_subject
-    def load(cls, *, project: Path) -> FileManager:
-        """The file manager of the session open in project, the folder a tool call works on. The session owns its file
-        manager, so it is read from the session saved as open there."""
-        return ToolCall.session_in(project).session_files.file_manager
+    def load(cls, *, call: ToolCall) -> FileManager:
+        """The file manager of the session open in the project the call it serves works on. The session owns its file
+        manager, so it is read from that session, opened for the call."""
+        return call.session.session_files.file_manager
 
     @property
     @data_field

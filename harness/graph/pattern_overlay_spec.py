@@ -6,7 +6,7 @@ from pathlib import Path
 _HERE = Path(__file__).resolve().parent
 
 from expects import equal, expect
-from harness.installation.destination import data_of  # noqa: E402
+from harness.installation.data_class import data_of  # noqa: E402
 from mamba import description, it
 
 from harness.graph.edge import EdgeType

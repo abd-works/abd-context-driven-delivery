@@ -15,7 +15,7 @@ from expects import be_empty, equal, expect, have_keys, raise_error
 from mamba import after, before, context, description, it
 
 from harness.chat.chat import Chat, ChatNotConnectedError
-from harness.installation.destination import data_of
+from harness.installation.data_class import data_of
 
 CHAT = "ad6c04ab-chat"
 CLOCK = [1000.0]

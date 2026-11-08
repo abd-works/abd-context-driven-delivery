@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 
-class Format:
+class Format(str):
     """*Format* is a channel an artifact is written in, such as `markdown`, `python`, or `drawio`. A format goes by its
     name and by a short name, which is also its file extension: `md` is `markdown` and `py` is `python`. Every reader
     of a format, an extension, or a template folder asks this class, so a format means the same thing everywhere.
+
+    A format is its own name as text: made once from whatever spelling a person or a document gives, it is held as it
+    is, compares equal to its name, and is written to JSON and into paths as that name, so its holder never parses it
+    again.
 
     Markdown and the code formats keep their templates in a folder named for the short name, such as `templates/py/`,
     with the format's extension; every other format's template is found by its name alone.
@@ -26,9 +30,9 @@ class Format:
     # The order a fidelity's files are shown in, by group: prose first, then the code, then the diagrams drawn from them.
     FILE_ORDER: tuple[str, ...] = ("markdown", "code", "diagram")
 
-    def __init__(self, name: str | None) -> None:
+    def __new__(cls, name: str | None = "") -> Format:
         folded = (name or "").strip().casefold()
-        self._name = self._NAMES_BY_SHORT_NAME.get(folded, folded)
+        return super().__new__(cls, cls._NAMES_BY_SHORT_NAME.get(folded, folded))
 
     @classmethod
     def from_extension(cls, extension: str) -> Format:
@@ -38,26 +42,26 @@ class Format:
     @property
     def name(self) -> str:
         """The format's own name, `markdown` for `md`; empty when no format was given."""
-        return self._name
+        return str(self)
 
     @property
     def short(self) -> str:
         """The short name, `md` for `markdown`; a format with no short name goes by its name."""
-        return self._SHORT_NAMES.get(self._name, self._name)
+        return self._SHORT_NAMES.get(self.name, self.name)
 
     @property
     def extension(self) -> str:
         """The extension a file in this format ends with, `.md` for `markdown`; empty when no format was given."""
-        return f".{self.short}" if self._name else ""
+        return f".{self.short}" if self.name else ""
 
     @property
     def is_code(self) -> bool:
-        return self._name in self.CODE
+        return self.name in self.CODE
 
     @property
     def group(self) -> str:
         """The group a person picks this format by, `code` for `python`; a format in no group is a group of its own."""
-        return next((group for group, members in self.GROUPS.items() if self._name in members), self._name)
+        return next((group for group, members in self.GROUPS.items() if self.name in members), self.name)
 
     @property
     def group_order(self) -> int:
@@ -74,7 +78,7 @@ class Format:
     @property
     def is_templated(self) -> bool:
         """Whether this format keeps its templates in its own folder with its own extension."""
-        return self._name in self.TEMPLATED
+        return self.name in self.TEMPLATED
 
     @property
     def template_folder(self) -> str:

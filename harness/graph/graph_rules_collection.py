@@ -8,7 +8,7 @@ from typing import Any
 from harness.guidance.rule import Rule, RulesCollection
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.violation import NodeViolation, Violation
-from harness.installation.destination import data_field
+from harness.installation.data_class import data_field
 
 
 class GraphRule(PracticeGraphRule, Rule):

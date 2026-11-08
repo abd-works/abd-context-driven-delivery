@@ -22,7 +22,8 @@ from mcp.server.models import InitializationOptions
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
-from harness.installation.destination import ServerInstallation, SkippedTool, SkippedTools, data_of
+from harness.installation.destination import ServerInstallation, SkippedTool, SkippedTools
+from harness.installation.data_class import data_of
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.installer import Installer
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -147,7 +148,7 @@ class McpInstallation(ServerInstallation):
             return self.layout.user_mcp_config
         if self.layout.is_claude_code:
             return self._project_root() / ".mcp.json"
-        return self.path / "mcp.json"
+        return self.path / self.layout.MCP_CONFIG_NAME
 
     def write_mcp_manifest(self) -> None:
         if not self.mcp_operations:

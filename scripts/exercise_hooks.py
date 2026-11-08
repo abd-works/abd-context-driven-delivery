@@ -116,9 +116,9 @@ class HookExercise:
         from harness.installation.repository_toolsets import RepositoryToolsets
 
         loaded = []
-        for ref in RepositoryToolsets(self.repo).collect():
+        for reference in RepositoryToolsets(self.repo).references():
             try:
-                practice = AgentToolSet.instantiate(ref)
+                practice = AgentToolSet.instantiate(reference.toolset_class)
             except Exception:  # noqa: BLE001
                 continue
             if not isinstance(practice, PracticeGuidance):

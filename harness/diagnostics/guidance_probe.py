@@ -86,11 +86,11 @@ class GuidanceProbe:
         from harness.guidance.practice_catalogue import PracticeCatalogue
 
         slug = mcp_name[: -len(".instructions")] if mcp_name.endswith(".instructions") else mcp_name
-        ref = PracticeCatalogue.toolset_ref(slug)
-        if ref is None:
+        practice = PracticeCatalogue.practice_named(slug)
+        if practice is None:
             return ProbeOutcome.from_refusal(mcp_name, "not a guidance slug")
         try:
-            text = AgentToolSet.instantiate(ref).instructions
+            text = practice.answers_to(slug).instructions
         except Exception as failure:
             # A probe reports what failed: the failure is its red outcome.
             return ProbeOutcome.from_failure(mcp_name, failure)

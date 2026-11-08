@@ -14,7 +14,7 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.graph.graph import Graph
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.documents import load_document
-from harness.installation.destination import data_field, identity, language_adapter
+from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
 from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
@@ -90,12 +90,12 @@ class Session:
 
     @classmethod
     @tool_subject
-    def from_file(cls, session: str, project: Path | str) -> Session:
-        """The session whose session.json is session, a path from project's checkout or an absolute one, read without
-        opening it, from the sessions this process holds for project. A board command names its ticket's session this
-        way, because it runs in whichever chat it is sent to, and that chat's open session can be another. A tool call
-        is handed the project the call names."""
-        return ToolCall(project=project).session_named(session)
+    def from_file(cls, session: str, *, call: ToolCall) -> Session:
+        """The session whose session.json is session, a path from the call's project or an absolute one, read without
+        opening it, from the sessions this process holds for that project. A board command names its ticket's session
+        this way, because it runs in whichever chat it is sent to, and that chat's open session can be another. A tool
+        is handed the call it serves, so the session it opens names that call's chat."""
+        return call.session_named(session)
 
     @property
     @data_field

@@ -18,7 +18,8 @@ from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_or
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, OnSubject, ToolsetMembers
 from harness.annotations.name import Name
-from harness.installation.destination import DataClass, Installation, SourceFile
+from harness.installation.destination import Installation
+from harness.installation.data_class import DataClass, SourceFile
 from harness.installation.ide_layout import IdeLayout
 
 _FOLDER = "language-adapters"
@@ -38,7 +39,6 @@ _MANIFEST = '{\n  "private": true,\n  "type": "module"\n}\n'
 _OPEN_DATA = "Record<string, unknown>"
 _SCHEMA_TYPES = {"string": "string", "integer": "number", "number": "number", "boolean": "boolean", "null": "null"}
 _SCALAR_TYPES = {str: "string", int: "number", float: "number", bool: "boolean", type(None): "null"}
-_SCALAR_NAMES = {"str": "string", "int": "number", "float": "number", "bool": "boolean", "None": "null"}
 _RESERVED_WORDS = frozenset({"default", "function", "class", "delete", "new", "in", "void", "with"})
 _SCHEMA_INPUTS = {"string": "text", "integer": "number", "number": "number", "boolean": "check"}
 _HINT_INPUTS = {str: "text", int: "number", float: "number", bool: "check"}
@@ -143,22 +143,10 @@ class _PythonName:
 
 
 class _TypeText:
-    """A Python type as written text, such as ``list[Ticket] | None``."""
+    """A TypeScript type as written text, such as ``TicketData | null``."""
 
     def __init__(self, text: str) -> None:
         self._text = text
-
-    def members(self, separator: str) -> list[str]:
-        """The parts between separators outside any brackets."""
-        parts, depth, current = [], 0, ""
-        for character in self._text:
-            depth += (character == "[") - (character == "]")
-            if character == separator and depth == 0:
-                parts.append(current.strip())
-                current = ""
-                continue
-            current += character
-        return [*parts, current.strip()]
 
     @property
     def as_list(self) -> str:
@@ -364,10 +352,6 @@ class TypeScriptToolset:
         """Every annotated toolset's class by name, for the types a module imports only for type checking."""
         return {peer.name: type(peer.toolset) for peer in self._peers.values()}
 
-    def _shape_named(self, name: str, function: Any) -> type | None:
-        found = vars(sys.modules[function.__module__]).get(name)
-        return found if _FieldHint(found).is_shape else None
-
     def render(self) -> dict[PurePosixPath, str]:
         # The operations come first: writing them is what names the imports and nested shapes the files need.
         operations = [TypeScriptOperation(tool, self) for tool in self._tools]
@@ -438,6 +422,9 @@ class TypeScriptToolset:
         if _FieldHint(hint).is_reference:
             return self._reference_type(_FieldHint(hint).unwrapped)
         hint = _FieldHint(hint).unwrapped
+        peer = self._peer_named_by(hint)
+        if peer is not None:
+            return self._peer_data(peer)
         if _FieldHint(hint).is_shape:
             return self._shape_reference(hint)
         origin = get_origin(hint)
@@ -609,22 +596,21 @@ class TypeScriptToolset:
         return tuple(inspect.signature(load).parameters)
 
     def result_of(self, tool: AgentTool) -> str:
-        annotation = inspect.signature(tool.callable).return_annotation
-        text = annotation.__name__ if isinstance(annotation, type) else str(annotation).replace("typing.", "")
-        return self._text_type(text, tool.callable)
+        """The TypeScript type of what tool answers, typed from its return hint the way a data field is typed."""
+        return self._hint_type(self._return_hint(tool.callable))
 
-    def _text_type(self, text: str, function: Any) -> str:
-        members = _TypeText(text).members("|")
-        if len(members) > 1:
-            return " | ".join(self._text_type(member, function) for member in members)
-        if text.startswith("list["):
-            return _TypeText(self._text_type(text[5:-1], function)).as_list
-        if text.startswith("dict["):
-            return f"Record<string, {self._text_type(_TypeText(text[5:-1]).members(',')[1], function)}>"
-        if text in self._peers:
-            return self._peer_data(text)
-        shape = self._shape_named(text, function)
-        return self._shape_reference(shape) if shape else _SCALAR_NAMES.get(text, "unknown")
+    def _return_hint(self, function: Any) -> object:
+        """function's return hint, resolved in its module with the peer toolsets' classes, which a module may import
+        only for type checking; a hint that names nothing either knows stays unread and is typed ``unknown``."""
+        try:
+            return get_type_hints(function, localns=self.peer_classes).get("return", inspect.Signature.empty)
+        except (NameError, TypeError):
+            return inspect.Signature.empty
+
+    def _peer_named_by(self, hint: object) -> str | None:
+        """The name of the peer toolset whose class hint is, whose data a tool answering it sends; none for any other
+        hint."""
+        return next((name for name, peer in self._peers.items() if isinstance(hint, type) and type(peer.toolset) is hint), None)
 
     def _peer_data(self, name: str) -> str:
         peer = self._peers[name]

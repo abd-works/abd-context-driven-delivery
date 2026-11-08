@@ -15,6 +15,7 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from space.session import Session, Sessions
+from harness.agent_tools.tool_call import ToolCall
 from space.session.file_manager import FileManager, PathOutsideRootsError
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
@@ -62,7 +63,7 @@ with description("a session's file manager"):
             shutil.rmtree(self.other, ignore_errors=True)
 
         with it("should read under the session open in that project"):
-            expect(FileManager.load(project=self.workpath).workpath).to(equal(self.workpath / "src"))
+            expect(FileManager.load(call=ToolCall({}, self.workpath)).workpath).to(equal(self.workpath / "src"))
 
         with it("should list the files of the project its call names"):
             listing = AgentToolSet.instantiate(FileManager).tools["list"].invoke({}, project=self.other)

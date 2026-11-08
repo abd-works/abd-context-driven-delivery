@@ -10,7 +10,7 @@ from typing import Any
 from xml.etree import ElementTree as ET
 
 from harness.graph.violation import Violation
-from harness.installation.destination import data_of
+from harness.installation.data_class import data_of
 
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import DrawioPage
 

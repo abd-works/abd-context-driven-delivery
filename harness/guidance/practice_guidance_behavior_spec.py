@@ -15,7 +15,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import contain, equal, expect
+from expects import be, contain, equal, expect
 from mamba import before, context, description, it
 
 from cdd_guidance.actions.render.render import Render
@@ -23,6 +23,7 @@ from harness.agent_tools.agent_tools import AgentInstructions
 from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.ddd.ddd import Ddd
+from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.agent_tools.agent_tools import ToolsetReference
 
 Car = ToolsetReference("cdd_guidance.practices._examples.car.car:Car").toolset_class
@@ -134,7 +135,7 @@ with description("a practice"):
 
         with context("with a Clean Engineering name on a fidelity"):
             with before.each:
-                self.practice = Bdd(fidelity="behavior")
+                self.practice = PracticeCatalogue.create("bdd", fidelity="behavior")
                 self.child = self.practice.fidelities["behavior"]
 
             with it("should treat that Clean Engineering fidelity as the companion"):
@@ -156,7 +157,12 @@ with description("a practice"):
     with context("that has been asked for guidance"):
         with context("with a Clean Engineering companion on the current fidelity"):
             with before.each:
-                self.practice = Bdd(fidelity="behavior")
+                self.practice = PracticeCatalogue.create("bdd", fidelity="behavior")
+
+            with it("should hold the Clean Engineering fidelity of its own set as that companion"):
+                expect(self.practice.fidelities["behavior"].clean_engineering).to(
+                    be(self.practice.companion.fidelities["model"])
+                )
 
             with it("should include that companion's instructions"):
                 prose = "\n".join(
@@ -304,7 +310,7 @@ with description("aggregate model"):
         with context("that have been generated in markdown"):
             with context("that have been re-rendered in python"):
                 with it("should be python of those classes"):
-                    result = Ddd(fidelity="model").render(
+                    result = PracticeCatalogue.create("ddd", fidelity="model").render(
                         "python", _CLASS_MARKDOWN, source="markdown"
                     )
                     expect(result["content"]).to(contain("class Cart"))
@@ -312,7 +318,7 @@ with description("aggregate model"):
         with context("that have been generated in python"):
             with context("that have been re-rendered in markdown"):
                 with it("should be markdown of those classes"):
-                    result = Ddd(fidelity="model").render(
+                    result = PracticeCatalogue.create("ddd", fidelity="model").render(
                         "markdown", _CLASS_PYTHON, source="python"
                     )
                     expect(result["content"]).to(contain("Cart"))

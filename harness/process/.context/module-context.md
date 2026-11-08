@@ -6,7 +6,7 @@ The process classes live in one module, `process.py`, since each is a few lines 
 *Git* runs the git command line in one folder, with a time limit that suits the command and no inherited stdin (which hangs git under the MCP server on Windows); every failure raises *RepoConnectError*. The repository tools (space/repo), the catalog's source links, and the pinned cdd runtime all run git through it.
 
 - **Purpose:** Start, name, and stop the processes the framework keeps, and run git, the same way on Windows and elsewhere.
-- **Seam (terms):** BackgroundStart, PythonInterpreter, ExclusivePort, ListeningPorts, RunningProcess, StoppableProcess, ProcessNotStopped, Git, RepoConnectError. Each class is a separate small tool its callers use directly, so the module is all seam by design.
+- **Seam (terms):** BackgroundStart, PythonInterpreter, ExclusivePort, ListeningPorts, RunningProcess, StoppableProcess, ProcessNotStopped, Git, RepoConnectError. The module is a toolkit, not one deep class: each class is a small tool for one job on this computer that its callers use directly, so every class is part of the seam by design, and a deep-module count that reads all of them as exposed reads the toolkit's purpose. A class added here is one more such tool, never a helper of another class here.
 - **Dependencies (one-way):** none, so harness/hooks, harness/mcp, harness/catalog_generator, space/repo, and the scripts all use it without depending on each other.
 
 ## Constraint

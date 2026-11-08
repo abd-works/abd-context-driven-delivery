@@ -1,3 +1,5 @@
+import json
+
 from mamba import description, it
 from expects import equal, expect
 
@@ -57,3 +59,13 @@ with description("a format") as self:
     with description("that was not given"):
         with it("should have no name"):
             expect(Format(None).name).to(equal(""))
+
+    with description("held by its owner"):
+        with it("should compare equal to its own name"):
+            expect(Format("md")).to(equal("markdown"))
+
+        with it("should be written to JSON as its own name"):
+            expect(json.dumps({"format": Format("py")})).to(equal('{"format": "python"}'))
+
+        with it("should stay the same format when made again from itself"):
+            expect(Format(Format("ts")).is_code).to(equal(True))

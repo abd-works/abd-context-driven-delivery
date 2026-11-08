@@ -7,7 +7,7 @@ import textwrap
 from typing import List, Optional
 
 from cdd_guidance.practices.sketch_document.sketch_outline import SketchOutline
-from harness.guidance.sketch_lens import SketchLens
+from harness.guidance.guidance import SketchLens
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,

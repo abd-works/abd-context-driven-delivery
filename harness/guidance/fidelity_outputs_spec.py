@@ -23,9 +23,6 @@ with description("a fidelity's declared outputs") as self:
         with it("should name the file for each format"):
             expect(self.outputs).to(equal({"markdown": ".context/story-map.md", "drawio": ".context/story-map.drawio"}))
 
-        with it("should give the file of its default format"):
-            expect(Stories().fidelities["story_map"].default_output).to(equal(".context/story-map.md"))
-
     with context("with a fidelity that writes several files for one format"):
         with before.each:
             self.outputs = Stories().fidelities["acceptance_tests"].outputs

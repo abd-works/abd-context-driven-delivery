@@ -8,7 +8,7 @@ import copy
 from pathlib import Path
 from typing import Annotated, Any
 
-from harness.installation.destination import SourceFile, data_field
+from harness.installation.data_class import SourceFile, data_field
 
 # A judgment or scanner that cannot tie its finding to a file names this place.
 UNKNOWN_LOCATION = "unknown"

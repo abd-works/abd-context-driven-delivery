@@ -16,7 +16,7 @@ RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from harness.diagnostics.server_health import ServerHealth  # noqa: E402
 from harness.hooks.hook_daemon import HookDaemon  # noqa: E402
-from harness.installation.destination import data_of  # noqa: E402
+from harness.installation.data_class import data_of  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 
 

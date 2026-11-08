@@ -1046,3 +1046,18 @@ with description("a checkout's hook server"):
 
         with it("should serve none of its events"):
             expect(self.catalog.event_names).to(equal([]))
+
+
+with description("a hook event that reports a file the agent changed"):
+
+    with context("from Claude Code's edit tool"):
+        with it("should report an edit"):
+            expect(HookPayload({"hook_event_name": "PostToolUse", "tool_name": "Edit"}).is_edit).to(be_true)
+
+    with context("from Cursor's file-edit event"):
+        with it("should report an edit"):
+            expect(HookPayload({"hook_event_name": "afterFileEdit"}).is_edit).to(be_true)
+
+    with context("from a tool that only reads"):
+        with it("should report no edit"):
+            expect(HookPayload({"hook_event_name": "PostToolUse", "tool_name": "Read"}).is_edit).to(equal(False))
