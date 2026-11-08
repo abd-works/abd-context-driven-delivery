@@ -11,7 +11,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_empty, be_false, contain, expect
+from expects import be_empty, be_false, contain, equal, expect
 from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.document.document import Document
@@ -47,6 +47,12 @@ def _expansion(project: Path | None, action_type, recipe, arguments: dict):
 def _expanded(project: Path, action_type, recipe, arguments: dict) -> str:
     """The instructions of recipe expanded for a call on project naming arguments."""
     return _expansion(project, action_type, recipe, arguments).instructions
+
+
+def _answered(project: Path, action_type, recipe, arguments: dict) -> str:
+    """The reply the MCP host gives a call on project naming only arguments, the way a client sends it: the recipe
+    answered for that call, which logs the call as the host does."""
+    return AgentInstructions.for_callable(recipe, action_type()).answer(ToolCall(arguments, project))
 
 
 def _rule(fidelity) -> str:
@@ -103,6 +109,9 @@ with description("an action that writes a practice's artifacts") as self:
 
         with it("should give the fidelity's rules"):
             expect(self.prose).to(contain(_rule(self.story_map)))
+
+        with it("should give the fidelity's rules once"):
+            expect(self.prose.count(f"### {_rule(self.story_map)}")).to(equal(1))
 
         with it("should give the practice's sketch template"):
             expect(self.prose).to(contain(self.story_map.sketch_template.strip()))
@@ -163,6 +172,47 @@ with description("an action that writes a practice's artifacts") as self:
         with it("should still give the grill's interview"):
             prose = _expanded(None, Iterate, Iterate.iterate, {"guidance": _STORY_MAP})
             expect(prose).to(contain("Conduct a relentless grilling interview"))
+
+    # Building a prompt runs the recipes it names, such as the generate a sketch ends with. Only the action the call asked
+    # for may say it ran: a generate line tells the session board that generate is done before anything is written.
+    with context("that an MCP client calls with only its required arguments"):
+        with context("to sketch"):
+            with before.each:
+                self.reply = _answered(self.throwaway.root, Sketch, Sketch.sketch, {"guidance": _STORY_MAP})
+
+            with it("should give the sketch instructions"):
+                expect(self.reply).to(contain("save_sketch the shell"))
+
+            with it("should log no generate line"):
+                expect(_logged_verbs(self.session_folder)).not_to(contain("generate"))
+
+        with context("to grill"):
+            with before.each:
+                self.reply = _answered(self.throwaway.root, GrillContext, GrillContext.grill, {"guidance": _STORY_MAP})
+
+            with it("should give the grill's interview"):
+                expect(self.reply).to(contain("Conduct a relentless grilling interview"))
+
+            with it("should log no generate line"):
+                expect(_logged_verbs(self.session_folder)).not_to(contain("generate"))
+
+        with context("to iterate"):
+            with before.each:
+                self.reply = _answered(self.throwaway.root, Iterate, Iterate.iterate, {"guidance": _STORY_MAP})
+
+            with it("should give the grill's interview"):
+                expect(self.reply).to(contain("Conduct a relentless grilling interview"))
+
+            with it("should log that it iterates"):
+                expect(_logged_verbs(self.session_folder)).to(contain("iterate"))
+
+            with it("should log no generate line"):
+                expect(_logged_verbs(self.session_folder)).not_to(contain("generate"))
+
+        with context("to generate"):
+            with it("should log its own generate line"):
+                _answered(self.throwaway.root, Generate, Generate.generate, {"guidance": _STORY_MAP})
+                expect(_logged_verbs(self.session_folder)).to(contain("generate"))
 
     with context("that satisfies"):
         with before.each:

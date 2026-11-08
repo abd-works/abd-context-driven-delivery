@@ -5,7 +5,6 @@ Narrative for maintainers of the sketch module itself. AI reading this file: thi
 ## What lives here
 
 - `sketch.py` — the `Sketch` action, a `GuidanceAction` made for one session. Its tools are `find_template`, `save_sketch`, `list_sketches`, and `review_sketch`; its instructions are `sketch(guidance)`, published as the `actions-sketch` skill and the `sketch.sketch` MCP operation.
-- `sketch_outline.py` — `SketchOutline`: a sketch holds one section per practice, opened by the headings that practice declares (its `sketch_lens`, a *SketchLens* from harness/guidance), and `SketchOutline.body_for(lens)` hands one practice its section, flattened to indentation, so the practice's sketch format can read it.
 - `sketch.md` — the behavior contract and rules an agent reads at runtime.
 - `templates/sketch-template.md` — the default heading-and-indent notation used when the practice has no sketch template of its own.
 - `agents/sketcher.md` — the Sketcher sub-agent that runs sketch-grill-confirm cycles.

@@ -5,28 +5,27 @@ description: Context. Uses Context Setup to capture documents or a live app into
 
 # Context
 
-Your goal is to turn raw documents or a running application into indexed context that later roles can trust. Capture and index come first. Partitioning is the last step, so segments are cut from material that has already been converted and embedded.
+Your goal is to turn raw documents or a running application into indexed context that later roles can trust. Documents are converted to markdown, partitioned into verbatim segments, and then those segments are embedded, so a search answers with source passages rather than whole documents.
 
 ## Skills In Play
 
-Use `ContextSetup` in `cdd_guidance/context_setup`. Load its skills under `.cursor/skills/context-setup/`.
+Use Context Setup (`cdd_guidance/context_setup`) through its skills: `context-setup-capture-from-documents`, `context-setup-capture-from-live-app`, `context-setup-convert`, `context-setup-smoke-test`, `context-setup-scout-app`, `context-setup-complete-capture`, `context-setup-embed`, `context-setup-search`, and `context-setup-ask`.
 
 If the user names the source, follow that path. If they have not said whether the source is documents or a live app, ask before capturing.
 
-- `convert` to turn documents in a folder into markdown and report heading structure.
-- `capture_from_documents` to convert a document folder, choose indexers, and embed.
-- `capture_from_live_app` for a web, desktop, or API surface: classify external dependencies, write stubs, then `smoke_test`, `scout_app`, and `complete_capture` for pages that fail or warn.
-- `embed`, `search`, and `ask` on the Context Index once capture has produced files to index.
+- `capture_from_documents` for a folder of documents.
+- `capture_from_live_app` for a web, desktop, or API surface.
+- `search` and `ask` on the Context Index once capture has embedded what it found.
 
-Partition runs last. Call `partition` only after convert or capture, and after embed.
+Each capture recipe names its own steps and their order. Follow the recipe rather than restating it here, so the two cannot disagree.
 
 ## Working Method
 
-**Documents.** Call `convert` on the source folder. Read `structure_notes`. When a file has `heading_depth` 0 and `word_count` over 200, tell the user it may need a semantic re-pass, then continue. When the user has not named indexers, ask which of Stories, Clean Engineering, DDD, and UX should index the content, and which one runs first. Pass the converted markdown to `context_index.embed` and report the index path.
+**Documents.** Run `capture_from_documents` on the source folder and follow its steps: it converts the documents, asks which practices index them, partitions them into segments, and embeds those segments.
 
-**Live app.** Classify external dependencies and write stubs at the outermost boundary. Call `smoke_test` and repair stubs until it passes. Call `scout_app`, review each captured page, and call `complete_capture` only for pages that fail or warn. Call `context_index.embed` on the captured pages.
+**Live app.** Run `capture_from_live_app` and follow its steps: it stubs external dependencies, smoke tests the application, scouts its pages, recaptures the pages that fail or warn, and embeds what it captured.
 
-**Partition.** Index the captured material, copy covering passages verbatim into segment files, and verify named lists are complete. Link every index entry to its segment. Leave scenarios, class designs, UI mockups, and production code to the later roles, so the segments stay source and not design.
+**Partition.** When partitioning, index the captured material, copy covering passages verbatim into segment files, and verify named lists are complete. Link every index entry to its segment. Leave scenarios, class designs, UI mockups, and production code to the later roles, so the segments stay source and not design.
 
 ## Handoff
 

@@ -6,7 +6,7 @@ Markdown channel for *PromptNotify*. The module's purpose, seam, and dependencie
 
 ## Language
 
-*Toast* is the annotation an author puts on an `@agent_tool` or `@agent_instructions` member so that an agent's call to that member shows an IDE toast naming it. `harness/guidance_actions` annotates `GuidanceAction.begin`, the step every guidance action starts with, so each action toasts as **Action →** its name without its own annotation.
+*Toast* is the annotation an author puts on an `@agent_tool` or `@agent_instructions` member so that an agent's call to that member shows an IDE toast naming it. `harness/guidance_actions` annotates `GuidanceAction.begin`, which every guidance action inherits and no recipe runs, so a call to any of an action's tools toasts as **Action →** the action's name without its own annotation.
 
 *PromptNotify* is the `preToolUse` *Hook*. It looks at the invoked member first, then at a toolset's inherited `begin`, then at its *catalog* of action, practice, fidelity, and rule names, and writes the first match as a toast notice into each workspace folder. When the module is loaded it registers `PromptNotify.show_toast` with `HookServer.show_toasts_with`, so the toast any hook gives in its result is shown here.
 

@@ -20,11 +20,12 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_a, be_empty, be_false, be_true, contain, equal, expect, have_len
+from expects import be_a, be_empty, be_false, be_true, contain, equal, expect, have_len, raise_error
 from mamba import after, before, context, description, it
 
 from cdd_guidance.context_setup.context_index import (
     ContextIndex,
+    SegmentNotFound,
     EmbedResult,
     EmbeddingProvider,
     RankedChunk,
@@ -32,6 +33,8 @@ from cdd_guidance.context_setup.context_index import (
     SegmentIndex,
 )
 from harness.agent_tools.agent_tools import AgentInstructions
+from harness.agent_tools.tool_call import ToolCall
+from space.session.throwaway_project import ThrowawayProject
 
 
 # ── Fake embedding provider ───────────────────────────────────────────────────
@@ -180,6 +183,31 @@ with description("a ContextIndex"):
         with it("should fall back to view 'general'"):
             expect("general" in self._result.views_covered).to(be_true)
 
+    # The cdd server answers every project from its own folder, so a path a call names is read from the call's project.
+    with context("that is made for a call and embeds segments named from the project's root"):
+        with before.each:
+            self.throwaway = ThrowawayProject()
+            segments = self.throwaway.root / "docs" / ".context"
+            segments.mkdir(parents=True)
+            (segments / "intro-segment.md").write_text("---\nview: story\n---\nIntro.\n", encoding="utf-8")
+            self.index = ContextIndex(FakeEmbeddingProvider()).for_call(ToolCall(project=self.throwaway.root))
+            self.result = self.index.embed(["docs/.context/intro-segment.md"], out_path="docs/rag")
+
+        with after.each:
+            self.throwaway.close()
+
+        with it("should write the index in that folder of the project"):
+            expect(Path(self.result.index_path)).to(equal((self.throwaway.root / "docs" / "rag").resolve()))
+
+        with it("should search the index named from the project's root"):
+            expect(self.index.search("intro", "docs/rag").chunks).to(have_len(1))
+
+        with context("and is named a segment that is not there"):
+            with it("should refuse it rather than embed empty text"):
+                expect(lambda: self.index.embed(["docs/.context/missing-segment.md"], out_path="docs/rag")).to(
+                    raise_error(SegmentNotFound)
+                )
+
     # ── Tool: Search Memory ───────────────────────────────────────────────────
 
     with context("whose search tool is called on a populated index"):
@@ -295,6 +323,16 @@ with description("a ContextIndex"):
         with it("should instruct the AI to cite source paths"):
             prose = fixture._expanded_ask()
             expect("cit" in prose.lower()).to(be_true)
+
+        with it("should name the question the call asks"):
+            ask = AgentInstructions.for_callable(ContextIndex.ask, ContextIndex())
+            prose = ask.expand({"question": "who pays for the plan?", "index_path": "docs/rag"}).instructions
+            expect(prose).to(contain("who pays for the plan?"))
+
+        with it("should leave no placeholder for the agent to read literally"):
+            ask = AgentInstructions.for_callable(ContextIndex.ask, ContextIndex())
+            prose = ask.expand({"question": "who pays for the plan?", "index_path": "docs/rag"}).instructions
+            expect(prose).not_to(contain("{question}"))
 
         with it("should mention weighting by view"):
             prose = fixture._expanded_ask()

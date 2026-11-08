@@ -58,8 +58,8 @@ class ContextSetup:
         self.context_index = context_index if context_index is not None else ContextIndex()
 
     def for_call(self, call: ToolCall) -> ContextSetup:
-        """A ContextSetup made for call, holding a Partition made for the session the call works in."""
-        return type(self)(self.partition.for_call(call), self.context_index)
+        """A ContextSetup made for call, holding a Partition and a ContextIndex made for the session the call works in."""
+        return type(self)(self.partition.for_call(call), self.context_index.for_call(call))
 
     @property
     def session(self) -> Any:
@@ -228,8 +228,8 @@ class ContextSetup:
         Emit a verdict per page: PASS | WARN | FAIL.
         FAIL and WARN pages need re-capture; note the reason for each. Every entry in scout_result.failed_pages
         is a FAIL: the browser could not load that page, and its reason says why.
-        If all pages PASS: call context_index.embed(segments_paths=[scout_result.pages_dir])
-        to index the captured content and report capture complete. Stop.
+        If all pages PASS: call context_index.embed(segments_paths=[scout_result.overview_path])
+        to index the extraction overview, which holds a section per captured page, and report capture complete. Stop.
         If any pages FAIL or WARN: proceed to Step 6.
 
         Step 6 — Complete App Capture (only when Step 5 found FAIL or WARN pages):

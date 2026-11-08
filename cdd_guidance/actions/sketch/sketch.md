@@ -189,14 +189,13 @@ Prose that is not part of a practice's tree — open questions, what is settled,
 ---
 ## Composition — how sketch chains with other actions
 
-`@sketch` **explicitly calls** `grill_with_context`, then chains `sketch_session`. Expansion order:
+`sketch.sketch` gives, in this order:
 
 ```
-grill_with_context  ← pure Q-loop (no sketch advice)
-sketch_session      ← template + save_sketch cadence
-base action body    ← e.g. Context.sketch (persist only; render is separate)
+sketch cadence        ← save_sketch the shell, three or four answers per theme, review_sketch
+each fidelity's text  ← its Scaffold section and its practice's sketch template
+grill_with_context    ← the grill's interview, so each question checks what the sketch claims
+generate              ← the generate each listed guidance becomes once the sketch is agreed, with its rules
 ```
 
-`@sketch_render` chains the same sketch loop, then **`build_render_calls` → `render_approved_sketch`** on approval. See `actions/sketch_render/sketch_render.md`.
-
-Base `Context` exposes peer entry points: `generate` (plain), `grill`, `sketch`, `sketch_render`, `iterate`. Domains inherit them; do not re-decorate domain `generate` with `@sketch` / `@grill_with_context`. After sketch approval, prefer **`sketch_render`** over `generate` for formal artifacts.
+Grill (`grill.grill`) and Iterate (`iterate.iterate`) are peer actions with the same interview. Grill ends with the same generate; Iterate generates one small slice per round. Only the action the call asked for logs a line in the session's log: building the sketch's instructions logs no generate line, so the session board shows generate as done only after the agent calls generate.
