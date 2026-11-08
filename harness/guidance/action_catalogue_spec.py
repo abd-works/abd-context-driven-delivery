@@ -10,6 +10,8 @@ from expects import be_false, be_none, be_true, contain, equal, expect
 from mamba import before, description, it
 
 from harness.guidance.action_catalogue import ActionCatalogue
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 _ACTIONS_FOLDER = _REPO_ROOT / "cdd_guidance" / "actions"
 

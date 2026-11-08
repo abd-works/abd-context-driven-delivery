@@ -8,10 +8,10 @@ _COMMENT_FENCES = ("# ---", "#---")
 _HEADING = re.compile(r"^#{1,6}\s", re.MULTILINE)
 
 
-class SettingLines:
-    """Flat ``key: value`` lines, such as a file's settings or a YAML block read without PyYAML. A blank line, a ``#``
-    comment, a ``- `` list item, and a line with no ``:`` hold no setting; a value loses the quotes around it. Every
-    reader of such lines reads them here, so they quote and comment the same way."""
+class FlatSettings:
+    """Settings written as flat ``key: value`` lines, as a front matter block or a simple ```yaml block writes them:
+    each value as written, without its quotes. Blank lines, ``#`` comments, and list items are not settings, and nested
+    YAML is not read here; a reader that has PyYAML reads that."""
 
     def __init__(self, text: str) -> None:
         self._text = text
@@ -59,7 +59,7 @@ class FrontMatter:
     def fields(self) -> dict[str, str]:
         """Each ``key: value`` line of the settings, the value as written without its quotes; a settings block is a
         flat list of names, so nested YAML is not read here."""
-        return SettingLines(self.settings).fields
+        return FlatSettings(self.settings).fields
 
     @property
     def content(self) -> str:

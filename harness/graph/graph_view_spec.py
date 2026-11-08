@@ -10,6 +10,7 @@ from mamba import before, context, description, it
 
 from harness.graph.graph import EdgeType, Graph, Node, Source
 from harness.graph.saved_graph import SavedGraph, SavedPractice
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 
 def _saved_node(node_id: str, name: str, type: str, file: str, end_line: int, stage: str) -> dict:

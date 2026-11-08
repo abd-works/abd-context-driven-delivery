@@ -20,6 +20,7 @@ from harness.diagnostics.guidance_probe import GuidanceProbe
 from harness.diagnostics.probe_outcome import ProbeOutcome
 from harness.diagnostics.guidance_diagnostics import GuidanceDiagnostics
 import space.session.session  # noqa: F401 - registers how a tool call opens its session, as the server does at start
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 
 def _installer(tree: Path, payload: dict) -> Installer:

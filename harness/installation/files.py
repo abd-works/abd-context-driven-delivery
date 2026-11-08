@@ -58,6 +58,9 @@ class FileInstallation(Installation):
     _REFERENCE_LINK = re.compile(r"\]\((?:\.\./)+references/([\w.-]+\.md)\)")
     _RULE_FILE_NAME = re.compile(r"`(practices/[\w/.-]+)\.mdc`")
 
+    # The line before the command a skill or command without MCP runs, which a skill's description leaves out.
+    _SHELL_INVOKE = "Run from the repository root with the Shell tool:"
+
     # The channels a file installation writes, in the order a tool's files are written.
     CHANNELS = (InstallDestination.SKILL, InstallDestination.COMMAND, InstallDestination.RULE)
 
@@ -163,9 +166,7 @@ class FileInstallation(Installation):
         return slug if operation in self._GUIDANCE_OWN_OPERATIONS else f"{slug}-{operation}"
 
     def _skill_operations(self, toolset: Any) -> list[str]:
-        bag = getattr(toolset, "tools", None) or {}
-        values = bag.values() if isinstance(bag, dict) else bag
-        return [Name(getattr(tool, "deploy_name", None) or tool.name).kebab for tool in values if getattr(tool, "install_to_skill", False)]
+        return [Name(tool.deploy_name).kebab for tool in toolset.tools.values() if tool.install_to_skill]
 
     def _skill_folder(self, toolset: Any, operation: str) -> Path:
         folder = self._kebab_folder(self.folder_for(toolset))
@@ -227,7 +228,7 @@ class FileInstallation(Installation):
         script = self.repo / "scripts" / f"{tool.deploy_name}.py" if self.repo is not None else None
         if script is not None and script.is_file():
             return f'python "{script.resolve()}"'
-        call = f'AgentToolSet.instantiate("{tool.toolset.registration_name}").{tool.name}()'
+        call = f'AgentToolSet.instantiate("{tool.registration_name}").{tool.name}()'
         code = f"from harness.agent_tools.agent_tools import AgentToolSet; print({call})"
         escaped = code.replace("\\", "\\\\").replace('"', '\\"')
         return f'python -c "{escaped}"'
@@ -237,19 +238,16 @@ class FileInstallation(Installation):
         return self.destination in {InstallDestination.SKILL, InstallDestination.COMMAND} and tool.kind == "tool" and not tool.install_to_mcp
 
     def _shell_invoke_line(self, tool: AgentTool) -> str:
-        return f"Run from the repository root with the Shell tool:\n\n```text\n{self._shell_command(tool)}\n```"
+        return f"{self._SHELL_INVOKE}\n\n```text\n{self._shell_command(tool)}\n```"
 
     def _fidelity_invoke_parts(self, toolset: Any) -> list[str]:
+        """One line for each fidelity a practice holds: its name and summary, then the MCP tool its instructions are
+        published as, written by that tool."""
         entries = getattr(getattr(toolset, "fidelities", None), "entries", None) or {}
         parts: list[str] = []
         for child in entries.values():
-            member = getattr(type(child), "instructions", None)
-            getter = getattr(member, "fget", member)
-            invoke = (
-                f"Use MCP tool: `{getattr(child, 'slug', '')}()`"
-                if annotation_kinds.annotated_for(InstallDestination.MCP, getter)
-                else ""
-            )
+            published = child.tools.get("instructions")
+            invoke = published.invoke_line() if published is not None and published.install_to_mcp else ""
             parts.append("\n\n".join(piece for piece in (self._fidelity_one_liner(child), invoke) if piece))
         return parts
 
@@ -262,19 +260,19 @@ class FileInstallation(Installation):
         return text
 
     def _install_reference(self, name: str, dest: Path) -> str:
-        """Copy one ``cdd_guidance/references`` file into ``<ide>/references``; return its link from ``dest``."""
-        repo = self.repo or Path(__file__).resolve().parents[2]
-        source = repo / "cdd_guidance" / "references" / name
+        """Copy one ``cdd_guidance/references`` file of the repository being installed into ``<ide>/references``; return
+        its link from ``dest``. An installation made for no repository has none to copy."""
+        source = self.repo / "cdd_guidance" / "references" / name if self.repo is not None else None
         target = Path(self.path) / "references" / name
-        if source.is_file():
+        if source is not None and source.is_file():
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
             self.track_write(target)
         return Path(os.path.relpath(target, dest.parent)).as_posix()
 
     def _skill_overview(self, toolset: Any, parts: list[str]) -> str:
-        raw = getattr(toolset, "overview", None)
-        source = raw.strip() if isinstance(raw, str) and raw.strip() else (parts[0] if parts else "")
+        overview = (toolset.overview or "").strip()
+        source = overview or (parts[0] if parts else "")
         return self._first_paragraph(self._without_mcp_invoke(source))
 
     def _first_paragraph(self, text: str) -> str:
@@ -286,13 +284,13 @@ class FileInstallation(Installation):
         lines: list[str] = []
         skip_shell_block = False
         for line in text.splitlines():
-            stripped = line.strip().lower()
+            stripped = line.strip().casefold()
             if skip_shell_block:
                 skip_shell_block = not stripped.startswith("```")
                 continue
-            if stripped.startswith("run from the repository root with the shell tool:"):
+            if stripped.startswith(self._SHELL_INVOKE.casefold()):
                 skip_shell_block = True
-            elif not stripped.startswith("use mcp tool:"):
+            elif not AgentTool.is_invoke_line(line):
                 lines.append(line)
         return "\n".join(lines).strip()
 

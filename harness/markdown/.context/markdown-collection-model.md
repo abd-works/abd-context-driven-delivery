@@ -40,9 +40,9 @@ from_section(markdown: Markdown, return_type, parent: Any = None) -> Any
 	# else from_markdown
 attach(instance: Any, name: str | None = None) -> None
 	# the owner keeps this same collection, so later reads return it
-markdown_collection(fn | label: str | None) -> property
-	# exported as markdownCollection
-	# getter -> Markdown.from_label
+markdownCollection(fn | label: str | None) -> property
+	# a module function, holding the label in the property it makes; no stand-in collection
+	# getter -> Markdown.held_by(owner, label)
 	# getter -> Markdown.read_into(return_type, MarkdownCollection.from_section)
 	# getter -> result.attach(owner, name)
 	# never Markdown.coerce

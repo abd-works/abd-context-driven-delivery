@@ -6,10 +6,12 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from expects import be_none, equal, expect, raise_error
-from mamba import description, it
+from expects import be, be_none, equal, expect, raise_error
+from mamba import before, description, it
 
 from harness.guidance.practice_catalogue import PracticeCatalogue, UnknownPractice
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 _STORIES = "cdd_guidance.practices.stories.stories:Stories"
 
@@ -38,3 +40,16 @@ with description("the practice catalogue"):
 
         with it("should name nothing for a slug no practice goes by"):
             expect(PracticeCatalogue.toolset_ref("astrology")).to(be_none)
+
+    with description("that makes a set of practices together"):
+        with before.all:
+            self.made = {practice.key: practice for practice in PracticeCatalogue.create_all()}
+            stories = self.made["stories"]
+            stories.work_at("acceptance_tests")
+            self.companion = stories.fidelities.current.clean_engineering
+
+        with it("should give a fidelity's companion from the Clean Engineering practice of the same set"):
+            expect(self.companion.practice_guidance).to(be(self.made["clean_engineering"]))
+
+        with it("should hold the practice an extending practice builds on from the same set"):
+            expect(self.made["ddd"].extended).to(be(self.made["clean_engineering"]))

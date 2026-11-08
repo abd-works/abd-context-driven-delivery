@@ -9,6 +9,7 @@ from harness.installation.destination import data_of  # noqa: E402
 from mamba import before, context, description, it
 
 from harness.graph.graph import Graph, Node, Source
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 
 def rule_on(node: dict, slug: str) -> dict:

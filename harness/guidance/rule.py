@@ -11,6 +11,7 @@ from harness.agent_tools.agent_tools import (
     collect,
     agent_toolset,
     instructions,
+    published_where_held,
 )
 from harness.annotations.annotation import hosted_only
 from harness.annotations.name import Name
@@ -158,6 +159,7 @@ class RulesCollection(MarkdownCollection):
         ```yaml settings, which say where they apply."""
         return MarkdownText(self.markdown or "").without_yaml
 
+    @published_where_held
     @hook("postToolUse", disabled=True)
     def inject_rules(self, payload: HookPayload) -> dict[str, Any]:
         """The rules that apply to the file the agent just edited, as context for its next step. The session notes
@@ -375,42 +377,6 @@ class RulesCollection(MarkdownCollection):
         for rule in self:
             lines.append(f"- **{rule.slug}** — {rule.body}")
         return "\n".join(lines)
-
-    @property
-    @agent_instructions
-    def markdown_block(self) -> str:
-        """Original Rules markdown for the practice and the active fidelity.
-
-        Evaluate the sketch against this block as an AI check — not a graph query.
-        """
-        return self._original_rules_markdown()
-
-    def _original_rules_markdown(self) -> str:
-        chunks: list[str] = []
-        seen: set[str] = set()
-        practice = self._owner_practice()
-        if practice is not None:
-            self._append_original_markdown(
-                chunks, seen, getattr(getattr(practice, "rules", None), "markdown", "")
-            )
-            current = getattr(getattr(practice, "fidelities", None), "current", None)
-            if current is not None:
-                self._append_original_markdown(
-                    chunks,
-                    seen,
-                    getattr(getattr(current, "rules", None), "markdown", ""),
-                )
-        self._append_original_markdown(chunks, seen, self.markdown)
-        return "\n\n".join(chunks)
-
-    def _append_original_markdown(
-        self, chunks: list[str], seen: set[str], text: str | None
-    ) -> None:
-        block = (text or "").strip()
-        if not block or block in seen:
-            return
-        seen.add(block)
-        chunks.append(block)
 
     @collect
     def validate(self) -> str: ...

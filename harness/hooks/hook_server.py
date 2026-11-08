@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 # What loading a toolset by its ``module:Class`` reference raises when the reference is wrong or the class cannot be
 # made: a malformed reference, a missing module or class, a class that is no toolset, or a constructor it cannot call.
-_TOOLSET_LOAD_FAILURES = (ImportError, AttributeError, TypeError, ValueError)
 
 
 class HookPayload(Mapping[str, Any]):
@@ -273,6 +272,9 @@ class HookHandler:
     def __init__(self, tool: AgentTool, repo_root: Path) -> None:
         self.tool = tool
         self.repo_root = repo_root
+        # The project configuration of each folder an event's edits fall under, made the first time that folder is
+        # asked about and kept; each read of a guideline still reads the file, so a change to it holds at once.
+        self._configs: dict[Path, ContextConfig] = {}
 
     @property
     def label(self) -> str:
@@ -327,12 +329,17 @@ class HookHandler:
 
     def _context_parents(self, edited: Path) -> list[Path]:
         for parent in edited.resolve().parents:
-            if ContextConfig(parent).exists():
+            if self._config_of(parent).exists():
                 return [parent]
         return []
 
     def _guideline_value(self, root: Path, pattern: str) -> str:
-        return ContextConfig(root).guideline(pattern)
+        return self._config_of(root).guideline(pattern)
+
+    def _config_of(self, root: Path) -> ContextConfig:
+        if root not in self._configs:
+            self._configs[root] = ContextConfig(root)
+        return self._configs[root]
 
     def invoke(self, payload: HookPayload) -> HookResult:
         raw = self.tool.callable(payload)
@@ -359,7 +366,7 @@ class HandlerCatalog:
         for item in items:
             try:
                 loaded = AgentToolSet.from_items([item])
-            except _TOOLSET_LOAD_FAILURES as error:
+            except AgentToolSet.LOAD_FAILURES as error:
                 self.failures.append((self.ref_label(item), error))
                 continue
             self.toolsets.extend(
@@ -374,7 +381,7 @@ class HandlerCatalog:
         registration = getattr(item, "registration_name", None)
         if isinstance(registration, str) and registration:
             return registration
-        return ToolsetReference.from_class(item if isinstance(item, type) else type(item)).text
+        return str(ToolsetReference.of(item if isinstance(item, type) else type(item)))
 
     @property
     def event_names(self) -> list[str]:

@@ -11,18 +11,26 @@ import textwrap
 import types
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Mapping, cast, get_type_hints
+from typing import Any, Callable, ClassVar, Mapping, get_type_hints
 
 from harness.annotations.name import Name
 from harness.agent_tools.parameter_schema import ParameterSchema
 from harness.agent_tools.tool_call import ToolCall
 from harness.markdown.markdown import Markdown, MarkdownCollection, OperationProperty
 from harness.annotations.annotation import Annotation, annotation_kinds
-from harness.agent_tools.sub_agent.annotation import SubAgentAnnotation
 from harness.agent_tools.recipe import ExpansionMode, ExpansionResult, RecipeExpansion, RecipePlaceholders, RecipeSource
 
 ContextDocument = dict[str, Any]
 ArgumentDocument = dict[str, Any]
+SUB_AGENT_CALLER_PREAMBLE = """Hand work to a background sub-agent and continue without waiting.
+
+Do not perform the delegated work in this conversation. Do not wait for the
+sub-agent to finish.
+
+Launch the Task tool with run_in_background true and subagent_type
+generalPurpose. Pass the instructions below as the task prompt.
+
+Tell the user you launched a non-blocking sub-agent and summarize what you delegated."""
 # A `@tool_subject` loader or a class tool that takes this argument is handed the checkout of the project its call works
 # on. No caller passes it, so it is not one of the tool's arguments.
 CALLED_PROJECT = "project"
@@ -58,8 +66,63 @@ class AgentToolValidationError(Exception):
         self.lineno = lineno
 
 
-class ToolSetCollection:
-    """Named child toolsets, iterated in entry order. The collection itself may have tools."""
+class AgentToolSetOrigin:
+    """Where a toolset lives and what it is called."""
+
+    domain_slug: str | None = None
+
+    @property
+    def name(self) -> str:
+        stored = getattr(self, "_name", None)
+        if isinstance(stored, str) and stored:
+            return stored
+        return Name(type(self).__name__).snake
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._name = value
+
+    @property
+    def slug(self) -> str:
+        return Name(self.domain_slug or type(self).__name__).kebab
+
+    @property
+    def install_folder(self) -> Path:
+        try:
+            return Path(inspect.getfile(type(self))).resolve().parent
+        except (TypeError, OSError):
+            return Path(self.slug)
+
+    @property
+    def registration_name(self) -> str:
+        """The ``module:Class`` reference configuration and the installer name this toolset by."""
+        return str(ToolsetReference.of(type(self)))
+
+    @property
+    def description(self) -> str:
+        return (self.__class__.__doc__ or "").strip()
+
+    @property
+    def overview(self) -> str:
+        """What this toolset is for, which its ``instructions`` tool is described by when its docstring says nothing;
+        none unless the toolset says."""
+        return ""
+
+    @property
+    def session_context(self) -> str:
+        """What an agent following one of this toolset's instructions needs to know about the session it works in,
+        added after the instructions; none for a toolset that works in no session."""
+        return ""
+
+    @functools.cached_property
+    def class_markdown(self) -> Markdown:
+        """The markdown beside this toolset's class, which expands a tool's one-word description into its section."""
+        return Markdown.from_label(self, "")
+
+
+class ToolSetCollection(AgentToolSetOrigin):
+    """Named child toolsets, iterated in entry order. The collection itself may have tools, and it is named and found
+    the way a toolset is."""
 
     def __init__(self, entries: dict[str, Any] | None = None, parent: Any = None) -> None:
         self.entries: dict[str, Any] = dict(entries or {})
@@ -73,18 +136,6 @@ class ToolSetCollection:
 
     def __bool__(self) -> bool:
         return bool(self.entries)
-
-    @property
-    def name(self) -> str:
-        return Name(type(self).__name__).snake
-
-    @property
-    def slug(self) -> str:
-        return Name(self.name).kebab
-
-    @property
-    def registration_name(self) -> str:
-        return ToolsetReference.from_class(type(self)).text
 
     def attach(self, instance: Any, name: str | None = None) -> None:
         MarkdownCollection.attach(self, instance, name)
@@ -242,9 +293,9 @@ class ToolsetMembers:
 
 class ToolsetReference:
     """A toolset named the way configuration and the installer name it: ``<module>:<Class>``. A module whose folder
-    names use hyphens on disk, such as ``agent-bdd``, is found by its underscored name too."""
-
-    _SEARCH_FOLDERS = ("harness", "tools", "cdd_guidance/practices", "cdd_guidance/actions", "cdd_guidance/builders")
+    names use hyphens on disk, such as ``agent-bdd``, is found by its underscored name too, under each folder on the
+    import path: the repository's toolsets put their checkout's import folders there, so this reference searches the
+    same folders the installer and the servers load from."""
 
     def __init__(self, reference: str) -> None:
         self._module_name, _, self._class_name = reference.partition(":")
@@ -253,14 +304,16 @@ class ToolsetReference:
         self._reference = reference
 
     @classmethod
-    def from_class(cls, toolset_class: type) -> "ToolsetReference":
-        """The reference that names toolset_class: its module's full name and its own, ``<module>:<Class>``. Every
-        ``module:Class`` CDD writes is made here."""
-        return cls(f"{toolset_class.__module__}:{toolset_class.__name__}")
+    def of(cls, toolset_class: type) -> ToolsetReference:
+        """The reference that names toolset_class: its module's full name and its own."""
+        return cls.in_module(toolset_class.__module__, toolset_class.__name__)
 
-    @property
-    def text(self) -> str:
-        """The reference as configuration and the installer write it, ``<module>:<Class>``."""
+    @classmethod
+    def in_module(cls, module: str, class_name: str) -> ToolsetReference:
+        """The reference to the class class_name defined in module, named the one way references are written."""
+        return cls(f"{module}:{class_name}")
+
+    def __str__(self) -> str:
         return self._reference
 
     @property
@@ -289,8 +342,7 @@ class ToolsetReference:
         return module
 
     def _module_file(self) -> Path:
-        repository = Path(__file__).resolve().parents[2]
-        roots = [repository, *(repository / folder for folder in self._SEARCH_FOLDERS)]
+        roots = [Path(entry or ".") for entry in sys.path]
         for root in roots:
             located = self._file_under(root, self._module_name.split("."))
             if located is not None:
@@ -418,52 +470,17 @@ class _RecipeLinesValidator(ast.NodeVisitor):
         raise AgentToolValidationError(message, class_name=self._class_name, action_name=self._action_name)
 
 
-class AgentToolSetOrigin:
-    """Where a toolset lives and what it is called."""
-
-    domain_slug: str | None = None
-
-    @property
-    def name(self) -> str:
-        stored = getattr(self, "_name", None)
-        if isinstance(stored, str) and stored:
-            return stored
-        return Name(type(self).__name__).snake
-
-    @name.setter
-    def name(self, value: str) -> None:
-        self._name = value
-
-    @property
-    def slug(self) -> str:
-        return Name(self.domain_slug or type(self).__name__).kebab
-
-    @property
-    def install_folder(self) -> Path:
-        try:
-            return Path(inspect.getfile(type(self))).resolve().parent
-        except (TypeError, OSError):
-            return Path(self.slug)
-
-    @property
-    def registration_name(self) -> str:
-        return ToolsetReference.from_class(type(self)).text
-
-    @property
-    def description(self) -> str:
-        return (self.__class__.__doc__ or "").strip()
-
-    @functools.cached_property
-    def class_markdown(self) -> Markdown:
-        """The markdown beside this toolset's class, which expands a tool's one-word description into its section."""
-        return Markdown.from_label(self, "")
-
-
 class AgentToolSet(AgentToolSetOrigin):
     """Injected by @agent_toolset — the operations, instructions, and nested collections of one toolset as the tools it
     publishes."""
 
     _mode: str = "instructions"
+    LOAD_FAILURES: ClassVar[tuple[type[BaseException], ...]] = (
+        ImportError, SyntaxError, NameError, AttributeError, TypeError, ValueError, LookupError, OSError
+    )
+    """What making or reading a toolset raises when its code cannot be loaded, such as a module that does not import or
+    a constructor that needs more than configuration gives it. A server that loads every toolset skips one that raises
+    these, names it, and serves the rest."""
     parameter_notes: ClassVar[dict[str, str]] = {}
     """What an agent reads about a parameter, by its name, after the description of every tool on this toolset that
     takes it; a guidance action explains its ``guidance`` parameter this way."""
@@ -508,10 +525,6 @@ class AgentToolSet(AgentToolSetOrigin):
             toolset = cls.instantiate({"toolset": item, "context": dict(context)} if isinstance(item, str) and context is not None else item)
             made.setdefault(type(toolset), toolset)
         return list(made.values())
-
-    @classmethod
-    def instantiate_all(cls, items: list) -> list:
-        return [cls.instantiate(item) for item in items]
 
     @classmethod
     def _made(cls, toolset: type, context: dict[str, Any]) -> Any:
@@ -654,7 +667,7 @@ class AgentToolSet(AgentToolSetOrigin):
     def _rehost_collection_tools(self, collection: Any, prefix: str) -> dict[str, AgentTool]:
         found: dict[str, AgentTool] = {}
         for name, tool in (getattr(collection, "tools", None) or {}).items():
-            if prefix and name == "inject_rules":
+            if prefix and PublishedWhereHeld.annotates(tool.callable):
                 continue
             found[f"{prefix}{name}"] = AgentTool(
                 name=name,
@@ -802,6 +815,21 @@ class AgentTool(AgentToolDestination):
     toolset: AgentToolSet
     _body: str | None = field(default=None, repr=False)
 
+    # The line a skill or command ends with to tell the agent which MCP tool runs it. A tool writes it, and the
+    # installer reads the tool names back from installed files, so both go through here.
+    INVOKE_PREFIX: ClassVar[str] = "Use MCP tool:"
+    _INVOKED_NAME: ClassVar[re.Pattern[str]] = re.compile(r"Use MCP tool:\s*`([A-Za-z0-9_.-]+)")
+
+    @classmethod
+    def invoked_names(cls, text: str) -> list[str]:
+        """The MCP tool each ``Use MCP tool:`` line in text names."""
+        return cls._INVOKED_NAME.findall(text)
+
+    @classmethod
+    def is_invoke_line(cls, line: str) -> bool:
+        """Whether line is a ``Use MCP tool:`` line."""
+        return line.strip().casefold().startswith(cls.INVOKE_PREFIX.casefold())
+
     @property
     def slug(self) -> str:
         return self.toolset.slug
@@ -834,7 +862,7 @@ class AgentTool(AgentToolDestination):
             suffix = str(params)
         except (TypeError, ValueError):
             suffix = "()"
-        return f"Use MCP tool: `{self.mcp_name}{suffix}`"
+        return f"{self.INVOKE_PREFIX} `{self.mcp_name}{suffix}`"
 
     @functools.cached_property
     def parameter_schema(self) -> ParameterSchema:
@@ -935,20 +963,10 @@ class AgentTool(AgentToolDestination):
         expanded = self.toolset.class_markdown.expand_docstring(self.docstring)
         if expanded:
             return expanded
-        if self.name == "instructions":
-            overview = getattr(self.toolset, "overview", None)
-            if callable(overview):
-                overview = overview()
-            if isinstance(overview, str) and overview.strip():
-                return overview.strip()
+        if self.name == "instructions" and (self.toolset.overview or "").strip():
+            return self.toolset.overview.strip()
         return self.docstring or self.callable.__name__
 
-    @property
-    def parameters(self) -> list[str]:
-        """The names of the arguments a caller passes, in order; their types are ParameterSchema's to say."""
-        signature = inspect.signature(self.callable)
-        skipped = (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
-        return [name for name, param in signature.parameters.items() if name not in ("self", "cls") and param.kind not in skipped]
 
 @dataclass
 class AgentOperation(AgentTool):
@@ -1014,7 +1032,7 @@ class AgentInstructions(AgentTool):
             body = f"{doc}\n\n{body}".strip() if body else doc
         reply = body or self.description or doc
         # An action that works in a session says which one, so the agent knows its folders without looking for them.
-        session = getattr(toolset, "session_context", "")
+        session = toolset.session_context
         return f"{reply}\n\n{session}" if session else reply
 
     @functools.cached_property
@@ -1035,7 +1053,7 @@ class AgentInstructions(AgentTool):
         """The recipe expanded for one call's arguments: its instructions, the tools it names, and its result line,
         with every placeholder filled."""
         expansion = RecipeExpansion(self, arguments).run()
-        placeholders = RecipePlaceholders(arguments, set(self.parameters), self.toolset)
+        placeholders = RecipePlaceholders(arguments, set(self.parameter_schema.names), self.toolset)
         lines = (placeholders.filled(part) for part in expansion.prompt)
         instructions = "\n\n".join(line for line in lines if line.strip())
         return ExpansionResult(
@@ -1190,6 +1208,31 @@ class ToolSetCollectionAnnotation(_ClassJoiningAnnotation):
         return target
 
 
+class PublishedWhereHeld(Annotation):
+    """A collection's tool that only the toolset holding the collection itself publishes: a toolset that reaches the
+    collection through one of its child toolsets, as a practice reaches each fidelity's rules, does not publish it as
+    its own. A practice's rule injection serves its shared rules this way, and each fidelity's rules are not injected
+    a second time through the practice."""
+
+    flag = "_published_where_held"
+    copied = False
+
+
+class SubAgentAnnotation(Annotation):
+    """Annotate an @agent_tool or @agent_instructions member for non-blocking sub-agent launch: its description starts with
+    the hand-off to a background sub-agent. The ``sub-agent.sub_agent`` operation itself is the SubAgent toolset in
+    tools/sub_agent."""
+
+    flag = "_sub_agent"
+
+    @classmethod
+    def with_hand_off(cls, text: str) -> str:
+        """text with the hand-off to a background sub-agent in front of it."""
+        preamble = SUB_AGENT_CALLER_PREAMBLE.strip()
+        body = (text or "").strip()
+        return f"{preamble}\n\n{body}" if body else preamble
+
+
 class NoSessionLog(Annotation):
     """Keep an operation's calls out of the session log. Use it on reads an agent or a mod repeats often, such as the
     session board, so the log keeps the work that was done rather than every look at it."""
@@ -1226,6 +1269,8 @@ class TakesCalledProject(Annotation):
 
 
 noSessionLog = NoSessionLog
+subAgent = SubAgentAnnotation()
+published_where_held = PublishedWhereHeld
 tool_subject = ToolSubject
 
 

@@ -11,13 +11,10 @@ from __future__ import annotations
 
 import re
 from functools import cached_property, lru_cache
-from pathlib import Path
 
 from harness.graph.graph import EdgeType
 from harness.guidance.schema import Schema
 from harness.annotations.name import Name
-
-_ROOT = Path(__file__).resolve().parents[2]
 
 # Child-list edges. A model object's child list records these itself.
 _CHILD_LISTS = frozenset(
@@ -117,13 +114,13 @@ class SchemaFields:
     @classmethod
     @lru_cache(maxsize=1)
     def load(cls) -> SchemaFields:
+        from harness.graph.pattern_overlays import PatternOverlays
         from harness.guidance.practice_catalogue import PracticeCatalogue
 
-        paths = [_ROOT / "cdd_guidance" / "practices" / practice / "model" / "schema.yaml" for practice in PracticeCatalogue.keys()]
-        patterns = _ROOT / "cdd_guidance" / "patterns"
-        if patterns.is_dir():
-            paths.extend(sorted(patterns.glob("*/practices/*/model/schema.yaml")))
-        return cls(tuple(field for path in paths for field in cls._fields_of(Schema.load(path))))
+        schemas = [practice.schema_types for practice in PracticeCatalogue.practices()]
+        for folder in PatternOverlays().pattern_folders:
+            schemas.extend(Schema.load(path) for path in sorted(folder.glob("practices/*/model/schema.yaml")))
+        return cls(tuple(field for schema in schemas for field in cls._fields_of(schema)))
 
     def inverses(self, owner_type: str, target_type: str, forward: str) -> list[str]:
         """The relationships owner_type names back to target_type, other than forward and the child lists."""
