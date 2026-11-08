@@ -52,7 +52,7 @@ class GrillContext(GuidanceAction):
         Returns a JSON array of {path, kind} where kind is 'context-named' or 'context-folder'.
         folder: a folder the plan names, from the project's root or absolute. Omit it to scan the session's root."""
         results: list[dict] = []
-        root_path = self.path_named(folder) if folder else self.session.root
+        root_path = self.path_named(folder) if folder else self.session.work_root
         if not root_path.exists():
             return json.dumps([])
         for candidate in self._files_under(root_path):

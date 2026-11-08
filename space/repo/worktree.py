@@ -42,12 +42,12 @@ class Worktree:
 
     __slots__ = ("path", "_branch_name", "_branch", "_worktrees", "_repository", "sync_failure")
 
-    def __init__(self, worktrees: Worktrees, path: Path | str, branch_name: str, *, repository: Repo | None = None) -> None:
+    def __init__(self, worktrees: Worktrees, path: Path | str, branch_name: str) -> None:
         self._worktrees = worktrees
         self.path = Path(path).resolve()
         self._branch_name = (branch_name or "").strip()
         self._branch: Branch | None = None
-        self._repository = repository
+        self._repository: Repo | None = None
         # Why the last fetch or pull from origin failed; empty while this checkout is up to date with origin.
         self.sync_failure = ""
 
@@ -65,7 +65,7 @@ class Worktree:
     @property
     def repository(self) -> Repo:
         if self._repository is None:
-            self._repository = _repo_at(self.path)
+            self._repository = self._worktrees.repository_at(self.path)
         return self._repository
 
     @property
@@ -104,6 +104,10 @@ class Worktrees:
 
     def __init__(self, repo: Repo) -> None:
         self._repo = repo
+
+    def repository_at(self, folder: Path) -> Repo:
+        """The repository as checked out at folder, one of these checkouts: the main clone's own when folder is its."""
+        return self._repo if folder == self._repo.root else self._repo.checkout_at(folder)
 
     def __iter__(self) -> Iterator[Worktree]:
         listing = self._repo.git.run("worktree", "list", "--porcelain")
@@ -172,7 +176,7 @@ class Worktrees:
     def _listed(self, folder: Path, branch_name: str) -> Worktree:
         """The checkout at folder with branch_name checked out; the main clone's repository is the one held here."""
         path = Path(folder).resolve()
-        return Worktree(self, path, branch_name, repository=self._repo if path == self._repo.root else None)
+        return Worktree(self, path, branch_name)
 
     def remove(self, worktree: Worktree) -> None:
         """Remove worktree's folder and forget it, forcing the folder away when git cannot delete a locked checkout.
@@ -231,9 +235,4 @@ class Worktrees:
             logger.info("powershell Remove-Item failed for %s: %s", target, exc)
 
 
-def _repo_at(folder: Path | str) -> Repo:
-    # WHY: space.repo.repo builds its Worktrees from this module, so Repo is imported when a checkout is first read.
-    from space.repo.repo import Repo
-
-    return Repo(folder)
 

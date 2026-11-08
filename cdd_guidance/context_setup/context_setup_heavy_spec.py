@@ -120,7 +120,7 @@ class SpecFixture:
         """A ContextSetup made for a call on a throwaway project, as the cdd server makes one for each call, so the
         partition it hands documents to works in the session open in that project."""
         call = ToolCall(project=ThrowawayProject().root)
-        self.session_root = call.session.root
+        self.session_root = call.session.work_root
         return ContextSetup().for_call(call)
 
     def instructions_for(self, cs: ContextSetup, name: str) -> AgentInstructions:

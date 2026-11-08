@@ -19,7 +19,12 @@ def violations_from_graph_json_file(path: Path, practices: list[str] | None = No
         return SavedGraph.from_document(raw, str(path)).violations(practices)
     if not isinstance(raw, list):
         raise ValueError(f"graph JSON must be a list of nodes or a saved graph document: {path}")
-    return [violation for node in raw if not practices or node.get("practice") in practices for violation in _violations_from_node(node)]
+    return violations_from_nodes(raw, practices)
+
+
+def violations_from_nodes(nodes: list[dict[str, Any]], practices: list[str] | None = None) -> list[Violation]:
+    """The violations on a ``graph.return_nodes`` node list; with practices, only those found by those practices."""
+    return [violation for node in nodes if not practices or node.get("practice") in practices for violation in _violations_from_node(node)]
 
 
 def violations_from_graph_json_files(paths: list[Path], practices: list[str] | None = None) -> list[Violation]:

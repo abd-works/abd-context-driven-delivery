@@ -852,6 +852,20 @@ class Graph:
             for practice in self._held.values():
                 self._open_practice(practice, folder)
 
+    def open_saved(self, folder: Path) -> None:
+        """Open this graph on folder, then read back the graph saved in its ``.context`` when there is one, each saved
+        practice on the source root it was read from, and run its rules: a session opened again shows what was loaded
+        in it before. A folder with nothing saved opens holding no node until a load reads it."""
+        self.open(folder)
+        with self._changing:
+            saved = self._saved_file().read()
+            if saved is None:
+                return
+            self.overlays = list(saved.overlays)
+            kept = {key: practice for key, practice in saved.practices.items() if key in self._held}
+            self._choose_roots({key: Path(practice.source_root) if practice.source_root else folder for key, practice in kept.items()})
+            self._load_saved(saved)
+
     def report_progress(self, message: str) -> None:
         """Tell whoever called the running tool which practice, file, node, or rule is in progress."""
         report_progress(message)

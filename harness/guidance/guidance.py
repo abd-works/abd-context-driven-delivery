@@ -766,7 +766,7 @@ class PracticeGuidance(Guidance):
     def _context_root(self, tool: Any) -> Path:
         """The folder tool's code is read from: the root of the session it works in."""
         session = getattr(tool, "session", None)
-        return session.root if session is not None else Path(".")
+        return session.work_root if session is not None else Path(".")
 
     def _code_tree(self, root: Path, adapter: Any) -> dict[str, str]:
         extension = getattr(adapter, "LEAF_EXTENSION", "") or ""

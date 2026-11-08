@@ -138,7 +138,7 @@ class Ticket(Card):
     @cached_property
     def _progress(self) -> list[FidelityProgress]:
         entries = self._session.log.entries
-        return [FidelityProgress.from_log(self._own(fidelity), stage, entries, self) for stage in self._stages for fidelity in stage.work_required]
+        return [FidelityProgress.from_log(fidelity, stage, entries, self) for stage in self._stages for fidelity in self._required_in(stage)]
 
     def record(self, line: str) -> Ticket:
         """Write line to its session's log; its progress is read from the log again next time it is asked for."""
@@ -146,19 +146,19 @@ class Ticket(Card):
         self.__dict__.pop("_progress", None)
         return self
 
-    def _own(self, fidelity: FidelityGuidance) -> FidelityGuidance:
-        """fidelity as this ticket's session holds it: one object per fidelity in a session, which finds its own files
-        and reports there and is the one an action on it works with."""
-        return self._session.practices[fidelity.practice_guidance.key].fidelities[fidelity.name]
+    def _required_in(self, stage: Stage) -> list[FidelityGuidance]:
+        """Every fidelity stage requires, in practice order, as this ticket's session holds it: one object per fidelity
+        in a session, which finds its own files and reports there and is the one an action on it works with."""
+        return [fidelity for practice in self._session.practices.values() for fidelity in practice.fidelities if stage.requires(fidelity)]
 
     def progress_of(self, slug: str) -> FidelityProgress:
         """The progress of the fidelity slug names, such as stories-story-map. Only that fidelity's progress is read,
         because a tool that names one fidelity needs no other's reports."""
-        found = next(((fidelity, stage) for stage in self._stages for fidelity in stage.work_required if fidelity.slug == slug), None)
+        found = next(((fidelity, stage) for stage in self._stages for fidelity in self._required_in(stage) if fidelity.slug == slug), None)
         if found is None:
             raise FidelityNotFoundError(slug, f"ticket {self.name!r}")
         fidelity, stage = found
-        return FidelityProgress.from_log(self._own(fidelity), stage, self._session.log.entries, self)
+        return FidelityProgress.from_log(fidelity, stage, self._session.log.entries, self)
 
     @property
     @data_field(reference=True)
@@ -393,11 +393,9 @@ class Ticket(Card):
     def _return_to_backlog(self) -> BacklogItem:
         """Into the Backlog from any column: its session closes and its whole folder becomes a backlog item, so starting
         the item brings the ticket back with its work."""
-        from space.kanban.backlog_item import BacklogItem
-
         self._session.close()
         kept_in_backlog = self._board.ticket_of(self._session.move_to_backlog())
-        item = BacklogItem.from_ticket(kept_in_backlog)
+        item = self._board.backlog_item_of(kept_in_backlog)
         item.write_if_missing(kept_in_backlog.title)
         return item
 
