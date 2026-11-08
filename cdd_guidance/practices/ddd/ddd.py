@@ -81,10 +81,10 @@ class Ddd(PracticeGuidance):
 
     def _parse_content(self, source_format: str, content):
         """A text the map reads as a plain class model, with no aggregate in it, is read by the Clean Engineering
-        practice this practice's fidelity has as its companion, through that practice's own adapter."""
+        practice of this practice's set, the one it extends, through that practice's own adapter."""
         parsed = super()._parse_content(source_format, content)
         if isinstance(parsed, BoundedContextMap) and parsed.holds_classes_only:
-            return self.clean_engineering_companion.practice_guidance._parse_content(source_format, content)
+            return self.companion_practice()._parse_content(source_format, content)
         return parsed
 
     def _model_for(self, target, parsed):
