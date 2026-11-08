@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from cdd_guidance.actions.sketch.discovery_document import DiscoveryDocument
+from cdd_guidance.practices.sketch_document.discovery_document import DiscoveryDocument
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType
 from cdd_guidance.practices.stories.model.story_model import Background, StepType, Scenario, Step

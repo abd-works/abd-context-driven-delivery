@@ -11,7 +11,7 @@ from harness.graph.graph import Graph, Node, Source
 from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.skipped_folders import scanned_files
 
-from cdd_guidance.patterns.lern_domain_driven.tier_facts import AggregateFolder, TierFile, test_setup_text
+from cdd_guidance.patterns.lern_domain_driven.tier_facts import AggregateFolder, TierFile
 
 _VIEW_EXPORT = re.compile(r"export\s+function\s+(\w+View)\s*\(")
 _CONTEXT_ARROW = re.compile(r"^[\s\-*>]*(.+?)\s*→\s*(.+?)\s*$")
@@ -42,16 +42,6 @@ class LernOverlay(GraphOverlay):
         _LernReading(self, graph, Path(graph.folder)).read()
 
 
-def _file_node(practice, relative: str, semantic: str, name: str = "") -> Node:
-    """The node for one tier file of practice, made the first time a tier names it."""
-    graph = practice.graph
-    node_id = f"{practice.key}:{semantic}:{relative}"
-    existing = graph.node(node_id)
-    if existing is not None:
-        return existing
-    return practice.in_graph.add_named(semantic, node_id, name or Path(relative).stem, Source.whole_file(relative, practice.in_graph.source_root))
-
-
 class _LernReading:
     """One read of the LERN tiers of a working copy onto the practices the graph holds."""
 
@@ -73,7 +63,7 @@ class _LernReading:
         if ddd is None or self.stories is None:
             return
         self.ddd = ddd
-        self.setup_text = test_setup_text(self.root, self.overlay.pattern.story_test_folder)
+        self.setup_text = self.overlay.pattern.test_setup_text(self.root)
         self._context_mappings()
         self._tier_folders()
         aggregates = {node.source.file.replace("\\", "/"): node for node in self.ddd.in_graph.nodes("Aggregate")}
@@ -92,7 +82,7 @@ class _LernReading:
             semantic = _BEHAVIOR_TIERS.get(".".join(file.name.split(".")[1:]))
             if semantic is not None:
                 behavior = TierFile.at(self.root, file)
-                node = _file_node(bdd, behavior.relative, semantic, file.name)
+                node = self._file_node(bdd, behavior.relative, semantic, file.name)
                 for key, value in behavior.behavior_facts().items():
                     node.set_fact(key, value)
 
@@ -106,12 +96,12 @@ class _LernReading:
 
     def _aggregate(self, folder: str, aggregate: Node) -> None:
         slug = Path(folder).name
-        tiers = {semantic: _file_node(self.ddd, f"{folder}/{name.format(slug=slug)}", semantic) for name, semantic in _TIER_FILES if (self.root / folder / name.format(slug=slug)).is_file()}
+        tiers = {semantic: self._file_node(self.ddd, f"{folder}/{name.format(slug=slug)}", semantic) for name, semantic in _TIER_FILES if (self.root / folder / name.format(slug=slug)).is_file()}
         for tier in tiers.values():
             self._link("owns", aggregate, tier)
         self._other_node_files(folder, slug, aggregate)
-        roots = [node for node in self.ddd.in_graph.nodes("EntityRoot") if _folder_of(node.source.file) == folder]
-        repositories = [node for node in self.ddd.in_graph.nodes("Repository") if _folder_of(node.source.file) == folder]
+        roots = [node for node in self.ddd.in_graph.nodes("EntityRoot") if self._folder_of(node.source.file) == folder]
+        repositories = [node for node in self.ddd.in_graph.nodes("Repository") if self._folder_of(node.source.file) == folder]
         self._tier_facts(folder, aggregate, tiers, repositories)
         self._link_tiers(tiers, roots, repositories)
         views = self._views(folder, slug, aggregate, tiers.get("ClientRoot"), repositories[0] if repositories else None)
@@ -158,16 +148,16 @@ class _LernReading:
         folder_path = self.root / folder
         for file in sorted(folder_path.glob("*-node.ts")) if folder_path.is_dir() else []:
             if file.name != f"{slug}-node.ts":
-                self._link("owns", aggregate, _file_node(self.ddd, file.relative_to(self.root).as_posix(), "NodeRoot"))
+                self._link("owns", aggregate, self._file_node(self.ddd, file.relative_to(self.root).as_posix(), "NodeRoot"))
 
     def _views(self, folder: str, slug: str, aggregate: Node, client_root: Node | None, repository: Node | None) -> list[Node]:
         views = []
         folder_path = self.root / folder
         for file in sorted(folder_path.glob("*.tsx")) if folder_path.is_dir() else []:
-            match = _VIEW_EXPORT.search(file.read_text(encoding="utf-8")) if _is_view_file(file.name, slug) else None
+            match = _VIEW_EXPORT.search(file.read_text(encoding="utf-8")) if self._is_view_file(file.name, slug) else None
             if match is None:
                 continue
-            view = _file_node(self.ddd, file.relative_to(self.root).as_posix(), "View", match.group(1))
+            view = self._file_node(self.ddd, file.relative_to(self.root).as_posix(), "View", match.group(1))
             views.append(view)
             self._link("view", aggregate, view)
             if client_root is not None:
@@ -208,11 +198,11 @@ class _LernReading:
     def _story_files(self) -> None:
         stories = self.stories
         for file in scanned_files(self.root):
-            semantic = _story_semantic(file)
+            semantic = self._story_semantic(file)
             if semantic is None:
                 continue
             story = TierFile.at(self.root, file)
-            node = _file_node(stories, story.relative, semantic, file.name)
+            node = self._file_node(stories, story.relative, semantic, file.name)
             parent = self._parent_story_scope(story.relative)
             if parent is not None:
                 self._link("owns", parent, node)
@@ -224,36 +214,39 @@ class _LernReading:
         rel = relative.replace("\\", "/")
         epics = [node for node in self.stories.in_graph.nodes() if node.type in {"Epic", "SubEpic"}]
         holding = [
-            (len(_folder_of(node.source.file)), node)
+            (len(self._folder_of(node.source.file)), node)
             for node in epics
-            if node.source.file and (rel == _folder_of(node.source.file) or rel.startswith(f"{_folder_of(node.source.file)}/"))
+            if node.source.file and (rel == self._folder_of(node.source.file) or rel.startswith(f"{self._folder_of(node.source.file)}/"))
         ]
         if holding:
             return max(holding, key=lambda item: item[0])[1]
         parent_name = Path(rel).parent.name.replace("_", "-")
         return next((node for node in epics if node.name.replace("_", "-") == parent_name), None)
 
+    def _file_node(self, practice, relative: str, semantic: str, name: str = "") -> Node:
+        """The node for one tier file of practice, made the first time a tier names it."""
+        graph = practice.graph
+        node_id = f"{practice.key}:{semantic}:{relative}"
+        existing = graph.node(node_id)
+        if existing is not None:
+            return existing
+        return practice.in_graph.add_named(semantic, node_id, name or Path(relative).stem, Source.whole_file(relative, practice.in_graph.source_root))
 
-def _is_view_file(filename: str, slug: str) -> bool:
-    if filename == f"{slug}-client.tsx" or not filename.endswith(".tsx"):
-        return False
-    return not any(filename.endswith(f"{suffix}.tsx") for suffix in _VIEW_SKIP_SUFFIXES)
+    def _is_view_file(self, filename: str, slug: str) -> bool:
+        if filename == f"{slug}-client.tsx" or not filename.endswith(".tsx"):
+            return False
+        return not any(filename.endswith(f"{suffix}.tsx") for suffix in _VIEW_SKIP_SUFFIXES)
 
+    def _story_semantic(self, file: Path) -> str | None:
+        if file.name.endswith(".story.shared.ts"):
+            return "StoryShared"
+        if file.name.endswith(".story.server.spec.ts"):
+            return "ServerSpec"
+        if file.name.endswith(".story.domain.spec.ts"):
+            return "DomainSpec"
+        if "playwright" in file.name and file.suffix == ".ts":
+            return "PlaywrightSpec"
+        return None
 
-def _story_semantic(file: Path) -> str | None:
-    if file.name.endswith(".story.shared.ts"):
-        return "StoryShared"
-    if file.name.endswith(".story.server.spec.ts"):
-        return "ServerSpec"
-    if file.name.endswith(".story.domain.spec.ts"):
-        return "DomainSpec"
-    if "playwright" in file.name and file.suffix == ".ts":
-        return "PlaywrightSpec"
-    return None
-
-
-def _folder_of(file_path: str) -> str:
-    return str(Path(file_path).parent).replace("\\", "/")
-
-
-
+    def _folder_of(self, file_path: str) -> str:
+        return str(Path(file_path).parent).replace("\\", "/")

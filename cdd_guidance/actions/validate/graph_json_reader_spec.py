@@ -63,3 +63,26 @@ with description("a validate call's checked graph"):
         with it("should keep each hit's message"):
             messages = [violation.described for violation in violations_from_graph_json_files([self.saved])]
             expect(messages[:2]).to(equal([violation.described for violation in violations_from_graph_json_files([_SAVED_GRAPH])]))
+
+
+    # One object answers for the saved graph file: the session's graph, which saves it and reads it back.
+    with context("that checks the session's saved graph"):
+        with before.each:
+            self.throwaway = ThrowawayProject()
+            session = ToolCall(project=self.throwaway.root).session
+            self.saved = session.graph.saved_file.path
+            self.saved.parent.mkdir(parents=True, exist_ok=True)
+            self.saved.write_bytes(_SAVED_GRAPH.read_bytes())
+            self.graph = CheckedGraph(session, [], None, True)
+            self.files = self.graph.check_beside(ReportFiles(session, []))
+
+        with after.each:
+            self.throwaway.close()
+
+        with it("should read the file the session's graph saves in"):
+            expect(self.files).to(equal([self.saved]))
+
+        with it("should report the violations that file holds"):
+            expect([violation.rule for violation in self.graph.violations()]).to(
+                equal(["limit-operation-parameters", "load-with-identity-in-hand"])
+            )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from cdd_guidance.actions.sketch.discovery_document import DiscoveryDocument
+from cdd_guidance.practices.sketch_document.discovery_document import DiscoveryDocument
 from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, OoadClass
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
