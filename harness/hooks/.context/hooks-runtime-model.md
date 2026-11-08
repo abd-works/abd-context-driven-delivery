@@ -258,7 +258,7 @@ The hooks of one checkout, loaded once in its hook daemon. It runs the enabled h
 - _append_debug(payload: HookPayload, message: str): None
 	// dispatch.debug in the logs folder of the session the event works in
 	-> HookPayload.session
-	-> Session.append_hook_log
+	-> Session.hook_log("dispatch.debug").stamped
 
 ## HookDaemon                                                     <!-- Md -->
 

@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
-from harness.agent_tools.chat_pointer import ChatPointer
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.graph import Graph
 from harness.guidance.practice_catalogue import PracticeCatalogue
@@ -25,7 +24,7 @@ from space.session.file_manager import FileEntry, FileText
 from space.session.handoffs import HANDOFF_FORMAT_FILE, Handoffs
 from space.session.practice_session_output import PracticeSessionOutput
 from space.session.session_files import SessionFiles
-from space.session.session_log import LogTimestamp, SessionLog
+from space.session.session_log import HookLog, SessionLog
 
 if TYPE_CHECKING:
     from space.session.sessions import Sessions
@@ -62,8 +61,10 @@ class UnknownPracticeError(ValueError):
 class Session:
     """One named piece of work in a project, kept in ``.sessions/{name}/``. It holds where it works, the practices it
     uses, and its title; its log, files, handoffs, decision records, and chat injections are objects of their own, made
-    with it. It holds the *Sessions* that loaded it and their repository. Every tool on it acts on the session whose
-    ``session.json`` its ``session`` argument names."""
+    with it. It holds the *Sessions* that loaded it and their repository, which keep one Session for each session
+    folder, so every call made in the session, from any chat, works on this one object: its graph and its one instance
+    of each practice. Every tool on it acts on the session whose ``session.json`` its ``session`` argument names; a
+    line a call logs points at that call's chat, which the call holds, never the session."""
 
     def __init__(self, sessions: Sessions) -> None:
         self._session_name = ""
@@ -75,27 +76,23 @@ class Session:
         self.context_config = ContextConfig(self.repo_path)
         self._workpath: Path | None = None
         self._session_path: Path | None = None
-        # The practices and graph this session keeps between calls, made when first asked for; only the session as its
-        # sessions keep it (``sessions.kept``) makes them.
+        # The practices and graph this session keeps between calls, made when first asked for.
         self._outputs: dict[str, PracticeSessionOutput] | None = None
         self._graph: Graph | None = None
         self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
         self.handoffs: Handoffs | None = None
-        # The chat of the tool call this session was opened for: its log lines point at it.
-        self.chat: ChatPointer | None = None
-        self._opened: list[PracticeSessionOutput] = []
         self.log = SessionLog(self)
         self.session_files = SessionFiles(self)
         self.chat_injections = ChatInjections(self)
 
     @classmethod
     @tool_subject
-    def from_file(cls, session: str, project: Path | str) -> Session:
-        """The session whose session.json is session, a path from project's checkout or an absolute one, read without
-        opening it, from the sessions this process holds for project. A board command names its ticket's session this
-        way, because it runs in whichever chat it is sent to, and that chat's open session can be another. A tool call
-        is handed the project the call names."""
-        return ToolCall(project=project).session_named(session)
+    def from_file(cls, session: str, call: ToolCall) -> Session:
+        """The session whose session.json is session, a path from the call's project or an absolute one, read without
+        opening it, from the sessions this process holds for that project. A board command names its ticket's session
+        this way, because it runs in whichever chat it is sent to, and that chat's open session can be another. A tool
+        is handed the call it answers."""
+        return call.session_named(session)
 
     @property
     @data_field
@@ -173,31 +170,24 @@ class Session:
     @property
     def graph(self) -> Graph:
         """The knowledge graph this session works with, opened on its root, holding the session's one instance of each
-        practice. The session as its sessions keep it holds it from the session's first call on, so every call in the
-        session works on the same graph and the same practices, and none rebuilds them; an action that writes files
-        refreshes the graph with exactly those files. A session whose root has moved gets a new graph, with new
-        practices, on the new root."""
-        return self._sessions.kept(self)._own_graph
-
-    @property
-    def _own_outputs(self) -> dict[str, PracticeSessionOutput]:
-        """A new instance of every practice, by key, each working in this session: made once on its root, on the
-        session as its sessions keep it."""
-        if self._outputs is None:
-            self._outputs = {practice.key: PracticeSessionOutput(practice, self) for practice in PracticeCatalogue.create_all()}
-            for output in self._outputs.values():
-                output.guidance.work_in(output)
-        return self._outputs
-
-    @property
-    def _own_graph(self) -> Graph:
-        """A graph on this session's root holding its practices, made once on its root. It reads back the graph saved
-        there, so a session opened again, such as a ticket just activated, shows what was loaded in it before."""
+        practice, made once on its root, so every call in the session works on the same graph and the same practices
+        and none rebuilds them; an action that writes files refreshes the graph with exactly those files. It reads back
+        the graph saved on its root, so a session opened again, such as a ticket just activated, shows what was loaded
+        in it before. A session whose root has moved gets a new graph, with new practices, on the new root."""
         if self._graph is None:
             graph = Graph(output.guidance for output in self._own_outputs.values())
             graph.open_saved(self.work_root)
             self._graph = graph
         return self._graph
+
+    @property
+    def _own_outputs(self) -> dict[str, PracticeSessionOutput]:
+        """A new instance of every practice, by key, each working in this session: made once on its root."""
+        if self._outputs is None:
+            self._outputs = {practice.key: PracticeSessionOutput(practice, self) for practice in PracticeCatalogue.create_all()}
+            for output in self._outputs.values():
+                output.guidance.work_in(output)
+        return self._outputs
 
     def path_named(self, named: str | Path) -> Path:
         """named as a path in this session's project, the way its agent writes one: from the project's root, or
@@ -265,17 +255,10 @@ class Session:
         """Where Validate saves its reports in this session, each with the graph it checked beside it."""
         return self.session_path / _REPORT_FOLDER
 
-    def hook_log(self, filename: str) -> Path:
+    def hook_log(self, filename: str) -> HookLog:
         """The log called filename that a hook appends to while this session is open, such as dispatch.debug, in the
-        ``logs`` folder of the session's folder, which is made when missing."""
-        folder = self.session_path / _HOOK_LOGS_FOLDER
-        folder.mkdir(parents=True, exist_ok=True)
-        return folder / filename
-
-    def append_hook_log(self, filename: str, line: str) -> None:
-        """Append line to the hook log called filename, stamped with the time it was written."""
-        with self.hook_log(filename).open("a", encoding="utf-8") as log:
-            log.write(f"{LogTimestamp.now()} {line}\n")
+        ``logs`` folder of the session's folder."""
+        return HookLog(self.session_path / _HOOK_LOGS_FOLDER / filename)
 
     def keep_file(self, file: Path) -> Path:
         """Move ``file`` into this session's folder, where it stays with the session's work until it becomes lasting
@@ -298,36 +281,30 @@ class Session:
         return self._move_folder_to(self.sessions.folder)
 
     def _move_folder_to(self, parent: Path) -> Session:
-        """Move this session's folder under ``parent``, such as ``.sessions/_complete/``; this session, now kept there."""
+        """Move this session's folder under ``parent``, such as ``.sessions/_complete/``; this session, now kept there,
+        and still the one object its sessions hold for it."""
         parent.mkdir(parents=True, exist_ok=True)
         destination = parent / self.name
-        shutil.move(str(self.session_path), str(destination))
+        moved_from = self.session_path
+        shutil.move(str(moved_from), str(destination))
         self.session_path = destination
+        self._sessions.moved(self, moved_from)
         return self
 
     def practice(self, name: str) -> PracticeSessionOutput:
-        """The practice called name in this session, opened, so this session's log lines name it."""
-        found = next((opened for opened in self._opened if opened.name == name), None)
-        if found is not None:
-            return found
-        opened = self.practices.get(name)
-        if opened is None:
+        """The practice called name in this session: the session's one instance of it."""
+        found = self.practices.get(name)
+        if found is None:
             raise UnknownPracticeError(name)
-        self._opened.append(opened)
-        return opened
+        return found
 
     @property
     @data_field
     def practices(self) -> dict[str, PracticeSessionOutput]:
-        """Every practice CDD has, by practice key, opened or not, each the session's one instance of it: the ones its
-        graph holds, kept between calls with the graph."""
-        kept = self._sessions.kept(self)
-        return {key: kept._own_outputs[key] for key in kept._own_graph.every_practice}
-
-    @property
-    def opened_practices(self) -> list[PracticeSessionOutput]:
-        """The practices this session has asked for, which its log lines name."""
-        return list(self._opened)
+        """Every practice CDD has, by practice key, each the session's one instance of it: the ones its graph holds,
+        kept between calls with the graph."""
+        outputs = self._own_outputs
+        return {key: outputs[key] for key in self.graph.every_practice}
 
     @property
     @data_field(key="handoff")
@@ -378,13 +355,13 @@ class Session:
     @mcp
     @command(name="mark-loop")
     @agent_tool
-    def mark_loop(self) -> str:
+    def mark_loop(self, call: ToolCall) -> str:
         """Mark the next loop in this session's log (slash ``/mark-loop``); returns its number.
 
         ``session`` is the session's session.json; ask ``sessions.current`` for it when the user names no session.
         Pass ``conversation_id``, ``transcript_path``, and ``transcript_lines`` (cumulative JSONL range for this chat)
         on the call; the ``--- N`` marker carries that chat's pointer."""
-        return str(self.log.mark_loop())
+        return str(self.log.by(call.chat).mark_loop())
 
     @mcp
     @command(name="read-loop")
@@ -399,7 +376,7 @@ class Session:
     @mcp
     @command(name="append-log")
     @agent_tool
-    def append_log(self, note: str = "", loop: int | None = None, paths: list[str] | None = None) -> str:
+    def append_log(self, call: ToolCall, note: str = "", loop: int | None = None, paths: list[str] | None = None) -> str:
         """Append a correction or audit note to this session's log (slash ``/append-log``).
 
         **Agent steps:** name the session by its session.json in ``session`` (ask ``sessions.current`` when the user
@@ -414,7 +391,7 @@ class Session:
         **Session artifacts:** write large or temporary outputs (MCP ``graph_return_nodes`` JSON, diagnostics dumps,
         probe results) under the session's folder (``.sessions/{name}/``), not only under Cursor
         ``.cursor/projects/.../agent-tools``. Reference those files in ``paths`` on this call."""
-        return self.log.append_note(note, loop, paths)
+        return self.log.by(call.chat).append_note(note, loop, paths)
 
     @mcp
     @skill

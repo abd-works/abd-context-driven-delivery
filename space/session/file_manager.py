@@ -134,10 +134,10 @@ class FileManager:
 
     @classmethod
     @tool_subject
-    def load(cls, *, project: Path) -> FileManager:
-        """The file manager of the session open in project, the folder a tool call works on. The session owns its file
-        manager, so it is read from the session saved as open there."""
-        return ToolCall.session_in(project).session_files.file_manager
+    def load(cls, *, call: ToolCall) -> FileManager:
+        """The file manager of the session open in the project the call works on. The session owns its file manager, so
+        it is read from that session."""
+        return call.session.session_files.file_manager
 
     @property
     @data_field

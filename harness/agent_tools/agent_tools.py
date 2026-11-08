@@ -31,9 +31,12 @@ Launch the Task tool with run_in_background true and subagent_type
 generalPurpose. Pass the instructions below as the task prompt.
 
 Tell the user you launched a non-blocking sub-agent and summarize what you delegated."""
-# A `@tool_subject` loader or a class tool that takes this argument is handed the checkout of the project its call works
-# on. No caller passes it, so it is not one of the tool's arguments.
+# A `@tool_subject` loader or a tool that takes one of these arguments is handed it from its call: ``project``, the
+# checkout of the project the call works on, and ``call``, the call itself, whose chat the lines it logs point at. No
+# caller passes either, so neither is one of the tool's arguments.
 CALLED_PROJECT = "project"
+THE_CALL = "call"
+_FROM_THE_CALL = (CALLED_PROJECT, THE_CALL)
 
 
 class CallNamesNoProject(Exception):
@@ -632,7 +635,7 @@ class AgentToolSet(AgentToolSetOrigin):
         subject_loader = self._members.subject_loader
         load = subject_loader.loader
         if load is None or isinstance(inspect.getattr_static(type(self), name), classmethod):
-            return subject_loader.given_the_called_project(self._members.callable_on(self, name, member))
+            return subject_loader.given_from_the_call(self._members.callable_on(self, name, member))
         return subject_loader.on_subject(load, member)
 
     def _discover_instruction_members(self) -> dict[str, AgentInstructions]:
@@ -728,42 +731,58 @@ class ToolSubjectLoader:
         for name in dir(self._toolset_class):
             member = inspect.getattr_static(self._toolset_class, name, None)
             if isinstance(member, classmethod) and ToolSubject.annotates(member.__func__):
-                return self.given_the_called_project(getattr(self._toolset_class, name))
+                return self.given_from_the_call(getattr(self._toolset_class, name))
         return None
 
     def on_subject(self, load: Callable[..., Any], operation: Callable[..., Any]) -> Callable[..., Any]:
         """A tool over ``operation`` that first loads the object the call names: it takes the loader's
-        arguments and the operation's own, so every reader of its signature sees what a caller passes."""
+        arguments and the operation's own, so every reader of its signature sees what a caller passes. The loader and
+        the operation are each handed what they take from the call: its project, or the call itself."""
         identity = list(inspect.signature(load).parameters.values())
-        own = [param for param in inspect.signature(operation).parameters.values() if param.name != "self"]
+        operation_takes_call = THE_CALL in inspect.signature(operation).parameters
+        own = [param for param in inspect.signature(operation).parameters.values() if param.name not in ("self", THE_CALL)]
         identity_names = [*(param.name for param in identity), *([CALLED_PROJECT] if TakesCalledProject.annotates(load) else [])]
+        loader_takes_call = TakesTheCall.annotates(load)
 
         @functools.wraps(operation)
         def on_subject(**arguments: Any) -> Any:
-            found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
-            return operation(found, **arguments)
+            call = {THE_CALL: arguments.pop(THE_CALL)} if THE_CALL in arguments else {}
+            named = {name: arguments.pop(name) for name in identity_names if name in arguments}
+            found = load(**named, **(call if loader_takes_call else {}))
+            return operation(found, **arguments, **(call if operation_takes_call else {}))
 
         on_subject.__signature__ = inspect.Signature(identity + own, return_annotation=inspect.signature(operation).return_annotation)
-        on_subject.__annotations__ = {**load.__annotations__, **operation.__annotations__}
+        on_subject.__annotations__ = {
+            name: hint for name, hint in {**load.__annotations__, **operation.__annotations__}.items() if name != THE_CALL
+        }
         if TakesCalledProject.annotates(load):
             TakesCalledProject(on_subject)
+        if loader_takes_call or operation_takes_call:
+            TakesTheCall(on_subject)
         return OnSubject(on_subject)
 
-    def given_the_called_project(self, operation: Any) -> Any:
-        """A class operation that takes the call's project, with the project left out of its signature, so no caller
-        passes it and its tool hands it the project its call names. Any other operation as it is."""
-        if not inspect.ismethod(operation) or CALLED_PROJECT not in inspect.signature(operation).parameters:
+    def given_from_the_call(self, operation: Any) -> Any:
+        """A class operation that takes the call's project or the call itself, with those left out of its signature,
+        so no caller passes them and its tool hands them from the call. Any other operation as it is."""
+        if not inspect.ismethod(operation):
+            return operation
+        taken = [name for name in _FROM_THE_CALL if name in inspect.signature(operation).parameters]
+        if not taken:
             return operation
         function = operation.__func__
         signature = inspect.signature(function)
 
         @functools.wraps(function)
-        def on_called_project(owner: Any, *arguments: Any, **named: Any) -> Any:
+        def given(owner: Any, *arguments: Any, **named: Any) -> Any:
             return function(owner, *arguments, **named)
 
-        on_called_project.__signature__ = signature.replace(parameters=[parameter for parameter in signature.parameters.values() if parameter.name != CALLED_PROJECT])
-        on_called_project.__annotations__ = {name: hint for name, hint in function.__annotations__.items() if name != CALLED_PROJECT}
-        return types.MethodType(TakesCalledProject(on_called_project), operation.__self__)
+        given.__signature__ = signature.replace(parameters=[parameter for parameter in signature.parameters.values() if parameter.name not in taken])
+        given.__annotations__ = {name: hint for name, hint in function.__annotations__.items() if name not in taken}
+        if CALLED_PROJECT in taken:
+            TakesCalledProject(given)
+        if THE_CALL in taken:
+            TakesTheCall(given)
+        return types.MethodType(given, operation.__self__)
 
 
 class InstallDestination:
@@ -885,7 +904,7 @@ class AgentTool(AgentToolDestination):
         argument in the type its parameter declares."""
         tool = self.on(self.toolset.for_call(call))
         tool.log_session_invocation(call)
-        return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._called_project(call))
+        return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
 
     def on(self, toolset: Any) -> AgentTool:
         """This tool on toolset, a toolset of the same class made for one call; the tool as it is when toolset is its
@@ -895,13 +914,16 @@ class AgentTool(AgentToolDestination):
         bound = getattr(self.callable, "__self__", None) is self.toolset
         return replace(self, callable=types.MethodType(self.callable.__func__, toolset) if bound else self.callable, toolset=toolset)
 
-    def _called_project(self, call: ToolCall) -> dict[str, Path]:
-        """The project argument a callable that takes it is handed: the checkout call names."""
-        if not TakesCalledProject.annotates(self.callable):
-            return {}
-        if call.project is None:
-            raise CallNamesNoProject(self.mcp_name)
-        return {CALLED_PROJECT: call.project}
+    def _from_the_call(self, call: ToolCall) -> dict[str, Any]:
+        """What a callable that takes it is handed from call: the checkout call names, and the call itself."""
+        handed: dict[str, Any] = {}
+        if TakesCalledProject.annotates(self.callable):
+            if call.project is None:
+                raise CallNamesNoProject(self.mcp_name)
+            handed[CALLED_PROJECT] = call.project
+        if TakesTheCall.annotates(self.callable):
+            handed[THE_CALL] = call
+        return handed
 
     def should_log_session_invocation(self, arguments: dict[str, Any] | None) -> bool:
         if arguments and arguments.get("ping") is True:
@@ -925,7 +947,7 @@ class AgentTool(AgentToolDestination):
             for key, value in call.arguments.items()
             if isinstance(value, (str, int, float, bool, list))
         }
-        session.log.tool(self.mcp_name, logged_args)
+        session.log.by(call.chat).tool(self.mcp_name, logged_args)
 
     @property
     def kind(self) -> str:
@@ -1266,6 +1288,14 @@ class TakesCalledProject(Annotation):
     caller passes it: the tool hands it the project its ``ToolCall`` names."""
 
     flag = "_takes_called_project"
+    copied = False
+
+
+class TakesTheCall(Annotation):
+    """Set on a tool's callable that takes the call it answers, which its signature leaves out because no caller passes
+    it: a tool that logs a line points it at the call's chat, and a loader opens the session the call names for it."""
+
+    flag = "_takes_the_call"
     copied = False
 
 

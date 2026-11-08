@@ -7,7 +7,7 @@
 // expects empty, so a test fails when the chat bar calls a name Python dropped.
 import type { BoardData } from '@cdd/space/kanban/board'
 import type { FidelityProgressData, FileEntryData, ReportData } from '@cdd/space/kanban/fidelity-progress'
-import type { BranchData, CloseChoicesData, TicketData } from '@cdd/space/kanban/ticket'
+import type { BranchData, LeaveChoicesData, OpenChoicesData, TicketData } from '@cdd/space/kanban/ticket'
 import type { FileTextData } from '@cdd/space/session/session'
 
 import { boardOf, checkoutFlow, HEALTHY, progressOf, STAGE_ORDER } from './examples/chat-bar.examples'
@@ -116,14 +116,31 @@ function readFile(world: World, { path }: { session: string; path: string }): Fi
 }
 
 // Ticket.close_choices: a handoff always, and a commit and a push of the branch the story gives the ticket's work, such
-// as main for work on main, while it is checked out; a ticket the story gives no branch has nothing checked out.
-function closeChoices(world: World, { ticket }: { ticket: string }): CloseChoicesData {
+// as main for work on main, while it is checked out; a ticket the story gives no branch has nothing checked out. Each
+// is chosen at first.
+function closeChoices(world: World, { ticket }: { ticket: string }): LeaveChoicesData {
   const work = world.branches[ticket]
-  return work?.is_checked_out ? { branch: work.name, choices: ['handoff', 'commit', 'push'] } : { branch: '', choices: ['handoff'] }
+  return work?.is_checked_out ? { branch: work.name, choices: ['handoff', 'commit', 'push'], chosen: ['handoff', 'commit', 'push'] } : { branch: '', choices: ['handoff'], chosen: ['handoff'] }
+}
+
+// Ticket.leave_choices: what closing offers, and a merge of the ticket's own branch while it is checked out, which is
+// not chosen at first; work on main has nothing to merge into.
+function leaveChoices(world: World, { ticket }: { ticket: string }): LeaveChoicesData {
+  const closing = closeChoices(world, { ticket })
+  const merges = closing.branch !== '' && closing.branch !== 'main'
+  return { ...closing, choices: [...closing.choices, ...(merges ? ['merge'] : [])] }
+}
+
+// Ticket.open_choices: its own branch while the story gives it none, and its own worktree, which no story gives it.
+function openChoices(world: World, { ticket }: { ticket: string }): OpenChoicesData {
+  const hasBranch = Boolean(world.branches[ticket]?.exists)
+  return { has_branch: hasBranch, choices: [...(hasBranch ? [] : ['branch']), 'worktree'] }
 }
 
 const TOOLS: Record<string, (world: World, args: any) => unknown> = {
   'ticket.close_choices': closeChoices,
+  'ticket.leave_choices': leaveChoices,
+  'ticket.open_choices': openChoices,
   'ticket.move_next': moveNext,
   'fidelity-progress.finish_review': finishReview,
   'ticket.close': close,
@@ -148,6 +165,8 @@ export const OPERATIONS: Record<string, string[]> = {
   'ticket.create': ['title', 'scope', 'parent', 'path'],
   'ticket.activate': ['ticket', 'leaving', 'opening'],
   'ticket.close_choices': ['ticket'],
+  'ticket.leave_choices': ['ticket'],
+  'ticket.open_choices': ['ticket'],
   'ticket.close': ['ticket', 'leaving'],
   'ticket.move_next': ['ticket'],
   'fidelity-progress.finish_review': ['ticket', 'fidelity'],
@@ -190,7 +209,8 @@ function runProcess(world: World, argv: string[]) {
   return { value: { ...world.installExit, stdout: '' } }
 }
 
-// Stubs the engine's calls the chat bar makes and the cdd server beneath it, starting from checkout-flow active.
+// Stubs the engine's calls the chat bar makes and the cdd server beneath it, starting from checkout-flow active, on its
+// own branch.
 export function cdd(on: any, board: BoardData = boardOf('checkout-flow', checkoutFlow())): World {
   const world: World = {
     board,
@@ -200,7 +220,8 @@ export function cdd(on: any, board: BoardData = boardOf('checkout-flow', checkou
     fills: [],
     submits: [],
     toasts: [],
-    branches: {},
+    // checkout-flow works on its own branch, checked out, so leaving it can commit, push, and merge that branch.
+    branches: { 'checkout-flow': { name: 'checkout-flow', exists: true, is_checked_out: true } },
     declared: {},
     reports: {},
     texts: {},

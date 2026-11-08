@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, NotRequired, TypedDic
 
 from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import InstallDestination
+from harness.agent_tools.chat_pointer import ChatPointer
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.action_catalogue import ActionCatalogue
 from harness.guidance.documents import document_in
@@ -180,9 +181,11 @@ class GuidanceAction:
     """Whether the action hands the agent its listed Guidance's rules after it returns; an action that only records
     what exists, such as Document, sets it false."""
 
-    def __init__(self, session: Any = None) -> None:
+    def __init__(self, session: Any = None, chat: ChatPointer | None = None) -> None:
         super().__init__()
         self._session = session
+        # The chat of the call this action was made for: every line it logs points at it.
+        self._chat = chat
         # The guidance argument this action works on, so naming the same argument again keeps what it built.
         self._guidance_worked_on: Any = _NOTHING_WORKED_ON
         self._guidance_text: str | None = None
@@ -200,14 +203,14 @@ class GuidanceAction:
         guidance = call.arguments.get("guidance")
         argument = GuidanceArgument(guidance) if guidance is not None else None
         named = argument.session_named if argument is not None else ""
-        action = self.made_for((call.session_named(named) if named else None) or call.session or self._session)
+        action = self.made_for((call.session_named(named) if named else None) or call.session or self._session, call.chat)
         if argument is not None:
             action._take(guidance, argument)
         return action
 
-    def made_for(self, session: Any) -> GuidanceAction:
-        """An action of this kind, set up as this one is, made for session."""
-        return type(self)(session=session)
+    def made_for(self, session: Any, chat: ChatPointer | None = None) -> GuidanceAction:
+        """An action of this kind, set up as this one is, made for session and the call from chat."""
+        return type(self)(session=session, chat=chat)
 
     def session_for(self, call: ToolCall) -> Any:
         """The session this action logs call in: the one it was made for."""
@@ -219,6 +222,11 @@ class GuidanceAction:
         if self._session is None:
             raise ActionWorksInNoSession(type(self).__name__)
         return self._session
+
+    @property
+    def log(self) -> Any:
+        """What this action writes in its session's log: each line points at the chat of the call it was made for."""
+        return self.session.log.by(self._chat)
 
     @property
     def graph(self) -> Any:
@@ -365,11 +373,17 @@ class GuidanceAction:
             return None
         return self._session.practice(item.key)
 
+    def _listed_practices(self) -> list:
+        """Each listed practice as this action's session holds it, which the lines it logs name; guidance that is no
+        practice CDD has is left out."""
+        found = [self._session_practice(item) for item in self.listed() if not isinstance(item, str)]
+        return [practice for practice in found if practice is not None]
+
     def _inside(self, action_type: type[GuidanceAction], guidance: str | list | None = None) -> GuidanceAction:
         """An action of action_type started inside this one: made for this action's session and working on guidance,
         this action's text or some of its listed Guidance, or on everything this action works on when guidance is
         none. It works on the same objects, so the session's practices stay the ones this action listed."""
-        inner = action_type(session=self._session)
+        inner = action_type(session=self._session, chat=self._chat)
         inner._worked_at = dict(self._worked_at)
         inner._work_on_listed(
             guidance if guidance is not None else self._guidance_text if self._guidance_text is not None else self.listed()
@@ -415,7 +429,7 @@ class GuidanceAction:
             return self.each(operation)
         except BaseException as failure:
             if self._session is not None:
-                self._session.log.failure(failure, tool=action or type(self).__name__)
+                self.log.failure(failure, tool=action or type(self).__name__)
             raise
 
     def log_running(self, action: str) -> None:
@@ -424,8 +438,7 @@ class GuidanceAction:
         if not action or self._session is None or self._logged_session_action == action:
             return
         self._logged_session_action = action
-        self.listed()
-        self._session.log.guidance_action(action)
+        self.log.guidance_action(action, self._listed_practices())
 
     @Toast
     @agent_instructions

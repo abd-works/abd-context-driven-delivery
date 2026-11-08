@@ -529,5 +529,5 @@ class HookServer:
         """Append message to the dispatch log of the session payload's event works in."""
         session = payload.session
         if session is not None:
-            session.append_hook_log("dispatch.debug", message)
+            session.hook_log("dispatch.debug").stamped(message)
 

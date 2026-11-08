@@ -303,10 +303,11 @@ validate(): None
 ToolSubjectLoader(toolset_class: type)
 ------
 loader: Callable | None
-	// the @tool_subject classmethod, found once, given the called project when it takes one
+	// the @tool_subject classmethod, found once, given the called project or the call when it takes one
 ----
 on_subject(load, operation): Callable
-given_the_called_project(operation: Callable): Callable
+	// the loader and the operation are each handed the call's project or the call itself when they take it
+given_from_the_call(operation: Callable): Callable
 
 ## ExpansionMode                                                  <!-- Md -->
 

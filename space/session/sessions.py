@@ -38,9 +38,10 @@ class Sessions:
     other is. The open session is read from that file each time it is asked for, so a switch or a close made by another
     chat or by the hook server is seen at once.
 
-    Each session read from a folder is a new object, opened for one call's chat. What lasts between calls is kept here:
-    one *Session* per session folder that no call opened, which holds that session's graph and its one instance of each
-    practice (``kept``)."""
+    One *Session* is kept here for each session folder, made the first time it is read and read again from its folder
+    on each ask, so every call in a session, from any chat, works on the same object, which holds that session's graph
+    and its one instance of each practice. A call's chat is the call's own: the lines it logs go through
+    ``session.log.by(chat)``."""
 
     def __init__(self, project: Path | str) -> None:
         self.project = Path(project).resolve()
@@ -50,8 +51,8 @@ class Sessions:
         # This checkout's own choice of open session. A linked worktree keeps its own, so a chat there never changes the
         # session open in the main clone; in the main clone it is the repository's `work_state`.
         self._state = self.repo.own_work_state
-        self._kept: dict[Path, Session] = {}
-        self._kept_lock = threading.Lock()
+        self._held: dict[Path, Session] = {}
+        self._held_lock = threading.Lock()
 
     @classmethod
     @tool_subject
@@ -120,30 +121,32 @@ class Sessions:
         return self.load(found.parent)
 
     def load(self, folder: Path) -> Session:
-        """The session kept in folder, read without opening it."""
-        session = Session(self)
-        session.session_path = Path(folder)
-        session.name = session.session_path.name
+        """The session kept in folder, read without opening it: the one object these sessions hold for that folder,
+        with the workpath its session.json names now, so a change saved by another process is seen."""
+        session = self._held_at(Path(folder))
         stored = session.fields.get("workpath", "")
-        session.workpath = Path(stored) if stored else self.root
+        workpath = Path(stored) if stored else self.root
+        if session.workpath is None or session.work_root != workpath.resolve():
+            session.workpath = workpath
         return session
 
-    def kept(self, session: Session) -> Session:
-        """session as these sessions keep it between calls: one Session object per session folder, opened for no call,
-        so what it holds never points at the chat of the call that first asked for it. It holds the session's graph and
-        its one instance of each practice. When session's root has moved since, the kept session moves with it and makes
-        its practices and graph again on the new root."""
-        key = Path(session.session_path or session.work_root).resolve()
-        with self._kept_lock:
-            kept = self._kept.get(key)
-            if kept is None:
-                kept = self._kept[key] = Session(self)
-                kept.session_path = session.session_path
-                kept.name = session.name
-                kept.workpath = session.workpath
-            elif kept.work_root != session.work_root:
-                kept.workpath = session.workpath
-            return kept
+    def _held_at(self, folder: Path) -> Session:
+        """The one Session held for folder, made the first time it is asked for."""
+        key = folder.resolve()
+        with self._held_lock:
+            held = self._held.get(key)
+            if held is None:
+                held = self._held[key] = Session(self)
+                held.session_path = folder
+                held.name = folder.name
+            return held
+
+    def moved(self, session: Session, moved_from: Path) -> None:
+        """Hold session under the folder it moved to, such as ``.sessions/_complete/alpha``, so reading it there finds
+        the same object."""
+        with self._held_lock:
+            self._held.pop(Path(moved_from).resolve(), None)
+            self._held[session.session_path.resolve()] = session
 
     @property
     def open_name(self) -> str:
@@ -154,10 +157,8 @@ class Sessions:
         """A new session called name, working in workpath, with the title, scope, and parent a board ticket shows saved
         in its ``session.json``; it is not opened, because a session made for later, such as a board ticket, is not the
         one being worked on."""
-        session = Session(self)
-        session.name = Name(name).title_slug
+        session = self._held_at(self.folder / Name(name).title_slug)
         session.workpath = Path(workpath).resolve()
-        session.session_path = self.folder / session.name
         session.save()
         session.save_fields(**{key: value for key, value in (("title", title), ("scope", scope), ("parent", parent)) if value})
         session.log.seed_first_loop()
@@ -210,8 +211,9 @@ class CallSessions:
     """The sessions of every project this process serves, each made once and held while it runs, so every call in a
     session works on the session's one graph and one instance of each practice, which those sessions keep. Through them
     a tool call finds the sessions it works in: the session open in the call's project, or the one a board command names
-    by its session.json, each opened for that call so its log lines point at the call's chat; and the session open in a
-    project for work that serves no call, such as a hook event. Registered with *ToolCall* when this module is imported,
+    by its session.json; and the session open in a project for work that serves no call, such as a hook event. Each is
+    the one object its sessions hold for its folder; the lines a call logs point at the call's chat through
+    ``session.log.by(call.chat)``. Registered with *ToolCall* when this module is imported,
     so the framework opens a session without importing space."""
 
     def __init__(self) -> None:
@@ -231,15 +233,11 @@ class CallSessions:
         return self.of_project(project).current()
 
     def open_in(self, call: ToolCall) -> Session:
-        session = self.saved_in(call.project)
-        session.chat = call.chat
-        return session
+        return self.saved_in(call.project)
 
     def named_in(self, session_file: str, call: ToolCall) -> Session:
         project = call.project if call.project is not None else Path(session_file).resolve().parent
-        session = self.of_project(project).with_file(session_file)
-        session.chat = call.chat
-        return session
+        return self.of_project(project).with_file(session_file)
 
 
 # The sessions this process serves, held for as long as it runs.

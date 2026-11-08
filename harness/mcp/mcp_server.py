@@ -743,7 +743,7 @@ class McpHost:
     def _log_failure(self, call: ToolCall, failure: BaseException) -> None:
         session = call.session
         if session is not None:
-            session.log.failure(failure, tool=call.tool)
+            session.log.by(call.chat).failure(failure, tool=call.tool)
 
     def _content_blocks(self, value: object) -> list[types.TextContent]:
         text = value if isinstance(value, str) else json.dumps(data_of(value))

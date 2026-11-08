@@ -1143,7 +1143,11 @@ with description("the board tools") as self:
                 expect(self.project.call("ticket.work_branch", ticket="pet-visits")).to(equal({"name": "main", "exists": True, "is_checked_out": True}))
 
             with it("should offer to close it with a handoff and a commit and push of main"):
-                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "choices": ["handoff", "commit", "push"]}))
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "choices": ["handoff", "commit", "push"], "chosen": ["handoff", "commit", "push"]}))
+
+            # Ticket.leave never merges the default branch, so leaving offers no merge a person could pick for nothing.
+            with it("should offer to leave it for another with a handoff and a commit and push of main, and no merge"):
+                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "main", "choices": ["handoff", "commit", "push"], "chosen": ["handoff", "commit", "push"]}))
 
             with it("should commit its work on main, merging nothing"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit", "merge"])
@@ -1165,6 +1169,13 @@ with description("the board tools") as self:
 
             with it("should say the ticket being left is on its branch"):
                 expect(self.project.call("ticket.branch", ticket="pet-visits")["is_checked_out"]).to(be_true)
+
+            with it("should offer to leave it for another with a merge of its branch, not chosen at first"):
+                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge"], "chosen": ["handoff", "commit", "push"]}))
+
+            # Its branch is checked out in this checkout already, which is that branch's worktree.
+            with it("should offer nothing to create on opening it, since its branch is checked out here"):
+                expect(self.project.call("ticket.open_choices", ticket="pet-visits")).to(equal({"has_branch": True, "choices": []}))
 
             with it("should commit the branch the ticket being left is on"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit"])
@@ -1192,7 +1203,7 @@ with description("the board tools") as self:
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             with it("should offer to close it with a handoff alone, since nothing checked out is its own"):
-                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "choices": ["handoff"]}))
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "choices": ["handoff"], "chosen": ["handoff"]}))
 
             with it("should commit nothing on a branch that is not checked out"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit"])
@@ -1213,7 +1224,7 @@ with description("the board tools") as self:
             names = set(self.project.server.tools)
             expect(names).to(equal({
                 "board.show", "board.help", "board.folders", "stage.set_wip_limit",
-                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.format_choices", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
+                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.leave_choices", "ticket.open_choices", "ticket.format_choices", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
                 "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
                 "session.choose_workpath", "session.folder_files", "session.read_file",

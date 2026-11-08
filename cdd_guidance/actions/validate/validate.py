@@ -24,8 +24,8 @@ _LOGGED_VIOLATIONS = 40
 class Validate(GuidanceAction):
     """Validate artifacts for provided context tools."""
 
-    def __init__(self, session=None) -> None:
-        super().__init__(session)
+    def __init__(self, session=None, chat=None) -> None:
+        super().__init__(session, chat)
         # What this call checks, made by each validate; the cdd server makes a new action for each call.
         self._graph: CheckedGraph | None = None
         self._reports: ReportFiles | None = None
@@ -110,12 +110,6 @@ class Validate(GuidanceAction):
             )
         return "\n\n".join(sentences)
 
-    def _listed_practices(self) -> list:
-        """Each listed practice as this action's session holds it, which logs its own validate line; guidance that is no
-        practice CDD has is left out."""
-        found = [self._session_practice(item) for item in self.listed() if not isinstance(item, str)]
-        return [practice for practice in found if practice is not None]
-
     def _graph_and_ai_rule_report(self) -> str:
         from cdd_guidance.actions.validate.validation_report import ValidationReport
 
@@ -135,7 +129,7 @@ class Validate(GuidanceAction):
         if len(violations) > _LOGGED_VIOLATIONS:
             synopsis.append(f"graph-rule … and {len(violations) - _LOGGED_VIOLATIONS} more")
         for practice in self._listed_practices():
-            self.session.log.validation(practice, synopsis)
+            self.log.validation(practice, synopsis)
         # This line is the call's validate line; the session board reads the latest one, so no clean line may follow.
         self._logged_session_action = "validate"
 
@@ -152,7 +146,7 @@ class Validate(GuidanceAction):
         if self._guidance_text is not None:
             return
         for practice in self._listed_practices():
-            self.session.log.validation(practice, [])
+            self.log.validation(practice, [])
 
     @noDeploy
     @mcp

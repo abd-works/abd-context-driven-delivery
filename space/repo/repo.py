@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from functools import cached_property
 from pathlib import Path
 
@@ -115,10 +116,12 @@ class Repo:
     @classmethod
     @tool_subject
     def of_project(cls, project: Path) -> Repo:
-        """The clone holding project, the project a tool call names. One cdd server answers every chat, so each call is
-        handed its project and acts on that project's clone, never on a clone named by an earlier call."""
+        """The clone holding project, the project a tool call names, as this process holds it. One cdd server answers
+        every chat, so each call is handed its project and acts on that project's clone, never on a clone named by an
+        earlier call; every call and every session of that checkout works on the one Repo held for it, which holds the
+        one WorkState of its ``.sessions/session.json``."""
         folder = Path(project).resolve()
-        return cls(cls._marked_checkout(folder) or folder)
+        return SERVED_CHECKOUTS.at(cls._marked_checkout(folder) or folder)
 
     @staticmethod
     def _marked_checkout(folder: Path) -> Path | None:
@@ -130,8 +133,9 @@ class Repo:
         return self._marked_checkout(self.root)
 
     def checkout_at(self, folder: Path | str) -> Repo:
-        """The repository as checked out at folder, another checkout of this one, such as a linked worktree beside it."""
-        return Repo(folder)
+        """The repository as checked out at folder, another checkout of this one, such as a linked worktree beside it,
+        as this process holds it."""
+        return SERVED_CHECKOUTS.at(Path(folder).resolve())
 
     @property
     def is_clone(self) -> bool:
@@ -578,3 +582,25 @@ class Branch:
         self.save(commit_message)
         self.land_on_default()
         self.delete()
+
+
+class ServedCheckouts:
+    """The repository of every checkout this process works in, each made once and held while it runs, so every tool
+    call and every session of one checkout work on the same Repo, and two objects never read and write one
+    ``.sessions/session.json``."""
+
+    def __init__(self) -> None:
+        self._at: dict[Path, Repo] = {}
+        self._lock = threading.Lock()
+
+    def at(self, root: Path) -> Repo:
+        """The repository checked out at root, made the first time this process works in it."""
+        with self._lock:
+            held = self._at.get(root)
+            if held is None:
+                held = self._at[root] = Repo(root)
+            return held
+
+
+# The checkouts this process works in, held for as long as it runs.
+SERVED_CHECKOUTS = ServedCheckouts()
