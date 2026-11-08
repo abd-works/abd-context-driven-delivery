@@ -100,9 +100,9 @@ class CFamilyParse:
             oclass = self.class_type(
                 name=match.group(1),
                 sequential_order=class_order,
-                intent=head.doc,
                 line=self._line_at(self._text, match.start()),
             )
+            head.documented.describe(oclass)
             oclass.stereotypes = head.stereotypes
             oclass.end_line = self._line_at(self._text, body_start + len(body))
             oclass.bases = self._bases(self._text[match.end() : body_start]) + head.implemented

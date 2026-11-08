@@ -52,6 +52,10 @@ with description("a class as DDD reads it"):
     with it("should name an aggregate root by the repository beside it"):
         expect(_class("Invoice", []).inferred_kind({"Invoice", "InvoiceRepository"})).to(equal("EntityRoot"))
 
+    with it("should say a name follows the value object convention it infers a value object from"):
+        tactical = _class("PlanRequirement", [])
+        expect((tactical.inferred_kind(set()), tactical.declares_stereotype("ValueObject"))).to(equal(("ValueObject", True)))
+
 
 with description("a bounded context on a graph"):
     with before.each:

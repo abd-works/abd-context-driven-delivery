@@ -30,8 +30,6 @@ _OPERATIONS = "----"
 _CALL = "->"
 _NOTE = "//"
 _INVARIANT = "invariant:"
-_ROOT = "aggregate root"
-_REPOSITORY = "repository"
 _ORDER = ("Aggregate Root", "Entity", "Value Object", "Repository")
 _REFERENCE = re.compile(r"^-?\s*(?:→|->)?\s*([A-Za-z][\w ·]*?)\s*\(by\s+([A-Za-z_]\w*)\s*\)")
 _IDENT = re.compile(r"^[A-Za-z_]\w*$")
@@ -87,12 +85,12 @@ class ClassCard(MarkdownDomainNode):
         return card
 
     @staticmethod
-    def from_code(oclass: OoadClass, intent: str) -> "ClassCard":
+    def from_code(oclass: OoadClass) -> "ClassCard":
         """The card a class read from code or a class drawing is: the building block its DDD stereotypes, or its name,
-        make it, holding the class's own members, without its constructor, and intent."""
+        make it, holding the class's own members, without its constructor, and its intent."""
         card = ClassCard.named(oclass.name, TacticalClass(oclass).building_block_stereotypes)
         card.sequential_order = oclass.sequential_order
-        card.intent = intent
+        card.intent = oclass.intent
         card.properties = list(oclass.properties)
         card.operations = [item for item in oclass.operations if not item.is_constructor and item.name != oclass.name]
         return card
@@ -106,7 +104,7 @@ class ClassCard(MarkdownDomainNode):
     @property
     def is_root(self) -> bool:
         """True when the card is marked <<Aggregate Root>>, or its aggregate made it its root."""
-        return self._made_root or any(item.lower() == _ROOT for item in self.stereotypes)
+        return self._made_root or kind_named_by(self.stereotypes) == "EntityRoot"
 
     @is_root.setter
     def is_root(self, value: bool) -> None:
@@ -114,7 +112,7 @@ class ClassCard(MarkdownDomainNode):
 
     @property
     def is_repository(self) -> bool:
-        return any(item.lower() == _REPOSITORY for item in self.stereotypes)
+        return kind_named_by(self.stereotypes) == "Repository"
 
     @property
     def heading(self) -> str:
@@ -233,13 +231,14 @@ class ClassCard(MarkdownDomainNode):
         invariants = [f"{_INVARIANT} {item}" for item in self.invariants]
         return self.property_lines() + self.operation_lines() + invariants
 
-    def write_into(self, module: Module, intent: str) -> OoadClass:
+    def write_into(self, module: Module, place: list[str]) -> OoadClass:
         """Add this card to module, a module of a Clean Engineering format, as that format's own class: its
-        stereotypes, its members, with the relationships their types name, and intent."""
+        stereotypes, its intent, its members, with the relationships their types name, and the place of its aggregate
+        as its module path."""
         written = module.load_class(self)
         written.update_self(self)
         written.sequential_order = len(module.classes) + 1
-        written.intent = intent
+        written.module_path = list(place)
         written.properties = [written.load_property(item) for item in self.plain_properties]
         written.operations = [written.load_operation(item) for item in self.operations]
         for prop in written.properties:

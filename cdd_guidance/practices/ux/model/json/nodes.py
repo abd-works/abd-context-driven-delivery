@@ -1,4 +1,8 @@
-"""JSON channel - the whole UxMap as one JSON document; every other format can round-trip through it."""
+"""JSON channel - the whole UxMap as one JSON document; every other format can round-trip through it.
+
+Each JSON node writes its own record (`as_record`) and reads one back (`from_record`), so the map reads a document by
+asking each of its parts to read its own record. Every screen is on the map before any link to a screen is read, so a
+transition, a tab, or a destination names a screen that is already there."""
 
 from __future__ import annotations
 
@@ -17,10 +21,38 @@ from cdd_guidance.practices.ux.model.nodes import (
 )
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
+# The kind a Story Demo control's record names, so it reads back as one.
+_STORY_DEMO = "StoryDemoControl"
+
 
 class JsonControl(Control):
     """A control as the JSON document writes it: its fields, its states, and each interaction, a link to a screen
     written as that screen's name."""
+
+    @classmethod
+    def from_record(cls, record: dict[str, Any], index: int, ux_map: "JsonUxMap") -> Control:
+        """The control a record writes, on ux_map's graph: a Story Demo control when the record says it is one."""
+        common = (record.get("name", f"Control {index}"), index, record.get("control_type", ""),
+                  record.get("label", ""), record.get("bound_field", ""))
+        if record.get("kind") == _STORY_DEMO or record.get("story_steps"):
+            control = ux_map.story_demo_control_type.demo_from_record(common, record, ux_map)
+        else:
+            control = cls(*common, graph=ux_map.graph)
+        control.read_states_and_interactions(record, ux_map)
+        return control
+
+    def read_states_and_interactions(self, record: dict[str, Any], ux_map: "JsonUxMap") -> None:
+        """The states the record lists, and each interaction it writes, its destination the screen it names."""
+        self.states = list(record.get("states", []))
+        for index, interaction in enumerate(record.get("interactions", [])):
+            self.append_interaction(Interaction(
+                interaction.get("name", f"Interaction {index}"),
+                index,
+                interaction.get("trigger", ""),
+                interaction.get("effect", ""),
+                ux_map.screen_named(interaction.get("destination", "")),
+                ux_map.graph,
+            ))
 
     def as_record(self) -> dict[str, Any]:
         return {
@@ -41,9 +73,22 @@ class JsonStoryDemoControl(StoryDemoControl, JsonControl):
     """A Story Demo control as the JSON document writes it: a control's record, marked with its kind, with the steps
     it runs and the input it fills."""
 
+    @classmethod
+    def demo_from_record(cls, common: tuple, record: dict[str, Any], ux_map: "JsonUxMap") -> "JsonStoryDemoControl":
+        """The Story Demo control a record writes, with a control's common fields."""
+        return cls(
+            *common,
+            record.get("story_steps"),
+            record.get("set_input", ""),
+            record.get("item_story_steps"),
+            record.get("item_value", ""),
+            record.get("item_label", ""),
+            graph=ux_map.graph,
+        )
+
     def as_record(self) -> dict[str, Any]:
         demo: dict[str, Any] = {
-            "kind": "StoryDemoControl",
+            "kind": _STORY_DEMO,
             "story_steps": [step.as_dict() for step in self.story_steps],
             "set_input": self.set_input,
             "item_story_steps": [step.as_dict() for step in self.item_story_steps],
@@ -56,12 +101,49 @@ class JsonStoryDemoControl(StoryDemoControl, JsonControl):
 class JsonRegion(Region):
     """A region as the JSON document writes it: its name, its area, and each control's record."""
 
+    @classmethod
+    def from_record(cls, record: dict[str, Any], index: int, ux_map: "JsonUxMap") -> "JsonRegion":
+        region = cls(record.get("name", f"Region {index}"), index, record.get("area", ""), ux_map.graph)
+        for control_index, control in enumerate(record.get("controls", [])):
+            region.append_control(ux_map.control_type.from_record(control, control_index, ux_map))
+        return region
+
     def as_record(self) -> dict[str, Any]:
         return {"name": self.name, "area": self.area, "controls": [control.as_record() for control in self.controls]}
 
 
 class JsonScreen(Screen):
     """A screen as the JSON document writes it: its fields, what it shows, and each region's record."""
+
+    @classmethod
+    def from_record(cls, record: dict[str, Any], index: int, ux_map: "JsonUxMap") -> "JsonScreen":
+        """The screen a record writes, before any link to another screen is read."""
+        return cls(
+            record.get("name", f"Screen {index}"),
+            index,
+            record.get("slug", ""),
+            record.get("layout", ""),
+            record.get("description", ""),
+            graph=ux_map.graph,
+        )
+
+    def read_record(self, record: dict[str, Any], ux_map: "JsonUxMap") -> None:
+        """The rest of the screen's record, once every screen is on the map: the screen it is the chrome of, what it
+        shows, and its regions."""
+        self.chrome_of = ux_map.screen_named(record.get("chrome_of", ""))
+        self.inactive_tabs = list(record.get("inactive_tabs", []))
+        for story in record.get("story_names", []):
+            self.show_story(story)
+        for scenario in record.get("scenario_names", []):
+            self.show_scenario(scenario)
+        for step in record.get("step_names", []):
+            self.show_step(step)
+        self.domain_terms = list(record.get("domain_terms", []))
+        self.domain_concepts = list(record.get("domain_concepts", []))
+        self.image = record.get("image", "")
+        self.prototype = record.get("prototype", "")
+        for index, region in enumerate(record.get("regions", [])):
+            self.append_region(ux_map.region_type.from_record(region, index, ux_map))
 
     def as_record(self) -> dict[str, Any]:
         return {
@@ -85,6 +167,18 @@ class JsonScreen(Screen):
 class JsonTransition(Transition):
     """A transition as the JSON document writes it, each screen it joins written as that screen's name."""
 
+    @classmethod
+    def from_record(cls, record: dict[str, Any], index: int, ux_map: "JsonUxMap") -> "JsonTransition":
+        return cls(
+            record.get("name", f"Transition {index}"),
+            index,
+            ux_map.screen_named(record.get("from_screen", "")),
+            ux_map.screen_named(record.get("to_screen", "")),
+            record.get("trigger", ""),
+            record.get("nav_type", "action"),
+            ux_map.graph,
+        )
+
     def as_record(self) -> dict[str, Any]:
         return {
             "name": self.name,
@@ -95,6 +189,32 @@ class JsonTransition(Transition):
         }
 
 
+class JsonContentType(ContentType):
+    """A content type as the JSON document writes it: its name, its hierarchy, and its key actions."""
+
+    @classmethod
+    def from_record(cls, record: dict[str, Any], index: int, ux_map: "JsonUxMap") -> "JsonContentType":
+        content_type = cls(record.get("name", f"ContentType {index}"), index, record.get("hierarchy", ""), ux_map.graph)
+        content_type.key_actions = list(record.get("key_actions", []))
+        return content_type
+
+    def as_record(self) -> dict[str, Any]:
+        return {"name": self.name, "hierarchy": self.hierarchy, "key_actions": list(self.key_actions)}
+
+
+class JsonNavComponent(NavComponent):
+    """A navigation component as the JSON document writes it, each destination written as that screen's name."""
+
+    @classmethod
+    def from_record(cls, record: dict[str, Any], index: int, ux_map: "JsonUxMap") -> "JsonNavComponent":
+        nav = cls(record.get("name", f"Nav {index}"), index, record.get("ux_type", ""), ux_map.graph)
+        nav.destinations = [ux_map.find_screen(name) for name in record.get("destinations", [])]
+        return nav
+
+    def as_record(self) -> dict[str, Any]:
+        return {"name": self.name, "ux_type": self.ux_type, "destinations": [screen.name for screen in self.destinations]}
+
+
 class JsonUxMap(UxMap):
     workspace_files = ("ux-map.json", "**/ux-map.json", "ux.json", "**/ux.json")
     screen_type = JsonScreen
@@ -102,11 +222,39 @@ class JsonUxMap(UxMap):
     control_type = JsonControl
     story_demo_control_type = JsonStoryDemoControl
     transition_type = JsonTransition
+    content_type_type = JsonContentType
+    nav_component_type = JsonNavComponent
 
     def parse(self, content: str | dict) -> UxMap:
+        """A new map of this format read from a JSON document: its own fields, then each screen, each transition,
+        content type, and navigation component reading its own record."""
         data = json.loads(content) if isinstance(content, str) else content
         ux_map = type(self).create(name=data.get("name", "UxMap"))
-        return JsonUxMapReader(ux_map, data).read()
+        ux_map.read_record(data)
+        return ux_map
+
+    def read_record(self, data: dict[str, Any]) -> None:
+        with self.batch_schema_sync():
+            self.scope = data.get("scope", "")
+            self.story_references = data.get("story_references", [])
+            self.object_references = data.get("object_references", [])
+            self.context.notes = list(data.get("notes", []))
+            self.context.invariants = list(data.get("invariants", []))
+            screens = data.get("screens", [])
+            for index, record in enumerate(screens):
+                self.append_screen(self.screen_type.from_record(record, index, self))
+            for screen, record in zip(self.screens, screens):
+                screen.read_record(record, self)
+            for index, record in enumerate(data.get("transitions", [])):
+                self.transitions.append(self.transition_type.from_record(record, index, self))
+            for index, record in enumerate(data.get("content_types", [])):
+                self.content_types.append(self.content_type_type.from_record(record, index, self))
+            for index, record in enumerate(data.get("nav_components", [])):
+                self.nav_components.append(self.nav_component_type.from_record(record, index, self))
+
+    def screen_named(self, name: str) -> Optional[Screen]:
+        """The screen a record names, or none for a record that names none."""
+        return self.find_screen(name) if name else None
 
     def render(self, canonical: UxMap) -> str:
         """canonical in this format: copied into a map of this format, which writes itself."""
@@ -116,7 +264,8 @@ class JsonUxMap(UxMap):
         return json.dumps(self.map_record(), indent=2) + "\n"
 
     def map_record(self) -> dict[str, Any]:
-        """This map as the JSON document JsonUxMapReader reads: each screen and transition writes its own record."""
+        """This map as the JSON document it reads back: each screen, transition, content type, and navigation
+        component writes its own record."""
         return {
             "name": self.name,
             "scope": self.scope,
@@ -126,132 +275,9 @@ class JsonUxMap(UxMap):
             "invariants": list(self.context.invariants),
             "screens": [screen.as_record() for screen in self.screens],
             "transitions": [transition.as_record() for transition in self.transitions],
-            "content_types": [
-                {"name": content_type.name, "hierarchy": content_type.hierarchy,
-                 "key_actions": list(content_type.key_actions)}
-                for content_type in self.content_types
-            ],
-            "nav_components": [
-                {"name": nav.name, "ux_type": nav.ux_type,
-                 "destinations": [screen.name for screen in nav.destinations]}
-                for nav in self.nav_components
-            ],
+            "content_types": [content_type.as_record() for content_type in self.content_types],
+            "nav_components": [nav.as_record() for nav in self.nav_components],
         }
-
-
-class JsonUxMapReader:
-    """Reads one JSON document into a new map. Every screen is on the map before any link to a screen is read, so a
-    transition, a tab, or a destination names a screen that is already there."""
-
-    def __init__(self, ux_map: UxMap, data: dict[str, Any]) -> None:
-        self.ux_map = ux_map
-        self.data = data
-
-    def read(self) -> UxMap:
-        with self.ux_map.batch_schema_sync():
-            self._read_map_fields()
-            screens = self.data.get("screens", [])
-            for index, screen_data in enumerate(screens):
-                self.ux_map.append_screen(self._screen_shell(screen_data, index))
-            for screen, screen_data in zip(self.ux_map.screens, screens):
-                self._read_screen(screen, screen_data)
-            self._read_components()
-        return self.ux_map
-
-    def _read_map_fields(self) -> None:
-        self.ux_map.scope = self.data.get("scope", "")
-        self.ux_map.story_references = self.data.get("story_references", [])
-        self.ux_map.object_references = self.data.get("object_references", [])
-        self.ux_map.context.notes = list(self.data.get("notes", []))
-        self.ux_map.context.invariants = list(self.data.get("invariants", []))
-
-    def _screen_shell(self, screen_data: dict[str, Any], index: int) -> Screen:
-        return self.ux_map.screen_type(
-            screen_data.get("name", f"Screen {index}"),
-            index,
-            screen_data.get("slug", ""),
-            screen_data.get("layout", ""),
-            screen_data.get("description", ""),
-            graph=self.ux_map.graph,
-        )
-
-    def _read_screen(self, screen: Screen, screen_data: dict[str, Any]) -> None:
-        screen.chrome_of = self._screen_named(screen_data.get("chrome_of", ""))
-        screen.inactive_tabs = list(screen_data.get("inactive_tabs", []))
-        for story in screen_data.get("story_names", []):
-            screen.show_story(story)
-        for scenario in screen_data.get("scenario_names", []):
-            screen.show_scenario(scenario)
-        for step in screen_data.get("step_names", []):
-            screen.show_step(step)
-        screen.domain_terms = list(screen_data.get("domain_terms", []))
-        screen.domain_concepts = list(screen_data.get("domain_concepts", []))
-        screen.image = screen_data.get("image", "")
-        screen.prototype = screen_data.get("prototype", "")
-        for index, region_data in enumerate(screen_data.get("regions", [])):
-            screen.append_region(self._region(region_data, index))
-
-    def _region(self, region_data: dict[str, Any], index: int) -> Region:
-        region = self.ux_map.region_type(region_data.get("name", f"Region {index}"), index, region_data.get("area", ""), self.ux_map.graph)
-        for control_index, control_data in enumerate(region_data.get("controls", [])):
-            region.append_control(self._control(control_data, control_index))
-        return region
-
-    def _control(self, control_data: dict[str, Any], index: int) -> Control:
-        name = control_data.get("name", f"Control {index}")
-        common = (name, index, control_data.get("control_type", ""), control_data.get("label", ""),
-                  control_data.get("bound_field", ""))
-        if control_data.get("kind") == "StoryDemoControl" or control_data.get("story_steps"):
-            control: Control = self.ux_map.story_demo_control_type(
-                *common,
-                control_data.get("story_steps"),
-                control_data.get("set_input", ""),
-                control_data.get("item_story_steps"),
-                control_data.get("item_value", ""),
-                control_data.get("item_label", ""),
-                graph=self.ux_map.graph,
-            )
-        else:
-            control = self.ux_map.control_type(*common, graph=self.ux_map.graph)
-        control.states = list(control_data.get("states", []))
-        for interaction_index, interaction_data in enumerate(control_data.get("interactions", [])):
-            control.append_interaction(self._interaction(interaction_data, interaction_index))
-        return control
-
-    def _interaction(self, interaction_data: dict[str, Any], index: int) -> Interaction:
-        return Interaction(
-            interaction_data.get("name", f"Interaction {index}"),
-            index,
-            interaction_data.get("trigger", ""),
-            interaction_data.get("effect", ""),
-            self._screen_named(interaction_data.get("destination", "")),
-            self.ux_map.graph,
-        )
-
-    def _read_components(self) -> None:
-        graph = self.ux_map.graph
-        for index, transition_data in enumerate(self.data.get("transitions", [])):
-            self.ux_map.transitions.append(self.ux_map.transition_type(
-                transition_data.get("name", f"Transition {index}"),
-                index,
-                self._screen_named(transition_data.get("from_screen", "")),
-                self._screen_named(transition_data.get("to_screen", "")),
-                transition_data.get("trigger", ""),
-                transition_data.get("nav_type", "action"),
-                graph,
-            ))
-        for index, content_data in enumerate(self.data.get("content_types", [])):
-            content_type = ContentType(content_data.get("name", f"ContentType {index}"), index,
-                                       content_data.get("hierarchy", ""), graph)
-            content_type.key_actions = list(content_data.get("key_actions", []))
-            self.ux_map.content_types.append(content_type)
-        for index, nav_data in enumerate(self.data.get("nav_components", [])):
-            nav = NavComponent(nav_data.get("name", f"Nav {index}"), index, nav_data.get("ux_type", ""), graph)
-            nav.destinations = [self.ux_map.find_screen(name) for name in nav_data.get("destinations", [])]
-            self.ux_map.nav_components.append(nav)
-
-    def _screen_named(self, name: str) -> Optional[Screen]:
-        return self.ux_map.find_screen(name) if name else None
 
 
 def _name_of(screen: Optional[Screen]) -> str:

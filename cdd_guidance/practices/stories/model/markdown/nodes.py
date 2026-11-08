@@ -212,11 +212,15 @@ class MarkdownScenario(Scenario):
         # The story's own background read above this scenario, which the scenario carries to its story.
         self.story_backgrounds: Optional[List[Background]] = None
 
+    def heading(self, marks: str) -> str:
+        """`### Scenario: name`, or `### Scenario Outline: name` for an outline, at the heading level marks gives."""
+        kind = "Scenario Outline" if self.is_outline else "Scenario"
+        return f"{marks} {kind}: {self.name}"
+
     def lines(self) -> List[str]:
         """This scenario as markdown: its heading, its own backgrounds, its steps in Given, When, Then order, and its
         examples table."""
-        kind = "Scenario Outline" if self.is_outline else "Scenario"
-        lines = [f"### {kind}: {self.name}", ""]
+        lines = [self.heading("###"), ""]
         for background in self.backgrounds:
             if background.steps:
                 lines.extend(["### Background", ""])
@@ -229,6 +233,24 @@ class MarkdownScenario(Scenario):
             lines.append("")
         lines.extend(example_table_lines(self.examples))
         return lines if lines[-1] == "" else lines + [""]
+
+    def document_text(self) -> str:
+        """This scenario in a scenarios document: each line as it was read, with its heading and steps written anew
+        where the model changed them; a scenario not read from a document is written as its heading and steps."""
+        parts = self.markdown_parts
+        if parts is None:
+            parts = [_HEADING_LINE, "\n", *((_STEP_LINE, self) for _ in _StepLines.steps_of(self)), "\n"]
+        name, is_outline, heading = self.markdown_heading or ("", False, None)
+        out: List[str] = []
+        steps = _StepLines(parts)
+        for part in parts:
+            if part != _HEADING_LINE:
+                out.append(steps.write(part))
+            elif heading is not None and (name, is_outline) == (self.name, self.is_outline):
+                out.append(heading)
+            else:
+                out.append(f"{self.heading(heading.split(' ', 1)[0] if heading else '####')}\n")
+        return "".join(out)
 
     @classmethod
     def from_workspace(cls, root: "Path", *, on_file=None) -> List["MarkdownScenario"]:
@@ -682,6 +704,33 @@ class MarkdownStory(Story):
         self.markdown_heading: Optional[tuple] = None
         self.markdown_parts: Optional[list] = None
 
+    def document_text(self) -> str:
+        """This story in a scenarios document: each line as it was read, with its heading, steps, and scenarios
+        written anew where the model changed them; a story not read from a document is written as its heading, its
+        backgrounds, and its scenarios."""
+        parts = self.markdown_parts
+        if parts is None:
+            parts = [_HEADING_LINE, "\n"]
+            for background in self.backgrounds:
+                parts.extend(["### Background\n", "\n"])
+                parts.extend((_STEP_LINE, background) for _ in _StepLines.steps_of(background))
+                parts.append("\n")
+        name, heading = self.markdown_heading or ("", None)
+        out: List[str] = []
+        steps = _StepLines(parts)
+        for part in parts:
+            if part == _HEADING_LINE:
+                out.append(heading if heading is not None and name == self.name else f"# Story: {self.name}\n")
+            elif isinstance(part, Scenario):
+                if any(scenario is part for scenario in self.scenarios):
+                    out.append(_markdown_scenario(part).document_text())
+            else:
+                out.append(steps.write(part))
+        for scenario in self.scenarios:
+            if not any(scenario is part for part in parts):
+                out.append(_markdown_scenario(scenario).document_text())
+        return "".join(out)
+
     def scenarios_text(self) -> str:
         """This story's own scenarios file: its heading, the examples its scenarios share, its backgrounds, then its
         scenarios."""
@@ -817,6 +866,11 @@ class _ScenarioDocument:
         if name == self.holder.name:
             return line
         return f"# {level}: {self.holder.name}\n"
+
+
+def _markdown_scenario(scenario: Scenario) -> MarkdownScenario:
+    """The scenario as markdown writes it: itself when it is one, else a markdown copy of it."""
+    return scenario if isinstance(scenario, MarkdownScenario) else MarkdownScenario(scenario)
 
 
 class _StepLines:
@@ -1064,57 +1118,12 @@ class MarkdownStoryModel(StoryModel):
                 out.append(document.heading_line())
             elif isinstance(part, MarkdownStory):
                 if any(story is part for story in document.holder.stories):
-                    out.append(self._render_story(part))
+                    out.append(part.document_text())
             else:
                 out.append(steps.write(part))
         for story in document.holder.stories:
             if not any(story is part for part in document.parts):
-                out.append(self._render_story(story))
-        return "".join(out)
-
-    def _render_story(self, story) -> str:
-        parts = story.markdown_parts if isinstance(story, MarkdownStory) else None
-        if parts is None:
-            parts = [_HEADING_LINE, "\n"]
-            for background in story.backgrounds:
-                parts.extend(["### Background\n", "\n"])
-                parts.extend((_STEP_LINE, background) for _ in _StepLines.steps_of(background))
-                parts.append("\n")
-        name, heading = story.markdown_heading if isinstance(story, MarkdownStory) and story.markdown_heading else ("", None)
-        out: List[str] = []
-        steps = _StepLines(parts)
-        for part in parts:
-            if part == _HEADING_LINE:
-                out.append(heading if heading is not None and name == story.name else f"# Story: {story.name}\n")
-            elif isinstance(part, Scenario):
-                if any(scenario is part for scenario in story.scenarios):
-                    out.append(self._render_scenario(part))
-            else:
-                out.append(steps.write(part))
-        for scenario in story.scenarios:
-            if not any(scenario is part for part in parts):
-                out.append(self._render_scenario(scenario))
-        return "".join(out)
-
-    def _render_scenario(self, scenario) -> str:
-        parts = scenario.markdown_parts if isinstance(scenario, MarkdownScenario) else None
-        if parts is None:
-            parts = [_HEADING_LINE, "\n"]
-            parts.extend((_STEP_LINE, scenario) for _ in _StepLines.steps_of(scenario))
-            parts.append("\n")
-        read = scenario.markdown_heading if isinstance(scenario, MarkdownScenario) else None
-        name, is_outline, heading = read or ("", False, None)
-        out: List[str] = []
-        steps = _StepLines(parts)
-        for part in parts:
-            if part != _HEADING_LINE:
-                out.append(steps.write(part))
-            elif heading is not None and (name, is_outline) == (scenario.name, scenario.is_outline):
-                out.append(heading)
-            else:
-                marks = heading.split(" ", 1)[0] if heading else "####"
-                kind = "Scenario Outline" if scenario.is_outline else "Scenario"
-                out.append(f"{marks} {kind}: {scenario.name}\n")
+                out.append((story if isinstance(story, MarkdownStory) else MarkdownStory(story)).document_text())
         return "".join(out)
 
     # -- Source location stamping ----------------------------------------------

@@ -140,9 +140,14 @@ class PythonClass(CodeClass):
         bases = ", ".join(self.declared_bases(known_names) or (["ABC"] if self.is_contract else []))
         heading = f"class {self.name}({bases}):" if bases else f"class {self.name}:"
         lines = ["", ""] + [f"@{snake_case_decorator(item)}" for item in self.stereotypes] + [heading]
-        if self.intent:
-            lines.extend([f'    """{self.intent}"""', ""])
+        doc = self.doc_intent()
+        if doc:
+            lines.extend([f'    """{doc}"""', ""])
         return lines
+
+    def doc_intent(self) -> str:
+        """Python marks the stereotypes as decorators, so its doc comment does not."""
+        return DocumentedIntent.of(self, marked=False).text()
 
     def closing(self, has_members: bool) -> List[str]:
         return [] if has_members else ["    pass"]
@@ -220,7 +225,8 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
 
     def _class_from_ast(self, node: ast.ClassDef, class_order: int) -> PythonClass:
         documented = DocumentedIntent.read(ast.get_docstring(node) or "")
-        oclass = PythonClass(name=node.name, sequential_order=class_order, intent=documented.intent, line=node.lineno)
+        oclass = PythonClass(name=node.name, sequential_order=class_order, line=node.lineno)
+        documented.describe(oclass)
         oclass.stereotypes = list(dict.fromkeys(self._stereotypes_above(node) + documented.stereotypes))
         oclass.end_line = getattr(node, "end_lineno", None) or node.lineno
         oclass.bases = [ast.unparse(base) for base in node.bases]

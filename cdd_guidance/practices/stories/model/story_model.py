@@ -1011,9 +1011,10 @@ class StoryModel(StoryNode):
         if isinstance(source, StoryModel):
             self._copy_map(source)
 
-    def copy_of(self, canonical: "StoryModel") -> "StoryModel":
-        """canonical copied into this format's node types, so this format's nodes write it."""
-        return type(self)(canonical)
+    def copy_of(self, source: "StoryModel") -> "StoryModel":
+        """source copied into this format's node types, with this model's settings, so this format's nodes write it.
+        It is asked of a model, not its class, because a code format copies with its own settings."""
+        return type(self)(source)
 
     @property
     def epics(self) -> List[Epic]:

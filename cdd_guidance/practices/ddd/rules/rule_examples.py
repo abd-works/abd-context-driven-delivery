@@ -25,13 +25,12 @@ def ddd_rule_by_slug(slug: str):
 
 
 def _kind_of(tactical: TacticalClass, names: set[str]) -> str:
-    """The building block the DDD practice's graph reading names the class: its stereotypes first, then its name."""
+    """The building block the DDD practice's graph reading names the class: its stereotypes first, then its name. An
+    example whose class the graph names no block for says the kind it checks."""
     kind = tactical.inferred_kind(names)
-    if kind is None and tactical.name.endswith("Repository"):
-        return "Repository"
-    if kind is None and tactical.name.endswith("Service"):
-        return "DomainService"
-    return kind or "Entity"
+    if kind is None:
+        raise ValueError(f"the graph names no building block for {tactical.name!r}; pass the kind the example checks")
+    return kind
 
 
 def _ddd_node(source: str, class_name: str, kind: str | None, lang: str, filename: str | None):

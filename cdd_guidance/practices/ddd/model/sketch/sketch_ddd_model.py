@@ -53,7 +53,7 @@ class SketchDddModel(BoundedContextMap):
     lens = _LENS
     """The section of a sketch DDD writes, opened by its `ddd:` or `domain driven design:` heading."""
     bounded_context_type = MarkdownBoundedContext
-    aggregate_type = MarkdownAggregate
+
 
     def parse(self, text: str) -> "SketchDddModel":
         """Read the ddd section of a sketch, flattened to indentation, into this map, and return it: each context the
@@ -101,11 +101,7 @@ class SketchDddModel(BoundedContextMap):
         written = [_SECTION, ""]
         for context in model.contexts:
             written.extend(context.sketch_lines())
-        entries = [
-            f"- {event.name}: emitted by {aggregate.name}; consumed by {', '.join(item.name for item in event.consumers)}"
-            for aggregate in model.every_aggregate
-            for event in aggregate.events
-        ]
+        entries = [f"- {event.map_entry()}" for aggregate in model.every_aggregate for event in aggregate.events]
         if entries:
             written.extend([f"{SKETCH_CONTEXT}{_EVENT_MAP}", ""] + fenced(entries))
         return "\n".join(written)

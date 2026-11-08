@@ -152,3 +152,12 @@ with description("a Ddd toolset"):
                 python = "class Cart:\n    def add(self, item: object) -> None:\n        self.items.append(item)\n"
                 result = Ddd(fidelity="model").render("typescript", python, source="python")
                 expect("    // self.items.append(item)" in result["content"]).to(be_true)
+
+
+with description("a Ddd practice made in a set with the Clean Engineering practice it extends"):
+    with it("should read a plain class model through that same Clean Engineering practice"):
+        from harness.guidance.practice_catalogue import PracticeCatalogue
+
+        practices = {type(item).__name__: item for item in PracticeCatalogue.create_all(fidelity=None)}
+        practices["Ddd"].render("markdown", "## Cart\n\n------\n+ total: int\n----\n", source="markdown")
+        expect("markdown" in vars(practices["Ddd"].extended).get("_live_adapters", {})).to(be_true)

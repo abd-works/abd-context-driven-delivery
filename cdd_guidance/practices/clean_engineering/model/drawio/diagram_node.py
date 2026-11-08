@@ -32,6 +32,12 @@ MODULE_CHILD_STYLE = (
 )
 
 
+def _style_kind(style: str) -> str:
+    """The kind a cell's style names after `kind=`; empty when it names none."""
+    found = re.search(r'(?:^|;)kind=([^;]*)', style)
+    return found.group(1) if found else ''
+
+
 MEMBER_CHARACTER_WIDTH = 5.5
 CARD_TEXT_PADDING = 18
 CARD_MIN_WIDTH = 200
@@ -154,6 +160,16 @@ class DrawIOImportedClass(ImportedClass, DrawIOClass):
 class DrawIOModule(DiagramModule, DrawioVertex):
     """Draw.io rounded modules-view cell."""
 
+    KIND = ""
+    """The kind of module a cell draws, written in its style as `kind=...;` so the drawing reads back as the cell type
+    that drew it; a plain module names none."""
+
+    @classmethod
+    def draws(cls, style: str) -> bool:
+        """True when a cell with this style is one this type draws: its style names this type's kind; a plain module
+        draws any cell, so a reader that knows no kind of its own reads every cell as a plain module."""
+        return not cls.KIND or _style_kind(style) == cls.KIND
+
     def __init__(self, name: str = '', sequential_order: int = 1, **kwargs) -> None:
         super().__init__(name, sequential_order, **kwargs)
         # The words written on the arrow to each dependency, by the dependency's name; most arrows carry none.
@@ -177,9 +193,8 @@ class DrawIOModule(DiagramModule, DrawioVertex):
         )
 
     def style(self) -> str:
-        if self.nested:
-            return MODULE_CHILD_STYLE
-        return MODULE_STYLE
+        kind = f'kind={self.KIND};' if self.KIND else ''
+        return (MODULE_CHILD_STYLE if self.nested else MODULE_STYLE) + kind
 
     @classmethod
     def from_cell(cls, value: str, sequential_order: int) -> Optional['DrawIOModule']:
