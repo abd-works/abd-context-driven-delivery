@@ -56,6 +56,7 @@ export function progressOf(ticket: string, slug: string, state = 'not_started', 
     practice: { key: practice },
     is_enabled: practice in ROOTS,
     next_action: nextAction,
+    commands: Object.fromEntries(STAGE_ACTIONS.map(action => [action, `/actions-${action} ${slug} session=${sessionFileOf(ticket)}`])),
     allowed_actions: [],
     state,
     actions,
@@ -64,9 +65,12 @@ export function progressOf(ticket: string, slug: string, state = 'not_started', 
   }
 }
 
+// Seed: a ticket's session.json as a path from the project, which every command a ticket's progress gives names.
+const sessionFileOf = (ticket: string): string => `.sessions/${ticket}/session.json`
+
 // Seed: a ticket's session with the practices Stories, UX and Clean Engineering turned on, each on its chosen root.
 function sessionOf(name: string, title: string): SessionData {
-  const sessionFile = `.sessions/${name}/session.json`
+  const sessionFile = sessionFileOf(name)
   const practiceData = (practice: string): PracticeSessionOutputData => ({ name: practice, session_file: sessionFile, enabled: practice in ROOTS, root: ROOTS[practice] ?? '', is_root_chosen: practice in ROOTS })
   return { name, session_file: sessionFile, workpath: '', handoff: '', title, scope: '', parent: '', practices: Object.fromEntries(PRACTICES.map(practice => [practice, practiceData(practice)])) }
 }
@@ -92,6 +96,10 @@ export function checkoutFlow(seed: TicketSeed = {}): TicketData {
     drop_targets: ['Backlog'],
     is_done: seed.is_done ?? false,
     next: next ? { ticket: { name }, fidelity: { slug: next } } : null,
+    agent_context: `CDD session board: you are working on ticket ${name} ("${title}"), in ${seed.column ?? 'Specification'}.`,
+    leave_choices: ['handoff', 'commit', 'push', 'merge'],
+    first_leave_choices: ['handoff', 'commit', 'push'],
+    open_choices: ['branch', 'worktree'],
     worktree: '',
   }
 }
@@ -137,13 +145,15 @@ const column = (name: string, tickets: TicketData[]): ColumnData => {
   const stage = work.length
     ? { scope: SCOPES[name], actions: STAGE_ACTIONS, producing_actions: STAGE_ACTIONS.filter(action => action !== 'validate' && action !== 'review'), actions_with_formats: ['generate', 'render'], work_required: work.map(fidelityOf) }
     : {}
-  return { name, in_progress: tickets.filter(ticket => ticket.column.name === name), ...stage }
+  return { name, kind: work.length ? 'stage' : 'complete', in_progress: tickets.filter(ticket => ticket.column.name === name), ...stage }
 }
 
-// Seed: the board as board.show returns it, each ticket in the column it names and the active one named.
+// Seed: the board as board.show returns it, each ticket in the column it names, the tickets in a stage named as open in
+// column order, and the active one named.
 export function boardOf(active: string | null, ...tickets: TicketData[]): BoardData {
   const activeTicket = tickets.some(ticket => ticket.name === active) ? { name: active! } : null
-  return { project: 'abd-context-driven-delivery', practices: PRACTICES.map(practiceData), active: activeTicket, columns: [{ name: 'Backlog', items: [] }, ...STAGE_ORDER.map(name => column(name, tickets))] }
+  const openTickets = STAGE_ORDER.filter(name => name in WORK_OF).flatMap(name => tickets.filter(ticket => ticket.column.name === name).map(ticket => ({ name: ticket.name })))
+  return { project: 'abd-context-driven-delivery', practices: PRACTICES.map(practiceData), open_tickets: openTickets, active: activeTicket, columns: [{ name: 'Backlog', kind: 'backlog', items: [] }, ...STAGE_ORDER.map(name => column(name, tickets))] }
 }
 
 // Interaction: the name a person types in the session list's field.
@@ -165,5 +175,6 @@ export const MODEL_REPORT = {
   text: '# Validation\n\n## no-legacy-api-after-refactor\n\nFail',
   rules: [],
   has_saved_graph: false,
+  violation_count: 1,
   is_out_of_date: false,
 }

@@ -59,6 +59,8 @@ EDGE_ORDER: dict[str, int] = {
 # A kind only a pattern overlay's schema names: a child sits with the owned children, a relationship after them.
 _DIRECT_KIND_ORDER = 2
 _RELATIONSHIP_KIND_ORDER = 7
+# Kinds no one filters by: belongsTo is the back-edge of every child list, and scopes is left out of the explorer tree.
+_NOT_OFFERED = frozenset({"belongsTo", "scopes"})
 
 
 class EdgeType:
@@ -69,6 +71,11 @@ class EdgeType:
         self.kind = kind
         self.order = order
         self.display = display
+
+    @property
+    def is_offered(self) -> bool:
+        """Whether a person filters the explorer by this kind."""
+        return self.kind not in _NOT_OFFERED
 
     @classmethod
     def from_kind(cls, kind: str, display: Display = "direct") -> EdgeType:

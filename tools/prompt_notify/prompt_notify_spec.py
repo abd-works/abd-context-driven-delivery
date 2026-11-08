@@ -1,4 +1,4 @@
-"""BDD specs for prompt echo against MCP and guideline signatures."""
+"""BDD specs for prompt echo against MCP and rule signatures."""
 import json
 import sys
 from pathlib import Path
@@ -104,7 +104,7 @@ with description("prompt echo detection"):
             expect(label).to(equal("bdd-behavior"))
 
     with context("that receives a practice rules file"):
-        with it("should name the guideline from the rules path"):
+        with it("should name the rule from the rules path"):
             kind, label = _prompt_notify.detect(
                 HookPayload({
                     "tool_name": "Read",
@@ -115,7 +115,7 @@ with description("prompt echo detection"):
                     },
                 })
             )
-            expect(kind).to(equal("guideline"))
+            expect(kind).to(equal("rule"))
             expect(label).to(equal("bdd"))
 
     with context("that receives a source file whose path names a practice"):

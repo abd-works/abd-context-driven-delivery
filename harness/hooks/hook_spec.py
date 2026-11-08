@@ -389,7 +389,7 @@ with description("hook dispatch"):
             try:
                 root = Path(tmp.name)
                 server = HookServer(root, HandlerCatalog([], root))
-                saved = Sessions(root).saved.chat_injections.path_for("chat-a")
+                saved = Sessions(root).current().chat_injections.path_for("chat-a")
                 saved.parent.mkdir(parents=True, exist_ok=True)
                 saved.write_text(
                     "Before you continue, echo the following message to the user:\n\nrules injected for clean-engineering-code\n",
@@ -412,7 +412,7 @@ with description("hook dispatch"):
             try:
                 root = Path(tmp.name)
                 server = HookServer(root, HandlerCatalog([], root))
-                saved = Sessions(root).saved.chat_injections.path_for("chat-a")
+                saved = Sessions(root).current().chat_injections.path_for("chat-a")
                 saved.parent.mkdir(parents=True, exist_ok=True)
                 saved.write_text(
                     "You just edited session.py. Check that edit against these rules and fix anything that does not follow them:\n"

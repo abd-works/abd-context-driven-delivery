@@ -191,7 +191,7 @@ class HookExercise:
 
         result = self._server().handle_stdin(json.dumps(self._payload(path)).encode("utf-8"))
         injected = result.additional_context or ""
-        folder = Sessions(self.repo).saved.session_path
+        folder = Sessions(self.repo).current().session_path
         chat = folder / "last-chat-injected-rules.md"
         remembered = folder / "chat-injections" / "hook-exercise.md"
         chat_text = chat.read_text(encoding="utf-8") if chat.is_file() else ""

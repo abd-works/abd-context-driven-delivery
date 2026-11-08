@@ -11,6 +11,8 @@ from harness.graph.graph import Graph, Node, Source
 from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.skipped_folders import scanned_files
 
+from cdd_guidance.patterns.lern_domain_driven.tier_facts import AggregateFolder, TierFile, test_setup_text
+
 _VIEW_EXPORT = re.compile(r"export\s+function\s+(\w+View)\s*\(")
 _CONTEXT_ARROW = re.compile(r"^[\s\-*>]*(.+?)\s*→\s*(.+?)\s*$")
 _VIEW_SKIP_SUFFIXES = ("-form", "-fields", "-banner", "-messages", "-footer", "-loaded", "-client")
@@ -62,7 +64,6 @@ class _LernReading:
         self.graph.link(kind, parent, child, self.overlay.display_of(kind))
 
     def read(self) -> None:
-        from cdd_guidance.patterns.lern_domain_driven.tier_facts import test_setup_text
         from cdd_guidance.practices.ddd.ddd import Ddd
         from cdd_guidance.practices.stories.stories import Stories
 
@@ -72,7 +73,7 @@ class _LernReading:
         if ddd is None or self.stories is None:
             return
         self.ddd = ddd
-        self.setup_text = test_setup_text(self.root)
+        self.setup_text = test_setup_text(self.root, self.overlay.pattern.story_test_folder)
         self._context_mappings()
         self._tier_folders()
         aggregates = {node.source.file.replace("\\", "/"): node for node in self.ddd.in_graph.nodes("Aggregate")}
@@ -82,8 +83,6 @@ class _LernReading:
 
     def _behaviors(self) -> None:
         """LERN behavior files on the BDD practice, each carrying the facts its tier rules read."""
-        from cdd_guidance.patterns.lern_domain_driven.tier_facts import TierFile
-
         from cdd_guidance.practices.bdd.bdd import Bdd
 
         bdd = self.graph.loaded(Bdd)
@@ -140,7 +139,6 @@ class _LernReading:
 
     def _tier_facts(self, folder: str, aggregate: Node, tiers: dict[str, Node], repositories: list[Node]) -> None:
         """Read each LERN tier file once and record what its rules need on the node it became."""
-        from cdd_guidance.patterns.lern_domain_driven.tier_facts import AggregateFolder, TierFile
 
         aggregate_folder = AggregateFolder(self.root, folder)
         aggregate.set_fact("web_path_literals", aggregate_folder.web_path_literals())
@@ -208,8 +206,6 @@ class _LernReading:
         return next((node for node in aggregates if node.name == tail), None)
 
     def _story_files(self) -> None:
-        from cdd_guidance.patterns.lern_domain_driven.tier_facts import TierFile
-
         stories = self.stories
         for file in scanned_files(self.root):
             semantic = _story_semantic(file)
@@ -217,11 +213,25 @@ class _LernReading:
                 continue
             story = TierFile.at(self.root, file)
             node = _file_node(stories, story.relative, semantic, file.name)
-            parent = _parent_story_scope(stories, story.relative)
+            parent = self._parent_story_scope(story.relative)
             if parent is not None:
                 self._link("owns", parent, node)
             for key, value in story.story_facts().items():
                 node.set_fact(key, value)
+
+    def _parent_story_scope(self, relative: str) -> Node | None:
+        """The innermost epic of the stories whose folder holds the file; else the epic named for the file's folder."""
+        rel = relative.replace("\\", "/")
+        epics = [node for node in self.stories.in_graph.nodes() if node.type in {"Epic", "SubEpic"}]
+        holding = [
+            (len(_folder_of(node.source.file)), node)
+            for node in epics
+            if node.source.file and (rel == _folder_of(node.source.file) or rel.startswith(f"{_folder_of(node.source.file)}/"))
+        ]
+        if holding:
+            return max(holding, key=lambda item: item[0])[1]
+        parent_name = Path(rel).parent.name.replace("_", "-")
+        return next((node for node in epics if node.name.replace("_", "-") == parent_name), None)
 
 
 def _is_view_file(filename: str, slug: str) -> bool:
@@ -246,17 +256,4 @@ def _folder_of(file_path: str) -> str:
     return str(Path(file_path).parent).replace("\\", "/")
 
 
-def _parent_story_scope(stories, relative: str) -> Node | None:
-    """The innermost epic of stories whose folder holds the file; else the epic named for the file's folder."""
-    rel = relative.replace("\\", "/")
-    epics = [node for node in stories.in_graph.nodes() if node.type in {"Epic", "SubEpic"}]
-    holding = [
-        (len(_folder_of(node.source.file)), node)
-        for node in epics
-        if node.source.file and (rel == _folder_of(node.source.file) or rel.startswith(f"{_folder_of(node.source.file)}/"))
-    ]
-    if holding:
-        return max(holding, key=lambda item: item[0])[1]
-    parent_name = Path(rel).parent.name.replace("_", "-")
-    return next((node for node in epics if node.name.replace("_", "-") == parent_name), None)
 

@@ -97,7 +97,7 @@ with story("Add Backlog Item"):
             pass
         with when("the Person starts Sign up"):
             # Person -> BacklogItem.start()
-            # BacklogItem -> Session.load(.sessions/_backlog/sign-up, repo).reopen()
+            # BacklogItem -> Sessions.load(.sessions/_backlog/sign-up).reopen()
             # BacklogItem <- Ticket sign-up
             pass
         with then("sign-up is back on the board with its session log and session.json"):
