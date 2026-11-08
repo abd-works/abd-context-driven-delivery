@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from harness.graph.pattern_overlays import PatternOverlays
 from harness.graph.violation import Violation
 from harness.installation.data_class import data_of
+from harness.installation.json_file import JsonFile, JsonFileUnreadable
 
 if TYPE_CHECKING:
     from harness.graph.edge import Edge
@@ -267,23 +268,22 @@ class SavedGraphFile:
     def __init__(self, folder: Path, report_progress: Callable[[str], None]) -> None:
         self.path = folder / ".context" / GRAPH_FILE_NAME
         self._report_progress = report_progress
+        # Written whole and swapped in, so a chat reading it never meets half a graph another chat's worker is saving.
+        self._file = JsonFile(self.path, compact=True)
 
     def read(self) -> SavedGraph | None:
         """The saved graph; none when there is no file, or it is not a saved graph of the shape this code writes. The
         file is a copy of what a load reads from the folder, so a load reads the folder again instead."""
-        if not self.path.is_file():
+        if not self._file.exists():
             return None
         self._report_progress("Reading the saved graph")
         try:
-            document = json.loads(self.path.read_text(encoding="utf-8"))
-            return SavedGraph.from_document(document, str(self.path)) if isinstance(document, dict) else None
-        except (json.JSONDecodeError, SavedGraphOutdated):
+            return SavedGraph.from_document(self._file.read(), str(self.path))
+        except (JsonFileUnreadable, SavedGraphOutdated):
             return None
 
     def write(self, saved: SavedGraph) -> Path:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(saved.text, encoding="utf-8")
-        return self.path
+        return self._file.write(saved.document)
 
     def holding(self, practice_roots: dict[str, Path], overlays: list[str]) -> SavedGraph | None:
         """The saved graph, when it holds these practices, each on the same root, and these overlays. It is not checked
