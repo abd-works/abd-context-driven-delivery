@@ -77,14 +77,14 @@ From round 5 on, each round runs validate, writes a report, has agents fix it, a
 
 | Goal class | Concerns | Round 5 |
 |---|---|---|
-| Bad resource orientation | 5, 9 | 64 (59 + 5) |
+| Bad resource orientation | 5, 9 | 63 |
 | Shadow models | 2 | 30 |
-| Duplicated functions | 1, 12 | 58 (47 + 11) |
-| **Goal total** | | **152** |
+| Duplicated functions | 1, 12 | 57 |
+| **Goal total** | | **150** |
 
-The first count gave 163, because it also counted round 5's summary tables of concerns. The counter now reads only tables that have a status or severity column, so 152 is the baseline.
+The first count gave 163, because it also counted round 5's summary tables of concerns. The counter now counts only finding rows: rows with a concern and a severity, read from a severity column or from the row's id (H1, R6-M4). That gives 150, the baseline.
 
-**Done when** the goal total is below 30 (under a fifth of round 5's 152) and no high finding remains in the three classes. The user set this target on 2026-11-08; it replaced the first target of 81.
+**Done when** the goal total is below 30 (under a fifth of round 5's 150) and no high finding remains in the three classes. The user set this target on 2026-11-08; it replaced the first target of 81.
 
 **What counts as cycling, and what to change when it happens.** After each round, compare it with the round before:
 - **Each round should cut the goal total by at least 20%.** If it doesn't, change the fix brief, not just the code. Find which findings were reported again:
@@ -96,6 +96,22 @@ The first count gave 163, because it also counted round 5's summary tables of co
 
 | Round | Bad resource orientation | Shadow models | Duplicated functions | Goal total | Change from last round | Regressions | Notes |
 |---|---|---|---|---|---|---|---|
-| 5 | 64 | 30 | 58 | 152 | baseline | — | First cross-file round. Nine fix agents ran on it |
+| 5 | 63 | 30 | 57 | 150 | baseline | — | First cross-file round. Nine fix agents ran on it |
+| 6 | 56 | 18 | 36 | 110 | −27% | 1 (0.9%) | 133 findings, 12 high. Shadow models −40%, duplicated functions −37%, resource orientation only −11%. See [round6-report.md](round6-report.md) |
 
 **Code metrics beside the findings.** [code-metrics-trend.md](code-metrics-trend.md) measures each round's input revision with standard tools. From round 6 on, each round also records the metrics that track bad resource orientation: classes with CBO above 14 (43 at the tip), classes with LCOM4 above 1 (252), runtime import cycles (2), the top module fan-in (62), the WMC of the largest classes (`Graph`, `PracticeGuidance`), and duplicated lines (0.42%). Shadow models and semantic duplicates are mostly invisible to these metrics, so the AI findings stay the measure for those two classes.
+
+## Round 6 analysis: on track, with one class lagging
+
+- **The loop is making progress, not going in circles.** The goal total fell from 150 to 110, a 27% cut, above the 20% bar. Regressions were 1 of 110, well under the 10% limit. About 120 of round 5's 166 findings are fixed.
+- **Shadow models and duplicated functions are falling fast:** −40% and −37%. At this rate they reach single figures in about three more rounds.
+- **Bad resource orientation is lagging, at −11%.** Fixes removed 33 of its round-5 findings, but the validators found 25 new ones in code that round 5 read and missed. Three patterns explain most of it, and the round-6 fix brief changes for each:
+  - **Stand-in swapped for stand-in:** one lookup replaced by another with the same effect. A concern-5 fix must now come with a spec on the effect it protects.
+  - **Named copy removed, twin left:** fix agents must grep for the job and list every place doing it, not just the named function.
+  - **Skipped items held open:** each becomes a named task with a failing spec, or a decision record that takes it out of the count.
+- **The round-5 fixes introduced three high bugs:** a premature "generate done", `partition` and `repair` failing on optional arguments, and a new actions↔practices cycle. New checks before each commit target exactly these: recipes called with required arguments only, `-X importtime` on changed package `__init__` files, and a grep for caches and registries that were moved rather than removed.
+- **The graph check is still unreliable because of B10.** Every validator lost the server during graph builds, so this round rests mainly on the AI check. B10 gets a structural fix this round: graph builds run outside the server's request loop. Until it lands, graph calls run one area at a time.
+
+**What would mean the loop is cycling:** a round-7 total above 88, which is less than a 20% cut, or resource orientation not falling. Either would mean changing the approach. For resource orientation, the next step would be one agent per pattern across the whole repository, instead of one agent per area.
+
+**To reach the goal of under 30:** at a 27% cut per round, 110 needs about four more rounds (80, 59, 43, 31, then below 30). At the 40% rate of the two faster classes, it needs about three.
