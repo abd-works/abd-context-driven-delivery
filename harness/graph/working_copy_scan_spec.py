@@ -78,6 +78,8 @@ def _working_copy() -> Path:
     _write(root, "src/billing/invoice.ts", _WITHIN_LIMIT.format(name="Invoice"))
     _write(root, "src/billing/.context/module-context.md", _CARD.format(name="billing", cls="Invoice"))
     _write(root, "src/shared/.examples/sample.ts", _WITHIN_LIMIT.format(name="Sample"))
+    _write(root, "src/orders/_examples/faulty/order.ts", _OVER_LIMIT.format(name="FaultyOrder"))
+    _write(root, "src/billing/fixtures/invoice.ts", _OVER_LIMIT.format(name="FixtureInvoice"))
     _write(root, "test-results/run-1/trace/resources/trace.js", _OVER_LIMIT.format(name="TraceBundle"))
     _write(root, "playwright-report/data/report.js", _OVER_LIMIT.format(name="ReportBundle"))
     _write(root, "packages/app/dist/bundle.js", _OVER_LIMIT.format(name="DistBundle"))
@@ -121,6 +123,10 @@ with description("a working copy scan") as self:
             names = _class_names(self.graph)
             for skipped in ("TraceBundle", "ReportBundle", "DistBundle", "WorktreeOrder"):
                 expect(skipped in names).to(equal(False))
+
+        with it("should leave a rule's _examples and a test's fixtures out"):
+            names = _class_names(self.graph)
+            expect([name in names for name in ("FaultyOrder", "FixtureInvoice")]).to(equal([False, False]))
 
     with context("over module cards"):
         with it("should make a module of a folder with .context/module-context.md"):

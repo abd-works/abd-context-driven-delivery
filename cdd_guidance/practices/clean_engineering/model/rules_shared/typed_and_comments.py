@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
+from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule
+
 if TYPE_CHECKING:
     from harness.graph.graph import Node
     from harness.graph.rule_context import RuleCheckContext
@@ -14,16 +16,14 @@ if TYPE_CHECKING:
 _VAGUE_TYPES = frozenset({"any", "object", "dict", "Dict", "Any", "Mapping", "mapping"})
 # A client's `withEmail(email)` answers a copy with one field changed: a property setter, not an operation.
 _FIELD_CHANGE = re.compile(r"^with[A-Z]")
-_TEST_FOLDERS = frozenset({"tests", "test", "__tests__"})
-_TEST_FILE = re.compile(r"(\.(spec|test)\.[jt]sx?$)|(_spec\.py$)|(^test_.*\.py$)")
 
 
-class UseTypedSignatures(PracticeGraphRule):
+class UseTypedSignatures(ProductionCodeRule):
     slug = "use-typed-signatures"
     node_types = ("Operation", "Parameter")
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
-        if is_test_code(node.source.file) or _FIELD_CHANGE.match(_operation_name(node)):
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+        if _FIELD_CHANGE.match(_operation_name(node)):
             return []
         if node.type == "Parameter":
             if not node.has_fact("type_hint"):
@@ -49,11 +49,6 @@ class LimitComments(PracticeGraphRule):
 
 
 _INVALID_PARAM_NAME = re.compile(r"^[\w$]+$")
-
-
-def is_test_code(file: str) -> bool:
-    parts = str(file or "").replace("\\", "/").split("/")
-    return bool(_TEST_FOLDERS.intersection(parts[:-1])) or _TEST_FILE.search(parts[-1]) is not None
 
 
 def _operation_name(node: "Node") -> str:

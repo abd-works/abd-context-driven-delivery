@@ -37,6 +37,8 @@ _CALL_RE = re.compile(r"\b([A-Za-z_]\w*)\s*\(")
 # A name after ``new`` is constructed, not called.
 _CONSTRUCTION_RE = re.compile(r"\bnew\s+$")
 _STRING_RE = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`')
+# A comment or a string, read left to right so a `//` inside a string, or a quote inside a comment, stays inside it.
+_COMMENT_OR_STRING_RE = re.compile(r"//[^\n]*|/\*.*?\*/|" + _STRING_RE.pattern, re.S)
 # A declared field, `name: Type;` or `name: Type = value;`, with its modifiers.
 _FIELD_RE = re.compile(
     r"^\s*((?:(?:public|private|protected|readonly|static|declare|override)\s+)*)(\w+)\s*:\s*([^;=\n]+?)(?:\s*=\s*[^;\n]*)?\s*;",
@@ -61,6 +63,7 @@ class CFamilyParse:
         """Read the text's classes and top-level functions into this model's one module, and return the model. The
         module keeps the text, and each class and operation the lines it spans."""
         self._text = text
+        self._class_heads = self._read_class_heads()
         self.modules = []
         module = self.module_type(name="", sequential_order=1)
         module.preamble = self._read_preamble()
@@ -72,17 +75,22 @@ class CFamilyParse:
             self.modules.append(module)
         return self
 
+    def _read_class_heads(self) -> list[re.Match]:
+        """Each `class Name` the code declares. The search reads the text with its comments and strings blanked, so
+        a comment such as `so this class names none` declares no class `names`; the offsets match the text."""
+        code = _COMMENT_OR_STRING_RE.sub(lambda found: re.sub(r"[^\n]", " ", found.group(0)), self._text)
+        return list(_CLASS_RE.finditer(code))
+
     def _read_preamble(self) -> CodeBody:
         """Imports and constants above the first class, as written."""
-        first = _CLASS_RE.search(self._text)
-        if first is None:
+        if not self._class_heads:
             return CodeBody()
-        line_start = self._text.rfind("\n", 0, first.start()) + 1
+        line_start = self._text.rfind("\n", 0, self._class_heads[0].start()) + 1
         return CodeBody(self._text[:line_start].rstrip(), self.language)
 
     def _append_classes(self, module: Module) -> None:
         class_order = 1
-        for match in _CLASS_RE.finditer(self._text):
+        for match in self._class_heads:
             body, body_start = self._brace_body(self._text, match.end() - 1)
             if body is None:
                 continue
@@ -171,7 +179,7 @@ class CFamilyParse:
 
     def _class_spans(self) -> list[tuple[int, int]]:
         spans: list[tuple[int, int]] = []
-        for match in _CLASS_RE.finditer(self._text):
+        for match in self._class_heads:
             body, body_start = self._brace_body(self._text, match.end() - 1)
             if body is not None:
                 spans.append((body_start, body_start + len(body)))

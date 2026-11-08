@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from cdd_guidance.practices.clean_engineering.model.rules_shared.typed_and_comments import is_test_code
+from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -20,12 +20,21 @@ _FOLDER_TYPES = ("Module", "Package")
 
 
 class OneWayDeps(PracticeGraphRule):
-    """Reports every import between two modules of the same cycle, so the whole cycle shows, not one pair of it."""
+    """Reports every import between two modules of the same cycle, so the whole cycle shows, not one pair of it; then
+    every import between two files of one folder that import each other in a cycle.
+
+    A cycle between files in different folders is also a cycle between those folders, so the folder report already
+    names it. The imports read are production code's, wherever a file makes them: at the top, inside a function, or
+    through ``importlib``. A spec may import the module above the one it tests, so its imports are left out.
+    """
 
     slug = "one-way-deps"
     node_types = ("Module", "Package")
 
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
+        return self._folder_cycles(context) + self._file_cycles(context)
+
+    def _folder_cycles(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
         imports = {
             folder.node_id: {imported.node_id for imported in context.targets(folder, "dependsOn")}
             for folder in _folders(context)
@@ -43,6 +52,25 @@ class OneWayDeps(PracticeGraphRule):
                             f"'{first.name}' through a cycle of {len(cycle)} modules; dependencies must flow one way.",
                         )
                     )
+        return hits
+
+    def _file_cycles(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
+        hits: list[tuple[str, str]] = []
+        for folder in _folders(context):
+            if not folder.has_fact("sibling_imports"):
+                continue
+            imports = {file: set(imported) for file, imported in (folder.get_fact("sibling_imports") or {}).items()}
+            for cycle in _strongly_connected(imports):
+                for importer in sorted(cycle):
+                    for imported in sorted(imports[importer] & cycle):
+                        hits.append(
+                            (
+                                folder.node_id,
+                                f"Circular import in '{folder.name}': '{importer}' imports '{imported}', which imports "
+                                f"back into '{importer}' through a cycle of {len(cycle)} files; move the shared code "
+                                "to the file that owns it so dependencies flow one way.",
+                            )
+                        )
         return hits
 
 
@@ -73,7 +101,8 @@ class DeepModule(PracticeGraphRule):
 
     A first-class module is a folder with a module card; folders without one roll up into the nearest module above
     them. A class is public when production code outside its module imports it or reaches it as ``module.Class``;
-    a name starting with ``_`` keeps it private. Tests do not make a class public.
+    a name starting with ``_`` keeps it private. Tests and test fixtures neither count as classes nor make a class
+    public. The callers read include those outside a validated scope, which the reading keeps on the practice's root.
     """
 
     slug = "deep-module"
@@ -94,7 +123,7 @@ class DeepModule(PracticeGraphRule):
         for module in modules:
             names = classes.get(module.node_id, [])
             public = sorted(
-                name for name in set(names) if not name.startswith("_") and importers.get(name, set()) - {module.node_id}
+                name for name in set(names) if not name.startswith("_") and importers.get(name, set()) - {module.source.file}
             )
             if len(names) < _MIN_MEASURED_CLASSES or len(public) <= _MAX_PUBLIC_SHARE * len(names):
                 continue
@@ -115,13 +144,18 @@ def _owning_module(file: str | None, modules: list["Node"]) -> "Node | None":
 
 
 def _importers_by_name(context: "RuleCheckContext", modules: list["Node"]) -> dict[str, set[str]]:
-    """Each class name production code imports or qualifies, with the modules whose code does it: the names each
-    folder's files import, which the reading kept on the folder."""
+    """Each class name production code imports or qualifies, with the folders of the modules whose code does it: the
+    names each folder's files import, which the reading kept on the folder, and the names the files outside the scope
+    import, which it kept on the practice's root."""
     importers: dict[str, set[str]] = {}
     for folder in _folders(context):
         importer = _owning_module(f"{folder.source.file}/", modules)
         for name in folder.get_fact("imported_names", []) or []:
-            importers.setdefault(name, set()).add(importer.node_id if importer else "")
+            importers.setdefault(name, set()).add(importer.source.file if importer else "")
+    root = context.graph.root_of(context.practice)
+    outside = root.get_fact("imported_names_outside") if root.has_fact("imported_names_outside") else {}
+    for name, folders in outside.items():
+        importers.setdefault(name, set()).update(folders)
     return importers
 
 

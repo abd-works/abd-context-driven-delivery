@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
+from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule
+
 if TYPE_CHECKING:
     from harness.graph.graph import Node
     from harness.graph.rule_context import RuleCheckContext
@@ -48,13 +50,14 @@ class KeepOperationsSingleResponsibility(PracticeGraphRule):
         return []
 
 
-class ErrorsOutOfExistence(PracticeGraphRule):
-    """Ordinary empty/absent cases should not raise."""
+class ErrorsOutOfExistence(ProductionCodeRule):
+    """Ordinary empty/absent cases should not raise. A spec helper raises on a missing value to fail its example, so
+    only production code is judged."""
 
     slug = "errors-out-of-existence"
     node_types = ("Operation",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if not node.get_fact("raises_on_empty"):
             return []
         return [f"Operation '{node.name}' raises on an empty or missing value; return a quiet result instead."]

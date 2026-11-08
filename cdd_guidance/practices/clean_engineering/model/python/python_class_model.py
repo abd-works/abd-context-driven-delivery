@@ -35,6 +35,8 @@ from cdd_guidance.practices.clean_engineering.model.operation_metrics import Pyt
 
 _FUTURE_IMPORT = "from __future__ import annotations"
 _ABC_IMPORT = "from abc import ABC, abstractmethod"
+# Calls that import a module named by a string: `importlib.import_module("a.b")`, `__import__("a.b")`.
+_IMPORT_CALLS = frozenset({"import_module", "__import__"})
 
 
 def python_type(hint: str) -> str:
@@ -92,6 +94,7 @@ class PythonOperation(CodeOperation):
         )
         operation.is_static = _decorated(node, "staticmethod")
         operation.is_classmethod = is_classmethod
+        operation.is_setter = any(isinstance(item, ast.Attribute) and item.attr == "setter" for item in node.decorator_list)
         operation.measure(PythonFunctionBody(node))
         return operation
 
@@ -176,16 +179,20 @@ class PythonModule(CodeModule):
                     oclass.module_helpers.append([function, helpers[function]])
 
     def import_targets(self, file: Path, root: Path) -> list[str]:
-        """Root-relative paths each `import` / `from … import` names, absolute or relative."""
+        """Root-relative paths each `import` / `from … import` names, absolute or relative, wherever it sits in the
+        file, and each module an `importlib.import_module` call names, as far as its text spells it."""
         if self.tree is None:
             return []
         package = file.parent.relative_to(root).parts
+        constants = _module_string_constants(self.tree, ".".join(package))
         targets: list[str] = []
         for node in ast.walk(self.tree):
             if isinstance(node, ast.Import):
                 targets.extend(alias.name.replace(".", "/") for alias in node.names)
             elif isinstance(node, ast.ImportFrom):
                 targets.extend(_from_import_targets(node, package))
+            elif isinstance(node, ast.Call) and _call_name(node) in _IMPORT_CALLS and node.args:
+                targets.extend(_dynamic_import_target(node.args[0], constants))
         return targets
 
 
@@ -330,6 +337,47 @@ def _from_import_targets(node: ast.ImportFrom, package: tuple[str, ...]) -> list
         return []
     joined = "/".join(module)
     return [joined] + [f"{joined}/{alias.name}" for alias in node.names if alias.name != "*"]
+
+
+def _call_name(node: ast.Call) -> str:
+    """`import_module` for `importlib.import_module(…)` or `import_module(…)`; empty for a call on anything else."""
+    if isinstance(node.func, ast.Attribute):
+        return node.func.attr
+    return node.func.id if isinstance(node.func, ast.Name) else ""
+
+
+def _module_string_constants(tree: ast.Module, package: str) -> dict[str, str]:
+    """The string each top-level `NAME = "…"` binds, and `__package__`, so an import spelled through one reads."""
+    constants = {"__package__": package}
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+            constants.update({target.id: node.value.value for target in node.targets if isinstance(target, ast.Name)})
+    return constants
+
+
+def _dynamic_import_target(argument: ast.expr, constants: dict[str, str]) -> list[str]:
+    """The module path an import call's argument spells: the whole string, or for an f-string the dotted part before
+    the first value it cannot read, such as `cdd_guidance.actions` in `f"cdd_guidance.actions.{folder}.{folder}"`."""
+    if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
+        spelled = argument.value
+    elif isinstance(argument, ast.Name) and argument.id in constants:
+        spelled = constants[argument.id]
+    elif isinstance(argument, ast.JoinedStr):
+        spelled = ""
+        for part in argument.values:
+            if isinstance(part, ast.Constant):
+                spelled += str(part.value)
+            elif isinstance(part, ast.FormattedValue) and isinstance(part.value, ast.Name) and part.value.id in constants:
+                spelled += constants[part.value.id]
+            else:
+                spelled = spelled.rsplit(".", 1)[0] if "." in spelled else ""
+                break
+    else:
+        return []
+    # A relative name, `.x`, is resolved against a package argument the text may not spell.
+    if not spelled or spelled.startswith("."):
+        return []
+    return [spelled.rstrip(".").replace(".", "/")]
 
 
 def _module_private_functions(tree: ast.Module) -> dict[str, int]:

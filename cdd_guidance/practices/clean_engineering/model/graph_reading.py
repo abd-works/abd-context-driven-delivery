@@ -12,10 +12,14 @@ from harness.graph.graph import Graph, Node, Source
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import scanned_files, skips_folder
 
+from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+
 CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py"}
 _CLASS_NAMES = re.compile(r"\bclass\s+(\w+)")
 # What the operation rules measure on a body; a getter's Property node records them for its getter.
 _GETTER_MEASURES = ("line_count", "max_control_flow_depth", "has_bare_catch", "swallows_exceptions")
+# The file an import names, after the path its import reads as: a Python module or package, or a script file.
+_IMPORTED_FILE_ENDINGS = (".py", "/__init__.py", "", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx", "/index.js")
 
 
 class GraphReading:
@@ -42,15 +46,17 @@ class GraphReading:
         files = self.graph.source_files(self._source_root, CODE_SUFFIXES)
         modules = self._parsed_modules(files)
         self._class_names = {cls.name for module in modules.values() for cls in module.classes}
-        self._class_names |= self._class_names_in(self._unparsed_declaring_files(files))
+        self._class_names |= self._read_unparsed(self._unparsed_declaring_files(files))
         nodes = {rel: self.graph.add(self, module, f"clean_engineering:{module.type}:{rel}", rel, 1, 1) for rel, module in folders.items()}
         imports: dict[str, list[str]] = {rel: [] for rel in folders}
         for file, module in modules.items():
             relative = file.relative_to(self._source_root).as_posix()
             owner = _nearest(str(Path(relative).parent).replace("\\", "/"), folders)
-            if owner:
+            # A spec's imports are not its module's dependencies: a spec of a lower module may import the one above it.
+            if owner and not is_test_code(relative):
                 imports[owner].extend(module.dependencies)
-                self._record_imported_names(nodes[owner], relative, module)
+                _merge_fact(nodes[owner], "imported_names", module.imported_names)
+                self._record_sibling_imports(nodes[owner], relative, module.dependencies)
             for cls in module.classes:
                 self._class(relative, nodes.get(owner) or self.graph.root_of(self), cls)
         self._record_unreadable(folders, nodes)
@@ -90,23 +96,60 @@ class GraphReading:
         parsed = set(files)
         return [path for path in scanned_files(self._source_root, CODE_SUFFIXES) if path not in parsed]
 
-    def _class_names_in(self, files: list[Path]) -> set[str]:
-        names = set()
+    def _read_unparsed(self, files: list[Path]) -> set[str]:
+        """The class names the files outside the scope declare. The practice's root keeps the class names each of their
+        production files imports, by the module that holds the file, so the deep-module rule sees the callers that make
+        a class public even when the scope leaves them out."""
+        from cdd_guidance.practices.clean_engineering.model.base_class_model import class_names_imported_by
+
+        names: set[str] = set()
+        importers: dict[str, set[str]] = {}
+        owners: dict[Path, str] = {}
         for index, file in enumerate(files, start=1):
             self.graph.report_progress(f"clean_engineering · class names · {index}/{len(files)} · {file.name}")
             try:
-                names.update(_CLASS_NAMES.findall(file.read_text(encoding="utf-8")))
+                text = file.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError):
                 continue
+            names.update(_CLASS_NAMES.findall(text))
+            if is_test_code(file.relative_to(self._source_root).as_posix()):
+                continue
+            if file.parent not in owners:
+                owners[file.parent] = self._module_folder_of(file.parent)
+            for name in class_names_imported_by(text):
+                importers.setdefault(name, set()).add(owners[file.parent])
+        self.graph.root_of(self).set_fact("imported_names_outside", {name: sorted(held) for name, held in importers.items()})
         return names
 
-    def _record_imported_names(self, folder: Node, relative: str, module) -> None:
-        """The class names a production file imports, kept on its folder for the deep-module rule; a refresh keeps the
-        names the folder's other files import."""
-        from cdd_guidance.practices.clean_engineering.model.rules_shared.typed_and_comments import is_test_code
+    def _module_folder_of(self, folder: Path) -> str:
+        """The root-relative path of the nearest folder at or above this one that holds a module card; empty for none."""
+        from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
 
-        if not is_test_code(relative):
-            _merge_fact(folder, "imported_names", module.imported_names)
+        root = self._source_root
+        while folder != root and root in folder.parents:
+            if ModuleContext(folder).exists():
+                return folder.relative_to(root).as_posix()
+            folder = folder.parent
+        return ""
+
+    def _record_sibling_imports(self, folder: Node, relative: str, targets: list[str]) -> None:
+        """The files of its own folder a production file imports, kept on the folder by file name, so the one-way-deps
+        rule sees a cycle between the files of one folder; a refresh keeps the other files' imports."""
+        path = Path(relative)
+        own = path.parent.as_posix()
+        siblings = set()
+        for target in targets:
+            # TypeScript names the compiled `./x.js` for its source `x.ts`.
+            bases = [target, target.removesuffix(".js")] if target.endswith(".js") else [target]
+            candidates = (Path(f"{base}{ending}") for base in bases for ending in _IMPORTED_FILE_ENDINGS)
+            found = next(
+                (item for item in candidates if item.parent.as_posix() == own and item != path and (self._source_root / item).is_file()),
+                None,
+            )
+            if found is not None:
+                siblings.add(found.name)
+        kept = folder.get_fact("sibling_imports") if folder.has_fact("sibling_imports") else {}
+        folder.set_fact("sibling_imports", {**kept, path.name: sorted(siblings)})
 
     def _record_unreadable(self, folders: dict, nodes: dict) -> None:
         """Each file that did not parse, on the module that holds it, so validate reports it instead of skipping it.

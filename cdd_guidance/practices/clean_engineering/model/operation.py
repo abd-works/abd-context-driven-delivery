@@ -46,7 +46,9 @@ class Parameter(OoadNode):
     def property_setter(self) -> bool:
         """True for the one parameter of a property's setter."""
         operation = self.operation
-        return operation is not None and operation.is_property and len(operation.parameters) == 1
+        if operation is None or len(operation.parameters) != 1:
+            return False
+        return operation.is_setter or operation.is_property
 
     def clone(self) -> "Parameter":
         return type(self)(self.name, self.sequential_order, self.type_hint)
@@ -80,6 +82,7 @@ class Operation(InvariantHolder, OoadNode):
         "is_static",
         "is_classmethod",
         "is_property",
+        "is_setter",
         "body_fingerprint",
         "callees",
         "peer_private_access",
@@ -123,6 +126,8 @@ class Operation(InvariantHolder, OoadNode):
         self.span = SourceText("")
         self.constructed_types: list[tuple[str, int]] = []
         self.is_property = False
+        # A property's setter, such as Python's `@total.setter`; a getter is `is_property`.
+        self.is_setter = False
         self.is_static = False
         self.is_classmethod = False
         self.max_control_flow_depth: int = 0
@@ -196,6 +201,7 @@ class Operation(InvariantHolder, OoadNode):
         cloned.body = self.body
         cloned.constructed_types = list(self.constructed_types)
         cloned.is_property = self.is_property
+        cloned.is_setter = self.is_setter
         cloned.is_static = self.is_static
         cloned.is_classmethod = self.is_classmethod
         cloned.max_control_flow_depth = self.max_control_flow_depth
@@ -288,6 +294,7 @@ class Operation(InvariantHolder, OoadNode):
         self.body = copied.body
         self.constructed_types = list(copied.constructed_types)
         self.is_property = copied.is_property
+        self.is_setter = copied.is_setter
         self.is_static = copied.is_static
         self.is_classmethod = copied.is_classmethod
         self.max_control_flow_depth = copied.max_control_flow_depth

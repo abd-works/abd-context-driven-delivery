@@ -143,7 +143,7 @@ Whenever you create, alter, or delete object-oriented boundaries and public seam
 
 **Define dependencies**
 
-- `one-way-deps` — Make dependencies flow in one direction without cycles. A cycle prevents either module from changing or being tested independently.
+- `one-way-deps` — Make dependencies flow in one direction without cycles, between modules and between the files of one module. An import inside a function or through `importlib` is still an import, so moving it out of sight does not remove the cycle; move the shared code to the file that owns it. A cycle prevents either module from changing or being tested independently.
 - `extensions-live-with-the-domain` — Domain extensions of a framework belong in the domain module — a nested package under that domain is fine. Do not host them in the base framework package. `GraphEpic` lives with Stories, not in Knowledge Graph; otherwise the framework depends on every practice and cannot stay generic.
 - `low-coupling` — Depend only through other modules’ seams. Keep sibling imports few. Reaching past a seam freezes that module’s internals — it can no longer change them without breaking you.
 - `layer-separation` — keep dependent modules at different levels of abstractions. Collapse pass-through modules — a module that only forwards turns every signature change into an edit in three files instead of one.

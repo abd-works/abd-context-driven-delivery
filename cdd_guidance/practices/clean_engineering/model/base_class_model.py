@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import ast
+import io
 import re
+import tokenize
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, List, Optional
 
@@ -12,6 +15,7 @@ from harness.graph.graph import Graph
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
+from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.clean_engineering.model.translation import TranslationError
 
 if TYPE_CHECKING:
@@ -39,8 +43,10 @@ class UnreadableSource(ValueError):
 
 
 def _internal_design_in(paths: List[Path]) -> str:
-    """'heading' for an `## Internal` section, 'mixed' for internal notes inline, else ''."""
-    text = "\n".join(_readable_text(path) for path in sorted(paths))
+    """'heading' for an internal-design section heading in the files' documentation, 'mixed' for internal notes inline
+    in it, else ''. Only docstrings and comments document a file; a string the code holds, such as the marker this
+    function looks for, is not documentation."""
+    text = "\n".join(_documentation_in(path) for path in sorted(paths))
     if _INTERNAL_MARKDOWN.search(text):
         return "heading"
     if "## Internal" in text or "_ holds " in text:
@@ -48,11 +54,29 @@ def _internal_design_in(paths: List[Path]) -> str:
     return ""
 
 
-def _readable_text(path: Path) -> str:
+def _documentation_in(path: Path) -> str:
+    """The docstrings and comments of a Python file; empty when it cannot be read or does not parse."""
     try:
-        return path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
+        text = path.read_text(encoding="utf-8")
+        tree = ast.parse(text)
+        comments = [token.string for token in tokenize.generate_tokens(io.StringIO(text).readline) if token.type == tokenize.COMMENT]
+    except (OSError, UnicodeDecodeError, SyntaxError, tokenize.TokenError):
         return ""
+    documented = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+    docstrings = [ast.get_docstring(node, clean=False) or "" for node in ast.walk(tree) if isinstance(node, documented)]
+    return "\n".join(docstrings + comments)
+
+
+def class_names_imported_by(source_text: str) -> set:
+    """The names a source file imports (`from x import A`, `import { A } from`) or reaches as `module.Class`."""
+    names: set = set(_QUALIFIED_CLASS.findall(source_text))
+    for match in _PY_FROM_IMPORT.finditer(source_text):
+        names.update(_IMPORT_ALIAS.sub("", item).strip() for item in match.group(1).strip("()").split(","))
+    for default, braced in _JS_IMPORT.findall(source_text):
+        names.add(default)
+        names.update(_IMPORT_ALIAS.sub("", item).strip() for item in (braced or "").split(","))
+    names.discard("")
+    return names
 
 
 def path_parent(name: str) -> Optional[str]:
@@ -569,20 +593,10 @@ class Module(OoadNode):
         """Fill the facts the file this module was read from owns: what it imports, the class names it imports, and
         which classes share it. The graph keeps each class apart from its module, so each class keeps its peers' names."""
         self.dependencies = self.import_targets(file, root)
-        self.imported_names = sorted(self._imported_names())
+        self.imported_names = sorted(class_names_imported_by(self.source_text))
         peer_names = [oclass.name for oclass in self.classes]
         for oclass in self.classes:
             oclass.peer_names = peer_names
-
-    def _imported_names(self) -> set:
-        names: set = set(_QUALIFIED_CLASS.findall(self.source_text))
-        for match in _PY_FROM_IMPORT.finditer(self.source_text):
-            names.update(_IMPORT_ALIAS.sub("", item).strip() for item in match.group(1).strip("()").split(","))
-        for default, braced in _JS_IMPORT.findall(self.source_text):
-            names.add(default)
-            names.update(_IMPORT_ALIAS.sub("", item).strip() for item in (braced or "").split(","))
-        names.discard("")
-        return names
 
     def import_targets(self, file: Path, root: Path) -> List[str]:
         """Root-relative paths named by relative script imports (`./x`, `../y`)."""
@@ -607,9 +621,9 @@ class Module(OoadNode):
         self.is_a_in_context = bool(_IS_A.search(content))
         self.child_parent_in_context = bool(_CHILD_PARENT.search(content))
         self.public_source_internal = _internal_design_in(
-            [path for path in sources if path.suffix == ".py" and not path.name.startswith("_")]
+            [path for path in sources if path.suffix == ".py" and not path.name.startswith("_") and not is_test_code(path.name)]
         )
-        self.public_source_files = len([path for path in sources if not path.name.startswith(("_", "test_"))])
+        self.public_source_files = len([path for path in sources if not path.name.startswith("_") and not is_test_code(path.name)])
 
     def reconcile_children(self, source: "OoadNode") -> None:
         assert isinstance(source, Module)
