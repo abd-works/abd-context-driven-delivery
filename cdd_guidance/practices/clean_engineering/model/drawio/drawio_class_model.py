@@ -88,6 +88,10 @@ Relationships = List[Tuple[str, str, str]]
 
 class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
 
+    module_cell_types: Tuple[type, ...] = (DrawIOModule,)
+    """The cell types a modules view reads its cells back as, each picked by the kind its cell's style names; a model
+    that draws modules of its own kinds names their cell types first."""
+
     def __init__(self, name: str='', sequential_order: int=1) -> None:
         super().__init__(name, sequential_order)
         # The diagram as it is now; with keep_positioning, cards and arrows already on it stay where they are.
@@ -158,7 +162,8 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
                 continue
             if not _is_module_style(style):
                 continue
-            module = DrawIOModule.from_cell(cell.get('value', ''), order)
+            cell_type = next((kind for kind in self.module_cell_types if kind.draws(style)), DrawIOModule)
+            module = cell_type.from_cell(cell.get('value', ''), order)
             if module is None:
                 continue
             cell_id = cell.get('id', '')

@@ -5,11 +5,11 @@ import tempfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from expects import be_empty, be_true, equal, expect
+from expects import be_empty, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
-from cdd_guidance.practices.ddd.model.drawio.drawio_bounded_context_map import DrawIOBoundedContextMap
+from cdd_guidance.practices.ddd.model.drawio.drawio_bounded_context_map import DrawIOAggregateCell, DrawIOBoundedContextMap
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 
 _EXAMPLES = Path(__file__).resolve().parent.parent / "_examples" / "expected"
@@ -62,6 +62,25 @@ with description("DrawIOBoundedContextMap"):
         with it("should place the context an integration reaches before the context it leaves"):
             x = {name: float(self.cells[name].find("mxGeometry").get("x")) for name in ("sales-custom", "catalog-bespoke")}
             expect(x["catalog-bespoke"] < x["sales-custom"]).to(be_true)
+
+        with it("should name each aggregate's kind in its cell's style"):
+            expect("kind=aggregate;" in self.cells["sales-custom-shoppingcart"].get("style")).to(be_true)
+
+        with it("should keep the cells it drew as its own modules"):
+            drawn = DrawIOBoundedContextMap()
+            drawn.render(MarkdownBoundedContextMap().parse(_MAP))
+            expect([module.name for module in drawn.modules if isinstance(module, DrawIOAggregateCell)]).to(
+                contain("Sales | custom/ShoppingCart")
+            )
+
+    with context("that reads back a map whose purpose lines were reworded"):
+        with before.all:
+            xml = DrawIOBoundedContextMap().render(MarkdownBoundedContextMap().parse(_MAP))
+            reworded = xml.replace("&lt;i&gt;aggregate&lt;/i&gt;", "&lt;i&gt;what the business keeps&lt;/i&gt;")
+            self.read = DrawIOBoundedContextMap().parse(reworded)
+
+        with it("should read each aggregate by the kind its cell's style names"):
+            expect([item.name for item in self.read.every_aggregate]).to(contain("ShoppingCart"))
 
     with context("that draws a domain model with class cards"):
         with before.all:

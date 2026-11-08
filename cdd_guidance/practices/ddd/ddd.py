@@ -91,9 +91,11 @@ class Ddd(PracticeGuidance):
     def _model_for(self, target, parsed):
         """The code formats are Clean Engineering class models, which the map writes itself into as their own classes,
         so they render themselves; the DDD formats render the bounded-context map, which reads a class model back."""
-        if isinstance(target, CleanEngineeringModel) and isinstance(parsed, BoundedContextMap):
-            parsed.write_classes(target)
-            return target
+        if isinstance(parsed, BoundedContextMap):
+            if isinstance(target, CleanEngineeringModel) and not isinstance(target, BoundedContextMap):
+                parsed.write_classes(target)
+                return target
+            return parsed
         if isinstance(target, BoundedContextMap) and isinstance(parsed, CleanEngineeringModel):
             return MarkdownBoundedContextMap().read_class_model(parsed)
         return parsed

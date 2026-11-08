@@ -85,3 +85,44 @@ with description("hand-written code that marks a class's stereotype"):
         with it("should not read it as a stereotype"):
             oclass = _read(PythonCleanEngineeringModel(), "@dataclass(frozen=True)\n@value_object\nclass Money:\n    amount: int\n")
             expect(oclass.stereotypes).to(equal(["Value Object"]))
+
+
+def _kept_cart(channel) -> OoadClass:
+    """Cart, kept in the Sales context's ShoppingCart module, depending on Product with the facts of that dependency
+    and on Clock with none, written by channel and read back."""
+    model = _cart_model()
+    cart = model.modules[0].classes[0]
+    cart.module_path = ["Sales | custom", "ShoppingCart"]
+    cart.depend_on("Product", "Customer/Supplier")
+    cart.dependencies[0].details = {"direction": "downstream", "crosses": "product identity"}
+    cart.depend_on("Clock", "reads time from")
+    return _read(channel, channel.render(model))
+
+
+with description("a class whose doc comment names its module path and a dependency with details"):
+    with context("written as python and read back"):
+        with it("should keep the module path"):
+            expect(_kept_cart(PythonCleanEngineeringModel()).module_path).to(equal(["Sales | custom", "ShoppingCart"]))
+
+        with it("should keep the dependency's label and details"):
+            dependency = _kept_cart(PythonCleanEngineeringModel()).dependencies[0]
+            expect((dependency.target, dependency.label, dependency.details)).to(
+                equal(("Product", "Customer/Supplier", {"direction": "downstream", "crosses": "product identity"}))
+            )
+
+        with it("should leave a dependency with no details to the code that makes it"):
+            expect([item.target for item in _kept_cart(PythonCleanEngineeringModel()).dependencies]).to(equal(["Product"]))
+
+        with it("should keep the intent apart from the module path and the dependency"):
+            expect(_kept_cart(PythonCleanEngineeringModel()).intent).to(equal("A shopper's cart."))
+
+    with context("written as typescript and read back"):
+        with it("should keep the module path"):
+            expect(_kept_cart(TypeScriptCleanEngineeringModel()).module_path).to(equal(["Sales | custom", "ShoppingCart"]))
+
+        with it("should keep the dependency's details"):
+            expect(_kept_cart(TypeScriptCleanEngineeringModel()).dependencies[0].details["crosses"]).to(equal("product identity"))
+
+        with it("should keep the stereotypes and intent"):
+            oclass = _kept_cart(TypeScriptCleanEngineeringModel())
+            expect((oclass.stereotypes, oclass.intent)).to(equal((["Aggregate Root", "Entity"], "A shopper's cart.")))

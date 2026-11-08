@@ -171,6 +171,9 @@ class OoadClass(OoadNode):
         self.line = line
         # The stereotypes the class carries, as words: `Aggregate Root`, `Value Object`.
         self.stereotypes: List[str] = []
+        # The modules the class says it is kept in, outermost first, when its source names them apart from where the
+        # class sits, as a code file does in a class's doc comment: `Sales | custom`, `ShoppingCart`.
+        self.module_path: List[str] = []
         # Parser facts for the graph: last source line and declared base classes.
         self.end_line: int | None = None
         self.bases: List[str] = []
@@ -249,6 +252,7 @@ class OoadClass(OoadNode):
         assert isinstance(source, OoadClass)
         self.intent = source.intent
         self.stereotypes = list(source.stereotypes)
+        self.module_path = list(source.module_path)
         self.bases = list(source.bases)
         self.collaborators = list(source.collaborators)
         self.dependencies = [item.clone() for item in getattr(source, "dependencies", [])]
@@ -262,6 +266,7 @@ class OoadClass(OoadNode):
             line=self.line,
         )
         cloned.stereotypes = list(self.stereotypes)
+        cloned.module_path = list(self.module_path)
         cloned.bases = list(self.bases)
         cloned.dependencies = [item.clone() for item in self.dependencies]
         cloned.properties = [item.clone() for item in self.properties]
@@ -274,6 +279,7 @@ class OoadClass(OoadNode):
             "sequentialOrder": self.sequential_order,
             "intent": self.intent,
             "stereotypes": list(self.stereotypes),
+            "modulePath": list(self.module_path),
             "bases": list(self.bases),
             "properties": [item.as_record() for item in self.properties],
             "operations": [item.as_record() for item in self.operations],

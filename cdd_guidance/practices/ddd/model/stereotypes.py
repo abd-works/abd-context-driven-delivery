@@ -38,6 +38,16 @@ _TACTICAL_STEREOTYPES = frozenset({stereotype for stereotype, _kind in KIND_OF_S
 _REPOSITORY = "Repository"
 _VALUE_OBJECT_SUFFIXES = ("Token", "Code", "Message", "Requirement", "Requirements", "Operation")
 _NON_TACTICAL_SUFFIXES = ("Exception", "Error", "Client", "Node", "View", "Screen", "Routes", "Router")
+# The naming convention of each building block: the words a class name ends with to say it is that block. This is the
+# one convention: inferring a block from a name and checking that a name says its block both read it.
+_NAME_ENDINGS = {
+    "Repository": (_REPOSITORY,),
+    "ValueObject": _VALUE_OBJECT_SUFFIXES,
+    "DomainService": ("Service",),
+    "Entity": ("Entity",),
+    "EntityRoot": ("Root",),
+}
+_SPECIFICATION = "Specification"
 _TAGGED_KINDS = frozenset({"Entity", "EntityRoot", "ValueObject", "Repository", "DomainService", "Specification"})
 
 
@@ -92,11 +102,11 @@ class TacticalClass:
         named = self.kind()
         if named is not None:
             return named
-        if self.name.endswith(_REPOSITORY):
+        if self.name.endswith(_NAME_ENDINGS[_REPOSITORY]):
             return _REPOSITORY
         if self.name.endswith(_NON_TACTICAL_SUFFIXES):
             return None
-        if self.name.endswith(_VALUE_OBJECT_SUFFIXES):
+        if self.name.endswith(_NAME_ENDINGS["ValueObject"]):
             return "ValueObject"
         return "EntityRoot" if self.repository_name in set(peer_names) else None
 
@@ -110,21 +120,14 @@ class TacticalClass:
         classes its file declares."""
         if self.stereotypes:
             return True
-        names = set(self.oclass.peer_names)
-        kind = self.inferred_kind(names) or graph_kind
-        return self._name_says(kind if kind in _TAGGED_KINDS else graph_kind, names)
+        kind = self.inferred_kind(self.oclass.peer_names) or graph_kind
+        return self.name_says(kind if kind in _TAGGED_KINDS else graph_kind)
 
-    def _name_says(self, kind: str, names: set[str]) -> bool:
-        if kind == _REPOSITORY:
-            return self.name.endswith(_REPOSITORY)
-        if kind == "DomainService":
-            return self.name.endswith("Service")
-        if kind == "Specification":
-            return "Specification" in self.name
-        if kind == "ValueObject":
-            return self.name.endswith(("Token", "Code", "Message", "Value"))
-        if kind == "EntityRoot":
-            return self.name.endswith("Root") or self.repository_name in names
-        if kind == "Entity":
-            return self.name.endswith("Entity")
-        return False
+    def name_says(self, kind: str) -> bool:
+        """True when the class's name follows the naming convention of the building block kind: a root is also named
+        by the repository beside it among the classes its file declares."""
+        if kind == _SPECIFICATION:
+            return _SPECIFICATION in self.name
+        if kind == "EntityRoot" and self.repository_name in set(self.oclass.peer_names):
+            return True
+        return self.name.endswith(_NAME_ENDINGS.get(kind, ())) if kind in _NAME_ENDINGS else False

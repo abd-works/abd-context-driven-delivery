@@ -4,12 +4,17 @@ interaction, such as `runs` or `reads sections with`, drawn as `Repo ---<<runs>>
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Dict
+import re
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 # How strongly each kind of relationship binds its classes: where two are drawn between the same classes, the stronger
 # one stands.
 RELATIONSHIP_STRENGTH = {"inheritance": 4, "composition": 3, "aggregation": 2, "association": 1, "relative": 1, "dependency": 0}
+# A dependency line: `---<<reads sections with>>--> MarkdownText`.
+_DEPENDENCY_LINE = re.compile(r"^\s*-{3}<<\s*(?P<label>.+?)\s*>>-{2}>\s*(?P<target>[A-Za-z_][\w.]*)\s*$")
+# A fact written under a dependency line: `direction: downstream`.
+_DETAIL_LINE = re.compile(r"^\s*(?P<key>[A-Za-z][\w ]*?)\s*:\s*(?P<value>.*?)\s*$")
 
 
 @dataclass
@@ -20,10 +25,43 @@ class Relationship:
     description: str = ""
     sequential_order: int = 0
     label: str = ""
+    # The facts a dependency's source names beside its label, in the order it names them, such as the direction and
+    # the pattern of an integration between two parts of a domain. Most dependencies name none.
+    details: Dict[str, str] = field(default_factory=dict)
 
     @property
     def name(self) -> str:
         return self.target
+
+    @classmethod
+    def read_line(cls, line: str) -> Optional["Relationship"]:
+        """The dependency a `---<<label>>--> Target` line names; none for any other line."""
+        found = _DEPENDENCY_LINE.match(line)
+        if found is None:
+            return None
+        return cls(target=found.group("target"), kind="dependency", label=found.group("label"))
+
+    @classmethod
+    def read_lines(cls, lines: List[str]) -> List["Relationship"]:
+        """The dependencies the lines write: each dependency line opens one, and the `key: value` lines under it are
+        its details."""
+        found: List[Relationship] = []
+        for line in lines:
+            opened = cls.read_line(line)
+            if opened is not None:
+                found.append(opened)
+            elif found and _DETAIL_LINE.match(line):
+                detail = _DETAIL_LINE.match(line)
+                found[-1].details[detail.group("key")] = detail.group("value")
+        return found
+
+    def line(self) -> str:
+        """The dependency as one line: `---<<label>>--> Target`."""
+        return f"---<<{self.label}>>--> {self.target}"
+
+    def lines(self) -> List[str]:
+        """The dependency line, then a `key: value` line for each of its details."""
+        return [self.line()] + [f"  {key}: {value}" for key, value in self.details.items()]
 
     def as_record(self) -> Dict[str, Any]:
         return {
@@ -32,6 +70,7 @@ class Relationship:
             "cardinality": self.cardinality,
             "description": self.description,
             "label": self.label,
+            "details": dict(self.details),
         }
 
     def translate_from(self, source: "Relationship") -> None:
@@ -44,6 +83,7 @@ class Relationship:
         self.description = source.description
         self.sequential_order = source.sequential_order
         self.label = source.label
+        self.details = dict(source.details)
 
     def clone(self) -> "Relationship":
         return type(self)(
@@ -53,4 +93,5 @@ class Relationship:
             description=self.description,
             sequential_order=self.sequential_order,
             label=self.label,
+            details=dict(self.details),
         )

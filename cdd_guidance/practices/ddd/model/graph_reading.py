@@ -47,6 +47,7 @@ class BuildingBlock(Node):
         "delegating_operations",
         "identity_free_loads",
         "tactical_stereotype",
+        "named_for_its_kind",
         "public_operation_names",
         "lifecycle_operations",
         "drives_a_screen",
@@ -88,6 +89,11 @@ class BuildingBlock(Node):
     def tactical_stereotype(self) -> bool:
         """Whether the class carries a DDD stereotype, or its name says the building block it is."""
         return self.tactical.declares_stereotype(self.type)
+
+    @property
+    def named_for_its_kind(self) -> bool:
+        """Whether the class's name follows the naming convention of the building block it is."""
+        return self.tactical.name_says(self.type)
 
     @property
     def public_operation_names(self) -> list[str]:
