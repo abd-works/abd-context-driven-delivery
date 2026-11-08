@@ -13,6 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from harness.annotations.class_folder import class_folder
 from harness.guidance.guidance import rules_in
 
 if TYPE_CHECKING:
@@ -129,7 +130,7 @@ class PatternOverlays:
 
     def _folder_of(self, name: str) -> Path:
         """The folder the registered pattern name is defined in."""
-        return self._registered[name].class_folder()
+        return class_folder(self._registered[name])
 
     def _pattern(self, name: str) -> Any:
         """The guidance of the registered pattern name, made the first time this object wants it."""

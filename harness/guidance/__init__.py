@@ -1,10 +1,2 @@
-"""Harness guidance — ``from harness.guidance import ...``."""
-from .rule import AppliesTo, Rule, RulesCollection
-
-def __getattr__(name: str):
-    from . import guidance as _guidance
-
-    try:
-        return getattr(_guidance, name)
-    except AttributeError:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+"""Harness guidance: the practices and their fidelities (guidance.py), their rules (rule.py), the stages (stages.py), and
+the practice and action catalogues. Import each from its own module."""

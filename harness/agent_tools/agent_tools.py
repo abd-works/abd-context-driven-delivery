@@ -7,17 +7,17 @@ import importlib.util
 import inspect
 import re
 import sys
-import textwrap
 import types
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, ClassVar, Mapping, get_type_hints
 
+from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
 from harness.agent_tools.parameter_schema import ParameterSchema
 from harness.agent_tools.tool_call import ToolCall
 from harness.markdown.markdown import Markdown, MarkdownCollection, OperationProperty
-from harness.annotations.annotation import Annotation, annotation_kinds
+from harness.annotations.annotation import Annotation, NamesAnnotation, annotation_kinds
 from harness.agent_tools.recipe import ExpansionMode, ExpansionResult, RecipeExpansion, RecipePlaceholders, RecipeSource
 
 ContextDocument = dict[str, Any]
@@ -97,21 +97,7 @@ class AgentToolSetOrigin:
     @property
     def install_folder(self) -> Path:
         """The folder beside the toolset's class, which its installed files are named from."""
-        return type(self).class_folder()
-
-    @classmethod
-    def class_folder(cls) -> Path:
-        """The folder the class is defined in, which holds its markdown, templates, and examples. Where a class is
-        defined never changes while the process runs, so the class holds it once it is first asked for, as it holds its
-        members; every practice made from the class, such as the five a graph makes for itself, asks it."""
-        held = cls.__dict__.get("_class_folder")
-        if held is None:
-            try:
-                held = Path(inspect.getfile(cls)).resolve().parent
-            except (TypeError, OSError):  # a class with no source file, such as one made in a shell, sits nowhere
-                held = Path(".")
-            cls._class_folder = held
-        return held
+        return class_folder(type(self))
 
     @property
     def registration_name(self) -> str:
@@ -657,9 +643,15 @@ class AgentToolSet(AgentToolSetOrigin):
     def _members(self) -> ToolsetMembers:
         return ToolsetMembers.of(type(self))
 
+    @property
+    def operation_type(self) -> type[AgentOperation]:
+        """The kind of tool each ``@agent_tool`` of this toolset is published as; a toolset whose tools log their calls
+        another way, such as a guidance action, names its own."""
+        return AgentOperation
+
     def _discover_operations(self) -> dict[str, AgentOperation]:
         return {
-            name: AgentOperation(name=name, callable=self._operation_callable(name, member), toolset=self)
+            name: self.operation_type(name=name, callable=self._operation_callable(name, member), toolset=self)
             for name, member in self._members.annotated if AgentToolAnnotation.annotates(member)
         }
 
@@ -790,7 +782,7 @@ class ToolSubjectLoader:
             name: hint for name, hint in {**load.__annotations__, **operation.__annotations__}.items() if name != SERVED_CALL
         }
         if taken:
-            TakesFromCall(taken).annotate(on_subject)
+            TakesFromCall(*taken).annotate(on_subject)
         return OnSubject(on_subject)
 
     def given_the_call(self, operation: Any) -> Any:
@@ -808,7 +800,7 @@ class ToolSubjectLoader:
 
         on_the_call.__signature__ = signature.replace(parameters=[parameter for parameter in signature.parameters.values() if parameter.name not in taken])
         on_the_call.__annotations__ = {name: hint for name, hint in function.__annotations__.items() if name not in taken}
-        return types.MethodType(TakesFromCall(taken).annotate(on_the_call), operation.__self__)
+        return types.MethodType(TakesFromCall(*taken).annotate(on_the_call), operation.__self__)
 
 
 class InstallDestination:
@@ -1304,31 +1296,13 @@ class OnSubject(Annotation):
     copied = False
 
 
-class TakesFromCall(Annotation):
+class TakesFromCall(NamesAnnotation):
     """Set on a tool's callable that takes the project its call works on, or the call itself, which its signature
     leaves out because no caller passes them: the tool hands them over from the ``ToolCall`` it serves. A loader that
     takes the call opens the session the call names, and an operation that takes it points what it logs at the chat the
     call came from."""
 
     flag = "_takes_from_call"
-    copied = False
-
-    def __new__(cls, names: tuple[str, ...] = ()):
-        annotation = object.__new__(cls)
-        annotation.names = names
-        return annotation
-
-    def __init__(self, names: tuple[str, ...] = ()) -> None:
-        self.names = names
-
-    def annotate(self, target: Any) -> Any:
-        setattr(target, self.flag, self.names)
-        return target
-
-    @classmethod
-    def names_on(cls, target: Any) -> tuple[str, ...]:
-        """The arguments target takes from the call it serves; none for a callable that takes none."""
-        return tuple(getattr(target, cls.flag, ()) or ())
 
 
 noSessionLog = NoSessionLog

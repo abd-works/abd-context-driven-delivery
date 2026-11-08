@@ -22,7 +22,7 @@ with description("the stages of the approach"):
         expect([stage.title for stage in STAGES]).to(equal(["Discovery", "Specification", "Implementation"]))
 
     with it("should hold every stage a practice's fidelity names"):
-        named = {fidelity.stage for practice in PracticeCatalogue.practices() for fidelity in practice.fidelities}
+        named = {fidelity.stage for practice in PracticeCatalogue.create_all() for fidelity in practice.fidelities}
         expect(named - set(STAGES.names)).to(equal(set()))
 
     with it("should find a stage by the name a fidelity gives it"):

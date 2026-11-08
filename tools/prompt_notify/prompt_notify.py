@@ -62,7 +62,7 @@ class PromptNotify:
         from harness.guidance.practice_catalogue import PracticeCatalogue
 
         names: dict[str, str] = {}
-        for practice in PracticeCatalogue.practices():
+        for practice in PracticeCatalogue.create_all():
             names[practice.slug] = "practice"
             for fidelity in practice.fidelities:
                 names[fidelity.slug] = "fidelity"

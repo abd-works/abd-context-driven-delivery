@@ -11,7 +11,10 @@ So a build that a chat's call asks for runs in a worker process. The graph write
 
 ## Consequences
 
-- The graph decides where a build runs from the call it runs in (`is_answering_a_chat`, set by the MCP host for each chat's call). A spec or a script builds in its own process, holding the parsed model objects its rules read.
+- The call decides where a build runs: the MCP host makes each chat's call with `answers_a_chat` set (`ToolCall.answers_a_chat`), and every graph operation that builds (`load_working_copy`, `load_files`, `refresh`, `refreshed`, `set_overlays`) takes the call it serves and builds in a worker when that call answers a chat. An action passes the call it was made for (`GuidanceAction.call`). A spec or a script, whose calls answer no chat, builds in its own process, holding the parsed model objects its rules read. No flag outside the call decides it, so a call started on another thread or a host call made in process builds where its own call says.
+- The server's graph changes only when the worker answers: a refresh drops the files' nodes and the rules' findings in the worker (`BuildStep.REFRESH`), so a build that fails leaves the server's graph whole. A validate refreshes and takes the nodes of the files it names in one change (`Graph.refreshed`), so another call's refresh never comes between them.
+- A full load's worker saves `graph.json` itself (`BuildOrder.saves`), so the server never serialises the graph it built a second time. Opening a session reads its saved graph back with the violations it was saved with and runs no build; its rules run again on the next load or refresh.
+- A practice that builds its own nodes from another practice's takes them from `practice.in_graph.nodes_read_now(type)`, the nodes the build in progress read. In a worker, or in a graph opened from its saved graph, every other node is a plain restored node, so DDD builds its building blocks from the classes Clean Engineering read now and keeps the blocks it built before for every other file.
 - `Graph._builds`, the process-wide one-build-at-a-time semaphore, is deleted: builds of several sessions run in separate worker processes at once.
 - A refresh sends the graph it holds to the worker and gets the whole graph back, so a small refresh costs the worker's start (a few seconds) on top of the rules it runs again.
 

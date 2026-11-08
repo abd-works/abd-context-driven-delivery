@@ -60,7 +60,7 @@ class CatalogPractice:
         order each practice's catalog card gives. Each keeps its place in the catalogue, the order the approach's grids
         list the practices in, and all share one skill install."""
         skills = cls.skill_install()
-        catalogued = enumerate(PracticeCatalogue.practices())
+        catalogued = enumerate(PracticeCatalogue.create_all())
         practices = [
             cls(practice, skills, position) for position, practice in catalogued if not NoCatalog.annotates(type(practice))
         ]

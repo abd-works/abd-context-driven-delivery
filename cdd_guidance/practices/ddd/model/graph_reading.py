@@ -15,7 +15,7 @@ from harness.graph.skipped_folders import skips_folder
 
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext
-from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
+from cdd_guidance.practices.ddd.model.stereotypes import KIND_OF_STEREOTYPE, TacticalClass, root_kept_by
 
 _FOREIGN_KEY = re.compile(r"//\s*foreign\s+(\w+)")
 _DERIVE_PREFIX = re.compile(r"^derive\w*", re.IGNORECASE)
@@ -30,6 +30,8 @@ _AMBIENT_STATE = re.compile(
 _REPOSITORY_LIFECYCLE = re.compile(r"^(?:add|remove|delete|find|get|load|save|store|fetch|by_id|find_by)", re.IGNORECASE)
 _UI_METHODS = frozenset({"open", "isshowing", "close", "show", "hide", "select"})
 _SCREEN_NAME = re.compile(r"^(Select|Screen|Dialog|Modal|View|Page)\w*$")
+# Every kind of building block a class can be, by its stereotype or its name.
+_BLOCK_KINDS = frozenset(kind for _stereotype, kind in KIND_OF_STEREOTYPE)
 
 
 class BuildingBlock(Node):
@@ -100,11 +102,6 @@ class BuildingBlock(Node):
         return bool(public & _UI_METHODS and ("open" in public or "isshowing" in public)) or bool(_SCREEN_NAME.search(self.name))
 
     @property
-    def foreign_names(self) -> list[str]:
-        """The other roots the class names with a ``// foreign Name`` comment in its own lines."""
-        return _FOREIGN_KEY.findall(self.ooad_class.source.text)
-
-    @property
     def facts(self) -> dict:
         """The class's own facts, then this building block's."""
         return {**self.ooad_class.facts, **super().facts}
@@ -132,7 +129,6 @@ class DddReading:
         self.practice = practice
         self.graph = practice.graph
         self.root = Path(practice.in_graph.source_root)
-        self._blocks: dict[str, BuildingBlock] = {}
 
     def read(self) -> None:
         """Read the practice's folder; a folder not written yet, such as a session's code root, holds no contexts."""
@@ -143,6 +139,7 @@ class DddReading:
             contexts = self._contexts()
             for folder, members in sorted(self._members_by_folder().items()):
                 self._aggregate(folder, members, _context_for(folder, contexts) or self.practice.in_graph.root)
+            self._link_blocks()
 
     def _contexts(self) -> dict[str, Node]:
         """Each bounded context by its folder, under the context of the folder around it."""
@@ -179,13 +176,16 @@ class DddReading:
         return context
 
     def _members_by_folder(self) -> dict[str, list[tuple[TacticalClass, str]]]:
-        """The classes the Clean Engineering practice read that DDD names a building block, by folder, each with its
-        kind."""
+        """The classes the Clean Engineering practice read now that DDD names a building block, by folder, each with its
+        kind. A refresh reads only the files it names, and the building blocks of every other class stay as DDD built
+        them before; a class's kind still reads every class's name, so a root is named by its repository whichever file
+        holds the repository."""
         clean = self.practice.extended
-        classes = clean.in_graph.nodes("OoadClass") if clean is not None else []
-        names = {cls.name for cls in classes}
+        if clean is None:
+            return {}
+        names = {cls.name for cls in clean.in_graph.nodes("OoadClass")}
         members: dict[str, list[tuple[TacticalClass, str]]] = {}
-        for cls in classes:
+        for cls in clean.in_graph.nodes_read_now("OoadClass"):
             folder = str(Path(cls.source.file).parent).replace("\\", "/")
             tactical = TacticalClass(cls)
             kind = tactical.inferred_kind(names)
@@ -200,27 +200,32 @@ class DddReading:
         node = self.practice.in_graph.add(aggregate, f"ddd:Aggregate:{folder}", folder, 1, 1)
         self.graph.link("owns", context, node)
         self.graph.link("belongsTo", node, context, "relationship")
-        blocks = [(self._block(node, tactical, kind), kind) for tactical, kind in members]
-        for block, kind in blocks:
-            if kind == "EntityRoot" and isinstance(block, BuildingBlock):
-                self._associate(block)
+        for tactical, kind in members:
+            self._block(node, tactical, kind)
 
-    def _block(self, aggregate: Node, tactical: TacticalClass, kind: str) -> Node:
+    def _block(self, aggregate: Node, tactical: TacticalClass, kind: str) -> None:
         source = tactical.oclass.source
         block = self.practice.in_graph.add(BuildingBlock(self.practice, tactical, kind), f"ddd:{kind}:{source.file}:{tactical.oclass.name}", source.file, source.start_line, source.end_line)
-        self._blocks[tactical.oclass.name] = block
         self.graph.link("root" if kind == "EntityRoot" else "owns", aggregate, block)
         self.graph.link("belongsTo", block, aggregate, "relationship")
-        root = self._blocks.get(tactical.kept_root_name) if kind == "Repository" else None
-        if root is not None:
-            self.graph.link("accesses", block, root, "relationship")
-        return block
 
-    def _associate(self, block: BuildingBlock) -> None:
-        """An entity root names each other root it holds a reference to with a ``// foreign Name`` comment."""
-        for other in block.foreign_names:
-            if other in self._blocks and other != block.name:
-                self.graph.link("associates", block, self._blocks[other], "relationship")
+    def _link_blocks(self) -> None:
+        """Link the building blocks DDD holds, those read now and those it built before: each repository accesses the
+        root its name says it keeps, and each entity root associates with every other root it holds a reference to,
+        which it names with a ``// foreign Name`` comment. Both read only a block's name and its lines, which a block
+        read back from a saved graph holds too, so a refreshed root is linked again to the blocks no file in the
+        refresh holds."""
+        blocks = [node for node in self.practice.in_graph.nodes() if node.type in _BLOCK_KINDS]
+        by_name = {block.name: block for block in blocks}
+        for block in blocks:
+            if block.type == "Repository":
+                root = by_name.get(root_kept_by(block.name) or "")
+                if root is not None:
+                    self.graph.link("accesses", block, root, "relationship")
+            elif block.type == "EntityRoot":
+                for other in _FOREIGN_KEY.findall(block.source.text):
+                    if other in by_name and other != block.name:
+                        self.graph.link("associates", block, by_name[other], "relationship")
 
 
 def _context_for(folder: str, contexts: dict[str, Node]) -> Node | None:

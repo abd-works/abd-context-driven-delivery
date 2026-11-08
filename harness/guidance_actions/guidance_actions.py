@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, NotRequired, Sequence, TypedDict
 
 from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions, agent_toolset, tools
-from harness.agent_tools.agent_tools import AgentToolAnnotation, InstallDestination, ToolsetReference
+from harness.agent_tools.agent_tools import InstallDestination, ToolsetReference
 from harness.agent_tools.chat_pointer import ChatPointer
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.action_catalogue import ActionCatalogue
@@ -194,8 +194,9 @@ class GuidanceAction:
     call works in.
 
     The cdd server makes a new action for each call (``for_call``), so the guidance a call names, the session it works
-    in, and the practices it lists belong to that action alone: calls running at once never see each other's, and no
-    call changes the session another call reads. A board command names its ticket's session in a ``session=`` word,
+    in, and the fidelity it works at on each practice it lists belong to that action alone. The practices themselves
+    are the session's, which every call in the session shares, so an action never moves a practice's current fidelity:
+    it holds the fidelity it works at (``fidelity_of``) and hands that fidelity to each operation and log line. A board command names its ticket's session in a ``session=`` word,
     because it runs in whichever chat it is sent to; any other call works in the session open in its project. An action
     started inside another (``_inside``) is made for that action's session and works on the same practices, and logs
     nothing: only the action the call asked for has run. An action made for no session, such as one listed for install,
@@ -207,11 +208,13 @@ class GuidanceAction:
     """Whether the action hands the agent its listed Guidance's rules after it returns; an action that only records
     what exists, such as Document, sets it false."""
 
-    def __init__(self, session: Any = None, chat: ChatPointer | None = None) -> None:
+    def __init__(self, session: Any = None, chat: ChatPointer | None = None, call: ToolCall | None = None) -> None:
         super().__init__()
         self._session = session
         # The chat of the call this action was made for: every line it logs points at it.
-        self._chat = chat
+        self._chat = chat if chat is not None or call is None else call.chat
+        # The call this action was made for, which says where a graph build it starts runs; none in process.
+        self.call = call
         # The guidance argument this action works on, so naming the same argument again keeps what it built.
         self._guidance_worked_on: Any = _NOTHING_WORKED_ON
         self._guidance_text: str | None = None
@@ -221,9 +224,10 @@ class GuidanceAction:
         self._practices: list[PracticeGuidance] | None = None
         # The action this one was started inside; none for the action a call asked for.
         self._outer: GuidanceAction | None = None
-        # The fidelity this action works at on each listed practice, by the practice's id: the one its guidance named,
-        # read once when listed, so a later call on another fidelity of the same practice does not change this one's.
-        self._worked_at: dict[int, Any] = {}
+        # The fidelity this action works at on each listed practice: the one its guidance named, read once when listed.
+        # The action holds it, never the practice, which every call in the session shares, so a later call on another
+        # fidelity of the same practice changes nothing this one reads.
+        self._worked_at: dict[PracticeGuidance, FidelityGuidance | None] = {}
 
     def for_call(self, call: ToolCall) -> GuidanceAction:
         """An action of this kind made for call and working on the guidance it names: in the session that guidance names
@@ -231,14 +235,14 @@ class GuidanceAction:
         A session is space/session's *Session*, which the call opens; the framework never names its class."""
         guidance = call.arguments.get("guidance")
         named = session_file_named(guidance)
-        action = self.made_for((call.session_named(named) if named else None) or call.session or self._session, call.chat)
+        action = self.made_for((call.session_named(named) if named else None) or call.session or self._session, call)
         if guidance is not None:
             action._take(guidance)
         return action
 
-    def made_for(self, session: Any, chat: ChatPointer | None = None) -> GuidanceAction:
-        """An action of this kind, set up as this one is, made for session and the call from chat."""
-        return type(self)(session=session, chat=chat)
+    def made_for(self, session: Any, call: ToolCall | None = None) -> GuidanceAction:
+        """An action of this kind, set up as this one is, made for session and call."""
+        return type(self)(session=session, call=call)
 
     def session_for(self, call: ToolCall) -> Any:
         """The session this action logs call in: the one it was made for."""
@@ -266,7 +270,7 @@ class GuidanceAction:
         """Refresh the session's graph with exactly the files this action just wrote, so the graph holds them as they
         are now; nothing watches the files. An action made for no session holds no graph to refresh."""
         if self._session is not None:
-            self.graph.refresh([str(path) for path in paths])
+            self.graph.refresh([str(path) for path in paths], self.call)
 
     def source_label(self, content: str = "", paths: list[str] | str | None = None) -> str:
         """What an instruction names as its source: the paths a call names, one per line, else its in-process text. The
@@ -285,12 +289,10 @@ class GuidanceAction:
         action made for no session, such as one run in process, reads paths as given."""
         return document_in(self._session, content, paths)
 
-    def _discover_operations(self) -> dict[str, AgentOperation]:
-        members = self._members
-        return {
-            name: GuidanceAgentOperation(name=name, callable=members.callable_on(self, name, member), toolset=self)
-            for name, member in members.annotated if AgentToolAnnotation.annotates(member)
-        }
+    @property
+    def operation_type(self) -> type[AgentOperation]:
+        """Each ``@agent_tool`` of an action logs its call as the action, such as ``render``."""
+        return GuidanceAgentOperation
 
     def _work_on(self, guidance: GuidanceArg | None = None) -> None:
         """Work on what guidance names: its Guidance, or its text. Naming again what this action already works on keeps
@@ -326,7 +328,7 @@ class GuidanceAction:
         other Guidance is itself."""
         practice = self.practice_of(item)
         if practice is not item:
-            self._worked_at[id(practice)] = item
+            self._worked_at[practice] = item
         return practice
 
     def practice_of(self, item: Any) -> Any:
@@ -337,8 +339,9 @@ class GuidanceAction:
 
     def listed(self) -> list:
         """The Guidance this action works on. A practice CDD has is the session's own instance of it, the one the
-        session's graph holds, working from now on at the fidelity the guidance names, whose format is the one the
-        guidance names, else the one that fidelity last used; any other guidance is made from its ref."""
+        session's graph holds, which this action works at the fidelity the guidance names (``fidelity_of``), else the
+        fidelity the practice was made at; the practice itself stays where it was made. A format the guidance names is
+        the one that fidelity keeps; any other guidance is made from its ref."""
         if self._guidance_text is not None:
             return []
         if self._listed_items is None:
@@ -362,13 +365,14 @@ class GuidanceAction:
         if named is None:
             return AgentToolSet.instantiate(self._held(raw))
         practice = named.practice
-        fidelity = practice.work_at(named.guidance) if named.guidance is not practice else practice.fidelities.current
+        fidelity = named.guidance if named.guidance is not practice else practice.fidelities.current
         if named.format:
-            # The fidelity keeps the format it is given, so the next action on it works in it without being told.
+            # The fidelity keeps the format it is given in its session, so the next action on it works in it without
+            # being told: the kept format is the session's choice, which every chat of the session reads.
             (fidelity if fidelity is not None else practice).format = named.format
         if self._session is not None:
             self._session.practice(practice.key)
-        self._worked_at[id(practice)] = fidelity
+        self._worked_at[practice] = fidelity
         return practice
 
     def _own_counterpart(self, made: Any) -> NamedGuidance | None:
@@ -389,14 +393,13 @@ class GuidanceAction:
         """Work on fidelity, one fidelity of a practice, held for this action: its practice is the one Guidance this
         action lists, worked at that fidelity, in format when one is named, which the fidelity keeps."""
         practice = fidelity.practice_guidance
-        practice.work_at(fidelity)
         if format:
             fidelity.format = format
         self._guidance_worked_on = fidelity
         self._guidance_text = None
         self._tool_items = [practice]
         self._listed_items = [practice]
-        self._worked_at[id(practice)] = fidelity
+        self._worked_at[practice] = fidelity
 
     def fidelity_of(self, item: Any) -> Any:
         """The fidelity this action works at on item, one of the Guidance it lists: the one its guidance named, read
@@ -405,8 +408,8 @@ class GuidanceAction:
         text."""
         if isinstance(item, FidelityGuidance):
             return item
-        if id(item) in self._worked_at:
-            return self._worked_at[id(item)]
+        if isinstance(item, PracticeGuidance) and item in self._worked_at:
+            return self._worked_at[item]
         return getattr(getattr(item, "fidelities", None), "current", None)
 
     def _session_practice(self, item: Any) -> Any:
@@ -417,10 +420,17 @@ class GuidanceAction:
         return next((output for output in self._session.practices.values() if output.guidance is item), None)
 
     def _listed_practices(self) -> list:
-        """Each listed practice as this action's session holds it, which the lines it logs name; guidance that is no
-        practice CDD has is left out."""
-        found = [self._session_practice(item) for item in self.listed() if not isinstance(item, str)]
+        """Each listed practice as this action's session holds it at the fidelity this action works at on it, which
+        the lines it logs name: that fidelity's FidelitySessionOutput, or the practice's PracticeSessionOutput for a
+        practice worked at no fidelity. Guidance that is no practice CDD has is left out."""
+        found = [self._worked_output(item) for item in self.listed() if not isinstance(item, str)]
         return [practice for practice in found if practice is not None]
+
+    def _worked_output(self, item: Any) -> Any:
+        practice = self._session_practice(item)
+        fidelity = self.fidelity_of(item) if practice is not None else None
+        held = fidelity.session_output if fidelity is not None else None
+        return held if held is not None else practice
 
     def _inside(self, action_type: type[GuidanceAction], guidance: str | list | None = None) -> GuidanceAction:
         """An action of action_type started inside this one: made for this action's session and working on guidance,

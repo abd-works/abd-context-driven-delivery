@@ -9,10 +9,24 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Literal, TypeVar, get_args, get_origin, get_type_hints
 
+from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
 from harness.annotations.annotation import annotation_kinds, hosted_only
 from harness.markdown.format import TEMPLATE_FOLDER_NAMES, Format
-from harness.markdown.front_matter import FlatSettings, FrontMatter
+from harness.markdown.front_matter import FlatSettings
+
+# The seam other modules import from the package: a class's markdown read typed, the scope an owner hands it, and the
+# annotations that make a property read it. The classes that locate and read one file stay behind *Markdown*.
+__all__ = [
+    "HTML",
+    "Markdown",
+    "MarkdownCollection",
+    "MarkdownScope",
+    "MarkdownText",
+    "MarkdownTypeUnresolved",
+    "markdown",
+    "markdownCollection",
+]
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
@@ -229,12 +243,6 @@ class MarkdownFile:
             return None
         return MarkdownText(self._path.read_text(encoding="utf-8"))
 
-    @property
-    def front_matter(self) -> FrontMatter:
-        """The settings block at the top of the file, and the content after it; an empty one for a file that is not
-        there."""
-        return FrontMatter(self._path.read_text(encoding="utf-8") if self._path.is_file() else "")
-
     def section_exists(self) -> bool:
         if not self._heading:
             return True
@@ -404,10 +412,7 @@ class MarkdownScope:
     @classmethod
     def beside(cls, owner_class: type) -> MarkdownScope:
         """The markdown beside owner_class's file, named by the slug the class declares, else by its folder."""
-        try:
-            folder = Path(inspect.getfile(owner_class)).resolve().parent
-        except (TypeError, OSError):
-            folder = Path(".")
+        folder = class_folder(owner_class)
         declared = getattr(owner_class, "domain_slug", None)
         return cls(folder, declared if isinstance(declared, str) and declared else folder.name)
 

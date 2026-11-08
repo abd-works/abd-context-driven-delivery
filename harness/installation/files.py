@@ -10,8 +10,8 @@ from harness.agent_tools.agent_tools import AgentTool, InstallDestination
 from harness.annotations.name import Name
 from harness.installation.destination import Installation
 from harness.installation.ide_layout import IdeLayout
-from harness.markdown.markdown import MarkdownFile
-from harness.annotations.annotation import Destination, NamedDestination, annotation_kinds
+from harness.markdown.front_matter import FrontMatter
+from harness.annotations.annotation import Destination, NamedDestination
 
 
 class Skill(NamedDestination):
@@ -127,7 +127,7 @@ class FileInstallation(Installation):
     def write_standing_rule(self, source: Path) -> None:
         """Install one always-on rule from ``cdd_guidance/rules``: ``.md`` scoped by ``paths`` for
         Claude Code, the source front matter as written for every other IDE."""
-        front_matter = MarkdownFile(source).front_matter
+        front_matter = FrontMatter.of_file(source)
         text = front_matter.text
         if self.layout.scopes_rules_by_paths:
             fields, body = front_matter.fields, front_matter.content

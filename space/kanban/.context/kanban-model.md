@@ -109,7 +109,7 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 	// the `@tool_subject` of the `board.*` tools, handed the call's project: the board of that project's main checkout with every practice chosen, so a chat in a ticket's worktree reads the same board
 	-> Repo.of_project
 	-> Repo.main_clone
-	-> PracticeCatalogue.practices
+	-> Sessions.board_practices
 + show(): Board
 	// `board.show`
 + folders(path: str): list[str]
@@ -673,7 +673,7 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## PracticeGuidance
 
-`harness/guidance/guidance.py`, chosen through `PracticeCatalogue.practices()` (`harness/guidance/practice_catalogue.py`). `key`, `slug`, `short_name`, `colour`, and its fidelities' slugs are data fields; the board reads `fidelities`, `rules`, `overview`, and `guidance`.
+`harness/guidance/guidance.py`, the board's own set, which the checkout's `Sessions` makes once with `PracticeCatalogue.create_all()` (`board_practices`). `key`, `slug`, `short_name`, `colour`, and its fidelities' slugs are data fields; the board reads `fidelities`, `rules`, `overview`, and `guidance`.
 
 ## FidelityGuidance
 

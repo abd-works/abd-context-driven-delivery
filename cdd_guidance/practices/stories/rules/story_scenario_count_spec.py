@@ -84,8 +84,8 @@ with description("story scenario count"):
 
     with context("schema"):
         with it("should size story scenarios with the at-most-seven rule"):
-            expect(PracticeSchema(PracticeCatalogue.practice("stories")).slugs_for("Story")).to(contain("story-scenarios-at-most-seven"))
-            expect("four-to-nine-children" in PracticeSchema(PracticeCatalogue.practice("stories")).slugs_for("Story")).to(equal(False))
+            expect(PracticeSchema(PracticeCatalogue.create("stories")).slugs_for("Story")).to(contain("story-scenarios-at-most-seven"))
+            expect("four-to-nine-children" in PracticeSchema(PracticeCatalogue.create("stories")).slugs_for("Story")).to(equal(False))
 
         with it("should keep four-to-nine on an epic"):
-            expect(PracticeSchema(PracticeCatalogue.practice("stories")).slugs_for("Epic")).to(contain("four-to-nine-children"))
+            expect(PracticeSchema(PracticeCatalogue.create("stories")).slugs_for("Epic")).to(contain("four-to-nine-children"))

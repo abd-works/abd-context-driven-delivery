@@ -9,7 +9,7 @@ import inspect
 from pathlib import Path
 from typing import Any
 
-from harness.annotations.annotation import Annotation
+from harness.annotations.annotation import Annotation, NamesAnnotation
 
 
 class LanguageAdapter(Annotation):
@@ -40,7 +40,7 @@ class LanguageAdapter(Annotation):
 language_adapter = LanguageAdapter
 
 
-class Identity(Annotation):
+class Identity(NamesAnnotation):
     """Name the data fields (`@data_field`) that name one object of this class, such as a ticket's `name`; a fidelity's
     progress is named by its `ticket` and its `slug`. A subclass is named as its base is.
 
@@ -51,17 +51,6 @@ class Identity(Annotation):
     """
 
     flag = "_identity_fields"
-    copied = False
-
-    def __new__(cls, *fields: str):
-        return object.__new__(cls)
-
-    def __init__(self, *fields: str) -> None:
-        self.fields = fields
-
-    def annotate(self, data_class: type) -> type:
-        setattr(data_class, self.flag, self.fields)
-        return data_class
 
 
 identity = Identity
@@ -74,7 +63,7 @@ class ReferenceWithoutIdentityError(TypeError):
         super().__init__(f"{data_class.__name__} is sent as a reference, so annotate the fields that name it with @identity")
 
 
-class Edits(Annotation):
+class Edits(NamesAnnotation):
     """Name the fields of the object's data this operation changes, when its argument names do not match them.
 
     A generated view shows a field as an input only where an operation changes it, so this is how an operation whose
@@ -82,17 +71,6 @@ class Edits(Annotation):
     """
 
     flag = "_language_adapter_edits"
-    copied = False
-
-    def __new__(cls, *fields: str):
-        return object.__new__(cls)
-
-    def __init__(self, *fields: str) -> None:
-        self.fields = fields
-
-    def annotate(self, operation: Any) -> Any:
-        setattr(operation, self.flag, self.fields)
-        return operation
 
 
 edits = Edits
@@ -168,7 +146,7 @@ class DataClass:
     @property
     def identity(self) -> tuple[str, ...]:
         """The fields that name one object of the class, or none."""
-        return tuple(getattr(self.data_class, Identity.flag, ()))
+        return Identity.names_on(self.data_class)
 
     @property
     def languages(self) -> tuple[str, ...]:
@@ -182,7 +160,7 @@ class DataClass:
 
     def edited_by(self, operation: Any) -> tuple[str, ...]:
         """The fields of this class's data that operation's `@edits` annotation names, or none."""
-        return tuple(getattr(operation, Edits.flag, ()))
+        return Edits.names_on(operation)
 
     def sends_by_identity(self, field: property) -> bool:
         """Whether field sends the object it holds by that object's identity alone."""

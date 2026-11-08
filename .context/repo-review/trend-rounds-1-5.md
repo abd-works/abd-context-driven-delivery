@@ -1,4 +1,9 @@
-# Validation trend, rounds 1–5
+# Validation trend, rounds 1–7
+
+**Where it stands (2026-11-08):**
+- The loop's goal total fell from 150 (round 5) to 110 (round 6) to **39** (round 7). The target is under 30, with no high findings in the three goal classes.
+- Round 7's fixes are landing now: the graph fixes and the harness-core fixes are merged. The space/tools/actions, harness-upper and practices fixes are still in progress.
+- Round 8 validates next, after a graph smoke check. It is the first round expected to run the graph check in every area since round 5.
 
 How many findings each validation round on `ensure-domain-orientation-refactor` produced, and how severe they were. Severity follows the same scale in every round:
 - **high:** wrong behaviour, or a second object model
@@ -16,6 +21,8 @@ Rounds 1 and 2 wrote several findings to a bullet, so their counts are ranges. T
 | 3 | `42ab935c` | Same method again, plus a whole-repository cross-file pass (130 reports) | 38–48 | 16 | 20–30 | 2 | 23 new, 5 left, 3 both, 7 unmarked |
 | 4 | `d589b161` | Relationship review: five agents read the code behind all 921 runtime relationships and 832 classes. Graded right, wrong shape or no use, not by severity | 363 wrong-shape relationships, 19 classes with no use | — | — | — | 84 earlier verdicts overturned |
 | 5 | `d71e0b20` | Six AI agents for twelve concerns that span files; recipes expanded and measured; graph rules in five of six areas; an end-to-end test | 170 | 21 | 99 | 50 | ~70% new, ~15% left from round 4, ~12% known skips |
+| 6 | `b91a73eb` | Same twelve concerns; graph check mostly lost to B10 (the server stalled on graph builds) | 133 | 12 | 66 | 55 | 58 new, 67 left, 2 regressions, 12 new scope |
+| 7 | `c8921451` | Same twelve concerns; graph check blocked by a DDD crash in the graph worker, so mostly the AI check | 54 | 4 | 17 | 33 | left and new about evenly; no regressions |
 
 ## Wrong behaviour (the bugs) by round
 
@@ -26,6 +33,8 @@ Rounds 1 and 2 wrote several findings to a bullet, so their counts are ranges. T
 | 3 | 17 (11 high) | Round trips still losing data, paths resolved against the server's folder, malformed files read as empty |
 | 4 | not graded | — |
 | 5 | about 10 high | Actions sending prompts with text missing; the server stalling on a graph validate; the graph going empty after a ticket switch; hooks reading the wrong install; draw.io rules never firing |
+| 6 | 12 high | Round-5 fixes that broke things (a premature "generate done", `partition`/`repair` failing on optional arguments, a new import cycle); B10 still stalling the server; a stale hook daemon keeping hooks dead after an update; session tools losing the calling chat |
+| 7 | 4 high | The DDD crash in the graph worker (from the round-6 merge); 12 rules that never run because the schema lists them on the wrong node types; a validate that reported clean code as clean |
 
 ## What the trend shows
 
@@ -129,3 +138,20 @@ The first count gave 163, because it also counted round 5's summary tables of co
   - Graph specs build in-process, so they missed the worker-only crash.
   - The round-7 fix brief makes both specs mandatory.
 - **To reach under 30:** one more fix round at even half of round 7's rate (−30%) brings 39 to about 27. Round 8 then confirms it, with a working graph check.
+
+## Round 7 fixes: what has landed so far
+
+| Fix | Status | What changed |
+|---|---|---|
+| Graph and MCP | Merged and pushed (77741148) | The DDD worker crash is fixed. DDD builds from the classes the current load read, and the result is the same in process, in a worker, and from a restored graph. A failed build no longer wipes a session's violations, so validate can no longer report clean code that isn't. Refresh and save are one locked step. With five concurrent builds, the slowest ping fell from 3.9 s to 1.05 s. The call decides where a build runs. |
+| Harness core | Merged locally (8db65b9a); quick suite running | No shared practice instances: the catalogue holds classes only. A call's fidelity lives on the call, not the shared practice. One owner each for the class folder (it was written six times), operation discovery, the names annotation, JSON file writing, and the nested-generate rule. Decision records for `ContextConfig`, `Name`, and the guidance and markdown seams. |
+| Space, tools, actions | In progress | Two owners of graph-file reading; a second Session for a subfolder; a `Session.graph` race; the capture → partition → embed chain building an empty index; board labels from Python. |
+| Harness upper | In progress | The graph app's type check; filter choices in Python; the catalog's twin tables. |
+| Practices | In progress | The 12 rules that never run, plus one schema-alignment spec for all five practices; the UX readers; the DDD integration target. |
+
+**Is the loop still converging?** Yes.
+- Each round has cut the goal total by more than the 20% bar: −27%, then −65%.
+- Regressions have stayed at or below 1%.
+- The patterns that held rounds back were stand-in swaps, twins left behind, open skips, and specs that skip the live path. Each one has been turned into a rule in the fix brief, and each validator report since has checked those rules.
+
+**Risk for round 8:** the graph check will run in every area for the first time with the ten Clean Engineering rules switched on in round 6. Their findings count as new scope, so they do not hide the comparison. But they may add real work.

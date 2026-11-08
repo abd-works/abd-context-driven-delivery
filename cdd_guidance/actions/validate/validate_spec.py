@@ -429,6 +429,31 @@ with description("a validate action on practice guidance") as self:
             report = self.action.validate(guidance=["bdd-development"], paths=[_SPEC_FILE, _STORY_FILE])
             expect(report).not_to(contain("verb-noun-format"))
 
+        # Two chats' validates refresh the one graph their session holds; neither may see the other's refresh half done.
+        with context("that two calls answering chats check at once"):
+            with before.each:
+                session = self.action.session
+                self.reports: dict[str, str] = {}
+                self.failures: list[BaseException] = []
+
+                def check(guidance: str, path: str) -> None:
+                    try:
+                        action = Validate(session=session, call=ToolCall(answers_a_chat=True))
+                        self.reports[guidance] = action.validate(guidance=[guidance], paths=[path])
+                    except BaseException as failure:
+                        self.failures.append(failure)
+
+                checks = [threading.Thread(target=check, args=pair) for pair in (("ddd-tactics", _ENTITY_ROOT_FILE), ("bdd-development", _SPEC_FILE))]
+                for running in checks:
+                    running.start()
+                for running in checks:
+                    running.join()
+
+            with it("should report to each call the violations of the file it checks"):
+                expect(self.failures).to(equal([]))
+                expect(self.reports["ddd-tactics"]).to(contain("private-method-naming"))
+                expect(self.reports["bdd-development"]).to(contain("framework-syntax"))
+
         # Calls running at once would each read the graph the last one wrote.
         with it("should write no graph that every call in the session shares"):
             self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
