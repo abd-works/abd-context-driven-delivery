@@ -110,9 +110,9 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def work_branch(self) -> Branch:
-        """Return the branch ticket's work is on, which leaving ticket commits and pushes: its own branch while it is checked out, else the default branch while the checkout is on it, as for a session with no branch of its own. Any other branch checked out is not ticket's, so its own branch comes back not checked out and leaving commits nothing."""
+        """Return the branch ticket's work is on, which leaving ticket commits and pushes: its own branch while it is checked out, in the repository or in its own worktree, else the default branch while the repository has it checked out, as for a session with no branch of its own. Any other branch checked out is not ticket's, so its own branch comes back not checked out and leaving commits nothing."""
         own = self.branch()
-        if own.is_checked_out:
+        if own.is_checked_out or own.worktree is not None:
             return own
         repo = self._board.repo
         default = repo.branch_named(repo.default_branch)
@@ -287,14 +287,16 @@ class Ticket(Card):
     @noSessionLog
     def close_choices(self) -> LeaveChoices:
         """Return what closing ticket can do with its work, each chosen at first: a handoff always, and a commit and a push of the branch its work is on while that branch is checked out, which branch names. Closing never merges."""
-        return LeaveChoices(self._checked_out_work_branch(), merges=False)
+        return LeaveChoices(self._work_checkout_branch(), merges=False)
 
     @mcp
     @agent_tool
     @noSessionLog
     def leave_choices(self) -> LeaveChoices:
         """Return what leaving ticket for another can do with its work now, in the order leave does it: a handoff always; a commit and a push of the branch its work is on while that branch is checked out, which branch names; and a merge of that branch while it is the ticket's own, not the default branch. Each is chosen at first but the merge, which waits for the person."""
-        return LeaveChoices(self._checked_out_work_branch(), merges=True)
+        branch = self._work_checkout_branch()
+        # A branch open in its own worktree cannot be merged and deleted from here; its worktree is closed first.
+        return LeaveChoices(branch, merges=branch is not None and branch.is_checked_out)
 
     @mcp
     @agent_tool
@@ -303,10 +305,11 @@ class Ticket(Card):
         """Return what opening ticket can create for it now, each chosen at first: its own branch while the repository has none, and its own worktree while it has none."""
         return OpenChoices(self.branch(), self.worktree)
 
-    def _checked_out_work_branch(self) -> Branch | None:
-        """The branch the ticket's work is on while it is checked out, which leaving acts on; none otherwise."""
+    def _work_checkout_branch(self) -> Branch | None:
+        """The branch the ticket's work is on while a checkout has it, the repository or its own worktree, which
+        leaving acts on; none otherwise."""
         branch = self.work_branch()
-        return branch if branch.is_checked_out else None
+        return branch if branch.is_checked_out or branch.worktree is not None else None
 
     @mcp
     @agent_tool
@@ -335,22 +338,32 @@ class Ticket(Card):
         return self
 
     def leave(self, leaving: list[str]) -> None:
-        """Do what leaving names with the ticket's work: write a handoff for its session, then commit, push, and merge
-        the branch its work is on. Those three only while that branch is checked out, because they act on whatever is
-        checked out. Work on the default branch is committed and pushed there; it has no branch to merge and no
-        worktree to remove."""
-        if not leaving:
-            return
+        """Do what leaving names with the ticket's work: write a handoff for its session, then save the work."""
+        self._write_handoff(leaving)
+        self._save_work(leaving)
+
+    def _write_handoff(self, leaving: list[str]) -> None:
         if LEAVE_HANDOFF in leaving:
             self._session.handoffs.write(LeavingHandoff(self).document)
-        branch = self.work_branch()
-        if not branch.is_checked_out:
+
+    def _save_work(self, leaving: list[str]) -> None:
+        """Commit, push, and merge the branch the ticket's work is on, as leaving names, in the checkout that has it:
+        the repository, or the ticket's own worktree. Nothing while no checkout has it, because those steps act on
+        whatever is checked out. Work on the default branch is committed and pushed there; it has no branch to merge and
+        no worktree to remove."""
+        if not set(leaving) & {LEAVE_COMMIT, LEAVE_PUSH, LEAVE_MERGE}:
             return
-        repo = self._board.repo
+        branch = self._work_checkout_branch()
+        if branch is None:
+            return
+        # Checked out in the repository itself, else in the ticket's own worktree.
+        checkout = self._board.repo if branch.is_checked_out else branch.worktree.repository
         if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
-            repo.push_commit(f"{self.name}: leave session", sync_remote=LEAVE_PUSH in leaving)
-        if LEAVE_MERGE in leaving and not branch.is_default:
-            repo.close_branch(branch.name)
+            checkout.commit([str(checkout.root)], f"{self.name}: leave session", untracked=True)
+        if LEAVE_PUSH in leaving:
+            checkout.push_upstream()
+        if LEAVE_MERGE in leaving and branch.is_checked_out and not branch.is_default:
+            self._board.repo.close_branch(branch.name)
 
     @mcp
     @agent_tool
@@ -399,9 +412,25 @@ class Ticket(Card):
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
         """Close ticket: its session ends, its folder moves to _complete/, and it shows in Complete. leaving names what to do with its work first: handoff, commit, push, merge."""
-        self.leave(leaving or [])
+        chosen = leaving or []
+        self._write_handoff(chosen)
         self._session.close()
-        return self._board.ticket_of(self._session.move_to_closed())
+        closed = self._board.ticket_of(self._session.move_to_closed())
+        # The work is saved after the folder moves, so the move is committed with it.
+        self._save_work(chosen)
+        self._return_to_default_branch(chosen)
+        return closed
+
+    def _return_to_default_branch(self, leaving: list[str]) -> None:
+        """A closed ticket's own branch leaves the repository's checkout once its work is committed, so the next
+        session does not start on it. Uncommitted work keeps it checked out, so nothing is carried to the default branch."""
+        if not (LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving):
+            return
+        own = self.branch()
+        if not own.is_checked_out:
+            return
+        repo = self._board.repo
+        repo.branch_named(repo.default_branch).check_out()
 
     @mcp
     @agent_tool
