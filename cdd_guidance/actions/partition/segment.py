@@ -22,6 +22,10 @@ _HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _ALL_CAPS = re.compile(r"^[A-Z][A-Z0-9 /'\-]{1,60}$")
 # An entry body shorter than this reads as a stub unless the index names a short-body pattern it matches.
 MIN_ENTRY_BODY_CHARS = 120
+# Where a partition writes each segment under its folder: one folder for each top-level artifact its practice's Scaffold
+# names, such as `checks/.context/checks-segment.md`, or `powers/attack/.context/attack-segment.md` for a nested one.
+SEGMENT_FILE = "{artifact}/.context/{artifact}-segment.md"
+_SEGMENT_FILES = "**/.context/*-segment.md"
 
 
 @dataclass(frozen=True)
@@ -108,6 +112,11 @@ class Segment:
         config = index.completeness if index is not None else SegmentCompletenessConfig(min_body_chars=int(min_body_chars))
         resolved = path.resolve()
         return cls.from_text(resolved, resolved.read_text(encoding="utf-8", errors="replace"), config, expected_names=expected_names)
+
+    @staticmethod
+    def files_under(folder: Path) -> list[Path]:
+        """Every segment file a partition wrote under folder, where ``SEGMENT_FILE`` places them, in path order."""
+        return sorted(path.resolve() for path in folder.glob(_SEGMENT_FILES) if path.is_file())
 
     @classmethod
     def from_text(

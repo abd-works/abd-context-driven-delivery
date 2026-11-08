@@ -268,20 +268,21 @@ class ContextSetup:
           Options: stories | clean_engineering | ddd | ux | cdd
         Also ask: which tool runs first? (first)
         No tool fires during this step — just collect the user's selection."""
-        """Step 3 — Sequence & Delegate (partition is additive; multi-pass is safe):
-        Call ONLY the tools the user selected in Step 2. Start with the tool named by
-        `first`; after it completes, read its index output to decide the order for the
-        remaining selected tools. Each call writes segments to folder_path/.context/
-        (out_root=folder_path) and accumulates views without wiping prior passes.
-        'cdd' means call both stories and clean_engineering.
-        Call partition.partition once with guidance set to the selected practices, in that
-        order (stories, clean-engineering, ddd, ux). If the user selected nothing, call it
-        with no guidance."""
+        """Step 3 — Partition (partition is additive; a later pass adds to the index and segments):
+        Call partition.partition once, with:
+          guidance = the context tools selected in Step 2, the one named by `first` first; 'cdd' stands for
+            stories and clean-engineering
+          paths = the markdown_files convert returned in Step 1, the documents it wrote
+          out_root = {{folder_path}}, so the index and segments are written beside the documents
+        If the user selects no context tool, ask once more; if none is selected then, stop and tell the user that
+        nothing was partitioned or indexed, because partition needs at least one guidance."""
         tools(self.partition.partition)
         """Step 4 — Embed:
-        segments_paths = glob(folder_path/.context/**/*-segment.md).
-        Pass them to context_index.embed with out_path=folder_path/rag.
+        Call partition.segment_files with out_root={{folder_path}}; it lists the segment files the partition wrote.
+        Pass that list as segments_paths to context_index.embed, with out_path={{folder_path}}/rag.
+        If the list is empty, the partition wrote no segments: say so and stop rather than embed an empty index.
         Report the resulting index_path to the user."""
+        tools(self.partition.segment_files)
         tools(self.context_index.embed())
         return "Documents captured and indexed."
 

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
-from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, Segment
+from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, SEGMENT_FILE, Segment
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
@@ -56,6 +56,11 @@ class Partition(GuidanceAction):
         """The folder the index and segments go under: out_root when the call names one, else the session's root."""
         return self.path_named(out_root) if out_root else self.session.work_root
 
+    def _corpus(self, source: str) -> str:
+        """The corpus a line names: the paths or text the call gave, else a request to ask for them, so no line tells
+        the agent to work on a blank."""
+        return f"the corpus at {source}" if source else "the corpus the user names (ask which files or folder, then pass them as paths)"
+
     @mcp
     @agent_tool
     def index(
@@ -68,17 +73,23 @@ class Partition(GuidanceAction):
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context.
         context: in-process text. Leave this empty on an MCP call."""
         source = self.source_label(context, paths)
-        return f"Index the corpus at {source} under {self._folder(out_root).as_posix()}/.context/. Read those files locally."
+        return f"Index {self._corpus(source)} under {self._folder(out_root).as_posix()}/.context/. Read those files locally."
 
     @mcp
     @agent_tool
     def segment(self, out_root: str | None = None) -> str:
         """Write verbatim source chunks from the index into segment files under out_root (from the project's root, or absolute), or under the session's root when out_root is omitted. Completeness must use named entries, not length alone."""
         return (
-            f"Verbatim source chunks written under {self._folder(out_root).as_posix()}/{{artifact}}/.context/ "
+            f"Verbatim source chunks written as {self._folder(out_root).as_posix()}/{SEGMENT_FILE} "
             "from {subject}-index.md. "
             "Named-entry completeness verified (length-only is a false PASS)."
         )
+
+    @mcp
+    @agent_tool
+    def segment_files(self, out_root: str | None = None) -> list[str]:
+        """List the segment files a partition wrote under out_root (from the project's root, or absolute), or under the session's root when out_root is omitted, each as an absolute path: the files context_index.embed reads."""
+        return [path.as_posix() for path in Segment.files_under(self._folder(out_root))]
 
     @mcp
     @skill
@@ -94,7 +105,7 @@ class Partition(GuidanceAction):
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context.
         context: in-process text. Leave this empty on an MCP call.
         mode: one_go, or the named partition mode.
-        out_root: folder for the index and segments. Omit it to use the session path."""
+        out_root: folder for the index and segments. Omit it to use the session's root, the folder it works in."""
         self._work_on(guidance)
         source = self.source_label(context, paths)
         self.run(self._guidance_to_index_by, action="partition")
@@ -104,7 +115,7 @@ class Partition(GuidanceAction):
         if self._session is not None:
             tools(self.graph.refresh)
         return (
-            f"Partition of {source} finished (mode {mode}); "
+            f"Partition of {self._corpus(source)} finished (mode {mode}); "
             f"docs under {self._folder(out_root).as_posix()}/.context/. "
             "Read those files locally. "
             "Hard fail if any new chunk fails named-entry completeness."
