@@ -8,7 +8,6 @@ from mamba import before, context, description, it
 
 from harness.catalog_generator.catalog_examples import CatalogFidelity, ExampleFile, ExampleMarkdown
 from harness.catalog_generator.catalog_practice import CatalogPractice
-from harness.guidance.practice_catalogue import PracticeCatalogue
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 _PNG = bytes.fromhex(
@@ -78,13 +77,13 @@ with description("a code example"):
     # Stories reads no `.ts` file itself, so another catalogued practice's TypeScript model names the language.
     with context("of a practice whose formats do not read it"):
         with it("should open in the language another practice's format reads it in"):
-            stories = CatalogPractice(PracticeCatalogue.practice("stories"))
+            stories = next(practice for practice in CatalogPractice.load_all() if practice.key == "stories")
             source = _examples({"acceptance_tests.ts": "export class Customer {}\n"}) / "acceptance_tests.ts"
             expect(ExampleFile(source, stories).panel_html()).to(contain('data-language="typescript"'))
 
     with context("that no practice's format reads"):
         with it("should open as plain text"):
-            stories = CatalogPractice(PracticeCatalogue.practice("stories"))
+            stories = next(practice for practice in CatalogPractice.load_all() if practice.key == "stories")
             source = _examples({"notes.txt": "a note\n"}) / "notes.txt"
             expect(ExampleFile(source, stories).panel_html()).to(contain('data-language="plaintext"'))
 

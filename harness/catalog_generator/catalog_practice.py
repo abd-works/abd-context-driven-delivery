@@ -38,9 +38,17 @@ class CatalogPractice:
         "stage_examples": False,
     }
 
-    def __init__(self, practice: PracticeGuidance, skills: FileInstallation | None = None, position: int = 0) -> None:
+    def __init__(
+        self,
+        practice: PracticeGuidance,
+        skills: FileInstallation | None = None,
+        position: int = 0,
+        catalogue: tuple[PracticeGuidance, ...] = (),
+    ) -> None:
         self.practice = practice
         self.position = position
+        # Every practice of the catalog this one was made with, made once, whose formats name a file this one cannot.
+        self._catalogue = catalogue
         self._skills = skills if skills is not None else self.skill_install()
         self._card = self._card_of(type(practice))
 
@@ -60,9 +68,11 @@ class CatalogPractice:
         order each practice's catalog card gives. Each keeps its place in the catalogue, the order the approach's grids
         list the practices in, and all share one skill install."""
         skills = cls.skill_install()
-        catalogued = enumerate(PracticeCatalogue.create_all())
+        catalogue = tuple(PracticeCatalogue.create_all())
         practices = [
-            cls(practice, skills, position) for position, practice in catalogued if not NoCatalog.annotates(type(practice))
+            cls(practice, skills, position, catalogue)
+            for position, practice in enumerate(catalogue)
+            if not NoCatalog.annotates(type(practice))
         ]
         shown = [practice for practice in practices if practice.on_board]
         return sorted(shown, key=lambda practice: (practice.order, practice.display_name))
@@ -170,9 +180,9 @@ class CatalogPractice:
         return Path(self.practice.module_dir) / EXAMPLES_FOLDER
 
     def language_of(self, path: Path) -> str | None:
-        """The language an example file's code is in: the format of this practice, else of another practice in the
-        catalogue, that reads it; none when no practice reads it."""
-        return self.practice.format_reading_with(path, PracticeCatalogue.practices())
+        """The language an example file's code is in: the format of this practice, else of another practice of its
+        catalog, that reads it; none when no practice reads it."""
+        return self.practice.format_reading_with(path, self._catalogue)
 
     def copy_examples_into(self, out_root: Path) -> None:
         """Copy the practice's example files into the catalog's ``examples/{practice}`` folder, where its fidelity
