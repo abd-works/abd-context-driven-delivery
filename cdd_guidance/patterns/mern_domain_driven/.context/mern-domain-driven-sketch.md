@@ -64,7 +64,7 @@ guidance; the pattern does not override them.
 **Resolved — the format gap.** The draft relied on `Stories.ce()` passing
 `format` to Clean Engineering. That operation no longer exists: a fidelity names
 its Clean Engineering companion (`FidelityGuidance.clean_engineering`), and
-`PracticeGuidance.clean_engineering_companion` adds that companion's instructions
+`FidelityGuidance.companion_instructions` adds that companion's instructions
 to the guidance's own.
 
 ## Rules (ported 1:1 from old `rules/*.md`, same slugs)

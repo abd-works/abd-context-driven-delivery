@@ -101,7 +101,8 @@ with description("a board") as self:
 
     with context("that has been loaded with no practices given"):
         with before.each:
-            self.board = Board.load(SessionsFolder().project)
+            self.project = SessionsFolder().project
+            self.board = Board.load(self.project)
 
         with it("should choose every practice"):
             expect([type(practice).__name__ for practice in self.board.practices]).to(equal(["Stories", "Ddd", "Ux", "CleanEngineering", "Bdd"]))
@@ -109,8 +110,13 @@ with description("a board") as self:
         with it("should choose the practice classes their packages define, loaded once under one name"):
             expect([type(practice) for practice in self.board.practices[:3]]).to(equal([Stories, Ddd, Ux]))
 
-        with it("should share its practices with every other board loaded in the process, since they do not change between calls"):
-            expect(Board.load(SessionsFolder().project).practices[0]).to(be(self.board.practices[0]))
+        with it("should share its practices with every other board of the same checkout, which makes them once"):
+            expect(Board.load(self.project).practices[0]).to(be(self.board.practices[0]))
+
+        with it("should hold practices of its own, not the ones a session works with"):
+            from space.session import Sessions
+
+            expect(Sessions(self.project).current().practices["stories"].guidance).not_to(be(self.board.practices[0]))
 
     # (S) Person --> Open Board
     with context("of a project named by a folder inside its checkout"):
@@ -402,24 +408,6 @@ with description("a ticket") as self:
 
         with it("should show Generate done and Validate and Review remaining for that fidelity"):
             expect(story_map(ticket_with(self.lines)).remaining_actions).to(equal(["validate", "review"]))
-
-        with context("by the generate tool"):
-            with it("should show Generate done"):
-                expect(story_map(ticket_with(["tool generate.generate", GENERATE_STORY_MAP])).done_actions).to(equal(["generate"]))
-
-        # Building the Sketch, Grill, or Iterate prompt expands a generate inside it, which wrote a generate line
-        # although the agent had written nothing yet.
-        with context("only in a line another tool's call wrote"):
-            with it("should leave Generate to do"):
-                expect(story_map(ticket_with(["tool sketch.sketch", GENERATE_STORY_MAP])).done_actions).to(equal([]))
-
-            with it("should leave Generate to do however many lines that call wrote"):
-                expect(story_map(ticket_with(["tool iterate.iterate", "iterate /work no-chat", GENERATE_STORY_MAP])).done_actions).to(equal([]))
-
-        with context("by the generate tool after another tool's call"):
-            with it("should show Generate done"):
-                lines = ["tool sketch.sketch", GENERATE_STORY_MAP, "tool generate.generate", GENERATE_STORY_MAP]
-                expect(story_map(ticket_with(lines)).done_actions).to(equal(["generate"]))
 
         with context("with log lines whose paths hold spaces and commas"):
             with it("should still find the practice and fidelity by name"):

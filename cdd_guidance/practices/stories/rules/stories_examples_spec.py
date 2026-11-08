@@ -43,7 +43,7 @@ with description("stories TypeScript .examples (faultyAsset.ts)"):
             from harness.guidance.practice_catalogue import PracticeCatalogue
 
             expect("vocabulary-traces-to-domain-source" in BY_SLUG).to(equal(False))
-            expect(PracticeSchema(PracticeCatalogue.practice("stories")).slugs_for("Story")).to(contain("vocabulary-traces-to-domain-source"))
+            expect(PracticeSchema(PracticeCatalogue.create("stories")).slugs_for("Story")).to(contain("vocabulary-traces-to-domain-source"))
 
 
 with description("stories TypeScript .examples (folders)"):

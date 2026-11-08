@@ -1,11 +1,11 @@
 """InstallDiagnostics - ``diagnostics.json`` in an IDE folder: what each install deployed, and the probes' sections."""
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.json_file import JsonFile
 
 _COLORS = ("green", "yellow", "red")
 # How much of the deployed set may change between two installs before the change reads as a warning, then a failure.
@@ -23,6 +23,7 @@ class InstallDiagnostics:
     def __init__(self, folder: Path, layout: IdeLayout) -> None:
         self.folder = folder
         self.path = folder / self.NAME
+        self._file = JsonFile(self.path)
         self._layout = layout
 
     def channels_in_folder(self, toolsets: list[str], published: dict[str, list[str]]) -> dict[str, list[str]]:
@@ -63,31 +64,31 @@ class InstallDiagnostics:
         for name in self.CHANNELS:
             items = actual.get(name, [])
             entry[name] = {"count": len(items), "items": items}
-        data = self._read()
+        data = self._file.read()
         data["installs"] = [*(data.get("installs") or []), entry]
-        self._write(data)
+        self._file.write(data)
 
     def write_section(self, section: str, results: dict[str, Any]) -> None:
         """Add or replace results in one top-level section, coloured by its worst result. The install history stays."""
-        data = self._read()
+        data = self._file.read()
         current = data.get(section)
         merged = {**(current if isinstance(current, dict) else {}), **results}
         colors = [value.get("color") for value in merged.values() if isinstance(value, dict) and value.get("color") in _COLORS]
         if colors:
             merged["color"] = max(colors, key=_COLORS.index)
         data[section] = merged
-        self._write(data)
+        self._file.write(data)
 
     def installed_items(self, channel: str) -> list[str]:
         """What the latest install deployed on one channel, such as ``mcp`` operation names or ``toolset``
         references; none before the first install."""
-        installs = self._read().get("installs") or []
+        installs = self._file.read().get("installs") or []
         if not installs:
             return []
         return [str(item) for item in (installs[-1].get(channel) or {}).get("items") or []]
 
     def _latest_install_channels(self) -> dict[str, list[str]] | None:
-        installs = self._read().get("installs") or []
+        installs = self._file.read().get("installs") or []
         if not installs:
             return None
         latest = installs[-1]
@@ -115,12 +116,3 @@ class InstallDiagnostics:
     def _files(self, folder_name: str, pattern: str) -> list[Path]:
         folder = self.folder / folder_name
         return list(folder.rglob(pattern)) if folder.is_dir() else []
-
-    def _read(self) -> dict[str, Any]:
-        if not self.path.is_file():
-            return {}
-        return json.loads(self.path.read_text(encoding="utf-8"))
-
-    def _write(self, data: dict[str, Any]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")

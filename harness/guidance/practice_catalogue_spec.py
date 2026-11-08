@@ -41,24 +41,29 @@ with description("the practice catalogue"):
         with it("should answer nothing for a slug it does not go by"):
             expect(self.stories.answers_to("astrology")).to(be_none)
 
-    with description("whose practice is asked to work at a fidelity"):
-        with before.all:
-            self.stories = PracticeCatalogue.create("stories")
-            self.ddd = PracticeCatalogue.create("ddd")
-
+    with description("whose practice is made at a fidelity"):
         with it("should hold that fidelity as its current one"):
-            fidelity = self.stories.fidelities["scenarios"]
-            expect(self.stories.work_at(fidelity)).to(be(self.stories.fidelities.current))
+            expect(PracticeCatalogue.create("stories", fidelity="scenarios").fidelities.current.name).to(equal("scenarios"))
 
-        with it("should refuse a fidelity of another practice"):
-            expect(lambda: self.stories.work_at(self.ddd.fidelities["model"])).to(raise_error(ValueError))
+        with it("should refuse a fidelity the practice does not have"):
+            expect(lambda: PracticeCatalogue.create("stories", fidelity="model")).to(raise_error(ValueError))
+
+    with description("whose practices two readers make"):
+        with before.all:
+            self.first = PracticeCatalogue.create_all()
+            self.second = PracticeCatalogue.create_all()
+
+        with it("should give each reader practices of its own"):
+            expect(self.first[0]).not_to(be(self.second[0]))
+
+        with it("should leave one reader's fidelity format as it was when the other's changes"):
+            self.first[0].fidelities["story_map"].format = "drawio"
+            expect(self.second[0].fidelities["story_map"].format).not_to(equal("drawio"))
 
     with description("that makes a set of practices together"):
         with before.all:
             self.made = {practice.key: practice for practice in PracticeCatalogue.create_all()}
-            stories = self.made["stories"]
-            stories.work_at(stories.fidelities["acceptance_tests"])
-            self.companion = stories.fidelities.current.clean_engineering
+            self.companion = self.made["stories"].fidelities["acceptance_tests"].clean_engineering
 
         with it("should give a fidelity's companion from the Clean Engineering practice of the same set"):
             expect(self.companion.practice_guidance).to(be(self.made["clean_engineering"]))

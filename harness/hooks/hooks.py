@@ -2,13 +2,13 @@
 command for each event, and ``hook-handlers.json``, which lists the operations that command may run."""
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 from harness.agent_tools.agent_tools import InstallDestination
 from harness.annotations.annotation import Annotation, Destination
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.json_file import JsonFile, JsonFileUnreadable
 
 
 class Hooks(Annotation):
@@ -119,14 +119,12 @@ hook = Hook
 hooks = Hooks
 
 
-class HooksFileUnreadable(Exception):
+class HooksFileUnreadable(JsonFileUnreadable):
     """A hooks file an install reads is not the JSON object it should be. The install stops rather than write over
     it, because the file can hold hooks the person added by hand."""
 
-    def __init__(self, path: Path, cause: Exception) -> None:
-        super().__init__(f"{path} is not readable hook JSON ({cause}); fix or remove it, then install again")
-        self.path = path
-        self.cause = cause
+    def message(self, path: Path, cause: Exception) -> str:
+        return f"{path} is not readable hook JSON ({cause}); fix or remove it, then install again"
 
 
 class _HooksJsonFile:
@@ -134,21 +132,7 @@ class _HooksJsonFile:
 
     def __init__(self, path: Path | str) -> None:
         self.path = Path(path)
-
-    def _read(self) -> dict[str, Any]:
-        if not self.path.is_file():
-            return {}
-        try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            raise HooksFileUnreadable(self.path, error) from error
-        if not isinstance(data, dict):
-            raise HooksFileUnreadable(self.path, TypeError(f"expected an object, found {type(data).__name__}"))
-        return data
-
-    def _write(self, data: dict[str, Any]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        self._file = JsonFile(self.path, HooksFileUnreadable)
 
 
 class HookHandlersFile(_HooksJsonFile):
@@ -159,7 +143,7 @@ class HookHandlersFile(_HooksJsonFile):
 
     @property
     def handlers(self) -> list[dict[str, str]]:
-        return [dict(item) for item in self._read().get("handlers") or [] if isinstance(item, dict)]
+        return [dict(item) for item in self._file.read().get("handlers") or [] if isinstance(item, dict)]
 
     @property
     def refs(self) -> tuple[str, ...]:
@@ -172,7 +156,7 @@ class HookHandlersFile(_HooksJsonFile):
         return sorted({str(item["operation"]) for item in self.handlers if item.get("operation")})
 
     def write(self, handlers: list[dict[str, str]]) -> None:
-        self._write({"handlers": handlers})
+        self._file.write({"handlers": handlers})
 
 
 class HooksManifest(_HooksJsonFile):
@@ -183,7 +167,7 @@ class HooksManifest(_HooksJsonFile):
 
     @property
     def hooks(self) -> dict[str, list[dict[str, Any]]]:
-        hooks = self._read().get("hooks") or {}
+        hooks = self._file.read().get("hooks") or {}
         if not isinstance(hooks, dict):
             raise HooksFileUnreadable(self.path, TypeError("its hooks are not an object"))
         return {str(event): list(items) for event, items in hooks.items()}
@@ -193,7 +177,7 @@ class HooksManifest(_HooksJsonFile):
         return sorted(event for event in self.hooks if event)
 
     def write(self, hooks: dict[str, list[dict[str, Any]]]) -> None:
-        self._write({"version": 1, "hooks": hooks})
+        self._file.write({"version": 1, "hooks": hooks})
 
 
 class InstalledHookHandlers:

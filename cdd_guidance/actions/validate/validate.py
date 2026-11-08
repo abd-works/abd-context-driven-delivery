@@ -9,7 +9,7 @@ from harness.agent_tools import agent_instructions, agent_toolset
 from harness.installation.destination import noDeploy
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
-from harness.guidance import Rule
+from harness.guidance.rule import Rule
 
 from cdd_guidance.actions.validate.checked_graph import CheckedGraph
 from cdd_guidance.actions.validate.report_files import ReportFiles
