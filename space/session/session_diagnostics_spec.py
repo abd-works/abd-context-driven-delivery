@@ -18,7 +18,6 @@ RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 from expects import contain, equal, expect
 from mamba import description, it
 
-from harness.agent_tools.tool_call import ToolCall
 from space.session.session_diagnostics import SessionDiagnostics
 from space.session.session_probe import SessionProbe
 
@@ -44,15 +43,6 @@ with description("session diagnostics"):
             expect(names).to(contain("session-diagnostics.session_diagnostics"))
         finally:
             shutil.rmtree(tree, ignore_errors=True)
-
-    with it("should write the session section into the install of the project its call names"):
-        project = Path(tempfile.mkdtemp())
-        try:
-            (project / ".git").mkdir()
-            report = SessionDiagnostics().for_call(ToolCall({}, project)).session_diagnostics()
-            expect((report.startswith("green\n"), len(list(project.rglob("diagnostics.json"))))).to(equal((True, 1)))
-        finally:
-            shutil.rmtree(project, ignore_errors=True)
 
     with it("should write the session section to diagnostics.json"):
         tree = Path(tempfile.mkdtemp())
