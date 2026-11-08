@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Callable, Generic, Mapping, TypeVar
 
 from cdd_guidance.practices.agent_bdd.cursor_cli import CursorCli
+from harness.agent_tools.tool_call import ToolCall
 from cdd_guidance.practices.agent_bdd.yaml_fence import YamlFence
 
 try:
@@ -540,9 +541,10 @@ class ToolsetInvoke:
     def _session_named(cls, name: str, project: Path) -> Any:
         """The project's session a run request names, which the toolset is made for, so the run works in that session
         and not in whichever session the project has open."""
-        from space.session.sessions import Sessions
-
-        session = Sessions(project).named(name)
+        # The sessions are reached through the opener space/session registers with ToolCall, so agent BDD never imports
+        # space, which imports the guidance back.
+        opened = ToolCall.session_in(project)
+        session = opened.sessions.named(name) if opened is not None else None
         if session is None:
             raise AgentHarnessError(f"request names session {name!r}, which the project does not have")
         return session

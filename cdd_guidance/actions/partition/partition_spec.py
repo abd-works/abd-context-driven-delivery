@@ -89,7 +89,7 @@ with description("a partition action"):
             operation = Partition()._discover_instruction_members()["partition"]
             arguments = {"guidance": "stories-story-map", "paths": "README.md", "context": "", "mode": "one_go", "out_root": None}
             self.reply = operation.invoke(arguments, project=self.project)
-            self.root = _session_of(self.project).root.as_posix()
+            self.root = _session_of(self.project).work_root.as_posix()
 
         with it("should name what the index lists from that fidelity's Scaffold subsection"):
             expect("verb-noun Epic, Sub-Epic, and Story names" in self.reply).to(be_true)

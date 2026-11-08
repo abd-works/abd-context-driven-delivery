@@ -19,12 +19,12 @@ from mamba import before, context, description, it
 from harness.agent_tools.agent_tools import AgentInstructions
 from cdd_guidance.actions.grill_context.grill_context import ContextFileNotFound, GrillContext
 from harness.agent_tools.agent_tools import AgentToolSet
-from space.session import Session
+from space.session import Session, Sessions
 
 
 def _session_at(folder: Path) -> Session:
     """A session that works in folder and keeps no log."""
-    session = Session(folder)
+    session = Session(Sessions(folder))
     session.workpath = Path(folder)
     return session
 

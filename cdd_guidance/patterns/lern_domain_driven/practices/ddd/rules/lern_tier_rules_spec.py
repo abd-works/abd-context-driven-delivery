@@ -20,6 +20,7 @@ from cdd_guidance.patterns.lern_domain_driven.practices.stories.rules.shared_sto
     OutlineEntriesLoopOverExamples,
     TierBoundRepositoryAccessor,
 )
+from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import LernDomainDriven
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import (
     AggregateFolder,
     test_setup_text,
@@ -157,17 +158,17 @@ with description("the lern_domain_driven pattern rules"):
 
         with it("should flag a repository instance the test setup never resets"):
             (self.root / "tests" / "vitest.setup.ts").write_text("otherRepository._reset();\n", encoding="utf-8")
-            expect(ResetEveryRepository().check(node_root(self.node_text, test_setup_text(self.root)), None)).to(have_len(1))
+            expect(ResetEveryRepository().check(node_root(self.node_text, test_setup_text(self.root, LernDomainDriven.story_test_folder)), None)).to(have_len(1))
 
         with it("should pass once the repositories file lists it"):
             (self.root / "tests" / "repositories.ts").write_text("export const all = [subscriptionRepositoryNode];\n", encoding="utf-8")
-            expect(ResetEveryRepository().check(node_root(self.node_text, test_setup_text(self.root)), None)).to(equal([]))
+            expect(ResetEveryRepository().check(node_root(self.node_text, test_setup_text(self.root, LernDomainDriven.story_test_folder)), None)).to(equal([]))
 
         with it("should pass once the step library's repositories file lists it"):
             library = self.root / "test-utils" / "story-test"
             library.mkdir(parents=True)
             (library / "repositories.ts").write_text("export const all = [subscriptionRepositoryNode];\n", encoding="utf-8")
-            expect(ResetEveryRepository().check(node_root(self.node_text, test_setup_text(self.root)), None)).to(equal([]))
+            expect(ResetEveryRepository().check(node_root(self.node_text, test_setup_text(self.root, LernDomainDriven.story_test_folder)), None)).to(equal([]))
 
     with description("shared story rules"):
         with it("should flag a context cast and pass the tier-bound accessor"):

@@ -105,7 +105,7 @@ with description("Sketch toolset") as self:
 
         with it("writes the session's sketch in the .context folder under the session root"):
             path = Path(self.sketcher.save_sketch("rough\n"))
-            expect(path).to(equal(self.session.root / ".context" / f"{self.session.name}-sketch.md"))
+            expect(path).to(equal(self.session.work_root / ".context" / f"{self.session.name}-sketch.md"))
 
         with it("reads the sketch from a file when paths is set"):
             source = self.throwaway.root / "draft.md"
@@ -115,11 +115,11 @@ with description("Sketch toolset") as self:
 
         with it("writes a module's sketch in that module's .context folder"):
             path = Path(self.sketcher.save_sketch("rough\n", module="billing"))
-            expect(path.parent).to(equal(self.session.root / "billing" / ".context"))
+            expect(path.parent).to(equal(self.session.work_root / "billing" / ".context"))
 
         with it("writes straight into a module that is already a .context folder"):
             path = Path(self.sketcher.save_sketch("rough\n", module="billing/.context"))
-            expect(path.parent).to(equal(self.session.root / "billing" / ".context"))
+            expect(path.parent).to(equal(self.session.work_root / "billing" / ".context"))
 
         with it("overwrites the session's sketch when saved again"):
             self.sketcher.save_sketch("first draft\n")
@@ -135,12 +135,12 @@ with description("Sketch toolset") as self:
             expect(self.sketcher.list_sketches()).to(equal("no sketches"))
 
         with it("returns no sketches when the .context directory exists but is empty"):
-            (self.session.root / ".context").mkdir(parents=True)
+            (self.session.work_root / ".context").mkdir(parents=True)
             expect(self.sketcher.list_sketches()).to(equal("no sketches"))
 
         with it("lists every *-sketch.md file in the session root's .context folder"):
             self.sketcher.save_sketch("a\n")
-            (self.session.root / ".context" / "older-sketch.md").write_text("b\n", encoding="utf-8")
+            (self.session.work_root / ".context" / "older-sketch.md").write_text("b\n", encoding="utf-8")
             expect(len(self.sketcher.list_sketches().splitlines())).to(equal(2))
 
         with it("lists a module's sketches when a module is named"):
@@ -205,17 +205,23 @@ with description("Sketch toolset") as self:
             expect(joined).to(contain("save_sketch"))
             expect(joined).to(contain("Conduct a relentless grilling interview"))
 
-        with it("inlines each listed practice's rules markdown_block"):
+    # Expanded from the call's arguments alone, as the MCP host expands it: nothing is run on the sketch first.
+    with context("sketch action expanded for a call naming a fidelity"):
+        with before.each:
             from cdd_guidance.practices.bdd.bdd import Bdd
 
-            sketcher = Sketch()
-            sketcher.begin([Bdd(fidelity="behavior")], action="sketch")
-            joined = "\n".join(
-                AgentInstructions.for_callable(Sketch.sketch, sketcher).prompt
-            )
-            expect(joined).to(contain("observable-behavior"))
-            expect(joined).to(contain("no-implementation"))
-            expect(joined).to(contain("not a graph query"))
+            arguments = {"guidance": [Bdd(fidelity="behavior")]}
+            sketcher = Sketch().for_call(ToolCall(arguments))
+            self.prose = AgentInstructions.for_callable(Sketch.sketch, sketcher).expand(arguments).instructions
+
+        with it("gives the practice's shared rules"):
+            expect(self.prose).to(contain("observable-behavior"))
+
+        with it("gives the fidelity's own rules"):
+            expect(self.prose).to(contain("no-implementation"))
+
+        with it("says the rules are an AI check on the sketch, not a graph query"):
+            expect(self.prose).to(contain("not a graph query"))
 
 
 with description("a sketch action"):

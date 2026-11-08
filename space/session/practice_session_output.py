@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Callable
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
+from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.declared_file import DeclaredFile
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
@@ -52,10 +53,7 @@ class PracticeSessionOutput:
     def load(cls, session: str, practice: str, project: Path) -> PracticeSessionOutput:
         """The practice named practice in the session whose session.json is session, a path from project, the project
         the tool call names."""
-        # WHY: Session makes its PracticeSessionOutput objects from this module, so Session is imported when first loaded.
-        from space.session.session import Session
-
-        return Session.from_file(session, project).practice(practice)
+        return ToolCall(project=project).session_named(session).practice(practice)
 
     @property
     @data_field
@@ -127,12 +125,6 @@ class PracticeSessionOutput:
         """The format this practice works in, such as drawio: its current fidelity's; empty when it has none."""
         return self._guidance.format or ""
 
-    def log_validation(self, violations: list[str]) -> None:
-        """Log a validate of this practice at its working fidelity in its session's log, with each violation's
-        synopsis; no violations is a validate that passed."""
-        detail = " ".join(violations)
-        self._session.log.line(f"validate {type(self._guidance).__name__} {self.working_fidelity} {detail}".rstrip())
-
     @property
     def chosen_outputs(self) -> dict:
         """What session.json's ``outputs`` keeps for this practice: the root a person chose, and under each fidelity's
@@ -154,14 +146,14 @@ class PracticeSessionOutput:
         """The folder this practice writes its code under: the root chosen or configured,
         else the practice's own default folder under the session's root, such as src for BDD."""
         relative = self._chosen_or_configured_root or self._guidance.default_workspace_folder
-        return (self._session.root / relative).resolve()
+        return (self._session.work_root / relative).resolve()
 
     @property
     def output_root(self) -> Path:
         """The folder this practice's fidelities declare their outputs under: the root chosen or configured, else the
         session's root itself. A declared output such as `.context/story-map.md` or `**/*_spec.py` is named from the
         workpath, so the practice's own default folder is not added."""
-        return (self._session.root / (self._chosen_or_configured_root or ".")).resolve()
+        return (self._session.work_root / (self._chosen_or_configured_root or ".")).resolve()
 
     @property
     @data_field
@@ -190,7 +182,7 @@ class PracticeSessionOutput:
         # A practice root holds the practice's code; its documents and diagrams go in the root's own .context.
         if CONTEXT_FOLDER in Path(root).parts:
             raise PracticeRootInContextError(self.name, Path(root))
-        relative = os.path.relpath(Path(root).resolve(), self._session.root)
+        relative = os.path.relpath(Path(root).resolve(), self._session.work_root)
         self._save_chosen_outputs({**self.chosen_outputs, "root": Path(relative).as_posix()})
 
     @mcp
@@ -230,7 +222,7 @@ class FidelitySessionOutput:
         """The folder this fidelity writes under: its own root when session.json names one, else its practice's output
         root."""
         chosen = self._chosen.get("root")
-        return (self._session.root / chosen).resolve() if chosen else self._practice.output_root
+        return (self._session.work_root / chosen).resolve() if chosen else self._practice.output_root
 
     @property
     def kept_format(self) -> str:
@@ -265,7 +257,7 @@ class FidelitySessionOutput:
         """Whether a file this fidelity declares is already in the session, such as one a person wrote. Unlike
         ``files`` it never asks git: a pattern counts only in a session with a folder of its own, since on the whole
         repository a pattern also finds other sessions' files, and the board asks this of every fidelity."""
-        own_folder = self._session.root != self._session.repo.root
+        own_folder = self._session.work_root != self._session.repo.root
         declared = [(label, self._declared(path)) for label, paths in self.output_paths().items() for path in paths]
         return any(self._exists(label, file) for label, file in declared if own_folder or file.names_one_path)
 

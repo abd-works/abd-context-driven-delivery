@@ -58,6 +58,6 @@ The fixtures bundle — `CanvasFixtures` with `load(story, scenario)`, `scenario
 ## Steps
 
 1. Load the story map from its drawio and the UX map (`ux/ux.json`, with its `shownOn` edges) into the graph.
-2. Build the pattern's fixtures bundle into `project/fixtures/canvas-fixtures.js`.
+2. Build the pattern's fixtures bundle into `project/fixtures/canvas-fixtures.js`: for the LERN pattern, `LernCanvasFixtures(workspace).build(story_names, "project/fixtures/canvas-fixtures.js")`.
 3. Render with the `claude_design` format into the working version (`CanvasVersions.working()`), and pass `sources` (each story's and scenario's `path:line` from the practice graph) so the explorer can copy an open-in-file-viewer request.
 4. Publish the version as a new canvas and record its link; port further screens into the next version the same way.

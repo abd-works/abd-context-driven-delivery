@@ -1,7 +1,6 @@
 """BDD spec — graph JSON violation reader."""
 
 import sys
-import tempfile
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -13,9 +12,13 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 from expects import equal, expect
-from mamba import context, description, it
+from mamba import after, before, context, description, it
 
-from cdd_guidance.actions.validate.graph_json_reader import save_checked_graph, violations_from_graph_json_files
+from cdd_guidance.actions.validate.checked_graph import CheckedGraph
+from cdd_guidance.actions.validate.graph_json_reader import violations_from_graph_json_files
+from cdd_guidance.actions.validate.report_files import ReportFiles
+from harness.agent_tools.tool_call import ToolCall
+from space.session.throwaway_project import ThrowawayProject
 
 _SAVED_GRAPH = Path(__file__).with_name("fixtures") / "saved-graph" / ".context" / "graph.json"
 
@@ -40,15 +43,23 @@ with description("graph JSON reader"):
             violations = violations_from_graph_json_files([_SAVED_GRAPH], practices=["ddd"])
             expect([violation.rule for violation in violations]).to(equal(["load-with-identity-in-hand"]))
 
-        with it("should keep every hit when several checked graphs are saved as one"):
-            with tempfile.TemporaryDirectory() as folder:
-                saved = Path(folder) / "report.json"
-                save_checked_graph([_SAVED_GRAPH, _SAVED_GRAPH], saved)
-                expect(len(violations_from_graph_json_files([saved]))).to(equal(4))
 
-        with it("should keep the same message when several checked graphs are saved as one"):
-            with tempfile.TemporaryDirectory() as folder:
-                saved = Path(folder) / "report.json"
-                save_checked_graph([_SAVED_GRAPH, _SAVED_GRAPH], saved)
-                messages = [violation.described for violation in violations_from_graph_json_files([saved])]
-                expect(messages[:2]).to(equal([violation.described for violation in violations_from_graph_json_files([_SAVED_GRAPH])]))
+with description("a validate call's checked graph"):
+    with context("that was named several graph files and is kept beside a report"):
+        with before.each:
+            self.throwaway = ThrowawayProject()
+            session = ToolCall(project=self.throwaway.root).session
+            graph = CheckedGraph(session, [], None, [str(_SAVED_GRAPH), str(_SAVED_GRAPH)])
+            graph.check_beside(ReportFiles(session, []))
+            self.saved = self.throwaway.root / "report.json"
+            graph.save_at(self.saved)
+
+        with after.each:
+            self.throwaway.close()
+
+        with it("should keep every hit of every graph"):
+            expect(len(violations_from_graph_json_files([self.saved]))).to(equal(4))
+
+        with it("should keep each hit's message"):
+            messages = [violation.described for violation in violations_from_graph_json_files([self.saved])]
+            expect(messages[:2]).to(equal([violation.described for violation in violations_from_graph_json_files([_SAVED_GRAPH])]))
