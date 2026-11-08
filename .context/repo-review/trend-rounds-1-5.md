@@ -82,7 +82,7 @@ From round 5 on, each round runs validate, writes a report, has agents fix it, a
 | Duplicated functions | 1, 12 | 62 (50 + 12) |
 | **Goal total** | | **163** |
 
-**Done when** the goal total is at most 81 (half of round 5), and no high finding remains in the three classes.
+**Done when** the goal total is below 30 (under a fifth of round 5's 163) and no high finding remains in the three classes. The user set this target on 2026-11-08; it replaced the first target of 81.
 
 **What counts as cycling, and what to change when it happens.** After each round, compare it with the round before:
 - **Each round should cut the goal total by at least 20%.** If it doesn't, change the fix brief, not just the code. Find which findings were reported again:
