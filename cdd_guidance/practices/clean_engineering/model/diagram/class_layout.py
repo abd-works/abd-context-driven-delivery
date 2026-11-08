@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import DiagramNode
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry, segments_cross
 
 Point = Tuple[int, int]
 Heading = Tuple[int, int]
@@ -171,7 +171,7 @@ class CardPlacement:
         for index, first in enumerate(self._links):
             for second in self._links[index + 1:]:
                 shares_card = {first.source, first.target} & {second.source, second.target}
-                if not shares_card and _lines_cross(grid[first.source], grid[first.target], grid[second.source], grid[second.target]):
+                if not shares_card and segments_cross((grid[first.source], grid[first.target]), (grid[second.source], grid[second.target])):
                     crossings += 1
         return CROSSING_WEIGHT * crossings
 
@@ -658,15 +658,6 @@ def _shared_middle(start: float, length: float, other_start: float, other_length
     if high - low < 2 * GRID_STEP:
         return None
     return int((low + high) / 2 // GRID_STEP * GRID_STEP)
-
-
-def _lines_cross(a: GridCell, b: GridCell, c: GridCell, d: GridCell) -> bool:
-    """True when the straight lines a-b and c-d cross, used while cards are still being placed."""
-    return _turn(a, b, c) * _turn(a, b, d) < 0 and _turn(c, d, a) * _turn(c, d, b) < 0
-
-
-def _turn(a: GridCell, b: GridCell, c: GridCell) -> int:
-    return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
 
 
 def paths_cross(first: List[Point], second: List[Point]) -> bool:

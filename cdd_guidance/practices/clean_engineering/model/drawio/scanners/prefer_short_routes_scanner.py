@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from harness.graph.violation import Violation
 
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import (
-    Box,
     DrawioPage,
     cell_box,
 )
@@ -40,9 +40,9 @@ class PreferShortRoutesScanner(DrawioScanner):
         return violations
 
 
-def _vertex_boxes(page: DrawioPage) -> dict[str, Box]:
+def _vertex_boxes(page: DrawioPage) -> dict[str, Geometry]:
     """Every vertex with a geometry, class or not, since an edge may end on any of them."""
-    boxes: dict[str, Box] = {}
+    boxes: dict[str, Geometry] = {}
     for cell in page.cells:
         box = cell_box(cell) if cell.get("vertex") == "1" else None
         if box and cell.get("id"):
@@ -50,7 +50,7 @@ def _vertex_boxes(page: DrawioPage) -> dict[str, Box]:
     return boxes
 
 
-def _clear_gap(first: Box, second: Box) -> float:
+def _clear_gap(first: Geometry, second: Geometry) -> float:
     """The empty space between two boxes; 0 when they touch or overlap."""
     ax, ay, aw, ah = first
     bx, by, bw, bh = second

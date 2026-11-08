@@ -16,6 +16,10 @@ _MODEL_BLOCKS = (
     (_LIVE_INSTANCE, "'Live instance:' name inventory"),
 )
 _CARD_NAME = "module-context.md"
+# `- **Seam (terms):** Cart, Order`: the public names other modules use.
+_SEAM = re.compile(r"\*\*Seam(?:\s*\(terms\))?:\*\*", re.IGNORECASE)
+# A `## Constraint` heading, or a `**Constraint:**` line: what callers must or must not do.
+_CONSTRAINT = re.compile(r"^\s*#{1,6}\s+Constraints?\b|\*\*Constraints?:\*\*", re.MULTILINE | re.IGNORECASE)
 
 
 class ModuleContext:
@@ -38,6 +42,14 @@ class ModuleContext:
     def has_modules_heading(self) -> bool:
         """True when the card has a `Modules` heading; the opening lines of each card already say what it is."""
         return bool(_MODULES_HEADING.search(self.read()))
+
+    def names_seam(self) -> bool:
+        """True when the card names the module's seam, `**Seam (terms):**`."""
+        return bool(_SEAM.search(self.read()))
+
+    def names_constraint(self) -> bool:
+        """True when the card says what callers must or must not do: a `Constraint` heading or line."""
+        return bool(_CONSTRAINT.search(self.read()))
 
     def model_blocks(self) -> List[str]:
         """Model-fidelity detail written into a modules-fidelity card, one description per kind found."""

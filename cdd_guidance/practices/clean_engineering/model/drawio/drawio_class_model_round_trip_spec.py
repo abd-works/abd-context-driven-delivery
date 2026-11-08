@@ -92,7 +92,7 @@ with description("a class model drawn as a Draw.io class diagram"):
         with before.each:
             self.path = Path(tempfile.mkdtemp()) / "shop.drawio"
             self.path.write_text(DrawIOCleanEngineeringModel().render(_shop()), encoding="utf-8")
-            self.loaded = DrawIOCleanEngineeringModel().load(str(self.path))
+            self.loaded = DrawIOCleanEngineeringModel().parse(self.path.read_text(encoding="utf-8"))
 
         with it("should read the classes the file shows"):
             expect([oclass.name for oclass in self.loaded.modules[0].classes]).to(equal(["Order", "OrderLine"]))

@@ -25,7 +25,7 @@ class Order:
 with description("rule violations a practice's graph finds on its nodes") as self:
     with context("with a class whose operation takes too many parameters"):
         with before.each:
-            self.practice, _ = practice_from_source(_OVER_LIMIT)
+            self.practice = practice_from_source(_OVER_LIMIT).practice
             self.place = next(node for node in self.practice.graph.nodes_of(self.practice, "Operation") if node.name == "place")
 
         with it("should keep the violation on the operation's node"):

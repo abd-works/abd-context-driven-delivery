@@ -20,23 +20,52 @@ from cdd_guidance.practices.ux.model.nodes import Region, Screen
 from cdd_guidance.practices.ux.ux import Ux
 
 
-with description("a model object built on its own graph"):
+with description("a model object built without a graph"):
     with before.each:
-        self.graph = Graph()
-        self.screen = Screen("Catalog", 0, graph=self.graph)
         self.region = Region("product list", 0, "body")
-        self.own_practice = self.region.practice
-        self.screen.append_region(self.region)
 
-    with context("that is appended to an owner on another graph"):
+    with it("should belong to no practice yet"):
+        expect(self.region.practice).to(be_none)
+
+    with context("that is appended to an owner on a graph"):
+        with before.each:
+            self.graph = Graph()
+            self.screen = Screen("Catalog", 0, graph=self.graph)
+            self.screen.append_region(self.region)
+
         with it("should be a node of the owner's practice"):
             expect(self.graph.node(self.region.node_id)).to(be(self.region))
 
-        with it("should leave the practice it was built in"):
-            expect(self.own_practice.graph.holds(self.own_practice, self.region.node_id)).to(equal(False))
-
         with it("should keep the source it already had"):
             expect(self.region.has_source_file).to(equal(False))
+
+    with context("that holds parts and is asked for its graph"):
+        with before.each:
+            self.screen = Screen("Catalog", 0)
+            self.screen.append_region(self.region)
+            self.graph = self.screen.graph
+
+        with it("should join one graph with its parts"):
+            expect(self.region.graph).to(be(self.graph))
+
+        with it("should record the edge to each part there"):
+            expect([edge.child for edge in self.graph.edges_from("regions", self.screen)]).to(equal([self.region]))
+
+
+with description("a model object built on a graph and moved to another"):
+    with before.each:
+        self.first = Graph()
+        self.region = Region("product list", 0, "body", graph=self.first)
+        self.own_practice = self.region.practice
+        self.graph = Graph()
+        self.screen = Screen("Catalog", 0, graph=self.graph)
+        self.screen.append_region(self.region)
+
+    with it("should be a node of the owner's practice"):
+        expect(self.graph.node(self.region.node_id)).to(be(self.region))
+
+    with it("should leave the practice it was built in"):
+        expect(self.own_practice.graph.holds(self.own_practice, self.region.node_id)).to(equal(False))
 
     with context("that has the same name as a node already on the owner's graph"):
         with before.each:

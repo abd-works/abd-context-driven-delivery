@@ -51,6 +51,3 @@ class YamlFence:
             allow_unicode=True,
         ).strip()
 
-
-def load_fenced(text: str) -> Any:
-    return YamlFence().load_fenced(text)

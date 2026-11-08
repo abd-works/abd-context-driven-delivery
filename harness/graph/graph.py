@@ -28,7 +28,6 @@ if TYPE_CHECKING:
 Display = str
 # File endings and the channel a file with that ending is written in; any other file is read as part of the graph.
 # Languages a node's file can be in whose rules every practice already checks; any other names a channel.
-_CODE_LANGUAGES = frozenset({"graph", "python", "typescript", "javascript"})
 _FILE_LANGUAGES = (((".ts", ".tsx"), "typescript"), ((".js", ".jsx", ".mjs"), "javascript"), (".py", "python"), ((".drawio", ".xml"), "drawio"))
 # A refresh reads files a practice keeps in `.context` (model documents, bounded contexts, story maps); every other
 # skipped folder, such as a session's reports in `.sessions`, holds nothing a practice reads.
@@ -587,6 +586,15 @@ class Node:
             node = node.parent or node.graph.direct_parent(node)
         return default
 
+    def merge_fact(self, key: str, values: list) -> None:
+        """Add values to a list fact this node keeps, each once, sorted: on its parsed object's own field when the
+        object saves that fact, else among the facts the node keeps itself."""
+        merged = sorted(set(self.get_fact(key) or []) | set(values))
+        if key in self.graph_facts:
+            setattr(self, key, merged)
+        else:
+            self.set_fact(key, merged)
+
     def has_fact(self, key: str) -> bool:
         """True when this node itself records the fact."""
         return self._holds_attribute(key) or key in self.data
@@ -624,13 +632,9 @@ class Node:
         return [fidelity for fidelity in self.practice.fidelities if fidelity.name in names]
 
     def rule_checks(self) -> dict:
-        """The checks this node's rules can run, by slug: its practice's own, those of the practice it extends and of
-        each pattern overlay its graph applies, and those of the language its file is written in."""
-        checks = dict(self.practice.checks())
-        language = self.file_language
-        if language and language not in _CODE_LANGUAGES:
-            checks.update(self.practice.language_checks(language))
-        return checks
+        """The checks this node's rules can run, by slug: its practice's own, and those of the practice it extends and
+        of each pattern overlay its graph applies."""
+        return dict(self.practice.checks())
 
     def applying_rule_types(self) -> set[str]:
         """The node types whose checks apply to this node: its own, and the type of the extended practice it is
@@ -801,8 +805,8 @@ class Graph:
     The graph holds its practices: the PracticeGuidance objects it is given, each of which knows this graph, so a node's
     practice is one of them (``node.practice``) and a practice reaches its nodes here (``graph.nodes_of(practice)``).
     The graph keeps every practice's nodes and edges itself, indexed by the practice. A session gives its graph the
-    session's own practices, the same objects its actions work with; a graph no session holds, such as the one a parser
-    builds its model objects in, makes a set of its own from the catalogue. The graph changes only when a call asks:
+    session's own practices, the same objects its actions work with; a graph no session holds makes a set of its own from the
+    catalogue. The graph changes only when a call asks:
     ``load_working_copy`` and ``load_files`` read a folder or files, and ``refresh`` reads again exactly the files an
     action wrote."""
 
@@ -1033,7 +1037,7 @@ class Graph:
 
     def add(self, practice: PracticeGuidance, node: Node, node_id: str, file: str, start_line: int, end_line: int) -> Node:
         """Make node one of practice's nodes, called node_id, at its lines in file; the node practice already calls
-        node_id when there is one. A parsed object leaves the throwaway graph its parser built it in. It keeps the parent
+        node_id when there is one. A parsed object leaves any graph it was held in. It keeps the parent
         its parser gave it only when that parent is one of practice's nodes too, such as an operation's class; the tree
         itself is built from practice's edges."""
         existing = self._by_id.setdefault(practice, {}).get(node_id)

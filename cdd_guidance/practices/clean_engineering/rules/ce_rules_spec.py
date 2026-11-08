@@ -10,7 +10,7 @@ if str(_REPO) not in sys.path:
 from expects import be_true, contain, equal, expect
 from mamba import context, description, it
 
-from cdd_guidance.practices.clean_engineering.rules.multi_language_examples import (
+from cdd_guidance.practices.clean_engineering.rules.fixtures.multi_language_examples import (
     _ELIMINATE_DUPLICATION_CLEAN,
     _ELIMINATE_DUPLICATION_FAULT,
     _KEEP_OPERATIONS_SMALL_FOCUSED_CLEAN,
@@ -35,7 +35,6 @@ from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
     assert_rule_pair,
     ce_rule_by_slug,
     practice_from_source,
-    violations_for_rule,
 )
 
 _LANGS = ("python", "typescript", "javascript")
@@ -92,12 +91,12 @@ export class Api {
 }
 """
             for source, expect_hits in ((ok, 0), (bad, 1)):
-                practice, root = practice_from_source(
+                fixture = practice_from_source(
                     source,
                     lang="typescript",
                     filename="api.ts",
                 )
-                hits = violations_for_rule(rule, practice, root)
+                hits = fixture.hits(rule)
                 if expect_hits == 0:
                     expect(hits).to(equal([]))
                 else:
@@ -112,12 +111,12 @@ export class Porting {
   }
 }
 """
-            practice, root = practice_from_source(
+            fixture = practice_from_source(
                 source,
                 lang="typescript",
                 filename="porting.ts",
             )
-            expect(violations_for_rule(rule, practice, root)).to(equal([]))
+            expect(fixture.hits(rule)).to(equal([]))
         with it("should not flag fromFields mapping factories"):
             rule = ce_rule_by_slug("limit-operation-parameters")
             source = """
@@ -127,12 +126,12 @@ export class NumberInventorySearch {
   }
 }
 """
-            practice, root = practice_from_source(
+            fixture = practice_from_source(
                 source,
                 lang="typescript",
                 filename="numbers.ts",
             )
-            expect(violations_for_rule(rule, practice, root)).to(equal([]))
+            expect(fixture.hits(rule)).to(equal([]))
     with context("use-property-not-accessor"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("use-property-not-accessor")
@@ -155,12 +154,12 @@ export class AccountCredentialsNode {
   async signOut(): Promise<void> {}
 }
 """
-            practice, root = practice_from_source(
+            fixture = practice_from_source(
                 source,
                 lang="typescript",
                 filename="account-node.ts",
             )
-            hits = violations_for_rule(rule, practice, root)
+            hits = fixture.hits(rule)
             expect(hits).to(equal([]))
         with it(
             "should not flag a TypeScript repository with single-word lifecycle verbs and camelCase bulk import/export"
@@ -181,15 +180,13 @@ export class AccountRepository {
   }
 }
 """
-            practice, root = practice_from_source(
+            fixture = practice_from_source(
                 source,
                 lang="typescript",
                 filename="account.ts",
             )
-            repo = next(n for n in practice.graph.nodes_of(practice, "OoadClass") if n.name == "AccountRepository")
-            from harness.graph.rule_context import RuleCheckContext
-
-            context = RuleCheckContext(practice, root)
+            repo = next(n for n in fixture.practice.graph.nodes_of(fixture.practice, "OoadClass") if n.name == "AccountRepository")
+            context = fixture.context
             expect(rule.check(repo, context)).to(equal([]))
     with context("state-change-returns-record-or-named-failure"):
         with it("should not flag signOut with one property assignment after a post helper"):
@@ -203,12 +200,12 @@ export class AccountCredentialsClient {
   }
 }
 """
-            practice, root = practice_from_source(
+            fixture = practice_from_source(
                 source,
                 lang="typescript",
                 filename="account-client.ts",
             )
-            hits = violations_for_rule(rule, practice, root)
+            hits = fixture.hits(rule)
             expect(hits).to(equal([]))
         with it("should flag verify when two property assignments lack a returned record"):
             rule = ce_rule_by_slug("state-change-returns-record-or-named-failure")
@@ -221,12 +218,12 @@ export class AccountCredentialsClient {
   }
 }
 """
-            practice, root = practice_from_source(
+            fixture = practice_from_source(
                 source,
                 lang="typescript",
                 filename="account-client.ts",
             )
-            hits = violations_for_rule(rule, practice, root)
+            hits = fixture.hits(rule)
             expect(len(hits)).to(equal(1))
             expect(hits[0]).to(contain("verify"))
     with context("use-intention-revealing-names"):
@@ -239,12 +236,12 @@ export class AccountCredentialsClient {
   }
 }
 """
-            practice, root = practice_from_source(
+            fixture = practice_from_source(
                 source,
                 lang="typescript",
                 filename="account-client.ts",
             )
-            hits = violations_for_rule(rule, practice, root)
+            hits = fixture.hits(rule)
             expect(hits).to(equal([]))
         with it("should still flag value on an ordinary method parameter"):
             rule = ce_rule_by_slug("use-intention-revealing-names")
@@ -255,12 +252,12 @@ export class AccountCredentialsClient {
   }
 }
 """
-            practice, root = practice_from_source(
+            fixture = practice_from_source(
                 source,
                 lang="typescript",
                 filename="account-client.ts",
             )
-            hits = violations_for_rule(rule, practice, root)
+            hits = fixture.hits(rule)
             expect(hits).not_to(equal([]))
         # A Claude Code mod hands every hook its engine as $, the name the mod API documents.
         with it("should allow the engine a Claude Code mod hands its hooks as $"):
@@ -268,12 +265,12 @@ export class AccountCredentialsClient {
             source = """
 export function refreshChatBar($: EngineInterface): void {}
 """
-            practice, root = practice_from_source(
+            fixture = practice_from_source(
                 source,
                 lang="typescript",
                 filename="chat-bar-client.ts",
             )
-            hits = violations_for_rule(rule, practice, root)
+            hits = fixture.hits(rule)
             expect(hits).to(equal([]))
     with context("prefer-instance-operations"):
         with it("should flag faultyAsset and accept repairedAsset"):
@@ -299,8 +296,8 @@ export class SubscriptionNode {
   }
 }
 """
-            practice, root = practice_from_source(source, lang="typescript", filename="credentials.tsx")
-            expect(violations_for_rule(rule, practice, root)).to(equal([]))
+            fixture = practice_from_source(source, lang="typescript", filename="credentials.tsx")
+            expect(fixture.hits(rule)).to(equal([]))
         with it("should still flag an untyped parameter with a default"):
             rule = ce_rule_by_slug("use-typed-signatures")
             source = """
@@ -310,15 +307,15 @@ export class Billing {
   }
 }
 """
-            practice, root = practice_from_source(source, lang="typescript", filename="billing.ts")
-            hits = violations_for_rule(rule, practice, root)
+            fixture = practice_from_source(source, lang="typescript", filename="billing.ts")
+            hits = fixture.hits(rule)
             expect(hits).to(contain("Parameter 'maxAttempts' is missing a type annotation."))
             expect(" ".join(hits)).not_to(contain("retry"))
         with it("should not flag the cls of a Python classmethod"):
             rule = ce_rule_by_slug("use-typed-signatures")
             source = "class Ticket:\n    @classmethod\n    def load(cls, ticket: str) -> 'Ticket':\n        return cls()\n"
-            practice, root = practice_from_files({"ticket.py": source})
-            expect(violations_for_rule(rule, practice, root)).to(equal([]))
+            fixture = practice_from_files({"ticket.py": source})
+            expect(fixture.hits(rule)).to(equal([]))
         with it("should treat withXxx client field changes as properties"):
             rule = ce_rule_by_slug("use-typed-signatures")
             source = """
@@ -331,8 +328,8 @@ export class SimClient {
   }
 }
 """
-            practice, root = practice_from_source(source, lang="typescript", filename="sim-client.tsx")
-            expect(violations_for_rule(rule, practice, root)).to(equal([]))
+            fixture = practice_from_source(source, lang="typescript", filename="sim-client.tsx")
+            expect(fixture.hits(rule)).to(equal([]))
         with it("should not check test code"):
             rule = ce_rule_by_slug("use-typed-signatures")
             source = """
@@ -344,8 +341,8 @@ export class NumberExamples {
 """
             for test_file in ("tests/get-number/number.examples.ts", "src/number.spec.ts", "harness/number_spec.py"):
                 text = source if test_file.endswith(".ts") else "class NumberExamples:\n    def pool(self, length=30):\n        return length\n"
-                practice, root = practice_from_files({test_file: text})
-                expect(violations_for_rule(rule, practice, root)).to(equal([]))
+                fixture = practice_from_files({test_file: text})
+                expect(fixture.hits(rule)).to(equal([]))
     with context("limit-comments"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("limit-comments")
@@ -373,6 +370,19 @@ export class NumberExamples {
     with context("modules-not-model-blocks"):
         with it("should flag model dump blocks in module-context"):
             assert_module_example_pair("modules-not-model-blocks")
+
+    with context("the examples each rule's guidance shows"):
+        with it("should flag a module card that names neither its seam nor its constraint"):
+            assert_module_example_pair("named-seam-and-constraint")
+
+        with it("should flag a module importing from more than eight sibling modules"):
+            assert_module_example_pair("low-coupling")
+
+        with it("should flag a domain extension kept in the framework package"):
+            assert_module_example_pair("extensions-live-with-the-domain")
+
+        with it("should flag an operation that reaches into another object's private state"):
+            assert_module_example_pair("put-logic-on-the-owning-resource")
 
     with context("named-seam-and-constraint"):
         with it("should accept a bounded context that only has bounded-context.md"):
@@ -473,8 +483,8 @@ export function SelectField({ open, options, locked }: { open: boolean; options:
   );
 }
 """
-            practice, root = practice_from_source(source, lang="typescript", filename="select-field.tsx")
-            expect(violations_for_rule(rule, practice, root)).to(equal([]))
+            fixture = practice_from_source(source, lang="typescript", filename="select-field.tsx")
+            expect(fixture.hits(rule)).to(equal([]))
         with it("should still count control flow nested inside a callback"):
             rule = ce_rule_by_slug("simplify-control-flow")
             source = """
@@ -490,8 +500,8 @@ export class Gate {
   }
 }
 """
-            practice, root = practice_from_source(source, lang="typescript", filename="gate.ts")
-            expect(violations_for_rule(rule, practice, root)).to(equal(["Operation 'decide' nests control flow 4 levels deep (max 3)."]))
+            fixture = practice_from_source(source, lang="typescript", filename="gate.ts")
+            expect(fixture.hits(rule)).to(equal(["Operation 'decide' nests control flow 4 levels deep (max 3)."]))
 
     with context("eliminate-duplication"):
         with it("should flag fault snippets in python, typescript, and javascript"):
@@ -532,12 +542,12 @@ export class CustomerProfile {
   identity: Identity;
 }
 """
-            practice, root = practice_from_source(
+            fixture = practice_from_source(
                 source,
                 lang="typescript",
                 filename="customer-profile.ts",
             )
-            hits = violations_for_rule(rule, practice, root)
+            hits = fixture.hits(rule)
             expect(hits).to(equal([]))
 
     with context("use-exceptions-properly"):
@@ -553,7 +563,7 @@ export class CustomerProfile {
             rule = ce_rule_by_slug("use-exceptions-properly")
             for lang in ("typescript", "javascript"):
                 source = _USE_EXCEPTIONS_PROPERLY_FAULT[lang]
-                expect(violations_for_rule(rule, *practice_from_source(source, lang=lang))).to(equal([]))
+                expect(practice_from_source(source, lang=lang).hits(rule)).to(equal([]))
 
     with context("never-swallow-exceptions"):
         with it("should flag empty catch in python, typescript, and javascript"):
@@ -583,7 +593,7 @@ def _sibling_modules(imported: int) -> dict[str, str]:
 
 def _markdown_class_hits(markdown: str) -> list[str]:
     rule = ce_rule_by_slug("write-interactions")
-    return violations_for_rule(rule, *practice_from_class_text("Order", markdown, "order.md"))
+    return practice_from_class_text("Order", markdown, "order.md").hits(rule)
 
 
 with description("Clean Engineering graph rules (inline fault and clean fixtures)"):
@@ -637,12 +647,15 @@ with description("Clean Engineering graph rules (inline fault and clean fixtures
             )
 
     with context("extensions-live-with-the-domain"):
-        with it("should flag a Graph epic that stands alone and accept one that extends Epic"):
-            assert_rule_pair(
-                "extensions-live-with-the-domain",
-                "class GraphStoriesEpic:\n    def children(self):\n        return self.stories\n",
-                "class GraphStoriesEpic(Epic):\n    def children(self):\n        return self.stories\n",
-            )
+        with it("should accept a domain extension that joins a framework type beside the domain class it extends"):
+            expect(
+                practice_from_files(
+                    {
+                        "framework/node.py": "class Node:\n    pass\n",
+                        "domain/epic.py": "class Epic:\n    pass\n\n\nclass GraphEpic(Epic, Node):\n    pass\n",
+                    }
+                ).hits(ce_rule_by_slug("extensions-live-with-the-domain"))
+            ).to(equal([]))
 
     with context("write-interactions"):
         with it("should flag a bold Interaction bullet in a markdown class"):

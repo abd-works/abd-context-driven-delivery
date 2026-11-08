@@ -14,12 +14,11 @@ from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
     assert_rule_pair,
     ce_rule_by_slug,
     practice_from_source,
-    violations_for_rule,
 )
 
 
 def _hits(source: str) -> list[str]:
-    return violations_for_rule(ce_rule_by_slug("limit-operation-parameters"), *practice_from_source(source))
+    return practice_from_source(source).hits(ce_rule_by_slug("limit-operation-parameters"))
 
 
 with description("an operation's parameters"):

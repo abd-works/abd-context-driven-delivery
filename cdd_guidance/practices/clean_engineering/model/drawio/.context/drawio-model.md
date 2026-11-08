@@ -95,8 +95,6 @@ The `drawio` format. A modules view when the model has modules and no class memb
 	// becomes the canonical model once (translate_from), then writes its own Draw.io modules and classes
 	-> CardPlacement.place
 	-> ArrowRouter.route
-+ load(path: str): DrawIOCleanEngineeringModel
-	-> parse
 + save(): str
 	-> render
 + kept_previous(): str | None
@@ -110,11 +108,12 @@ The `drawio` format. A modules view when the model has modules and no class memb
 
 The toolset a caller types. Create writes a path. Scan judges layout. Repair fixes the layout generator, not one diagram by hand.
 
-+ Drawio(practice: CleanEngineering)
++ Drawio(source: CleanEngineeringModel | None = None)
 ------
 + practice: CleanEngineering
 	// the practice that makes it; its formats read the content a diagram is drawn from
-+ source_format: str
++ source: CleanEngineeringModel
+	// the model the source a diagram is drawn from is read with: the practice's markdown format, else a markdown model of its own
 	// the format create_diagram parses its content from: any format the practice reads
 + << composition >> channel: DrawIOCleanEngineeringModel
 	// the one Draw.io model it writes; its previous and keep_positioning are the layout policy
@@ -191,4 +190,4 @@ One page of a draw.io file (`drawio/drawio_page.py`): its cells, the class boxes
 + segments(edge: Element): tuple[list, bool]
 	// the polyline an edge draws, and whether Draw.io's router may draw it differently
 
-The graph checks the same rules on diagram files: `drawio/rules/__init__.py` wraps each discovered scanner in a *PracticeGraphRule* whose `check_practice` scans each `.drawio` file the practice read a class, module, or package from once, and reports on the first of those nodes; `CleanEngineering.language_checks("drawio")` returns them.
+The layout rules check a rendered diagram through `Drawio.scan`, in the render, validate, and repair loop; the knowledge graph reads no `.drawio` file, so it runs none of them.

@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
 from harness.annotations.name import Name
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock, WrittenKey
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
@@ -181,15 +182,8 @@ class CodeScenario(Scenario, CodeStoryNode):
 
     @classmethod
     def balanced(cls, text: str, open_at: int) -> str:
-        depth = 0
-        for index in range(open_at, len(text)):
-            if text[index] == "{":
-                depth += 1
-            elif text[index] == "}":
-                depth -= 1
-                if depth == 0:
-                    return text[open_at + 1:index]
-        return text[open_at + 1:]
+        close = SourceText(text).closing_bracket(open_at)
+        return text[open_at + 1 : close] if close is not None else text[open_at + 1 :]
 
     @classmethod
     def outside_scenarios(cls, body: str) -> str:

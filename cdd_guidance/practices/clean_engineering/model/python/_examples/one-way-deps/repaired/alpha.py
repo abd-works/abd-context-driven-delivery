@@ -1,4 +1,5 @@
-import beta
+from . import beta
+
 
 class Alpha:
     def ping(self):

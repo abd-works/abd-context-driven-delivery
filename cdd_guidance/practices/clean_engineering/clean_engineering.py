@@ -10,18 +10,21 @@ from cdd_guidance.practices.clean_engineering.model.java.java_class_model import
 from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import JavaScriptCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.json.json_class_model import JsonCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
 from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.sketch.sketch_class_model import SketchCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset, tools
-from harness.guidance.guidance import PracticeGuidance, rules_in
+from harness.guidance.guidance import PracticeGuidance
 
 
 @agent_toolset
 class CleanEngineering(GraphReading, PracticeGuidance):
     """# Instructions"""
 
-    sketch_titles = SketchCleanEngineeringModel.lens.titles
+    # Its section of a sketch is the one its sketch format reads, held as that one lens.
+    sketch_lens = SketchCleanEngineeringModel.lens
+    sketch_titles = sketch_lens.titles
     SHORT_NAME = "CE"
     COLOUR = "#4FC3F7"
 
@@ -58,8 +61,8 @@ class CleanEngineering(GraphReading, PracticeGuidance):
         )
         self._drawio: Drawio | None = None
 
-    # In the knowledge graph: Clean Engineering's modules, classes, and members, its rules, and the draw.io rules it
-    # checks on a diagram's nodes.
+    # In the knowledge graph: Clean Engineering's modules, classes, and members, and its rules. The draw.io layout rules
+    # check a rendered diagram through the Draw.io toolset's scan, not the graph.
     class_types = ("OoadClass",)
     member_types = ("Operation", "Property")
     class_node_type = "OoadClass"
@@ -72,21 +75,11 @@ class CleanEngineering(GraphReading, PracticeGuidance):
         "package": "Package",
     }
 
-    def own_graph_checks(self) -> dict:
-        return {**super().own_graph_checks(), **self.language_checks("drawio")}
-
-    def language_checks(self, language: str) -> dict:
-        return rules_in(f"{self.package}.model.drawio.rules") if language == "drawio" else {}
-
-    def model_in(self, format: str, content: str):
-        """The class model content describes, read by this practice's adapter for format."""
-        return self._parse_content(format, content)
-
     @property
     def drawio(self) -> Drawio:
-        """The Draw.io toolset this practice renders its diagrams with."""
+        """The Draw.io toolset this practice renders its diagrams with, reading sources with its markdown format."""
         if self._drawio is None:
-            self._drawio = Drawio(self)
+            self._drawio = Drawio(self._live_adapter("markdown"))
             self._drawio.mode = "tool"
         return self._drawio
 

@@ -63,3 +63,35 @@ Sources:
 - `clean-engineering-validation-round3.md` (round 3)
 - `README.md` and its area files (round 4)
 - `round5-report.md` (round 5)
+
+## Fix-and-revalidate loop: goal, measure, and stopping rule
+
+From round 5 on, each round runs validate, writes a report, has agents fix it, and is then measured here. The loop's goal is to remove most findings in three classes:
+- **bad resource orientation:** concern 5, wrong-shape relationships, and concern 9, one file with several owners
+- **shadow models:** concern 2, duplicated shapes and second object models
+- **duplicated functions:** concern 1, plus concern 12, rules decided in both TypeScript and Python
+
+**How it is measured.** The script counts every finding row in a round's area files by the concerns it carries, using the same script every round so the numbers compare (`concern_counts.py` beside this file; a row naming several concerns counts once for each). Rounds 6 on use round 5's twelve concerns, area split and status words (new / left / known skip / regression), so the counts mean the same thing.
+
+**Round 5 baseline:**
+
+| Goal class | Concerns | Round 5 |
+|---|---|---|
+| Bad resource orientation | 5, 9 | 68 (62 + 6) |
+| Shadow models | 2 | 33 |
+| Duplicated functions | 1, 12 | 62 (50 + 12) |
+| **Goal total** | | **163** |
+
+**Done when** the goal total is at most 81 (half of round 5), and no high finding remains in the three classes.
+
+**What counts as cycling, and what to change when it happens.** After each round, compare it with the round before:
+- **Each round should cut the goal total by at least 20%.** If it doesn't, change the fix brief, not just the code. Find which findings were reported again:
+  - **The same finding reported again** means the fix was skipped or reverted. Make it a named task with a spec that fails first.
+  - **A new finding of an old kind** means the guardrails missed it. Add the pattern to `refactor-guardrails.md`.
+- **Watch the share of regressions.** These are findings marked fixed in an earlier round that are back. If more than 10% of a round's findings are regressions, each fix agent's brief adds a grep-based check for the earlier patterns before it commits.
+- **A finding the fix agents skip twice** goes into a decision record, with the reason, and leaves the count. That way a deliberate decision does not keep the loop running.
+- **New scope is counted separately from progress.** A round that checks more code (for example, a scanner that now sees cycles between files) reports its findings in the newly checked code in their own column, so a wider check does not hide progress.
+
+| Round | Bad resource orientation | Shadow models | Duplicated functions | Goal total | Change from last round | Regressions | Notes |
+|---|---|---|---|---|---|---|---|
+| 5 | 68 | 33 | 62 | 163 | baseline | — | First cross-file round. Nine fix agents ran on it |
