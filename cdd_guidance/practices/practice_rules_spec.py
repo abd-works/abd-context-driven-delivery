@@ -33,7 +33,7 @@ def _unlisted(practice) -> list[str]:
 
 with description("the graph rules of every practice CDD ships"):
     with it("should check the five practices"):
-        expect(len(PracticeCatalogue.practices())).to(equal(5))
+        expect(len(PracticeCatalogue.create_all())).to(equal(5))
 
     with it("should list each rule on every node type its check judges, so validate runs it there"):
-        expect([gap for practice in PracticeCatalogue.practices() for gap in _unlisted(practice)]).to(equal([]))
+        expect([gap for practice in PracticeCatalogue.create_all() for gap in _unlisted(practice)]).to(equal([]))
