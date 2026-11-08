@@ -1,10 +1,11 @@
 """A BDD model read from a saved knowledge graph: the realization fidelity drawn from what the graph knows.
 
-The behavior tree is the graph's `bdd` nodes, in each spec file's order. Each observation's call graph starts at what
-its `invokes` edges name, and each call is followed through the Clean Engineering model's interactions, which the
-graph saves under `model_members` on the Clean Engineering practice's root. Each code member's saved facts name its
-class under `owner`. The saved file is read back into the graph's own nodes and edges, the way the graph reloads it,
-so this model asks nodes for their facts and edges for their ends and never reads the file's layout.
+The behavior tree is the graph's `bdd` nodes, read by following the `descriptions`, `contexts`, and `observations` edges
+from each spec. Each observation's call graph starts at what its `invokes` edges name, and each call is followed
+through the interactions of the operation the Clean Engineering model documents describe, which the Clean Engineering
+practice holds. Each code member's saved facts name its class under `owner`, and its parameters are the `Parameter`
+nodes its `hasParameter` edges lead to. The saved file is read back into the graph's own nodes and edges, the way the
+graph reloads it, so this model asks nodes for their facts and edges for their ends and never reads the file's layout.
 """
 
 from __future__ import annotations
@@ -12,19 +13,19 @@ from __future__ import annotations
 import re
 from typing import List, Optional
 
-from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
-from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
+from cdd_guidance.practices.bdd.model.nodes import DescribeBlock
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph, CallGraphEntry
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
 from harness.graph.graph import Node
 from harness.graph.saved_graph import SavedGraph
 
 # Following interactions further than this many calls deep adds lines nobody reads; a cycle is cut where it repeats.
 _DEEPEST_CALL = 6
 NO_OPERATION = "// the graph holds no operation this observation calls"
-_BEHAVIOR_TYPES = ("Description", "Context", "Observation")
 _MEMBER_TYPES = ("Operation", "Property")
+_CHILD_EDGES = ("contexts", "observations")
 
 
 class GraphBddModel(BddModel):
@@ -33,91 +34,76 @@ class GraphBddModel(BddModel):
     def parse(self, text: str) -> "GraphBddModel":
         graph = SavedGraph.from_text(text).restored_graph()
         self._graph = graph
-        self._bdd = graph.practice_of(Bdd)
-        self._clean = graph.practice_of(CleanEngineering)
-        for nodes in self._behavior_by_file().values():
-            self._read_spec(sorted(nodes, key=lambda node: (node.source.start_line, -node.source.end_line)))
+        bdd = graph.practice_of(self.practice_kind())
+        self._clean = bdd.clean_engineering_practice
+        for spec in sorted(bdd.in_graph.nodes("Spec"), key=lambda node: node.source.file):
+            for saved in self._in_file_order(graph.edges_from("descriptions", spec)):
+                self._read_block(saved, self.add_description(saved.name))
         return self
 
-    def _behavior_by_file(self) -> dict[str, List[Node]]:
-        """The describe-tree nodes of each spec file."""
-        by_file: dict[str, List[Node]] = {}
-        for node_type in _BEHAVIOR_TYPES:
-            for node in self._bdd.in_graph.nodes(node_type):
-                by_file.setdefault(node.source.file, []).append(node)
-        return by_file
+    def _read_block(self, saved: Node, block: DescribeBlock) -> None:
+        """The saved block's contexts and observations, in the order its file has them, under block."""
+        children = self._in_file_order(edge for kind in _CHILD_EDGES for edge in self._graph.edges_from(kind, saved))
+        for order, child in enumerate(children, start=1):
+            if child.type == "Observation":
+                block.add_child("it", child.name, order).call_graph = self._realization(child)
+            else:
+                self._read_block(child, block.add_child("context", child.name, order))
 
-    def _read_spec(self, nodes: List[Node]) -> None:
-        """One spec file's nodes, outermost first at each line: a node sits inside the open node whose lines enclose it."""
-        open_nodes: List[tuple[int, object]] = []
-        for saved in nodes:
-            while open_nodes and open_nodes[-1][0] < saved.source.start_line:
-                open_nodes.pop()
-            parent = open_nodes[-1][1] if open_nodes else None
-            if saved.type == "Observation":
-                self._add_observation(saved, parent)
-                continue
-            open_nodes.append((saved.source.end_line, self._add_block(saved.name, parent)))
-
-    def _add_observation(self, saved: Node, parent) -> None:
-        if parent is None:
-            return
-        observation = Observation(saved.name, len(parent.observations) + 1)
-        observation.call_graph = self._realization(saved)
-        parent.observations.append(observation)
-
-    def _add_block(self, name: str, parent):
-        """An outermost block becomes a description; any block inside another becomes a context."""
-        if parent is None:
-            node = Description(name, len(self.descriptions) + 1)
-            self.descriptions.append(node)
-            return node
-        node = Context(name, len(parent.contexts) + 1)
-        parent.contexts.append(node)
-        return node
+    def _in_file_order(self, edges) -> List[Node]:
+        return sorted((edge.child for edge in edges), key=lambda node: (node.source.start_line, -node.source.end_line))
 
     def _realization(self, observation: Node) -> CallGraph:
         entries = CallGraph()
         for edge in self._graph.edges_from("invokes", observation):
-            facts = _member_facts(edge.child)
-            entries.extend(self._call(facts.get("owner", ""), edge.child.name, 0, set(), facts))
+            member = edge.child
+            entries.extend(self._call(member.get_fact("owner", ""), member.name, 0, set(), member))
         return entries or CallGraph([CallGraphEntry(depth=0, kind="call", text=NO_OPERATION)])
 
-    def _call(self, owner: str, name: str, depth: int, trail: set, code_facts: Optional[dict] = None) -> List[CallGraphEntry]:
+    def _call(self, owner: str, name: str, depth: int, trail: set, code: Optional[Node]) -> List[CallGraphEntry]:
         """A call on owner.name, then the interactions the model gives it, then what it returns."""
-        described = self._described_members().get(f"{owner}.{name}", {})
-        facts = {**(code_facts or {}), **described}
-        is_property = facts.get("kind") == "Property"
-        parameters = facts.get("model_parameters") or facts.get("parameters") or []
-        signature = ", ".join(f"{label}: {kind}" if kind else label for label, kind in parameters)
+        described = self._clean.described_member(owner, name) if self._clean is not None else None
+        is_property = isinstance(described, Property) if described is not None else code is not None and code.type == "Property"
+        signature = ", ".join(f"{label}: {kind}" if kind else label for label, kind in self._parameters(described, code))
         entries = [CallGraphEntry(depth=depth, kind="out", text=f"{owner}.{name}" if is_property else f"{owner}.{name}({signature})")]
-        if depth < _DEEPEST_CALL:
-            for interaction in facts.get("interactions") or []:
+        if depth < _DEEPEST_CALL and described is not None:
+            for interaction in described.callees:
                 callee = _member_named(interaction)
                 if callee is None or callee in trail:
                     continue
-                entries.extend(self._call(callee[0], callee[1], depth + 1, trail | {(owner, name)}, self._code_facts(*callee)))
-        returns = facts.get("model_returns") or ""
+                entries.extend(self._call(callee[0], callee[1], depth + 1, trail | {(owner, name)}, self._code_member(*callee)))
+        returns = _returned(described)
         if returns:
             entries.append(CallGraphEntry(depth=depth, kind="in", text=returns))
         return entries
 
-    def _described_members(self) -> dict:
-        """The members the Clean Engineering model describes, by `Class.member`, as its practice's root records them."""
-        return self._clean.in_graph.root.get_fact("model_members", {}) or {}
+    def _parameters(self, described, code: Optional[Node]) -> List[tuple[str, str]]:
+        """Each parameter's name and type: the model's when it describes the member, else the code's."""
+        if isinstance(described, Operation):
+            return [(parameter.name, (parameter.type_hint or "").strip()) for parameter in described.parameters]
+        if described is not None or code is None:
+            return []
+        parameters = [edge.child for edge in self._graph.edges_from("hasParameter", code)]
+        return [(parameter.name, (parameter.get_fact("type_hint") or "").strip()) for parameter in parameters]
 
-    def _code_facts(self, owner: str, name: str) -> Optional[dict]:
-        """The facts on the code's member owner.name, when the graph loaded it."""
+    def _code_member(self, owner: str, name: str) -> Optional[Node]:
+        """The code's member owner.name, when the graph loaded it."""
+        if self._clean is None:
+            return None
         for node_type in _MEMBER_TYPES:
             for member in self._clean.in_graph.nodes(node_type):
-                if member.name == name and member.facts.get("owner") == owner:
-                    return _member_facts(member)
+                if member.name == name and member.get_fact("owner") == owner:
+                    return member
         return None
 
 
-def _member_facts(member: Node) -> dict:
-    """A code member's saved facts, with its kind (Operation or Property)."""
-    return {**member.facts, "kind": member.type}
+def _returned(described) -> str:
+    """What the described member gives back: an operation's return type, a property's type."""
+    if isinstance(described, Operation):
+        return (described.return_type or "").strip()
+    if isinstance(described, Property):
+        return (described.type_hint or "").strip()
+    return ""
 
 
 def _member_named(interaction: str) -> Optional[tuple[str, str]]:

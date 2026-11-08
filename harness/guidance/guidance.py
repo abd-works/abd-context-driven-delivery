@@ -471,10 +471,6 @@ class PracticeGuidance(Guidance):
             merged.update(self.in_graph.overlay_checks)
         return merged
 
-    def language_checks(self, language: str) -> dict[str, Any]:
-        """The graph rules this practice checks only on nodes read from a file in ``language``, such as ``drawio``."""
-        return {}
-
     @property
     @data_field
     def key(self) -> str:
@@ -718,6 +714,12 @@ class PracticeGuidance(Guidance):
             if suffix in getattr(adapter, "suffixes", ()):
                 return adapter()
         raise ValueError(f"No {type(self).__name__} format reads {file.name}")
+
+    @property
+    def readable_suffixes(self) -> frozenset[str]:
+        """Every file extension one of this practice's formats reads, such as ``.py`` and ``.ts``: the files its graph
+        reading reads, the same table ``format_for`` picks a format from."""
+        return frozenset(suffix for name in self.formats for suffix in getattr(self._format_adapter(name), "suffixes", ()))
 
     def read_paths(self, paths: list[str] | str, source: str | None = None) -> Any:
         """What render converts from the files at paths: their text, one after another, read from the project of the

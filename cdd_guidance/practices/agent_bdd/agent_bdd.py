@@ -26,4 +26,4 @@ class AgentBdd(PracticeGuidance):
     def bdd(self) -> Bdd:
         """The session's own BDD practice, at the fidelity and in the format the session works in: agent specs compose
         vanilla BDD."""
-        return next(practice for practice in self.session.graph.every_practice.values() if isinstance(practice, Bdd))
+        return self.session.graph.practice_of(Bdd)

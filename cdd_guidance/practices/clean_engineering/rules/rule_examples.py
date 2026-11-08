@@ -6,100 +6,56 @@ their own facts, each node holding its parsed object, rules reading ``node.get_f
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
-from harness.graph.graph import Graph
-from harness.guidance.guidance import PracticeGuidance
-from harness.graph.rule_context import RuleCheckContext
+from harness.graph.rule_fixture import RuleFixture, RulePair
 
-_SUFFIX = {"python": ".py", "typescript": ".ts", "javascript": ".js"}
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
+from cdd_guidance.practices.clean_engineering.model.code_body import CODE_LANGUAGES
+from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
+
 FIXTURE_FOLDER = "example"
 _PRACTICE = Path(__file__).resolve().parents[1]
+# The extension a fixture written in each language takes: the first its language reads.
+_SUFFIX = {language.name: language.suffixes[0] for language in CODE_LANGUAGES}
 
 
 def ce_rule_by_slug(slug: str):
-    from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
-
-    rule = BY_SLUG.get(slug)
-    if rule is None:
-        raise KeyError(slug)
-    return rule
+    return BY_SLUG[slug]
 
 
-def practice_from_files(files: dict[str, str]) -> tuple[PracticeGuidance, Path]:
-    """Write files under a temp root and load the clean engineering working copy from it."""
-    temp = tempfile.TemporaryDirectory()
-    root = Path(temp.name)
-    for relative, text in files.items():
-        path = root / relative
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-    graph = Graph()
-    graph.load_working_copy(str(root), {"clean_engineering": str(root)}, force=True)
-    practice = graph.practice("clean_engineering")
-    practice._temp_dir = temp  # type: ignore[attr-defined]
-    return practice, root
+def practice_from_files(files: dict[str, str]) -> RuleFixture:
+    """The files, read by Clean Engineering from a folder of their own."""
+    return RuleFixture(CleanEngineering, files)
 
 
-def practice_from_class_text(name: str, text: str, relative: str) -> tuple[PracticeGuidance, Path]:
+def practice_from_class_text(name: str, text: str, relative: str) -> RuleFixture:
     """One class node recorded from source the working copy does not scan (markdown model files)."""
-    from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
-
     oclass = OoadClass(name=name, sequential_order=1, line=1)
     oclass.end_line = text.count("\n") + 1
     oclass.take_lines(text.split("\n"))
     oclass.load_source_facts()
-    practice, root = practice_from_files({relative: text})
-    practice.in_graph.add(oclass, f"clean_engineering:OoadClass:{relative}:{name}", relative, 1, text.count("\n") + 1)
-    return practice, root
+    fixture = practice_from_files({relative: text})
+    fixture.practice.in_graph.add(oclass, f"clean_engineering:OoadClass:{relative}:{name}", relative, 1, text.count("\n") + 1)
+    return fixture
 
 
-def practice_from_source(source: str, *, lang: str = "python", filename: str | None = None) -> tuple[PracticeGuidance, Path]:
+def practice_from_source(source: str, *, lang: str = "python", filename: str | None = None) -> RuleFixture:
     name = filename or f"example{_SUFFIX[lang]}"
     return practice_from_files({f"{FIXTURE_FOLDER}/{name}": source.strip() + "\n"})
 
 
-def violations_for_rule(rule, practice: PracticeGuidance, root: Path) -> list[str]:
-    context = RuleCheckContext(practice, root)
-    messages: list[str] = []
-    for _node_id, message in rule.check_practice(context):
-        messages.append(message)
-    for node_type in rule.node_types:
-        for node in context.nodes(node_type):
-            messages.extend(rule.check(node, context))
-    return messages
-
-
-def _assert_pair(slug: str, fault_hits: list[str], clean_hits: list[str]) -> None:
-    if not fault_hits:
-        raise AssertionError(f"{slug}: expected violations on fault fixture, got none")
-    if clean_hits:
-        raise AssertionError(f"{slug}: expected no violations on clean fixture, got {clean_hits!r}")
-
-
 def assert_rule_pair(slug: str, fault_source: str, clean_source: str, *, lang: str = "python") -> None:
-    rule = ce_rule_by_slug(slug)
-    fault_hits = violations_for_rule(rule, *practice_from_source(fault_source, lang=lang))
-    clean_hits = violations_for_rule(rule, *practice_from_source(clean_source, lang=lang))
-    _assert_pair(slug, fault_hits, clean_hits)
+    RulePair(ce_rule_by_slug(slug), practice_from_source(fault_source, lang=lang), practice_from_source(clean_source, lang=lang)).check()
 
 
 def assert_files_rule_pair(slug: str, fault_files: dict[str, str], clean_files: dict[str, str]) -> None:
-    rule = ce_rule_by_slug(slug)
-    fault_hits = violations_for_rule(rule, *practice_from_files(fault_files))
-    clean_hits = violations_for_rule(rule, *practice_from_files(clean_files))
-    _assert_pair(slug, fault_hits, clean_hits)
+    RulePair(ce_rule_by_slug(slug), practice_from_files(fault_files), practice_from_files(clean_files)).check()
 
 
 def example_asset_paths(slug: str, *, channel: str = "python") -> tuple[Path, Path]:
-    root = (
-        _PRACTICE
-        / "model"
-        / channel
-        / "_examples"
-        / slug
-    )
+    root = _PRACTICE / "model" / channel / "_examples" / slug
     suffix = _SUFFIX[channel]
     return root / "faulty" / f"faultyAsset{suffix}", root / "repaired" / f"repairedAsset{suffix}"
 
@@ -125,11 +81,7 @@ def _example_files(folder: Path) -> dict[str, str]:
 
 
 def assert_module_example_pair(slug: str) -> None:
-    rule = ce_rule_by_slug(slug)
     root_path = _PRACTICE / "model" / "python" / "_examples" / slug
-    fault_hits = violations_for_rule(rule, *practice_from_files(_example_files(root_path / "faulty")))
-    clean_hits = violations_for_rule(rule, *practice_from_files(_example_files(root_path / "repaired")))
-    if not fault_hits:
-        raise AssertionError(f"{slug}: expected fault violations, got none")
-    if clean_hits:
-        raise AssertionError(f"{slug}: expected clean, got {clean_hits!r}")
+    faulty = practice_from_files(_example_files(root_path / "faulty"))
+    repaired = practice_from_files(_example_files(root_path / "repaired"))
+    RulePair(ce_rule_by_slug(slug), faulty, repaired).check()

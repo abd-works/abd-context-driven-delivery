@@ -31,7 +31,7 @@ _TOOLS_RUN = re.compile(
 class _StreamBuckets:
     """Collect stdout narrative, raw lines, and shell captures from a live process."""
 
-    def __init__(self) -> None:
+    def __init__(self, tools_run_yaml: ToolsRunYaml) -> None:
         self.narrative: list[str] = []
         self.raw_lines: list[str] = []
         self.shell_captures: list[_ShellCapture] = []
@@ -41,7 +41,8 @@ class _StreamBuckets:
         self.stdout = ""
         self.stderr = ""
         self.exit_code = 0
-        self._tools_run_yaml = ToolsRunYaml()
+        # The block's reader of toolset-run YAML, which tells a run's output from other shell output.
+        self._tools_run_yaml = tools_run_yaml
 
     def drain(self, proc: subprocess.Popen, timeout_seconds: int) -> tuple[str, str, int]:
         self._stdout_thread = threading.Thread(target=lambda: self._read_stdout(proc), daemon=True)
@@ -267,13 +268,15 @@ class CliAgentBlock(AgentBlock):
     def __init__(self, workspace: Path, session_file: Path) -> None:
         super().__init__(workspace, session_file)
         self._session: AgentSession | None = None
+        # The agent command line before any chat: whether it is installed, and the chats it starts.
+        self._cli = CursorCli()
 
     def _open(self) -> None:
         self._assert_authenticated()
-        self._session = AgentSession.from_workspace(self._session_file, self._workspace, fresh=False)
+        self._session = AgentSession.from_workspace(self._session_file, self._workspace, self._cli, fresh=False)
 
     def _assert_authenticated(self) -> None:
-        exe = CursorCli().launcher
+        exe = self._cli.launcher
         if exe is None:
             raise CursorAgentNotFound()
         completed = subprocess.run([exe, "status"], capture_output=True, text=True, timeout=_STATUS_TIMEOUT_SECONDS)
@@ -292,13 +295,13 @@ class CliAgentBlock(AgentBlock):
 
     def _judge_answer(self, launch_prompt: str, timeout_seconds: int) -> AgentResult:
         judge_file = self._session_file.with_name(f"{self._session_file.stem}-judge.json")
-        judge_session = AgentSession.from_workspace(judge_file, self._workspace, fresh=True)
+        judge_session = AgentSession.from_workspace(judge_file, self._workspace, self._cli, fresh=True)
         return judge_session.run(launch_prompt, self._workspace, timeout_seconds=timeout_seconds)
 
     def _run(self, prompt: str, timeout_seconds: int, prefix: str) -> _StreamBuckets:
         if self._session is None:
             raise RuntimeError("agent session not started - use `with agent(...)`")
-        buckets = _StreamBuckets()
+        buckets = _StreamBuckets(self._tools_run_yaml)
         proc = subprocess.Popen(
             self._agent_command(self._session, prompt),
             stdout=subprocess.PIPE,

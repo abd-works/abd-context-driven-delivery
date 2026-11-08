@@ -1216,7 +1216,7 @@ Observed: `graph.load_files` builds each practice from only the named files or f
 
 ### (S) Knowledge Graph --> Skip Build And Cache Folders
 
-Observed: a scan leaves out `node_modules`, `dist`, test-run output, caches and dot-folders but still reads `.examples` folders (`skipped_folders.py`, `working_copy_scan_spec.py` "over build and test-run output").
+Observed: a scan leaves out `node_modules`, `dist`, test-run output, caches, dot-folders, and the `_examples` and `fixtures` folders, but still reads `.examples` folders (`skipped_folders.py`, `working_copy_scan_spec.py` "over build and test-run output").
 
 ### (S) Knowledge Graph --> Report Load Progress
 

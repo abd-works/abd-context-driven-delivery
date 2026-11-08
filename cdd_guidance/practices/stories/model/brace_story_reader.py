@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import Callable, List, Optional, Tuple
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock
+from cdd_guidance.practices.clean_engineering.model.code_body import BraceCall, CodeBody, CodeLanguage, WrittenBlock
 from cdd_guidance.practices.stories.model.code_story_model import flat_steps
 from cdd_guidance.practices.stories.model.story_reader import StoryReader
 from cdd_guidance.practices.stories.model.story_model import Background, Scenario, Step, Story
@@ -20,39 +20,6 @@ _SCENARIO = re.compile(r"(?<![.\w])scenario\s*\(\s*" + _QUOTED)
 _BACKGROUND = re.compile(r"(?<![.\w])background\s*\(")
 _STEP = re.compile(r"(?<![.\w])(given|when|then|and|but)\s*\(\s*(['\"`])((?:\\.|(?!\2).)*)\2")
 _CHAINED = re.compile(r"\s*\.(and|but)\s*\(\s*(['\"`])((?:\\.|(?!\2).)*)\2")
-
-
-class BraceCall:
-    """One call whose last argument is a callback: where it starts, its callback braces, and where it ends."""
-
-    def __init__(self, text: str, start: int, open_paren: int, name: str) -> None:
-        self.start = start
-        self.name = name
-        self.close = self._matching(text, open_paren, "(", ")")
-        arrow = text.find("=>", open_paren, self.close if self.close is not None else len(text))
-        self.brace = text.find("{", arrow if arrow >= 0 else open_paren, self.close if self.close is not None else len(text))
-        self.inner_end = self._matching(text, self.brace, "{", "}") if self.brace >= 0 else None
-        end = (self.close + 1) if self.close is not None else start
-        self.end = end + 1 if text.startswith(";", end) else end
-
-    @property
-    def is_whole(self) -> bool:
-        return self.close is not None and self.brace >= 0 and self.inner_end is not None
-
-    def body(self, text: str) -> str:
-        return text[self.brace + 1 : self.inner_end] if self.is_whole else ""
-
-    def _matching(self, text: str, open_index: int, opener: str, closer: str) -> Optional[int]:
-        """The index of the bracket that closes the one at open_index; None when the text never closes it."""
-        depth = 0
-        for index in range(open_index, len(text)):
-            if text[index] == opener:
-                depth += 1
-            elif text[index] == closer:
-                depth -= 1
-                if depth == 0:
-                    return index
-        return None
 
 
 class BraceStoryReader(StoryReader[BraceCall]):

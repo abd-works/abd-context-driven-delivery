@@ -7,7 +7,10 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
+from cdd_guidance.practices.clean_engineering.model.rules_shared.class_graph import ClassGraph
+from cdd_guidance.practices.clean_engineering.model.rules_shared.near_copies import NearCopies
 from cdd_guidance.practices.clean_engineering.model.rules_shared.operation_semantics import SEMANTIC_RULES
+from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule, is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -46,7 +49,9 @@ _STATIC_FACTORY_NAMES = frozenset({"instance", "create"})
 # it is the ambient state `hold-state-on-the-object-not-in-parameters` replaces with an object the caller holds.
 _STATIC_FACTORY_EXTRA_NAMES = frozenset({"fromRequest"})
 _CAMEL_FROM_FACTORY = re.compile(r"^from[A-Z]")
-_LOAD_FACTORY = re.compile(r"^load(?:[A-Z].*)?$")
+_LOAD_FACTORY = re.compile(r"^load(?:[A-Z_].*)?$")
+# The names a return type spells: `list[CatalogPractice]` spells `list` and `CatalogPractice`.
+_TYPE_NAME = re.compile(r"[A-Za-z_]\w*")
 
 
 def _allows_static_factory_operation(name: str) -> bool:
@@ -57,6 +62,17 @@ def _allows_static_factory_operation(name: str) -> bool:
     if _CAMEL_FROM_FACTORY.match(name):
         return True
     return _LOAD_FACTORY.match(name) is not None
+
+
+def _makes_its_own_class(operation: "Node") -> bool:
+    """A factory: a class-level operation that makes its own class from what it is given, such as `for_project(root)
+    -> ProjectApproach`, `every(folder) -> list[Practice]`, or `-> Self`; no instance exists yet to call it on. One
+    that takes nothing, such as `current() -> Board`, hands out a global instance, which a caller should hold instead."""
+    if not operation.get_fact("parameters", []):
+        return False
+    spelled = set(_TYPE_NAME.findall(str(getattr(operation, "return_type", "") or "")))
+    return bool(spelled & {operation.get_fact("owner", ""), "Self"})
+
 
 _VAGUE_PARAMETER_NAMES = frozenset({"options", "opts", "config", "settings"})
 
@@ -83,12 +99,14 @@ def _parameter_names(node: "Node") -> list[str]:
 
 
 def _setter_parameter(name: str, property_setter: bool) -> bool:
-    """TypeScript/JavaScript `set email(value)` — intent is in the property name."""
+    """`value` in a setter, TypeScript's `set email(value)` or Python's `@email.setter`: the property names the intent."""
     return name == "value" and property_setter
 
 
 def _operation_is_setter(node: "Node") -> bool:
-    return bool(node.get_fact("is_property")) and len(node.get_fact("parameters", [])) == 1
+    if len(node.get_fact("parameters", [])) != 1:
+        return False
+    return bool(node.get_fact("is_setter")) or bool(node.get_fact("is_property"))
 
 
 class UseExplicitDependencies(PracticeGraphRule):
@@ -96,8 +114,9 @@ class UseExplicitDependencies(PracticeGraphRule):
     node_types = ("OoadClass",)
 
     def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+        classes = context.index(ClassGraph)
         for type_name in node.get_fact("constructs", []):
-            if type_name == node.name:
+            if type_name == node.name or classes.is_value(type_name):
                 continue
             # <<Entity>> / <<Aggregate Root>> may compose sibling types from the same file.
             if node.get_fact("composes_peers") and type_name in node.get_fact("peer_names", []):
@@ -156,19 +175,23 @@ class SimplifyControlFlow(OperationMeasureRule):
         return [f"{operation_label(operation)} nests control flow {depth} levels deep (max {self.limit})."]
 
 
-class UseExceptionsProperly(OperationMeasureRule):
-    slug = "use-exceptions-properly"
+class UseExceptionsProperly(ProductionCodeRule):
+    """A spec catches every exception on purpose, to prove what a call raises, so only production code is judged."""
 
-    def measure(self, operation: "Node") -> list[str]:
+    slug = "use-exceptions-properly"
+    node_types = OperationMeasureRule.node_types
+
+    def check_production(self, operation: "Node", context: "RuleCheckContext") -> list[str]:
         if not operation.get_fact("has_bare_catch"):
             return []
         return [f"{operation_label(operation)} catches every exception (a bare except, or except Exception that never re-raises)."]
 
 
-class NeverSwallowExceptions(OperationMeasureRule):
+class NeverSwallowExceptions(ProductionCodeRule):
     slug = "never-swallow-exceptions"
+    node_types = OperationMeasureRule.node_types
 
-    def measure(self, operation: "Node") -> list[str]:
+    def check_production(self, operation: "Node", context: "RuleCheckContext") -> list[str]:
         if not operation.get_fact("swallows_exceptions"):
             return []
         return [f"{operation_label(operation)} swallows a caught failure or hands back a fallback in its place."]
@@ -267,7 +290,7 @@ class PreferInstanceOperations(PracticeGraphRule):
         is_classmethod = bool(node.get_fact("is_classmethod"))
         if not is_static and not is_classmethod:
             return []
-        if _allows_static_factory_operation(node.name):
+        if _allows_static_factory_operation(node.name) or _makes_its_own_class(node):
             return []
         kind = "classmethod" if is_classmethod else "staticmethod"
         return [f"Operation '{node.name}' is a {kind}; prefer an instance operation."]
@@ -291,6 +314,9 @@ class UsePropertyNotAccessor(PracticeGraphRule):
 
 
 class EliminateDuplication(PracticeGraphRule):
+    """Production operations whose bodies are the same, or nearly the same: a copy with a renamed variable or one
+    changed line is still a second place the same fix has to go."""
+
     slug = "eliminate-duplication"
     node_types = ("Operation",)
 
@@ -298,16 +324,28 @@ class EliminateDuplication(PracticeGraphRule):
         return []
 
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
+        operations = [node for node in context.nodes("Operation") if not is_test_code(node.source.file)]
         seen: dict[str, str] = {}
         hits: list[tuple[str, str]] = []
-        for op_node in context.nodes("Operation"):
+        copied: set[str] = set()
+        for op_node in operations:
             fingerprint = op_node.get_fact("body_fingerprint", "")
             if not fingerprint or op_node.get_fact("line_count", 0) < 3:
                 continue
             if fingerprint in seen:
+                copied.add(op_node.node_id)
                 hits.append((op_node.node_id, f"Operation '{op_node.name}' duplicates the body of '{seen[fingerprint]}'."))
             else:
                 seen[fingerprint] = op_node.name
+        near = NearCopies([node for node in operations if node.node_id not in copied])
+        for copy, original, shared in near.pairs():
+            hits.append(
+                (
+                    copy.node_id,
+                    f"Operation '{copy.name}' nearly duplicates '{original.name}' ({original.source.file}): "
+                    f"{round(100 * shared)}% of their code is the same. Give the shared logic one function.",
+                )
+            )
         return hits
 
 

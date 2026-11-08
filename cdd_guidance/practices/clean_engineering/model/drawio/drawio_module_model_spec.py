@@ -133,7 +133,6 @@ def _render_kept(model, previous):
 
 def _create_kept(content, path):
     toolset = CleanEngineering().drawio
-    toolset.source_format = 'markdown'
     toolset.channel.keep_positioning = True
     return toolset.create_diagram(content, path)
 

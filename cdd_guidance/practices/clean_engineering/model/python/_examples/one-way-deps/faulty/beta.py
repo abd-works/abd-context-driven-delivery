@@ -1,4 +1,4 @@
-import alpha
+from . import alpha
 
 
 class Beta:

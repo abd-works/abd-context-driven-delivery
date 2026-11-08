@@ -20,8 +20,6 @@ from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_l
 
 _NESTING_INDENT = 2
 _SECTION_TITLE = "clean engineering:"
-# The Clean Engineering section of a sketch, opened by either of its headings; the practice declares these titles.
-_LENS = SketchLens(("ce:", _SECTION_TITLE))
 _TOP_MODULE_DEPTH = 3
 _CLASS_DEPTH = 5
 _DEEPEST_HEADING = 6
@@ -34,8 +32,6 @@ _RELATIONSHIP_KINDS = frozenset({"composition", "aggregation", "association"})
 _CLASS = re.compile(r"^([A-Z][A-Za-z0-9]+)((?:\s*<<[^>]+>>)*)(?:\s*:\s*(.+))?$")
 _BOLD_CLASS = re.compile(r"^\*\*([A-Z][A-Za-z0-9]+)\*\*$")
 _MODULE = re.compile(r"Module:\**\s*`([^`]+)`", re.I)
-_UML_OP = re.compile(r"^[+\-]\s*([A-Za-z_][A-Za-z0-9_]*)\((.*)\)\s*(?::\s*(.+))?$")
-_UML_PROP = re.compile(r"^[+\-]\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$")
 _IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _RETURN_TYPE = re.compile(
     r"^(void|string|number|bool|boolean|int|float|object|any|list|dict|str|None|Path)$"
@@ -48,7 +44,8 @@ _PROSE = re.compile(
 
 
 class SketchOoadClass(OoadClass):
-    """A class in the sketch notation: its heading, then a fence of its members."""
+    """A class in the sketch notation: its heading, then a fence of its members. It reads its own member lines and
+    writes them back."""
 
     def sketch_lines(self, depth: int) -> List[str]:
         marks = "".join(f" <<{item}>>" for item in self.stereotypes)
@@ -66,10 +63,101 @@ class SketchOoadClass(OoadClass):
             lines.extend([_FENCE, *members, _FENCE, ""])
         return lines
 
+    def merge(self, incoming: OoadClass) -> None:
+        """Take what a second card of the same class adds: members, bases, and stereotypes it does not have yet."""
+        seen_props = {member.name for member in self.properties}
+        for prop in incoming.properties:
+            if prop.name not in seen_props:
+                self.properties.append(prop)
+                seen_props.add(prop.name)
+        seen_ops = {member.name for member in self.operations}
+        for operation in incoming.operations:
+            if operation.name not in seen_ops:
+                self.operations.append(operation)
+                seen_ops.add(operation.name)
+        self.bases.extend(base for base in incoming.bases if base not in self.bases)
+        self.stereotypes.extend(stereotype for stereotype in incoming.stereotypes if stereotype not in self.stereotypes)
+        if incoming.intent and not self.intent:
+            self.intent = incoming.intent
+
+    def read_member(self, lines: list[str], index: int) -> int:
+        """The member written at lines[index] in the boxed notation, with the arrows and notes under it; the index
+        after them."""
+        stripped = lines[index]
+        nested = _Nest.taken(lines, index + 1)
+        tokens = stripped.replace("()", " ").replace("-->", " ").split()
+        if not tokens:
+            return nested.end
+        if stripped.endswith("()") or self._is_operation_line(tokens, nested.arrows):
+            operation = self._operation_from(tokens)
+            for callee in nested.arrows:
+                if callee not in operation.callees:
+                    operation.callees.append(callee)
+            for note in nested.notes:
+                operation.add_invariant(note)
+            self.operations.append(operation)
+            return nested.end
+        prop = Property(name=tokens[0])
+        for note in nested.notes:
+            prop.take_note(note)
+        self.properties.append(prop)
+        return nested.end
+
+    def read_uml_member(self, lines: list[str], index: int, owner: Operation | Property) -> int:
+        """The `+ name(args): type` member owner, then the arrows and notes under it; the index after them."""
+        if isinstance(owner, Operation):
+            self.operations.append(owner)
+        else:
+            self.properties.append(owner)
+        index += 1
+        while index < len(lines):
+            stripped = lines[index].strip()
+            if not stripped:
+                index += 1
+                continue
+            if _is_rule(stripped) or _BOLD_CLASS.match(stripped) or _uml_member(stripped) is not None:
+                break
+            if stripped.startswith("->"):
+                callee = stripped[2:].strip()
+                if callee and isinstance(owner, Operation) and callee not in owner.callees:
+                    owner.callees.append(callee)
+                index += 1
+                continue
+            if stripped.startswith("//"):
+                owner.add_invariant(stripped[2:].strip())
+                index += 1
+                continue
+            if re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", stripped):
+                owner.add_invariant(stripped)
+                index += 1
+                continue
+            break
+        return index
+
+    def _is_operation_line(self, tokens: list[str], arrows: list[str]) -> bool:
+        if arrows:
+            return True
+        if tokens[0] == self.name:
+            return True
+        return len(tokens) > 1
+
+    def _operation_from(self, tokens: list[str]) -> Operation:
+        if tokens[0] == self.name:
+            name, rest, return_type = tokens[0], tokens[1:], ""
+        elif len(tokens) >= 2 and _is_return_type(tokens[0]):
+            return_type, name, rest = tokens[0], tokens[1], tokens[2:]
+        else:
+            name, rest, return_type = tokens[0], tokens[1:], ""
+        operation = Operation(name=name, return_type=return_type)
+        for order, token in enumerate(rest, start=1):
+            if _IDENT.match(token):
+                operation.parameters.append(Parameter(name=token, sequential_order=order))
+        return operation
+
 
 class SketchModule(Module):
     """A module in the sketch notation: a `name/` heading, its own classes, then its nested modules, so each class
-    is read back under its module."""
+    is read back under its module. It reads the class cards written under its heading."""
 
     def load_module(self, source: Module) -> "SketchModule":
         return SketchModule(name=source.name, sequential_order=source.sequential_order)
@@ -85,9 +173,84 @@ class SketchModule(Module):
             lines.extend(nested.sketch_lines(depth + 1))
         return lines
 
+    def read_classes(self, lines: List[str]) -> None:
+        """The class cards written under this module's heading; a second card of a class it holds adds to it."""
+        for oclass in self._classes_in(textwrap.dedent("\n".join(lines))):
+            existing = next((known for known in self.classes if known.name == oclass.name), None)
+            if existing is None:
+                self.classes.append(oclass)
+                continue
+            existing.merge(oclass)
+
+    def _classes_in(self, text: str) -> list[SketchOoadClass]:
+        if any(_BOLD_CLASS.match(raw.strip()) for raw in text.splitlines()):
+            return self._uml_classes(text)
+        lines = [raw.strip() for raw in text.splitlines() if raw.strip() and raw.strip() != "Fidelity:"]
+        classes: list[SketchOoadClass] = []
+        current: SketchOoadClass | None = None
+        index = 0
+        while index < len(lines):
+            stripped = lines[index]
+            if stripped in {"----", "```"} or stripped.startswith("```"):
+                current = None
+                index += 1
+                continue
+            if stripped.startswith("//") or stripped.startswith("#"):
+                index += 1
+                continue
+            if current is not None and _is_prose(stripped):
+                current = None
+                index += 1
+                continue
+            headed = _CLASS.match(stripped)
+            if headed and (current is None or headed.group(1) != current.name):
+                current = SketchOoadClass(name=headed.group(1), sequential_order=len(classes) + 1)
+                current.stereotypes = marks_in(headed.group(2) or "")
+                current.bases = [base.strip() for base in split_top_level(headed.group(3) or "") if base.strip()]
+                classes.append(current)
+                index += 1
+                continue
+            if current is None:
+                index += 1
+                continue
+            index = current.read_member(lines, index)
+        return classes
+
+    def _uml_classes(self, text: str) -> list[SketchOoadClass]:
+        """`### **Session**` plus `+ name(args): type` lines. Indented bold labels stay notes."""
+        classes: list[SketchOoadClass] = []
+        current: SketchOoadClass | None = None
+        lines = text.splitlines()
+        index = 0
+        while index < len(lines):
+            raw = lines[index]
+            stripped = raw.strip()
+            if not stripped or stripped.startswith(("//", "#")) or _is_rule(stripped):
+                index += 1
+                continue
+            indent = len(raw) - len(raw.lstrip(" "))
+            heading = _BOLD_CLASS.match(stripped)
+            if heading and indent == 0:
+                current = SketchOoadClass(name=heading.group(1), sequential_order=len(classes) + 1)
+                classes.append(current)
+                index += 1
+                continue
+            if current is None or indent == 0:
+                index += 1
+                continue
+            member = _uml_member(stripped)
+            if member is not None:
+                index = current.read_uml_member(lines, index, member)
+                continue
+            if current.operations and re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", stripped):
+                current.operations[-1].add_invariant(stripped)
+            index += 1
+        return classes
+
 
 class SketchCleanEngineeringModel(CleanEngineeringModel):
-    lens = _LENS
+    # The Clean Engineering section of a sketch, opened by either of its headings; the practice holds this lens.
+    lens = SketchLens(("ce:", _SECTION_TITLE))
 
     def load_module(self, source: Module) -> SketchModule:
         return SketchModule(name=source.name, sequential_order=source.sequential_order)
@@ -96,8 +259,7 @@ class SketchCleanEngineeringModel(CleanEngineeringModel):
         """Read the sketch's clean engineering section into this model's own modules, and return it."""
         declared = _MODULE.search(text)
         self.name = declared.group(1) if declared else "KnowledgeGraph"
-        body = SketchOutline(text, _NESTING_INDENT).body_for(self.lens)
-        self.modules = _modules_in(body, self.name)
+        self.modules = self._modules_in(SketchOutline(text, _NESTING_INDENT).body_for(self.lens))
         return self
 
     def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
@@ -114,6 +276,31 @@ class SketchCleanEngineeringModel(CleanEngineeringModel):
         for module in self.modules:
             lines.extend(module.sketch_lines(_TOP_MODULE_DEPTH))
         return lines
+
+    def _modules_in(self, body: str) -> List[Module]:
+        """Each `name/` line opens a module, nested under the one above it when written further in. Classes written
+        before any module line belong to a module named after the sketch."""
+        loose = SketchModule(name=self.name, sequential_order=1)
+        top: List[Module] = []
+        open_modules: List[tuple] = []
+        owner = loose
+        section: List[str] = []
+        for raw in body.splitlines():
+            heading = _MODULE_HEADING.match(raw.strip())
+            if heading is None:
+                section.append(raw)
+                continue
+            owner.read_classes(section)
+            section = []
+            indent = len(raw) - len(raw.lstrip(" "))
+            while open_modules and open_modules[-1][0] >= indent:
+                open_modules.pop()
+            siblings = open_modules[-1][1].modules if open_modules else top
+            owner = SketchModule(name=heading.group(1), sequential_order=len(siblings) + 1)
+            siblings.append(owner)
+            open_modules.append((indent, owner))
+        owner.read_classes(section)
+        return ([loose] if loose.classes else []) + top
 
 
 def _property_notes(prop: Property) -> List[str]:
@@ -143,7 +330,7 @@ def _with_section_replaced(previous: str, section: List[str]) -> str:
 
 def _section_span(lines: List[str]) -> Optional[tuple]:
     """Where the clean engineering section starts in a sketch and the line where the next peer heading ends it."""
-    lens = _LENS
+    lens = SketchCleanEngineeringModel.lens
     first: Optional[int] = None
     depth = 0
     fenced = False
@@ -161,254 +348,43 @@ def _section_span(lines: List[str]) -> Optional[tuple]:
     return (first, len(lines)) if first is not None else None
 
 
-def _modules_in(body: str, loose_name: str) -> List[Module]:
-    """Each `name/` line opens a module, nested under the one above it when written further in.
-    Classes written before any module line belong to a module named after the sketch."""
-    loose = SketchModule(name=loose_name, sequential_order=1)
-    top: List[Module] = []
-    open_modules: List[tuple] = []
-    owner = loose
-    section: List[str] = []
-    for raw in body.splitlines():
-        heading = _MODULE_HEADING.match(raw.strip())
-        if heading is None:
-            section.append(raw)
-            continue
-        _add_classes(owner, section)
-        section = []
-        indent = len(raw) - len(raw.lstrip(" "))
-        while open_modules and open_modules[-1][0] >= indent:
-            open_modules.pop()
-        siblings = open_modules[-1][1].modules if open_modules else top
-        owner = SketchModule(name=heading.group(1), sequential_order=len(siblings) + 1)
-        siblings.append(owner)
-        open_modules.append((indent, owner))
-    _add_classes(owner, section)
-    return ([loose] if loose.classes else []) + top
-
-
-def _add_classes(module: Module, lines: List[str]) -> None:
-    for oclass in _classes_in(textwrap.dedent("\n".join(lines))):
-        existing = next((known for known in module.classes if known.name == oclass.name), None)
-        if existing is None:
-            module.classes.append(oclass)
-            continue
-        _merge_class(existing, oclass)
-
-
-def _merge_class(into: OoadClass, incoming: OoadClass) -> None:
-    seen_props = {member.name for member in into.properties}
-    for prop in incoming.properties:
-        if prop.name not in seen_props:
-            into.properties.append(prop)
-            seen_props.add(prop.name)
-    seen_ops = {member.name for member in into.operations}
-    for operation in incoming.operations:
-        if operation.name not in seen_ops:
-            into.operations.append(operation)
-            seen_ops.add(operation.name)
-    for base in incoming.bases:
-        if base not in into.bases:
-            into.bases.append(base)
-    for stereotype in incoming.stereotypes:
-        if stereotype not in into.stereotypes:
-            into.stereotypes.append(stereotype)
-    if incoming.intent and not into.intent:
-        into.intent = incoming.intent
-
-
-def _classes_in(text: str) -> list[OoadClass]:
-    if any(_BOLD_CLASS.match(raw.strip()) for raw in text.splitlines()):
-        return _uml_classes(text)
-    lines = [raw.strip() for raw in text.splitlines() if raw.strip() and raw.strip() != "Fidelity:"]
-    classes: list[OoadClass] = []
-    current: OoadClass | None = None
-    index = 0
-    while index < len(lines):
-        stripped = lines[index]
-        if stripped in {"----", "```"} or stripped.startswith("```"):
-            current = None
-            index += 1
-            continue
-        if stripped.startswith("//") or stripped.startswith("#"):
-            index += 1
-            continue
-        if current is not None and _is_prose(stripped):
-            current = None
-            index += 1
-            continue
-        headed = _CLASS.match(stripped)
-        if headed and (current is None or headed.group(1) != current.name):
-            current = SketchOoadClass(name=headed.group(1), sequential_order=len(classes) + 1)
-            current.stereotypes = marks_in(headed.group(2) or "")
-            current.bases = [base.strip() for base in split_top_level(headed.group(3) or "") if base.strip()]
-            classes.append(current)
-            index += 1
-            continue
-        if current is None:
-            index += 1
-            continue
-        index = _add_member(current, lines, index)
-    return classes
-
-
 def _is_rule(stripped: str) -> bool:
     return len(stripped) >= 4 and set(stripped) <= {"-"}
 
 
-def _uml_classes(text: str) -> list[OoadClass]:
-    """`### **Session**` plus `+ name(args): type` lines. Indented bold labels stay notes."""
-    classes: list[OoadClass] = []
-    current: OoadClass | None = None
-    lines = text.splitlines()
-    index = 0
-    while index < len(lines):
-        raw = lines[index]
-        stripped = raw.strip()
-        if not stripped or stripped.startswith(("//", "#")):
-            index += 1
-            continue
-        if _is_rule(stripped):
-            index += 1
-            continue
-        indent = len(raw) - len(raw.lstrip(" "))
-        heading = _BOLD_CLASS.match(stripped)
-        if heading and indent == 0:
-            current = SketchOoadClass(name=heading.group(1), sequential_order=len(classes) + 1)
-            classes.append(current)
-            index += 1
-            continue
-        if current is None or indent == 0:
-            index += 1
-            continue
-        operation = _UML_OP.match(stripped)
-        prop = None if operation else _UML_PROP.match(stripped)
-        if operation or prop:
-            index = _add_uml_member(current, lines, index, operation, prop)
-            continue
-        if current.operations and re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", stripped):
-            current.operations[-1].add_invariant(stripped)
-        index += 1
-    return classes
-
-
-def _add_uml_member(oclass, lines, index, operation_match, prop_match) -> int:
-    if operation_match:
-        operation = Operation(name=operation_match.group(1), return_type=operation_match.group(3) or "")
-        for order, part in enumerate(split_top_level(operation_match.group(2) or ""), start=1):
-            name, _, hint = part.partition(":")
-            hint = hint.split("=")[0].strip()
-            operation.parameters.append(Parameter(name=name.strip(), sequential_order=order, type_hint=hint))
-        oclass.operations.append(operation)
-        owner = operation
-    else:
-        owner = Property(name=prop_match.group(1), type_hint=prop_match.group(2).strip())
-        oclass.properties.append(owner)
-    index += 1
-    while index < len(lines):
-        stripped = lines[index].strip()
-        if not stripped:
-            index += 1
-            continue
-        if _is_rule(stripped) or _BOLD_CLASS.match(stripped) or _UML_OP.match(stripped) or _UML_PROP.match(stripped):
-            break
-        if stripped.startswith("->"):
-            callee = stripped[2:].strip()
-            if callee and isinstance(owner, Operation) and callee not in owner.callees:
-                owner.callees.append(callee)
-            index += 1
-            continue
-        if stripped.startswith("//"):
-            owner.add_invariant(stripped[2:].strip())
-            index += 1
-            continue
-        if re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", stripped):
-            owner.add_invariant(stripped)
-            index += 1
-            continue
-        break
-    return index
-
-
-def _add_member(oclass: OoadClass, lines: list[str], index: int) -> int:
-    stripped = lines[index]
-    nested = _take_nest(lines, index + 1)
-    tokens = stripped.replace("()", " ").replace("-->", " ").split()
-    if not tokens:
-        return nested.end
-    if stripped.endswith("()") or _is_operation_line(oclass, tokens, nested.arrows):
-        operation = _operation_from(oclass, tokens)
-        for callee in nested.arrows:
-            if callee not in operation.callees:
-                operation.callees.append(callee)
-        for note in nested.notes:
-            operation.add_invariant(note)
-        oclass.operations.append(operation)
-        return nested.end
-    prop = Property(name=tokens[0])
-    for note in nested.notes:
-        prop.take_note(note)
-    oclass.properties.append(prop)
-    return nested.end
+def _uml_member(line: str) -> Operation | Property | None:
+    """The operation or typed property a `+` or `-` member line writes; none for any other line."""
+    if not line.startswith(("+", "-")):
+        return None
+    signature = line[1:].strip()
+    return Operation.from_signature(signature) or Property.from_signature(signature)
 
 
 class _Nest:
+    """The `->` arrows and `//` notes written under one member, and the line after them."""
+
     def __init__(self, end: int, arrows: list[str], notes: list[str]) -> None:
         self.end = end
         self.arrows = arrows
         self.notes = notes
 
-
-def _take_nest(lines: list[str], start: int) -> _Nest:
-    arrows: list[str] = []
-    notes: list[str] = []
-    index = start
-    while index < len(lines):
-        stripped = lines[index]
-        if stripped in {"----", "```"} or stripped.startswith("```"):
-            break
-        if stripped.startswith("->"):
-            callee = stripped[2:].strip()
-            if callee:
-                arrows.append(callee)
+    @classmethod
+    def taken(cls, lines: list[str], start: int) -> "_Nest":
+        arrows: list[str] = []
+        notes: list[str] = []
+        index = start
+        while index < len(lines):
+            stripped = lines[index]
+            if stripped.startswith("->"):
+                callee = stripped[2:].strip()
+                if callee:
+                    arrows.append(callee)
+            elif stripped.startswith("//"):
+                notes.append(stripped[2:].strip())
+            else:
+                break
             index += 1
-            continue
-        if stripped.startswith("//"):
-            notes.append(stripped[2:].strip())
-            index += 1
-            continue
-        if stripped.startswith("#") or _is_prose(stripped) or _CLASS.match(stripped):
-            break
-        break
-    return _Nest(index, arrows, notes)
-
-
-def _is_operation_line(oclass: OoadClass, tokens: list[str], arrows: list[str]) -> bool:
-    if arrows:
-        return True
-    if tokens[0] == oclass.name:
-        return True
-    return len(tokens) > 1
-
-
-def _operation_from(oclass: OoadClass, tokens: list[str]) -> Operation:
-    if tokens[0] == oclass.name:
-        name = tokens[0]
-        rest = tokens[1:]
-        return_type = ""
-    elif len(tokens) >= 2 and _is_return_type(tokens[0]):
-        return_type = tokens[0]
-        name = tokens[1]
-        rest = tokens[2:]
-    else:
-        return_type = ""
-        name = tokens[0]
-        rest = tokens[1:]
-    operation = Operation(name=name, return_type=return_type)
-    for order, token in enumerate(rest, start=1):
-        if _IDENT.match(token):
-            operation.parameters.append(Parameter(name=token, sequential_order=order))
-    return operation
+        return cls(index, arrows, notes)
 
 
 def _is_return_type(token: str) -> bool:

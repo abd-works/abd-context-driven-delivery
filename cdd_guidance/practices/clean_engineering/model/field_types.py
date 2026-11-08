@@ -7,6 +7,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict
 
+# How strongly each kind of relationship binds its classes: where two are drawn between the same classes, the stronger
+# one stands.
+RELATIONSHIP_STRENGTH = {"inheritance": 4, "composition": 3, "aggregation": 2, "association": 1, "relative": 1, "dependency": 0}
+
 
 @dataclass
 class Relationship:

@@ -6,13 +6,13 @@ Callers do not construct a format class directly. `Bdd.render` (through `Practic
 
 ```
 model = PythonBddModel().parse(text)
-markdown = MarkdownBddModel().render(model)
+markdown = BddModel().render(model)
 ```
 
 # practices/bdd/model
 
 - **Purpose:** Keep observable behaviour as one describe tree — descriptions, contexts, observations — so a sketch and a spec file stay the same hierarchy every later fidelity reads, and so the graph can check BDD rules against facts each node carries.
-- **Seam (terms):** BddModel, MarkdownBddModel, SketchBddModel, CodeBddModel, PythonBddModel, TypeScriptBddModel, GraphBddModel, BehaviorNode, Description, Context, Observation, UnreadableSpec
+- **Seam (terms):** BddModel, SketchBddModel, CodeBddModel, PythonBddModel, TypeScriptBddModel, GraphBddModel, BehaviorNode, Description, Context, Observation, UnreadableSpec
 - **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*, *Node*, *Edge*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*), harness/guidance (*SketchLens*)
 
 *ModelNode*, *ModelChildren*, *CodeBody*, *CodeLanguage*, *WrittenBlock*, and *CallGraphEntry* are owned by the modules above; this model only uses them.
@@ -36,7 +36,6 @@ Every description, context, and observation. It knows its own source lines and t
 + private_probe: dict
 	// the first line that asserts on, reads, or calls a private member; empty when there is none
 ----
-+ take_code_from(source: BehaviorNode): None
 	// keep written and setup, so a copy in another format can still write them back
 + setup_reach: dict
 	// what its lines after its opening line reach, up to its first child: member names, those it only reads, and tools called by name
@@ -52,7 +51,6 @@ Every description, context, and observation. It knows its own source lines and t
 + observations: ModelChildren[Observation]
 	// spec code often puts it straight under the outermost describe
 ----
-+ clone(): Description
 	// a copy with its contexts and observations
 
 ## Context : BehaviorNode
@@ -63,7 +61,6 @@ Every description, context, and observation. It knows its own source lines and t
 + contexts: ModelChildren[Context]
 + observations: ModelChildren[Observation]
 ----
-+ clone(): Context
 
 ## Observation : BehaviorNode
 
@@ -76,9 +73,7 @@ Every description, context, and observation. It knows its own source lines and t
 + surface_lines: list[str]
 	// the `->` lines that name what the observation calls first
 ----
-+ take_code_from(source: Observation): None
 	// also keeps body
-+ clone(): Observation
 
 ## BddModel : ModelNode
 
@@ -111,10 +106,6 @@ The spec, and the sketch format: an indented describe tree, with an observation'
 + body_at(path: tuple): CodeBody
 + written_at(path: tuple): WrittenBlock | None
 	// path is the names from the description down; empty or None when this spec has no such block
-
-## MarkdownBddModel : BddModel
-
-The `markdown` format. It reads and writes the same indented tree as *BddModel*.
 
 ## SketchBddModel : BddModel
 
@@ -183,7 +174,7 @@ The `graph` format, read only: a saved knowledge graph read into descriptions wh
 ----
 + parse(text: str): GraphBddModel
 	// the behaviour tree is the graph's bdd nodes in each spec file's order
-	// each observation's call graph starts at what its invokes edges name and follows the Clean Engineering model's interactions (model_members), cut at a repeat or six calls deep
+	// each observation's call graph starts at what its invokes edges name and follows the interactions of the member the Clean Engineering practice's model documents describe (`described_member`), cut at a repeat or six calls deep
 	-> Node.fact
 	-> Edge.fact
 

@@ -6,7 +6,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from expects import contain, equal, expect
+from expects import contain, equal, expect, have_key
 from mamba import after, before, context, description, it
 
 _REPO = Path(__file__).resolve().parents[4]
@@ -72,12 +72,14 @@ with description("a saved graph of a spec and the code it tests"):
 
     with context("with a Clean Engineering model beside the code"):
         with it("should give the code's operation the model's interactions"):
-            members = json.loads(self.saved)["practices"]["clean_engineering"]["root_facts"]["model_members"]
-            expect(members["Cart.add"]["interactions"]).to(equal(["Ledger.record"]))
+            expect(self.clean.described_member("Cart", "add").callees).to(equal(["Ledger.record"]))
 
         with it("should keep every member the model describes, the ones with no code too"):
-            members = json.loads(self.saved)["practices"]["clean_engineering"]["root_facts"]["model_members"]
-            expect(members["Ledger.record"]["model_returns"]).to(equal("str"))
+            expect(self.clean.described_member("Ledger", "record").return_type).to(equal("str"))
+
+        with it("should save no copy of the model's members beside the code's nodes"):
+            root_facts = json.loads(self.saved)["practices"]["clean_engineering"]["root_facts"]
+            expect(root_facts).not_to(have_key("model_members"))
 
     with context("that is rendered as a bdd realization"):
         with before.all:

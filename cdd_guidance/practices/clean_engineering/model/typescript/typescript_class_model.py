@@ -80,4 +80,4 @@ class TypeScriptModule(CodeModule):
 class TypeScriptCleanEngineeringModel(BraceCleanEngineeringModel):
     language = TYPESCRIPT
     module_type = TypeScriptModule
-    suffixes = (".ts", ".tsx")
+    suffixes = language.suffixes

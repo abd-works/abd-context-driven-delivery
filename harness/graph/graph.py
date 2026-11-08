@@ -31,7 +31,6 @@ if TYPE_CHECKING:
 
 # File endings and the channel a file with that ending is written in; any other file is read as part of the graph.
 # Languages a node's file can be in whose rules every practice already checks; any other names a channel.
-_CODE_LANGUAGES = frozenset({"graph", "python", "typescript", "javascript"})
 _FILE_LANGUAGES = (((".ts", ".tsx"), "typescript"), ((".js", ".jsx", ".mjs"), "javascript"), (".py", "python"), ((".drawio", ".xml"), "drawio"))
 # A refresh reads files a practice keeps in `.context` (model documents, bounded contexts, story maps); every other
 # skipped folder, such as a session's reports in `.sessions`, holds nothing a practice reads.
@@ -505,6 +504,15 @@ class Node:
             node = node.parent or node.graph.direct_parent(node)
         return default
 
+    def merge_fact(self, key: str, values: list) -> None:
+        """Add values to a list fact this node keeps, each once, sorted: on its parsed object's own field when the
+        object saves that fact, else among the facts the node keeps itself."""
+        merged = sorted(set(self.get_fact(key) or []) | set(values))
+        if key in self.graph_facts:
+            setattr(self, key, merged)
+        else:
+            self.set_fact(key, merged)
+
     def has_fact(self, key: str) -> bool:
         """True when this node itself records the fact."""
         return self._holds_attribute(key) or key in self.data
@@ -542,13 +550,9 @@ class Node:
         return [fidelity for fidelity in self.practice.fidelities if fidelity.name in names]
 
     def rule_checks(self) -> dict:
-        """The checks this node's rules can run, by slug: its practice's own, those of the practice it extends and of
-        each pattern overlay its graph applies, and those of the language its file is written in."""
-        checks = dict(self.practice.checks())
-        language = self.file_language
-        if language and language not in _CODE_LANGUAGES:
-            checks.update(self.practice.language_checks(language))
-        return checks
+        """The checks this node's rules can run, by slug: its practice's own, and those of the practice it extends and
+        of each pattern overlay its graph applies."""
+        return dict(self.practice.checks())
 
     def applying_rule_types(self) -> set[str]:
         """The node types whose checks apply to this node: its own, and the type of the extended practice it is
@@ -1064,8 +1068,8 @@ class Graph:
     practice is one of them (``node.practice``). It gives each practice its part of the graph, a *PracticeNodes* made
     once and kept, which holds the practice's nodes, edges, and root (``practice.in_graph.nodes("Story")``); the graph
     aggregates those parts. A session gives its graph the
-    session's own practices, the same objects its actions work with; a graph no session holds, such as the one a parser
-    builds its model objects in, makes a set of its own from the catalogue. The graph changes only when a call asks:
+    session's own practices, the same objects its actions work with; a graph no session holds makes a set of its own from the
+    catalogue; a model object made apart from any graph joins one when a graph adopts it. The graph changes only when a call asks:
     ``load_working_copy`` and ``load_files`` read a folder or files, and ``refresh`` reads again exactly the files an
     action wrote."""
 

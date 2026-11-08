@@ -8,12 +8,11 @@ import re
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry, Point, Segment, segments_cross
+
 # A segment counts as horizontal or vertical when it moves less than this many pixels across.
 STRAIGHT_TOLERANCE = 1
 
-Point = tuple[float, float]
-Segment = tuple[Point, Point]
-Box = tuple[float, float, float, float]
 
 
 class DrawioPage:
@@ -27,7 +26,7 @@ class DrawioPage:
         self.cells = list(root.iter('mxCell'))
         self.vertices = [cell for cell in self.cells if cell.get('vertex') == '1']
         self.edges = [cell for cell in self.cells if cell.get('edge') == '1']
-        self.boxes: dict[str, Box] = {}
+        self.boxes: dict[str, Geometry] = {}
         self.class_names: dict[str, str] = {}
         for cell in self.vertices:
             name_in_cell = class_name_in(cell.get('value', ''))
@@ -123,19 +122,20 @@ def class_name_in(value: str) -> str | None:
     """The class name in a class cell's title; a stereotype or ` : Base` beside it is not part of the name."""
     if not value:
         return None
-    match = re.search('<b[^>]*>(.*?)</b>', html.unescape(value), re.IGNORECASE | re.DOTALL)
+    # `<b>` or `<b style=...>`, never the `<br/>` that ends a stereotype line above the name.
+    match = re.search(r'<b(?:\s[^>]*)?>(.*?)</b>', html.unescape(value), re.IGNORECASE | re.DOTALL)
     if not match:
         return None
     name = re.sub('\\s+', ' ', match.group(1)).strip()
     return name.split(' : ')[0].strip() or None
 
 
-def cell_box(cell: ET.Element) -> Box | None:
-    """(x, y, width, height) from a cell's mxGeometry, or None when the cell has none."""
+def cell_box(cell: ET.Element) -> Geometry | None:
+    """The box a cell's mxGeometry places it in, or None when the cell has none."""
     geometry = cell.find('mxGeometry')
     if geometry is None:
         return None
-    return (float(geometry.get('x', '0')), float(geometry.get('y', '0')), float(geometry.get('width', '0')), float(geometry.get('height', '0')))
+    return Geometry(float(geometry.get('x', '0')), float(geometry.get('y', '0')), float(geometry.get('width', '0')), float(geometry.get('height', '0')))
 
 
 def edge_kind(style: str) -> str:
@@ -178,28 +178,17 @@ def style_number(style: str, key: str) -> float | None:
     return float(match.group(1)) if match else None
 
 
-def box_center(box: Box) -> Point:
-    x, y, width, height = box
-    return (x + width / 2, y + height / 2)
-
-
-def anchor_point(style: str, box: Box, end: str) -> Point:
+def anchor_point(style: str, box: Geometry, end: str) -> Point:
     """Where one end of an edge meets its box: the exit or entry anchor in the style, else the box centre."""
     x, y, width, height = box
     fraction_x = style_number(style, f'{end}X')
     fraction_y = style_number(style, f'{end}Y')
     if fraction_x is not None and fraction_y is not None:
         return (x + width * fraction_x, y + height * fraction_y)
-    return box_center(box)
+    return box.center
 
 
-def segments_cross(first: Segment, second: Segment) -> bool:
-    """True when two straight segments cross each other."""
-    (a, b), (c, d) = first, second
-    return _turns_left(a, c, d) != _turns_left(b, c, d) and _turns_left(a, b, c) != _turns_left(a, b, d)
-
-
-def segment_hits_box(segment: Segment, box: Box, margin: float) -> bool:
+def segment_hits_box(segment: Segment, box: Geometry, margin: float) -> bool:
     """True when the segment cuts the box grown by margin on every side, or starts inside it."""
     start = segment[0]
     left, top = box[0] - margin, box[1] - margin
@@ -208,10 +197,6 @@ def segment_hits_box(segment: Segment, box: Box, margin: float) -> bool:
     if any(segments_cross(segment, (corners[index], corners[(index + 1) % 4])) for index in range(4)):
         return True
     return left <= start[0] <= right and top <= start[1] <= bottom
-
-
-def _turns_left(a: Point, b: Point, c: Point) -> bool:
-    return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
 
 
 def _orthogonal_through(points: list[Point]) -> list[Segment]:

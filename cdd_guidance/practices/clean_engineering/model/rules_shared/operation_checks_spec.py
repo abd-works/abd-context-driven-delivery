@@ -15,12 +15,11 @@ from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
     assert_rule_pair,
     ce_rule_by_slug,
     practice_from_source,
-    violations_for_rule,
 )
 
 
 def _hits(slug: str, source: str, lang: str = "python") -> list[str]:
-    return violations_for_rule(ce_rule_by_slug(slug), *practice_from_source(source, lang=lang))
+    return practice_from_source(source, lang=lang).hits(ce_rule_by_slug(slug))
 
 
 def _long_body(lines: int, indent: str = "    ") -> str:

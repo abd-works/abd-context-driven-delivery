@@ -61,7 +61,7 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 + PracticeNodes.rule_labels: list[str]
 	// practice.NodeType.slug, with the owning pattern in front
 + PracticeNodes.add(node, node_id, file, start_line, end_line): Node
-	// the node practice already calls node_id when there is one; else release it from the throwaway graph its parser built it in, place it, hold it
+	// the node practice already calls node_id when there is one; else release it from any graph it was held in, place it, hold it
 + PracticeNodes.add_named(type, node_id, name, source): Node
 + PracticeNodes.hold(node): None
 	// keep the node among its practice's nodes, by type and id
@@ -333,7 +333,6 @@ What one practice gives the graph is declared on its own `PracticeGuidance` clas
 + graph_checks(): dict[str, PracticeGraphRule]
 + own_graph_checks(): dict[str, PracticeGraphRule]
 	// -> rules_in(f"{package}.rules"): the module's BY_SLUG, else its RULES
-+ language_checks(language): dict[str, PracticeGraphRule]
 
 `PracticeGuidance.checks()` adds each active overlay's `rules_for(practice)` (through `practice.in_graph.overlay_checks`) to the practice's own; `node.rules` keeps those whose `node_types` hold the node's type, its file language's, or the Clean Engineering type a pattern's schema anchors it to.
 
@@ -463,7 +462,7 @@ edge:      { parent, child, kind, order, display }
 violation: { rule, practice, node_id, subject, location, line, end_line, message, severity, source }
 ```
 
-`root_facts` holds the practice root's facts, such as Clean Engineering's `model_members`. A document of any other `version` is `SavedGraphOutdated`: the loader reads the folder again, and a reader of its violations is told to load the working copy again.
+`root_facts` holds the practice root's facts, such as a file another practice could not read. A document of any other `version` is `SavedGraphOutdated`: the loader reads the folder again, and a reader of its violations is told to load the working copy again.
 
 ## What a practice declares on its PracticeGuidance
 
@@ -495,7 +494,7 @@ Operation   clean_engineering:Operation:{file}:{name}:{class} facts: parameters,
 Parameter   clean_engineering:Parameter:{file}:{name}:{class}.{operation}
 ```
 
-A file's top-level functions are operations of the `_module` class its language model gives that file. The root holds `model_members`: every member the model documents describe, by `Class.member`.
+A file's top-level functions are operations of the `_module` class its language model gives that file. The Clean Engineering practice keeps the class model each model document describes and answers `described_member(owner, name)`; the graph holds no copy of those members.
 
 ## Edges
 
@@ -514,7 +513,7 @@ returns      relationship  Operation -> OoadClass its return type names
 
 ## Rules
 
-`cdd_guidance.practices.clean_engineering.rules`, plus `model.drawio.rules` for nodes read from a `.drawio` file.
+`cdd_guidance.practices.clean_engineering.rules`.
 
 # DDD
 

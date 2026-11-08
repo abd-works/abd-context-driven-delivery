@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional, Tuple
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
+from cdd_guidance.practices.clean_engineering.model.type_refs import pascal_type_names
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     DiagramClass,
     DiagramModule,
@@ -61,6 +62,15 @@ class DrawIOClass(DiagramClass, DrawioVertex):
 
     fill_color = ''
     owning_module = ''
+
+    def take_arrow(self, target: str, kind: str) -> None:
+        """An arrow of kind drawn to target is the property whose type names the target. Inheritance and a dependency
+        stand for no property."""
+        if (kind or "").lower() in {"inheritance", "dependency"}:
+            return
+        for prop in self.properties:
+            if target in pascal_type_names(prop.type_hint or ""):
+                prop.take_drawn_kind(kind)
 
     def width(self) -> int:
         """Wide enough that no line wraps, because the height counts one printed line per member."""

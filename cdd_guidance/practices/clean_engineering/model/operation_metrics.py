@@ -122,6 +122,27 @@ class SourceText:
     def text(self) -> str:
         return self._text
 
+    def closing_bracket(self, open_at: int, opener: str = "{", closer: str = "}") -> int | None:
+        """The index of the bracket that closes the one at open_at; None when the text never closes it. Every reader
+        of brace-language code asks this one matcher."""
+        depth = 0
+        for index in range(open_at, len(self._text)):
+            if self._text[index] == opener:
+                depth += 1
+            elif self._text[index] == closer:
+                depth -= 1
+                if depth == 0:
+                    return index
+        return None
+
+    def braced(self, open_at: int) -> str | None:
+        """The text inside the `{` at open_at and the `}` that closes it; None when open_at is no `{` or nothing
+        closes it."""
+        if open_at >= len(self._text) or self._text[open_at] != "{":
+            return None
+        close = self.closing_bracket(open_at)
+        return self._text[open_at + 1 : close] if close is not None else None
+
     def control_flow_depth(self) -> int:
         """The deepest nesting of if/for/while, by indentation or by control-flow braces, whichever is deeper."""
         stack: list[int] = []
@@ -146,7 +167,7 @@ class SourceText:
     def swallows_exceptions(self) -> bool:
         """An empty catch, or one that hands back a fallback value without throwing again."""
         for match in _CATCH.finditer(self._text):
-            catch_body = self._brace_body(match.end() - 1)
+            catch_body = self.braced(match.end() - 1)
             if catch_body is None:
                 continue
             stripped = catch_body.strip()
@@ -240,20 +261,6 @@ class SourceText:
     def hits(self, pattern: re.Pattern[str]) -> list[list]:
         """[line, matched code] for each match of pattern."""
         return [[self.line_of(match.start()), match.group(0).strip()] for match in pattern.finditer(self._text)]
-
-    def _brace_body(self, open_index: int) -> str | None:
-        text = self._text
-        if open_index >= len(text) or text[open_index] != "{":
-            return None
-        depth = 0
-        for index in range(open_index, len(text)):
-            if text[index] == "{":
-                depth += 1
-            elif text[index] == "}":
-                depth -= 1
-                if depth == 0:
-                    return text[open_index + 1 : index]
-        return None
 
     def _brace_depth(self) -> int:
         """Count only the blocks control flow opens: JSX containers, object literals and arrow bodies nest no logic."""
