@@ -1,3 +1,4 @@
+# <<Entity>>
 class Cart:
     def add(self):
         return self._hide()
@@ -6,6 +7,7 @@ class Cart:
         return None
 
 
+# <<Entity>>
 class Other:
     def poke(self, cart: Cart):
         return cart._hide()

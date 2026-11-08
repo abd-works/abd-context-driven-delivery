@@ -136,7 +136,7 @@ class MarkdownOoadClass(OoadClass):
                 continue
             lines.append(self._public_line(operation.render()))
             lines.extend(self._notes_under(operation.callees, operation.invariant_lines()))
-        lines.extend(item.line() for item in self.dependencies)
+        lines.extend(line for item in self.dependencies for line in item.lines())
         return lines
 
     def _constructor_line(self, constructors: List[Operation]) -> str:
@@ -209,8 +209,10 @@ class MarkdownOoadClass(OoadClass):
     def read_body(self, body: str) -> None:
         """Read this class's card body: its intent, its constructor, its properties and operations, and the
         dependencies it names."""
-        dependencies = [found for found in map(Relationship.read_line, body.splitlines()) if found is not None]
-        body = "\n".join(line for line in body.splitlines() if Relationship.read_line(line) is None)
+        lines = body.splitlines()
+        first_dependency = next((index for index, line in enumerate(lines) if Relationship.read_line(line)), len(lines))
+        dependencies = Relationship.read_lines(lines[first_dependency:])
+        body = "\n".join(lines[:first_dependency])
         parts6 = re.split(r"(?m)^-{6}\s*$", body, maxsplit=1)
         pre6 = parts6[0] if parts6 else ""
         post6 = parts6[1] if len(parts6) > 1 else ""

@@ -14,6 +14,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import Clea
 from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import (  # noqa: E402
     JavaScriptCleanEngineeringModel,
 )
+from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel  # noqa: E402
 from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel  # noqa: E402
 from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import (  # noqa: E402
     TypeScriptCleanEngineeringModel,
@@ -126,3 +127,15 @@ with description("a class whose doc comment names its module path and a dependen
         with it("should keep the stereotypes and intent"):
             oclass = _kept_cart(TypeScriptCleanEngineeringModel())
             expect((oclass.stereotypes, oclass.intent)).to(equal((["Aggregate Root", "Entity"], "A shopper's cart.")))
+
+    with context("written as markdown and read back"):
+        with it("should keep the dependency's label and details"):
+            dependency = _kept_cart(MarkdownCleanEngineeringModel()).dependencies[0]
+            expect((dependency.target, dependency.label, dependency.details)).to(
+                equal(("Product", "Customer/Supplier", {"direction": "downstream", "crosses": "product identity"}))
+            )
+
+        with it("should keep a dependency with no details as it was"):
+            expect([item.details for item in _kept_cart(MarkdownCleanEngineeringModel()).dependencies]).to(
+                equal([{"direction": "downstream", "crosses": "product identity"}, {}])
+            )

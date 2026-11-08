@@ -76,6 +76,17 @@ with description("classes compared across the graph"):
                 },
             )
 
+        with it("should accept a failure that keeps the name of what it failed on, for its message"):
+            files = {
+                "tools/action.py": "class Action:\n    name: str\n",
+                "tools/errors.py": (
+                    "class ToolError(Exception):\n    pass\n\n\n"
+                    "class AgentToolValidationError(ToolError):\n    def __init__(self, action_name: str) -> None:\n"
+                    "        self.action_name = action_name\n"
+                ),
+            }
+            expect(_hits("do-not-invent-parallel-object-models", files)).to(equal([]))
+
         with it("should flag a dict holding one value per member, keyed by the member's name"):
             assert_files_rule_pair(
                 "do-not-invent-parallel-object-models",

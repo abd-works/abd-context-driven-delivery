@@ -23,11 +23,6 @@ from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 # The `# Title` line of a bounded context's `.context/bounded-context.md`: the context's name.
 _CONTEXT_TITLE = re.compile(r"^\s*#\s+(.+?)\s*$", re.M)
 
-# `→ Context · Aggregate · Entity`: the segments of an integration's target.
-_TARGET_SEGMENT = re.compile(r"[·•]")
-_ARROWS = ("→", "->")
-# `Product (by ProductId)`: the identity an integration holds its target by.
-_HELD_BY = "(by"
 # A module's path: the labels of the contexts that hold it, then its own name, as Clean Engineering nests modules.
 _PATH = "/"
 # The context classes with no place gather in.
@@ -40,55 +35,45 @@ class DomainNode(ModelNode):
 
 
 class Integration:
-    """An arrow from an aggregate to another class."""
+    """An arrow from an aggregate to another class: the context, aggregate, and entity it reaches, the identity it holds
+    that class by, and its fields. A target that names one class names only its entity."""
 
     FIELDS = ("pattern", "direction", "crosses", "integration")
     """The fields of an arc, in the order its lines write them under its target."""
-    TARGET = "to"
-    """The detail a class model's dependency names the arc's whole target by: `to: → Customer · Customer Profile`."""
+    PARTS = ("context", "aggregate", "entity", "held_by")
+    """The parts of the arc's target, each kept as its own detail when a class model keeps the arc as a dependency."""
 
-    def __init__(self) -> None:
-        self.context = ""
-        self.aggregate = ""
-        self.target = ""
+    def __init__(self, context: str = "", aggregate: str = "", entity: str = "", held_by: str = "") -> None:
+        self.context = context
+        self.aggregate = aggregate
+        self.entity = entity
+        self.held_by = held_by
         self.direction = ""
         self.crosses = ""
         self.integration = ""
         self.pattern = ""
 
     @property
-    def target_parts(self) -> tuple[str, str, str]:
-        """The target's context, aggregate, and entity; a target that names one class names only the entity."""
-        text = self.target.split(_HELD_BY, 1)[0].strip()
-        for arrow in _ARROWS:
-            text = text.removeprefix(arrow).strip()
-        parts = [part.strip() for part in _TARGET_SEGMENT.split(text) if part.strip()]
-        if len(parts) == 1:
-            return "", "", parts[0]
-        padded = parts + ["", "", ""]
-        return padded[0], padded[1], padded[2]
-
-    @property
     def target_name(self) -> str:
         """The class the arrow points at: the entity when the target names one, else the aggregate."""
-        _context, aggregate, entity = self.target_parts
-        return entity or aggregate or self.aggregate
-
-    def lines(self) -> list[str]:
-        """The arc as an aggregate writes it under `Integrations:`: `- target`, then each field it has, indented."""
-        return [f"- {self.target}"] + [f"  {key}: {getattr(self, key)}" for key in self.FIELDS if getattr(self, key)]
+        return self.entity or self.aggregate
 
     def as_dependency(self) -> Relationship:
         """The arc as a class model keeps it on the aggregate's root: a dependency on the class it reaches, labelled by
-        its pattern, with its whole target and its other fields as details."""
-        details = {self.TARGET: self.target}
-        details.update({key: getattr(self, key) for key in self.FIELDS[1:] if getattr(self, key)})
+        its pattern, with each part of its target and each of its other fields as a detail."""
+        details = {key: getattr(self, key) for key in (*self.PARTS, *self.FIELDS[1:]) if getattr(self, key)}
         return Relationship(target=self.target_name, kind="dependency", label=self.pattern, details=details)
 
+    @classmethod
+    def keeps_one(cls, dependency: Relationship) -> bool:
+        """Whether a class model's dependency keeps an arc: it names a part of the arc's target as a detail."""
+        return any(dependency.details.get(key) for key in cls.PARTS)
+
     def read_dependency(self, dependency: Relationship) -> None:
-        """Take the fields a class model's dependency keeps for this arc: its pattern is the label, the rest details."""
+        """Take the parts and fields a class model's dependency keeps for this arc: its pattern is the label, the rest
+        details."""
         self.pattern = dependency.label
-        for key in self.FIELDS[1:]:
+        for key in (*self.PARTS, *self.FIELDS[1:]):
             setattr(self, key, dependency.details.get(key, ""))
 
 
@@ -420,9 +405,7 @@ class BoundedContextMap:
     def aggregate_reached_by(self, integration: Integration) -> Aggregate | None:
         """The aggregate an integration's target names: in the context it names, its entity or its aggregate; with no
         context the map holds, the aggregate called by the name it gives."""
-        context_name, aggregate_name, entity_name = integration.target_parts
-        if integration.context or integration.aggregate:
-            context_name, aggregate_name = integration.context, integration.aggregate
+        context_name, aggregate_name, entity_name = integration.context, integration.aggregate, integration.entity
         in_context = [item for item in self.every_aggregate if _same_name(item.parent.name, context_name)]
         if not in_context:
             return next((item for item in self.every_aggregate if _same_name(item.name, aggregate_name or entity_name)), None)

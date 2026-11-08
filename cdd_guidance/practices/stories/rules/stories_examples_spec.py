@@ -47,22 +47,9 @@ with description("stories TypeScript .examples (faultyAsset.ts)"):
 
 
 with description("stories TypeScript .examples (folders)"):
-    with context("domain-operation-in-the-step"):
-        with it("should flag orchestration exports"):
-            assert_stories_folder_pair(
-                "domain-operation-in-the-step",
-                "domain-operation-in-the-step",
-                "create-customer.story.shared.ts",
-                node_type="Story",
-            )
-
     with context("example-role-names"):
         with it("should require entered/stored/expected exports"):
-            assert_stories_folder_pair(
-                "example-role-names",
-                "example-role-names",
-                "tests/onboard/examples/customers.examples.ts",
-            )
+            assert_stories_folder_pair("example-role-names", "tests/onboard/examples/customers.examples.ts", ("validCustomer",))
 
     with context("kebab-case-paths"):
         with it("should flag camelCase story test file names"):

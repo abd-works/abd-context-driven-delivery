@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule
+from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import is_interface_name
 from cdd_guidance.practices.clean_engineering.model.graph_reading import parameters_of
@@ -26,25 +26,15 @@ _STRING_KEYS = frozenset({"str", "string"})
 
 
 class HideInnerDetails(ProductionCodeRule):
+    """Reports an operation that reads another object's private member, the one measure of that reach. Where the
+    logic belongs instead (``put-logic-on-the-owning-resource``) is judged from the rule's prose."""
+
     slug = "hide-inner-details"
     node_types = ("Operation",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
-        if node.get_fact("peer_private_access") or node.get_fact("private_reach"):
-            return [f"Operation '{node.name}' reaches into a collaborator's private state."]
-        return []
-
-
-class PutLogicOnOwningResource(ProductionCodeRule):
-    slug = "put-logic-on-the-owning-resource"
-    node_types = ("Operation",)
-
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if node.get_fact("peer_private_access"):
-            return [
-                f"Operation '{node.name}' uses another object's internals; "
-                "move the behavior onto the owning resource."
-            ]
+            return [f"Operation '{node.name}' reaches into a collaborator's private state."]
         return []
 
 
@@ -137,9 +127,12 @@ def _copies(shared: set[str], own: set[str], theirs: set[str]) -> bool:
 
 
 def _copied_references(node: "Node", classes: ClassGraph, fields: dict[str, str]) -> list[str]:
+    """A name copy of a reference, or one value per member keyed by its name. A failure keeps the name of what it
+    failed on for its message, so its names are not copies."""
     hits: list[str] = []
+    named_copies = not classes.is_failure(node.name)
     for field, hint in fields.items():
-        named = _NAME_COPY.match(field)
+        named = _NAME_COPY.match(field) if named_copies else None
         owner = _class_named(named.group("owner"), classes) if named else ""
         if owner and owner != node.name:
             hits.append(

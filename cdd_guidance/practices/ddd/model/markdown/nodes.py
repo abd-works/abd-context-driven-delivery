@@ -33,8 +33,12 @@ _MODULE = "**Module:**"
 _INTEGRATIONS = "Integrations:"
 # `*Group*`: the heading a sketch grouped the following aggregates under.
 _GROUP = re.compile(r"^\*([^*].*?)\*$")
+# `→ Context · Aggregate · Entity (by Identity)`: the parts of an integration's target as an arc's line writes them.
+_TARGET_SEGMENT = re.compile(r"[·•]")
+_ARROWS = ("→", "->")
+_HELD_BY = "(by"
 # `integrate:` is the sketch's word for the integration field.
-_FIELD_NAMES = {"integrate": "integration", "context": "context", "aggregate": "aggregate"} | {
+_FIELD_NAMES = {"integrate": "integration", "context": "context", "aggregate": "aggregate", "entity": "entity"} | {
     field: field for field in Integration.FIELDS
 }
 # Lines that end a card's section and return to the aggregate's own lines: its arcs, its events, the next aggregate.
@@ -110,21 +114,39 @@ class MarkdownIntegration(Integration, MarkdownDomainNode):
 
     @staticmethod
     def targeting(text: str) -> "MarkdownIntegration":
-        """An arc to the class text names; the context and aggregate its target names are its own."""
+        """An arc to the target text names: `→ Context · Aggregate · Entity (by Identity)`, or one class alone."""
         integration = MarkdownIntegration()
-        integration.target = integration.plain_name(text.split("(by", 1)[0])
-        integration.context, integration.aggregate, _entity = integration.target_parts
+        named, _, held_by = text.partition(_HELD_BY)
+        named = integration.plain_name(named)
+        for arrow in _ARROWS:
+            named = named.removeprefix(arrow).strip()
+        parts = [part.strip() for part in _TARGET_SEGMENT.split(named) if part.strip()]
+        if len(parts) == 1:
+            parts = ["", "", parts[0]]
+        integration.context, integration.aggregate, integration.entity = (parts + ["", "", ""])[:3]
+        integration.held_by = held_by.rstrip(")").strip()
         return integration
 
     @staticmethod
     def kept_by(dependency: Relationship) -> "MarkdownIntegration | None":
-        """The arc a class model's dependency keeps, when it keeps one: a dependency that names the arc's target."""
-        target = dependency.details.get(Integration.TARGET)
-        if not target:
+        """The arc a class model's dependency keeps, when it keeps one."""
+        if not Integration.keeps_one(dependency):
             return None
-        integration = MarkdownIntegration.targeting(target)
+        integration = MarkdownIntegration()
         integration.read_dependency(dependency)
         return integration
+
+    @property
+    def target(self) -> str:
+        """The target as the arc's line writes it: `→ Context · Aggregate · Entity` across contexts, the class alone
+        when it names one, then the identity it is held by."""
+        named = " · ".join(part for part in (self.context, self.aggregate, self.entity) if part)
+        written = f"{_ARROWS[0]} {named}" if self.context or self.aggregate else named
+        return f"{written} {_HELD_BY} {self.held_by})" if self.held_by else written
+
+    def lines(self) -> list[str]:
+        """The arc as an aggregate writes it under `Integrations:`: `- target`, then each field it has, indented."""
+        return [f"- {self.target}"] + [f"  {key}: {getattr(self, key)}" for key in self.FIELDS if getattr(self, key)]
 
     def read_field(self, line: str) -> None:
         """One `key: value` line under the arc's target, for a field the arc has."""

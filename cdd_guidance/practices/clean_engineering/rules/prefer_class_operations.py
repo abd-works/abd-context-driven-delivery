@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule
+from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node

@@ -63,18 +63,6 @@ class ExampleRoleNames(PracticeGraphRule):
             return [f"Example exports {node.name!r} without a role name (entered/stored/expected/…)."]
         return []
 
-class OriginatingSubEpicExamples(PracticeGraphRule):
-    slug = "originating-sub-epic-examples"
-    node_types = ("Example",)
-
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        path = node.source.file or ""
-        if "/examples/" in path and "sub-epic" in path.lower():
-            return []
-        if "epic" in path.lower() and "story" not in path.lower() and "examples" in path:
-            return [f"Example {path!r} sits on an epic; place fixtures on the owning story/sub-epic."]
-        return []
-
 class ExamplesExportDataNotRepository(PracticeGraphRule):
     slug = "examples-export-data-not-repository"
     node_types = ("Example",)

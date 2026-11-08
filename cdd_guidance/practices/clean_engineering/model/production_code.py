@@ -1,4 +1,4 @@
-"""Which source files are test code, and the rule shape that judges only production code.
+"""Which source files are test code.
 
 A spec or a test fixture catches every exception on purpose, raises on an empty value to prove a guard, and builds its
 collaborators inline; judging it by production rules buries the real findings under hits nobody will fix.
@@ -20,14 +20,6 @@ for what it does instead, so the rules judge it.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
-
-from harness.graph.practice_rule import PracticeGraphRule
-
-if TYPE_CHECKING:
-    from harness.graph.graph import Node
-    from harness.graph.rule_context import RuleCheckContext
-
 _TEST_FOLDERS = frozenset({"tests", "test", "__tests__", "test-utils", "fixtures", "_examples"})
 # The roles a dotted part of a file name gives it. The first four name a spec; the rest name what a spec uses.
 _SPEC_ROLES = frozenset({"spec", "test", "e2e", "feature"})
@@ -91,18 +83,3 @@ def is_spec_file(file: str | None) -> bool:
 def is_test_code(file: str | None) -> bool:
     """True for a spec, a test, or test support (see the module's description for the names that mark each)."""
     return TestFileName(file).is_test_code
-
-
-class ProductionCodeRule(PracticeGraphRule):
-    """A rule about production code: it passes every node read from a spec, a test, or test support. Every Clean
-    Engineering rule that judges one node at a time derives from it; specs are the BDD practice's to judge. A rule that
-    judges the whole practice at once reads production code only through what it reads: ``ClassGraph``, the folders'
-    imports, and the operations it filters."""
-
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
-        if is_test_code(node.source.file):
-            return []
-        return self.check_production(node, context)
-
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
-        return []

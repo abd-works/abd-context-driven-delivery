@@ -63,6 +63,7 @@ story:
     - right-size-story-nodes
     - behaviours-not-one-time-tasks
     - story-scenarios-at-most-seven
+    - kebab-case-paths
 
 scenario:
   fidelity: scenarios
@@ -82,7 +83,6 @@ scenario:
     - invokes is the union of invokes on these steps
   rules:
     - scenarios-shape
-    - scenario-names-continuation
     - outline-requires-many-permutations
     - explore-full-interaction-surface
     - and-chaining
@@ -143,6 +143,7 @@ then:
     - id is the text slugs from the root to this node, joined by dots
   rules:
     - behavioral-and-system-observable-outcomes
+    - scenario-names-continuation
     - browser-then-asserts-screen-widgets
     - assert-domain-behavior-not-seeded-state
 

@@ -99,7 +99,6 @@ class Operation(InvariantHolder, OoadNode):
         "body_fingerprint",
         "callees",
         "peer_private_access",
-        "private_reach",
         "io_and_domain",
         "io_and_domain_callees",
         "raises_on_empty",
@@ -151,7 +150,6 @@ class Operation(InvariantHolder, OoadNode):
         self.peer_private_access: bool = False
         # Each parameter that packs several values, with how many; only Python's parse measures it.
         self.packed_parameters: dict[str, int] = {}
-        self.private_reach = False
         self.io_and_domain = False
         self.io_and_domain_callees = False
         self.raises_on_empty = False
@@ -278,7 +276,6 @@ class Operation(InvariantHolder, OoadNode):
         if not self.body_fingerprint:
             self.body_fingerprint = _span_fingerprint(span.text)
         self.io_and_domain_callees = self._delegates_io_and_domain()
-        self.private_reach = span.private_reach()
         self.io_and_domain = span.mixes_io_and_domain()
         self.raises_on_empty = span.raises_on_empty()
         self.exception_without_message = span.exception_without_message()
@@ -297,7 +294,7 @@ class Operation(InvariantHolder, OoadNode):
         self.has_bare_catch = measured.has_bare_catch()
         self.swallows_exceptions = measured.swallows_exceptions()
         self.unnamed_literal_numbers = measured.unnamed_numbers()
-        self.peer_private_access = measured.reaches_peer_private(parameter_names)
+        self.peer_private_access = measured.reaches_peer_private()
         if self.is_constructor:
             self.constructed_types = measured.built_collaborators(parameter_names, self.line or 1)
 

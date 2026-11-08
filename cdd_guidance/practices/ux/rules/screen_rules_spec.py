@@ -12,6 +12,7 @@ if str(_REPO) not in sys.path:
 
 from harness.graph.graph import Graph
 from harness.graph.rule_context import RuleCheckContext
+from harness.graph.rule_fixture import SchemaRuleRun
 
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel
 from cdd_guidance.practices.ux.model.nodes import Screen
@@ -38,7 +39,8 @@ class ScreenExample:
             self.screen.show_story(name)
 
     def violations(self, rule) -> list[str]:
-        return rule.check(self.screen, RuleCheckContext(self.graph.practice("ux"), None))
+        """What the rule reports on the screen where validate runs it."""
+        return SchemaRuleRun(rule, RuleCheckContext(self.screen.practice, None)).node_hits(self.screen)
 
 
 with description("a screen checked against the screen-story-budget rule"):

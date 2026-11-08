@@ -10,6 +10,8 @@ if str(_REPO) not in sys.path:
 from expects import be_true, contain, equal, expect
 from mamba import context, description, it
 
+from harness.graph.rule_fixture import SchemaRuleRun
+
 from cdd_guidance.practices.clean_engineering.rules.fixtures.multi_language_examples import (
     _ELIMINATE_DUPLICATION_CLEAN,
     _ELIMINATE_DUPLICATION_FAULT,
@@ -187,7 +189,7 @@ export class AccountRepository {
             )
             repo = next(n for n in fixture.practice.in_graph.nodes("OoadClass") if n.name == "AccountRepository")
             context = fixture.context
-            expect(rule.check(repo, context)).to(equal([]))
+            expect(SchemaRuleRun(rule, context).node_hits(repo)).to(equal([]))
     with context("state-change-returns-record-or-named-failure"):
         with it("should not flag signOut with one property assignment after a post helper"):
             rule = ce_rule_by_slug("state-change-returns-record-or-named-failure")
@@ -381,9 +383,6 @@ export class NumberExamples {
         with it("should flag a domain extension kept in the framework package"):
             assert_module_example_pair("extensions-live-with-the-domain")
 
-        with it("should flag an operation that reaches into another object's private state"):
-            assert_module_example_pair("put-logic-on-the-owning-resource")
-
     with context("named-seam-and-constraint"):
         with it("should accept a bounded context that only has bounded-context.md"):
             import tempfile
@@ -414,7 +413,7 @@ export class NumberExamples {
             )
             rule = NamedSeamAndConstraint()
             context = RuleCheckContext(practice, root)
-            expect(rule.check(node, context)).to(equal([]))
+            expect(SchemaRuleRun(rule, context).node_hits(node)).to(equal([]))
 
         with it("should accept a DDD aggregate folder with module-context.md"):
             import tempfile
@@ -445,7 +444,7 @@ export class NumberExamples {
             )
             rule = NamedSeamAndConstraint()
             context = RuleCheckContext(practice, root)
-            expect(rule.check(node, context)).to(equal([]))
+            expect(SchemaRuleRun(rule, context).node_hits(node)).to(equal([]))
 
 
 with description("Clean Engineering graph rules (multi-language scanner fixtures)"):
@@ -597,10 +596,10 @@ def _markdown_class_hits(markdown: str) -> list[str]:
 
 
 with description("Clean Engineering graph rules (inline fault and clean fixtures)"):
-    with context("put-logic-on-the-owning-resource"):
+    with context("hide-inner-details"):
         with it("should flag reading another object's private field and accept asking it"):
             assert_rule_pair(
-                "put-logic-on-the-owning-resource",
+                "hide-inner-details",
                 "class Invoice:\n    def total(self, order):\n        return sum(item.price for item in order._items)\n",
                 "class Invoice:\n    def total(self, order):\n        return order.total()\n",
             )

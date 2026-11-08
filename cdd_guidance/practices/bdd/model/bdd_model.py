@@ -13,13 +13,13 @@ from cdd_guidance.practices.clean_engineering.model.call_graph import (
     parse_arrow_line,
 )
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation, private_probe_in_text
-from cdd_guidance.practices.bdd.model.spec_source import code_like_describe_lines, has_signature_marker
+from cdd_guidance.practices.bdd.model.spec_source import has_signature_marker
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 
 
 class BddModel(ModelNode):
     _semantic_type_name = "Spec"
-    graph_facts = ("patches_infrastructure", "signature_marker", "top_level_describes", "code_like_describe_lines", "private_probe")
+    graph_facts = ("patches_infrastructure", "signature_marker", "top_level_describes", "private_probe")
     _belongs = {("Description", "Spec")}
 
     def __init__(self, graph: Graph | None = None) -> None:
@@ -53,12 +53,14 @@ class BddModel(ModelNode):
         return self
 
     def load_source_facts(self, text: str) -> None:
-        """Fill the facts the whole spec file owns."""
+        """Fill the facts the whole spec file owns. Its private probe is one in the lines no describe holds, since each
+        describe keeps the probes in its own lines."""
         self.patches_infrastructure = bool(_PATCH_DECORATOR.search(text) or _MOCK_PATCH_IMPORT.search(text))
         self.signature_marker = has_signature_marker(text)
         self.top_level_describes = _MAMBA_DESCRIBE.findall(text)
-        self.code_like_describe_lines = code_like_describe_lines(text)
-        self.private_probe = private_probe_in_text(text, 1)
+        described = {number for description in self.descriptions for number in range(description.line, description.end_line + 1)}
+        outside = "\n".join("" if number in described else line for number, line in enumerate(text.splitlines(), start=1))
+        self.private_probe = private_probe_in_text(outside, 1)
 
     def behavior_nodes(self) -> list:
         """Every description, context, and observation under this spec, parents first."""

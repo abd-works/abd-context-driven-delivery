@@ -42,12 +42,10 @@ class BuildingBlock(Node):
         "public_derive_operations",
         "delegating_operations",
         "identity_free_loads",
-        "tactical_stereotype",
         "named_for_its_kind",
         "public_operation_names",
         "lifecycle_operations",
         "drives_a_screen",
-        "in_screen_module",
     )
 
     def __init__(self, practice, tactical: TacticalClass, kind: str) -> None:
@@ -82,11 +80,6 @@ class BuildingBlock(Node):
         ]
 
     @property
-    def tactical_stereotype(self) -> bool:
-        """Whether the class carries a DDD stereotype, or its name says the building block it is."""
-        return self.tactical.declares_stereotype(self.type)
-
-    @property
     def named_for_its_kind(self) -> bool:
         """Whether the class's name follows the naming convention of the building block it is."""
         return self.tactical.name_says(self.type)
@@ -105,11 +98,6 @@ class BuildingBlock(Node):
         """Whether the class behaves like a screen: it opens and shows, or its name is a screen's."""
         public = {name.lower() for name in self.public_operation_names}
         return bool(public & _UI_METHODS and ("open" in public or "isshowing" in public)) or bool(_SCREEN_NAME.search(self.name))
-
-    @property
-    def in_screen_module(self) -> bool:
-        """Whether the class sits in a React screen module, which is not a DDD building block in code."""
-        return (self.source.file or "").replace("\\", "/").lower().endswith(".tsx")
 
     @property
     def foreign_names(self) -> list[str]:

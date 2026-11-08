@@ -71,10 +71,7 @@ class DrawIOAggregateCell(DrawIOMapCell):
         source = drawn.aggregate_at(self.name)
         for dependency in self.external_deps():
             target = drawn.aggregate_at(dependency)
-            integration = MarkdownIntegration()
-            integration.context = target.parent.name
-            integration.aggregate = target.name
-            integration.target = f"{integration.context} · {integration.aggregate}"
+            integration = MarkdownIntegration(context=target.parent.name, aggregate=target.name)
             integration.pattern = self.dependency_labels.get(dependency, "")
             source.integrations.append(integration)
 

@@ -87,7 +87,16 @@ class Stories(PracticeGuidance):
     # In the knowledge graph: Stories' epics, stories, scenarios, steps, and examples, linked to the Clean Engineering
     # operations each step calls and the classes and properties each example shows.
     source_ordered_types = frozenset({"Background", "Scenario", "Step", "Story"})
-    rule_types = {"SubEpic": ("Epic", "StoryNode"), "Epic": ("StoryNode",), "Story": ("StoryNode",)}
+    # A step is recorded as the Given, When, or Then it is, while the schema keeps every step's rules on Step (its
+    # given, when, and then types are each a Step), so each carries Step's rules; its check says which kind it judges.
+    rule_types = {
+        "SubEpic": ("Epic", "StoryNode"),
+        "Epic": ("StoryNode",),
+        "Story": ("StoryNode",),
+        "Given": ("Step",),
+        "When": ("Step",),
+        "Then": ("Step",),
+    }
 
     @property
     def object_model(self) -> PracticeGuidance | None:

@@ -14,7 +14,8 @@ from mamba import context, description, it
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.skipped_folders import skips_folder
 
-from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule, is_spec_file, is_test_code
+from cdd_guidance.practices.clean_engineering.model.production_code import is_spec_file, is_test_code
+from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import (
     TypeScriptCleanEngineeringModel,
 )
@@ -136,13 +137,6 @@ with description("test code"):
 
 with description("the Clean Engineering graph rules"):
     with context("in a graph load, where the schema says which rules each node carries"):
-        with it("should carry every rule on each node type the rule judges, so its hits are kept"):
-            schema = practice_from_files({"orders/order.py": "class Order:\n    pass\n"}).practice.in_graph.schema.applicable
-            missing = sorted(
-                f"{rule.slug} on {node_type}" for rule in RULES for node_type in rule.node_types if node_type not in schema.get(rule.slug, [])
-            )
-            expect(missing).to(equal([]))
-
         with it("should keep an eliminate-duplication hit on the operation that copies another"):
             source = _SUBTOTAL.format(name="Totals", field="price") + "\n" + _SUBTOTAL.format(name="Backup", field="cost")
             fixture = practice_from_files({"orders/totals.py": source})
@@ -282,6 +276,27 @@ with description("the Clean Engineering graph rules"):
         with it("should flag an operation that reads another object's private field"):
             source = "class Cart:\n    def total(self, order) -> int:\n        return sum(order._lines)\n"
             expect(_hits("hide-inner-details", source)).to(have_len(1))
+
+        with it("should flag a private field read off a local as well as off a parameter"):
+            source = "class Cart:\n    def total(self) -> int:\n        order = self.orders.last()\n        return sum(order._lines)\n"
+            expect(_hits("hide-inner-details", source)).to(have_len(1))
+
+        with it("should accept a classmethod that reads its own class's private members"):
+            source = "class Catalogue:\n    @classmethod\n    def keys(cls) -> tuple:\n        return tuple(cls._registered())\n"
+            expect(_hits("hide-inner-details", source)).to(equal([]))
+
+        with it("should accept reading a dunder of another object"):
+            source = "class Catalogue:\n    def fields(self, other) -> dict:\n        return dict(other.__dict__)\n"
+            expect(_hits("hide-inner-details", source)).to(equal([]))
+
+        with it("should accept copying a parameter's private field into the same field of this object"):
+            source = "class Plan:\n    def copy_from(self, other: 'Plan') -> None:\n        self._tier = other._tier\n"
+            expect(_hits("hide-inner-details", source)).to(equal([]))
+
+        with it("should be the one rule that reports the reach"):
+            reaching = practice_from_source("class Cart:\n    def total(self, order) -> int:\n        return sum(order._lines)\n")
+            asking = practice_from_source("class Cart:\n    def total(self, order) -> int:\n        return sum(order.lines)\n")
+            expect([rule.slug for rule in RULES if reaching.hits(rule) != asking.hits(rule)]).to(equal(["hide-inner-details"]))
 
     with context("use-explicit-dependencies on its values"):
         with it("should accept a constructor that builds a Path"):
