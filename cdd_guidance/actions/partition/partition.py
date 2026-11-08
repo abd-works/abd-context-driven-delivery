@@ -10,6 +10,7 @@ from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, Segment
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
+from harness.agent_tools.recipe import RecipePlaceholders
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 
@@ -48,12 +49,12 @@ class Partition(GuidanceAction):
         fidelity = None if isinstance(item, str) else self.fidelity_of(item)
         if fidelity is None:
             return ""
-        practice = self.practice_of(item)
-        return self.partition_guidance.replace("{{slug}}", practice.key).replace("{{scaffold}}", fidelity.scaffold)
+        values = {"slug": self.practice_of(item).key, "scaffold": fidelity.scaffold}
+        return RecipePlaceholders(values, set(values)).filled(self.partition_guidance)
 
     def _folder(self, out_root: str | None) -> Path:
         """The folder the index and segments go under: out_root when the call names one, else the session's root."""
-        return self.path_named(out_root) if out_root else self.session.root
+        return self.path_named(out_root) if out_root else self.session.work_root
 
     @mcp
     @agent_tool

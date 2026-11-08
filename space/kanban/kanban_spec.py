@@ -167,6 +167,9 @@ with description("a board") as self:
         with it("should name the ticket of the current session as active"):
             expect(self.board.active.name).to(equal("pet-visits"))
 
+        with it("should offer the tickets in a stage to switch to, neither backlog items nor closed tickets"):
+            expect(names(self.board.open_tickets)).to(equal(["pet-visits", "sign-up"]))
+
         with it("should show tickets and backlog items alike as the board's cards"):
             expect([card.title for card in self.board.cards]).to(equal(["Pet visits", "Sign up", "Browse pets", "Returns and refunds"]))
 
@@ -365,6 +368,24 @@ with description("a ticket") as self:
 
         with it("should name Generate on story_map as next"):
             expect((self.ticket.next_fidelity.fidelity.slug, self.ticket.next_fidelity.remaining_actions[0])).to(equal(("stories-story-map", "generate")))
+
+        with it("should tell the agent the ticket, its stage, its next guidance, and the steps each fidelity goes through"):
+            expect(self.ticket.agent_context).to(equal(
+                'CDD session board: you are working on ticket pet-visits ("Pet visits"), in Discovery. Its next guidance is stories-story-map. '
+                "Each fidelity goes through generate, validate, then review, which a person records on the board."
+            ))
+
+        with it("should start leaving it for another with a handoff, a commit, and a push chosen, merge left to the person"):
+            expect((self.ticket.leave_choices, self.ticket.first_leave_choices)).to(equal((["handoff", "commit", "push", "merge"], ["handoff", "commit", "push"])))
+
+        with it("should offer its own branch and worktree on opening it"):
+            expect(self.ticket.open_choices).to(equal(["branch", "worktree"]))
+
+        with it("should command an action on its next fidelity in its own session, naming no format so the fidelity's kept format holds"):
+            expect(self.ticket.next_fidelity.commands["generate"]).to(equal("/actions-generate stories-story-map session=.sessions/pet-visits/session.json"))
+
+        with it("should command every action its stage offers"):
+            expect(list(self.ticket.next_fidelity.commands)).to(equal(["generate", "validate", "review", "iterate", "sketch", "render", "document"]))
 
     # (S) Board App --> Display Ticket Card, Place Ticket In Column
     with context("with its first logged work on a Specification fidelity"):

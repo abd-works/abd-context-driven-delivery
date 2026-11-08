@@ -122,3 +122,7 @@
 
 - **Restart the CDD MCP host,** then run the Stories/UX/DDD graph call (one call) and, optionally, harness core's code-level call.
 - **Expect little from it:** the graph check has added nothing new in the other areas.
+- **2026-11-08: tried again on a freshly restarted server, and it fails the same way every time.**
+  - The validate of `stories`, `ux` and `ddd` with `graph: true` stopped the server answering within seconds. The process spent over 1,000 CPU seconds without finishing, and it had to be killed and restarted.
+  - So B10 reproduces on demand with this one call. It is the test for the B10 fix.
+  - The check runs after that fix is merged and the runtime is repinned.

@@ -25,7 +25,7 @@ story('Close Active Session', CHAT_BAR, () => {
     when('the Person closes checkout-flow', async ($, on, scene) => {
       await scene.ui.press({ key: 'close-button' })
     })
-    // close press -> openClose($, chatBar) -> $.mcp.call('ticket.work_branch', { ticket: 'checkout-flow' }) -> Ticket.work_branch()
+    // close press -> openClose($, chatBar) -> $.mcp.call('ticket.close_choices', { ticket: 'checkout-flow' }) -> Ticket.close_choices()
     then('a dialog headed Close session Checkout flow offers Create handoff, commit and push on checkout-flow, all chosen', async ($, on, scene) => {
       expect(textOf(await findText(scene.ui, 'Close session Checkout flow'))).toBe('Close session Checkout flow')
       expect(await choicesOf(scene.ui)).toEqual(['☑ Create handoff', '☑ commit checkout-flow', '☑ push checkout-flow'])

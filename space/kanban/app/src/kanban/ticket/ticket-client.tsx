@@ -11,7 +11,6 @@ import { TicketChat } from '../chat/chat-client'
 import { FidelityProgressClient } from './fidelity-progress-client'
 import { fixReportPrompt, fixRulePrompt, fixViolationPrompt, ReportClient } from './report-client'
 
-const VALIDATE_COMMAND = '/actions-validate'
 // Steps the board does itself rather than sending to a chat: a review is the person's own, opening the report while the
 // fidelity has violations and recording the approval once it has none.
 const STEPS_WITHOUT_CHAT = ['review']
@@ -25,7 +24,7 @@ const isBacklogItem = (moved: TicketData | BacklogItemData): moved is BacklogIte
 
 // How far some of a ticket's work has got, as Python answers it for one fidelity's progress or for a stage's work taken
 // together: what an action bar shows and allows.
-export type WorkStanding = { actions: ActionStatesData; hasViolations: boolean; violationCount: number; allowedActions: string[] }
+export type WorkStanding = { actions: ActionStatesData; hasViolations: boolean; violationCount: number; allowedActions: string[]; commands: Record<string, string> }
 
 // A ticket as the page knows it, with what a person can do to it. Each operation reaches the ticket's tool through the
 // generated client it extends, then brings the rest of the page up to date.
@@ -80,7 +79,7 @@ export class TicketClient extends TicketClientGenerated {
   // Its work in a stage taken together, which a stage head's action bar shows and acts on.
   workIn(stage: ColumnClient): WorkStanding | undefined {
     const work = this.stageWork.find(entry => entry.stage.name === stage.name)
-    return work && { actions: work.actions, hasViolations: work.has_violations, violationCount: work.violation_count, allowedActions: work.allowed_actions }
+    return work && { actions: work.actions, hasViolations: work.has_violations, violationCount: work.violation_count, allowedActions: work.allowed_actions, commands: work.commands }
   }
 
   hasViolationsIn(stage: ColumnClient): boolean {
@@ -247,10 +246,10 @@ export class TicketClient extends TicketClientGenerated {
     await this.page.reader.refresh()
   }
 
-  // A command runs in whichever chat it is sent to, whose open session can be another ticket's, so every action command
-  // names this ticket's session.json.
-  actionCommand(command: string): string {
-    return `${command} session=${this.session.session_file}`
+  // A prompt runs in whichever chat it is sent to, whose open session can be another ticket's, so a fix prompt names
+  // this ticket's session.json, as Python's action commands do.
+  private inSession(prompt: string): string {
+    return `${prompt} session=${this.session.session_file}`
   }
 
   fillSplit(): Promise<void> {
@@ -268,20 +267,20 @@ export class TicketClient extends TicketClientGenerated {
 
   // A report's fixes are for the ticket whose report it is, so they name its session and go to its chat.
   fixViolation(rule: ReportRuleData, violation: ViolationData): Promise<void> {
-    return this.chat.command(this.actionCommand(fixViolationPrompt(rule, violation)))
+    return this.chat.command(this.inSession(fixViolationPrompt(rule, violation)))
   }
 
   fixRule(report: ReportClient, rule: ReportRuleData): Promise<void> {
-    return this.chat.command(this.actionCommand(fixRulePrompt(report, rule)))
+    return this.chat.command(this.inSession(fixRulePrompt(report, rule)))
   }
 
   fixReport(report: ReportClient): Promise<void> {
-    return this.chat.command(this.actionCommand(fixReportPrompt(report)))
+    return this.chat.command(this.inSession(fixReportPrompt(report)))
   }
 
   // A report whose saved graph is out of date has lost its graph's rules, so its fidelity is validated again to find them.
   validateAgain(progress: FidelityProgressClient): Promise<void> {
-    return this.chat.command(this.actionCommand(`${VALIDATE_COMMAND} ${progress.fidelity.slug}`))
+    return this.chat.command(progress.commands.validate ?? '')
   }
 
   get canRunNext(): boolean {
@@ -289,14 +288,14 @@ export class TicketClient extends TicketClientGenerated {
     return STEPS_WITHOUT_CHAT.includes(this.nextAction) || this.page.chat.canSend
   }
 
-  // Python names the command for the next action. Generate is sent straight to the chat, in the format the fidelity
-  // keeps; the others fill the prompt. A review is the person's own, made on the board.
+  // Python gives the command for the next action, naming the session and no format. Generate is sent straight to the
+  // chat, in the format the fidelity keeps; the others fill the prompt. A review is the person's own, made on the board.
   async runNext(): Promise<void> {
     const next = this.nextProgress
     if (!next) return
     if (this.nextAction === 'review' && next.state === 'violations') return this.page.panels.openReport(this, next)
     if (this.nextAction === 'review') return this.review(next)
-    const command = this.actionCommand(next.nextCommand)
+    const command = next.commands[this.nextAction] ?? ''
     if (this.nextAction !== 'generate') return this.chat.fill(command)
     await this.chat.command(command)
   }

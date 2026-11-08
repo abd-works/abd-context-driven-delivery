@@ -35,17 +35,18 @@ describe('Activate Ticket', () => {
     expect(page.store.state.activation?.leaving).toEqual(['handoff', 'commit', 'push'])
   })
 
-  it('should offer a branch to a ticket that has none', async () => {
+  // Python chooses each open choice at first; the dialog offers those the ticket does not have yet.
+  it('should offer a branch and a worktree to a ticket that has neither', async () => {
     const { page, chosen } = await switchingPage()
     await page.activation.start(chosen, false)
-    expect(page.store.state.activation?.opening).toEqual(['branch'])
+    expect(page.store.state.activation?.opening).toEqual(['branch', 'worktree'])
   })
 
   // The fixture project is checked out on main, so the active session's work is on main, which leaving commits and pushes.
   it('should offer a handoff, commit and push of main when the session has no branch of its own', async () => {
     const { page } = await board.page()
     await page.activation.start(ticketOn(page, CHOSEN), false)
-    expect([page.store.state.activation?.leaveChoices?.branch.name, page.store.state.activation?.leaving]).toEqual(['main', ['handoff', 'commit', 'push']])
+    expect([page.store.state.activation?.leavingBranch, page.store.state.activation?.leaving]).toEqual(['main', ['handoff', 'commit', 'push']])
   })
 
   it('should leave only the handoff chosen once a person unchooses commit and push', async () => {
@@ -73,12 +74,12 @@ describe('Activate Ticket', () => {
 
     it('should send what was chosen', async () => {
       const { asked } = await confirmed()
-      expect(activatePosts(asked)[0]?.body).toEqual({ leaving: ['handoff', 'commit', 'push', 'merge'], opening: ['branch'] })
+      expect(activatePosts(asked)[0]?.body).toEqual({ leaving: ['handoff', 'commit', 'push', 'merge'], opening: ['branch', 'worktree'] })
     })
 
     it('should report it', async () => {
       const { page } = await confirmed()
-      expect(page.store.state.toasts.at(-1)?.text).toBe('Checkout flow: handoff written, committed, pushed, merged to main · Billing report: branch created · Billing report is now active')
+      expect(page.store.state.toasts.at(-1)?.text).toBe('Checkout flow: handoff written, committed, pushed, merged to main · Billing report: branch created, worktree created · Billing report is now active')
     })
   })
 

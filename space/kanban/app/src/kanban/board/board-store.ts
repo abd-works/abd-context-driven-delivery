@@ -1,6 +1,6 @@
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
 import type { BoardData, FidelityGuidanceData, HelpData } from '@cdd/space/kanban/board'
-import type { FormatChoiceData, SessionChoicesData } from '@cdd/space/kanban/ticket'
+import type { FormatChoiceData } from '@cdd/space/kanban/ticket'
 
 import type { ChatData, ChatMessageData } from '@cdd/harness/chat/chat'
 import type { FidelityProgressClient } from '../ticket/fidelity-progress-client'
@@ -22,13 +22,16 @@ export type Activation = {
   ticket: TicketClient
   isClosing: boolean
   leavingTitle: string
-  // What a person has ticked, starting from what Python chooses.
+  // What a person has ticked, starting from what Python chooses at first.
   leaving: string[]
   opening: string[]
-  // What Python offers on leaving the active ticket, with the branch its work is on, and on opening the ticket, with its
-  // own branch; none on leaving while no ticket is active.
-  leaveChoices: SessionChoicesData | null
-  openChoices: SessionChoicesData
+  // What the dialog offers: on leaving, what the ticket left can do with its work now; on opening, what the ticket does
+  // not have yet. The branch the work left is on, empty while nothing checked out is its own, and whether the ticket
+  // opened has its own branch.
+  offeredLeaving: string[]
+  offeredOpening: string[]
+  leavingBranch: string
+  hasBranch: boolean
 }
 
 // The roots dialog: the ticket's workpath on top and each practice's practice root under it. Starting a backlog item asks for its workpath

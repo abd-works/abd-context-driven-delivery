@@ -816,9 +816,6 @@ with description("the board tools") as self:
         with it("should not allow Render before anything is generated"):
             expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).not_to(contain("render"))
 
-        with it("should name the command Run next sends for its next action"):
-            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["next_command"]).to(equal("/actions-generate stories-story-map"))
-
         # (S) Person --> Choose Action And Formats
         with context("with an action bar opened on its story map"):
             with before.each:
@@ -1111,10 +1108,6 @@ with description("the board tools") as self:
                 branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=self.opened, check=True, capture_output=True, text=True)
                 expect(branch.stdout.strip()).to(equal("sign-up"))
 
-            with it("should offer no worktree on activating the ticket"):
-                choices = self.project.call("ticket.open_choices", ticket="sign-up")["choices"]
-                expect(next(choice["is_offered"] for choice in choices if choice["name"] == "worktree")).to(be_false)
-
             # (S) Person --> Open Ticket Chat
             with context("with chats connected"):
                 with before.each:
@@ -1149,16 +1142,8 @@ with description("the board tools") as self:
             with it("should name main as the branch its work is on"):
                 expect(self.project.call("ticket.work_branch", ticket="pet-visits")).to(equal({"name": "main", "exists": True, "is_checked_out": True}))
 
-            # (S) Person --> Activate Ticket
-            with it("should offer a handoff, commit, and push on leaving it, chosen, and no merge of main"):
-                choices = self.project.call("ticket.leave_choices", ticket="pet-visits")["choices"]
-                expect([(choice["name"], choice["is_offered"], choice["is_chosen"]) for choice in choices]).to(equal([
-                    ("handoff", True, True), ("commit", True, True), ("push", True, True), ("merge", False, False),
-                ]))
-
-            with it("should offer the ticket switched to a branch of its own, chosen, and a worktree, not chosen"):
-                choices = self.project.call("ticket.open_choices", ticket="sign-up")["choices"]
-                expect([(choice["name"], choice["is_offered"], choice["is_chosen"]) for choice in choices]).to(equal([("branch", True, True), ("worktree", True, False)]))
+            with it("should offer to close it with a handoff and a commit and push of main"):
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "choices": ["handoff", "commit", "push"]}))
 
             with it("should commit its work on main, merging nothing"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit", "merge"])
@@ -1180,10 +1165,6 @@ with description("the board tools") as self:
 
             with it("should say the ticket being left is on its branch"):
                 expect(self.project.call("ticket.branch", ticket="pet-visits")["is_checked_out"]).to(be_true)
-
-            with it("should offer to merge its branch on leaving it, not chosen"):
-                choices = self.project.call("ticket.leave_choices", ticket="pet-visits")["choices"]
-                expect(next((choice["is_offered"], choice["is_chosen"]) for choice in choices if choice["name"] == "merge")).to(equal((True, False)))
 
             with it("should commit the branch the ticket being left is on"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit"])
@@ -1210,9 +1191,8 @@ with description("the board tools") as self:
                 Sessions(self.project.root).switch("pet-visits")
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
-            with it("should offer only a handoff on leaving it"):
-                choices = self.project.call("ticket.leave_choices", ticket="pet-visits")["choices"]
-                expect([choice["name"] for choice in choices if choice["is_offered"]]).to(equal(["handoff"]))
+            with it("should offer to close it with a handoff alone, since nothing checked out is its own"):
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "choices": ["handoff"]}))
 
             with it("should commit nothing on a branch that is not checked out"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit"])
@@ -1233,7 +1213,7 @@ with description("the board tools") as self:
             names = set(self.project.server.tools)
             expect(names).to(equal({
                 "board.show", "board.help", "board.folders", "stage.set_wip_limit",
-                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.leave_choices", "ticket.open_choices", "ticket.format_choices", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
+                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.format_choices", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
                 "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
                 "session.choose_workpath", "session.folder_files", "session.read_file",

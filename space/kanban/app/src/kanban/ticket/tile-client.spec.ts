@@ -161,7 +161,7 @@ describe('Generate Fidelity Output', () => {
 
   it('should send the generate command for the picked formats', async () => {
     const { chat } = await ran()
-    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map format=markdown session=.sessions/billing-report/session.json' }])
+    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map session=.sessions/billing-report/session.json format=markdown' }])
   })
 
   it('should clear the picks', async () => {
@@ -177,7 +177,7 @@ describe('Render Fidelity Format', () => {
     page.tileActions.chooseAction(barAt(page)!, 'render')
     page.tileActions.toggleFormat(barAt(page)!, 'diagram')
     await page.tileActions.run(barAt(page)!)
-    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-render stories-story-map format=drawio session=.sessions/billing-report/session.json' }])
+    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-render stories-story-map session=.sessions/billing-report/session.json format=drawio' }])
   })
 })
 

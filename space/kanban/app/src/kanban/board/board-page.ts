@@ -27,7 +27,7 @@ const BUILD_PATH = '/build'
 const SERVER_BACK_WITHIN_MILLISECONDS = 30_000
 const SERVER_BACK_CHECK_MILLISECONDS = 1000
 const CLAUDE_OPEN_PATH = '/claude/open'
-const NOT_READ_YET: BoardData = { project: '', practices: [], active: null, columns: [], format_groups: [] }
+const NOT_READ_YET: BoardData = { project: '', practices: [], open_tickets: [], active: null, columns: [], format_groups: [] }
 
 // Everything the page's views act through, wired once.
 export class BoardPage {

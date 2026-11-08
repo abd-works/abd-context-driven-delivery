@@ -28,11 +28,11 @@ function SessionFactsView({ session, branch }: { session: string; branch: string
   )
 }
 
-// Python offers each choice and says which it offers; the dialog words them. Commit, push, and merge act on the branch
-// the work being left is on, its own or main, so they name it while it is checked out.
+// Python says which choices leaving offers; the dialog words them. Commit, push, and merge act on the branch the work
+// being left is on, its own or main, so they name it while it is checked out.
 function LeaveGroupView({ open }: { open: Activation }) {
   const { page } = useBoard()
-  const branch = open.leaveChoices?.branch.is_checked_out ? open.leaveChoices.branch.name : ''
+  const branch = open.leavingBranch
   const named = branch || open.leavingTitle
   const labels: Record<string, string> = {
     handoff: 'Create handoff',
@@ -44,9 +44,10 @@ function LeaveGroupView({ open }: { open: Activation }) {
     <div className="dialog-group">
       <div className="dialog-group-heading">{open.isClosing ? 'CLOSE' : 'LEAVE'}</div>
       <SessionFactsView session={open.leavingTitle} branch={branch || NONE_YET} />
-      {(open.leaveChoices?.choices ?? []).map(choice => (
-        <OptionView key={choice.name} label={labels[choice.name] ?? choice.name} isChecked={choice.is_offered && open.leaving.includes(choice.name)} isOff={!choice.is_offered} onToggle={() => page.activation.toggleLeaving(choice.name)} />
-      ))}
+      {open.ticket.leaveChoices.map(choice => {
+        const isOffered = open.offeredLeaving.includes(choice)
+        return <OptionView key={choice} label={labels[choice] ?? choice} isChecked={isOffered && open.leaving.includes(choice)} isOff={!isOffered} onToggle={() => page.activation.toggleLeaving(choice)} />
+      })}
     </div>
   )
 }
@@ -61,16 +62,19 @@ function OpenGroupView({ open }: { open: Activation }) {
   return (
     <div className="dialog-group">
       <div className="dialog-group-heading">OPEN</div>
-      <SessionFactsView session={open.ticket.title} branch={open.openChoices.branch.exists ? name : NONE_YET} />
-      {open.openChoices.choices.map(choice => (
-        <OptionView
-          key={choice.name}
-          label={labels[choice.name]?.[choice.is_offered ? 0 : 1] ?? choice.name}
-          isChecked={choice.is_offered && open.opening.includes(choice.name)}
-          isOff={!choice.is_offered}
-          onToggle={() => page.activation.toggleOpening(choice.name)}
-        />
-      ))}
+      <SessionFactsView session={open.ticket.title} branch={open.hasBranch ? name : NONE_YET} />
+      {open.ticket.openChoices.map(choice => {
+        const isOffered = open.offeredOpening.includes(choice)
+        return (
+          <OptionView
+            key={choice}
+            label={labels[choice]?.[isOffered ? 0 : 1] ?? choice}
+            isChecked={isOffered && open.opening.includes(choice)}
+            isOff={!isOffered}
+            onToggle={() => page.activation.toggleOpening(choice)}
+          />
+        )
+      })}
     </div>
   )
 }

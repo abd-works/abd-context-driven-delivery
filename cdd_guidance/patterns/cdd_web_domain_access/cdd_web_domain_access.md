@@ -12,7 +12,7 @@ How anything outside Python reaches the **CDD domain**. The domain, its rules, a
 | `{Object}Adapter extends {Object}` | Server | Each operation calls its MCP tool and takes on the state Python returns. |
 | `{Object}ClientGenerated extends {Object}` | Browser | Each operation posts to its route and takes on the state the server returns. |
 | `{object}Routes` | Server | One route for each tool. Each reads the request against the tool's published schema and calls `{Object}Adapter`. |
-| `CddConnection` | Server | One per install. Starts one cdd server and carries calls to it. It knows no tool by name. |
+| `CddConnection` | Server | One per install. Starts one cdd server and carries calls to it. It knows no tool by name. The server's connect script, run with `--address` in the project's folder, gives it the server's address and the header naming the project, so it reads no server file itself. |
 | `use{Object}(client)` | Browser | A React hook that re-renders a view whenever the client takes on new state. |
 | `FileListViewGenerated`, `SourceViewGenerated` | Browser | Shared default views over the session's file manager: a folder's files to pick from, and a file's text in Monaco with a line or range marked. Any field Python annotates as a file opens in `SourceViewGenerated`. |
 | `{Object}ViewGenerated`, `{Object}NewViewGenerated` | Browser | Starting-point React views: the object with each field editable where a domain operation changes it and read-only elsewhere, its other operations as buttons and forms, and a form for each operation that creates one. **Never deployed as they are**; an application composes them, or copies one and changes it. |

@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
@@ -85,26 +85,39 @@ class Board:
     # Every ticket is in exactly one column; the board stores no ticket state.
 
 
+    # The kinds of card a board places: ticket.py and backlog_item.py build on this module, so the kanban package hands
+    # their classes to the board when it is imported (``places_cards``), and this module imports neither back.
+    _ticket_kind: ClassVar[type[Ticket]]
+    _backlog_item_kind: ClassVar[type[BacklogItem]]
+
     def __init__(self, repo: Repo, practices: list[PracticeGuidance]) -> None:
         self._repo = repo
+        # The sessions of the board's repository, as this process holds them: each one a ticket, and which is open.
+        self._sessions = Sessions.of_project(repo.root)
         self._practices = list(practices)
         self._columns = self._build_columns()
+        self._reads = BoardReads(self)
+
+    @classmethod
+    def places_cards(cls, ticket_kind: type[Ticket], backlog_item_kind: type[BacklogItem]) -> None:
+        """Make every board place its sessions as tickets of ticket_kind and its ideas as items of backlog_item_kind."""
+        cls._ticket_kind = ticket_kind
+        cls._backlog_item_kind = backlog_item_kind
 
     @classmethod
     @tool_subject
     def load(cls, project: Path | str) -> Board:
         """The board of project, with every practice chosen; a tool call is handed the project the call names. A chat
         in a ticket's worktree reads the board of the project's main checkout, where every ticket's session lives."""
-        return cls(Repo.of_project(Path(project)).main_clone, list(PracticeCatalogue.practices()))
+        return cls(Sessions.of_project(project).repo.main_clone, list(PracticeCatalogue.practices()))
 
     @property
     def repo(self) -> Repo:
         return self._repo
 
-    @cached_property
+    @property
     def sessions(self) -> Sessions:
-        """The sessions of the board's repository: each one a ticket, and which is open. Made once per board read."""
-        return Sessions(self._repo.root)
+        return self._sessions
 
     @property
     def file(self) -> Path:
@@ -132,13 +145,11 @@ class Board:
     def project(self) -> str:
         return self._repo.root.name
 
-    @cached_property
+    @property
     def worktrees(self) -> dict[Branch, Worktree]:
         """Each branch's worktree, listed once per board read rather than once per ticket: the board is read after every
-        call. A project that is no git clone has none."""
-        if not self._repo.is_clone:
-            return {}
-        return {tree.branch: tree for tree in self._repo.worktrees if tree.branch is not None}
+        call. A project that is no clone has none."""
+        return self._reads.worktrees
 
     @property
     @data_field
@@ -157,47 +168,46 @@ class Board:
         """The groups a person picks formats by, each with its formats, so the page sorts a fidelity's files by group."""
         return FormatGroup.every()
 
-    @cached_property
+    @property
     def chats(self) -> list[Chat]:
         """The chats connected now, listed once per board read, so each ticket finds the one working on it."""
-        return Chat.list()
+        return self._reads.chats
 
-    @cached_property
+    @property
     def tickets(self) -> list[Ticket]:
         """Every session's ticket, made once per board read: each column, and each ticket's own reads, ask for them."""
-        from space.kanban.ticket import Ticket
+        return self._reads.tickets
 
-        return [Ticket(session, self) for session in self.sessions.all()]
-
-    @cached_property
+    @property
     def backlog_items(self) -> list[BacklogItem]:
-        from space.kanban.backlog_item import BacklogItem
-
-        folder = self.sessions.backlog_folder
-        if not folder.is_dir():
-            return []
-        # An item is a file in the Backlog, or a folder holding a file of its own name: a ticket moved back keeps its
-        # whole folder, history and all. A folder beside a file of its name is that file's ticket, not a second item.
-        files = list(folder.glob("*.md"))
-        kept = [entry / f"{entry.name}.md" for entry in folder.iterdir() if entry.is_dir() and not (folder / f"{entry.name}.md").exists()]
-        return [BacklogItem(path, self) for path in sorted([*files, *(path for path in kept if path.is_file())], key=lambda path: path.stem)]
+        return self._reads.backlog_items
 
     def ticket_of(self, session: Session) -> Ticket:
         """The ticket of session, which was just opened, moved between folders, closed, or reopened: the board forgets
         the cards it has read, so its next read sees the change."""
-        from space.kanban.ticket import Ticket
-
         self.reread()
-        return Ticket(session, self)
+        return self._ticket_kind(session, self)
+
+    def backlog_item_of(self, ticket: Ticket) -> BacklogItem:
+        """The item ticket becomes in the Backlog once its session's folder has moved there: the board forgets the cards
+        it has read, so its next read sees the item."""
+        self.reread()
+        return self._backlog_item_kind.from_ticket(ticket)
 
     def reread(self) -> None:
         """Forget the tickets, backlog items, worktrees, and chats read so far, so the next read sees a change made since."""
-        for read in ("tickets", "backlog_items", "worktrees", "chats"):
-            self.__dict__.pop(read, None)
+        self._reads = BoardReads(self)
 
     @property
     def cards(self) -> list[Card]:
         return [*self.tickets, *self.backlog_items]
+
+    @property
+    @data_field(reference=True)
+    def open_tickets(self) -> list[Ticket]:
+        """The tickets a person can switch to, in the board's column order: each in a stage, so neither a backlog item
+        nor a closed ticket. Sent by their names, since their columns send them."""
+        return [card for column in self._columns if isinstance(column, Stage) for card in column.cards]
 
     @property
     @data_field(reference=True)
@@ -215,10 +225,8 @@ class Board:
     def ticket(self, name: str) -> Ticket | None:
         """The ticket called name, open before closed, read from its own session folder: a tool names one ticket, so
         the board reads no other session to find it. The main session works on the whole repository and is no ticket."""
-        from space.kanban.ticket import Ticket
-
         session = self.sessions.named(name) if name != MAIN_SESSION_NAME else None
-        return Ticket(session, self) if session is not None else None
+        return self._ticket_kind(session, self) if session is not None else None
 
     def backlog_item(self, title: str) -> BacklogItem | None:
         return next((item for item in self.backlog_items if item.title == title), None)
@@ -251,6 +259,11 @@ class Board:
         """Return the overview, guidance, and shared rules of the board's practice named practice, such as stories or clean_engineering, with its page on the forge. A fidelity's help comes from its progress on a ticket: fidelity-progress.help."""
         return Help(self.practice(practice), None, None)
 
+    def works_through(self, practice: PracticeGuidance) -> bool:
+        """Whether practice, the board's own or a ticket's session's instance of it, is one the board's tickets work
+        through."""
+        return any(type(chosen) is type(practice) for chosen in self._practices)
+
     def practice(self, key: str) -> PracticeGuidance:
         """The board's practice whose folder name is key, such as clean_engineering."""
         found = next((entry for entry in self._practices if entry.key == key), None)
@@ -260,6 +273,43 @@ class Board:
 
     def _build_columns(self) -> list[Column]:
         return [Backlog(self), *(Stage(stage, self) for stage in STAGES), Complete(self)]
+
+
+class BoardReads:
+    """What one read of a board finds: its tickets, its backlog items, its worktrees, and the chats connected, each read
+    once when first asked for. The board replaces it whole when it reads again."""
+
+    def __init__(self, board: Board) -> None:
+        self._board = board
+
+    @cached_property
+    def tickets(self) -> list[Ticket]:
+        board = self._board
+        return [board._ticket_kind(session, board) for session in board.sessions.all()]
+
+    @cached_property
+    def backlog_items(self) -> list[BacklogItem]:
+        board = self._board
+        folder = board.sessions.backlog_folder
+        if not folder.is_dir():
+            return []
+        # An item is a file in the Backlog, or a folder holding a file of its own name: a ticket moved back keeps its
+        # whole folder, history and all. A folder beside a file of its name is that file's ticket, not a second item.
+        files = list(folder.glob("*.md"))
+        kept = [entry / f"{entry.name}.md" for entry in folder.iterdir() if entry.is_dir() and not (folder / f"{entry.name}.md").exists()]
+        found = sorted([*files, *(path for path in kept if path.is_file())], key=lambda path: path.stem)
+        return [board._backlog_item_kind(path, board) for path in found]
+
+    @cached_property
+    def chats(self) -> list[Chat]:
+        return Chat.list()
+
+    @cached_property
+    def worktrees(self) -> dict[Branch, Worktree]:
+        repo = self._board.repo
+        if not repo.is_clone:
+            return {}
+        return {tree.branch: tree for tree in repo.worktrees if tree.branch is not None}
 
 
 @identity("name")
@@ -366,7 +416,12 @@ class Stage(Column):
     @data_field
     def work_required(self) -> list[FidelityGuidance]:
         """Every fidelity of every chosen practice whose stage is this stage, in practice order."""
-        return [fidelity for practice in self._board.practices for fidelity in practice.fidelities if fidelity.stage == self._approach.name]
+        return [fidelity for practice in self._board.practices for fidelity in practice.fidelities if self.requires(fidelity)]
+
+    def requires(self, fidelity: FidelityGuidance) -> bool:
+        """Whether fidelity's work is done in this stage, whichever session holds it: it is a fidelity of a practice the
+        board works through, and its approach stage is this stage's."""
+        return fidelity.approach_stage is self._approach and self._board.works_through(fidelity.practice_guidance)
 
     @property
     def next_stage(self) -> Stage | None:

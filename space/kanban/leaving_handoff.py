@@ -56,8 +56,7 @@ class LeavingHandoff:
     @property
     def _approach(self) -> list[str]:
         upcoming = self._next
-        session_file = self._ticket.session.session_file_from_project
         lines = ["## Approach for Next Agent", "- Read this handoff, then the session's latest validation reports."]
         if upcoming:
-            lines.append(f"- Start at `/actions-{upcoming.next_action} {upcoming.fidelity.slug} session={session_file}`.")
+            lines.append(f"- Start at `{upcoming.command(upcoming.next_action)}`.")
         return lines

@@ -8,6 +8,7 @@ from pathlib import Path
 from expects import be_a, be_false, contain, equal, expect, have_len, raise_error
 from mamba import after, before, context, description, it
 
+from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance_actions import ActionWorksInNoSession
 from space.session.throwaway_project import ThrowawayProject
@@ -52,6 +53,43 @@ with description("a ContextSetup"):
             expect([Path(file).parent for file in self.result.markdown_files]).to(
                 equal([(self.throwaway.root / "docs" / "markdown").resolve()])
             )
+
+    # Step 3 tells the agent to call partition.partition with the practices the user picked, which only the call knows.
+    with context("whose capture_from_documents is expanded for a call, as the MCP host expands it"):
+        with before.each:
+            self.throwaway = ThrowawayProject()
+            arguments = {"folder_path": "docs"}
+            setup = ContextSetup().for_call(ToolCall(arguments, self.throwaway.root))
+            self.expansion = AgentInstructions.for_callable(ContextSetup.capture_from_documents, setup).expand(arguments)
+
+        with after.each:
+            self.throwaway.close()
+
+        with it("should list partition as a tool to call"):
+            expect(self.expansion.tools).to(contain("partition"))
+
+        with it("should not paste Partition's recipe in with no guidance"):
+            expect(self.expansion.instructions).not_to(contain("Partition of  finished"))
+
+        with it("should name the folder the call gives"):
+            expect(self.expansion.instructions).to(contain("folder_path=docs"))
+
+    with context("whose capture_from_live_app is expanded for a call"):
+        with it("should name the application folder the call gives"):
+            throwaway = ThrowawayProject()
+            arguments = {"repo_path": "shop"}
+            setup = ContextSetup().for_call(ToolCall(arguments, throwaway.root))
+            prose = AgentInstructions.for_callable(ContextSetup.capture_from_live_app, setup).expand(arguments).instructions
+            throwaway.close()
+            expect(prose).to(contain("repo_path=shop"))
+
+    with context("that is made for a call on a project"):
+        with it("should work in the session its partition works in"):
+            throwaway = ThrowawayProject()
+            setup = ContextSetup().for_call(ToolCall(project=throwaway.root))
+            same = setup.session is setup.partition.session
+            throwaway.close()
+            expect(same).to(equal(True))
 
     with context("that is made for no session and converts a folder"):
         with it("should refuse, naming the toolset that works in no session"):

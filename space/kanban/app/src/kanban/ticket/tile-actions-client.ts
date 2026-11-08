@@ -5,10 +5,8 @@ import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 import type { TicketClient, WorkStanding } from './ticket-client'
-import { headPlace, slugsOf } from './tile-client'
+import { headPlace } from './tile-client'
 import { chosenFormats } from './tile-formats'
-
-const namedIn = (tile: Tile): string => slugsOf(tile.fidelities).join(' ')
 
 export type ChipFace = FormatChoiceData & { hint: string; isOn: boolean; isDone: boolean; count: string }
 export type StepFace = { mark: string; color: string; hint: string; text: string }
@@ -105,22 +103,28 @@ export class TileActionsClient {
     }
   }
 
-  // One command names every fidelity the bar acts on, so a stage's work stays a single turn.
+  // Python gives one command naming every fidelity the bar acts on, and the ticket's session, so a stage's work stays a
+  // single turn. The chips add the formats a person picked to an action that takes them.
   async run(tile: Tile): Promise<void> {
+    const command = this.commandOf(tile, tile.action)
     // The stage says which of its actions take the formats chosen; every other one writes or reads files without one.
-    if (!tile.stage.actionsWithFormats.includes(tile.action)) return this.sendFor(tile, `/actions-${tile.action} ${namedIn(tile)}`)
+    if (!tile.stage.actionsWithFormats.includes(tile.action)) return this.sendFor(tile, command)
     const formats = chosenFormats(tile.choices, tile.picked)
     this.save(tile, { picked: [] })
-    await this.sendFor(tile, `/actions-${tile.action} ${namedIn(tile)} format=${formats.join(',')}`)
+    await this.sendFor(tile, `${command} format=${formats.join(',')}`)
   }
 
   validate(tile: Tile): Promise<void> {
-    return this.sendFor(tile, `/actions-validate ${namedIn(tile)}`)
+    return this.sendFor(tile, this.commandOf(tile, 'validate'))
   }
 
-  // The tile's ticket names its own session in the command, which goes to that ticket's chat.
+  private commandOf(tile: Tile, action: string): string {
+    return this.workOf(tile.ticket, tile)?.commands[action] ?? ''
+  }
+
+  // The command goes to the tile's ticket's own chat.
   private sendFor(tile: Tile, command: string): Promise<void> {
-    return tile.ticket.chat.command(tile.ticket.actionCommand(command))
+    return tile.ticket.chat.command(command)
   }
 
   // The ticket writes the review to its session log, and the board read after it shows the fidelity done.
