@@ -8,6 +8,7 @@ import re
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from harness.catalog_generator.drawio_diagram import DrawioDiagram
 from harness.markdown.front_matter import FrontMatter
@@ -15,7 +16,9 @@ from harness.catalog_generator.markdown_html import MarkdownHtml
 from harness.catalog_generator.source_folds import Fold, SourceFolds
 from harness.catalog_generator.stage_columns import STAGE_COLUMNS, BoardLabel, StageColumn
 
-_STORY_EXAMPLES = Path(__file__).resolve().parents[2] / "cdd_guidance" / "practices" / "stories" / "catalog-examples"
+if TYPE_CHECKING:
+    from harness.catalog_generator.catalog_practice import CatalogPractice
+
 EXAMPLES_FOLDER = "catalog-examples"
 # The order a fidelity's examples are shown in: prose, then code, then diagrams, then pictures.
 _SUFFIX_ORDER = {
@@ -357,41 +360,55 @@ class CatalogFidelity:
 
 @dataclass(frozen=True)
 class ProjectExampleSources:
-    """A project's own artifacts, copied into the catalog's ``examples/`` folder, by practice and stage."""
+    """A project's own artifacts, copied into the catalog's ``examples/`` folder, by the board fidelity each shows."""
 
-    staged: dict[tuple[str, str], Path]
+    staged: dict[CatalogFidelity, Path]
 
-    def file_for(self, practice: str, stage: str) -> Path | None:
-        """Where the practice's artifact at that stage sits in the catalog, relative to the catalog's folder."""
-        return self.staged.get((practice, stage))
+    def file_for(self, shown: CatalogFidelity | None) -> Path | None:
+        """Where the artifact of fidelity ``shown`` sits in the catalog, relative to the catalog's folder; none when the
+        project gave none for it."""
+        return self.staged.get(shown) if shown is not None else None
 
 
 class StageExample:
-    """The example an approach stage names in its copy (``example:``), from the Stories practice's examples; for a
-    project's approach page, the project's own Stories artifact at that stage."""
+    """The example an approach stage names in its copy (``example:``), from the examples of the practice whose stage
+    examples the approach shows (Stories); for a project's approach page, the project's own artifact of that practice's
+    fidelity at the stage."""
 
-    def __init__(self, stage, project_examples: ProjectExampleSources | None = None) -> None:
+    def __init__(
+        self, stage, stories: CatalogPractice | None, project_examples: ProjectExampleSources | None = None
+    ) -> None:
         self.stage = stage
+        self._stories = stories
         self._project_examples = project_examples
 
     @property
     def catalog_path(self) -> Path | None:
         """Where a project's artifact sits in the catalog; none for a practice example."""
-        return self._project_examples.file_for("stories", self.stage.id) if self._project_examples else None
+        if self._project_examples is None or self._stories is None:
+            return None
+        return self._project_examples.file_for(self._stories.fidelity_at(self.stage.id))
 
     @property
     def exists(self) -> bool:
         if self._project_examples:
             return self.catalog_path is not None
-        return bool(self.stage.example) and (_STORY_EXAMPLES / self.stage.example).is_file()
+        practice_file = self._practice_file
+        return practice_file is not None and practice_file.is_file()
 
     def href(self, path_prefix: str = "") -> str:
         """The example's own page; empty when the stage has no example."""
         return f"{path_prefix}examples/{self.stage.id}.html" if self.exists else ""
 
     def file(self, catalog_root: Path | None) -> Path | None:
-        """The example file: a project's under ``catalog_root``, a practice example in the Stories practice."""
+        """The example file: a project's under ``catalog_root``, else the practice's own example."""
         if self._project_examples:
             relative = self.catalog_path
             return Path(catalog_root) / relative if relative and catalog_root is not None else None
-        return _STORY_EXAMPLES / self.stage.example if self.stage.example else None
+        return self._practice_file
+
+    @property
+    def _practice_file(self) -> Path | None:
+        if not self.stage.example or self._stories is None:
+            return None
+        return self._stories.examples_folder / self.stage.example

@@ -77,7 +77,7 @@ with description("server health") as self:
 
     with context("with a hook server state file whose process has gone"):
         with it("should report the hook server is not running"):
-            state = HookDaemon(self.root).state_path
+            state = HookDaemon(self.root).address_file.path
             state.parent.mkdir()
             state.write_text(json.dumps({"port": closed_port()}), encoding="utf-8")
             expect(data_of(ServerHealth(self.root).report())["is_hook_server_running"]).to(be_false)

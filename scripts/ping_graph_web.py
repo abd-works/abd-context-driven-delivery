@@ -11,9 +11,10 @@ _SCRIPTS = Path(__file__).resolve().parent
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
-from instances import GRAPH_WEB_PORTS, HttpPing, graph_web
+from instances import HttpPing, graph_web  # noqa: I001 - instances puts the checkout on the import path
+from harness.graph.graph_app import GraphAppPorts
 
 if __name__ == "__main__":
     raise SystemExit(
-        HttpPing().run(graph_web, preferred_ports=GRAPH_WEB_PORTS, expect_service="graph_web")
+        HttpPing().run(graph_web, preferred_ports=GraphAppPorts().web, expect_service="graph_web")
     )

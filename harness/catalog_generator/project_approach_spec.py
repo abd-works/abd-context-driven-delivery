@@ -15,7 +15,8 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 from expects import be_true, contain, equal, expect
 from mamba import context, description, it
 
-from harness.catalog_generator.catalog_generator import Catalog, CatalogPractice
+from harness.catalog_generator.catalog_generator import Catalog
+from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.catalog_generator.project_approach import ExampleClassifier, ProjectApproach, ProjectFiles
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 

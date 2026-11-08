@@ -58,7 +58,8 @@ class GraphRule(PracticeGraphRule, Rule):
 
     @property
     @data_field
-    def children(self) -> list:
+    def children(self) -> list[GraphRule]:
+        """None: a rule is a leaf of the explorer tree."""
         return []
 
     @property

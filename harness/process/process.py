@@ -4,6 +4,7 @@ its process id still runs, or stop it."""
 from __future__ import annotations
 
 import os
+import re
 import signal
 import socket
 import subprocess
@@ -22,6 +23,55 @@ _STILL_ACTIVE = 259
 _POLL_SECONDS = 0.05
 
 
+class ListeningPorts:
+    """Which process on this computer listens on which TCP port, as ``netstat -ano`` (Windows) or ``ss -ltnp``
+    (elsewhere) reports it now. A server that finds its port held asks it for the holder, and the instances script asks
+    it which ports each of its processes listens on."""
+
+    def by_process(self) -> dict[int, list[int]]:
+        """Each listening process's id, with the ports it listens on."""
+        heard: dict[int, set[int]] = {}
+        for pid, port in self._listeners():
+            heard.setdefault(pid, set()).add(port)
+        return {pid: sorted(ports) for pid, ports in heard.items()}
+
+    def holder(self, port: int) -> StoppableProcess | None:
+        """The process listening on port; none when no process does, or none this computer reports."""
+        return next((StoppableProcess(pid) for pid, heard in self._listeners() if heard == port), None)
+
+    def _listeners(self) -> list[tuple[int, int]]:
+        if sys.platform == "win32":
+            return self._netstat_listeners()
+        return self._ss_listeners()
+
+    def _netstat_listeners(self) -> list[tuple[int, int]]:
+        found: list[tuple[int, int]] = []
+        for line in self._output(["netstat", "-ano", "-p", "TCP"]).splitlines():
+            parts = line.split()
+            if len(parts) < 5 or parts[3].upper() != "LISTENING":
+                continue
+            port_text = parts[1].rsplit(":", 1)[-1]
+            if port_text.isdigit() and parts[4].isdigit():
+                found.append((int(parts[4]), int(port_text)))
+        return found
+
+    def _ss_listeners(self) -> list[tuple[int, int]]:
+        found: list[tuple[int, int]] = []
+        for line in self._output(["ss", "-ltnp"]).splitlines():
+            pid_match = re.search(r"pid=(\d+)", line)
+            port_match = re.search(r":(\d+)\s", line)
+            if pid_match is not None and port_match is not None:
+                found.append((int(pid_match.group(1)), int(port_match.group(1))))
+        return found
+
+    def _output(self, command: list[str]) -> str:
+        try:
+            completed = subprocess.run(command, capture_output=True, text=True, timeout=30, check=False)
+        except (OSError, subprocess.TimeoutExpired):
+            return ""
+        return completed.stdout or ""
+
+
 class ExclusivePort:
     """The one port a long-running server of this computer may listen on, claimed by binding it exclusively: two
     servers cannot both hold one port, and no lock file can promise that once its holder is killed without cleanup."""
@@ -29,6 +79,10 @@ class ExclusivePort:
     def __init__(self, host: str, port: int) -> None:
         self.host = host
         self.port = port
+
+    def holder(self) -> StoppableProcess | None:
+        """The process listening on this port now; none when none is."""
+        return ListeningPorts().holder(self.port)
 
     def claim(self) -> socket.socket | None:
         """A listening socket on the port; none when another server already holds it, so the loser exits."""

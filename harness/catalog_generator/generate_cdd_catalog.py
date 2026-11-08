@@ -23,7 +23,8 @@ from harness.installation.repository_toolsets import RepositoryToolsets  # noqa:
 
 RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
-from harness.catalog_generator.catalog_generator import Catalog, GitCitation
+from harness.catalog_generator.catalog_generator import Catalog
+from harness.catalog_generator.git_citation import GitCitation
 
 
 def main(argv: list[str] | None = None) -> None:

@@ -7,7 +7,7 @@ from mamba import before, context, description, it
 
 from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, ApproachCopy
 from harness.catalog_generator.approach_page import ApproachGrids, ApproachPage, PrincipleBullets
-from harness.catalog_generator.catalog_generator import CatalogPractice
+from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.catalog_generator.hub_board import HubBoard
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
@@ -52,9 +52,9 @@ with description("the catalog board's stage columns"):
         with it("should show each stage's paragraphs in its column"):
             expect("ZZ-PARA" in self.html).to(equal(True))
 
-    with context("whose stages name catalog examples"):
+    with context("whose stages name the Stories practice's catalog examples"):
         with it("should link each column heading to its stage's example page"):
-            html = HubBoard([], [], [], ApproachCopy.load(APPROACH_MARKDOWN).board_stages).html()
+            html = HubBoard(CatalogPractice.load_all(), [], [], ApproachCopy.load(APPROACH_MARKDOWN).board_stages).html()
             links = ('href="examples/discovery.html"', 'href="examples/specification.html"', 'href="examples/implementation.html"')
             expect(all(link in html for link in links)).to(equal(True))
 

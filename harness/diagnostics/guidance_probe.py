@@ -5,7 +5,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.diagnostics.probe_arguments import ProbeArguments
+from harness.guidance.action_catalogue import ActionCatalogue
 from harness.diagnostics.probe_outcome import ProbeOutcome, ProbeSection
 
 # The guidance probed when the caller names none: one practice and one fidelity of another practice.
@@ -13,6 +15,11 @@ GUIDANCE_PROBE = ["stories", "clean-engineering-model"]
 GUIDANCE_SECTION = "guidance"
 # Operations that write under the session's root; the probe calls them in a session of its own.
 _WRITES_UNDER_SESSION_ROOT = frozenset({"sketch.save_sketch", "grill-context.write_grill_answer"})
+# Actions the probe never calls, by the name each is published under, with the reason the report gives.
+_LEFT_ALONE = {
+    "improvement.repair": "opens a repair on real work",
+    "improvement.verify_fix": "re-runs a repair's regression check on real work",
+}
 
 
 class GuidanceProbe:
@@ -62,12 +69,12 @@ class GuidanceProbe:
         """Call each installed guidance action's MCP operations, and write the result under ``guidance`` in
         diagnostics.json."""
         published = set(self.installer.diagnostics.installed_items("mcp"))
+        installed = set(self.installer.diagnostics.installed_items("toolset"))
         outcomes: list[ProbeOutcome] = []
         try:
-            for ref in self.installer.diagnostics.installed_items("toolset"):
-                if "cdd_guidance.actions." not in ref or "cdd_guidance.actions.improvement." in ref:
-                    continue
-                outcomes.extend(self._action_toolset(ref, published))
+            for toolset_class in ActionCatalogue.toolsets():
+                if str(ToolsetReference.of(toolset_class)) in installed:
+                    outcomes.extend(self._action_toolset(toolset_class, published))
         finally:
             self.arguments.cleanup()
         section = ProbeSection("actions", outcomes, self.slugs)
@@ -89,16 +96,16 @@ class GuidanceProbe:
             return ProbeOutcome.from_failure(mcp_name, failure)
         return ProbeOutcome.from_answer(mcp_name, text)
 
-    def _action_toolset(self, ref: str, published: set[str]) -> list[ProbeOutcome]:
-        from harness.agent_tools.agent_tools import AgentToolSet
-
+    def _action_toolset(self, toolset_class: type, published: set[str]) -> list[ProbeOutcome]:
         try:
-            toolset = AgentToolSet.instantiate(ref)
+            toolset = toolset_class()
         except Exception as failure:
-            return [ProbeOutcome.from_failure(ref, failure)]
+            return [ProbeOutcome.from_failure(str(ToolsetReference.of(toolset_class)), failure)]
         return [self._action(toolset, tool) for tool in toolset.tools.values() if tool.install_to_mcp and tool.mcp_name in published]
 
     def _action(self, toolset: Any, tool: Any) -> ProbeOutcome:
+        if tool.mcp_name in _LEFT_ALONE:
+            return ProbeOutcome.from_skip(tool.mcp_name, _LEFT_ALONE[tool.mcp_name])
         if tool.mcp_name in _WRITES_UNDER_SESSION_ROOT:
             toolset = type(toolset)(session=self.arguments.work_session())
         member = getattr(toolset, tool.name)

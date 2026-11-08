@@ -23,6 +23,8 @@ class Format:
         "markdown": ("markdown",),
         "code": ("python", "typescript", "javascript", "java", "html"),
     }
+    # The order a fidelity's files are shown in, by group: prose first, then the code, then the diagrams drawn from them.
+    FILE_ORDER: tuple[str, ...] = ("markdown", "code", "diagram")
 
     def __init__(self, name: str | None) -> None:
         folded = (name or "").strip().casefold()
@@ -62,6 +64,12 @@ class Format:
         """Where this format's group comes among the groups an action bar offers; a group of its own comes after them."""
         groups = list(self.GROUPS)
         return groups.index(self.group) if self.group in groups else len(groups)
+
+    @property
+    def file_order(self) -> int:
+        """Where a file in this format comes among a fidelity's files: by its group in `FILE_ORDER`; a group of its own
+        comes after them."""
+        return self.FILE_ORDER.index(self.group) if self.group in self.FILE_ORDER else len(self.FILE_ORDER)
 
     @property
     def is_templated(self) -> bool:

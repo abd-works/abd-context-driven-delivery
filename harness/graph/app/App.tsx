@@ -2,15 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
 import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
 import type { CddProgress } from '@cdd/cdd-shared';
-import type { ExplorerEntryData, InventoryData, PracticeInventoryData, NodeSourceData } from '@cdd/harness/graph/graph';
+import type { ExplorerEntryData, GraphRuleData, InventoryData, PracticeInventoryData, NodeSourceData } from '@cdd/harness/graph/graph';
 import { nodeFilter, type FilterSelection } from './filter/filter-selection';
 import { FilterView } from './filter/FilterView';
 import { GraphClient } from './graph/GraphClient';
 import { GraphView } from './graph/GraphView';
-import { ruleHits, selectionForRule, type GraphSelection } from './graph/graph-selection';
+import { childrenOf, isRule, ruleHits, selectionForRule, type GraphSelection, type TreeItem } from './graph/graph-selection';
 import { SourceView, type SourceRule } from './source/SourceView';
 import { normalizeInventoryBundle } from './inventory-bundle';
-import { lernNodeTypesFromCatalog, lernOverlayActive, overlayPathLabel } from './overlay-labels';
+import { overlayPathLabel } from './overlay-labels';
 import type { ViolationFocus } from './source/violation-prompt';
 
 const LAST_FOLDER = 'cdd-graph-folder';
@@ -227,12 +227,6 @@ export function App() {
     void applyOverlays([...selection.overlays, name]);
   }
 
-  function overlayHint(): string {
-    if (!lernOverlayActive(selection.overlays)) {
-      return '';
-    }
-    return 'LERN overlay is on. Under ddd, expand each aggregate for Node root / Client root / View / Route, or select those node types in the filter.';
-  }
 
   async function applyFilter(next: FilterSelection, practices = catalog) {
     if (!folder.trim()) {
@@ -345,7 +339,6 @@ export function App() {
             }}
             availableOverlays={availableOverlays}
             overlayApplying={overlayApplying}
-            overlayHint={overlayHint()}
             onAddOverlay={() => {
               void addOverlayFolder();
             }}
@@ -371,7 +364,7 @@ export function App() {
             activeRule={activeRule}
             onSelectRule={(name) => {
               const node = findNode(trees, selectedId);
-              const rule = node?.children.find((child) => child.type === 'rules')?.children.find((child) => child.name === name);
+              const rule = rulesUnder(node).find((child) => child.name === name);
               if (rule) {
                 void choose(selectionForRule(selectedId, rule));
               }
@@ -409,15 +402,10 @@ function overlayFilterRefresh(
   const nodes = listed(scope, catalog, 'node_types');
   const edges = listed(scope, catalog, 'edge_types');
   const rules = listed(scope, catalog, 'rules');
-  let node_types = mergeNewCatalogItems(previous.node_types, nodes);
-  if (lernOverlayActive(activeOverlays)) {
-    const lernTypes = lernNodeTypesFromCatalog(catalog.ddd?.node_types ?? []);
-    node_types = mergeNewCatalogItems(node_types, nodes, lernTypes);
-  }
   return {
     ...next,
     overlays: activeOverlays.length ? activeOverlays : next.overlays,
-    node_types,
+    node_types: mergeNewCatalogItems(previous.node_types, nodes),
     relationships: mergeNewCatalogItems(previous.relationships, edges),
     rules: mergeNewCatalogItems(previous.rules, rules),
   };
@@ -489,12 +477,12 @@ function mergeKept(current: string[], available: string[], added: string[]): str
   return kept;
 }
 
-function findNode(nodes: ExplorerEntryData[], id: string): ExplorerEntryData | null {
+function findNode(nodes: TreeItem[], id: string): TreeItem | null {
   for (const node of nodes) {
     if (node.node_id === id) {
       return node;
     }
-    const child = findNode(node.children ?? [], id);
+    const child = findNode(childrenOf(node), id);
     if (child) {
       return child;
     }
@@ -502,9 +490,13 @@ function findNode(nodes: ExplorerEntryData[], id: string): ExplorerEntryData | n
   return null;
 }
 
-function rulesOn(node: ExplorerEntryData | null): SourceRule[] {
-  const holder = node?.children.find((child) => child.type === 'rules');
-  return (holder?.children ?? []).map((rule) => ({
+function rulesUnder(node: TreeItem | null): GraphRuleData[] {
+  const holder = node ? childrenOf(node).find((child) => child.type === 'rules') : undefined;
+  return holder ? childrenOf(holder).filter(isRule) : [];
+}
+
+function rulesOn(node: TreeItem | null): SourceRule[] {
+  return rulesUnder(node).map((rule) => ({
     name: rule.name,
     status: rule.status,
     messages: ruleHits(rule).map((hit) => hit.message).filter(Boolean),
