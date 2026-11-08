@@ -276,11 +276,14 @@ class Operation(InvariantHolder, OoadNode):
     def load_brace_body_facts(self, body: str) -> None:
         """Fill the facts the rules measure on a brace-language method body (inside its `{` … `}`)."""
         measured = SourceText(body)
+        parameter_names = frozenset(p.name for p in self.parameters if p.name)
         self.max_control_flow_depth = measured.control_flow_depth()
         self.has_bare_catch = measured.has_bare_catch()
         self.swallows_exceptions = measured.swallows_exceptions()
         self.unnamed_literal_numbers = measured.unnamed_numbers()
-        self.peer_private_access = measured.reaches_peer_private(frozenset(p.name for p in self.parameters if p.name))
+        self.peer_private_access = measured.reaches_peer_private(parameter_names)
+        if self.is_constructor:
+            self.constructed_types = measured.built_collaborators(parameter_names, self.line or 1)
 
     def _delegates_io_and_domain(self) -> bool:
         """A long operation that calls both I/O and domain calculations does two jobs, even when it only delegates."""

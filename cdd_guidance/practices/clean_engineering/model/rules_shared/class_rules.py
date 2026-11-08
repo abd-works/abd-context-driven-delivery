@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from harness.graph.practice_rule import PracticeGraphRule
+from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -33,11 +33,11 @@ def _public_operations_for_budget(shapes: list[dict]) -> list[str]:
     ]
 
 
-class KeepClassesSingleResponsibility(PracticeGraphRule):
+class KeepClassesSingleResponsibility(ProductionCodeRule):
     slug = "keep-classes-single-responsibility"
     node_types = ("OoadClass",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if not node.has_fact("operation_shapes"):
             return []
         public_ops = _public_operations_for_budget(node.get_fact("operation_shapes"))

@@ -5,8 +5,6 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from harness.graph.practice_rule import PracticeGraphRule
-
 from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -19,28 +17,23 @@ _FIELD_CHANGE = re.compile(r"^with[A-Z]")
 
 
 class UseTypedSignatures(ProductionCodeRule):
+    """Judged on each parameter, which the graph reads for every operation's signature, so an untyped parameter is
+    reported once, where it is written."""
+
     slug = "use-typed-signatures"
-    node_types = ("Operation", "Parameter")
+    node_types = ("Parameter",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
-        if _FIELD_CHANGE.match(_operation_name(node)):
+        if _FIELD_CHANGE.match(str(node.get_fact("operation_name") or "")) or not node.has_fact("type_hint"):
             return []
-        if node.type == "Parameter":
-            if not node.has_fact("type_hint"):
-                return []
-            return _param_violation(node.name, node.get_fact("type_hint"))
-        for name, hint in node.get_fact("parameters", []):
-            hit = _param_violation(name, hint)
-            if hit:
-                return [f"In '{node.name}': {hit[0]}"]
-        return []
+        return _param_violation(node.name, node.get_fact("type_hint"))
 
 
-class LimitComments(PracticeGraphRule):
+class LimitComments(ProductionCodeRule):
     slug = "limit-comments"
     node_types = ("Operation", "OoadClass")
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if not node.get_fact("prose_comment"):
             return []
         if node.type == "OoadClass":
@@ -49,12 +42,6 @@ class LimitComments(PracticeGraphRule):
 
 
 _INVALID_PARAM_NAME = re.compile(r"^[\w$]+$")
-
-
-def _operation_name(node: "Node") -> str:
-    if node.type == "Operation":
-        return node.name
-    return str(node.get_fact("operation_name") or "")
 
 
 def _param_violation(name: str, hint: str) -> list[str]:

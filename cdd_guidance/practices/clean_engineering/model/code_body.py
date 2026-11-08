@@ -98,7 +98,8 @@ class CodeLanguage:
 
 
 class CodeBody:
-    """The statements inside one operation, test, or step, kept with the language they were read in."""
+    """<<Value Object>> The statements inside one operation, test, or step, kept with the language they were read in.
+    It never changes once made; a body in another language is a new one (``in_language_of``)."""
 
     def __init__(self, text: str = "", language: Optional[CodeLanguage] = None) -> None:
         lines = [line if line.strip() else "" for line in text.split("\n")]

@@ -246,8 +246,6 @@ class CFamilyParse:
         op.body_fingerprint = operation_body_fingerprint(body)
         op.body = CodeBody(body, self.language)
         op.load_brace_body_facts(body)
-        if op.name in {"constructor", "__init__"}:
-            op.constructed_types = self._constructed_types(body, op.line or 1)
         return op
 
     def _apply_method_end_line(self, op: Operation, class_body: str, search_from: int) -> None:
@@ -257,13 +255,6 @@ class CFamilyParse:
         close_idx = SourceText(class_body).closing_bracket(brace_open)
         if close_idx is not None:
             op.end_line = self._line_at(self._text, self._body_start + close_idx)
-
-    def _constructed_types(self, body: str, start_line: int) -> list[tuple[str, int]]:
-        found: list[tuple[str, int]] = []
-        for index, line in enumerate(body.splitlines()):
-            for match in re.finditer(r"\bnew\s+([A-Z]\w*)\s*\(", line):
-                found.append((match.group(1), start_line + index))
-        return found
 
     def _split_params(self, raw: str) -> list[str]:
         if not raw.strip():

@@ -10,8 +10,8 @@ from harness.annotations.name import Name
 from harness.graph.graph import Graph, Node
 from harness.graph.model_node import schema_sync_paused
 
-from cdd_guidance.practices.bdd.model.spec_source import is_spec_file
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+from cdd_guidance.practices.clean_engineering.model.production_code import is_spec_file, is_test_code
 
 _BEHAVIOR_EDGES = {"Description": "descriptions", "Context": "contexts", "Observation": "observations"}
 
@@ -26,7 +26,7 @@ class BddGraphReading:
         """Each spec file's language model reads its describe tree, whose spec, descriptions, contexts, and observations
         are added to its graph as they are."""
         root = Path(self.in_graph.source_root)
-        specs = [file for file in self.graph.source_files(root, self.readable_suffixes) if is_spec_file(file)]
+        specs = [file for file in self.graph.source_files(root, self.readable_suffixes) if is_spec_file(file.name)]
         with schema_sync_paused():
             for index, file in enumerate(specs, start=1):
                 relative = file.relative_to(root).as_posix()
@@ -70,11 +70,6 @@ class BddGraphReading:
             graph.link(_BEHAVIOR_EDGES[node.type], parent, added[id(node)])
 
 
-def _is_test_support(path: str) -> bool:
-    """Spec files and the helpers only specs use: they drive the code under test, so an observation never invokes them."""
-    return is_spec_file(Path(path)) or "/tests/" in f"/{path}" or "/test-utils/" in f"/{path}" or "page-driver" in path
-
-
 class ObservationLinks:
     """Each observation invokes the operations and properties its realization starts from: what the nearest enclosing
     setup reaches, the event the observation follows, and what the observation's own body calls or reads. Each block
@@ -87,7 +82,7 @@ class ObservationLinks:
         self.graph = bdd.graph
         self.members: dict[tuple[bool, str], list] = {}
         for node in [*clean.in_graph.nodes("Operation"), *clean.in_graph.nodes("Property")]:
-            if node.source.file and not _is_test_support(node.source.file):
+            if node.source.file and not is_test_code(node.source.file):
                 self.members.setdefault((_is_python(node), node.name), []).append(node)
 
     def link(self) -> None:

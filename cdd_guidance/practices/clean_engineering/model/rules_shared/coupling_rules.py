@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
+from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule
+
 from cdd_guidance.practices.clean_engineering.model.base_class_model import is_interface_name
 from cdd_guidance.practices.clean_engineering.model.rules_shared.class_graph import ClassGraph, names_in
 
@@ -22,21 +24,21 @@ _KEYED_COLLECTIONS = frozenset({"dict", "Dict", "Mapping", "MutableMapping", "Re
 _STRING_KEYS = frozenset({"str", "string"})
 
 
-class HideInnerDetails(PracticeGraphRule):
+class HideInnerDetails(ProductionCodeRule):
     slug = "hide-inner-details"
     node_types = ("Operation",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if node.get_fact("peer_private_access") or node.get_fact("private_reach"):
             return [f"Operation '{node.name}' reaches into a collaborator's private state."]
         return []
 
 
-class PutLogicOnOwningResource(PracticeGraphRule):
+class PutLogicOnOwningResource(ProductionCodeRule):
     slug = "put-logic-on-the-owning-resource"
     node_types = ("Operation",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if node.get_fact("peer_private_access"):
             return [
                 f"Operation '{node.name}' uses another object's internals; "

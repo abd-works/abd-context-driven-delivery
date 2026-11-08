@@ -5,6 +5,7 @@ operation, and keep the answers as the node's facts."""
 from __future__ import annotations
 
 import ast
+import builtins
 import re
 
 _CATCH = re.compile(r"\bcatch\s*(?:\([^)]*\))?\s*\{")
@@ -60,6 +61,15 @@ _THROW = re.compile(r"\bthrow\b")
 # The catch ends by handing back a stand-in value, so the caller never learns the call failed.
 _FALLBACK_RETURN = re.compile(r"\breturn\s*(?:null|undefined|false|true|\[\s*\]|\{\s*\}|''|\"\"|-?\d+)?\s*;?\s*$")
 _OWN_RECEIVERS = frozenset({"this", "self", "super"})
+# `new Repo(` in a brace-language body, and what makes the construction a failure thrown or a parameter's default:
+# `throw new`, `?? new`, `|| new`, right before it.
+_NEW_CLASS = re.compile(r"\bnew\s+([A-Z][\w$]*)\s*\(")
+_THROWN_OR_DEFAULTED = re.compile(r"(?:\bthrow|\?\?|\|\|)\s*$")
+# A name a construction's arguments read: not a member after a dot, and not a function or class it calls.
+_ARGUMENT_NAME = re.compile(r"(?<![\w.$])([A-Za-z_$][\w$]*)\b(?!\s*\()")
+# A name a brace-language body declares, which it then holds: `const x =`, `let x`, `var x`.
+_DECLARED_LOCAL = re.compile(r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)")
+_SCRIPT_VALUES = frozenset({"true", "false", "null", "undefined", "typeof", "instanceof", "as", "void", "await", "new"})
 _WIRED_PEER_FIELDS = frozenset({"repository", "repo"})
 _CATCH_ALL_TYPES = frozenset({"Exception", "BaseException"})
 _IO_CALL = re.compile(
@@ -71,12 +81,19 @@ _DOMAIN_CALL = re.compile(
     re.IGNORECASE,
 )
 _EDGE_RAISE = re.compile(
-    r"if\s+(?:not\s+\w+|len\s*\([^)]+\)\s*(?:==|<=)\s*0|\w+\s+is\s+None)\s*:[^\n]*\n(?:[^\n]*\n){0,3}\s*raise\b",
+    r"if\s+(?:not\s+\w+|len\s*\([^)]+\)\s*(?:==|<=)\s*0|\w+\s+is\s+None)\s*:[^\n]*\n(?:[^\n]*\n){0,3}\s*raise\b([^\n]*)",
     re.MULTILINE,
 )
 _EDGE_RAISE_BRACE = re.compile(
-    r"if\s*\(\s*(?:!\s*\w+|len\s*\([^)]+\)\s*===?\s*0|\w+\s*===?\s*null)\s*\)[^{]*\{[^\}]*raise\b",
+    r"if\s*\(\s*(?:!\s*\w+|len\s*\([^)]+\)\s*===?\s*0|\w+\s*===?\s*null)\s*\)[^{]*\{[^\}]*raise\b([^\n]*)",
     re.MULTILINE | re.DOTALL,
+)
+# What a raise names: `UnknownPractice(key, known)` names the failure `UnknownPractice` and gives it what was asked for.
+_RAISED_WITH_CONTEXT = re.compile(r"^\s*(?:new\s+)?([A-Z]\w*)\s*\(\s*[^)\s]")
+# The failures a language gives every program; raising one on an empty value says nothing about the domain.
+_BUILTIN_FAILURES = frozenset(
+    {name for name in dir(builtins) if isinstance(getattr(builtins, name), type) and issubclass(getattr(builtins, name), BaseException)}
+    | {"Error", "RangeError", "ReferenceError", "IllegalArgumentException", "IllegalStateException", "RuntimeException"}
 )
 _EDGE_RAISE_MESSAGE = re.compile(r"raise\s+\w*(?:Error|Exception)\([^)]*(?:empty|not found|missing|none)", re.I)
 _EDGE_GUARD = re.compile(r"if\s+(?:not\s+|len\s*\([^)]*\)\s*==\s*0)")
@@ -87,7 +104,7 @@ _COORDINATED_MUTATION = re.compile(r"\b(?:self|this)(?:\.\w+)+\s*=")
 _RETURN = re.compile(r"\breturn\b")
 _VOID_RETURN = re.compile(r"->\s*None\b|: void\b")
 _THROWS = re.compile(r"\b(?:throw|raise)\b")
-_PRIVATE_REACH = re.compile(r"(?<![\w.])\w+\._\w+")
+_PRIVATE_REACH = re.compile(r"(?<![\w.])(\w+)\.(_\w+)")
 _PROTOTYPE_SWAP = re.compile(r"\bObject\.setPrototypeOf\s*\(|\.__proto__\s*=(?!=)|\.__class__\s*=(?!=)")
 _BOLD_INTERACTION = re.compile(r"\*\*Interaction:\*\*", re.I)
 _BOLD_INVARIANT_BULLET = re.compile(r"^\s*[-*]\s+\*\*Invariant:\*\*", re.I | re.M)
@@ -192,6 +209,25 @@ class SourceText:
             return True
         return False
 
+    def built_collaborators(self, parameter_names: frozenset[str], start_line: int) -> list[tuple[str, int]]:
+        """The classes this brace-language constructor body builds with `new` that a caller cannot hand it, each with
+        its line, read as ``PythonFunctionBody.built_collaborators`` reads Python: a class it throws, the default it
+        builds for a parameter (``repo ?? new Repo()``, ``repo || new Repo()``), and a part it builds from its own state
+        (``this``, its parameters, its locals, or constants) are left out."""
+        code = _STRING.sub('""', self._text)
+        unquoted = SourceText(code)
+        owned = parameter_names | _OWN_RECEIVERS | set(_DECLARED_LOCAL.findall(code)) | _SCRIPT_VALUES
+        found: list[tuple[str, int]] = []
+        for match in _NEW_CLASS.finditer(code):
+            if _THROWN_OR_DEFAULTED.search(code[: match.start()]):
+                continue
+            close = unquoted.closing_bracket(match.end() - 1, "(", ")")
+            arguments = code[match.end() : close if close is not None else len(code)]
+            if arguments.strip() and all(name in owned or name.isupper() for name in _ARGUMENT_NAME.findall(arguments)):
+                continue
+            found.append((match.group(1), start_line + code.count("\n", 0, match.start())))
+        return found
+
     def mixes_io_and_domain(self) -> bool:
         """A body long enough to mean something that calls both I/O and a domain calculation."""
         return len(self._text.strip()) >= MIN_SIGNAL_BODY and self.calls_io_and_domain()
@@ -200,8 +236,12 @@ class SourceText:
         return bool(_IO_CALL.search(self._text) and _DOMAIN_CALL.search(self._text))
 
     def raises_on_empty(self) -> bool:
-        if _EDGE_RAISE.search(self._text) or _EDGE_RAISE_BRACE.search(self._text):
-            return True
+        """True when the body raises on an empty or missing value. A raise of a failure the program declares, given
+        what was asked for, such as ``raise UnknownPractice(key, known)`` when no practice has the key, reports a broken
+        call rather than an ordinary empty case, so it is left out."""
+        for pattern in (_EDGE_RAISE, _EDGE_RAISE_BRACE):
+            if any(not _names_broken_call(match.group(1)) for match in pattern.finditer(self._text)):
+                return True
         return bool(_EDGE_RAISE_MESSAGE.search(self._text) and _EDGE_GUARD.search(self._text))
 
     def exception_without_message(self) -> str:
@@ -218,7 +258,12 @@ class SourceText:
         return not (_RETURN.search(text) or _VOID_RETURN.search(text) or _THROWS.search(text))
 
     def private_reach(self) -> bool:
-        return bool(_PRIVATE_REACH.search(self._text))
+        """True when the body reads a ``_`` member of something other than itself: ``order._lines``, not
+        ``self._lines``, ``cls._registry``, or a dunder such as ``type(x).__name__``."""
+        return any(
+            match.group(1) not in _OWN_RECEIVERS | {"cls"} and not match.group(2).endswith("__")
+            for match in _PRIVATE_REACH.finditer(_STRING.sub('""', self._text))
+        )
 
     def has_prose_comment(self, hash_only: bool = False) -> bool:
         for line in self._text.splitlines():
@@ -352,6 +397,64 @@ class PythonFunctionBody:
             return True
         return False
 
+    def built_collaborators(self) -> list[tuple[str, int]]:
+        """The classes this constructor builds that a caller cannot hand it, each with its line.
+
+        A class it raises is a failure, not a collaborator. One it builds as the default of a parameter a caller may
+        pass (``repo if repo is not None else Repo()``, ``repo or Repo()``, a default in the signature) can be swapped.
+        One it builds from its own state, that is from itself, its parameters, values it computes from them, or
+        constants, is a part it owns. What is left is built from nothing, or from something outside the object, such
+        as a global or a call that reaches the environment, and the caller can never replace it."""
+        replaceable = self._raised_or_defaulted()
+        owned = self._owned_names()
+        return [
+            (child.func.id, child.lineno)
+            for stmt in self._node.body
+            for child in ast.walk(stmt)
+            if isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Name)
+            and child.func.id[:1].isupper()
+            and id(child) not in replaceable
+            and not _built_from(child, owned)
+        ]
+
+    def _parameter_names(self) -> set[str]:
+        arguments = self._node.args
+        named = arguments.posonlyargs + arguments.args + arguments.kwonlyargs
+        extra = [item for item in (arguments.vararg, arguments.kwarg) if item is not None]
+        return {item.arg for item in named + extra}
+
+    def _owned_names(self) -> set[str]:
+        """Itself, its parameters, and every name its body assigns: what the constructor holds or computes."""
+        stored = {
+            child.id
+            for stmt in self._node.body
+            for child in ast.walk(stmt)
+            if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store)
+        }
+        return self._parameter_names() | stored
+
+    def _raised_or_defaulted(self) -> set[int]:
+        """The constructions a caller can replace, and the failures it raises, by node identity."""
+        parameters = self._parameter_names() - {"self"}
+        found: set[int] = set()
+        for stmt in self._node.body:
+            for child in ast.walk(stmt):
+                if isinstance(child, ast.Raise) and isinstance(child.exc, ast.Call):
+                    found.add(id(child.exc))
+                elif isinstance(child, ast.IfExp) and {_name_of(child.body), _name_of(child.orelse)} & parameters:
+                    # `repo if repo is not None else Repo()`: the parameter, or the default built in its place.
+                    found.update(id(branch) for branch in (child.body, child.orelse) if isinstance(branch, ast.Call))
+                elif isinstance(child, ast.BoolOp) and isinstance(child.op, ast.Or) and _name_of(child.values[0]) in parameters:
+                    # `repo or Repo()`.
+                    found.update(id(value) for value in child.values[1:] if isinstance(value, ast.Call))
+                elif isinstance(child, ast.If) and _absent_parameter(child.test) in parameters:
+                    # `if repo is None: repo = Repo()`.
+                    found.update(
+                        id(inner.value) for inner in child.body if isinstance(inner, ast.Assign) and isinstance(inner.value, ast.Call)
+                    )
+        return found
+
     def packed_parameters(self) -> dict[str, int]:
         """Each parameter that carries several values, with how many: a tuple the body unpacks (``x, y = rest``), and a
         ``*args`` the parser leaves out of the parameter list. A packed tuple hides real parameters from the count."""
@@ -411,3 +514,44 @@ class PythonFunctionBody:
             isinstance(stmt, ast.Pass) or (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant))
             for stmt in body
         )
+
+
+def _names_broken_call(raised: str) -> bool:
+    """A raise of a failure the program declares, given the value it could not use: `UnknownPractice(key, known)`."""
+    named = _RAISED_WITH_CONTEXT.match(raised)
+    return named is not None and named.group(1) not in _BUILTIN_FAILURES
+
+
+def _name_of(expression: ast.expr) -> str:
+    """The name an expression is, when it is a bare name; empty otherwise."""
+    return expression.id if isinstance(expression, ast.Name) else ""
+
+
+def _absent_parameter(test: ast.expr) -> str:
+    """The name a test asks is missing, `x is None` or `not x`; empty for any other test."""
+    if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
+        return _name_of(test.operand)
+    if isinstance(test, ast.Compare) and len(test.ops) == 1 and isinstance(test.ops[0], ast.Is):
+        compared = test.comparators[0]
+        if isinstance(compared, ast.Constant) and compared.value is None:
+            return _name_of(test.left)
+    return ""
+
+
+def _built_from(construction: ast.Call, owned: set[str]) -> bool:
+    """A construction given only what the constructor owns: every name its arguments read is one the constructor holds
+    or computes, a constant spelled in capitals, or a builtin; a function or class it calls is judged on its own. A
+    construction given nothing has no tie to its owner."""
+    arguments = [*construction.args, *(keyword.value for keyword in construction.keywords)]
+    if not arguments:
+        return False
+    nodes = [child for argument in arguments for child in ast.walk(argument)]
+    # A comprehension's or a lambda's own names are bound inside the argument.
+    bound = {child.id for child in nodes if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store)}
+    bound |= {child.arg for child in nodes if isinstance(child, ast.arg)}
+    called = {id(child.func) for child in nodes if isinstance(child, ast.Call)}
+    return all(
+        child.id in owned or child.id in bound or child.id.isupper() or hasattr(builtins, child.id)
+        for child in nodes
+        if isinstance(child, ast.Name) and id(child) not in called
+    )

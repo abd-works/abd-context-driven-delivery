@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
-from typing import List, Optional
+from typing import Iterator, List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     UnreadableSource,
@@ -73,6 +73,7 @@ class PythonOperation(CodeOperation):
         in it, read from its own syntax tree."""
         end_line = getattr(node, "end_lineno", None) or node.lineno
         is_classmethod = _decorated(node, "classmethod")
+        function = PythonFunctionBody(node)
         operation = cls(
             name=node.name,
             parameters=_parameter_strings(node, is_classmethod),
@@ -81,7 +82,7 @@ class PythonOperation(CodeOperation):
             line=node.lineno,
             end_line=end_line,
             line_count=end_line - node.lineno + 1,
-            constructed_types=_constructed_types(node) if node.name in {"__init__", "constructor"} else [],
+            constructed_types=function.built_collaborators() if node.name in {"__init__", "constructor"} else [],
             callees=_callees(node),
             is_property=_decorated(node, "property"),
             body_fingerprint=operation_body_fingerprint("\n".join(ast.unparse(stmt) for stmt in node.body)),
@@ -90,7 +91,7 @@ class PythonOperation(CodeOperation):
         operation.is_static = _decorated(node, "staticmethod")
         operation.is_classmethod = is_classmethod
         operation.is_setter = any(isinstance(item, ast.Attribute) and item.attr == "setter" for item in node.decorator_list)
-        operation.measure(PythonFunctionBody(node))
+        operation.measure(function)
         return operation
 
     def measure(self, function: PythonFunctionBody) -> None:
@@ -175,13 +176,14 @@ class PythonModule(CodeModule):
 
     def import_targets(self, file: Path, root: Path) -> list[str]:
         """Root-relative paths each `import` / `from … import` names, absolute or relative, wherever it sits in the
-        file, and each module an `importlib.import_module` call names, as far as its text spells it."""
+        file, and each module an `importlib.import_module` call names, as far as its text spells it. An import under
+        `if TYPE_CHECKING:` names a type for an annotation and never runs, so it is no dependency and is left out."""
         if self.tree is None:
             return []
         package = file.parent.relative_to(root).parts
         constants = _module_string_constants(self.tree, ".".join(package))
         targets: list[str] = []
-        for node in ast.walk(self.tree):
+        for node in _runtime_nodes(self.tree):
             if isinstance(node, ast.Import):
                 targets.extend(alias.name.replace(".", "/") for alias in node.names)
             elif isinstance(node, ast.ImportFrom):
@@ -299,14 +301,6 @@ def _body_of(node: Function, source: str) -> CodeBody:
     return CodeBody("\n".join(lines[start - 1 : node.end_lineno]), PYTHON)
 
 
-def _constructed_types(func: ast.AST) -> list[tuple[str, int]]:
-    return [
-        (child.func.id, child.lineno)
-        for child in ast.walk(func)
-        if isinstance(child, ast.Call) and isinstance(child.func, ast.Name) and child.func.id and child.func.id[0].isupper()
-    ]
-
-
 def _callees(func: ast.AST) -> list[str]:
     names: list[str] = []
     for child in ast.walk(func):
@@ -332,6 +326,25 @@ def _from_import_targets(node: ast.ImportFrom, package: tuple[str, ...]) -> list
         return []
     joined = "/".join(module)
     return [joined] + [f"{joined}/{alias.name}" for alias in node.names if alias.name != "*"]
+
+
+def _runtime_nodes(tree: ast.AST) -> Iterator[ast.AST]:
+    """Every node of the tree that runs: the body of an `if TYPE_CHECKING:` (or `if typing.TYPE_CHECKING:`) block is
+    read only by a type checker, so it is left out; its `else` branch runs and is kept."""
+    pending: list[ast.AST] = [tree]
+    while pending:
+        node = pending.pop()
+        yield node
+        if isinstance(node, ast.If) and _is_type_checking(node.test):
+            pending.extend(node.orelse)
+            continue
+        pending.extend(ast.iter_child_nodes(node))
+
+
+def _is_type_checking(test: ast.expr) -> bool:
+    if isinstance(test, ast.Attribute):
+        return test.attr == "TYPE_CHECKING"
+    return isinstance(test, ast.Name) and test.id == "TYPE_CHECKING"
 
 
 def _call_name(node: ast.Call) -> str:
