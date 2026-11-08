@@ -1264,9 +1264,10 @@ with description("the board tools") as self:
         with it("should send a Ticket's next fidelity by its ticket and slug alone, since its progress sends it"):
             expect(self.project.ticket_json("pet-visits")["next"]).to(equal({"ticket": {"name": "pet-visits"}, "fidelity": {"slug": "stories-story-map"}}))
 
-        with it("should send the board's active ticket by its name alone, since its column sends it"):
+        with it("should send the board's active ticket whole, so the chat bar never finds it again by its name"):
             self.project.call("ticket.activate", ticket="pet-visits")
-            expect(self.project.call("board.show")["active"]).to(equal({"name": "pet-visits"}))
+            active = self.project.call("board.show")["active"]
+            expect((active["name"], "progress" in active)).to(equal(("pet-visits", True)))
 
         with it("should return exactly the fields a Branch marks as its data"):
             subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
