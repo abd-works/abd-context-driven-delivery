@@ -19,16 +19,9 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
     SampleTool,
 )
-from harness.markdown import (
-    AssetLocator,
-    HTML,
-    Markdown,
-    MarkdownFile,
-    MarkdownScope,
-    MarkdownText,
-    MarkdownTypeUnresolved,
-    markdown,
-)
+from harness.markdown import HTML, Markdown, MarkdownScope, MarkdownText, MarkdownTypeUnresolved, markdown
+from harness.markdown.front_matter import FrontMatter
+from harness.markdown.markdown import AssetLocator
 
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "clean_engineering"
 _STORIES_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "stories"
@@ -208,10 +201,10 @@ with description("a markdown file with a settings block"):
         self.path.write_text("---\nname: reviewer\n---\n# Reviewer\n", encoding="utf-8")
 
     with it("should answer its settings"):
-        expect(MarkdownFile(self.path).front_matter.fields).to(equal({"name": "reviewer"}))
+        expect(FrontMatter.of_file(self.path).fields).to(equal({"name": "reviewer"}))
 
     with it("should answer the content after them"):
-        expect(MarkdownFile(self.path).front_matter.content).to(equal("# Reviewer\n"))
+        expect(FrontMatter.of_file(self.path).content).to(equal("# Reviewer\n"))
 
 
 with description("a markdown collection bound to a guidance"):

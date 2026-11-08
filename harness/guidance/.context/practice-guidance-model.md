@@ -61,7 +61,7 @@ fidelities: GuidanceCollection
 format: Format
 	Invariant: the current fidelity's format; the practice's own only while it has no current fidelity
 	Invariant: a constructor format is the format the fidelity made current at construction works in
-	// the fidelity a constructor names is looked up once, at construction; from then on work_at takes the fidelity itself
+	// the fidelity a constructor names is looked up once, at construction, and stays current: an action holds the fidelity it works at
 companion: PracticeGuidance | None
 	// the Clean Engineering practice of the set it was made with (hold_set); none for a practice made apart from any set
 set_keys: tuple[str, ...]
@@ -86,8 +86,6 @@ practice_slug: str
 short_name: str
 colour: str
 fidelity_slugs: list[str]
-clean_engineering_companion: FidelityGuidance | None
-	-> fidelities.current.clean_engineering
 guidance: str
 	// practice guidance, the active fidelity's guidance, and the companion's instructions
 instructions: str
@@ -100,8 +98,6 @@ files(): dict[str, dict[str, list]]
 	-> FidelityGuidance.files
 output_paths(): dict[str, list[str]]
 	-> fidelities.current.output_paths
-work_at(fidelity: FidelityGuidance): FidelityGuidance
-	// makes fidelity, one of its own, current; ValueError for another practice's fidelity
 answers_to(slug: str): PracticeGuidance | FidelityGuidance | None
 	// itself for its slug, the fidelity whose slug it is, else none
 fidelity_called(name: str): FidelityGuidance | None
@@ -119,12 +115,13 @@ scoped_markdown(): str
 generate_output(): str
 	// instruction-only by default; a practice that owns generation overrides it
 render(format: str, content: Any, source: str | None, previous: str): dict
+	// at the fidelity the practice was made at; render_at(fidelity, ...) and render_files(..., fidelity) render at the fidelity a call works at
 	// the formats are made into Format objects once, in the RenderRequest the call carries
 	Interaction:
 		# formats empty: hand the call to the companion's practice
-		-> clean_engineering_companion.practice_guidance._render
+		-> request.fidelity.clean_engineering.practice_guidance._render
 		# otherwise: parse content into the object model, then render the target format
-		-> formats[source or self.format].parse
+		-> formats[source or request.fidelity.format].parse
 		-> formats[format].render
 format_for(file: Path): Any
 	// a new model of the file's format: the format whose adapter's suffixes hold the file's extension; ValueError when none does
@@ -270,8 +267,6 @@ create_all(): list[PracticeGuidance]
 	-> PracticeGuidance.hold_set
 	// each practice holds the one it extends and the Clean Engineering practice whose fidelities accompany its own, from the same set
 practice_class(key: str): type[PracticeGuidance]
-practice_named(slug: str): PracticeGuidance | None
-	// the shared practice that answers_to slug, for a reader that works in no session
 
 ## ActionCatalogue
 

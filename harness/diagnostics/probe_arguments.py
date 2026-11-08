@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
+import functools
 import inspect
 import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from harness.agent_tools.tool_call import ToolCall
 from harness.diagnostics.cdd_diagnostic_bridge import CddDiagnosticFixtures
 from harness.guidance.practice_catalogue import PracticeCatalogue
+
+if TYPE_CHECKING:
+    from harness.guidance.guidance import PracticeGuidance
 
 
 class ProbeArguments:
@@ -25,13 +29,23 @@ class ProbeArguments:
         self.fixtures = CddDiagnosticFixtures(self.repo)
         self._created: list[Path] = []
 
+    @functools.cached_property
+    def practices(self) -> list[PracticeGuidance]:
+        """The practices this probe reads, made once for it, so nothing it reads is another caller's."""
+        return PracticeCatalogue.create_all()
+
+    def practice_named(self, slug: str) -> PracticeGuidance | None:
+        """The practice slug names, by the practice's slug, such as ``clean-engineering``, or one of its fidelities'
+        slugs, such as ``stories-story-map``; none when no practice goes by it."""
+        return next((practice for practice in self.practices if practice.answers_to(slug) is not None), None)
+
     @property
     def content_paths(self) -> list[str]:
         """The folder of each practice the slugs name, or of the practice whose fidelity they name, as each practice
         answers it; the folder that holds every practice's folder when no slug names a practice."""
         found: list[str] = []
         for slug in self.slugs:
-            practice = PracticeCatalogue.practice_named(slug)
+            practice = self.practice_named(slug)
             folder = str(practice.module_dir) if practice is not None else ""
             if folder and folder not in found:
                 found.append(folder)
@@ -40,7 +54,7 @@ class ProbeArguments:
     @property
     def _practices_folder(self) -> Path:
         """The folder that holds the practices' folders, as the first practice in the catalogue answers it."""
-        return PracticeCatalogue.practices()[0].module_dir.parent
+        return self.practices[0].module_dir.parent
 
     def for_operation(self, mcp_name: str, member: Any) -> tuple[dict[str, Any], list[str]]:
         """The arguments to call the operation published as mcp_name with, and the names of the required ones the probe
@@ -129,7 +143,7 @@ class ProbeArguments:
 
     def _sample_guidance_file(self) -> str:
         """A practice's own document for a read probe: the first practice in the catalogue's, as it answers its path."""
-        return str(PracticeCatalogue.practices()[0].domain_markdown_path())
+        return str(self.practices[0].domain_markdown_path())
 
 
 class _OperationParameters:

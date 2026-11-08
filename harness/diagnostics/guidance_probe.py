@@ -40,11 +40,9 @@ class GuidanceProbe:
     def prefixes(self) -> list[str]:
         """Each slug, then the slug of the practice it names or whose fidelity it names: `stories-story-map` adds
         `stories`, so the practice's own instructions are probed with its fidelity's."""
-        from harness.guidance.practice_catalogue import PracticeCatalogue
-
         prefixes: list[str] = []
         for slug in self.slugs:
-            practice = PracticeCatalogue.practice_named(slug)
+            practice = self.arguments.practice_named(slug)
             for prefix in (slug, practice.slug if practice is not None else ""):
                 if prefix and prefix not in prefixes:
                     prefixes.append(prefix)
@@ -82,11 +80,8 @@ class GuidanceProbe:
         return section.reply
 
     def _instructions_of(self, mcp_name: str) -> ProbeOutcome:
-        from harness.agent_tools.agent_tools import AgentToolSet
-        from harness.guidance.practice_catalogue import PracticeCatalogue
-
         slug = mcp_name[: -len(".instructions")] if mcp_name.endswith(".instructions") else mcp_name
-        practice = PracticeCatalogue.practice_named(slug)
+        practice = self.arguments.practice_named(slug)
         if practice is None:
             return ProbeOutcome.from_refusal(mcp_name, "not a guidance slug")
         try:
