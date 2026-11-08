@@ -20,7 +20,7 @@ $mamba = if (Test-Path $venvMamba) { $venvMamba } else { "mamba" }
 $excludedDirs = [System.Collections.Generic.HashSet[string]]::new(
     [string[]]@(
         ".codeql", ".cq", ".venv", ".git", "node_modules", "__pycache__",
-        ".ruff_cache", "sandbox", "fixtures", "seeds", "templates", "retired"
+        ".ruff_cache", "sandbox", "fixtures", "seeds", "templates", "retired", ".retired"
     ),
     [StringComparer]::OrdinalIgnoreCase
 )
