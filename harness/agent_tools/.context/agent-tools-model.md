@@ -16,7 +16,7 @@ Each *AgentTool* exposes `kind`, `description`, `parameters`, `response`, and `i
 - Inside an `@agent_instructions` body, `tools(...)` names operations the agent calls while following the recipe, and `instructions(...)` includes another recipe inline. A recipe that includes itself is rejected when the class is decorated.
 - *ExpansionMode* on the called toolset decides whether a nested recipe expands inline (`instructions`) or is listed as a tool to call (`tool`).
 - `@toolset_collection` on a class makes it a *ToolSetCollection*; on a property it annotates one of the toolset's collections, whose children are published as nested toolsets.
-- `@tool_subject` annotates the class method that loads the object a tool call acts on; a loader that takes `project` is handed the checkout the call names. `@noSessionLog` keeps a repeated read out of the session log.
+- `@tool_subject` annotates the class method that loads the object a tool call acts on; a loader or a tool that takes `project` is handed the checkout the call names, and one that takes `call` is handed the *ToolCall* itself, so a tool that logs a line points it at the call's chat. `@noSessionLog` keeps a repeated read out of the session log.
 - `@subAgent` on a member puts the hand-off to a background sub-agent at the start of its description.
 - A toolset's `parameter_notes` are added after the description of every tool that takes that parameter.
 
