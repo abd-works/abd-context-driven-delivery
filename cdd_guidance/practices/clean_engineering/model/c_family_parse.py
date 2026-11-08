@@ -261,11 +261,11 @@ class CFamilyParse:
             return []
         params: list[str] = []
         for part in split_top_level(raw):
-            default_at = self._top_level_index(part, "=")
+            default_at = SourceText(part).top_level_index("=")
             if default_at >= 0:
                 part = part[:default_at].strip()
             part = re.sub(r"^\s*(public|private|protected|final|readonly)\s+", "", part)
-            hint_at = self._top_level_index(part, ":")
+            hint_at = SourceText(part).top_level_index(":")
             if hint_at >= 0:
                 name_part, type_hint = part[:hint_at], part[hint_at + 1 :]
                 name = name_part.strip().split()[-1]
@@ -278,18 +278,6 @@ class CFamilyParse:
             if name and name not in {"this", "self"} and re.match(r"^[\w$]+\??$", name):
                 params.append(f"{name}: {type_hint}" if type_hint else name)
         return params
-
-    def _top_level_index(self, part: str, mark: str) -> int:
-        """Where `mark` sits outside a destructuring pattern or type literal (`{ a = 1 }: T` defaults at neither); an arrow's `=>` is not a default."""
-        depth = 0
-        for index, ch in enumerate(part):
-            if ch in "<([{":
-                depth += 1
-            elif ch in ")]}" or (ch == ">" and part[index - 1 : index] != "="):
-                depth = max(0, depth - 1)
-            elif ch == mark and depth == 0 and part[index + 1 : index + 2] != ">":
-                return index
-        return -1
 
     def _fields_from_body(self, oclass: OoadClass, body: str) -> list:
         """Each field the class body declares, with its line, in the order it declares them."""
@@ -360,14 +348,10 @@ class CFamilyParse:
             prop.derive_relationship()
 
     def _brace_body(self, text: str, open_index: int) -> tuple[str | None, int]:
-        while open_index < len(text) and text[open_index] != "{":
-            open_index += 1
-        if open_index >= len(text):
-            return None, -1
-        close_index = SourceText(text).closing_bracket(open_index)
-        if close_index is None:
-            return None, -1
-        return text[open_index + 1 : close_index], open_index + 1
+        """The text inside the first `{` at or after open_index and the `}` that closes it, with where it starts."""
+        brace = text.find("{", open_index)
+        body = SourceText(text).braced(brace) if brace >= 0 else None
+        return (body, brace + 1) if body is not None else (None, -1)
 
     def _line_at(self, text: str, index: int) -> int:
         return text.count("\n", 0, index) + 1

@@ -24,7 +24,8 @@ class PracticeOutsideSession(Exception):
 class Stories(PracticeGuidance):
     """# Instructions"""
 
-    sketch_titles = SketchStoryModel.lens.titles
+    # Its section of a sketch is the one its sketch format reads, held as that one lens.
+    sketch_lens = SketchStoryModel.lens
     SHORT_NAME = "Stories"
     COLOUR = "#6BCB77"
 

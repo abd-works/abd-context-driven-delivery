@@ -80,10 +80,6 @@ class ObservationLinks:
         self.bdd = bdd
         self.clean = clean
         self.graph = bdd.graph
-        self.members: dict[tuple[bool, str], list] = {}
-        for node in [*clean.in_graph.nodes("Operation"), *clean.in_graph.nodes("Property")]:
-            if node.source.file and not is_test_code(node.source.file):
-                self.members.setdefault((_is_python(node), node.name), []).append(node)
 
     def link(self) -> None:
         by_file: dict[str, list] = {}
@@ -123,7 +119,7 @@ class ObservationLinks:
         transports = set()
         for transport, toolset, operation in reach.get("tools", []):
             transports.add(transport)
-            for member in self.members.get((is_python, Name(operation).snake), ()):
+            for member in self._code_members(Name(operation).snake, is_python):
                 if member.type == "Operation" and Name(member.get_fact("owner")).kebab == toolset:
                     add(member)
         reads = set(reach.get("reads", []))
@@ -134,7 +130,7 @@ class ObservationLinks:
 
     def _members_reached(self, name: str, is_python: bool, reads: set[str], transports: set[str]) -> list:
         members = [
-            member for member in self.members.get((is_python, name), ())
+            member for member in self._code_members(name, is_python)
             # A module function is reached by calling it; a read with its name belongs to some object's field.
             if not (name in reads and member.get_fact("owner") == "_module")
         ]
@@ -145,6 +141,15 @@ class ObservationLinks:
             return []
         # A getter is both an operation and a property of one class; the operation is the one that runs.
         return sorted(members, key=lambda member: member.type != "Operation")
+
+    def _code_members(self, name: str, is_python: bool) -> list:
+        """The code's operations and properties called name in the spec's language family. Specs and the helpers only
+        specs use drive the code under test, so an observation never invokes them."""
+        return [
+            member
+            for member in self.clean.members_named(name)
+            if member.source.file and not is_test_code(member.source.file) and _is_python(member) == is_python
+        ]
 
 
 def _is_python(node: Node) -> bool:

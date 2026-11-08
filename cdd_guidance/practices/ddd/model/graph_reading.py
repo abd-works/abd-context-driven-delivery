@@ -13,11 +13,10 @@ from harness.guidance.guidance import PracticeGuidance
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 
+from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext
 from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
-# A helper class in a test folder is never a domain aggregate, whatever its name suggests.
-_TEST_FOLDERS = ("tests/", "test-utils/")
 _FOREIGN_KEY = re.compile(r"//\s*foreign\s+(\w+)")
 _DERIVE_PREFIX = re.compile(r"^derive\w*", re.IGNORECASE)
 _ONLY_DELEGATES = re.compile(r"return\s+\w+\.\w+\s*\(")
@@ -202,7 +201,8 @@ class DddReading:
             folder = str(Path(cls.source.file).parent).replace("\\", "/")
             tactical = TacticalClass(cls)
             kind = tactical.inferred_kind(names)
-            if kind is not None and not f"{folder}/".startswith(_TEST_FOLDERS):
+            # A class in a spec, a test folder, or test support is never a domain building block, whatever its name.
+            if kind is not None and not is_test_code(cls.source.file):
                 members.setdefault(folder, []).append((tactical, kind))
         return members
 

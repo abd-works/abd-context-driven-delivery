@@ -152,6 +152,26 @@ class SourceText:
                     return index
         return None
 
+    def top_level_indexes(self, mark: str) -> list[int]:
+        """Each place mark sits outside every bracket pair, generics included: a `,` between parameters and not one
+        inside `Map<K, V>`, a default's `=` and not one inside a destructuring pattern `{ a = 1 }`. An arrow's `>` closes
+        no bracket, and the `=` of an arrow `=>` is no mark."""
+        found: list[int] = []
+        depth = 0
+        text = self._text
+        for index, char in enumerate(text):
+            if char in "<([{":
+                depth += 1
+            elif char in ")]}" or (char == ">" and text[index - 1 : index] != "="):
+                depth = max(0, depth - 1)
+            elif char == mark and depth == 0 and text[index + 1 : index + 2] != ">":
+                found.append(index)
+        return found
+
+    def top_level_index(self, mark: str) -> int:
+        """The first place mark sits outside every bracket pair; -1 when it sits at none."""
+        return next(iter(self.top_level_indexes(mark)), -1)
+
     def braced(self, open_at: int) -> str | None:
         """The text inside the `{` at open_at and the `}` that closes it; None when open_at is no `{` or nothing
         closes it."""

@@ -64,16 +64,6 @@ class CodeClass(OoadClass):
     property_type: type = CodeProperty
     operation_type: type = CodeOperation
 
-    def load_property(self, source: Property) -> CodeProperty:
-        loaded = self.property_type(source.name, source.sequential_order)
-        loaded.update_self(source)
-        return loaded
-
-    def load_operation(self, source: Operation) -> CodeOperation:
-        loaded = self.operation_type(source.name, source.sequential_order)
-        loaded.update_self(source)
-        return loaded
-
     @property
     def is_contract(self) -> bool:
         return is_interface_name(self.name)

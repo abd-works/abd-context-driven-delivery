@@ -17,7 +17,8 @@ from cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model import SketchDddMo
 class Ddd(PracticeGuidance):
     """# Instructions"""
 
-    sketch_titles = SketchDddModel.lens.titles
+    # Its section of a sketch is the one its sketch format reads, held as that one lens.
+    sketch_lens = SketchDddModel.lens
     SHORT_NAME = "DDD"
     COLOUR = "#6C5CE7"
 
