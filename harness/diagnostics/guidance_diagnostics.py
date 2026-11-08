@@ -2,28 +2,16 @@
 
 from __future__ import annotations
 
-from functools import cached_property
-from typing import TYPE_CHECKING
-
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
-from harness.agent_tools.tool_call import ToolCall
+from harness.diagnostics.call_diagnostics import CallDiagnostics
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import long_call, mcp
 
-if TYPE_CHECKING:
-    from harness.installation.installer import Installer
-
 
 @agent_toolset
-class GuidanceDiagnostics:
+class GuidanceDiagnostics(CallDiagnostics):
     """Probe installed guidance instructions and guidance-action MCP operations. Made for one call, so it probes the
     install of the project that call names."""
-
-    def __init__(self, call: ToolCall | None = None) -> None:
-        self._call = call or ToolCall()
-
-    def for_call(self, call: ToolCall) -> GuidanceDiagnostics:
-        return type(self)(call)
 
     @mcp
     @long_call
@@ -40,11 +28,3 @@ class GuidanceDiagnostics:
 
         probe = GuidanceProbe.from_filter(self._installer, guidance)
         return "\n\n".join((probe.instructions(), probe.actions()))
-
-    @cached_property
-    def _installer(self) -> Installer:
-        """The install of the project this call names, made once for the call: the probe reads what it published and
-        writes its section into the install's diagnostics."""
-        from harness.installation.installer import Installer
-
-        return Installer(repo=self._call.project)

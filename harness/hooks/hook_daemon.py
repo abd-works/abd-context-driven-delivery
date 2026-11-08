@@ -1,24 +1,35 @@
 """The hook daemon of one checkout: the process that keeps the hook server loaded between hook commands, and the address
-a hook command reaches it at."""
+a hook command reaches it at.
+
+An IDE runs this file as its hook command: ``python -u harness/hooks/hook_daemon.py`` with the event's fields on stdin.
+The command hands the event to the checkout's hook daemon, started with ``serve <checkout>``, and prints its answer."""
 from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+if __name__ == "__main__":
+    # Run by path, this file's folder is on the import path and the checkout is not; put the checkout first so the
+    # imports below resolve. The hook command sets the rest of the checkout's import path through RepositoryToolsets.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import hashlib
 import json
 import logging
 import os
 import socket
-import sys
 import threading
 import time
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+import harness.hooks.hook_server as hook_server_module
+import harness.hooks.hooks as hooks_module
+import harness.process.process as process_module
+from harness.agent_tools.agent_tools import ToolsetReference
+from harness.hooks.hook_server import HookResult, HookServer
+from harness.hooks.hooks import InstalledHookHandlers
 from harness.installation.repository_toolsets import RepositoryToolsets
-from harness.process.process import BackgroundStart, PythonInterpreter
-from harness.process.process import ProcessNotStopped, RunningProcess, StoppableProcess
-
-if TYPE_CHECKING:
-    from harness.hooks.hook_server import HookServer
+from harness.process.process import BackgroundStart, ExclusivePort, ProcessNotStopped, PythonInterpreter, RunningProcess, StoppableProcess
 
 logger = logging.getLogger(__name__)
 
@@ -33,12 +44,12 @@ _READY_POLL_SECONDS = 0.2
 _CALL_TIMEOUT_SECONDS = 600
 # A ping answers at once from a live daemon, so a dead or busy address is found quickly.
 _PING_TIMEOUT_SECONDS = 5
-_SOURCE_STAMP_FILES = (
-    Path("harness/hooks/hook_daemon.py"),
-    Path("harness/hooks/hook_server.py"),
-    Path("harness/process/process.py"),
-    Path("harness/guidance/rule.py"),
-    Path("harness/guidance_actions/guidance_actions.py"),
+# The hook server's own code: a daemon that loaded older copies of these is a different daemon.
+_HOOK_SERVER_FILES = (
+    Path(__file__).resolve(),
+    Path(hook_server_module.__file__).resolve(),
+    Path(hooks_module.__file__).resolve(),
+    Path(process_module.__file__).resolve(),
 )
 
 
@@ -143,10 +154,14 @@ class _SpawnLock:
 
 class HookDaemon:
     """The hook daemon of one checkout. It listens on the one port this checkout's daemon may hold, publishes its
-    address in ``.cursor/hook-server.json``, and serves every hook command for the checkout with one loaded hook
-    server. A hook command asks it for that address, starting the daemon first when none answers."""
+    address in the checkout's ``.hook-server/`` folder, and serves every hook command for the checkout, whichever IDE
+    sent it, with one loaded hook server. A hook command asks it for that address, starting the daemon first when none
+    answers. The folder belongs to no IDE, so a checkout that installs for VS Code or Kilo gets no ``.cursor`` folder."""
 
     HOST = "127.0.0.1"
+    FOLDER_NAME = ".hook-server"
+    # The hook command every IDE event an install registers runs: this file.
+    COMMAND_SCRIPT = Path(__file__).resolve()
 
     def __init__(self, repo: Path | str, port: int | None = None) -> None:
         self.repo = Path(repo).resolve()
@@ -155,9 +170,19 @@ class HookDaemon:
         self._dispatch = threading.Lock()
 
     @property
+    def folder(self) -> Path:
+        """The checkout's folder for the daemon's address, log, and start lock."""
+        return self.repo / self.FOLDER_NAME
+
+    @property
     def state_path(self) -> Path:
         """The address file a running daemon publishes."""
-        return self.repo / ".cursor" / "hook-server.json"
+        return self.folder / "address.json"
+
+    @property
+    def log_path(self) -> Path:
+        """The file a started daemon writes its output to."""
+        return self.folder / "server.log"
 
     @property
     def port(self) -> int:
@@ -181,11 +206,22 @@ class HookDaemon:
     def source_stamp(self) -> str:
         """Identity of the hook code this checkout holds now. A daemon that loaded older files is a different daemon."""
         parts: list[str] = []
-        for relative in _SOURCE_STAMP_FILES:
-            path = self.repo / relative
+        for path in self._stamped_files():
             if path.is_file():
-                parts.append(f"{relative.as_posix()}:{path.stat().st_mtime_ns}")
+                parts.append(f"{path.as_posix()}:{path.stat().st_mtime_ns}")
         return hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()
+
+    def _stamped_files(self) -> list[Path]:
+        """The hook server's own code, each hook install's ``hook-handlers.json``, and the module of each toolset those
+        files list: the code and the list a loaded daemon answers with."""
+        installed = InstalledHookHandlers(self.repo)
+        found = [*_HOOK_SERVER_FILES, *(handlers.path for handlers in installed.files)]
+        for ref in installed.refs:
+            try:
+                found.append(ToolsetReference(ref).module_file())
+            except (ModuleNotFoundError, ValueError):
+                continue
+        return found
 
     def ensure(self) -> HookDaemonAddress:
         """The address of this checkout's daemon, replacing one on older code and starting one when none answers."""
@@ -214,7 +250,7 @@ class HookDaemon:
 
     def spawn(self) -> None:
         """Start this checkout's daemon in the background, importing from the checkout, with its output in
-        ``.cursor/hook-server.log``."""
+        ``log_path``."""
         toolsets = self.toolsets
         existing = os.environ.get("PYTHONPATH", "")
         env = {
@@ -222,35 +258,33 @@ class HookDaemon:
             "PYTHONPYCACHEPREFIX": toolsets.pycache_prefix(),
             "PYTHONPATH": os.pathsep.join(part for part in (toolsets.pythonpath(), existing) if part),
         }
-        self.state_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.state_path.parent / "hook-server.log", "a", encoding="utf-8") as log:
+        self.folder.mkdir(parents=True, exist_ok=True)
+        with open(self.log_path, "a", encoding="utf-8") as log:
             BackgroundStart().run(
-                [PythonInterpreter().windowless, "-m", "harness.hooks.hook_daemon", str(self.repo)], cwd=self.repo, env=env, log=log
+                [PythonInterpreter().windowless, "-m", "harness.hooks.hook_daemon", "serve", str(self.repo)],
+                cwd=self.repo,
+                env=env,
+                log=log,
             )
 
     def serve(self, server: HookServer | None = None) -> None:
         """Listen on this checkout's port and answer hook commands with server, until the process ends; with no
         server, the hook server of every toolset the checkout defines. Return at once when another daemon holds the
         port."""
-        listener = self._claim_port()
+        listener = ExclusivePort(self.HOST, self.port).claim()
         if listener is None:
             return
         try:
-            server = server if server is not None else self._loaded_server()
+            server = server if server is not None else HookServer.from_repository(self.toolsets)
             self._publish_address(listener.getsockname()[1])
             self._serve_until_stopped(listener, server)
         finally:
             listener.close()
 
-    def _loaded_server(self) -> HookServer:
-        from harness.hooks.hook_server import HookServer
-
-        return HookServer.from_repository(self.toolsets)
-
     def _start_once(self) -> None:
         """Start the daemon unless another hook command is starting it; either way, it is starting when this returns."""
-        lock = _SpawnLock(self.state_path.parent / "hook-server.spawn.lock")
-        self.state_path.parent.mkdir(parents=True, exist_ok=True)
+        lock = _SpawnLock(self.folder / "spawn.lock")
+        self.folder.mkdir(parents=True, exist_ok=True)
         deadline = time.time() + _READY_WAIT_SECONDS
         while time.time() < deadline:
             if self.live_address() is not None:
@@ -286,25 +320,8 @@ class HookDaemon:
             return None
         return HookDaemonAddress(state.get("host") or self.HOST, int(state["port"]), state.get("pid"), str(state.get("stamp") or ""))
 
-    def _claim_port(self) -> socket.socket | None:
-        """None when a daemon already holds this checkout's port, so the loser exits.
-
-        An exclusive bind is the claim — two daemons cannot both hold one port, and
-        no lock file can promise that once the holder is killed without cleanup.
-        """
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        if sys.platform == "win32":
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
-        try:
-            sock.bind((self.HOST, self.port))
-        except OSError:
-            sock.close()
-            return None
-        sock.listen(socket.SOMAXCONN)
-        return sock
-
     def _publish_address(self, port: int) -> None:
-        self.state_path.parent.mkdir(parents=True, exist_ok=True)
+        self.folder.mkdir(parents=True, exist_ok=True)
         payload = {"host": self.HOST, "port": port, "pid": os.getpid(), "stamp": self.source_stamp}
         self.state_path.write_text(json.dumps(payload), encoding="utf-8")
 
@@ -339,5 +356,22 @@ class HookDaemon:
         wire.write(result.as_dict())
 
 
+def run_hook_command() -> None:
+    """The hook command: hand the event on stdin to this checkout's hook daemon and print its answer for the IDE."""
+    toolsets = RepositoryToolsets.of_running_checkout()
+    daemon = HookDaemon(toolsets.root)
+    daemon.toolsets.use_for_this_process()
+    os.chdir(toolsets.root)
+    raw = sys.stdin.buffer.read()
+    if not raw.strip():
+        print(json.dumps(HookResult().as_dict()))
+        return
+    answer = daemon.ensure().handle_stdin(raw)
+    print(json.dumps(HookResult.from_handler(answer).as_dict()))
+
+
 if __name__ == "__main__":
-    HookDaemon(Path(sys.argv[1] if len(sys.argv) > 1 else ".")).serve()
+    if len(sys.argv) > 2 and sys.argv[1] == "serve":
+        HookDaemon(Path(sys.argv[2])).serve()
+    else:
+        run_hook_command()

@@ -28,19 +28,19 @@ with description("story tests read into the graph beside the Clean Engineering m
         self.clean = self.graph.practice("clean_engineering")
 
     with it("should record each step an operation is invoked by under invokedBy"):
-        expect(len(self.clean.graph.edges_of(self.clean, "invokedBy")) > 0).to(be_true)
+        expect(len(self.clean.in_graph.edges("invokedBy")) > 0).to(be_true)
 
     with it("should record the invoking step on the operation only once, as invokedBy"):
-        expect(self.clean.graph.edges_of(self.clean, "invokes")).to(be_empty)
+        expect(self.clean.in_graph.edges("invokes")).to(be_empty)
 
     with it("should have the top-level epic use the module whose operation its step invokes"):
-        uses = {(edge.parent.name, edge.child.name) for edge in self.stories.graph.edges_of(self.stories, "uses")}
+        uses = {(edge.parent.name, edge.child.name) for edge in self.stories.in_graph.edges("uses")}
         expect(("Onboard A Customer", "account-credentials") in uses).to(be_true)
 
     with it("should have each epic use a module only when a step in that epic's own tree invokes an operation there"):
         owners = {
             (_top_epic_of(edge.parent).name, Path(edge.child.source.file).parent.name)
-            for edge in self.stories.graph.edges_of(self.stories, "invokes")
+            for edge in self.stories.in_graph.edges("invokes")
         }
-        uses = {(edge.parent.name, edge.child.name) for edge in self.stories.graph.edges_of(self.stories, "uses")}
+        uses = {(edge.parent.name, edge.child.name) for edge in self.stories.in_graph.edges("uses")}
         expect(uses - owners).to(equal(set()))

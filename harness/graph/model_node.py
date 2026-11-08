@@ -9,7 +9,8 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import Callable, Iterable, Iterator, Optional
 
-from harness.graph.graph import EdgeType, Graph, Node, Source
+from harness.graph.edge import EdgeType
+from harness.graph.graph import Graph, Node, Source
 
 # The file a new model object names until a loader tells it which file it came from.
 NO_SOURCE_FILE = "."
@@ -239,11 +240,8 @@ class ModelNode(Node):
     def _unlink(self, child, kind: str) -> None:
         if not isinstance(child, ModelNode) or self.practice is None:
             return
-        self.graph.drop_edges(
-            self.practice,
-            lambda edge: (edge.parent is self and edge.child is child and edge.kind == kind)
-            or (edge.parent is child and edge.child is self and edge.kind == "belongsTo"),
-        )
+        self.practice.in_graph.drop_edges(lambda edge: (edge.parent is self and edge.child is child and edge.kind == kind)
+            or (edge.parent is child and edge.child is self and edge.kind == "belongsTo"),)
 
     def _refer(self, target, kind: str) -> None:
         """Record a relationship edge of kind to target when both are on one graph; an owner that joins another graph
@@ -256,11 +254,11 @@ class ModelNode(Node):
     def _join(self, practice) -> None:
         """Make this object and its whole tree practice's nodes: each leaves the graph it was in, carrying the edges
         between them, and the edges its own lists hold are recorded in practice's graph."""
-        subtree = self._subtree()
+        subtree = self.subtree()
         members = {id(node) for node in subtree}
         carried = []
         for held in {id(node.practice): node.practice for node in subtree if node.practice is not None}.values():
-            carried.extend(held.graph.drop_edges(held, lambda edge: id(edge.parent) in members and id(edge.child) in members))
+            carried.extend(held.in_graph.drop_edges(lambda edge: id(edge.parent) in members and id(edge.child) in members))
         with schema_sync_paused():
             for node in subtree:
                 node._move_to(practice)
@@ -282,25 +280,24 @@ class ModelNode(Node):
     def _move_to(self, practice) -> None:
         if self.practice is practice:
             return
-        graph = practice.graph
-        unnamed = not self.node_id or graph.holds(practice, self.node_id)
-        node_id = graph.unused_node_id(practice, self.type, self.name) if unnamed else self.node_id
+        unnamed = not self.node_id or practice.in_graph.holds(self.node_id)
+        node_id = practice.in_graph.unused_node_id(self.type, self.name) if unnamed else self.node_id
         # add places a parsed node at its lines; a bound object keeps the source it already has, whatever its kind.
         source = self.source
-        graph.add(practice, self, node_id, NO_SOURCE_FILE, 1, 1)
+        practice.in_graph.add(self, node_id, NO_SOURCE_FILE, 1, 1)
         self.source = source
 
-    def _subtree(self) -> list["ModelNode"]:
+    def subtree(self) -> list["ModelNode"]:
         found: list[ModelNode] = [self]
         for children in list(self._child_lists):
             for child in list(children):
                 if isinstance(child, ModelNode):
-                    found.extend(child._subtree())
+                    found.extend(child.subtree())
         examples = getattr(self, "examples", None)
         if isinstance(examples, dict):
             for example in examples.values():
                 if isinstance(example, ModelNode):
-                    found.extend(example._subtree())
+                    found.extend(example.subtree())
         return found
 
     def __setattr__(self, name: str, value) -> None:

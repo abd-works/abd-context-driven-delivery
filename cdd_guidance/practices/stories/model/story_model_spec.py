@@ -873,7 +873,7 @@ with description("a story map on a graph") as self:
         practice = self.graph.practice("stories")
         pairs = [
             (edge.parent.name, edge.child.name)
-            for edge in practice.graph.edges_of(practice, "decomposedInto")
+            for edge in practice.in_graph.edges("decomposedInto")
         ]
         expect(pairs).to(contain(
             ("Onboard A Customer", "Authenticate User"),
@@ -884,9 +884,9 @@ with description("a story map on a graph") as self:
         practice = self.graph.practice("stories")
         scenario_pairs = [
             (edge.parent.name, edge.child.name)
-            for edge in practice.graph.edges_of(practice, "scenarios")
+            for edge in practice.in_graph.edges("scenarios")
         ]
-        step_names = [edge.child.name for edge in practice.graph.edges_of(practice, "steps")]
+        step_names = [edge.child.name for edge in practice.in_graph.edges("steps")]
         expect(scenario_pairs).to(contain(("Create Account", "Create account")))
         expect(step_names).to(contain("the User creates their account", "the account is unconfirmed"))
 
@@ -894,7 +894,7 @@ with description("a story map on a graph") as self:
         practice = self.graph.practice("stories")
         pairs = [
             (edge.parent.name, edge.child.name)
-            for edge in practice.graph.edges_of(practice, "belongsTo")
+            for edge in practice.in_graph.edges("belongsTo")
         ]
         expect(pairs).to(contain(
             ("Authenticate User", "Onboard A Customer"),
@@ -907,7 +907,7 @@ with description("a story map on a graph") as self:
         self.scenario.steps[0].ands = [continued]
         pairs = [
             (edge.parent.name, edge.child.name)
-            for edge in self.graph.edges_of(self.graph.practice("stories"), "ands")
+            for edge in self.graph.practice("stories").in_graph.edges("ands")
         ]
         expect(pairs).to(contain(("the User creates their account", "the email is saved")))
 
@@ -934,18 +934,18 @@ with description("a story map on a graph") as self:
 
         stories = self.graph.practice("stories")
         clean = self.graph.practice("clean_engineering")
-        invokes = [(edge.parent.name, edge.child.name) for edge in stories.graph.edges_of(stories, "invokes")]
-        observes = [(edge.parent.name, edge.child.name) for edge in stories.graph.edges_of(stories, "observes")]
-        demonstrates = [(edge.parent.name, edge.child.name) for edge in stories.graph.edges_of(stories, "demonstrates")]
-        retrieved = [(edge.parent.name, edge.child.name) for edge in stories.graph.edges_of(stories, "retrievedUsing")]
-        uses = [(edge.parent.name, edge.child.name) for edge in stories.graph.edges_of(stories, "uses")]
-        shown = [(edge.parent.name, edge.child.name) for edge in stories.graph.edges_of(stories, "shownOn")]
-        specified = [(edge.parent.name, edge.child.name) for edge in stories.graph.edges_of(stories, "specifiedBy")]
+        invokes = [(edge.parent.name, edge.child.name) for edge in stories.in_graph.edges("invokes")]
+        observes = [(edge.parent.name, edge.child.name) for edge in stories.in_graph.edges("observes")]
+        demonstrates = [(edge.parent.name, edge.child.name) for edge in stories.in_graph.edges("demonstrates")]
+        retrieved = [(edge.parent.name, edge.child.name) for edge in stories.in_graph.edges("retrievedUsing")]
+        uses = [(edge.parent.name, edge.child.name) for edge in stories.in_graph.edges("uses")]
+        shown = [(edge.parent.name, edge.child.name) for edge in stories.in_graph.edges("shownOn")]
+        specified = [(edge.parent.name, edge.child.name) for edge in stories.in_graph.edges("specifiedBy")]
         expect(invokes).to(contain(("the User creates their account", "register")))
-        expect([(edge.parent.name, edge.child.name) for edge in clean.graph.edges_of(clean, "invokedBy")]).to(contain(("register", "the User creates their account")))
+        expect([(edge.parent.name, edge.child.name) for edge in clean.in_graph.edges("invokedBy")]).to(contain(("register", "the User creates their account")))
         expect(observes).to(contain(("the account is unconfirmed", "emailedValidationCode")))
         expect(demonstrates).to(contain(("emailedValidationCode", "AccountCredentials")))
-        expect([(edge.parent.name, edge.child.name) for edge in clean.graph.edges_of(clean, "demonstratedThrough")]).to(contain(("AccountCredentials", "emailedValidationCode")))
+        expect([(edge.parent.name, edge.child.name) for edge in clean.in_graph.edges("demonstratedThrough")]).to(contain(("AccountCredentials", "emailedValidationCode")))
         expect(retrieved).to(contain(("emailedValidationCode", "token")))
         expect(uses).to(contain(("Onboard A Customer", "account-credentials")))
         expect(shown).to(contain(("Create Account", "Create Account")))

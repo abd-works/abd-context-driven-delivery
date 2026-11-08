@@ -31,6 +31,8 @@ class Stories(PracticeGuidance):
     catalog_card = {
         "name": "Stories",
         "label": "stories",
+        # The approach page's stage examples are Stories' artifacts.
+        "stage_examples": True,
         "family": "aad-fam-sdd",
         "perspective": "sdd",
         "order": 10,

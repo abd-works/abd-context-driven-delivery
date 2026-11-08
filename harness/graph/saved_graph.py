@@ -15,7 +15,8 @@ from harness.graph.violation import Violation
 from harness.installation.destination import data_of
 
 if TYPE_CHECKING:
-    from harness.graph.graph import Edge, Graph, Node
+    from harness.graph.edge import Edge
+    from harness.graph.graph import Graph, Node
     from harness.guidance.guidance import PracticeGuidance
 
 GRAPH_FILE_NAME = "graph.json"
@@ -120,12 +121,12 @@ class SavedPractice:
         """The practice as the graph that holds it has it now; with files, only its nodes read from them (each a file
         or folder from its source root) and the edges that join two of them or one of them to the practice's root."""
         graph = practice.graph
-        nodes = [node for node in graph.nodes_of(practice) if _read_from(node, files)]
-        edges = [edge for edge in graph.edges_of(practice) if _joins_kept(edge, files)]
+        nodes = [node for node in practice.in_graph.nodes() if _read_from(node, files)]
+        edges = [edge for edge in practice.in_graph.edges() if _joins_kept(edge, files)]
         return cls(
             practice.key,
-            graph.source_root_of(practice),
-            graph.root_of(practice).facts,
+            practice.in_graph.source_root,
+            practice.in_graph.root.facts,
             [SavedNode.from_node(node) for node in nodes],
             [SavedEdge.from_edge(edge) for edge in edges],
             [violation for node in nodes for violation in node.rules.violations],

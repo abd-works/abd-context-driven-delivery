@@ -61,7 +61,7 @@ class GraphReading:
 
     @property
     def _source_root(self) -> Path:
-        return Path(self.graph.source_root_of(self))
+        return Path(self.in_graph.source_root)
 
     def _read_code(self) -> None:
         self.graph.report_progress("clean_engineering · folders")
@@ -70,7 +70,7 @@ class GraphReading:
         modules = self._parsed_modules(files)
         self._class_names = {cls.name for module in modules.values() for cls in module.classes}
         self._class_names |= self._read_unparsed(self._unparsed_declaring_files(files))
-        nodes = {rel: self.graph.add(self, module, f"clean_engineering:{module.type}:{rel}", rel, 1, 1) for rel, module in folders.items()}
+        nodes = {rel: self.in_graph.add(module, f"clean_engineering:{module.type}:{rel}", rel, 1, 1) for rel, module in folders.items()}
         imports: dict[str, list[str]] = {rel: [] for rel in folders}
         for file, module in modules.items():
             relative = file.relative_to(self._source_root).as_posix()
@@ -81,7 +81,7 @@ class GraphReading:
                 nodes[owner].merge_fact("imported_names", module.imported_names)
                 self._record_sibling_imports(nodes[owner], relative, module.dependencies)
             for cls in module.classes:
-                self._class(relative, nodes.get(owner) or self.graph.root_of(self), cls)
+                self._class(relative, nodes.get(owner) or self.in_graph.root, cls)
         self._record_unreadable(folders, nodes)
         self._link_folders(folders, nodes, imports)
 
@@ -137,7 +137,7 @@ class GraphReading:
                 owners[file.parent] = self._module_folder_of(file.parent)
             for name in class_names_imported_by(text):
                 importers.setdefault(name, set()).add(owners[file.parent])
-        self.graph.root_of(self).set_fact("imported_names_outside", {name: sorted(held) for name, held in importers.items()})
+        self.in_graph.root.set_fact("imported_names_outside", {name: sorted(held) for name, held in importers.items()})
         return names
 
     def _module_folder_of(self, folder: Path) -> str:
@@ -174,16 +174,16 @@ class GraphReading:
         modules = {rel: module for rel, module in folders.items() if module.type == "Module"}
         for file, reason in self._unreadable.items():
             relative = file.relative_to(self._source_root).as_posix()
-            owner = nodes.get(_nearest(str(Path(relative).parent).replace("\\", "/"), modules)) or self.graph.root_of(self)
+            owner = nodes.get(_nearest(str(Path(relative).parent).replace("\\", "/"), modules)) or self.in_graph.root
             kept = owner.get_fact("unreadable_sources") or []
             owner.set_fact("unreadable_sources", list(dict.fromkeys([*kept, f"{relative}: {reason}"])))
 
     def _link_folders(self, folders: dict, nodes: dict, imports: dict[str, list[str]]) -> None:
         """Each folder is owned by the folder that encloses it, and depends on each folder its files import from."""
-        held = {node.source.file: node for kind in ("Module", "Package") for node in self.graph.nodes_of(self, kind)}
+        held = {node.source.file: node for kind in ("Module", "Package") for node in self.in_graph.nodes(kind)}
         held.update(nodes)
         for rel in sorted(folders, key=lambda item: (item.count("/"), item)):
-            parent = _enclosing(rel, folders, nodes) or self.graph.root_of(self)
+            parent = _enclosing(rel, folders, nodes) or self.in_graph.root
             folder = nodes[rel]
             for imported in _imported_folders(imports[rel], held, rel):
                 self.graph.link("dependsOn", folder, imported, "relationship")
@@ -194,7 +194,7 @@ class GraphReading:
     def _class(self, relative: str, folder: Node, cls) -> None:
         """Add the class, its properties, and its operations; each is the object the parser built."""
         cls.load_source_facts()
-        node = self.graph.add(self, cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", relative, cls.line, cls.end_line)
+        node = self.in_graph.add(cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", relative, cls.line, cls.end_line)
         self.graph.link("owns", folder, node)
         self.graph.link("belongsTo", node, folder, "relationship")
         for prop in cls.public_properties:
@@ -212,7 +212,7 @@ class GraphReading:
         else:
             prop.type = "Property"
             hint = prop.name[:1].upper() + prop.name[1:]
-        node = self.graph.add(self, prop, prop_id, relative, line, line)
+        node = self.in_graph.add(prop, prop_id, relative, line, line)
         self.graph.link("properties", cls, node, "grouped")
         if not _names_class(hint, self._class_names):
             return
@@ -226,12 +226,12 @@ class GraphReading:
     def _operation(self, relative: str, cls: Node, operation) -> None:
         start, end = operation.source_lines
         operation.load_span_facts()
-        node = self.graph.add(self, operation, f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}", relative, start, end)
+        node = self.in_graph.add(operation, f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}", relative, start, end)
         node.set_fact("parameters", [[p.name, (p.type_hint or "").strip()] for p in operation.parameters])
         self.graph.link("owns", cls, node)
         for parameter in operation.parameters:
             param_id = f"clean_engineering:Parameter:{relative}:{parameter.name}:{cls.name}.{operation.name}"
-            self.graph.link("hasParameter", node, self.graph.add(self, parameter, param_id, relative, start, start), "relationship")
+            self.graph.link("hasParameter", node, self.in_graph.add(parameter, param_id, relative, start, start), "relationship")
         returned = operation.return_type or ""
         if _names_class(returned, self._class_names):
             for other in self._class_names:
@@ -274,7 +274,7 @@ class GraphReading:
         return module
 
     def _class_named(self, name: str) -> Node | None:
-        return next((node for node in self.graph.nodes_of(self, "OoadClass") if node.name == name), None)
+        return next((node for node in self.in_graph.nodes("OoadClass") if node.name == name), None)
 
     ## the model documents
 

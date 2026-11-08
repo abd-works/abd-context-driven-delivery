@@ -1,21 +1,17 @@
 """The hooks that start the one cdd server: Cursor and VS Code connect to its URL and cannot start it themselves."""
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.hooks.hooks import hook
 from harness.installation.destination import noCatalog
 from harness.mcp.cdd_home import CddHome
+from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.mcp.mcp_daemon import McpDaemon
 
 if TYPE_CHECKING:
     from harness.hooks.hook_server import HookPayload
-
-# The checkout this code runs from. The cdd server is installed into ``~/.cdd`` from it, whichever project's hook asks.
-_CDD_CHECKOUT = Path(__file__).resolve().parents[2]
-
 
 @noCatalog
 @agent_toolset
@@ -25,7 +21,9 @@ class CddServerHooks:
 
     def __init__(self, home: CddHome | None = None) -> None:
         self.daemon = McpDaemon(home if home is not None else CddHome())
-        self.checkout = _CDD_CHECKOUT
+        # The checkout this code runs from: the cdd server is installed into ``~/.cdd`` from it, whichever project's
+        # hook asks.
+        self.checkout = RepositoryToolsets.of_running_checkout().root
 
     @hook("sessionStart")
     def ensure_mcp_server_on_session_start(self, payload: HookPayload) -> str:

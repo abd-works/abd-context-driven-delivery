@@ -65,7 +65,7 @@ with description("a model object built on a graph and moved to another"):
         expect(self.graph.node(self.region.node_id)).to(be(self.region))
 
     with it("should leave the practice it was built in"):
-        expect(self.own_practice.graph.holds(self.own_practice, self.region.node_id)).to(equal(False))
+        expect(self.own_practice.in_graph.holds(self.region.node_id)).to(equal(False))
 
     with context("that has the same name as a node already on the owner's graph"):
         with before.each:

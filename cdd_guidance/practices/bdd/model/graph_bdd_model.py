@@ -36,7 +36,7 @@ class GraphBddModel(BddModel):
         self._graph = graph
         bdd = graph.practice_of(self.practice_kind())
         self._clean = bdd.clean_engineering_practice
-        for spec in sorted(graph.nodes_of(bdd, "Spec"), key=lambda node: node.source.file):
+        for spec in sorted(bdd.in_graph.nodes("Spec"), key=lambda node: node.source.file):
             for saved in self._in_file_order(graph.edges_from("descriptions", spec)):
                 self._read_block(saved, self.add_description(saved.name))
         return self
@@ -91,7 +91,7 @@ class GraphBddModel(BddModel):
         if self._clean is None:
             return None
         for node_type in _MEMBER_TYPES:
-            for member in self._graph.nodes_of(self._clean, node_type):
+            for member in self._clean.in_graph.nodes(node_type):
                 if member.name == name and member.get_fact("owner") == owner:
                     return member
         return None

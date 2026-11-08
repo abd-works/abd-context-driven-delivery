@@ -1,6 +1,7 @@
 """A graph loaded from the account-credentials working copy."""
 
 import json
+import tempfile
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
@@ -9,7 +10,8 @@ from expects import be, be_a, be_above, be_none, contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
-from harness.graph.graph import EdgeType, Graph, Node, Source
+from harness.graph.edge import EdgeType
+from harness.graph.graph import Graph, Node, Source
 from harness.guidance.guidance import PracticeGuidance
 from harness.graph.explorer import PracticeInventory
 from harness.graph.pattern_overlays import PatternOverlays
@@ -138,7 +140,7 @@ def _inside(file: str | None, scope: list[str]) -> bool:
 
 
 def _practice_nodes(graph: Graph, practice: str, scope: list[str]) -> list[Node]:
-    nodes = graph.nodes_of(graph.practice(practice))
+    nodes = graph.practice(practice).in_graph.nodes()
     return [node for node in nodes if _inside(node.source.file, scope)]
 
 
@@ -151,7 +153,7 @@ def violations_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[st
 
 
 def edges_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, str, str]]:
-    edges = graph.edges_of(graph.practice(practice))
+    edges = graph.practice(practice).in_graph.edges()
     return {
         (edge.parent.node_id, edge.child.node_id, edge.kind)
         for edge in edges
@@ -168,12 +170,12 @@ with description("a graph"):
         with before.all:
             self.graph = Graph()
             roots = {name: str(_SAMPLE) for name in _PRACTICES}
-            data_of(self.graph.load_working_copy(str(_ROOT), roots, database=str(_SAMPLE), force=True))
+            data_of(self.graph.load_working_copy(str(_ROOT), roots, database=tempfile.mkdtemp(prefix="cdd-graph-spec-"), force=True))
 
         with context("with clean engineering"):
             with before.all:
                 self.clean = self.graph.practice("clean_engineering")
-                self.clean_tree = data_of(self.graph.root_of(self.clean).serialize())
+                self.clean_tree = data_of(self.clean.in_graph.root.serialize())
                 self.account = tree_named(self.clean_tree, "AccountCredentials", "OoadClass")
 
             with it("should count three modules"):
@@ -248,8 +250,8 @@ with description("a graph"):
             with it("should include properties on AccountCredentials"):
                 expect(tree_names(self.account)).to(contain("properties"))
 
-            with it("should include belongsTo on AccountCredentials"):
-                expect(tree_names(self.account)).to(contain("belongsTo"))
+            with it("should leave the belongsTo back-edge out of AccountCredentials' tree"):
+                expect(tree_names(self.account)).not_to(contain("belongsTo"))
 
             with context("with a module, a class, an operation, a property, and a parameter"):
                 with before.all:
@@ -360,7 +362,7 @@ with description("a graph"):
                     with before.all:
                         self.graph.filter.select_rules(["limit-operation-parameters"])
                         self.graph.filter.select_violations()
-                        self.violation_tree = data_of(self.graph.root_of(self.graph.practice("clean_engineering")).serialize())
+                        self.violation_tree = data_of(self.graph.practice("clean_engineering").in_graph.root.serialize())
 
                     with it("should return the operation that fails the rule"):
                         returned = [node["name"] for node in data_of(self.graph.return_nodes())]
@@ -423,8 +425,8 @@ with description("a graph"):
         with context("with stories"):
             with before.all:
                 self.stories = self.graph.practice("stories")
-                self.stories_tree = data_of(self.graph.root_of(self.stories).serialize())
-                self.clean_tree = data_of(self.graph.root_of(self.graph.practice("clean_engineering")).serialize())
+                self.stories_tree = data_of(self.stories.in_graph.root.serialize())
+                self.clean_tree = data_of(self.graph.practice("clean_engineering").in_graph.root.serialize())
 
             with it("should count one epic"):
                 expect(tree_count(self.stories_tree, "Epic")).to(equal(1))
@@ -683,7 +685,7 @@ with description("a graph"):
         with context("with domain-driven design"):
             with before.all:
                 self.ddd = self.graph.practice("ddd")
-                self.ddd_tree = data_of(self.graph.root_of(self.ddd).serialize())
+                self.ddd_tree = data_of(self.ddd.in_graph.root.serialize())
                 self.bounded_context = tree_named(self.ddd_tree, "bounded context", "BoundedContext")
                 self.aggregate = tree_named(self.ddd_tree, "account-credentials", "Aggregate")
 
@@ -739,13 +741,9 @@ with description("a graph"):
                 expect(customer["node_id"]).to(equal("ddd:Aggregate:src/customer"))
                 expect({"Customer", "CustomerRepository", "Address", "Identity"} <= set(tree_names(customer))).to(equal(True))
 
-            with it("should leave a belongsTo copy of the customer aggregate without its members"):
-                copies = [
-                    item
-                    for item in walk_tree(self.ddd_tree)
-                    if item.get("node_id") == "ddd:Aggregate:src/customer" and not item.get("children")
-                ]
-                expect(len(copies)).to(be_above(0))
+            with it("should show the customer aggregate once, with its members"):
+                copies = [item for item in walk_tree(self.ddd_tree) if item.get("node_id") == "ddd:Aggregate:src/customer"]
+                expect(len(copies)).to(equal(1))
 
             with it("should include AccountCredentials"):
                 expect(tree_names(self.aggregate)).to(contain("AccountCredentials"))
@@ -845,7 +843,7 @@ with description("a graph"):
 
         with context("with behavior-driven development that has one story spec without describes"):
             with before.all:
-                self.bdd_tree = data_of(self.graph.root_of(self.graph.practice("bdd")).serialize())
+                self.bdd_tree = data_of(self.graph.practice("bdd").in_graph.root.serialize())
 
             with it("should count one spec"):
                 expect(tree_count(self.bdd_tree, "Spec")).to(equal(1))
@@ -890,7 +888,7 @@ with description("a graph"):
 
         with context("with experience design that has no map"):
             with before.all:
-                self.ux_tree = data_of(self.graph.root_of(self.graph.practice("ux")).serialize())
+                self.ux_tree = data_of(self.graph.practice("ux").in_graph.root.serialize())
 
             with it("should count zero maps"):
                 expect(tree_count(self.ux_tree, "UxMap")).to(equal(0))
@@ -905,7 +903,7 @@ with description("a graph"):
         with before.all:
             self.full = Graph()
             roots = {name: str(_SAMPLE) for name in _PRACTICES}
-            data_of(self.full.load_working_copy(str(_ROOT), roots, database=str(_SAMPLE), force=True))
+            data_of(self.full.load_working_copy(str(_ROOT), roots, database=tempfile.mkdtemp(prefix="cdd-graph-spec-"), force=True))
 
         with context("with an edited entity root"):
             with before.all:
@@ -1162,7 +1160,7 @@ with description("a graph's practice"):
     with before.each:
         self.graph = Graph()
         self.practice = self.graph.practice("stories")
-        self.story = self.graph.add_named(self.practice, "Story", "stories:Story:Create account", "Create account", Source("story.md", 1, 1))
+        self.story = self.practice.in_graph.add_named("Story", "stories:Story:Create account", "Create account", Source("story.md", 1, 1))
 
     with it("should be the practice's guidance itself"):
         expect(self.practice).to(be_a(PracticeGuidance))
@@ -1177,7 +1175,7 @@ with description("a graph's practice"):
         expect(self.story.practice).to(be(self.practice))
 
     with it("should reach its nodes through the graph it holds"):
-        expect(self.practice.graph.nodes_of(self.practice)).to(equal([self.story]))
+        expect(self.practice.in_graph.nodes()).to(equal([self.story]))
 
     with it("should leave the graph no part of its own for the practice"):
         import harness.graph.graph as graph_module
@@ -1252,7 +1250,7 @@ with description("a graph opened on a folder"):
         expect(_class_names_in(self.graph)).to(equal([]))
 
     with it("should open every practice on the session's root"):
-        expect(self.graph.source_root_of(self.graph.practice("clean_engineering"))).to(equal(str(self.folder.resolve())))
+        expect(self.graph.practice("clean_engineering").in_graph.source_root).to(equal(str(self.folder.resolve())))
 
     with context("that is refreshed with a file an action wrote"):
         with before.each:
@@ -1297,5 +1295,37 @@ with description("a graph opened on a folder"):
             expect(self.message).to(contain("nothing was refreshed"))
 
 
+class _SlowBuild(Graph):
+    """A graph whose working copy takes a while to read, recording how many builds read at once."""
+
+    reading = 0
+    most_at_once = 0
+
+    def _read_working_copy(self) -> None:
+        import time
+
+        type(self).reading += 1
+        type(self).most_at_once = max(type(self).most_at_once, type(self).reading)
+        time.sleep(0.2)
+        type(self).reading -= 1
+
+
+with description("graphs of several sessions built at once"):
+    with before.each:
+        import threading
+
+        _SlowBuild.reading = 0
+        _SlowBuild.most_at_once = 0
+        graphs = [_SlowBuild(), _SlowBuild(), _SlowBuild()]
+        builds = [threading.Thread(target=graph._fill) for graph in graphs]
+        for build in builds:
+            build.start()
+        for build in builds:
+            build.join(10)
+
+    with it("should build one graph at a time, so the server keeps answering other calls"):
+        expect(_SlowBuild.most_at_once).to(equal(1))
+
+
 def _class_names_in(graph: Graph) -> list[str]:
-    return sorted(node.name for node in graph.nodes_of(graph.practice("clean_engineering"), "OoadClass"))
+    return sorted(node.name for node in graph.practice("clean_engineering").in_graph.nodes("OoadClass"))

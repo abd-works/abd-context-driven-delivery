@@ -106,11 +106,15 @@ class Guidance:
 
     @property
     def module_dir(self) -> Path:
+        """The folder beside the guidance's class: ``key`` and every markdown read ask it."""
         return type(self).class_folder()
 
     @classmethod
+    @functools.cache
     def class_folder(cls) -> Path:
-        """The folder the guidance's class is defined in, which holds its markdown, templates, and examples."""
+        """The folder the guidance's class is defined in, which holds its markdown, templates, and examples. Found once
+        per class: where a class is defined never changes while the process runs, and every practice made from the
+        class, such as the five a graph makes for itself, asks it."""
         try:
             return Path(inspect.getfile(cls)).resolve().parent
         except (TypeError, OSError):
@@ -369,9 +373,13 @@ class PracticeGuidance(Guidance):
     # names the graph rules it checks. The graph names no practice, so these words live here, on the practice.
 
     graph: Any = None
-    """The graph that holds this practice (harness/graph's *Graph*), which keeps the practice's nodes and edges; none for
-    a practice no graph holds. A session's practices are held by the session's graph, so the practice an action works
-    with is the one the graph reads."""
+    """The graph that holds this practice (harness/graph's *Graph*); none for a practice no graph holds. A session's
+    practices are held by the session's graph, so the practice an action works with is the one the graph reads."""
+
+    in_graph: Any = None
+    """This practice's part of the graph that holds it (harness/graph's *PracticeNodes*): its root node, its nodes, and
+    its edges, made once by the graph and kept here, so code holding the practice asks it for its nodes
+    (``practice.in_graph.nodes("Story")``); none for a practice no graph holds."""
 
     extended: PracticeGuidance | None = None
     """The practice whose types this practice's schema builds on, which ``extends`` names, held by reference: the one of
@@ -460,7 +468,7 @@ class PracticeGuidance(Guidance):
         """The graph rules this practice checks, with those the pattern overlays its graph applies add to it, by slug."""
         merged = dict(self.graph_checks())
         if self.graph is not None:
-            merged.update(self.graph.overlay_checks_of(self))
+            merged.update(self.in_graph.overlay_checks)
         return merged
 
     @property

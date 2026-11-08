@@ -148,7 +148,7 @@ class AgentToolsProbe:
     def _skipped_at_start(self) -> list[ProbeOutcome]:
         """A probed toolset, or an installed tool, the host skipped when it started."""
         probed = {*self.toolset_refs, *self.installer.diagnostics.installed_items("mcp")}
-        skipped = self.host.checkout_server.skipped
+        skipped = self.host.checkout_server.skipped.as_data
         return [ProbeOutcome.from_refusal(item["tool"], f"skipped at start-up: {item['reason']}") for item in skipped if item["tool"] in probed]
 
     def _invoke_one(self, mcp_name: str, arguments: ProbeArguments) -> ProbeOutcome:

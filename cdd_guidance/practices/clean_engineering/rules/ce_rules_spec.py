@@ -185,7 +185,7 @@ export class AccountRepository {
                 lang="typescript",
                 filename="account.ts",
             )
-            repo = next(n for n in fixture.practice.graph.nodes_of(fixture.practice, "OoadClass") if n.name == "AccountRepository")
+            repo = next(n for n in fixture.practice.in_graph.nodes("OoadClass") if n.name == "AccountRepository")
             context = fixture.context
             expect(rule.check(repo, context)).to(equal([]))
     with context("state-change-returns-record-or-named-failure"):

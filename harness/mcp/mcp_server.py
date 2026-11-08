@@ -22,7 +22,7 @@ from mcp.server.models import InitializationOptions
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
-from harness.installation.destination import ServerInstallation, data_of
+from harness.installation.destination import ServerInstallation, SkippedTool, SkippedTools, data_of
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.installer import Installer
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -93,16 +93,6 @@ class ToolNotEnrolled(LookupError):
     def __init__(self, tool: str) -> None:
         super().__init__(f"{tool} is not a tool the cdd server publishes")
         self.tool = tool
-
-
-class _SkippedTool(Exception):
-    """One published tool or toolset the server skipped so it could serve the rest."""
-
-    def __init__(self, tool: str, reason: str, cause: BaseException | None = None) -> None:
-        super().__init__(f"{tool}: {reason}")
-        self.tool = tool
-        self.reason = reason
-        self.cause = cause
 
 
 class McpInstallation(ServerInstallation):
@@ -216,7 +206,7 @@ class McpInstallation(ServerInstallation):
         except McpConfigUnreadable as unreadable:
             logger.warning("a cdd entry in the %s config may still outrank the cdd plugin: %s", whose, unreadable)
             return
-        servers = data.get("mcpServers") if isinstance(data, dict) else None
+        servers = data.get(self.layout.mcp_servers_key) if isinstance(data, dict) else None
         if not isinstance(servers, dict) or "cdd" not in servers:
             return
         del servers["cdd"]
@@ -278,7 +268,7 @@ class McpInstallation(ServerInstallation):
 
     def _project_root(self) -> Path:
         path = Path(self.path)
-        return path.parent if path.name in {".cursor", ".claude"} else path
+        return path.parent if path.name == self.layout.folder_name else path
 
     def standup(self) -> McpHost | None:
         """A host over every toolset in this installation's checkout, in this process, to check it stands up; none
@@ -324,7 +314,7 @@ class McpInstallation(ServerInstallation):
 
     @property
     def _checkout(self) -> Path:
-        return Path(self.repo or Path(__file__).resolve().parents[2]).resolve()
+        return Path(self.repo or RepositoryToolsets.of_running_checkout().root).resolve()
 
 
 class McpServer:
@@ -337,12 +327,12 @@ class McpServer:
         repo: str | Path | None = None,
         project: str | Path | None = None,
     ) -> None:
-        self.repo = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
+        self.repo = Path(repo).resolve() if repo is not None else RepositoryToolsets.of_running_checkout().root
         self.project = Path(project).resolve() if project is not None else self.repo
         self.venv = self.repo / ".venv"
         self._tools: dict[str, AgentTool] = {}
         self._prompts: dict[str, AgentTool] = {}
-        self.exceptions: list[_SkippedTool] = []
+        self.skipped = SkippedTools("MCP", "tools")
         self._started = False
         self._toolsets: tuple[Any, ...] = ()
 
@@ -358,31 +348,21 @@ class McpServer:
     def prompts(self) -> dict[str, AgentTool]:
         return dict(self._prompts)
 
-    @property
-    def skipped(self) -> list[dict[str, str]]:
-        """Each tool or toolset the start skipped, and why."""
-        return [{"tool": item.tool, "reason": item.reason} for item in self.exceptions]
-
-    def skip(self, tool: str, error: BaseException) -> None:
-        skipped = error if isinstance(error, _SkippedTool) else _SkippedTool(tool, str(error), error)
-        self.exceptions.append(skipped)
-        logger.error("MCP standup exception: skipped %s: %s", skipped.tool, skipped.reason, exc_info=skipped.cause)
-
     def enroll(self, tool: AgentTool) -> None:
         """Publish tool under its MCP name: an operation as a tool, instructions as a prompt whose call answers with
         them expanded. A tool whose name is not a legal MCP name, is taken, or whose arguments' schema cannot be read
         is skipped, so the tool list never fails."""
         name = tool.mcp_name
         if not self._is_legal_name(name):
-            self.skip(name, _SkippedTool(name, "illegal MCP tool name"))
+            self.skipped.skip(name, SkippedTool(name, "illegal MCP tool name"))
             return
         if name in self._tools or name in self._prompts:
-            self.skip(name, _SkippedTool(name, "MCP name is already enrolled"))
+            self.skipped.skip(name, SkippedTool(name, "MCP name is already enrolled"))
             return
         try:
             tool.input_schema
         except AgentToolSet.LOAD_FAILURES as unreadable:
-            self.skip(name, _SkippedTool(name, f"its argument schema cannot be read: {unreadable}", unreadable))
+            self.skipped.skip(name, SkippedTool(name, f"its argument schema cannot be read: {unreadable}", unreadable))
             return
         if tool.kind == "tool":
             self._tools[name] = tool
@@ -396,7 +376,7 @@ class McpServer:
         self._toolsets = tuple(toolsets)
         self._tools.clear()
         self._prompts.clear()
-        self.exceptions = []
+        self.skipped.clear()
         for item in self._toolsets:
             for toolset in self._loaded(item):
                 self._enroll_with_children(toolset)
@@ -406,7 +386,7 @@ class McpServer:
         try:
             return AgentToolSet.from_items([item])
         except AgentToolSet.LOAD_FAILURES as error:
-            self.skip(str(item), error)
+            self.skipped.skip(str(item), error)
             return []
 
     def _enroll_with_children(self, toolset: Any) -> None:
@@ -414,7 +394,7 @@ class McpServer:
             for each in (toolset, *toolset.child_toolsets()):
                 self._enroll_toolset(each)
         except AgentToolSet.LOAD_FAILURES as error:
-            self.skip(toolset.registration_name, error)
+            self.skipped.skip(toolset.registration_name, error)
 
     def for_project(self, project: Path) -> McpServer:
         """A server with the same toolsets working on ``project``. Toolsets keep state between calls, so each project
@@ -818,7 +798,7 @@ class McpHost:
             with self._servers_lock:
                 self._servers = {self._checkout_server.project: self._checkout_server}
         tools = self._checkout_server.tools
-        return {"is_restarted": True, "tools": len(tools) + len(self._checkout_server.prompts), "exceptions": self._checkout_server.skipped}
+        return {"is_restarted": True, "tools": len(tools) + len(self._checkout_server.prompts), "exceptions": self._checkout_server.skipped.as_data}
 
     def diagnose(self) -> dict[str, Any]:
         """What this host publishes: the ping's answer, every tool name, and what start-up skipped."""
@@ -827,22 +807,9 @@ class McpHost:
             "ok": True,
             "ping": self.ping(),
             "tools": [BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL, *sorted(server.tools), *sorted(server.prompts)],
-            "exceptions": server.skipped,
-            "notice": self.notice(),
+            "exceptions": server.skipped.as_data,
+            "notice": server.skipped.notice,
         }
-
-    def notice(self) -> str:
-        skipped = self._checkout_server.skipped
-        if not skipped:
-            return ""
-        lines = ["MCP standup skipped illegitimate tools and continued:"]
-        lines.extend(f"- {item['tool']}: {item['reason']}" for item in skipped)
-        return "\n".join(lines)
-
-    def notify_exceptions(self) -> None:
-        text = self.notice()
-        if text:
-            print(text, file=sys.stderr)
 
     @classmethod
     def from_repo(cls, repo: Path | str) -> McpHost:
@@ -853,7 +820,7 @@ class McpHost:
             server = McpServer(repo=resolved, project=resolved)
             server.start(toolsets.classes())
             for unloadable in toolsets.unloadable:
-                server.skip(unloadable.reference, unloadable.cause)
+                server.skipped.skip(unloadable.reference, unloadable.cause)
             return cls._serving(server)
         except Exception as error:
             raise McpStandupFailed(resolved, error) from error
@@ -869,7 +836,7 @@ class McpHost:
     @classmethod
     def _serving(cls, server: McpServer) -> McpHost:
         host = cls(server)
-        host.notify_exceptions()
+        server.skipped.notify()
         return host
 
 

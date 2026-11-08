@@ -10,7 +10,8 @@ if str(_REPO) not in sys.path:
 from expects import equal, expect
 from mamba import before, context, description, it
 
-from harness.graph.graph import EdgeType, Graph, Node, Source
+from harness.graph.edge import EdgeType
+from harness.graph.graph import Graph, Node, Source
 from harness.graph.rule_context import RuleCheckContext
 from cdd_guidance.practices.stories.model.story_model import Step, StepType
 from cdd_guidance.practices.stories.rules.scenarios import AndChaining, ScenariosShape
@@ -32,7 +33,7 @@ def _step(practice, semantic: str, text: str, line: int) -> Node:
     step = Step(text, StepType(semantic.lower()), line, keyword=semantic)
     step.name = label
     step.type = semantic
-    return practice.graph.add(practice, step, f"stories:{semantic}:story.ts:{line}:{hash(label) & 0xFFFFFF}", "story.ts", line, line)
+    return practice.in_graph.add(step, f"stories:{semantic}:story.ts:{line}:{hash(label) & 0xFFFFFF}", "story.ts", line, line)
 
 
 def _record_steps(practice, scenario: Node, steps: list[Node]) -> None:

@@ -49,7 +49,7 @@ def _file_node(practice, relative: str, semantic: str, name: str = "") -> Node:
     existing = graph.node(node_id)
     if existing is not None:
         return existing
-    return graph.add_named(practice, semantic, node_id, name or Path(relative).stem, Source.whole_file(relative, graph.source_root_of(practice)))
+    return practice.in_graph.add_named(semantic, node_id, name or Path(relative).stem, Source.whole_file(relative, practice.in_graph.source_root))
 
 
 class _LernReading:
@@ -68,15 +68,15 @@ class _LernReading:
         from cdd_guidance.practices.stories.stories import Stories
 
         self._behaviors()
-        ddd = self.graph.loaded_practice(Ddd)
-        self.stories = self.graph.loaded_practice(Stories)
+        ddd = self.graph.loaded(Ddd)
+        self.stories = self.graph.loaded(Stories)
         if ddd is None or self.stories is None:
             return
         self.ddd = ddd
         self.setup_text = test_setup_text(self.root, self.overlay.pattern.story_test_folder)
         self._context_mappings()
         self._tier_folders()
-        aggregates = {node.source.file.replace("\\", "/"): node for node in self.graph.nodes_of(self.ddd, "Aggregate")}
+        aggregates = {node.source.file.replace("\\", "/"): node for node in self.ddd.in_graph.nodes("Aggregate")}
         for folder, aggregate in sorted(aggregates.items()):
             self._aggregate(folder, aggregate)
         self._story_files()
@@ -85,7 +85,7 @@ class _LernReading:
         """LERN behavior files on the BDD practice, each carrying the facts its tier rules read."""
         from cdd_guidance.practices.bdd.bdd import Bdd
 
-        bdd = self.graph.loaded_practice(Bdd)
+        bdd = self.graph.loaded(Bdd)
         if bdd is None:
             return
         for file in scanned_files(self.root):
@@ -101,8 +101,8 @@ class _LernReading:
         for file in scanned_files(self.root):
             folder = file.parent.relative_to(self.root).as_posix()
             is_tier_file = file.name in (f"{file.parent.name}-routes.ts", f"{file.parent.name}-node.ts")
-            if is_tier_file and folder.startswith("src/") and not self.graph.holds(self.ddd, f"ddd:Aggregate:{folder}"):
-                self.graph.add_named(self.ddd, "Aggregate", f"ddd:Aggregate:{folder}", file.parent.name, Source(folder, 1, 1, self.graph.source_root_of(self.ddd)))
+            if is_tier_file and folder.startswith("src/") and not self.ddd.in_graph.holds(f"ddd:Aggregate:{folder}"):
+                self.ddd.in_graph.add_named("Aggregate", f"ddd:Aggregate:{folder}", file.parent.name, Source(folder, 1, 1, self.ddd.in_graph.source_root))
 
     def _aggregate(self, folder: str, aggregate: Node) -> None:
         slug = Path(folder).name
@@ -110,8 +110,8 @@ class _LernReading:
         for tier in tiers.values():
             self._link("owns", aggregate, tier)
         self._other_node_files(folder, slug, aggregate)
-        roots = [node for node in self.graph.nodes_of(self.ddd, "EntityRoot") if _folder_of(node.source.file) == folder]
-        repositories = [node for node in self.graph.nodes_of(self.ddd, "Repository") if _folder_of(node.source.file) == folder]
+        roots = [node for node in self.ddd.in_graph.nodes("EntityRoot") if _folder_of(node.source.file) == folder]
+        repositories = [node for node in self.ddd.in_graph.nodes("Repository") if _folder_of(node.source.file) == folder]
         self._tier_facts(folder, aggregate, tiers, repositories)
         self._link_tiers(tiers, roots, repositories)
         views = self._views(folder, slug, aggregate, tiers.get("ClientRoot"), repositories[0] if repositories else None)
@@ -178,7 +178,7 @@ class _LernReading:
 
     def _context_mappings(self) -> None:
         """Each ``Local → Remote`` line a bounded context's file lists, mapped to the aggregates it names."""
-        for context in self.graph.nodes_of(self.ddd, "BoundedContext"):
+        for context in self.ddd.in_graph.nodes("BoundedContext"):
             markdown = context.source.file
             path = self.root / markdown if markdown and markdown != "." else None
             if path is None or not path.is_file():
@@ -186,10 +186,10 @@ class _LernReading:
             for index, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
                 match = _CONTEXT_ARROW.match(line.strip())
                 map_id = f"ddd:ContextMapping:{markdown}:{index}"
-                if match is None or self.graph.holds(self.ddd, map_id):
+                if match is None or self.ddd.in_graph.holds(map_id):
                     continue
                 left, right = match.group(1).strip(), match.group(2).strip()
-                mapping = self.graph.add_named(self.ddd, "ContextMapping", map_id, f"{left} → {right}", Source(markdown, index, index, self.graph.source_root_of(self.ddd)))
+                mapping = self.ddd.in_graph.add_named("ContextMapping", map_id, f"{left} → {right}", Source(markdown, index, index, self.ddd.in_graph.source_root))
                 self._link("mappedTo", context, mapping)
                 for kind, label in (("local", left), ("remote", right)):
                     aggregate = self._aggregate_named(label)
@@ -198,7 +198,7 @@ class _LernReading:
 
     def _aggregate_named(self, label: str) -> Node | None:
         label = label.strip()
-        aggregates = self.graph.nodes_of(self.ddd, "Aggregate")
+        aggregates = self.ddd.in_graph.nodes("Aggregate")
         for node in aggregates:
             if node.name == label or label.endswith(f"· {node.name}") or label.endswith(f"·{node.name}"):
                 return node
@@ -222,7 +222,7 @@ class _LernReading:
     def _parent_story_scope(self, relative: str) -> Node | None:
         """The innermost epic of the stories whose folder holds the file; else the epic named for the file's folder."""
         rel = relative.replace("\\", "/")
-        epics = [node for node in self.graph.nodes_of(self.stories) if node.type in {"Epic", "SubEpic"}]
+        epics = [node for node in self.stories.in_graph.nodes() if node.type in {"Epic", "SubEpic"}]
         holding = [
             (len(_folder_of(node.source.file)), node)
             for node in epics

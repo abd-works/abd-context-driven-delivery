@@ -153,7 +153,7 @@ def _importers_by_name(context: "RuleCheckContext", modules: list["Node"]) -> di
         importer = _owning_module(f"{folder.source.file}/", modules)
         for name in folder.get_fact("imported_names", []) or []:
             importers.setdefault(name, set()).add(importer.source.file if importer else "")
-    root = context.graph.root_of(context.practice)
+    root = context.practice.in_graph.root
     outside = root.get_fact("imported_names_outside") if root.has_fact("imported_names_outside") else {}
     for name, folders in outside.items():
         importers.setdefault(name, set()).update(folders)

@@ -40,6 +40,21 @@ async def _greeting_through(listener: socket.socket) -> bytes:
         return reply
 
 
+class ResetSocket:
+    """A connected socket whose caller has already reset the connection, so shutdown raises the way Windows does."""
+
+    closed = False
+
+    def fileno(self) -> int:
+        return 7
+
+    def shutdown(self, how: int) -> None:
+        raise ConnectionResetError(10054, "An existing connection was forcibly closed by the remote host")
+
+    def close(self) -> None:
+        self.closed = True
+
+
 if sys.platform == "win32":
     from harness.mcp.listening_loop import _AcceptRetryingProactor
 
@@ -102,3 +117,27 @@ with description("the cdd server's listening loop") as self:
 
             with it("should answer the next caller"):
                 expect(self.reply).to(equal(b"hello"))
+
+        with context("on Windows, with a connection the caller reset before the server closed it"):
+            with before.each:
+                from harness.mcp.listening_loop import _DropTolerantSocketTransport
+
+                self.sock = ResetSocket()
+                self.protocol = SimpleNamespace(lost=[], connection_lost=lambda exc: self.protocol.lost.append(exc))
+                self.server = SimpleNamespace(detached=0)
+                self.server._detach = lambda: setattr(self.server, "detached", self.server.detached + 1)
+                transport = _DropTolerantSocketTransport.__new__(_DropTolerantSocketTransport)
+                transport._called_connection_lost = False
+                transport._protocol = self.protocol
+                transport._sock = self.sock
+                transport._server = self.server
+                transport._call_connection_lost(None)
+
+            with it("should tell the server's protocol the connection ended"):
+                expect(self.protocol.lost).to(equal([None]))
+
+            with it("should close the socket"):
+                expect(self.sock.closed).to(equal(True))
+
+            with it("should free the connection on the listening server"):
+                expect(self.server.detached).to(equal(1))

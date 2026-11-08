@@ -24,6 +24,7 @@ class Ddd(PracticeGuidance):
     catalog_card = {
         "name": "Domain-Driven Design",
         "label": "domain-driven-design",
+        "product_engineering_label": "Domain-driven design",
         "family": "aad-fam-ddd",
         "perspective": "ddd",
         "order": 50,
