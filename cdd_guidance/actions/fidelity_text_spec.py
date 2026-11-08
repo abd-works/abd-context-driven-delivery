@@ -19,6 +19,7 @@ from cdd_guidance.actions.generate.generate import Generate
 from cdd_guidance.actions.grill_context.grill_context import GrillContext
 from cdd_guidance.actions.improvement.improvement import Improvement
 from cdd_guidance.actions.iterate.iterate import Iterate
+from cdd_guidance.actions.partition.partition import Partition
 from cdd_guidance.actions.satisfy.satisfy import Satisfy
 from cdd_guidance.actions.sketch.sketch import Sketch
 from cdd_guidance.actions.validate.validate import Validate
@@ -234,6 +235,21 @@ with description("an action that writes a practice's artifacts") as self:
 
         with it("should log no validate line"):
             expect(_logged_verbs(self.session_folder)).not_to(contain("validate"))
+
+    # The index and the segments a partition asks for are one set for the corpus the call names, whatever it lists.
+    with context("that partitions one corpus for two practices"):
+        with before.each:
+            arguments = {"guidance": "stories-story-map ddd-bounded-context", "paths": ["docs"], "mode": "one_go"}
+            self.prose = _expanded(self.throwaway.root, Partition, Partition.partition, arguments)
+
+        with it("should ask for the corpus's index once"):
+            expect(self.prose.count("Index the corpus at docs")).to(equal(1))
+
+        with it("should ask for its segments once"):
+            expect(self.prose.count("Verbatim source chunks written under")).to(equal(1))
+
+        with it("should give the Scaffold section of each practice's fidelity"):
+            expect(self.prose).to(contain(self.story_map.scaffold))
 
     with context("that documents"):
         with it("should give the fidelity's template"):
