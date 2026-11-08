@@ -12,7 +12,7 @@ format: md
 
 A session is one named piece of work in a project, kept in `.sessions/{name}/`. `Sessions` knows every session of one checkout and which one is open; `Session` holds where one session works, the practices it uses, and its title. Its log, its files, its handoffs, and its decision records are objects of their own, each reached through the session, so each has one reason to change.
 
-Every tool on a session acts on the session whose `session.json` its `session` argument names. No session is kept in memory between calls: a `ToolCall` (`harness/agent_tools/tool_call.py`) opens the session each call works in, through `CallSessions`, and the open session's name is read from `.sessions/session.json` each time it is asked for, so a switch or a close made by another chat or by the hook server is seen at once.
+Every tool on a session acts on the session whose `session.json` its `session` argument names. The process keeps one Session per session folder between calls, so every call from any chat works on the same object: a `ToolCall` (`harness/agent_tools/tool_call.py`) opens the session each call works in, through `CallSessions`, which holds the sessions of each checkout by its top, and the open session's name is read from `.sessions/session.json` each time it is asked for, so a switch or a close made by another chat or by the hook server is seen at once.
 
 `patterns` in the source stops at the word pattern. That concept stays unresolved.
 
@@ -81,7 +81,7 @@ Sessions, a session, and its log
 
 ----
 + of_project(project: Path): Sessions
-	// the sessions of project, made the first time the process works on it and held while it runs
+	// the sessions of the checkout holding project, made the first time the process works in it and held by the checkout's top while it runs
 + saved_in(project: Path): Session
 	// the session open in project, for work that serves no call, such as a hook event
 	-> Sessions.current
@@ -479,8 +479,10 @@ it should log into the ticket's folder on the board
 -> session = ToolCall(project).session
 it should be the main session until another is open on the repo
   -> expect(session.name).to equal "main"
-it should give each call its own copy, so one call's practices never reach another
-  -> expect(ToolCall(project).session).not_to be session
+it should be one object for every call, from any chat
+  -> expect(ToolCall.sent({"conversation_id": "chat-2"}, project).session).to be session
+it should be the same object for a call that names a folder inside the checkout
+  -> expect(ToolCall(project / "docs").session).to be session
 ```
 
 #### that logs an action

@@ -733,6 +733,11 @@ with description("the board tools") as self:
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="stories-story-map")
                 expect(sorted(files)).to(equal(["drawio", "markdown"]))
 
+            # (S) Person --> View Fidelity Files: the page opens tabs in the order Python sends the formats.
+            with it("should send the formats in the order files are shown, markdown before code"):
+                files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="clean-engineering-model")
+                expect(list(files)).to(equal(["markdown", "python", "typescript"]))
+
             # One fidelity object per session: the progress's fidelity is the one an action on the ticket's session works with.
             with it("should give each progress the fidelity its ticket's session holds"):
                 ticket = Ticket.load("pet-visits", project=self.project.root)

@@ -47,7 +47,7 @@ _SKIP_OP_NAMES = frozenset(
 )
 _STATIC_FACTORY_NAMES = frozenset({"instance", "create"})
 # Static factories beyond name patterns (creation / mapping helpers): `now` makes a new value for this moment, as
-# `datetime.now` does, and `every` makes each value a class allows, such as `FormatGroup.every()`. A global accessor
+# `datetime.now` does, and `every` makes each value a class allows, such as `IdeLayout.every()`. A global accessor
 # such as `current` is not one: it hands out ambient state, which `hold-state-on-the-object-not-in-parameters` replaces
 # with an object the caller holds.
 _STATIC_FACTORY_EXTRA_NAMES = frozenset({"fromRequest", "now", "every"})

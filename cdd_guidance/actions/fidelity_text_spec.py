@@ -246,7 +246,7 @@ with description("an action that writes a practice's artifacts") as self:
             expect(self.prose.count("Index the corpus at docs")).to(equal(1))
 
         with it("should ask for its segments once"):
-            expect(self.prose.count("Verbatim source chunks written under")).to(equal(1))
+            expect(self.prose.count("Verbatim source chunks written as")).to(equal(1))
 
         with it("should give the Scaffold section of each practice's fidelity"):
             expect(self.prose).to(contain(self.story_map.scaffold))

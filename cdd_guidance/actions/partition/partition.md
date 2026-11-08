@@ -6,14 +6,16 @@ Read `partition_guidance.md` before indexing — it references `{slug}.md § Sca
 
 **Parameters**
 
-- `context` — path to the source material (markdown and/or code).
+- `paths` — the source material (markdown and/or code): a file, a list of files, or a folder. The action reads them locally.
+- `context` — in-process text, for a call made in Python; leave it empty on an MCP call.
 - `mode` — `one_go` (default) | `pause` | `index_only`.
-- `out_root` — where to write output. Defaults to the current session folder. Set this only when you need a second distinct partition rooted somewhere else.
+- `out_root` — where to write output, `{root}` below. Defaults to the session's root, the folder the session works in. Set it to write the partition somewhere else, such as beside the documents it reads.
 
 **Output**
 
-- Index → `{session.path}/.context/{subject}-index.md`
-- Chunks → `{session.path}/{artifact}/.context/{artifact}-segment.md` (folder name = the top-level artifact defined in `{slug}.md § Scaffold`)
+- Index → `{root}/.context/{subject}-index.md`
+- Chunks → `{root}/{artifact}/.context/{artifact}-segment.md` (folder name = the top-level artifact defined in `{slug}.md § Scaffold`)
+- `segment_files` lists every chunk file under `{root}`, so a later step, such as embedding, reads exactly the chunks written.
 
 `{subject}` = the source file or folder name (e.g. `HeroesHandbook.md` → `HeroesHandbook-index.md`). Not the context tool name.
 
@@ -28,7 +30,7 @@ Build or update an index of what's in the source material.
 3. Read `partition_guidance.md` (filled in with `{slug}.md § Overview` and `§ Scaffold`). The things the context tool cares about — epics, subjects, screens, modules — **must** appear as entries in the index. Ignoring them or just copying the source's headings as entries is a hard fail.
 4. Let the context tool determine the structure, not the source's table of contents. Source chapters and files tell you where the material lives — they don't decide what the entries are.
 5. **Anti-mirror check:** if your entry count matches the number of top-level headings or chapters in the source, you've mirrored it. Regroup before writing.
-6. Write the index to `{session.path}/.context/{subject}-index.md` (or `{out_root}/.context/{subject}-index.md` when `out_root` is set). All context tools write to the same index file — not one file each. Each tool adds its own columns. Keep it shallow: one entry per epic, module, screen, or subject — not full stories or APIs. **See the example at the bottom of this file for the expected structure and column order.**
+6. Write the index to `{root}/.context/{subject}-index.md`. All context tools write to the same index file — not one file each. Each tool adds its own columns. Keep it shallow: one entry per epic, module, screen, or subject — not full stories or APIs. **See the example at the bottom of this file for the expected structure and column order.**
 7. Do **not** write chunk files yet — that happens in Step 2.
 8. **Config** — Some sources use ALL-CAPS labels like `NAME`, `COST`, or `DESCRIPTION` as column headers inside entries, not as entry names themselves. Without telling the tool about these, the completeness check in Step 3 will treat them as missing entries and fail. If your source has this pattern, add a `## Config` section to the index:
 
@@ -63,11 +65,11 @@ Copy the relevant passages from the source into chunk files. **Skip for `pause` 
 
 **Additive rule (hard):** see **Multi-pass** below. Never delete or rewrite existing chunk files. Only create new ones for passages not yet covered. Starting over requires an explicit user request.
 
-1. Read `{session.path}/.context/{subject}-index.md`.
+1. Read `{root}/.context/{subject}-index.md`.
 2. If the needed passages are already chunked, skip extraction and make sure the index links to those existing files.
 3. Open the source. Use `partition_guidance.md` only to decide which passages still need a chunk file — do not start writing code or expanding the design.
 4. For each new chunk, write it under the path from the index entry. The folder name comes from the top-level artifact defined in `{slug}.md § Scaffold` — an epic, subject, screen, module, or bounded context, depending on which tool you're running:
-  - Default: `{session.path}/{artifact}/.context/{artifact}-segment.md`
+  - Default: `{root}/{artifact}/.context/{artifact}-segment.md`
   - e.g. `checks` → `checks/.context/checks-segment.md`
   - e.g. `powers/attack` → `powers/attack/.context/attack-segment.md` (create parent folders as needed)
   - When a later context tool adds chunks, use the same naming rules and never overwrite an existing chunk.

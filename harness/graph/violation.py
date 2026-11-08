@@ -129,6 +129,14 @@ class Violation:
         """The lines around the violation, once it has been read from its file with ``in_file``."""
         return list(self._source)
 
+    @staticmethod
+    def by_rule(violations: list[Violation]) -> dict[str, list[Violation]]:
+        """violations under the rule each breaks, in the order they come; a violation that names no rule is ``unknown``."""
+        grouped: dict[str, list[Violation]] = {}
+        for violation in violations:
+            grouped.setdefault(violation.rule or "unknown", []).append(violation)
+        return grouped
+
     @property
     def described(self) -> str:
         """The message with what it was found on in front, the way a report lists it."""

@@ -1,4 +1,4 @@
-import { BoardClientGenerated, type BoardData } from '@cdd/space/kanban/board'
+import { BoardClientGenerated, type BoardData, type BoardFidelityData } from '@cdd/space/kanban/board'
 
 import type { BacklogItemClient } from '../backlog-item/backlog-item-client'
 import type { TicketClient } from '../ticket/ticket-client'
@@ -36,6 +36,11 @@ export class BoardClient extends BoardClientGenerated {
 
   practiceNamed(key: string): PracticeClient | undefined {
     return this.shownPractices.find(practice => practice.key === key)
+  }
+
+  // A fidelity as its tile names it: the label and the skill's slash command Python sends for it.
+  fidelityShown(slug: string): BoardFidelityData | undefined {
+    return this.fidelities.find(shown => shown.fidelity.slug === slug)
   }
 
   get shownColumns(): ColumnClient[] {

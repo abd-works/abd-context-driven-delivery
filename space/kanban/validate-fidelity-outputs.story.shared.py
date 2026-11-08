@@ -37,7 +37,7 @@ from space.kanban.session_board_examples import (
     seed_checkout_flow_open,
 )
 from space.kanban.story_test import SharedStories, expect_action, expect_held_on_violations, progress_in
-from cdd_guidance.actions.validate.graph_json_reader import violations_from_graph_json_files
+from harness.graph.saved_graph import SavedGraph
 
 shared_stories = SharedStories("Validate Fidelity Outputs")
 
@@ -128,7 +128,7 @@ def _(s):
 
     @s.and_("the graph it checked is saved beside it as ddd-tactics-20261101T100000.json, with the rule hits on its nodes")
     def _(world):
-        hits = [hit.rule for hit in violations_from_graph_json_files([world.reports[0].with_suffix(".json")], ["ddd"])]
+        hits = [hit.rule for hit in SavedGraph.from_file(world.reports[0].with_suffix(".json")).violations(["ddd"])]
         expect(hits).to(contain("private-method-naming"))
 
     @s.and_("Claude Code's reply says where the report is saved")

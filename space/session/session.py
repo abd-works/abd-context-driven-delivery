@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -79,6 +80,10 @@ class Session:
         # The practices and graph this session keeps between calls, made when first asked for.
         self._outputs: dict[str, PracticeSessionOutput] | None = None
         self._graph: Graph | None = None
+        # Calls from several chats reach this one object at once; the first to ask makes the practices and the graph,
+        # and the others wait for them, so the session never holds two. Reentrant, because the graph asks for the
+        # practices while it is being made.
+        self._parts_lock = threading.RLock()
         self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
         self.handoffs: Handoffs | None = None
         self.log = SessionLog(self)
@@ -118,10 +123,11 @@ class Session:
     def workpath(self, folder: Path | None) -> None:
         """Work in folder from now on. The practices and graph this session keeps were made on its old root, so they
         are made again on the new one when next asked for."""
-        self._workpath = folder
-        self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
-        self._outputs = None
-        self._graph = None
+        with self._parts_lock:
+            self._workpath = folder
+            self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
+            self._outputs = None
+            self._graph = None
 
     @property
     def session_path(self) -> Path | None:
@@ -174,20 +180,22 @@ class Session:
         and none rebuilds them; an action that writes files refreshes the graph with exactly those files. It reads back
         the graph saved on its root, so a session opened again, such as a ticket just activated, shows what was loaded
         in it before. A session whose root has moved gets a new graph, with new practices, on the new root."""
-        if self._graph is None:
-            graph = Graph(output.guidance for output in self._own_outputs.values())
-            graph.open_saved(self.work_root)
-            self._graph = graph
-        return self._graph
+        with self._parts_lock:
+            if self._graph is None:
+                graph = Graph(output.guidance for output in self._own_outputs.values())
+                graph.open_saved(self.work_root)
+                self._graph = graph
+            return self._graph
 
     @property
     def _own_outputs(self) -> dict[str, PracticeSessionOutput]:
         """A new instance of every practice, by key, each working in this session: made once on its root."""
-        if self._outputs is None:
-            self._outputs = {practice.key: PracticeSessionOutput(practice, self) for practice in PracticeCatalogue.create_all()}
-            for output in self._outputs.values():
-                output.guidance.work_in(output)
-        return self._outputs
+        with self._parts_lock:
+            if self._outputs is None:
+                self._outputs = {practice.key: PracticeSessionOutput(practice, self) for practice in PracticeCatalogue.create_all()}
+                for output in self._outputs.values():
+                    output.guidance.work_in(output)
+            return self._outputs
 
     def path_named(self, named: str | Path) -> Path:
         """named as a path in this session's project, the way its agent writes one: from the project's root, or

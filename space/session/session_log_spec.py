@@ -58,6 +58,26 @@ with description("a session loop"):
             second = ToolCall.sent({"conversation_id": "chat-2"}, repo).session
             expect(first is second).to(equal(True))
 
+    # One Session per folder holds only when every name of one checkout reaches one Sessions, as one Repo does.
+    with context("read by a call that names a folder inside the checkout"):
+        with before.each:
+            self.repo = Path(tempfile.mkdtemp()).resolve()
+            (self.repo / ".git").mkdir()
+            (self.repo / "docs").mkdir()
+            Sessions(self.repo).switch("alpha", self.repo)
+            self.session = ToolCall.sent({"conversation_id": "chat-1"}, self.repo).session
+
+        with it("should be the session object a call naming the checkout's top reads"):
+            inside = ToolCall.sent({"conversation_id": "chat-2"}, self.repo / "docs").session
+            expect(inside is self.session).to(equal(True))
+
+        with it("should be the session object a board command naming its session.json with no project reads"):
+            named = ToolCall.sent({"conversation_id": "chat-3"}, None).session_named(str(self.repo / ".sessions" / "alpha" / "session.json"))
+            expect(named is self.session).to(equal(True))
+
+        with it("should be held by one sessions object for the checkout"):
+            expect(Sessions.of_project(self.repo / "docs") is Sessions.of_project(self.repo)).to(equal(True))
+
     with context("whose practice a call reaches"):
         with it("should be the practice's own session, the one the call opened"):
             repo = Path(tempfile.mkdtemp())

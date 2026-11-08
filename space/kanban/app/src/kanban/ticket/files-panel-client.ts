@@ -1,22 +1,16 @@
-import type { FormatGroupData } from '@cdd/space/kanban/board'
-
 import type { BoardStore, FilesPanel, SidePanel } from '../board/board-store'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 import type { FilesByFidelity, TicketClient } from './ticket-client'
 
-// Tabs show markdown before code before diagrams; Python says which formats each group holds.
-const TAB_GROUPS = ['markdown', 'code', 'diagram']
 const SESSION_ENTRY = 'session'
-export const tabOrderOf = (groups: FormatGroupData[]): string[] => TAB_GROUPS.flatMap(label => groups.find(group => group.label === label)?.formats ?? [])
 
 // The entries a panel's files are read under: the session folder's one, or each fidelity's slug.
 const entriesOf = (panel: Pick<FilesPanel, 'isSession' | 'progress'>): string[] => (panel.isSession ? [SESSION_ENTRY] : panel.progress.map(progress => progress.fidelity.slug))
 
 // One tab per format the fidelity offers, generated or not: a story map always shows its markdown and its diagram.
-export const offeredTabs = (files: FilesByFidelity, slugs: string[], order: string[]): string[] =>
-  slugs.flatMap(slug =>
-    [...order, ...Object.keys(files[slug] ?? {}).filter(label => !order.includes(label))].flatMap(label => (files[slug]?.[label] ?? []).map(entry => entry.path)),
-  )
+// Tabs follow the order Python sends the formats in (markdown, then code, then diagrams).
+export const offeredTabs = (files: FilesByFidelity, slugs: string[]): string[] =>
+  slugs.flatMap(slug => Object.values(files[slug] ?? {}).flatMap(entries => entries.map(entry => entry.path)))
 
 const existsIn = (panel: FilesPanel, path: string): boolean =>
   Object.values(panel.files).some(formats => Object.values(formats).some(entries => entries.some(entry => entry.path === path && entry.exists)))
@@ -34,9 +28,9 @@ export const folderGroupsOf = (paths: string[]): { root: string; entries: { path
   }))
 
 // Tabs follow what is offered now; one a person closed stays closed, and one a violation opened stays open.
-function withFiles(panel: FilesPanel, files: FilesByFidelity, order: string[]): FilesPanel {
-  const before = offeredTabs(panel.files, entriesOf(panel), order)
-  const after = offeredTabs(files, entriesOf(panel), order)
+function withFiles(panel: FilesPanel, files: FilesByFidelity): FilesPanel {
+  const before = offeredTabs(panel.files, entriesOf(panel))
+  const after = offeredTabs(files, entriesOf(panel))
   const kept = panel.tabs.filter(tab => after.includes(tab) || !before.includes(tab))
   const added = panel.tabs.length ? after.filter(tab => !before.includes(tab) && !kept.includes(tab)) : []
   const tabs = [...kept, ...added]
@@ -55,10 +49,6 @@ const showingTab = (panel: FilesPanel, path: string, text: string, line: number)
 // The files panel beside the board: its list, its folders, and the tabs of open files.
 export class FilesPanelClient {
   constructor(private readonly store: BoardStore) {}
-
-  private get tabOrder(): string[] {
-    return tabOrderOf(this.store.state.board?.format_groups ?? [])
-  }
 
   private get panel(): FilesPanel | undefined {
     return this.store.state.panels.find((panel): panel is FilesPanel => panel.kind === 'files')
@@ -103,7 +93,7 @@ export class FilesPanelClient {
   async chooseMode(mode: string): Promise<void> {
     const panel = this.panel
     if (!panel) return
-    const tabs = mode === 'files' && !panel.tabs.length ? offeredTabs(panel.files, entriesOf(panel), this.tabOrder) : panel.tabs
+    const tabs = mode === 'files' && !panel.tabs.length ? offeredTabs(panel.files, entriesOf(panel)) : panel.tabs
     const activeTab = panel.activeTab || (tabs[0] ?? '')
     this.change(entry => ({ ...entry, mode, tabs, activeTab }))
     if (mode === 'files' && activeTab) await this.openTab(activeTab)
@@ -145,7 +135,7 @@ export class FilesPanelClient {
     const panel = this.panel
     if (!panel) return
     const files = await this.read(panel.ticket, panel.progress, panel.isSession)
-    if (files) this.change(entry => withFiles(entry, files, this.tabOrder))
+    if (files) this.change(entry => withFiles(entry, files))
   }
 
   private async reloadFileText(): Promise<void> {

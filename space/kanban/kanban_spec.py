@@ -15,6 +15,7 @@ from cdd_guidance.practices.bdd.bdd import Bdd  # noqa: E402
 from cdd_guidance.practices.ddd.ddd import Ddd  # noqa: E402
 from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
 from cdd_guidance.practices.ux.ux import Ux  # noqa: E402
+from harness.catalog_generator.catalog_practice import CatalogPractice  # noqa: E402
 from harness.guidance.guidance import FidelityGuidance  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
 from space.kanban.board import Board, Card, ColumnNotFoundError, Help  # noqa: E402
@@ -219,10 +220,49 @@ with description("a board") as self:
     with context("with help open on a fidelity the catalog has no page for"):
         with before.each:
             stories = Stories()
-            self.help = Help(stories, FidelityGuidance("unpublished", "discovery"), None)
+            board = Board(Repo(SessionsFolder().project), [stories])
+            self.help = Help(stories, FidelityGuidance("unpublished", "discovery"), None, board.catalogued(stories))
 
         with it("should link to its practice's page on the forge"):
             expect(self.help.href).to(equal("https://forge.abdworks.net/abd-context-driven-delivery/context-tools/stories.html"))
+
+    # (S) Person --> Open Help: the catalog's view of a practice names its pages; one is made per practice on a board.
+    with context("asked for help on its practices several times"):
+        with before.each:
+            self.made = []
+            original = CatalogPractice.skill_install
+            self.original = original
+
+            def counted() -> object:
+                self.made.append(1)
+                return original()
+
+            CatalogPractice.skill_install = staticmethod(counted)
+            board = Board(Repo(SessionsFolder().project), [Stories(), Ux()])
+            self.helps = [board.help("stories"), board.help("ux"), board.help("stories")]
+
+        with after.each:
+            CatalogPractice.skill_install = staticmethod(self.original)
+
+        with it("should make the skill install its catalog pages are named with once"):
+            expect(len(self.made)).to(equal(1))
+
+        with it("should still link each practice's own page"):
+            expect([help.href.rsplit("/", 1)[-1] for help in self.helps]).to(equal(["stories.html", "ux.html", "stories.html"]))
+
+    # (S) Board App --> Display Board: a tile shows the fidelity's label and its skill, which Python names.
+    with context("sent with UX chosen"):
+        with before.each:
+            self.sent = data_of(Board(Repo(SessionsFolder().project), [Ux()]))["fidelities"]
+
+        with it("should send each fidelity's label as the catalog names it"):
+            expect([fidelity["label"] for fidelity in self.sent]).to(equal(["information-architecture", "mockup", "front-end-code"]))
+
+        with it("should send the slash command of each fidelity's skill"):
+            expect(self.sent[0]["skill"]).to(equal("/practices-ux-ux-ia"))
+
+        with it("should send each fidelity by its slug"):
+            expect(self.sent[0]["fidelity"]).to(equal({"slug": "ux-ia"}))
 
     # (S) Person --> Set WIP Limit
     with context("with something else the sessions share saved in the board's file"):

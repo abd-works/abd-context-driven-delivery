@@ -86,6 +86,12 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 	// data field: the repository folder's name
 + << aggregation >> practices: list[PracticeGuidance]
 	// data field: the practices every ticket works through, each with its key, slug, short name, colour, and fidelities' slugs
++ << composition >> catalogued: list[CatalogPractice]
+	// the catalog's view of each practice, made once per board with one skill install they share; `catalogued(practice)` answers the one for a practice's class, the board's own instance or a ticket's session's, and every `Help` is handed it
+	-> CatalogPractice.skill_install
++ << composition >> fidelities: list[BoardFidelity]
+	// data field: every fidelity of its practices with its label and its skill's slash command, as the catalog names them, so a tile shows both and works out neither
+	-> CatalogPractice.shown_fidelities
 + << composition >> columns: list[Column]
 	// data field; always Backlog, then one Stage for each `ApproachStage` in `STAGES` (`harness/guidance/stages.py`), then Complete
 + << composition >> tickets: list[Ticket]
@@ -480,11 +486,6 @@ A ticket's work in one stage taken together: the progress of each fidelity the s
 	// a chip per group the fidelities offer, in the order of `Format.GROUPS`
 	-> Format.group
 
-## FormatGroup
-
-`space/kanban/format_choice.py`. One group a person picks formats by, with its formats; `Board.format_groups` sends every one, so the page sorts a fidelity's files by group.
-
-
 ## BacklogItem : Card
 
 Marked `@identity("title")`.
@@ -532,8 +533,10 @@ Marked `@identity("title")`.
 
 What `board.help` answers for a practice and `fidelity-progress.help` for a fidelity: the guidance objects themselves, with the text help shows.
 
-+ Help(practice: PracticeGuidance, fidelity: FidelityGuidance, stage: Stage)
++ Help(practice: PracticeGuidance, fidelity: FidelityGuidance, stage: Stage, catalogued: CatalogPractice)
 ------
++ << association >> catalogued: CatalogPractice
+	// the catalog's view of the practice the board holds (`Board.catalogued`), which names every page on the forge
 + << association >> practice: PracticeGuidance
 	// data field
 + << association >> fidelity: FidelityGuidance
@@ -548,9 +551,26 @@ What `board.help` answers for a practice and `fidelity-progress.help` for a fide
 	// data field: the rules themselves, each with its slug and body
 + href: str
 	// data field: its page on the forge as the catalog generator names it: the fidelity's own page, or its practice's page for a fidelity the catalog has no page for
+	-> PracticeGuidance.fidelity_called
 	-> CatalogPractice.fidelities
 	-> CatalogPractice.fidelity_href
 	-> CatalogPractice.href
+----
+
+## BoardFidelity
+
+A fidelity as a board tile names it. The page shows its label and its skill's slash command and works out neither.
+
++ BoardFidelity(catalogued: CatalogPractice, shown: CatalogFidelity)
+------
++ << association >> fidelity: FidelityGuidance
+	// reference data field: the fidelity, sent by its slug
++ label: str
+	// data field: its name on a tile, such as `story-map`, or `information-architecture` for UX's `ia`
+	-> CatalogFidelity.label
++ skill: str
+	// data field: the slash command of the skill the installer publishes for it, such as `/practices-stories-stories-story-map`
+	-> CatalogPractice.skill_of
 ----
 
 ## Report
@@ -614,8 +634,9 @@ A validation report of one fidelity saved in a session folder, with the graph th
 	-> PracticeGuidance.rules
 	-> FidelityGuidance.rules
 	-> ReportFile.from_fidelity
-	-> violations_from_graph_json_files
-	-> violations_by_rule
+	-> SavedGraph.from_file
+	-> SavedGraph.violations
+	-> Violation.by_rule
 	-> SavedGraph.checks_of
 	-> Judgment.from_report
 	-> Violation.in_file
@@ -685,6 +706,6 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## Violation
 
-`harness/graph/violation.py`: one place a rule is broken, the one shape for graph hits and judged findings. `rule`, `practice`, `location`, `line`, `message`, and `source` (the numbered `SourceLine`s around the line, once `in_file(location, file, lines_before, lines_after)` has read them) are data fields. A judged finding is `Violation(rule, message, location=..., line=...)`. A report reads a saved graph's hits through `violations_from_graph_json_files` and `violations_by_rule` (`cdd_guidance/actions/validate/graph_json_reader.py`), and the rules a scanner checks now through the saved graph, `SavedGraph.checks_of(practice)` (`harness/graph/saved_graph.py`), which asks the report's own practice with the overlays the graph was saved with.
+`harness/graph/violation.py`: one place a rule is broken, the one shape for graph hits and judged findings. `rule`, `practice`, `location`, `line`, `message`, and `source` (the numbered `SourceLine`s around the line, once `in_file(location, file, lines_before, lines_after)` has read them) are data fields. A judged finding is `Violation(rule, message, location=..., line=...)`. A report reads the graph saved beside it through `SavedGraph.from_file` (`harness/graph/saved_graph.py`), the one reader of a saved graph document and of the node list `graph.return_nodes` answers with, groups its hits with `Violation.by_rule`, and reads the rules a scanner checks now through the saved graph, `SavedGraph.checks_of(practice)` (`harness/graph/saved_graph.py`), which asks the report's own practice with the overlays the graph was saved with.
 
 `FileManager` and `FileEntry` (`space/session/file_manager.py`) list folders for `board.folders`, through the board's `Sessions.file_manager`, and are the entries `fidelity-progress.files` sends.

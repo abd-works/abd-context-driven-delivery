@@ -46,9 +46,8 @@ class Sessions:
     ``session.log.by(chat)``."""
 
     def __init__(self, project: Path | str) -> None:
-        self.project = Path(project).resolve()
         # The checkout holding the project, made once: every session this loads works in it.
-        self.repo = Repo.of_project(self.project)
+        self.repo = Repo.of_project(project)
         self.root = self.repo.root
         # This checkout's own choice of open session. A linked worktree keeps its own, so a chat there never changes the
         # session open in the main clone; in the main clone it is the repository's `work_state`.
@@ -195,12 +194,12 @@ class Sessions:
         """Open the session called ``name``, creating its folder when missing, and save it as the open session of this project. Returns how to keep its log.
 
         ``name`` defaults to ``session`` in ``.sessions/session.json``, then to the saved ``branch``.
-        ``workpath`` is the folder it works in; a new session works in the project's folder when none is given.
+        ``workpath`` is the folder it works in; a new session works in the checkout's top when none is given.
         Does not touch branches or worktrees."""
         wanted = self._name_to_switch_to(name)
         folder = self.folder_of(wanted)
         is_kept = (folder / SESSION_FILE).is_file()
-        session = self.load(folder) if is_kept else self.create(wanted, workpath if workpath is not None else self.project)
+        session = self.load(folder) if is_kept else self.create(wanted, workpath if workpath is not None else self.root)
         return self.open(session, workpath).log.instructions()
 
     def _name_to_switch_to(self, name: str) -> str:
@@ -230,12 +229,14 @@ class CallSessions:
         self._lock = threading.Lock()
 
     def of_project(self, project: Path | str) -> Sessions:
-        """The sessions of project, made the first time this process works on it."""
-        folder = Path(project).resolve()
+        """The sessions of the checkout holding project, made the first time this process works in it. They are held by
+        the checkout's top, as its one Repo is, so a call naming a folder inside the checkout, or a session.json with no
+        project, reaches the same sessions, and through them the one Session of each folder."""
+        repo = Repo.of_project(project)
         with self._lock:
-            held = self._of_project.get(folder)
+            held = self._of_project.get(repo.root)
             if held is None:
-                held = self._of_project[folder] = Sessions(folder)
+                held = self._of_project[repo.root] = Sessions(repo.root)
             return held
 
     def saved_in(self, project: Path) -> Session:

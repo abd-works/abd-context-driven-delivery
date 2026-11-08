@@ -17,7 +17,7 @@ _PARTITION_CONFIG = re.compile(
 
 
 class PartitionIndex:
-    """The shared partition index at ``{session.path}/.context/{subject}-index.md``."""
+    """The shared partition index at ``{root}/.context/{subject}-index.md``, where root is the partition's out_root, else the session's root."""
 
     def __init__(
         self,

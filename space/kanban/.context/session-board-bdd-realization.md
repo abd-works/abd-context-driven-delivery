@@ -854,8 +854,12 @@ Display Ticket Details
   it should name the ticket's stage and how far it has got there
   ```
   ```
-  -> _module.skillOf(slug: string)
+  -> BoardClient.fidelityShown(slug: string).skill
   it should keep a practice with two words in its skill
+  ```
+  ```
+  -> BoardClient.fidelityShown(slug: string).label
+  it should name a fidelity's tile as the catalog names it
   ```
 
 

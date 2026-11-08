@@ -38,8 +38,10 @@ class Improvement(GuidanceAction):
         if self._session is not None:
             tools(self.graph.refresh)
         tools(self._diagnose().diagnose)
+        # A repair named no file is about the listed guidance alone, so the line names no file rather than a blank.
+        under_repair = f" for {asset}" if asset else ""
         return (
-            "Diagnose why the toolset's expected behavior failed for {{asset}} "
+            f"Diagnose why the toolset's expected behavior failed{under_repair} "
             "(call the diagnose tool with this guidance). State the proposed toolset change "
             "before any test. Do not list tactical file fixes. Then fail-first "
             "at the seam. See repair.md."

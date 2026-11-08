@@ -26,7 +26,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
 import harness.guidance.guidance as guidance_module
-from cdd_guidance.actions.validate.graph_json_reader import violations_from_graph_json_files
+from harness.graph.saved_graph import SavedGraph
 from cdd_guidance.actions.validate.checked_graph import CheckedGraph, PathsNotFoundError
 from cdd_guidance.actions.validate.validate import Validate
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
@@ -491,7 +491,7 @@ with description("a validate action on practice guidance") as self:
         with it("should keep the rule hits on the nodes of the saved graph"):
             self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
             saved = next((self.session / "validation-reports").glob("ddd-tactics-*.json"))
-            slugs = [violation.rule for violation in violations_from_graph_json_files([saved], ["ddd"])]
+            slugs = [violation.rule for violation in SavedGraph.from_file(saved).violations(["ddd"])]
             expect(slugs).to(contain("private-method-naming"))
 
         with it("should leave an earlier report's saved graph as it was"):

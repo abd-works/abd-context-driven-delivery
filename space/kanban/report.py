@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import re
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from cdd_guidance.actions.validate.graph_json_reader import violations_by_rule, violations_from_nodes
 from harness.graph.saved_graph import SavedGraph, SavedGraphOutdated
 from harness.graph.violation import UNKNOWN_LOCATION, Violation
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
@@ -234,33 +232,24 @@ class ReportFile:
         return [ReportRule(self._fidelity, self._rule_named(name), [self._violation_of(hit) for hit in hits]) for name, hits in self._hits_by_rule().items()]
 
     @cached_property
-    def _checked_graph(self) -> SavedGraph | list[dict[str, Any]]:
-        """The graph the validation checked, read from beside the report once: its saved graph, or the list of violating
-        nodes validate keeps when it checked several graphs. SavedGraphOutdated when it was saved in a shape the graph
-        no longer writes."""
-        text = self._graph.read_text(encoding="utf-8")
-        document = json.loads(text) if text.strip() else None
-        if isinstance(document, list):
-            return document
-        return SavedGraph.from_document(document, str(self._graph)) if document is not None else SavedGraph([], {})
+    def _checked_graph(self) -> SavedGraph:
+        """The graph the validation checked, read from beside the report once. SavedGraphOutdated when it was saved in
+        a shape the graph no longer writes."""
+        return SavedGraph.from_file(self._graph)
 
     def _hits_by_rule(self) -> dict[str, list[Violation]]:
         """The hits on the rules this report answers for: a saved graph holds its whole practice's hits. A rule no
         fidelity describes belongs to none, so every report keeps it."""
-        checked = self._checked_graph
-        practices = [self._practice.key]
-        found = violations_from_nodes(checked, practices) if isinstance(checked, list) else checked.violations(practices)
+        found = self._checked_graph.violations([self._practice.key])
         answered = {rule.slug for rule in self._answered_rules}
         described = {rule.slug for rule in self._described_rules}
         scanned = self._scanned_rules()
-        return {name: rule_hits for name, rule_hits in violations_by_rule(found).items() if name in scanned and (name in answered or name not in described)}
+        return {name: rule_hits for name, rule_hits in Violation.by_rule(found).items() if name in scanned and (name in answered or name not in described)}
 
     def _scanned_rules(self) -> set[str]:
-        """The rules a scanner checks now; a saved graph keeps the hits of a scanner deleted since it was saved. A list
-        of violating nodes keeps no overlays, so only the practice's own scanners count."""
-        checked = self._checked_graph
-        saved = SavedGraph([], {}) if isinstance(checked, list) else checked
-        return set(saved.checks_of(self._practice))
+        """The rules a scanner checks now, with the overlays the graph was saved with; a saved graph keeps the hits of a
+        scanner deleted since it was saved."""
+        return set(self._checked_graph.checks_of(self._practice))
 
     def _judged_rules(self, text: str) -> list[ReportRule]:
         """Each rule the judgment fails, once however many judged files fail it, with its findings at the judged files' lines."""
