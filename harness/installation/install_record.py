@@ -1,13 +1,13 @@
 """InstallRecord - the file that remembers what the last install wrote, so the next one can remove it."""
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 from typing import Any
 
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.install_diagnostics import InstallDiagnostics
+from harness.installation.json_file import JsonFile, JsonFileUnreadable
 
 # The folders a skill, rule, command, prompt, or agent file sits under; cleaning stops emptying parents at them.
 _CHANNEL_FOLDERS = ("skills", "rules", "commands", "prompts", "agents")
@@ -15,17 +15,15 @@ _CHANNEL_FOLDERS = ("skills", "rules", "commands", "prompts", "agents")
 _KEPT_FILES = frozenset({IdeLayout.MCP_CONFIG_NAME, InstallDiagnostics.NAME})
 
 
-class InstallRecordUnreadable(Exception):
+class InstallRecordUnreadable(JsonFileUnreadable):
     """The install record is not the JSON it should be. Without it a clean cannot tell which files the last install
     wrote, so the install stops rather than overwrite the record and leave those files behind."""
 
-    def __init__(self, path: Path, cause: Exception) -> None:
-        super().__init__(
+    def message(self, path: Path, cause: Exception) -> str:
+        return (
             f"{path} is not a readable install record ({cause}); remove the files it lists by hand, or delete it and "
             "install again"
         )
-        self.path = path
-        self.cause = cause
 
 
 class InstallRecord:
@@ -36,20 +34,13 @@ class InstallRecord:
 
     def __init__(self, path: Path) -> None:
         self.path = path
+        self._file = JsonFile(path, InstallRecordUnreadable)
         self.installed_files: list[str] = []
 
     @property
     def saved(self) -> dict[str, Any]:
         """What the file holds; empty before the first install."""
-        if not self.path.is_file():
-            return {}
-        try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            raise InstallRecordUnreadable(self.path, error) from error
-        if not isinstance(data, dict):
-            raise InstallRecordUnreadable(self.path, TypeError(f"expected an object, found {type(data).__name__}"))
-        return data
+        return self._file.read()
 
     def track(self, written: Path, folder: Path) -> None:
         """Add written, a file the install wrote under folder."""
@@ -69,8 +60,7 @@ class InstallRecord:
         self.installed_files = [relative for relative in self.saved.get("installed_files", []) if (folder / relative).is_file()]
 
     def save(self, ide: str, folder: Path) -> None:
-        payload = {"ide": ide, "path": str(folder), "installed_files": self.installed_files}
-        self.path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        self._file.write({"ide": ide, "path": str(folder), "installed_files": self.installed_files})
 
     def remove_installed(self, folder: Path) -> list[str]:
         """Remove every file the saved record lists for folder, and the folders that leaves empty; answer what was

@@ -14,6 +14,7 @@ for _path in (_REPO_ROOT, _REPO_ROOT / "tools", _REPO_ROOT / "cdd_guidance" / "p
 
 import cdd_guidance.practices  # noqa: F401
 from cdd_guidance.practices.stories.stories import Stories
+from harness.markdown.format import Format
 
 _TS_PATH = "tests/onboard-a-customer/create-customer/create_customer.story.shared.ts"
 _PY_PATH = "tests/onboard-a-customer/create-customer/create_customer_story.test.py"
@@ -129,7 +130,7 @@ with description("a story tree rendered to code"):
         with context("with one scenario renamed on the model"):
             with before.each:
                 stories = Stories(fidelity="acceptance_tests")
-                model = stories._to_object_model({_TS_PATH: _CUSTOMER_TYPESCRIPT}, "typescript")
+                model = stories._to_object_model({_TS_PATH: _CUSTOMER_TYPESCRIPT}, Format("typescript"))
                 story = model.epics[0].epics[0].stories[0]
                 story.scenarios[1].name = "CustomerProfile exists already"
                 self.rendered = stories.render("typescript", model)["content"][_TS_PATH]

@@ -87,8 +87,8 @@ with description("a guidance action"):
         action._work_on(["stories", "clean-engineering-model"])
         listed = action.listed()
         expect([type(item).__name__ for item in listed]).to(equal(["Stories", "CleanEngineering"]))
-        expect(listed[0].fidelities.current.name).to(equal("story_map"))
-        expect(listed[1].fidelities.current.name).to(equal("model"))
+        expect(action.fidelity_of(listed[0]).name).to(equal("story_map"))
+        expect(action.fidelity_of(listed[1]).name).to(equal("model"))
 
     with it("should list stories at the scenarios fidelity from the short fidelity slug"):
         from harness.guidance_actions import GuidanceAction
@@ -98,7 +98,7 @@ with description("a guidance action"):
         listed = action.listed()
         expect(len(listed)).to(equal(1))
         expect(type(listed[0]).__name__).to(equal("Stories"))
-        expect(listed[0].fidelities.current.name).to(equal("scenarios"))
+        expect(action.fidelity_of(listed[0]).name).to(equal("scenarios"))
 
     with it("should list each guidance slug in one string of slugs"):
         from harness.guidance_actions import GuidanceAction
@@ -113,7 +113,7 @@ with description("a guidance action"):
 
         action = GuidanceAction()
         action._work_on("ux-ia format=drawio")
-        expect([item.format for item in action.listed()]).to(equal(["drawio"]))
+        expect([action.fidelity_of(item).format for item in action.listed()]).to(equal(["drawio"]))
 
     with it("should keep prose made of ordinary words as guidance text"):
         from harness.guidance_actions import GuidanceAction
@@ -286,7 +286,7 @@ with description("a guidance action"):
                 lambda item: None, action="generate"
             )
             action = served.for_call(_call(f"stories-story-map {self.session_word}", self.project))
-            expect([item.format for item in action.listed()]).to(equal(["drawio"]))
+            expect([action.fidelity_of(item).format for item in action.listed()]).to(equal(["drawio"]))
 
         with it("should keep the practice turned on when it keeps a format"):
             from harness.guidance_actions import GuidanceAction
@@ -394,11 +394,41 @@ with description("a guidance action"):
             toolset._work_on(["clean-engineering-model", "bdd-behavior"])
             listed = toolset.listed()
             expect([type(item).__name__ for item in listed]).to(equal(["CleanEngineering", "Bdd"]))
-            expect(listed[0].fidelities.current.name).to(equal("model"))
-            expect(listed[1].fidelities.current.name).to(equal("behavior"))
+            expect(toolset.fidelity_of(listed[0]).name).to(equal("model"))
+            expect(toolset.fidelity_of(listed[1]).name).to(equal("behavior"))
         expect(seen).to(contain("Render.render"))
         expect(seen).to(contain("Validate.validate"))
         expect(seen).to(contain("Validate.create_rule"))
+
+
+def _call_taking_action():
+    """A guidance action with a tool that takes the call it serves, as any toolset's tool can."""
+    from harness.agent_tools import agent_tool, agent_toolset
+    from harness.guidance_actions import GuidanceAction
+
+    @agent_toolset
+    class CallTakingAction(GuidanceAction):
+        @agent_tool
+        def project_of_call(self, guidance: str = "", *, call) -> str:
+            """The project of the call this tool serves."""
+            return str(call.project)
+
+    return CallTakingAction()
+
+
+with description("a guidance action's tool that takes the call it serves"):
+    with before.each:
+        self.project = _project()
+        _open_session(self.project, "alpha")
+        self.tool = _call_taking_action().tools["project_of_call"]
+
+    with it("should leave the call out of the arguments a caller passes"):
+        import inspect
+
+        expect(list(inspect.signature(self.tool.callable).parameters)).to(equal(["guidance"]))
+
+    with it("should be handed the call it answers"):
+        expect(self.tool.answer(_call("stories-story-map", self.project))).to(equal(str(self.project)))
 
 
 with description("a guidance action that wrote files"):
@@ -428,18 +458,33 @@ with description("two calls in one session on two fidelities of the same practic
     with before.each:
         from harness.guidance_actions import GuidanceAction
 
-        project = _project()
-        _open_session(project, "alpha")
+        self.project = _project()
+        _open_session(self.project, "alpha")
         served = GuidanceAction()
-        self.story_map_call = served.for_call(_call("stories-story-map", project))
+        self.story_map_call = served.for_call(_call("stories-story-map", self.project))
         self.practice = self.story_map_call.listed()[0]
-        self.scenarios_call = served.for_call(_call("stories-scenarios", project))
+        self.scenarios_call = served.for_call(_call("stories-scenarios", self.project))
         self.scenarios_call.listed()
         self.story_map = self.story_map_call.fidelity_of(self.practice)
         self.scenarios = self.scenarios_call.fidelity_of(self.practice)
 
     with it("should work on the one practice the session holds in both calls"):
         expect(self.scenarios_call.listed()[0]).to(be(self.practice))
+
+    with it("should leave the practice at the fidelity it was made at"):
+        expect(self.practice.fidelities.current.name).to(equal("story_map"))
+
+    with it("should name the first call's own fidelity in the line it logs"):
+        self.scenarios_call.run(lambda item: None, action="generate")
+        self.story_map_call.run(lambda item: None, action="generate")
+        last = (self.project / ".sessions" / "alpha" / "session.log").read_text(encoding="utf-8").splitlines()[-1]
+        expect(last.split()[-3:-1]).to(equal(["story_map", "markdown"]))
+
+    with it("should name the second call's own fidelity in the line it logs"):
+        self.story_map_call.run(lambda item: None, action="generate")
+        self.scenarios_call.run(lambda item: None, action="generate")
+        last = (self.project / ".sessions" / "alpha" / "session.log").read_text(encoding="utf-8").splitlines()[-1]
+        expect(last.split()[-3]).to(equal("scenarios"))
 
     with it("should give the first call its own fidelity's rules in its instructions"):
         expect(self.story_map.instructions).to(contain(self.story_map.rules.markdown.strip()))

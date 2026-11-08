@@ -25,7 +25,7 @@ toast_roots: list[Path] | None
 	// the workspace folders a toast is written to besides this checkout
 catalog: list[tuple[str, str]]
 	// every practice, fidelity, practice rule file, and action name with its kind, longest first, so a fidelity matches before its practice; read once per process
-	-> PracticeCatalogue.practices
+	-> PracticeCatalogue.create_all
 	-> ActionCatalogue.names
 ----
 on_pre_tool_use(payload: HookPayload): dict

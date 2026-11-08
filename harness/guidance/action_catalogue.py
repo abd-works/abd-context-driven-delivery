@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-import inspect
 from pathlib import Path
 from typing import Any, ClassVar, Iterator, Protocol
 
 from harness.agent_tools.agent_tools import InstallDestination
 from harness.installation.files import Skill  # noqa: F401 - defining Skill registers the skill channel this reads
 from harness.annotations.annotation import annotation_kinds
+from harness.annotations.class_folder import class_folder
 
 class WorkedFidelity(Protocol):
-    """The fidelity an action runs on, as this module names it: guidance.py's *WorkedFidelity* answers it. Naming only
+    """The fidelity an action runs on, as this module names it: guidance.py's *FidelityGuidance* answers it. Naming only
     what a fidelity is here keeps the catalogue from importing the guidance that holds it."""
 
     @property
@@ -54,7 +54,7 @@ class Action:
     @property
     def folder(self) -> Path:
         """The toolset's own folder, which holds its guide and module context."""
-        return Path(inspect.getfile(self._toolset_class)).resolve().parent
+        return class_folder(self._toolset_class)
 
     def run_on(self, fidelity: WorkedFidelity, **arguments: Any) -> Any:
         """Run this action on fidelity with arguments, through the runner the actions registered."""

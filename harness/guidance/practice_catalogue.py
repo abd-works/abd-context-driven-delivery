@@ -28,23 +28,21 @@ class PracticeCatalogue:
     """Every practice CDD ships, in the order the approach walks them: Stories, DDD, UX, Clean Engineering, BDD.
 
     The framework names no practice. The package that defines the practices registers their classes here when it is
-    imported (``register``), as every process that loads the repository's toolsets imports it. Callers that need a
-    practice's fidelities, rules, folder, or schema read the catalogue's own instances from ``practices()`` or
-    ``practice(key)``. A session makes a set of its own with ``create_all()``, which its graph and its actions share, and
-    a caller that works at a fidelity or format of its own outside any session makes its own with ``create(key)``. A
-    practice that extends another holds that practice: one of the same set, or one made with it. The catalogue keeps its
-    instances because a practice's fidelities and rules are read from its markdown, which does not change while the
-    process runs, and every hook and tool call reads them; nothing that reads one sets it.
+    imported (``register``), as every process that loads the repository's toolsets imports it. The catalogue holds
+    classes, never instances: a practice holds the session it works in, its graph, and the formats its fidelities keep,
+    so every reader makes the practices it works with and holds them. A session makes a set of its own with
+    ``create_all()``, which its graph and its actions share; any other reader, such as the board or a diagnostics probe,
+    makes its own set once and keeps it; and a caller that works at a fidelity or format of its own makes one practice
+    with ``create(key)``. A practice that extends another holds that practice: one of the same set, or one made with
+    it. Making a set reads nothing until a practice's document is first asked for.
     """
 
     _classes: ClassVar[dict[str, type[PracticeGuidance]]] = {}
-    _shared: ClassVar[dict[str, PracticeGuidance]] = {}
 
     @classmethod
     def register(cls, *practice_classes: type[PracticeGuidance]) -> None:
         """Hold practice_classes as the practices CDD ships, in the order the approach walks them, each by its key."""
         PracticeCatalogue._classes = {practice_class.class_key(): practice_class for practice_class in practice_classes}
-        PracticeCatalogue._shared = {}
 
     @classmethod
     def keys(cls) -> tuple[str, ...]:
@@ -54,20 +52,6 @@ class PracticeCatalogue:
     @classmethod
     def has(cls, key: str) -> bool:
         return key in cls._classes
-
-    @classmethod
-    def practices(cls) -> tuple[PracticeGuidance, ...]:
-        """The shared instance of every practice. Built once per process: building them takes about 30 ms."""
-        if len(cls._shared) < len(cls._registered()):
-            PracticeCatalogue._shared = {practice.key: practice for practice in cls.create_all()}
-        return tuple(cls._shared.values())
-
-    @classmethod
-    def practice(cls, key: str) -> PracticeGuidance:
-        """The shared instance of the practice ``key``; read it, do not change its current fidelity or format."""
-        cls.practice_class(key)
-        cls.practices()
-        return cls._shared[key]
 
     @classmethod
     def create(cls, key: str, **arguments: object) -> PracticeGuidance:
@@ -103,12 +87,6 @@ class PracticeCatalogue:
         if practice_class is None:
             raise UnknownPractice(key, cls.keys())
         return practice_class
-
-    @classmethod
-    def practice_named(cls, slug: str) -> PracticeGuidance | None:
-        """The shared practice that slug names: by the practice's slug, such as ``clean-engineering``, or one of its
-        fidelities' slugs, such as ``stories-story-map``; none when no practice goes by it."""
-        return next((practice for practice in cls.practices() if practice.answers_to(slug) is not None), None)
 
     @classmethod
     def _registered(cls) -> dict[str, type[PracticeGuidance]]:

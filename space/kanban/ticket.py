@@ -483,31 +483,18 @@ class FidelityProgress:
         """Read the actions done on this fidelity from its session's log entries, finding it by name, never by position;
         the latest report's judgment can still fail a validate the log shows passing."""
         naming = [(index, entry.verb) for index, entry in enumerate(entries) if entry.names(fidelity)]
-        generated = cls._written_by_generate(entries)
         validations = [index for index, verb in naming if verb == VALIDATE]
         latest_validation = validations[-1] if validations else None
         has_violations = latest_validation is not None and GRAPH_RULE_VIOLATION in entries[latest_validation].words
         validated = latest_validation is not None and not has_violations
         reviewed = any(verb == REVIEW and (latest_validation is None or index > latest_validation) for index, verb in naming)
-        done_verbs = {verb for index, verb in naming if verb == GENERATE and index in generated}
+        # Only the generate tool writes a generate line: an action started inside another, such as the generate a
+        # Sketch prompt expands, logs nothing (GuidanceAction.log_running), so every generate line counts.
+        done_verbs = {verb for _index, verb in naming if verb == GENERATE}
         done_verbs |= {VALIDATE} if validated else set()
         done_verbs |= {REVIEW} if reviewed else set()
         read = cls(fidelity, stage, [action for action in stage.steps if action in done_verbs], has_violations, ticket)
         return read.with_violations() if read._is_judged_failing else read
-
-    @staticmethod
-    def _written_by_generate(entries: list[LogEntry]) -> set[int]:
-        """The generate lines the generate tool wrote: each but those written in the call of another tool, such as
-        Sketch, whose prompt expands a generate before the agent has written anything. A line belongs to the call of
-        the latest tool line before it; a line no tool call wrote, such as one an action run in process wrote, counts."""
-        written: set[int] = set()
-        calling = ""
-        for index, entry in enumerate(entries):
-            if entry.tool_called:
-                calling = entry.tool_called
-            elif entry.verb == GENERATE and (not calling or calling.split(".")[0] == GENERATE):
-                written.add(index)
-        return written
 
     @classmethod
     @tool_subject
