@@ -486,7 +486,7 @@ it should give each call its own copy, so one call's practices never reach anoth
 #### that logs an action
 
 ```
--> session.log.action(action, paths)
+-> session.log.by(chat).action(action, paths, practices)
 it should append a timestamped line that names the action and the path
   -> expect(session.log.path).to contain action and paths
 ```
@@ -530,7 +530,7 @@ it should append a note line with message paths and chat pointer
 #### that is opened
 
 ```
--> loop = session.log.next_loop()
+-> loop = session.log.by(chat).next_loop()
 it should take the next loop number
   -> expect(loop.number).to equal the previous number plus one
 it should append the loop marker to session.log
@@ -551,7 +551,7 @@ it should return the log lines for that loop number
 #### that calls validate
 
 ```
--> session.log.validation(session.practice(name), violations)
+-> session.log.by(chat).validation(session.practice(name), violations)
 it should log that practice and that fidelity
   -> expect(session.log.path).to contain the practice and the fidelity
 it should log the rule, the synopsis, and the correction

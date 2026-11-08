@@ -12,7 +12,6 @@ import { TileView } from './tile-view'
 export type CardSpot = 'left' | 'right' | 'only'
 
 const ACTIVE_BORDER_WIDTH = 3
-const OPENS_LEFT_COLUMNS = ['Implementation', 'Complete']
 
 const withoutSelecting = (press: () => unknown) => (event: MouseEvent) => {
   event.stopPropagation()
@@ -21,10 +20,9 @@ const withoutSelecting = (press: () => unknown) => (event: MouseEvent) => {
 
 // The open card covers the closed one from the same corner and grows out to the width of a tile in the details.
 // Sizes are from the card's edge: the card's border, the list's 8px padding and the column's 1px border.
-function openCardPlace(ticket: TicketClient, spot: CardSpot) {
+function openCardPlace(ticket: TicketClient, spot: CardSpot, opensLeft: boolean) {
   const border = ticket.isActive ? ACTIVE_BORDER_WIDTH : 1
   const span = spot === 'only' ? `100% + ${2 * (9 + border)}px` : `200% + ${4 * border + 26}px`
-  const opensLeft = OPENS_LEFT_COLUMNS.includes(ticket.column.name)
   return { width: `calc(${span})`, top: -border, left: opensLeft ? 'auto' : -border, right: opensLeft ? -border : 'auto', opensLeft }
 }
 
@@ -148,9 +146,9 @@ function useColumnsReachOpenCard(card: RefObject<HTMLDivElement | null>): void {
 
 // An open card shows the same tiles as the details, so a ticket can be worked from either place.
 function OpenCardView({ ticket, stage, spot }: { ticket: TicketClient; stage: ColumnClient; spot: CardSpot }) {
-  const { state } = useBoard()
+  const { page, state } = useBoard()
   const card = useRef<HTMLDivElement>(null)
-  const { opensLeft, ...place } = openCardPlace(ticket, spot)
+  const { opensLeft, ...place } = openCardPlace(ticket, spot, page.board.opensLeft(ticket))
   // The card scrolls back into view whenever one of its bars opens or closes, since the card grows or shrinks with it.
   const openPlaces = state.tiles
     .filter(tile => tile.ticket.name === ticket.name)

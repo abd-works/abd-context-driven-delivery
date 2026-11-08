@@ -544,8 +544,9 @@ class FidelityProgress:
     @property
     @data_field
     def is_enabled(self) -> bool:
-        """Whether the ticket's session works on this fidelity's practice."""
-        return self._ticket.session.practices[self._practice.key].enabled
+        """Whether the ticket's session works on this fidelity's practice, as the fidelity, which works in that session,
+        answers it."""
+        return self._fidelity.session_output.is_enabled
 
     @property
     def _practice(self) -> PracticeGuidance:

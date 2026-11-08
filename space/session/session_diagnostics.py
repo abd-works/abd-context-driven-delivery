@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset
-from harness.agent_tools.tool_call import ToolCall
+from harness.diagnostics.call_diagnostics import CallDiagnostics
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
 
@@ -14,16 +14,9 @@ if TYPE_CHECKING:
 
 
 @agent_toolset
-class SessionDiagnostics:
-    """Probe session logging (generate, validate, loops, chat pointers). Made for one call, so it writes the report into
-    the install of the project that call names."""
-
-    def __init__(self, call: ToolCall | None = None) -> None:
-        # The call this was made for; none for the one the installer lists, which serves no call.
-        self._call = call
-
-    def for_call(self, call: ToolCall) -> SessionDiagnostics:
-        return type(self)(call)
+class SessionDiagnostics(CallDiagnostics):
+    """Probe session logging (generate, validate, loops, chat pointers). Made for one call, as every diagnostics
+    toolset is, so it writes the report into the install of the project that call names."""
 
     @mcp
     @skill
@@ -35,9 +28,7 @@ class SessionDiagnostics:
 
         Run via MCP ``session-diagnostics.session_diagnostics`` or slash ``/session-diagnostics``.
         Read ``.cursor/diagnostics.json`` → ``session`` for pass/fail and log tail."""
-        from harness.installation.installer import Installer
-
-        return self.write_to(Installer(repo=self._call.project).diagnostics)
+        return self.write_to(self._installer.diagnostics)
 
     def write_to(self, diagnostics: InstallDiagnostics) -> str:
         """Run the session-log probe and write its result as the ``session`` section of diagnostics, an install's

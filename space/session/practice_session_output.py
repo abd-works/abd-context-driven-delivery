@@ -208,6 +208,11 @@ class FidelitySessionOutput:
         return self._practice.session
 
     @property
+    def is_enabled(self) -> bool:
+        """Whether the session works on this fidelity's practice."""
+        return self._practice.enabled
+
+    @property
     def reports_folder(self) -> Path:
         return self._session.reports_folder
 
