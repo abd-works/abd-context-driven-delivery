@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import re
+from pathlib import Path
 
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 
@@ -19,38 +20,60 @@ _OPERATION_ANNOTATION = "mcp"
 _OPEN_RESULT = "dict[str, Any]"
 
 
-def route_facts(text: str) -> dict:
-    return {"tool_calls": SourceText(text).hits(_TOOL_CALL)}
+class AccessFile:
+    """One file that may reach the CDD domain from outside Python, read once, with the SourceText that gives each match
+    in it the line it starts on: a route, a node tier, a hand-written adapter, or an annotated toolset. Which of those it
+    is, and the facts its rules read, are its operations."""
 
+    def __init__(self, name: str, text: str) -> None:
+        self.name = name
+        self.text = text
+        self._source = SourceText(text)
 
-def node_facts(text: str) -> dict:
-    source = SourceText(text)
-    reaches_cdd = bool(_ADAPTER_IMPORT.search(text))
-    return {
-        "tool_calls": source.hits(_TOOL_CALL),
-        "reaches_cdd": reaches_cdd,
-        "extends_adapter": bool(_EXTENDS_ADAPTER.search(text)),
-        "store_imports": source.hits(_STORE_IMPORT) if reaches_cdd else [],
-    }
+    @classmethod
+    def at(cls, path: Path) -> AccessFile:
+        """The file at path, read now."""
+        return cls(path.name, path.read_text(encoding="utf-8", errors="replace"))
 
+    def tier(self) -> tuple[str, dict] | None:
+        """The DDD node type this file becomes and the facts it carries; none for a file that does not reach the domain."""
+        if self.name.endswith("-routes.ts"):
+            return "AccessRoute", self.route_facts()
+        if self.is_hand_written_adapter():
+            return "AccessHandWrittenAdapter", {}
+        if self.name.endswith("-node.ts"):
+            return "AccessNode", self.node_facts()
+        if self.name.endswith(".py") and self.is_annotated():
+            return "AccessAnnotatedToolset", self.annotated_toolset_facts()
+        return None
 
-def is_hand_written_adapter(file_name: str, text: str) -> bool:
-    """A file named like generated code that reaches cdd; an adapter for anything else is the application's own port."""
-    if not _HAND_WRITTEN_ADAPTER.search(file_name):
-        return False
-    return file_name.startswith("cdd-connection") or bool(_ADAPTER_IMPORT.search(text) or _TOOL_CALL.search(text))
+    def route_facts(self) -> dict:
+        return {"tool_calls": self._source.hits(_TOOL_CALL)}
 
+    def node_facts(self) -> dict:
+        reaches_cdd = bool(_ADAPTER_IMPORT.search(self.text))
+        return {
+            "tool_calls": self._source.hits(_TOOL_CALL),
+            "reaches_cdd": reaches_cdd,
+            "extends_adapter": bool(_EXTENDS_ADAPTER.search(self.text)),
+            "store_imports": self._source.hits(_STORE_IMPORT) if reaches_cdd else [],
+        }
 
-def is_annotated(text: str) -> bool:
-    return bool(_MARK.search(text))
+    def is_hand_written_adapter(self) -> bool:
+        """A file named like generated code that reaches cdd; an adapter for anything else is the application's own port."""
+        if not _HAND_WRITTEN_ADAPTER.search(self.name):
+            return False
+        return self.name.startswith("cdd-connection") or bool(_ADAPTER_IMPORT.search(self.text) or _TOOL_CALL.search(self.text))
 
+    def is_annotated(self) -> bool:
+        return bool(_MARK.search(self.text))
 
-def annotated_toolset_facts(text: str) -> dict:
-    """[line, operation] for each MCP operation of an annotated toolset that answers an open ``dict[str, Any]``, which
-    TypeScript then reads with no type. The decorators are read from the parsed file, so every spelling of the annotation and
-    any number of other annotations above it count."""
-    operations = [node for node in ast.walk(ast.parse(text)) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
-    return {"open_results": [[node.lineno, node.name] for node in operations if _answers_open_dict(node) and _is_published(node)]}
+    def annotated_toolset_facts(self) -> dict:
+        """[line, operation] for each MCP operation of an annotated toolset that answers an open ``dict[str, Any]``, which
+        TypeScript then reads with no type. The decorators are read from the parsed file, so every spelling of the
+        annotation and any number of other annotations above it count."""
+        operations = [node for node in ast.walk(ast.parse(self.text)) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
+        return {"open_results": [[node.lineno, node.name] for node in operations if _answers_open_dict(node) and _is_published(node)]}
 
 
 def _answers_open_dict(operation: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:

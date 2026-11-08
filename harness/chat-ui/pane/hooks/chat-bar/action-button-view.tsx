@@ -14,9 +14,13 @@ type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 const ACTION_ICONS: Record<string, string> = { generate: '▶', validate: '✓', review: '◉', iterate: '↻', sketch: '✎', render: '↗', document: '▯', advance: '➜' }
 const iconOf = (action: string): string => ACTION_ICONS[action] ?? '•'
 
-// The action the button shows: advance once the stage is done, else the action fidelity's next action, or none.
+// The action the button shows: advance once the stage is done, else the action fidelity's next action, else, for a
+// fidelity with nothing next, such as one already done, the stage's first action, so ▶ and its ▾ list stay on the band.
 export function actionOf(chatBar: ChatBarClient): string {
-  return chatBar.canMoveNext ? 'advance' : (chatBar.actionFidelity?.nextAction ?? '')
+  if (chatBar.canMoveNext) return 'advance'
+  const fidelity = chatBar.actionFidelity
+  if (!fidelity) return ''
+  return fidelity.nextAction || (chatBar.actions[0] ?? '')
 }
 
 // What the button shows and runs: the action picked from the menu, else the next one.

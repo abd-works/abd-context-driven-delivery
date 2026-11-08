@@ -16,7 +16,7 @@
 
 ## Constraint
 
-Callers type `Drawio.create_diagram`, `Drawio.scan`, `Drawio.render`, and the format's `DrawIOCleanEngineeringModel.load` / `parse` / `render` and the `sync` every class model inherits. They do not set cell HTML, anchors, or private layout fields. `keep_positioning` on `Drawio` and on `DrawIOCleanEngineeringModel` is the only layout policy they pass.
+Callers type `Drawio.create_diagram`, `Drawio.scan`, `Drawio.render`, and the format's `DrawIOCleanEngineeringModel.load` / `parse` / `render` and the `sync` every class model inherits. They do not set cell HTML, anchors, or private layout fields. `keep_positioning` on the `DrawIOCleanEngineeringModel` that `Drawio` holds as its `channel` is the only layout policy they pass.
 
 ## DrawioVertex
 
@@ -35,6 +35,8 @@ A placed node written as one Draw.io vertex cell: its HTML label, its style, and
 The rounded modules-view cell.
 
 ------
++ dependency_labels: dict[str, str]
+	// the words written on the arrow to each dependency, by its name; parse reads them back from the edge
 ----
 + html(): str
 	// the name, the purpose line, then the shown seam terms as bullets
@@ -42,8 +44,8 @@ The rounded modules-view cell.
 	-> DiagramModule.shown_seam_terms
 + style(): str
 	// a nested module uses the child style
-+ parse_html(value: str): tuple[str | None, str, list[str]]
-	// the name, purpose, and seam terms read back from a cell label
++ from_cell(value: str, sequential_order: int): DrawIOModule | None
+	// class operation: the module a cell label names, with its purpose and seam terms; None when it names none
 + load_class(source: OoadClass): DrawIOClass
 	-> DrawIOClass.translate_from
 
@@ -88,35 +90,40 @@ The `drawio` format. A modules view when the model has modules and no class memb
 	// cards and arrows already on previous stay where they are; only new ones are laid out
 ----
 + parse(text: str): DrawIOCleanEngineeringModel
-	// a modules diagram, one page whose cards name their module in their style, or one module per page; dashed import cards are skipped
+	// fills this model and returns it: a modules diagram, one page whose cards name their module in their style, or one module per page; dashed import cards are skipped
 + render(canonical: CleanEngineeringModel): str
+	// becomes the canonical model once (translate_from), then writes its own Draw.io modules and classes
 	-> CardPlacement.place
 	-> ArrowRouter.route
 + load(path: str): DrawIOCleanEngineeringModel
 	-> parse
-+ save(canonical: CleanEngineeringModel | None = None): str
++ save(): str
 	-> render
 + kept_previous(): str | None
 	// previous when this render keeps its positions
 + load_module(source: Module): DrawIOModule
-+ load_class(source: OoadClass): DrawIOClass
++ load_module_cell(source: Module): DrawIOModule
+	// a Draw.io cell for a container module the containment forest made
 + imported_class(source: OoadClass, from_module: str = ""): DrawIOImportedClass
 
 ## Drawio
 
 The toolset a caller types. Create writes a path. Scan judges layout. Repair fixes the layout generator, not one diagram by hand.
 
-+ Drawio(workspace = None)
++ Drawio(practice: CleanEngineering)
 ------
++ practice: CleanEngineering
+	// the practice that makes it; its formats read the content a diagram is drawn from
 + source_format: str
-	// markdown, json, python, or drawio: the format create_diagram parses its content from
-+ previous: str
-+ keep_positioning: bool
+	// the format create_diagram parses its content from: any format the practice reads
++ << composition >> channel: DrawIOCleanEngineeringModel
+	// the one Draw.io model it writes; its previous and keep_positioning are the layout policy
 + scan_root: str | None
 + rule: str | None
 ----
 + create_diagram(content: str, path: str): str
 	// with keep_positioning, the diagram already at path is the previous one
+	-> CleanEngineering.model_in
 	-> DrawIOCleanEngineeringModel.render
 + scan(paths: list[str]): str
 	-> DrawioScanner.run_report
@@ -150,6 +157,7 @@ Layout audit for an existing mxfile. It reads cells; it does not render them. Ea
 	// each subclass checks its one rule here
 + violation(page: DrawioPage, message: str): Violation
 + discover(): dict[str, type[DrawioScanner]]
+	// class operation
 	// every *_scanner.py beside this file, by its RULE
 + run_report(paths: list[str]): dict
 	// every discovered scanner over paths: ok, the rule names, and the violations
@@ -159,17 +167,28 @@ Layout audit for an existing mxfile. It reads cells; it does not render them. Ea
 
 ## DrawioPage
 
-One page of a scanned file. It is read once, so every check on the page sees the same boxes and edges.
+One page of a draw.io file (`drawio/drawio_page.py`): its cells, the class boxes on it, and the edges between them. It is the one reader of draw.io cells: *DrawIOCleanEngineeringModel* parses a diagram and keeps the positions and routes of the one it replaces through it, and every scanner checks one.
 
-+ DrawioPage(file_path: Path, name: str, root: Element)
++ DrawioPage(file_path: Path | None, name: str, root: Element)
 ------
++ cells: list[Element]
++ vertices: list[Element]
++ edges: list[Element]
 + boxes: dict[str, tuple]
 + class_names: dict[str, str]
-+ edges: list[Element]
 ----
++ pages_in(mxfile: Element, file_path: Path | None = None): list[DrawioPage]
+	// class operation: each diagram page that holds a graph model
++ whole(text: str): DrawioPage | None
+	// class operation: every cell of a document as one page
++ cell(cell_id: str): Element | None
++ positions(): dict[str, tuple[float, float]]
++ edges_by_ends(): dict[tuple[str, str], Element]
++ kind_of(edge: Element): str
+	// inheritance, composition, aggregation, dependency, or association
 + describe(edge: Element): str
 	// Source->Target (kind)
 + segments(edge: Element): tuple[list, bool]
 	// the polyline an edge draws, and whether Draw.io's router may draw it differently
 
-The graph checks the same rules on diagram files: `drawio/rules/__init__.py` wraps each discovered scanner in a *PracticeGraphRule* for `OoadClass`, `Module`, and `Package` nodes whose source is a `.drawio` file, and `CleanEngineeringGraph.language_rules("drawio")` returns them.
+The graph checks the same rules on diagram files: `drawio/rules/__init__.py` wraps each discovered scanner in a *PracticeGraphRule* whose `check_practice` scans each `.drawio` file the practice read a class, module, or package from once, and reports on the first of those nodes; `CleanEngineering.language_checks("drawio")` returns them.

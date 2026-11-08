@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from harness.graph.saved_graph import SavedGraph
 from harness.graph.violation import Violation
 
 from cdd_guidance.actions.validate.report_files import ReportFiles
@@ -13,9 +14,6 @@ from cdd_guidance.actions.validate.graph_json_reader import (
     load_graph_json_paths,
     violations_from_graph_json_files,
 )
-
-# What validate checks for each listed guidance: the guidance, and its fidelity's declared files by format.
-CheckedOutputs = list[tuple[Any, dict[str, list[str]]]]
 
 
 class PathsNotFoundError(FileNotFoundError):
@@ -31,49 +29,75 @@ class CheckedGraph:
     have written when it names none, and written beside the call's report; or the saved graph or node lists the call
     names. Graph node files are named from the session's root, so every path is kept that way here too.
 
-    Validate checks one format of each fidelity, so the declared files of its other formats are left out of the
-    report: the formats mirror each other, and judging both reports every finding twice."""
+    It holds the fidelity each listed practice is checked at, which says the format the call checks and where each of
+    its formats is written. Validate checks one format of each fidelity, so the declared files of its other formats are
+    left out of the report: the formats mirror each other, and judging both reports every finding twice."""
 
-    def __init__(self, session: Any, checked: CheckedOutputs, practices: list[str]) -> None:
+    def __init__(self, session: Any, fidelities: list[Any], edited: list[str] | None, named: bool | str | list[str] | None) -> None:
         self.session = session
-        self._checked = checked
-        # The catalogue key of each listed practice, such as clean_engineering; a report keeps only their hits.
-        self._practices = practices
+        self._fidelities = fidelities
+        # The format each fidelity is checked in, read once, so another call changing a fidelity's format mid-way never
+        # changes which files this call checks.
+        self._formats = [fidelity.format for fidelity in fidelities]
+        # What the call names: the files being edited, and a graph (true for the session's saved one, or graph files).
+        self._named = named
         self.unchecked_files = self._other_format_files()
+        # Read now, so a path that is not there is refused before the call claims any report file.
+        self.prefixes = self._prefixes(edited)
+        self._built: SavedGraph | None = None
+        self.files: list[Path] = []
 
-    def prefixes(self, paths: list[str] | None, graph: bool | str | list[str] | None) -> list[str]:
-        """The files the graph is built from, from the session's root: the paths the call names in the checked format,
-        else, when it names no graph either, the folders holding what each graph-backed fidelity has written."""
-        named = [path for path in self._from_session_root(paths) if path not in self.unchecked_files]
-        return named or self._from_session_root(self._written_outputs() if graph is None else [])
+    def check_beside(self, reports: ReportFiles) -> list[Path]:
+        """The graph files this call checks: a graph built from the prefixes and written where reports keeps the call's
+        graph, the session's saved graph when the call names true and no file, or the graph files it names."""
+        self.files = self._files(reports)
+        return self.files
 
-    def paths(self, graph: bool | str | list[str] | None, prefixes: list[str], reports: ReportFiles) -> list[Path]:
-        """The graph files this call checks: a graph built from prefixes and written where reports keeps the call's
-        graph, the session's saved graph when graph is true and no file is named, or the graph files graph names."""
-        if prefixes and graph in (None, True) and self._practices:
-            return [self._built_from(prefixes, reports.graph_file())]
-        if graph is True:
-            saved = self.session.root / ".context" / "graph.json"
-            return [saved] if saved.is_file() else []
-        return load_graph_json_paths(graph)
-
-    def violations(self, paths: list[Path], prefixes: list[str]) -> list[Violation]:
-        """The listed practices' violations in the files this call checks."""
-        found = violations_from_graph_json_files(paths, self._practices or None)
-        found = filter_violations_by_path_prefix(found, prefixes)
+    def violations(self) -> list[Violation]:
+        """The listed practices' violations in the files this call checks: from the graph it built, else from the graph
+        files it was named."""
+        keys = [fidelity.practice_guidance.key for fidelity in self._fidelities]
+        found = self._built.violations(keys) if self._built is not None else violations_from_graph_json_files(self.files, keys or None)
+        found = filter_violations_by_path_prefix(found, self.prefixes)
         return [violation for violation in found if violation.location not in self.unchecked_files]
 
-    def _built_from(self, edited: list[str], destination: Path) -> Path:
-        """Refresh the session's graph with the edited files, read as they are now, and write the nodes read from them
-        at destination; the saved graph stays as it is. Each call writes its own file, so calls running at once never
-        read each other's report graph.
+    def judged_files(self, on_graph: bool) -> str:
+        """Each checked format and its files, for the fidelities judged on this call's graph (on_graph) or on their
+        files: a model or code fidelity is judged on the graph when the call checks one."""
+        judged = [
+            (fidelity, format)
+            for fidelity, format in zip(self._fidelities, self._formats)
+            if (bool(self.files) and fidelity.is_judged_on_graph) == on_graph
+        ]
+        return "; ".join(f"{format}: {', '.join(fidelity.output_paths().get(format, []))}" for fidelity, format in judged)
+
+    def _files(self, reports: ReportFiles) -> list[Path]:
+        if self.prefixes and self._named in (None, True) and self._fidelities:
+            return [self._built_at(reports.graph_file())]
+        if self._named is True:
+            saved = self.session.root / ".context" / "graph.json"
+            return [saved] if saved.is_file() else []
+        return load_graph_json_paths(self._named)
+
+    def _built_at(self, destination: Path) -> Path:
+        """Refresh the session's graph with the edited files, read as they are now, keep the nodes read from them as this
+        call's graph, and write it at destination for the report; the saved graph stays as it is. Each call writes its
+        own file, so calls running at once never read each other's report graph.
 
         The session's graph holds every practice, because one builds on another (DDD building blocks come from the
         clean engineering classes); the report keeps only the listed guidance's practice."""
         graph = self.session.graph
-        graph.refresh(edited)
-        graph.write_json(str(destination), edited)
+        graph.refresh(self.prefixes)
+        self._built = graph.saved(self.prefixes)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(self._built.text, encoding="utf-8")
         return destination
+
+    def _prefixes(self, edited: list[str] | None) -> list[str]:
+        """The files the graph is built from, from the session's root: the paths the call names in the checked format,
+        else, when it names no graph either, the folders holding what each graph-backed fidelity has written."""
+        named = [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
+        return named or self._from_session_root(self._written_outputs() if self._named is None else [])
 
     def _from_session_root(self, paths: list[str] | None) -> list[str]:
         """Each named path as graph node files record it, relative to the session's root.
@@ -90,16 +114,20 @@ class CheckedGraph:
 
     def _other_format_files(self) -> set[str]:
         """The declared files of every format validate does not check, as graph node files record them."""
-        others = [self.session.path_named(path) for item, outputs in self._checked for format, paths in outputs.items() if format != item.format for path in paths if "{" not in path]
+        others = [
+            self.session.path_named(path)
+            for fidelity, checked in zip(self._fidelities, self._formats)
+            for format, paths in fidelity.output_paths().items()
+            if format != checked
+            for path in paths
+            if "{" not in path
+        ]
         return {path.relative_to(self.session.root).as_posix() for path in others if self.session.root in path.parents}
 
     def _written_outputs(self) -> list[str]:
-        """The folders holding what each listed graph-backed guidance's fidelity declares in its checked format and has
-        already written. The folder, not the file, because a story map's stories keep their scenarios in files beside
-        it."""
-        if not self._practices:
-            return []
-        declared = [path for item, outputs in self._checked for path in outputs.get(item.format, [])]
+        """The folders holding what each listed fidelity declares in its checked format and has already written. The
+        folder, not the file, because a story map's stories keep their scenarios in files beside it."""
+        declared = [path for fidelity, checked in zip(self._fidelities, self._formats) for path in fidelity.output_paths().get(checked, [])]
         found = [self.session.path_named(path) for path in declared if "{" not in path]
         folders = {path.parent if path.is_file() else path for path in found if path.exists()}
         return sorted(str(folder) for folder in folders if self._under_root(folder))

@@ -12,7 +12,7 @@ from harness.graph.graph import Graph
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
-from cdd_guidance.practices.clean_engineering.model.translation import ChildCollectionPair, TranslationError
+from cdd_guidance.practices.clean_engineering.model.translation import TranslationError
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.clean_engineering.model.operation import Operation
@@ -22,6 +22,10 @@ if TYPE_CHECKING:
 _EXAMPLE_EXTENSION_PREFIXES = ("Fake", "Isolated", "Production")
 _CODE_SUFFIXES = (".py", ".ts", ".tsx", ".js", ".jsx")
 _SCRIPT_IMPORT = re.compile(r"""(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(?\s*)['"](\.{1,2}/[^'"]+)['"]""")
+_PY_FROM_IMPORT = re.compile(r"^\s*from\s+[\w.]+\s+import\s+(\([^)]*\)|[^\n]+)", re.M)
+_JS_IMPORT = re.compile(r"\bimport\s+(?:type\s+)?([\w$]+)?\s*,?\s*(?:\{([^}]*)\})?\s*from\b")
+_QUALIFIED_CLASS = re.compile(r"\.([A-Z]\w*)\b")
+_IMPORT_ALIAS = re.compile(r"\s+as\s+\w+")
 _IS_A = re.compile(r"\*is a type of\*", re.I)
 _CHILD_PARENT = re.compile(r"^\s*#{1,6}\s+\S.+\s+:\s+\S", re.MULTILINE)
 _INTERNAL_MARKDOWN = re.compile(r"^##\s+Internal\b", re.MULTILINE | re.IGNORECASE)
@@ -49,6 +53,13 @@ def _readable_text(path: Path) -> str:
         return path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return ""
+
+
+def path_parent(name: str) -> Optional[str]:
+    """The path that holds a nested module path: `powers` for `powers/attack`; None at the top."""
+    if "/" not in name:
+        return None
+    return name.rsplit("/", 1)[0]
 
 
 def is_interface_name(name: str) -> bool:
@@ -103,7 +114,6 @@ def companion_interface_name(class_name: str, known_names: Iterable[str]) -> str
 
 
 class OoadNode(ModelNode):
-    _practice_key = "clean_engineering"
     _semantic_type_name: str = "OoadNode"
     _belongs = {
         ("OoadClass", "Module"),
@@ -117,6 +127,12 @@ class OoadNode(ModelNode):
         ("Invariant", "Property"),
     }
 
+    @classmethod
+    def practice_kind(cls) -> type:
+        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+
+        return CleanEngineering
+
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
 
@@ -126,45 +142,14 @@ class OoadNode(ModelNode):
                 f"Cannot translate from {source.semantic_type()} into {self.semantic_type()}"
             )
         self.update_self(source)
-        for pair in self.child_collections(source):
-            self._reconcile_collection(pair)
+        self.reconcile_children(source)
 
     def update_self(self, source: "OoadNode") -> None:
         raise NotImplementedError(f"{type(self).__name__} must implement update_self")
 
-    def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:
-        raise NotImplementedError(f"{type(self).__name__} must implement child_collections")
+    def reconcile_children(self, source: "OoadNode") -> None:
+        """Make each child list this node holds the matching list of source's; a node with no children has none."""
 
-    def _reconcile_collection(self, pair: ChildCollectionPair) -> None:
-        consumed_ids: set = set()
-        reconciled: List[OoadNode] = []
-
-        for source_child in pair.source_children:
-            match = self._find_match(source_child, pair.self_children, consumed_ids)
-            if match is not None:
-                consumed_ids.add(id(match))
-                match.translate_from(source_child)
-                reconciled.append(match)
-            else:
-                new_child = pair.load(source_child)
-                new_child.translate_from(source_child)
-                reconciled.append(new_child)
-
-        pair.self_children[:] = reconciled
-
-    @staticmethod
-    def _find_match(
-        source: "OoadNode",
-        candidates: List["OoadNode"],
-        consumed_ids: set,
-    ) -> Optional["OoadNode"]:
-        for c in candidates:
-            if id(c) not in consumed_ids and c.name == source.name:
-                return c
-        for c in candidates:
-            if id(c) not in consumed_ids and c.sequential_order == source.sequential_order:
-                return c
-        return None
 
 
 class OoadClass(OoadNode):
@@ -208,6 +193,8 @@ class OoadClass(OoadNode):
         self.peer_names: List[str] = []
         self.module_helpers: List[list] = []
         self.collaborators: List[str] = collaborators if collaborators is not None else []
+        # The source this class spans in its file, kept once its parser reads the file.
+        self.span = SourceText("")
         # What this class does to another class at run time, each named by its interaction: `Repo ---<<runs>>--> Git`.
         self.dependencies: List[Relationship] = []
         self._properties = ModelChildren(self, "participants")
@@ -225,7 +212,7 @@ class OoadClass(OoadNode):
 
     @properties.setter
     def properties(self, properties: List["Property"]) -> None:
-        self._refill(self._properties, properties)
+        self._properties.refill(properties)
 
     @property
     def operations(self) -> List["Operation"]:
@@ -233,9 +220,21 @@ class OoadClass(OoadNode):
 
     @operations.setter
     def operations(self, operations: List["Operation"]) -> None:
-        self._refill(self._operations, operations)
+        self._operations.refill(operations)
 
-    def load_source_facts(self, class_text: str) -> None:
+    @property
+    def composes_peers(self) -> bool:
+        """An Entity or Aggregate Root owns the peers it builds, so building them is not a hidden dependency."""
+        return bool(_PEER_COMPOSING_STEREOTYPES & {item.lower() for item in self.stereotypes})
+
+    def take_lines(self, lines: List[str]) -> None:
+        """Keep the lines of its file this class spans, from its line to its end line, and each operation's."""
+        start = self.line or 1
+        self.span = SourceText("\n".join(lines[start - 1 : self.end_line or start]))
+        for operation in self.operations:
+            operation.take_lines(lines)
+
+    def load_source_facts(self) -> None:
         """Fill the shape and source-span facts this class owns."""
         operations = list(self.operations)
         constructor = next((op for op in operations if op.name in {"__init__", "constructor"}), None)
@@ -246,7 +245,7 @@ class OoadClass(OoadNode):
         ]
         self.property_names = sorted(prop.name for prop in self.properties)
         self.constructs = [type_name for type_name, _line in constructor.constructed_types] if constructor else []
-        source = SourceText(class_text)
+        source = self.span
         self.prose_comment = source.has_prose_comment(hash_only=True)
         self.prototype_swap = source.prototype_swap(self.line or 1)
         bullets = source.markdown_bullet_lines()
@@ -320,12 +319,10 @@ class OoadClass(OoadNode):
         loaded.update_self(source)
         return loaded
 
-    def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:
+    def reconcile_children(self, source: "OoadNode") -> None:
         assert isinstance(source, OoadClass)
-        return [
-            ChildCollectionPair(self.properties, source.properties, self.load_property),
-            ChildCollectionPair(self.operations, source.operations, self.load_operation),
-        ]
+        self._properties.reconcile(source.properties, self.load_property)
+        self._operations.reconcile(source.operations, self.load_operation)
 
     def load_properties(self) -> None:
         while self.has_more_property():
@@ -377,13 +374,7 @@ class OoadClass(OoadNode):
         for prop in self.properties:
             if relationship.target not in domain_type_names(getattr(prop, "type_hint", "") or ""):
                 continue
-            if relationship.kind:
-                prop.stereotype = relationship.kind
-            if relationship.cardinality:
-                prop.cardinality = relationship.cardinality
-            if relationship.description and not getattr(prop, "origin", ""):
-                prop.origin = relationship.description
-            prop.derive_relationship()
+            prop.take_relationship(relationship)
 
     def depend_on(self, target: str, label: str) -> None:
         """Record that this class acts on target at run time, labelled by the interaction; the same pair and label once."""
@@ -419,6 +410,7 @@ class Module(OoadNode):
         "public_source_internal",
         "public_source_files",
         "dependencies",
+        "imported_names",
     )
 
     def __init__(
@@ -439,6 +431,10 @@ class Module(OoadNode):
         self.seam_terms: List[str] = list(seam_terms) if seam_terms is not None else []
         self.dependencies: List[str] = list(dependencies) if dependencies is not None else []
         self.preamble = CodeBody()
+        # The text of the file this module was read from, which its parser keeps.
+        self.source_text = ""
+        # The class names this module's code imports or reaches as `module.Class`.
+        self.imported_names: List[str] = []
         self._modules = ModelChildren(self, "participants")
         self._classes = ModelChildren(self, "participants")
         self._class_blocks: List[str] = []
@@ -449,7 +445,7 @@ class Module(OoadNode):
 
     @modules.setter
     def modules(self, modules: List["Module"]) -> None:
-        self._refill(self._modules, modules)
+        self._modules.refill(modules)
 
     @property
     def classes(self) -> List[OoadClass]:
@@ -457,7 +453,7 @@ class Module(OoadNode):
 
     @classes.setter
     def classes(self, classes: List[OoadClass]) -> None:
-        self._refill(self._classes, classes)
+        self._classes.refill(classes)
 
     def as_record(self) -> dict:
         return {
@@ -470,6 +466,15 @@ class Module(OoadNode):
             "constraint": self.constraint,
             "classes": [loaded.as_record() for loaded in self.classes],
         }
+
+    @property
+    def path_parent(self) -> Optional[str]:
+        """The module whose path holds this one: `powers` for `powers/attack`; None at the top."""
+        return path_parent(self.name)
+
+    def external_deps(self) -> List[str]:
+        """The modules this one depends on, leaving out the path parent that contains it."""
+        return [dependency for dependency in self.dependencies if dependency != self.path_parent]
 
     def public_terms(self) -> List[str]:
         """Seam bullets for modules fidelity: explicit terms, else thin class names, else seam string."""
@@ -553,19 +558,36 @@ class Module(OoadNode):
     def get_next_class_from_file(self) -> OoadClass:
         raise NotImplementedError(f"{type(self).__name__} must implement get_next_class_from_file")
 
-    def load_source_facts(self, text: str, file: Path, root: Path) -> None:
-        """Fill the facts one parsed source file owns: what it imports, which classes share it,
-        and which of them carry the Entity or Aggregate Root stereotype, which may build the peers they own."""
-        self.dependencies = self.import_targets(text, file, root)
+    def take_lines(self, text: str) -> None:
+        """Keep the text of the file this module was read from, and the span of each class in it."""
+        self.source_text = text
+        lines = text.split("\n")
+        for oclass in self.classes:
+            oclass.take_lines(lines)
+
+    def load_source_facts(self, file: Path, root: Path) -> None:
+        """Fill the facts the file this module was read from owns: what it imports, the class names it imports, and
+        which classes share it. The graph keeps each class apart from its module, so each class keeps its peers' names."""
+        self.dependencies = self.import_targets(file, root)
+        self.imported_names = sorted(self._imported_names())
         peer_names = [oclass.name for oclass in self.classes]
         for oclass in self.classes:
             oclass.peer_names = peer_names
-            oclass.composes_peers = bool(_PEER_COMPOSING_STEREOTYPES & {item.lower() for item in oclass.stereotypes})
 
-    def import_targets(self, text: str, file: Path, root: Path) -> List[str]:
+    def _imported_names(self) -> set:
+        names: set = set(_QUALIFIED_CLASS.findall(self.source_text))
+        for match in _PY_FROM_IMPORT.finditer(self.source_text):
+            names.update(_IMPORT_ALIAS.sub("", item).strip() for item in match.group(1).strip("()").split(","))
+        for default, braced in _JS_IMPORT.findall(self.source_text):
+            names.add(default)
+            names.update(_IMPORT_ALIAS.sub("", item).strip() for item in (braced or "").split(","))
+        names.discard("")
+        return names
+
+    def import_targets(self, file: Path, root: Path) -> List[str]:
         """Root-relative paths named by relative script imports (`./x`, `../y`)."""
         targets: List[str] = []
-        for specifier in _SCRIPT_IMPORT.findall(text):
+        for specifier in _SCRIPT_IMPORT.findall(self.source_text):
             resolved = (file.parent / specifier).resolve()
             if resolved.is_relative_to(root.resolve()):
                 targets.append(resolved.relative_to(root.resolve()).as_posix())
@@ -575,7 +597,7 @@ class Module(OoadNode):
         """Fill the facts a code folder owns: its context files and its own source files."""
         from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
 
-        module_context = ModuleContext(folder)
+        self.module_context = module_context = ModuleContext(folder)
         content = module_context.read()
         sources = [path for path in folder.iterdir() if path.is_file() and path.suffix.lower() in _CODE_SUFFIXES]
         self.has_module_context = module_context.exists()
@@ -589,20 +611,10 @@ class Module(OoadNode):
         )
         self.public_source_files = len([path for path in sources if not path.name.startswith(("_", "test_"))])
 
-    def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:
+    def reconcile_children(self, source: "OoadNode") -> None:
         assert isinstance(source, Module)
-        return [
-            ChildCollectionPair(
-                self_children=self.modules,
-                source_children=source.modules,
-                load=self.load_module,
-            ),
-            ChildCollectionPair(
-                self_children=self.classes,
-                source_children=source.classes,
-                load=self.load_class,
-            ),
-        ]
+        self._modules.reconcile(source.modules, self.load_module)
+        self._classes.reconcile(source.classes, self.load_class)
 
 
 class CleanEngineeringModel(OoadNode):
@@ -616,8 +628,6 @@ class CleanEngineeringModel(OoadNode):
         super().__init__(name, sequential_order, graph)
         self.path = ""
         self._modules = ModelChildren(self, "participants")
-        if opened:
-            self._copy_modules_on_graph()
 
     @property
     def modules(self) -> List[Module]:
@@ -625,18 +635,33 @@ class CleanEngineeringModel(OoadNode):
 
     @modules.setter
     def modules(self, modules: List[Module]) -> None:
-        self._refill(self._modules, modules)
+        self._modules.refill(modules)
 
-    def _copy_modules_on_graph(self) -> None:
-        others = [
-            node
-            for node in self._copies_on_graph("CleanEngineeringModel")
-            if getattr(node, "modules", None)
-        ]
-        if not others:
-            return
-        for module in others[0].modules:
-            self.modules.append(module.clone())
+    @property
+    def is_modules_view(self) -> bool:
+        """True when the model shows modules only: no class carries a member or a drawn relationship."""
+        if not self.modules:
+            return False
+        classes = [oclass for module in self.modules for oclass in module.classes]
+        for oclass in classes:
+            if oclass.properties or oclass.operations:
+                return False
+            if any(relationship.kind for relationship in oclass.relationships):
+                return False
+        if any(module.dependencies or module.seam_terms for module in self.modules):
+            return True
+        if not classes:
+            return True
+        return all(not oclass.properties and not oclass.operations and not oclass.relationships for oclass in classes)
+
+    def described_members(self, file: str) -> dict:
+        """Each member this model describes, by `Class.member`, as the graph saves it for the document at file."""
+        return {
+            f"{oclass.name}.{member.name}": member.model_member(file)
+            for module in self.modules
+            for oclass in module.classes
+            for member in [*oclass.properties, *oclass.operations]
+        }
 
     def every_class(self) -> List[OoadClass]:
         """Every class in every module, nested modules included, in module order."""
@@ -663,8 +688,6 @@ class CleanEngineeringModel(OoadNode):
         for module in self.modules:
             cloned.modules.append(module.clone())
         return cloned
-
-    module_type: type = None  # type: ignore[assignment]
 
     def load(self, path: str) -> "CleanEngineeringModel":
         self.path = path
@@ -700,12 +723,6 @@ class CleanEngineeringModel(OoadNode):
     def load_module(self, source: Module) -> Module:
         return Module(name=source.name, sequential_order=source.sequential_order)
 
-    def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:
+    def reconcile_children(self, source: "OoadNode") -> None:
         assert isinstance(source, CleanEngineeringModel)
-        return [
-            ChildCollectionPair(
-                self_children=self.modules,
-                source_children=source.modules,
-                load=self.load_module,
-            )
-        ]
+        self._modules.reconcile(source.modules, self.load_module)

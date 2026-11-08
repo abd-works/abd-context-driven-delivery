@@ -1,15 +1,19 @@
 """The ``@Hook`` annotation, and the files an IDE reads to run hooks: ``hooks.json``, which names the hook command for each
-event, and ``hook-handlers.json``, which lists the operations that command may run."""
+event, and ``hook-handlers.json``, which lists the operations that command may run. Importing this module registers the
+hook channel's installation with the Installer."""
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from harness.agent_tools.agent_tools import AgentTool, InstallDestination
-from harness.installation.destination import Installation
-from harness.annotations.annotation import Destination
+from harness.annotations.annotation import Annotation, Destination
+from harness.hooks.hook_daemon import HookDaemon
+from harness.installation.destination import ServerInstallation
+from harness.installation.ide_layout import IdeLayout
+from harness.installation.installer import Installer
+from harness.process.process import PythonInterpreter
 
 if TYPE_CHECKING:
     from harness.hooks.hook_server import HookServer
@@ -20,24 +24,49 @@ _HOOK_COMMAND_TIMEOUT_SECONDS = 30
 _HOOK_COMMAND_SCRIPT = Path(__file__).resolve().with_name("hook_server.py")
 
 
-class Hooks:
-    """Class annotation: disable every hook operation on the toolset."""
+class Hooks(Annotation):
+    """Class annotation on a toolset: ``@Hooks(disabled=True)`` turns off every hook operation on it, and
+    ``deploy=False`` keeps them out of install. The hook server and the hook install read it through ``disabled_on``
+    and ``deploys``, so a subclass carries its base's setting."""
+
+    flag = "_hooks"
+    copied = False
 
     def __new__(cls, target: Any = None, *, disabled: bool = False, deploy: bool = True):
-        inst = object.__new__(cls)
-        inst.disabled = disabled
-        inst.deploy = deploy
+        annotation = object.__new__(cls)
+        annotation.disabled = disabled
+        annotation.deploy = deploy
         if isinstance(target, type):
-            return inst.annotate(target)
-        return inst
+            return annotation.annotate(target)
+        return annotation
 
-    def __call__(self, cls: type) -> type:
-        return self.annotate(cls)
+    def annotate(self, toolset_class: type) -> type:
+        setattr(toolset_class, self.flag, self)
+        return toolset_class
 
-    def annotate(self, cls: type) -> type:
-        cls._hooks_disabled = self.disabled
-        cls._hooks_deploy = self.deploy
-        return cls
+    @classmethod
+    def _on(cls, toolset: Any) -> Hooks | None:
+        return getattr(type(toolset), cls.flag, None)
+
+    @classmethod
+    def disabled_on(cls, toolset: Any) -> bool:
+        """True when ``@Hooks(disabled=True)`` turned off every hook of toolset's class."""
+        annotation = cls._on(toolset)
+        return annotation is not None and annotation.disabled
+
+    @classmethod
+    def deploys(cls, toolset: Any) -> bool:
+        """False when ``@Hooks(deploy=False)`` keeps the hooks of toolset's class out of install."""
+        annotation = cls._on(toolset)
+        return annotation is None or annotation.deploy
+
+
+class HookServerNotRunning(Exception):
+    """The install finished but the checkout's hook daemon does not answer, so hooks would not run."""
+
+    def __init__(self, repo: Path) -> None:
+        super().__init__(f"install failed: the hook server of {repo} is not running")
+        self.repo = repo
 
 
 class Hook(Destination):
@@ -179,39 +208,57 @@ class HooksManifest(_HooksJsonFile):
         self._write({"version": 1, "hooks": hooks})
 
 
-class HookInstallation(Installation):
+class HookInstallation(ServerInstallation):
     """Write the IDE's ``hooks.json``, which runs the hook command for each event a hook operation serves, and
-    ``hook-handlers.json``, which lists those operations for the hook server."""
+    ``hook-handlers.json``, which lists those operations for the hook server; then stand up, start, and report the hook
+    server of the checkout. An IDE whose layout runs no hooks gets none."""
 
     channel = "hook"
 
     def __init__(
         self,
-        ide: str,
+        layout: IdeLayout,
         path: Path | str,
         *,
         python: str | None = None,
         repo: Path | str | None = None,
     ) -> None:
-        super().__init__(ide, path, repo=repo)
-        self.python = python or sys.executable
+        super().__init__(layout, path, repo=repo)
+        self.interpreter = PythonInterpreter(python)
+        self.handlers_file = HookHandlersFile(self.path / HookHandlersFile.NAME)
+        self.manifest = HooksManifest(self.path / HooksManifest.NAME)
+        self.daemon = HookDaemon(self.repo or self.path)
         self._handlers: list[dict[str, str]] = []
         self.server: HookServer | None = None
         self.diagnosis: dict[str, Any] | None = None
 
     @property
     def dispatch_command(self) -> str:
-        from harness.process.process import PythonInterpreter
+        return f"{self.interpreter.console} -u {_HOOK_COMMAND_SCRIPT}"
 
-        return f"{PythonInterpreter(self.python).console} -u {_HOOK_COMMAND_SCRIPT}"
-
-    @property
-    def handlers_file(self) -> HookHandlersFile:
-        return HookHandlersFile(self.path / HookHandlersFile.NAME)
+    def accepts(self, tool: AgentTool) -> bool:
+        return tool.install_to_hook and self.layout.runs_hooks
 
     @property
-    def manifest(self) -> HooksManifest:
-        return HooksManifest(self.path / HooksManifest.NAME)
+    def published(self) -> list[str]:
+        return self.registered_operations
+
+    def ensure_running(self) -> dict[str, str]:
+        """Start the checkout's hook daemon when none answers; an IDE that runs no hooks gets none."""
+        if not self.layout.runs_hooks:
+            return {"hook": "not installed"}
+        self.daemon.ensure()
+        if self.daemon.live_address() is None:
+            raise HookServerNotRunning(self.daemon.repo)
+        return {"hook": "running"}
+
+    def status(self) -> list[str]:
+        address = self.daemon.live_address()
+        return [
+            f"hook server: {f'running (pid {address.pid})' if address is not None else 'not running'}",
+            f"hooks registered (events): {', '.join(self.registered_events) or 'none'}",
+            f"hook handlers (operations): {', '.join(self.registered_operations) or 'none'}",
+        ]
 
     @property
     def registered_events(self) -> list[str]:
@@ -226,7 +273,7 @@ class HookInstallation(Installation):
     def write(self, tool: AgentTool) -> None:
         if not tool.install_to_hook or not tool.hook_event:
             return
-        if getattr(type(tool.toolset), "_hooks_deploy", True) is False:
+        if not Hooks.deploys(tool.toolset):
             return
         record = {"event": tool.hook_event, "operation": tool.name, "ref": tool.registration_name}
         if record in self._handlers:
@@ -287,3 +334,6 @@ class HookInstallation(Installation):
         server = self.server if self.server is not None else self.standup()
         self.diagnosis = server.diagnose()
         return self.diagnosis
+
+
+Installer.installs_through(HookInstallation)

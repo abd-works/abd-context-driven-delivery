@@ -8,6 +8,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
+    path_parent,
 )
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import (
     CELL_MIN_HEIGHT,
@@ -82,16 +83,14 @@ class ImportedClass(DiagramClass):
 class DiagramModule(Module, DiagramNode):
     """Module on a page: purpose, seam, nesting, height. Channel fills the label."""
 
+    # How many seam terms the card lists before it ends the list with `...`.
+    seam_bullets = MODULE_MAX_SEAM_BULLETS
+
     def __init__(self, name: str = '', sequential_order: int = 1, **kwargs) -> None:
         Module.__init__(self, name, sequential_order, **kwargs)
         DiagramNode.__init__(self)
         self.nested = False
         self.geometry = Geometry(0, 0, MODULE_CELL_WIDTH, float(self.height()))
-
-    def load_class(self, source: OoadClass) -> DiagramClass:
-        loaded = DiagramClass(name=source.name, sequential_order=source.sequential_order)
-        loaded.translate_from(source)
-        return loaded
 
     def height(self) -> int:
         return self.header_height()
@@ -100,14 +99,10 @@ class DiagramModule(Module, DiagramNode):
         terms = self.public_terms()
         if not terms:
             return MODULE_HEADER_HEIGHT + MODULE_LINE_HEIGHT
-        n = min(MODULE_MAX_SEAM_BULLETS, len(terms))
-        if len(terms) > MODULE_MAX_SEAM_BULLETS:
+        n = min(self.seam_bullets, len(terms))
+        if len(terms) > self.seam_bullets:
             n += 1
         return max(MODULE_CELL_MIN_HEIGHT, MODULE_HEADER_HEIGHT + n * MODULE_LINE_HEIGHT + 24)
-
-    def external_deps(self) -> List[str]:
-        parent = path_parent(self.name)
-        return [d for d in self.dependencies if d != parent]
 
     def purpose_line(self) -> str:
         purpose = self.description.strip() or '{one-line purpose}'
@@ -118,16 +113,10 @@ class DiagramModule(Module, DiagramNode):
 
     def shown_seam_terms(self) -> List[str]:
         terms = self.public_terms()
-        shown = terms[:MODULE_MAX_SEAM_BULLETS]
-        if len(terms) > MODULE_MAX_SEAM_BULLETS:
+        shown = terms[:self.seam_bullets]
+        if len(terms) > self.seam_bullets:
             return shown + ['...']
         return shown
-
-
-def path_parent(name: str) -> Optional[str]:
-    if '/' not in name:
-        return None
-    return name.rsplit('/', 1)[0]
 
 
 def module_tab_label(module_name: str) -> str:
@@ -136,25 +125,6 @@ def module_tab_label(module_name: str) -> str:
         if sep in name:
             return name.split(sep, 1)[0].strip()
     return name
-
-
-def is_modules_view(canonical: CleanEngineeringModel) -> bool:
-    if not canonical.modules:
-        return False
-    classes = [oclass for module in canonical.modules for oclass in module.classes]
-    for oclass in classes:
-        if oclass.properties or oclass.operations:
-            return False
-        if any(r.kind for r in oclass.relationships):
-            return False
-    if any(m.dependencies or m.seam_terms for m in canonical.modules):
-        return True
-    if not classes:
-        return True
-    return all(
-        (not c.properties and not c.operations and not c.relationships)
-        for c in classes
-    )
 
 
 class ContainmentForest:
@@ -226,26 +196,14 @@ class ContainmentForest:
 
     def _dep_names_for(self, name: str) -> List[str]:
         module = self.by_name[name]
-        node = DiagramModule(
-            name=module.name,
-            sequential_order=module.sequential_order,
-            dependencies=list(module.dependencies),
-        )
-        dep_names = list(node.external_deps())
+        dep_names = list(module.external_deps())
         if name in self.synthetic or (
             self.children_of.get(name)
             and not module.public_terms()
             and not module.dependencies
         ):
             for child in self.children_of.get(name, []):
-                nested = self.by_name[child]
-                dep_names.extend(
-                    DiagramModule(
-                        name=nested.name,
-                        sequential_order=nested.sequential_order,
-                        dependencies=list(nested.dependencies),
-                    ).external_deps()
-                )
+                dep_names.extend(self.by_name[child].external_deps())
         return dep_names
 
     def _root_of(self, dep: str) -> Optional[str]:
@@ -263,6 +221,4 @@ class ContainmentForest:
 
 
 class DiagramCleanEngineeringModel(CleanEngineeringModel):
-    """Shared diagram channel. Draw.io and Miro extend this model."""
-
-    module_type = DiagramModule
+    """Shared diagram channel. Draw.io extends this model."""

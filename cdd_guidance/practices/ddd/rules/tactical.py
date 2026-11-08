@@ -1,16 +1,11 @@
-"""DDD tactical rules — read the facts each building block recorded on its graph node."""
+"""DDD tactical rules — read the facts each building block records on its graph node (a *BuildingBlock*, which works
+them out from the class it is; a saved graph keeps them)."""
 
 from __future__ import annotations
 
-from harness.graph.practice_rule import PracticeGraphRule
+import re
 
-from cdd_guidance.practices.ddd.rules.tactical_helpers import (
-    is_presentation_module_source,
-    is_screen_driver_class,
-    public_operation_names,
-    repository_lifecycle_ops,
-    technical_name_violation,
-)
+from harness.graph.practice_rule import PracticeGraphRule
 
 _TACTICAL_CLASS = (
     "EntityRoot",
@@ -22,6 +17,9 @@ _TACTICAL_CLASS = (
     "Specification",
 )
 _CONSTRUCTORS = frozenset({"constructor", "__init__"})
+_TECHNICAL_SUFFIXES = frozenset({"result", "response", "dto", "request"})
+_AGENT_NOUNS = frozenset({"manager", "helper", "processor", "handler", "controller"})
+_CAMEL = re.compile(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])")
 
 
 class PrivateMethodNaming(PracticeGraphRule):
@@ -47,7 +45,7 @@ class FlaccidDataObject(PracticeGraphRule):
     def check(self, node, context) -> list[str]:
         if node.type == "ValueObject" or not node.has_fact("operation_shapes"):
             return []
-        public_ops = [name for name in public_operation_names(node) if name not in _CONSTRUCTORS]
+        public_ops = [name for name in node.get_fact("public_operation_names", []) if name not in _CONSTRUCTORS]
         props = len(node.get_fact("property_names", [])) or context.child_count(node, ("properties",))
         if props and not public_ops:
             return [f"{node.type} '{node.name}' has properties but no public operations."]
@@ -59,7 +57,7 @@ class EveryClassCarriesDddStereotype(PracticeGraphRule):
     node_types = _TACTICAL_CLASS
 
     def check(self, node, context) -> list[str]:
-        if is_presentation_module_source(node) or node.get_fact("tactical_stereotype", True):
+        if node.get_fact("in_screen_module", False) or node.get_fact("tactical_stereotype", True):
             return []
         return [
             f"Class '{node.name}' lacks a DDD stereotype "
@@ -72,8 +70,12 @@ class DomainConceptsNotTechnicalNames(PracticeGraphRule):
     node_types = _TACTICAL_CLASS + ("Aggregate",)
 
     def check(self, node, context) -> list[str]:
-        message = technical_name_violation(node.name)
-        return [message] if message else []
+        """A name whose last word is a technical one (a result, a response) or that names an agent noun (a manager, a
+        helper) names the code, not a domain concept."""
+        tokens = [token.lower() for token in _CAMEL.findall(node.name or "") if token]
+        if tokens and (tokens[-1] in _TECHNICAL_SUFFIXES or any(token in _AGENT_NOUNS for token in tokens)):
+            return [f"Class '{node.name}' uses a technical name instead of a domain concept."]
+        return []
 
 
 class ServiceIsHomeless(PracticeGraphRule):
@@ -97,9 +99,9 @@ class RepositoryIsCollectionLifecycle(PracticeGraphRule):
     def check(self, node, context) -> list[str]:
         if not node.name.endswith("Repository") or not node.has_fact("operation_shapes"):
             return []
-        if repository_lifecycle_ops(node):
+        if node.get_fact("lifecycle_operations", []):
             return []
-        public = public_operation_names(node)
+        public = node.get_fact("public_operation_names", [])
         if not public:
             return [f"Repository '{node.name}' exposes no collection lifecycle operations (add, find, remove, …)."]
         if len(public) == 1 and public[0].lower() in {"persist", "save", "store"}:
@@ -137,7 +139,7 @@ class ScreenInterfaceNotADomainObject(PracticeGraphRule):
     node_types = ("EntityRoot", "Entity", "ValueObject", "DomainService")
 
     def check(self, node, context) -> list[str]:
-        if not is_screen_driver_class(node):
+        if not node.has_fact("operation_shapes") or not node.get_fact("drives_a_screen", False):
             return []
         return [
             f"'{node.name}' behaves like a UI driver (open/isShowing); put the action on the owning aggregate."

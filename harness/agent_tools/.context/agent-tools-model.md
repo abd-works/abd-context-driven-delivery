@@ -1,6 +1,6 @@
 # agent_tools — class model (model fidelity)
 
-Markdown channel for the *AgentToolSet* primitive. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet* is the toolset the author marks with `@agent_toolset`; its members are *AgentTool* objects — *AgentOperation* for `@agent_tool` and *AgentInstructions* for `@agent_instructions`. Writing members out to MCP, skills, commands, rules, and hooks belongs to `harness/installation`, `harness/mcp`, and `harness/hooks`. *Mark* and *Destination* belong to `harness/annotations`, *Name* to `harness/name`, *Markdown* to `harness/markdown`, *Session* to `space/session`, *SubAgent* (the `sub-agent.sub_agent` operation) to `tools/sub_agent`, and *AgentToolsProbe* and *AgentToolsDiagnostics* to `harness/diagnostics`; they appear here only as names this module uses.
+Markdown channel for the *AgentToolSet* primitive. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet* is the toolset the author marks with `@agent_toolset`; its members are *AgentTool* objects — *AgentOperation* for `@agent_tool` and *AgentInstructions* for `@agent_instructions`. Writing members out to MCP, skills, commands, rules, and hooks belongs to `harness/installation`, `harness/mcp`, and `harness/hooks`. *Mark*, *Destination*, and *Name* belong to `harness/annotations`, *Markdown* to `harness/markdown`, *Session* to `space/session`, *SubAgent* (the `sub-agent.sub_agent` operation) to `tools/sub_agent`, and *AgentToolsProbe* and *AgentToolsDiagnostics* to `harness/diagnostics`; they appear here only as names this module uses.
 
 **Out of scope:** guidance actions (`harness/guidance_actions`, Generate, Validate, …) keep their own model; *GuidanceAgentOperation* is listed only because this module defines it.
 
@@ -39,20 +39,27 @@ description: str
 registration_name: str
 	// "{module}:{Class}", the ref installers and the hook server load by
 install_folder: Path
-<< aggregation >> operations: dict[str, AgentOperation]
-	// every @agent_tool on this instance, each made with toolset=self
-instructions: Mapping[str, AgentInstructions]
-	// every @agent_instructions on this instance, each made with toolset=self
+<< composition >> operations: dict[str, AgentOperation]
+	// every @agent_tool on this instance, each made once with toolset=self
+<< composition >> instructions: Mapping[str, AgentInstructions]
+	// every @agent_instructions on this instance, each made once with toolset=self
 tools: dict[str, AgentTool]
-	// instructions, then operations (an @agent_tool wins the same name), then hooks, then collection tools
+	// instructions, then operations (an @agent_tool wins the same name), then hooks, then collection tools; made once per instance
+<< composition >> class_markdown: Markdown
+	// the markdown beside the class, made once; a tool's one-word description expands through it
 toolset_collections: list[ToolSetCollection]
 mode: ExpansionMode
 	Invariant: value is "instructions" or "tool"
-HOSTED_ONLY_CLASS_NAMES: frozenset[str]
 	// classes whose tools run only through the practice or toolset that holds them; install and the hook server skip them
 parameter_notes: dict[str, str]
 	// parameter name -> note added after the description of each tool that takes it
+is_part_of_practice: bool
+	// false; a fidelity its practice holds says true, so installs and MCP name it after its own slug in its practice's folder
+is_served_on_mcp: bool
+	// true; a fidelity made apart from any practice says false, so the cdd server skips it
 ----
+instruction(name: str): AgentInstructions
+	// the @agent_instructions member called name; a recipe names its members by name in its source
 tools_for(destination: str): list[AgentTool]
 	-> AgentTool.install_to
 child_toolsets(): Iterator[AgentToolSet]
@@ -94,11 +101,13 @@ kind: str
 	// "tool", "instructions", or "none"
 docstring: str
 description: str
-	// the docstring expanded once through Markdown
+	// the docstring expanded once through the toolset's class_markdown
 parameters: dict[str, str]
 response: str | None
+<< composition >> parameter_schema: ParameterSchema
+	// made once from callable
 input_schema: dict
-	-> ParameterSchema.json_schema
+	-> parameter_schema.json_schema
 install_to_mcp, install_to_hook, install_to_skill, install_to_command, install_to_rule: bool
 hook_event: str
 destinations: list[str]
@@ -111,7 +120,7 @@ invoke(arguments: dict | None = None, *, project: Path | None = None): Any
 answer(call: ToolCall): Any
 	// runs on the toolset made for the call; a callable annotated as taking the project is handed call.project
 	-> on(toolset.for_call(call)).log_session_invocation(call)
-	-> ParameterSchema.coerced
+	-> parameter_schema.coerced
 	// then call the callable
 	// raises CallNamesNoProject when the callable takes the project and the call names none
 on(toolset: AgentToolSet): AgentTool
@@ -145,6 +154,9 @@ sent(arguments: dict | None, project: Path | None): ToolCall
 	-> ChatPointer.taken_from
 open_sessions_with(opener: SessionOpener): None
 	// space/session registers its opener when it is imported, so this module never imports space
+session_in(project: Path): Session | None
+	// the session saved as open in project's checkout, for work that serves no call, such as a hook event or a probe
+	-> SessionOpener.saved_in(project)
 session_named(session_file: str): Session
 	// the session a board command names by its session.json
 	-> SessionOpener.named_in(session_file, self)
@@ -157,6 +169,7 @@ How a call finds the sessions it works in. A protocol: the module that keeps ses
 SessionOpener
 ------
 ----
+saved_in(project: Path): Session
 open_in(call: ToolCall): Session
 named_in(session_file: str, call: ToolCall): Session
 
@@ -179,7 +192,6 @@ taken_from(arguments: dict | None): tuple[ChatPointer | None, dict]
 	// the chat named in a call's arguments, and the arguments left for the tool
 from_claude_chat(chat_id: str): ChatPointer | None
 in_log_line(line: str): ChatPointer | None
-in_chat_file(path: Path): tuple[ChatPointer, str]
 transcript_text(): list[str]
 
 ## GuidanceAgentOperation : AgentOperation                        <!-- Md -->
@@ -190,7 +202,7 @@ GuidanceAgentOperation(name: str, callable: Callable, toolset: AgentToolSet)
 ------
 ----
 log_session_invocation(call: ToolCall): None
-	-> toolset._log_running_action(name)
+	-> toolset.log_running(name)
 
 ## AgentInstructions : AgentTool                                  <!-- Md -->
 
@@ -200,9 +212,12 @@ AgentInstructions(name: str, callable: Callable, toolset: AgentToolSet)
 prompt: tuple[str, ...]
 tools: list[str]
 	// deferred operation names from tools(...), merged with those of every nested instructions(...); read-only
+<< composition >> recipe_source: RecipeSource
+	// parsed once from callable; every expansion of this recipe reads it
 result_template: str
 ----
-for_callable(callable: Callable, instance: AgentToolSet | None = None): AgentInstructions
+for_callable(callable: Callable, toolset: AgentToolSet): AgentInstructions
+	-> toolset.instruction(callable name)
 expand(arguments: dict): ExpansionResult
 	// raises RecipeLineFailed when a recipe line raises
 answer(call: ToolCall): str
@@ -211,6 +226,7 @@ answer(call: ToolCall): str
 	-> expand
 members_of(target: AgentToolSet): ToolsetMembers
 member_of(target: AgentToolSet, member: str): AgentInstructions
+	-> target.instruction(member)
 provider_of(owner: Any, provider_name: str): Any
 parent_recipe(after_class: type | None = None): tuple[AgentInstructions, type] | None
 	// the same-named recipe on the nearest class above, for a recipe that defers to its parent
@@ -232,6 +248,7 @@ run(): RecipeExpansion
 RecipeSource(recipe: Callable)
 ------
 module: ast.Module
+	// parsed once
 function_def: ast.FunctionDef
 only_defers_to_parent: bool
 result_template: str
@@ -250,7 +267,7 @@ filled(template: str): str
 
 ## ToolsetMembers                                                 <!-- Md -->
 
-The members of one toolset class and which of them its annotations make tools; each class is walked once.
+The members of one toolset class and which of them its annotations make tools. The class holds them (`ToolsetMembers.of(owner)` keeps them on the class itself), so each class is walked once and no process-wide table is kept.
 
 ToolsetMembers(owner: type)
 ------
@@ -258,7 +275,11 @@ every: list[tuple[str, Any]]
 annotated: list[tuple[str, Any]]
 tool_names: set[str]
 instruction_names: frozenset[str]
+<< composition >> subject_loader: ToolSubjectLoader
+	// the class's @tool_subject loader, read once
 ----
+of(owner: type): ToolsetMembers
+	// the members owner holds, made and kept on owner the first time they are asked for
 callable_on(instance, name, member): Callable
 
 ## ToolsetReference                                               <!-- Md -->
@@ -282,7 +303,7 @@ validate(): None
 ToolSubjectLoader(toolset_class: type)
 ------
 loader: Callable | None
-	// the @tool_subject classmethod, given the called project when it takes one
+	// the @tool_subject classmethod, found once, given the called project when it takes one
 ----
 on_subject(load, operation): Callable
 given_the_called_project(operation: Callable): Callable
@@ -393,4 +414,4 @@ lineno: int
 | Skill, command, and rules markdown | `FileInstallation` | live toolset: `description`, `tools_for(destination)`; `AgentTool.invoke_line`; `AgentInstructions.expand` |
 | MCP enrollment | `McpInstallation.write` (records each operation), `McpServer` (enrolls it at start) | each member's `mcp_name`, `kind`, `description`, `parameters` |
 | Runtime call | `McpServer` | `AgentTool.invoke(arguments, project=...)`, the project of the runtime the call's project names |
-| Hooks | `HookInstallation`, `HookDaemon`, `HookServer` | `tools_for("hook")`, `hook_event`, `HOSTED_ONLY_CLASS_NAMES` |
+| Hooks | `HookInstallation`, `HookDaemon`, `HookServer` | `tools_for("hook")`, `hook_event`, `@hosted_only` |

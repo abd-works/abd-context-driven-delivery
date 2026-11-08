@@ -16,12 +16,12 @@ import json
 import logging
 import os
 from collections.abc import Iterator, Mapping
-from datetime import datetime, timezone
 from typing import Any, Callable, ClassVar
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
 from harness.agent_tools.tool_call import ToolCall
-from harness.hooks.hooks import HookHandlersFile
+from harness.annotations.annotation import HostedOnly
+from harness.hooks.hooks import HookHandlersFile, Hooks
 from harness.installation.context_config import ContextConfig
 from harness.installation.repository_toolsets import RepositoryToolsets
 
@@ -33,11 +33,13 @@ _TOOLSET_LOAD_FAILURES = (ImportError, AttributeError, TypeError, ValueError)
 
 
 class HookPayload(Mapping[str, Any]):
-    """The fields an IDE sends on stdin for one firing of a hook, such as the tool that just ran and its input. Its
-    handlers read them through the named properties; it reads as a mapping of those fields too."""
+    """The fields an IDE sends on stdin for one firing of a hook, such as the tool that just ran and its input, and the
+    checkout of the hook server that received them. Its handlers read them through the named properties; it reads as a
+    mapping of those fields too."""
 
-    def __init__(self, fields: Mapping[str, Any]) -> None:
+    def __init__(self, fields: Mapping[str, Any], checkout: Path | None = None) -> None:
         self._fields = dict(fields)
+        self._checkout = checkout
 
     def __getitem__(self, key: str) -> Any:
         return self._fields[key]
@@ -49,11 +51,17 @@ class HookPayload(Mapping[str, Any]):
         return len(self._fields)
 
     @classmethod
-    def from_stdin(cls, raw: bytes) -> HookPayload:
+    def from_stdin(cls, raw: bytes, checkout: Path | None = None) -> HookPayload:
+        """The event an IDE wrote on stdin, as the hook server of checkout received it."""
         text = raw.decode("utf-8-sig")
         while text.startswith("\ufeff"):
             text = text[1:]
-        return cls(json.loads(text))
+        return cls(json.loads(text), checkout)
+
+    def received_in(self, checkout: Path) -> HookPayload:
+        """This event as the hook server of checkout received it: itself when it already names the checkout that
+        received it."""
+        return self if self._checkout is not None else type(self)(self._fields, checkout)
 
     @property
     def hook_event_name(self) -> str:
@@ -104,6 +112,16 @@ class HookPayload(Mapping[str, Any]):
         return Path(folder) if folder else None
 
     @property
+    def call(self) -> ToolCall:
+        """The tool call this event reports: the tool's input, in the project the event happened in, else in the
+        checkout that received it, made once, so every handler of the event reads the same call and the session it
+        opens."""
+        made = self.__dict__.get("_call")
+        if made is None:
+            made = self.__dict__["_call"] = ToolCall(self.tool_input, self.project or self._checkout)
+        return made
+
+    @property
     def chat_id(self) -> str:
         """The chat whose rules this event's injection belongs to: for ``subagentStop``, the subagent's own
         transcript; for any other event, the conversation."""
@@ -112,6 +130,14 @@ class HookPayload(Mapping[str, Any]):
             if stem:
                 return stem
         return self.conversation_id.strip()
+
+    @property
+    def session(self) -> Any:
+        """The session the event works in: the one saved as open in the event's project, else in the checkout that
+        received it, main when none is; none when the event names neither or no sessions are registered. It is read
+        once for the event, the way a tool call reads its session, so every hook of one event works in the same session,
+        and the next event follows a switch or a close made through MCP."""
+        return self.call.session
 
     def edited_path(self) -> str:
         for key in ("file_path", "path", "uri"):
@@ -254,7 +280,7 @@ class HookHandler:
         return f"{type(self.tool.toolset).__name__}.{self.tool.name}"
 
     def is_enabled(self, payload: HookPayload | None = None) -> bool:
-        if bool(getattr(type(self.tool.toolset), "_hooks_disabled", False)):
+        if Hooks.disabled_on(self.tool.toolset):
             return False
         pattern = self._pattern_name()
         if not pattern:
@@ -318,28 +344,16 @@ class HookHandler:
 
 
 class HandlerCatalog:
-    """The toolsets whose hook operations may run, loaded from a list of toolsets, from the references a
-    ``hook-handlers.json`` lists, or from every toolset the repository defines."""
+    """The toolsets whose hook operations may run, and the handlers of each event they serve, made once when the
+    toolsets load. Each toolset is named by its class, its instance, or, as ``hook-handlers.json`` lists it, its
+    ``module:Class`` reference; one that cannot be loaded is kept in ``failures`` and the rest still serve."""
 
-    def __init__(
-        self,
-        toolsets: list[Any] | None = None,
-        repo_root: Path | None = None,
-        *,
-        handlers: Path | str | None = None,
-    ) -> None:
+    def __init__(self, toolsets: list[Any], repo_root: Path | None = None) -> None:
         self.repo_root = repo_root
         self.failures: list[tuple[str, BaseException]] = []
         self.toolsets: list[Any] = []
-        self._load_items(self._source_items(toolsets, handlers))
-
-    def _source_items(self, toolsets: list[Any] | None, handlers: Path | str | None) -> list[Any]:
-        if handlers is not None:
-            return list(HookHandlersFile(handlers).refs)
-        if toolsets is not None:
-            return list(toolsets)
-        installed = HookHandlersFile((self.repo_root or Path()) / ".cursor" / HookHandlersFile.NAME).refs
-        return list(installed) or list(RepositoryToolsets(self.repo_root).collect())
+        self._load_items(toolsets)
+        self._handlers = self._handlers_by_event()
 
     def _load_items(self, items: list[Any]) -> None:
         for item in items:
@@ -349,7 +363,7 @@ class HandlerCatalog:
                 self.failures.append((self.ref_label(item), error))
                 continue
             self.toolsets.extend(
-                instance for instance in loaded if type(instance).__name__ not in AgentToolSet.HOSTED_ONLY_CLASS_NAMES
+                instance for instance in loaded if not HostedOnly.annotates(instance)
             )
 
     def ref_label(self, item: Any) -> str:
@@ -369,22 +383,28 @@ class HandlerCatalog:
         return list(dict.fromkeys(tool.hook_event for tool in self._hook_tools() if tool.hook_event))
 
     def for_event(self, event_name: str) -> list[HookHandler]:
-        handlers: dict[tuple[str, str], HookHandler] = {}
+        """The handlers of the hook operations that serve event_name, one for each operation."""
+        return list(self._handlers.get(event_name, ()))
+
+    def _handlers_by_event(self) -> dict[str, list[HookHandler]]:
+        by_event: dict[str, dict[tuple[str, str], HookHandler]] = {}
         for tool in self._hook_tools():
-            key = (type(tool.toolset).__name__, tool.name)
-            if self._serves_event(tool, event_name) and key not in handlers:
-                handlers[key] = HookHandler(tool, self.repo_root or Path())
-        return list(handlers.values())
+            for event in self._events_served(tool):
+                handlers = by_event.setdefault(event, {})
+                key = (type(tool.toolset).__name__, tool.name)
+                if key not in handlers:
+                    handlers[key] = HookHandler(tool, self.repo_root or Path())
+        return {event: list(handlers.values()) for event, handlers in by_event.items()}
 
     def _hook_tools(self) -> list[AgentTool]:
         return [tool for toolset in self.toolsets for tool in toolset.tools_for(InstallDestination.HOOK)]
 
-    def _serves_event(self, tool: AgentTool, event_name: str) -> bool:
+    def _events_served(self, tool: AgentTool) -> list[str]:
         """A tool serves the event its annotation names. Rule injection annotated for ``postToolUse`` also serves
         ``afterFileEdit``, because Cursor reports a file edit under that event as well as ``postToolUse``."""
-        if tool.hook_event == event_name:
-            return True
-        return event_name == "afterFileEdit" and tool.hook_event == "postToolUse" and tool.name == "inject_rules"
+        if tool.hook_event == "postToolUse" and tool.name == "inject_rules":
+            return [tool.hook_event, "afterFileEdit"]
+        return [tool.hook_event]
 
 
 class HookIllegitimateHandler(Exception):
@@ -396,89 +416,6 @@ class HookIllegitimateHandler(Exception):
         self.tool = tool
         self.reason = reason
         self.cause = cause
-
-
-class ChatInjections:
-    """The rules a hook gave each chat of one session, kept in the session's ``chat-injections`` folder so the next
-    prompt in the same chat gets them again, and never another chat's."""
-
-    _CHAT_START = "--- chat ---"
-    _CHAT_END = "--- end chat ---"
-    # Text that tells the person rules were injected; the model never needs it in a prompt.
-    _NOTICE_LINES = frozenset(
-        {
-            "These rules are injected in the chat.",
-            "The user sees the chat line. Do not paste the rule text into the chat.",
-            "Before you continue, echo the following message to the user:",
-            "The following rules need to be followed while editing this document:",
-        }
-    )
-    # The openings of a rules dump made for one edit; replaying it into a later prompt would repeat a stale check.
-    _DUMP_OPENINGS = (
-        "You just edited ",
-        "The following rules need to be followed",
-        "Before you continue, echo the following message",
-    )
-    _DUMP_LINE = "The following rules need to be followed while editing this document:"
-
-    def __init__(self, session: Any, repo_root: Path) -> None:
-        self._session = session
-        self._repo_root = repo_root
-
-    def path_for(self, chat_id: str) -> Path:
-        """The file that keeps chat_id's injection."""
-        safe = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in chat_id)
-        return self._session.session_path / "chat-injections" / f"{safe.strip('-') or 'unknown'}.md"
-
-    def keep(self, result: HookResult, payload: HookPayload) -> None:
-        """Remember result's rules for the chat the event came from, and the last rules sent in the session."""
-        self._retire_shared_inject()
-        body = (result.additional_context or "").strip()
-        if body and payload.chat_id:
-            dest = self.path_for(payload.chat_id)
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_text(body, encoding="utf-8")
-        folder = self._session.session_path
-        folder.mkdir(parents=True, exist_ok=True)
-        (folder / "last-chat-injected-rules.md").write_text(result.additional_context or "", encoding="utf-8")
-
-    def replay(self, payload: HookPayload, result: HookResult) -> HookResult:
-        """result with the rules kept for the prompt's chat, when the hooks gave none of their own."""
-        chat_id = payload.conversation_id.strip()
-        if result.additional_context or not chat_id:
-            return result
-        dest = self.path_for(chat_id)
-        if not dest.is_file():
-            return result
-        kept = dest.read_text(encoding="utf-8")
-        if self.is_rules_dump(kept):
-            dest.unlink(missing_ok=True)
-            return result
-        result.additional_context = self._model_context(kept) or None
-        return result
-
-    def is_rules_dump(self, body: str) -> bool:
-        text = body.lstrip()
-        return bool(text) and (text.startswith(self._DUMP_OPENINGS) or self._DUMP_LINE in text)
-
-    def _model_context(self, body: str) -> str:
-        """Rule text for the model. The injected-rules notice stays out of the prompt."""
-        kept: list[str] = []
-        hide = False
-        for line in body.splitlines():
-            stripped = line.strip()
-            if stripped in (self._CHAT_START, self._CHAT_END):
-                hide = stripped == self._CHAT_START
-                continue
-            if not hide and not stripped.startswith("rules injected") and stripped not in self._NOTICE_LINES:
-                kept.append(line)
-        return "\n".join(kept).strip()
-
-    def _retire_shared_inject(self) -> None:
-        """Remove the always-apply rule older installs shared between every chat."""
-        shared = self._repo_root / ".cursor" / "rules" / "practices" / "chat-inject.mdc"
-        shared.unlink(missing_ok=True)
-        shared.with_suffix(".sent").unlink(missing_ok=True)
 
 
 class HookServer:
@@ -501,29 +438,24 @@ class HookServer:
         self._absorb_catalog_failures()
 
     @classmethod
-    def from_toolsets(cls, repo_root: Path, toolsets: list[Any] | None = None) -> HookServer:
-        return cls(repo_root, HandlerCatalog(toolsets, repo_root))
+    def from_repository(cls, toolsets: RepositoryToolsets) -> HookServer:
+        """The hook server of a checkout: the toolsets its installed ``.cursor/hook-handlers.json`` lists, else every
+        toolset it defines. Every toolset module is imported either way, so the registrations those modules make,
+        such as how a call opens its session, hold in the hook process."""
+        classes = toolsets.classes()
+        installed = HookHandlersFile(toolsets.root / ".cursor" / HookHandlersFile.NAME).refs
+        server = cls(toolsets.root, HandlerCatalog(list(installed) or classes, toolsets.root))
+        for unloadable in toolsets.unloadable:
+            server.skip(unloadable.reference, unloadable.cause)
+        return server
 
     @classmethod
     def from_handlers(cls, handlers: Path | str, *, repo: Path | str) -> HookServer:
         """The hook server of the toolsets a ``hook-handlers.json`` lists, for the checkout at repo."""
         resolved = Path(repo).resolve()
-        server = cls(resolved, HandlerCatalog(repo_root=resolved, handlers=handlers))
+        server = cls(resolved, HandlerCatalog(list(HookHandlersFile(handlers).refs), resolved))
         server.notify_exceptions()
         return server
-
-    @property
-    def session(self) -> Any:
-        """The session saved as open in the project's ``.sessions/session.json``, main when none is. It is read for each
-        event, so hooks follow a switch or a close made through MCP at once. The hook server reads it the way every
-        tool call reads its session, through a call on this repository; none when no sessions are registered."""
-        return ToolCall(project=self._repo_root).session
-
-    @property
-    def chat_injections(self) -> ChatInjections | None:
-        """The rules kept for each chat of the open session; none when no sessions are registered."""
-        session = self.session
-        return ChatInjections(session, self._repo_root) if session is not None else None
 
     def skip(self, tool: str, error: BaseException) -> None:
         skipped = error if isinstance(error, HookIllegitimateHandler) else HookIllegitimateHandler(tool, str(error), error)
@@ -535,18 +467,19 @@ class HookServer:
         if not raw.strip():
             return HookResult()
         try:
-            payload = HookPayload.from_stdin(raw)
+            payload = HookPayload.from_stdin(raw, self._repo_root)
         except (json.JSONDecodeError, UnicodeDecodeError):
             return HookResult()
         result = self.dispatch(payload)
-        injections = self.chat_injections
-        if injections is not None:
-            result = self._with_chat_injections(injections, payload, result)
+        session = payload.session
+        if session is not None:
+            result = self._with_chat_injections(session.chat_injections, payload, result)
         if payload.hook_event_name in ("stop", "subagentStop"):
             result.followup_only = result.followup_message is not None
         return result
 
-    def _with_chat_injections(self, injections: ChatInjections, payload: HookPayload, result: HookResult) -> HookResult:
+    def _with_chat_injections(self, injections: Any, payload: HookPayload, result: HookResult) -> HookResult:
+        """result with the rules kept for the event's chat, through the chat injections its session keeps."""
         if injections.is_rules_dump(result.additional_context or ""):
             result.additional_context = None
         injections.keep(result, payload)
@@ -555,18 +488,21 @@ class HookServer:
         return result
 
     def dispatch(self, payload: HookPayload) -> HookResult:
+        """The merged answer of the enabled handlers of payload's event, received by this hook server's checkout."""
+        payload = payload.received_in(self._repo_root)
         event = payload.hook_event_name
         self._append_debug(
+            payload,
             f"EVENT {event!r} tool={payload.tool_name!r} path={payload.edited_path()!r} "
             f"conversation_id={payload.conversation_id!r} payload_keys={sorted(payload)}"
         )
         if not event:
-            self._append_debug("NO_EVENT merged={}")
+            self._append_debug(payload, "NO_EVENT merged={}")
             return HookResult()
         merged = HookResult()
         for result in self._invoke_enabled(event, payload):
             merged = merged.merge(result)
-        self._append_debug(f"MERGED {json.dumps(merged.as_dict())}")
+        self._append_debug(payload, f"MERGED {json.dumps(merged.as_dict())}")
         self._show_toast(merged, payload)
         return merged
 
@@ -613,8 +549,8 @@ class HookServer:
                 self.skip(handler.label, error)
                 continue
             results.append(result)
-            self._append_debug(f"HANDLER {handler.label} result={json.dumps(result.as_dict())}")
-        self._append_debug(f"ENABLED {enabled or ['(none)']}")
+            self._append_debug(payload, f"HANDLER {handler.label} result={json.dumps(result.as_dict())}")
+        self._append_debug(payload, f"ENABLED {enabled or ['(none)']}")
         return results
 
     def _show_toast(self, result: HookResult, payload: HookPayload) -> None:
@@ -622,13 +558,11 @@ class HookServer:
         if result.toast and show is not None:
             show(result.toast, payload.workspace_roots)
 
-    def _append_debug(self, message: str) -> None:
-        session = self.session
-        if session is None:
-            return
-        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        with open(session.hook_log("dispatch.debug"), "a", encoding="utf-8") as log:
-            log.write(f"{stamp} {message}\n")
+    def _append_debug(self, payload: HookPayload, message: str) -> None:
+        """Append message to the dispatch log of the session payload's event works in."""
+        session = payload.session
+        if session is not None:
+            session.append_hook_log("dispatch.debug", message)
 
 
 def main() -> None:
@@ -636,13 +570,14 @@ def main() -> None:
     from harness.hooks.hook_daemon import HookDaemon
 
     checkout = Path(__file__).resolve().parents[2]
-    RepositoryToolsets(checkout).use_for_this_process()
+    daemon = HookDaemon(checkout)
+    daemon.toolsets.use_for_this_process()
     os.chdir(checkout)
     raw = sys.stdin.buffer.read()
     if not raw.strip():
         print(json.dumps(HookResult().as_dict()))
         return
-    answer = HookDaemon(checkout).ensure().handle_stdin(raw)
+    answer = daemon.ensure().handle_stdin(raw)
     print(json.dumps(HookResult.from_handler(answer).as_dict()))
 
 

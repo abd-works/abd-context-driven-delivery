@@ -2,7 +2,7 @@ import type { EngineInterface } from 'claude-code'
 
 import type { FidelityFilesJson } from '../../types'
 import { BRAND } from '../brand'
-import { closeFiles, openInDrawio, showFile } from './fidelity-files-client'
+import { closeFiles, isDiagram, openInDrawio, showFile } from './fidelity-files-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
@@ -23,10 +23,16 @@ function FileTextView({ Box, Markdown, Text }: ElementTable, path: string, text:
   )
 }
 
-// One tab per file the fidelity declares, or its validation report alone, and the shown tab's first lines.
+function ShownFileView(elements: ElementTable, shown: { path: string; text: string | null }) {
+  const { Text } = elements
+  if (isDiagram(shown.path)) return <Text color={BRAND.muted}>{`${shown.path} is a diagram: open it in draw.io.`}</Text>
+  return FileTextView(elements, shown.path, shown.text ?? '')
+}
+
+// The files pane: one tab per file the fidelity declares, or its validation report alone, and the shown tab's first lines.
 export function FidelityFilesView($: EngineInterface, elements: ElementTable, files: FidelityFilesJson) {
   const { Box, Button, Text } = elements
-  if (!files) return null
+  if (!files) return <Text color={BRAND.muted}>No files open.</Text>
   const shown = files.tabs.find(tab => tab.path === files.shown)
   return (
     <Box key="files" flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.border} backgroundColor={BRAND.surface}>
@@ -34,10 +40,10 @@ export function FidelityFilesView($: EngineInterface, elements: ElementTable, fi
         {files.tabs.map(tab => (
           <Button key={`file-${tab.path}`} label={tab.path.split('/').at(-1) ?? tab.path} variant={tab.path === files.shown ? 'primary' : undefined} onPress={() => showFile($, tab.path)} />
         ))}
-        {shown?.path.endsWith('.drawio') ? <Button key="file-drawio" label="Open in draw.io" variant="primary" onPress={() => openInDrawio($, shown.path)} /> : null}
+        {shown && isDiagram(shown.path) ? <Button key="file-drawio" label="Open in draw.io" variant="primary" onPress={() => openInDrawio($, shown.path)} /> : null}
         <Button key="files-close" label="✕" onPress={() => closeFiles($)} />
       </Box>
-      {shown ? FileTextView(elements, shown.path, shown.text ?? '') : <Text color={BRAND.muted}>{`${files.fidelity} declares no files.`}</Text>}
+      {shown ? ShownFileView(elements, shown) : <Text color={BRAND.muted}>{`${files.fidelity} declares no files.`}</Text>}
     </Box>
   )
 }

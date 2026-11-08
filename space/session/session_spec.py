@@ -22,7 +22,7 @@ from mamba import after, before, context, description, it
 
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance_actions import GuidanceAction
-from harness.hooks.hook_server import HandlerCatalog, HookPayload, HookServer
+from harness.hooks.hook_server import HookPayload
 from harness.agent_tools.tool_call import ToolCall
 from harness.mcp.mcp_server import McpServer
 from space.repo.repo import Repo
@@ -62,13 +62,13 @@ with description("a session"):
             expect(self.session.practice("stories") is self.prior).to(equal(False))
 
     # (S) Session --> Persist Hook Session
-    with context("that the hook server reads"):
+    with context("that a hook event reads"):
         with before.each:
             self.root = Path(tempfile.mkdtemp())
-            self.server = HookServer(self.root, HandlerCatalog([], self.root))  # pyright: ignore[reportUndefinedVariable]
+            self.event = lambda: HookPayload({"hook_event_name": "stop"}, self.root)
 
         with it("should be the main session until another is open on the repo"):
-            expect(self.server.session.name).to(equal("main"))
+            expect(self.event().session.name).to(equal("main"))
 
         with context("with a named session opened after the hook server started"):
             with before.each:
@@ -77,34 +77,36 @@ with description("a session"):
                 Sessions(self.root).switch("alpha", self.work)
 
             with it("should be that session"):
-                expect(self.server.session.name).to(equal("alpha"))
+                expect(self.event().session.name).to(equal("alpha"))
 
-            with it("should open that practice's guideline"):
-                expect(self.server.session.practice("stories").guideline).to(be_a(PracticeGuidance))
+            with it("should open that practice's guidance"):
+                expect(self.event().session.practice("stories").guidance).to(be_a(PracticeGuidance))
 
             with it("should open the session's graph, which holds that practice"):
-                expect(self.server.session.graph.practices["stories"].name).to(equal("stories"))
+                expect(self.event().session.graph.every_practice["stories"]).to(be(self.event().session.practice("stories").guidance))
 
             with it("should open the same graph on the next call in that session"):
-                expect(self.server.session.graph).to(be(self.server.session.graph))
+                expect(self.event().session.graph).to(be(self.event().session.graph))
 
             with context("that has closed"):
                 with it("should be the main session again"):
                     Sessions(self.root).current().close()
-                    expect(self.server.session.name).to(equal("main"))
+                    expect(self.event().session.name).to(equal("main"))
 
     # (S) Session --> Read Call Session
     with context("that a tool call reads"):
         with before.each:
             self.repo = Path(tempfile.mkdtemp())
             (self.repo / ".git").mkdir()
-            self.hooks = HookServer(self.repo, HandlerCatalog([], self.repo))
 
         with it("should be the main session until another is open on the repo"):
             expect(ToolCall({}, self.repo).session.name).to(equal("main"))
 
-        with it("should agree with the hook server on the same repo"):
-            expect(ToolCall({}, self.repo).session.session_path).to(equal(self.hooks.session.session_path))
+        with it("should agree with a hook event on the same repo"):
+            expect(ToolCall({}, self.repo).session.session_path).to(equal(HookPayload({"cwd": str(self.repo)}).session.session_path))
+
+        with it("should agree with the session opened for the project without a call"):
+            expect(ToolCall({}, self.repo).session.session_path).to(equal(ToolCall.session_in(self.repo).session_path))
 
         with context("with a named session open"):
             with before.each:
@@ -587,22 +589,6 @@ with description("a loop"):
             reloaded = self.session.log.loop_at(self.opened.number)
             expect(reloaded.entries[0]).to(contain(f"--- {reloaded.number}"))
 
-        with context("with a chat to place under the lines"):
-            with it("should show the chat and the response under the lines they belong to"):
-                chat = self.work / "chat.md"
-                chat.write_text(
-                    "chat-id: chat-loop-1\nlines: 1-1\n\nthe response\n",
-                    encoding="utf-8",
-                )
-                self.opened.inject(chat)
-                text = self.opened.text()
-                expect(
-                    "chat-loop-1" in text
-                    and str(chat) in text
-                    and "1-1" in text
-                    and "the response" in text
-                ).to(equal(True))
-
         with it("should reload log lines from session.log when accessed by loop number"):
             Sessions(self.repo).switch("alpha")
             reloaded = Sessions(self.called).current().log.loop_at(self.opened.number)
@@ -653,18 +639,6 @@ with description("an action"):
                 expect("hierarchy-preservation" in log and "synopsis" in log and "correction" in log).to(
                     equal(True)
                 )
-
-    # (S) Session --> Attach Action Chat
-    with context("that appends a chat to a logged action"):
-        with before.each:
-            self.session.log.action("sketch", [self.work / "cart.py"])
-            self.chat = self.work / "chat.md"
-            self.chat.write_text("chat body\n", encoding="utf-8")
-
-        with it("should add that chat onto that action's log line"):
-            self.session.log.append_chat("sketch", ChatPointer("chat-9", self.chat, "4"))
-            log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
-            expect("chat-9" in log and "4" in log).to(equal(True))
 
     # (S) Session --> Record Session Action
     with context("that names an action"):
@@ -754,14 +728,26 @@ with description("a practice"):
             self.session = Sessions(self.called).current()
             self.opened = self.session.practice("bdd")
 
-        with it("should hold that practice's guideline in memory"):
-            expect(isinstance(self.opened.guideline, PracticeGuidance)).to(equal(True))
+        with it("should hold that practice's guidance in memory"):
+            expect(isinstance(self.opened.guidance, PracticeGuidance)).to(equal(True))
 
-        with it("should hold a graph of its own, apart from the guideline an action works with"):
-            expect(self.session.graph.practices["bdd"].guidance is self.opened.guideline).to(equal(False))
+        with it("should be the one practice the session's graph holds"):
+            expect(self.session.graph.every_practice["bdd"]).to(be(self.opened.guidance))
+
+        with it("should know the session's graph"):
+            expect(self.opened.guidance.graph).to(be(self.session.graph))
+
+        with it("should be the same practice the next call in the session works with"):
+            expect(Sessions(self.called).current().practice("bdd").guidance).to(be(self.opened.guidance))
+
+        with it("should hold the practice it extends from the same session"):
+            expect(self.session.practice("ddd").guidance.extended).to(be(self.session.practice("clean_engineering").guidance))
 
         with it("should open its graph on its workpath"):
-            expect(self.session.graph.practices["bdd"].source_root).to(equal(str(self.work.resolve())))
+            expect(self.session.graph.source_root_of(self.opened.guidance)).to(equal(str(self.work.resolve())))
+
+        with it("should be the same graph on the next call in the session"):
+            expect(Sessions(self.called).current().graph).to(be(self.session.graph))
 
         with it("should return that same practice on the next ask"):
             expect(self.session.practice("bdd") is self.opened).to(equal(True))
@@ -960,7 +946,28 @@ with description("a session with no folder of its own, on a project inside its c
 
     with it("should keep each practice's folder under its root"):
         stories = self.session.practice("stories")
-        expect(stories.folder).to(equal(self.session.root / stories.guideline.default_workspace_folder))
+        expect(stories.folder).to(equal(self.session.root / stories.guidance.default_workspace_folder))
+
+
+with description("a session working in a folder of its own, holding an aggregate's files") as self:
+    with before.each:
+        self.repo = Path(tempfile.mkdtemp(prefix="session-declared-")).resolve()
+        (self.repo / ".git").mkdir()
+        self.work = self.repo / "work"
+        for name in ("client.ts", "helpers.ts"):
+            (self.work / "sales" / "client").mkdir(parents=True, exist_ok=True)
+            (self.work / "sales" / "client" / name).write_text("export class Client {}\n", encoding="utf-8")
+        Sessions(self.repo).switch("alpha", self.work)
+        self.model = Sessions(self.repo).current().practice("ddd").fidelities["model"]
+
+    with after.each:
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    with it("should list the file named for its aggregate's folder"):
+        expect([entry.path for entry in self.model.files()["typescript"]]).to(equal(["work/sales/client/client.ts"]))
+
+    with it("should find the declared file there"):
+        expect(self.model.has_declared_output()).to(equal(True))
 
 
 # (E) Open Work Session
@@ -1125,6 +1132,40 @@ with description("a session read for a board") as self:
 
         with it("should keep its log and title in the new folder"):
             expect(self.moved.title).to(equal("Beta"))
+
+        with it("should stay the same session"):
+            expect(self.moved).to(be(self.beta))
+
+        with it("should be kept in the closed sessions' folder"):
+            expect(self.beta.session_path).to(equal(self.repo.resolve() / ".sessions" / "_complete" / "beta"))
+
+        with it("should write its handoffs into that folder"):
+            expect(Path(self.beta.write_handoff("moved")).parent).to(equal(self.beta.session_path))
+
+    with context("that its sessions loaded"):
+        with before.each:
+            self.sessions = Sessions(self.repo)
+            self.loaded = self.sessions.named("beta")
+
+        with it("should hold those sessions"):
+            expect(self.loaded.sessions).to(be(self.sessions))
+
+        with it("should hold their repository"):
+            expect(self.loaded.repo).to(be(self.sessions.repo))
+
+        with it("should make each practice once"):
+            expect(self.loaded.practices["stories"]).to(be(self.loaded.practices["stories"]))
+
+        with it("should keep its decision records under the workpath it moves to"):
+            (self.repo / "billing").mkdir()
+            self.loaded.choose_workpath("billing")
+            written = Path(self.loaded.write_cdr(slug="moved", content="# Moved"))
+            expect(written.parent).to(equal(self.repo.resolve() / "billing" / ".context" / "cdr"))
+
+    with context("whose checkout's files are listed"):
+        with it("should list them through one file manager"):
+            sessions = Sessions(self.repo)
+            expect(sessions.file_manager).to(be(sessions.file_manager))
 
     with context("that keeps a file a person wrote, such as a started backlog item's idea"):
         with before.each:

@@ -2,7 +2,7 @@ import { expect } from 'claude-code/testing'
 
 import { called } from '../../../cdd-stub'
 import { NEW_SESSION_NAME } from '../../../examples/chat-bar.examples'
-import { CHAT_BAR, findText, textOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, findText, labelOf, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -25,9 +25,10 @@ story('Create New Session', CHAT_BAR, () => {
     then('payment-retry is created', async ($, on, scene) => {
       expect(called(scene.world, 'ticket.create')).toEqual({ title: NEW_SESSION_NAME })
     })
-    and('the activation dialog opens on it, offering LEAVE commit, push, merge and OPEN create branch, create worktree, as in Open Session', async ($, on, scene) => {
-      const dialog = await Promise.all(['Open payment-retry', /^LEAVE/, /^OPEN/].map(async text => textOf(await findText(scene.ui, text))))
-      expect(dialog).toEqual(['Open payment-retry', 'LEAVE ☑ commit ☑ push ☐ merge', 'OPEN ☑ create branch ☑ create worktree'])
+    and('the activation dialog opens on it, offering LEAVE Create handoff, commit, push, merge and OPEN create branch, create worktree, as in Open Session', async ($, on, scene) => {
+      expect(textOf(await findText(scene.ui, 'Open payment-retry'))).toBe('Open payment-retry')
+      const choices = await Promise.all(['leave-handoff', 'leave-commit', 'leave-push', 'leave-merge', 'open-branch', 'open-worktree'].map(key => labelOf(scene.ui, key)))
+      expect(choices).toEqual(['☑ Create handoff', '☑ commit', '☑ push', '☐ merge', '☑ create branch', '☑ create worktree'])
     })
   })
 })

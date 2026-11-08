@@ -13,6 +13,8 @@ import subprocess
 from pathlib import Path
 from typing import Iterable, List
 
+from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import LernDomainDriven
+
 _HERE = Path(__file__).resolve().parent
 _ENTRY_TEMPLATE = _HERE / "canvas-fixtures.ts"
 _BUILD_SCRIPT = _HERE / "build-canvas-fixtures.mjs"
@@ -21,7 +23,8 @@ _BUILD_SCRIPT = _HERE / "build-canvas-fixtures.mjs"
 class LernCanvasFixtures:
     """Builds ``canvas-fixtures.js`` from a LERN workspace's ``*.story.shared.ts`` files."""
 
-    story_test_folder = "test-utils/story-test"
+    # The LERN pattern's step library, so the bundle runs the same story runtime the tests do.
+    story_test_folder = LernDomainDriven.story_test_folder
     tests_folder = "tests"
     work_folder = ".temp/canvas-fixtures"
     shared_story_glob = "*.story.shared.ts"

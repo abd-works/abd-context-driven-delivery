@@ -28,7 +28,9 @@ from space.kanban.session_board_examples import (
     STORY_FILE,
     STORY_MAP,
     STORY_MAP_FILE,
+    STORY_MAP_GRAPH,
     STORY_MAP_REPORT,
+    STORY_MAP_TEXT,
     ReportSeed,
     generated,
     seed_checkout_flow_held_on_violations,
@@ -41,10 +43,19 @@ shared_stories = SharedStories("Validate Fidelity Outputs")
 
 REPORTS = f".sessions/{CHECKOUT_FLOW.name}/validation-reports"
 REPORT_WITHOUT_GRAPH = ReportSeed(STORY_MAP_REPORT, text="### verb-noun-format: 1 violation(s)\n")
-EARLIER_TACTICS_GRAPH = f"{REPORTS}/ddd-tactics-20200101T000000.json"
+# A graph saved before the saved graph's shape had a version, as every report saved before shape 2 holds it.
+REPORT_WITH_OUTDATED_GRAPH = ReportSeed(STORY_MAP_REPORT, graph={key: value for key, value in STORY_MAP_GRAPH.items() if key != "version"})
+EARLIER_TACTICS_GRAPH =f"{REPORTS}/ddd-tactics-20200101T000000.json"
 EARLIER_TACTICS_GRAPH_TEXT = "[]"
 # Validate dates each report by the clock, so a report's name is matched, not spelled out.
 TACTICS_REPORT_NAME = re.compile(r"^ddd-tactics-\d{8}T\d{6}\.md$")
+
+
+def seed_checkout_flow_with_outdated_report(project) -> None:
+    """checkout-flow held on violations, its latest story map report saved with a graph from before shape 2."""
+    project.seed_file(STORY_MAP_FILE, STORY_MAP_TEXT)
+    project.seed_session(CHECKOUT_FLOW)
+    project.seed_report(CHECKOUT_FLOW, REPORT_WITH_OUTDATED_GRAPH)
 
 
 @shared_stories.scenario("Validate Fidelity", "Count Validate done only with no graph-rule violations")
@@ -54,7 +65,7 @@ def _(s):
         world.project.seed_session(PET_VISITS.with_log(generated("stories", "story_map")))
         world.session = world.Session.load(world.project.sessions / PET_VISITS.name, world.project.root)
         world.stories = world.session.practice("stories")
-        world.stories.guideline = Stories(fidelity="story_map")
+        world.stories.guidance.work_at("story_map")
         world.ticket = world.Ticket.load(PET_VISITS.name)
 
     @s.when("Claude Code validates the story map and finds no graph-rule violation")
@@ -219,6 +230,40 @@ def _(s):
     @s.and_("it says the report has no saved graph in place of saying it has no violations")
     def _(world):
         expect((world.report["has_saved_graph"], world.report["rules"])).to(equal((False, [])))
+
+
+@shared_stories.scenario("Open Validation Report", "Say a report's saved graph is out of date")
+def _(s):
+    @s.given("checkout-flow's latest story_map report has a graph saved in a shape the graph no longer writes")
+    def _(world):
+        seed_checkout_flow_with_outdated_report(world.project)
+
+    @s.when("the Person opens the story_map report")
+    def _(world):
+        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).progress_of(STORY_MAP).report())
+
+    @s.then("the report panel shows the report's text")
+    def _(world):
+        expect(world.report["text"]).to(equal(REPORT_WITH_OUTDATED_GRAPH.text))
+
+    @s.and_("it says the report's saved graph is out of date in place of its graph's rules")
+    def _(world):
+        expect((world.report["is_out_of_date"], world.report["rules"])).to(equal((True, [])))
+
+
+@shared_stories.scenario("Open Validation Report", "Read the board with an out-of-date report")
+def _(s):
+    @s.given("checkout-flow's latest story_map report has a graph saved in a shape the graph no longer writes")
+    def _(world):
+        seed_checkout_flow_with_outdated_report(world.project)
+
+    @s.when("the session board reads checkout-flow")
+    def _(world):
+        world.read = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name))
+
+    @s.then("the story_map bar links that report")
+    def _(world):
+        expect(progress_in(world.read, STORY_MAP)["report_file"]).to(equal(f"{REPORTS}/{STORY_MAP_REPORT}.md"))
 
 
 @shared_stories.scenario("Open Validation Report", "Say there is no report")

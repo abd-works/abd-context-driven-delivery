@@ -5,7 +5,7 @@
 
 - **Purpose:** Keep the software in the business's language, with each rule held in the aggregate that owns it, before any technical detail is added.
 - **Seam (terms):** Ddd, BoundedContextMap, `ddd.instructions`, `ddd-bounded-context`, `ddd-model`, `ddd-tactics`, `render`
-- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `harness/markdown`, `cdd_guidance/actions/sketch` (*SketchOutline*), `cdd_guidance/practices/clean_engineering/model` (class model and its markdown format), `cdd_guidance/practices/clean_engineering/model/drawio` (the class model's draw.io format, which the aggregate diagram extends), `cdd_guidance/practices/clean_engineering` (its rules, which the DDD rule examples run beside), `harness/name`. Neither the class model nor harness imports DDD back; the spec support that runs its rules on examples is its own `rules/rule_examples.py`.
+- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `harness/markdown`, `cdd_guidance/actions/sketch` (*SketchOutline*), `cdd_guidance/practices/clean_engineering/model` (class model and its markdown format), `cdd_guidance/practices/clean_engineering/model/drawio` (the class model's draw.io format, which the aggregate diagram extends), `cdd_guidance/practices/clean_engineering` (its rules, which the DDD rule examples run beside), `harness/annotations` (*Name*). Neither the class model nor harness imports DDD back; the spec support that runs its rules on examples is its own `rules/rule_examples.py`.
 
 ## Constraint
 

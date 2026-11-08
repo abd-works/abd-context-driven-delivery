@@ -6,7 +6,6 @@ from expects import equal, expect
 from mamba import before, description, context, it
 
 from cdd_guidance.practices.ddd.model.drawio.drawio_bounded_context_map import DrawIOBoundedContextMap
-from cdd_guidance.practices.ddd.model.markdown.class_cards import plain_properties
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 from cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model import SketchDddModel
 
@@ -62,24 +61,22 @@ def _drawn_integrations(aggregate):
 
 
 def _card(card):
-    node = card.node
     return (
-        node.name,
+        card.name,
         card.stereotypes,
-        [(prop.name, prop.type_hint, prop.stereotype) for prop in plain_properties(node)],
-        [(op.name, [item.save() for item in op.parameters], op.return_type, op.callees) for op in node.operations],
+        [(prop.name, prop.type_hint, prop.stereotype) for prop in card.plain_properties],
+        [(op.name, [item.save() for item in op.parameters], op.return_type, op.callees) for op in card.operations],
         card.invariants,
     )
 
 
 def _drawn_card(card):
     # The root card draws its repository's operations only, so a repository's properties are not on the page.
-    node = card.node
     return (
-        node.name,
+        card.name,
         card.stereotypes,
-        [] if card.is_repository else [(prop.name, prop.type_hint) for prop in plain_properties(node)],
-        [(op.name, [item.name for item in op.parameters]) for op in node.operations],
+        [] if card.is_repository else [(prop.name, prop.type_hint) for prop in card.plain_properties],
+        [(op.name, [item.name for item in op.parameters]) for op in card.operations],
     )
 
 
@@ -87,7 +84,7 @@ def _aggregate(aggregate):
     return (
         aggregate.name,
         aggregate.root.name,
-        [item.name for item in aggregate.root.invariant_objects],
+        [item.name for item in aggregate.members],
         [item.name for item in aggregate.root.operations],
         _integrations(aggregate),
         [(event.name, [item.name for item in event.consumers]) for event in aggregate.events],
@@ -108,7 +105,7 @@ def _drawn_map(model):
             item.name,
             item.owner,
             [
-                (a.name, a.root.name, [m.name for m in a.root.invariant_objects], _drawn_integrations(a))
+                (a.name, a.root.name, [m.name for m in a.members], _drawn_integrations(a))
                 for a in item.aggregates
             ],
         )

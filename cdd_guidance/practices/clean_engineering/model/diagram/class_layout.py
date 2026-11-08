@@ -14,7 +14,7 @@ import heapq
 import math
 import random
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import DiagramNode
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
@@ -64,29 +64,6 @@ _HORIZONTAL_SIDES = ("right", "left")
 
 
 @dataclass
-class DiagramCard:
-    """A box to place or route around for a view with no diagram node of its own, such as the DDD aggregate view.
-
-    A class-diagram view passes its DiagramNode cards directly; placement and routing read only cell_id, geometry,
-    and group."""
-
-    cell_id: str
-    width: float
-    height: float
-    group: str = ""
-    x: float = 0
-    y: float = 0
-
-    @property
-    def geometry(self) -> Geometry:
-        return Geometry(self.x, self.y, self.width, self.height)
-
-    @geometry.setter
-    def geometry(self, box: Geometry) -> None:
-        self.x, self.y, self.width, self.height = box
-
-
-@dataclass
 class DiagramArrow:
     """The line drawn between two cards for every relationship one class has to another.
 
@@ -110,8 +87,6 @@ class DiagramArrow:
         return [self.exit_point] + self.corners + [self.entry_point]
 
 
-# A card is a DiagramNode on a class diagram, or a DiagramCard where a view has no node.
-Card = Union[DiagramNode, "DiagramCard"]
 
 
 class CardPlacement:
@@ -123,7 +98,7 @@ class CardPlacement:
     together. The search is seeded, so the same model always gives the same diagram.
     """
 
-    def __init__(self, cards: List[Card], arrows: List[DiagramArrow]) -> None:
+    def __init__(self, cards: List[DiagramNode], arrows: List[DiagramArrow]) -> None:
         self._cards = cards
         ids = {card.cell_id for card in cards}
         self._links = [arrow for arrow in arrows if arrow.source != arrow.target and arrow.source in ids and arrow.target in ids]
@@ -400,7 +375,7 @@ class _InheritanceTrunk:
 
     Each arrow still runs from its own subclass to the base, so a diagram read back gives every subclass its base."""
 
-    def __init__(self, arrows: List[DiagramArrow], cards: Dict[str, Card]) -> None:
+    def __init__(self, arrows: List[DiagramArrow], cards: Dict[str, DiagramNode]) -> None:
         self.arrows = arrows
         # The base and its subclasses, the only cards the trunk's lines may come near.
         self._cards = {cell_id: cards[cell_id] for arrow in arrows for cell_id in (arrow.source, arrow.target)}
@@ -452,7 +427,7 @@ class ArrowRouter:
 
     def __init__(
         self,
-        cards: List[Card],
+        cards: List[DiagramNode],
         arrows: List[DiagramArrow],
         obstacles: Iterable[Geometry] = (),
         kept_paths: Iterable[List[Point]] = (),

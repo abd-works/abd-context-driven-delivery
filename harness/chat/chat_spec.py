@@ -119,6 +119,18 @@ with description("a chat") as self:
             with it("should go by the latest title"):
                 expect(Chat.list()[0].name).to(equal("Session board handoff review"))
 
+            # The chat keeps the transcript it found, so a later title read does not search the projects folder again.
+            with context("that the chat renamed, read at a later check-in after the projects folder moved"):
+                with before.each:
+                    transcript = self.projects / "C--dev-repo" / f"{CHAT}.jsonl"
+                    transcript.write_text(transcript.read_text(encoding="utf-8") + _titled("Renamed review") + "\n", encoding="utf-8")
+                    os.environ["CLAUDE_CONFIG_DIR"] = tempfile.mkdtemp(prefix="claude-config-moved-")
+                    CLOCK[0] += 31
+                    Chat.load(CHAT).check_in(is_busy=False, name="repo · first words")
+
+                with it("should go by the new title from the transcript it kept"):
+                    expect(Chat.list()[0].name).to(equal("Renamed review"))
+
         # A mod that reloads can check in twice at once, and a state file written over itself cannot be read.
         with context("that checks in from two places at once"):
             with before.each:

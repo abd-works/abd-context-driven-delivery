@@ -13,7 +13,7 @@ markdown = MarkdownBddModel().render(model)
 
 - **Purpose:** Keep observable behaviour as one describe tree — descriptions, contexts, observations — so a sketch and a spec file stay the same hierarchy every later fidelity reads, and so the graph can check BDD rules against facts each node carries.
 - **Seam (terms):** BddModel, MarkdownBddModel, SketchBddModel, CodeBddModel, PythonBddModel, TypeScriptBddModel, GraphBddModel, BehaviorNode, Description, Context, Observation, UnreadableSpec
-- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*, *Node*, *Edge*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*, *SketchLens*)
+- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*, *Node*, *Edge*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*), harness/guidance (*SketchLens*)
 
 *ModelNode*, *ModelChildren*, *CodeBody*, *CodeLanguage*, *WrittenBlock*, and *CallGraphEntry* are owned by the modules above; this model only uses them.
 
@@ -38,8 +38,11 @@ Every description, context, and observation. It knows its own source lines and t
 ----
 + take_code_from(source: BehaviorNode): None
 	// keep written and setup, so a copy in another format can still write them back
++ setup_reach: dict
+	// what its lines after its opening line reach, up to its first child: member names, those it only reads, and tools called by name
 + load_span_facts(span: str): None
-	// fills expect_count, has_implementation, private_probe from this node's own lines
+	// fills expect_count, has_implementation, private_probe, and setup_reach from this node's own lines; an observation also keeps reach, what its whole span reaches
+	-> reach_of
 
 ## Description : BehaviorNode
 
@@ -154,7 +157,7 @@ The `python` format: Mamba `with description(...)`, `with context(...)`, `with i
 
 ------
 + language: CodeLanguage
-	// CodeLanguage.named("python")
+	// PYTHON (the code_body constant)
 ----
 + check_readable(text: str): None
 + parse_code(text: str): PythonBddModel
@@ -167,7 +170,7 @@ The `typescript` format: `describe`, `context`, `it`, and Playwright's `test.des
 
 ------
 + language: CodeLanguage
-	// CodeLanguage.named("typescript")
+	// TYPESCRIPT (the code_body constant)
 ----
 + parse_code(text: str): TypeScriptBddModel
 + default_imports, block_open, block_close

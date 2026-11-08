@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio import Drawio
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
 from cdd_guidance.practices.clean_engineering.model.java.java_class_model import JavaCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import JavaScriptCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.json.json_class_model import JsonCleanEngineeringModel
@@ -16,10 +17,10 @@ from harness.guidance.guidance import PracticeGuidance, rules_in
 
 
 @agent_toolset
-class CleanEngineering(PracticeGuidance):
+class CleanEngineering(GraphReading, PracticeGuidance):
     """# Instructions"""
 
-    sketch_titles = ("ce:", "clean engineering:")
+    sketch_titles = SketchCleanEngineeringModel.lens.titles
     SHORT_NAME = "CE"
     COLOUR = "#4FC3F7"
 
@@ -76,18 +77,15 @@ class CleanEngineering(PracticeGuidance):
     def language_checks(self, language: str) -> dict:
         return rules_in(f"{self.package}.model.drawio.rules") if language == "drawio" else {}
 
-    def read_working_copy(self, practice_graph) -> None:
-        """Read each source file with its language's class model, adding the folders, classes, properties, operations,
-        and parameters it parsed as nodes, and keep the members the model documents describe on the practice's root."""
-        from cdd_guidance.practices.clean_engineering.model.graph_reading import read_code_and_models
-
-        read_code_and_models(practice_graph)
+    def model_in(self, format: str, content: str):
+        """The class model content describes, read by this practice's adapter for format."""
+        return self._parse_content(format, content)
 
     @property
     def drawio(self) -> Drawio:
         """The Draw.io toolset this practice renders its diagrams with."""
         if self._drawio is None:
-            self._drawio = Drawio()
+            self._drawio = Drawio(self)
             self._drawio.mode = "tool"
         return self._drawio
 

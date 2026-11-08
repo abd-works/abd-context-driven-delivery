@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Iterable, List, Mapping, Optional
 
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph, Node
 
@@ -215,6 +215,12 @@ class Screen(UxNode):
     def lists(self, node: Node) -> bool:
         """True when this screen shows that story, scenario, or step, or one with its key drawn on another graph."""
         return any(link.names(node) for link in self._story_links)
+
+    def show_what(self, other: "Screen") -> None:
+        """Show the stories, scenarios, and steps other shows: each Stories node other finds on its own graph, else
+        the key other holds for it."""
+        for link in other._story_links:
+            self._show(link.kind, link.resolved_on(other.graph) or link.key)
 
     def attach_domain_term(self, term: str) -> None:
         if term and term not in self.domain_terms:

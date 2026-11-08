@@ -5,19 +5,18 @@ import base64
 import html
 import json
 import re
-import shutil
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 
 from harness.catalog_generator.drawio_diagram import DrawioDiagram
 from harness.markdown.front_matter import FrontMatter
 from harness.catalog_generator.markdown_html import MarkdownHtml
 from harness.catalog_generator.source_folds import Fold, SourceFolds
-from harness.catalog_generator.stage_columns import BoardLabel
+from harness.catalog_generator.stage_columns import STAGE_COLUMNS, BoardLabel, StageColumn
 
 _STORY_EXAMPLES = Path(__file__).resolve().parents[2] / "cdd_guidance" / "practices" / "stories" / "catalog-examples"
-_PRACTICES = Path(__file__).resolve().parents[2] / "cdd_guidance" / "practices"
-_EXAMPLES_FOLDER = "catalog-examples"
+EXAMPLES_FOLDER = "catalog-examples"
 # The order a fidelity's examples are shown in: prose, then code, then diagrams, then pictures.
 _SUFFIX_ORDER = {
     ".md": 0, ".markdown": 0,
@@ -227,7 +226,7 @@ class ExampleFile:
         name = html.escape(self.path.name)
         if catalog_href is not None:
             href = html.escape(str(catalog_href).replace("\\", "/"))
-        elif self.path.parent.name == _EXAMPLES_FOLDER:
+        elif self.path.parent.name == EXAMPLES_FOLDER:
             href = f"examples/{html.escape(self.path.parent.parent.name)}/{name}"
         else:
             href = f"examples/{name}"
@@ -258,13 +257,27 @@ class ExampleFile:
 
 
 class CatalogFidelity:
-    """A fidelity as the catalog shows it: its board label, the opening of its overview, and its example files, the
-    files in its practice's ``catalog-examples`` folder named for the fidelity in any spelling or by its board label.
-    The fidelity page and the approach panel both start from these files, so a file shown on one is never missing from
-    the other."""
+    """A fidelity as the catalog shows it: its board column, its board label, the opening of its overview, and its
+    example files, the files in its practice's ``catalog-examples`` folder named for the fidelity in any spelling or by
+    its board label. Its practice in the catalog makes one for each fidelity it shows and keeps it, so every page, board
+    ticket, and approach panel reads the same one. The fidelity page and the approach panel both start from these
+    files, so a file shown on one is never missing from the other."""
 
     def __init__(self, fidelity) -> None:
         self.fidelity = fidelity
+
+    @property
+    def name(self) -> str:
+        return self.fidelity.name
+
+    @property
+    def stage(self) -> str:
+        return self.fidelity.stage
+
+    @cached_property
+    def column(self) -> StageColumn | None:
+        """The board column the fidelity's stage sits in; none for a stage the board has no column for."""
+        return STAGE_COLUMNS.of(self.fidelity.approach_stage)
 
     @property
     def label(self) -> str:
@@ -292,7 +305,7 @@ class CatalogFidelity:
 
     @property
     def examples_folder(self) -> Path:
-        return Path(self.fidelity.practice_guidance.module_dir) / _EXAMPLES_FOLDER
+        return Path(self.fidelity.practice_guidance.module_dir) / EXAMPLES_FOLDER
 
     @property
     def example_files(self) -> list[Path]:
@@ -340,27 +353,6 @@ class CatalogFidelity:
         if diagrams:
             return diagrams
         return [path for path in group if path.suffix.lower() not in _MARKDOWN_SUFFIXES] or group
-
-
-class PracticeExamples:
-    """Every practice's ``catalog-examples`` files, copied into the catalog's ``examples/{practice}`` folders so the
-    approach panels can show them."""
-
-    def __init__(self, practices_folder: Path = _PRACTICES) -> None:
-        self._practices_folder = practices_folder
-
-    def copy_into(self, out_root: Path) -> None:
-        if not self._practices_folder.is_dir():
-            return
-        for practice in self._practices_folder.iterdir():
-            folder = practice / _EXAMPLES_FOLDER
-            if not folder.is_dir():
-                continue
-            destination = Path(out_root) / "examples" / practice.name
-            for path in folder.iterdir():
-                if path.is_file() and not path.name.startswith("."):
-                    destination.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(path, destination / path.name)
 
 
 @dataclass(frozen=True)

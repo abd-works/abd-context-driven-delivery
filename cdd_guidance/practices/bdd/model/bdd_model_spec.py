@@ -14,7 +14,7 @@ from harness.graph.graph import Graph
 
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph, CallGraphEntry
 
 
 with description("a bdd spec on a graph"):
@@ -37,18 +37,13 @@ with description("a bdd spec on a graph"):
 
     with it("should record contexts, observations, and belongsTo"):
         practice = self.graph.practice("bdd")
-        contexts = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("contexts", [])]
-        observations = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("observations", [])]
-        belongs = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("belongsTo", [])]
+        contexts = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "contexts")]
+        observations = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "observations")]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "belongsTo")]
         expect(contexts).to(contain(("a cart", "that has a line")))
         expect(observations).to(contain(("that has a line", "should show the line")))
         expect(belongs).to(contain(("that has a line", "a cart"), ("should show the line", "that has a line")))
 
-    with it("should open the same spec from the graph"):
-        restored = BddModel(self.graph)
-        expect(restored.descriptions[0].name).to(equal("a cart"))
-        expect(restored.descriptions[0].contexts[0].name).to(equal("that has a line"))
-        expect(restored.descriptions[0].contexts[0].observations[0].name).to(equal("should show the line"))
 
 
 with description("a bdd sketch with realization fences"):
@@ -72,7 +67,7 @@ it should complete payment
         spec = BddModel()
         cart = Description("a cart")
         empty = Observation("should start empty")
-        empty.call_graph = [CallGraphEntry(depth=0, kind="out", text="Cart.items")]
+        empty.call_graph = CallGraph([CallGraphEntry(depth=0, kind="out", text="Cart.items")])
         cart.observations.append(empty)
         with_items = Context("that has items")
         with_items.observations.append(Observation("should count them"))

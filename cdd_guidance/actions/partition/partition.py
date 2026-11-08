@@ -6,7 +6,7 @@ from pathlib import Path
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
-from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, Segment, SegmentCompletenessConfig
+from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, Segment
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
@@ -34,60 +34,26 @@ class Partition(GuidanceAction):
         path = self.path_named(segment_path)
         if not path.is_file():
             return f"completeness: FAIL\nerror: segment not found: {segment_path}\n"
-        segment = self._segment_for(path, expected_names, min_body_chars, index_path)
+        index = PartitionIndex.at(self.path_named(index_path)) if index_path.strip() else PartitionIndex.near(path)
+        segment = Segment.at(path, index, expected_names=expected_names, min_body_chars=min_body_chars)
         return segment.completeness_report()
-
-    def _segment_for(
-        self,
-        path: Path,
-        expected_names: str,
-        min_body_chars: int,
-        index_path: str,
-    ) -> Segment:
-        index = self._read_partition_index(path, index_path)
-        config = (
-            index.completeness
-            if index is not None
-            else SegmentCompletenessConfig(min_body_chars=int(min_body_chars))
-        )
-        return Segment.from_text(
-            path.resolve(),
-            path.read_text(encoding="utf-8", errors="replace"),
-            config,
-            expected_names=expected_names,
-        )
 
     @markdown
     def partition_guidance(self) -> str: ...
 
     def _guidance_to_index_by(self, item) -> str:
-        """partition_guidance.md for one listed practice, naming that practice's own file and the Scaffold subsection
-        of the fidelity it works at, which says what the index lists. Text guidance, and a practice with no current
-        fidelity, have none."""
-        if isinstance(item, str) or getattr(item.fidelities, "current", None) is None:
+        """partition_guidance.md for one listed practice, handed over at the fidelity this partition works at, naming
+        that practice's own file and the fidelity's Scaffold subsection, which says what the index lists. Text guidance,
+        and a practice with no current fidelity, have none."""
+        fidelity = None if isinstance(item, str) else self.fidelity_of(item)
+        if fidelity is None:
             return ""
-        return self.partition_guidance.replace("{{slug}}", item.key).replace(
-            "{{scaffold}}", item.fidelities.current.scaffold
-        )
+        practice = self.practice_of(item)
+        return self.partition_guidance.replace("{{slug}}", practice.key).replace("{{scaffold}}", fidelity.scaffold)
 
     def _folder(self, out_root: str | None) -> Path:
         """The folder the index and segments go under: out_root when the call names one, else the session's root."""
         return self.path_named(out_root) if out_root else self.session.root
-
-    def _read_partition_index(
-        self, segment_path: Path, index_path: str
-    ) -> PartitionIndex | None:
-        resolved = (
-            self.path_named(index_path)
-            if index_path.strip()
-            else PartitionIndex.resolve_near(segment_path)
-        )
-        if resolved is None or not resolved.is_file():
-            return None
-        return PartitionIndex.from_text(
-            resolved.resolve(),
-            resolved.read_text(encoding="utf-8", errors="replace"),
-        )
 
     @mcp
     @agent_tool

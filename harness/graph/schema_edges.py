@@ -15,7 +15,7 @@ from pathlib import Path
 
 from harness.graph.graph import EdgeType
 from harness.guidance.schema import Schema
-from harness.name.name import Name
+from harness.annotations.name import Name
 
 _ROOT = Path(__file__).resolve().parents[2]
 
@@ -207,8 +207,7 @@ class SchemaEdges:
         """The model objects on the graph: nodes that build their own edges."""
         found = []
         for practice in self.graph.practices.values():
-            for bucket in practice.nodes.values():
-                found.extend(node for node in bucket if hasattr(node, "semantic_type") and hasattr(node, "_subtree"))
+            found.extend(node for node in self.graph.nodes_of(practice) if hasattr(node, "semantic_type") and hasattr(node, "_subtree"))
         return found
 
     @cached_property
@@ -243,9 +242,9 @@ class SchemaEdges:
 
     def _record(self, kind: str, parent, child) -> None:
         edge_type = EdgeType.from_kind(kind, _DISPLAY.get(kind, "relationship"))
-        parent.practice.record(edge_type, parent, child)
+        self.graph.record(edge_type, parent, child)
         if parent.practice is not child.practice:
-            child.practice.record(edge_type, child, parent)
+            self.graph.record(edge_type, child, parent)
 
     def _matches(self, kind: str, owner, target) -> bool:
         evidence = NodeEvidence(owner)

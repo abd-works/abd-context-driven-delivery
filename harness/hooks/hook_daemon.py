@@ -13,6 +13,8 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from harness.installation.repository_toolsets import RepositoryToolsets
+from harness.process.process import BackgroundStart, PythonInterpreter
 from harness.process.running_process import RunningProcess
 from harness.process.stoppable_process import ProcessNotStopped, StoppableProcess
 
@@ -51,12 +53,15 @@ class HookDaemonNotReady(Exception):
 
 
 class HookDaemonAddress:
-    """Where a running hook daemon answers: its host, port, and process. A hook command sends its event here."""
+    """Where a running hook daemon answers, as it publishes it: its host, port, process, and the stamp of the hook code
+    it loaded. A hook command sends its event here; a daemon on older code is stopped through its process."""
 
-    def __init__(self, host: str, port: int, pid: int | None = None) -> None:
+    def __init__(self, host: str, port: int, pid: int | None = None, stamp: str = "") -> None:
         self.host = host
         self.port = port
         self.pid = pid
+        self.stamp = stamp
+        self.process = StoppableProcess(pid or 0)
 
     def answers(self) -> bool:
         """Whether a daemon answers a ping at this address."""
@@ -147,6 +152,7 @@ class HookDaemon:
 
     def __init__(self, repo: Path | str, port: int | None = None) -> None:
         self.repo = Path(repo).resolve()
+        self.toolsets = RepositoryToolsets(self.repo)
         self._port = port
         self._dispatch = threading.Lock()
 
@@ -166,11 +172,8 @@ class HookDaemon:
 
     def live_address(self) -> HookDaemonAddress | None:
         """The address of this checkout's daemon when one answers there; none when none does."""
-        state = self._published_state()
-        if not state.get("port"):
-            return None
-        address = HookDaemonAddress(state.get("host") or self.HOST, int(state["port"]), state.get("pid"))
-        return address if address.answers() else None
+        address = self._published_address()
+        return address if address is not None and address.answers() else None
 
     def is_running(self) -> bool:
         """Whether this checkout's hook daemon answers."""
@@ -197,11 +200,11 @@ class HookDaemon:
 
     def replace_stale(self) -> None:
         """Stop a daemon that loaded older hook code. A Cursor reload does not restart it."""
-        state = self._published_state()
-        if not state or state.get("stamp") == self.source_stamp:
+        published = self._published_address()
+        if published is None or published.stamp == self.source_stamp:
             return
         try:
-            StoppableProcess(int(state.get("pid") or 0)).stop(_STOP_SECONDS)
+            published.process.stop(_STOP_SECONDS)
         except ProcessNotStopped as still_running:
             # Its address file stays, so hooks keep reaching the older daemon rather than none.
             logger.warning("the hook daemon on older code keeps running: %s", still_running)
@@ -214,10 +217,7 @@ class HookDaemon:
     def spawn(self) -> None:
         """Start this checkout's daemon in the background, importing from the checkout, with its output in
         ``.cursor/hook-server.log``."""
-        from harness.installation.repository_toolsets import RepositoryToolsets
-        from harness.process.process import BackgroundStart, PythonInterpreter
-
-        toolsets = RepositoryToolsets(self.repo)
+        toolsets = self.toolsets
         existing = os.environ.get("PYTHONPATH", "")
         env = {
             **os.environ,
@@ -246,10 +246,8 @@ class HookDaemon:
 
     def _loaded_server(self) -> HookServer:
         from harness.hooks.hook_server import HookServer
-        from harness.installation.repository_toolsets import RepositoryToolsets
 
-        RepositoryToolsets(self.repo).import_modules()
-        return HookServer.from_toolsets(self.repo)
+        return HookServer.from_repository(self.toolsets)
 
     def _start_once(self) -> None:
         """Start the daemon unless another hook command is starting it; either way, it is starting when this returns."""
@@ -277,15 +275,18 @@ class HookDaemon:
             time.sleep(_READY_POLL_SECONDS)
         raise HookDaemonNotReady(self.repo, _READY_WAIT_SECONDS)
 
-    def _published_state(self) -> dict[str, Any]:
+    def _published_address(self) -> HookDaemonAddress | None:
+        """The address the daemon last published; none when there is none, or none readable."""
         if not self.state_path.is_file():
-            return {}
+            return None
         try:
             state = json.loads(self.state_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             # A daemon writing its address, or one killed while writing it; the next start writes it again.
-            return {}
-        return state if isinstance(state, dict) else {}
+            return None
+        if not isinstance(state, dict) or not state.get("port"):
+            return None
+        return HookDaemonAddress(state.get("host") or self.HOST, int(state["port"]), state.get("pid"), str(state.get("stamp") or ""))
 
     def _claim_port(self) -> socket.socket | None:
         """None when a daemon already holds this checkout's port, so the loser exits.

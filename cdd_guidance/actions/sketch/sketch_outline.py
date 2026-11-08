@@ -2,30 +2,8 @@
 
 from __future__ import annotations
 
-
-class SketchLens:
-    """The section of a sketch that one practice writes, opened by the headings the practice declares."""
-
-    def __init__(self, titles: tuple[str, ...]) -> None:
-        self.titles = titles
-
-    @classmethod
-    def of(cls, practice: str) -> "SketchLens":
-        """The lens of the practice with that catalogue key, such as `stories`."""
-        from harness.guidance.practice_catalogue import PracticeCatalogue
-
-        return cls(PracticeCatalogue.practice_class(practice).sketch_titles)
-
-    @classmethod
-    def every(cls) -> tuple["SketchLens", ...]:
-        """One lens per practice, in catalogue order."""
-        from harness.guidance.practice_catalogue import PracticeCatalogue
-
-        return tuple(cls.of(key) for key in PracticeCatalogue.keys())
-
-    def opens(self, title: str) -> bool:
-        """True when this title is the section heading or marker this practice writes under."""
-        return title.strip().lower() in self.titles
+from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.sketch_lens import SketchLens
 
 
 _HORIZONTAL_RULES = {"---", "***", "___"}
@@ -50,6 +28,9 @@ class SketchOutline:
     def __init__(self, text: str, nesting_indent: int = 2) -> None:
         self._lines = text.splitlines()
         self._nesting_indent = nesting_indent
+        # Every practice's lens, asked of each practice CDD has: a heading that opens any of them starts that practice's
+        # section, since a sketch holds one section for each practice it works on.
+        self._lenses = tuple(practice.sketch_lens for practice in PracticeCatalogue.practices())
 
     def holds(self, lens: SketchLens) -> bool:
         """True when this sketch has a section for that practice."""
@@ -69,7 +50,7 @@ class SketchOutline:
     @property
     def _names_a_lens(self) -> bool:
         return any(
-            any(lens.opens(title) for lens in SketchLens.every())
+            any(lens.opens(title) for lens in self._lenses)
             for _, _, title in self._outline
         )
 
@@ -106,7 +87,7 @@ class SketchOutline:
                 continue
             if other_depth and other_depth <= depth:
                 return other
-            if any(lens.opens(title) for lens in SketchLens.every()):
+            if any(lens.opens(title) for lens in self._lenses):
                 return other
         return len(self._lines)
 

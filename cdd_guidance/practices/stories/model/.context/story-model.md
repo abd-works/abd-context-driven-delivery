@@ -5,7 +5,7 @@
 Each format is a *StoryModel* subclass with its own node subclasses, listed by `Stories` under `formats`: sketch, markdown, json, drawio, miro, python, typescript, java, javascript. `StoryModel(source)` copies any model into the subclass's node types; `parse` reads text in that format and `render(canonical, previous)` writes a model out. Markdown, JSON, and the code formats carry scenarios, steps, and examples; the diagram formats (drawio, miro) stop at stories and still read increments. The Claude Design story canvas, which shows the stories on their screens, is a *DiagramStoryModel* the UX practice draws (`practices/ux/model/claude_design/story_canvas.py`).
 
 ```
-story_map = StoryModel.load(folder)            # story-map.md (or .json), increments, scenarios
+story_map = Stories().read_folder(folder)       # story-map.md (or .json), increments, scenarios
 drawio = DrawIOStoryModel().render(story_map)
 ```
 
@@ -13,9 +13,9 @@ drawio = DrawIOStoryModel().render(story_map)
 
 - **Purpose:** Keep stakeholder behaviour as one story model — epics, stories, and increments, then scenarios and steps — so a markdown file, a diagram, and a test file stay the same hierarchy every later fidelity reads.
 - **Seam (terms):** StoryNode, StoryModel, Epic, Increment, Story, StoryType, Background, Scenario, Step, StepType, Example, Examples, SourceLocation, and one StoryModel subclass per format
-- **Dependencies (one-way):** harness/graph (*ModelNode*, *Graph*), harness/name (*Name*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*, *SketchLens*)
+- **Dependencies (one-way):** harness/graph (*ModelNode*, *Graph*), harness/annotations (*Name*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*), harness/guidance (*SketchLens*)
 
-These dependencies are owned by the modules named; this model only uses them. *GraphStoryModel* writes a loaded model onto the stories practice graph; cross-practice links from steps and examples to Clean Engineering nodes are recorded there.
+These dependencies are owned by the modules named; this model only uses them. Each node writes itself onto the stories practice graph (`StoryModel.record`, through a *StoryRecording*); cross-practice links from steps and examples to Clean Engineering nodes are recorded there.
 
 ## StoryNode : ModelNode
 
@@ -58,10 +58,14 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 + story_type: type
 + increment_type: type
 ----
-+ load(root): StoryModel
-	// class operation: the story map, increments, and scenarios in a folder
-+ load_files(files, project): StoryModel
-	// class operation: the story maps and story tests among files; each node names its file as a path from project
++ source_texts: dict[str, str]
+	// the text of each file the map was read from, by the path its nodes name
++ links: StoryMapLinks | None
+	// where each node links in the folder a render placed the map in
++ take_scenarios(stories: list[Story], file: str): None
+	// the scenarios of each story read from a story test go to the map's Story of the same name
++ record(practice, on_node: Callable | None = None): None
+	// each epic, story, background, scenario, step, and example adds itself to the stories practice
 + every_epic(): list[Epic]
 	// every epic and nested epic, each before its own children
 + every_story(): list[Story]
@@ -236,12 +240,20 @@ Each format class below is a *StoryModel* subclass. Its node subclasses (`Markdo
 
 ## SketchStoryModel : StoryModel
 
-The `sketch` format: the stories section of an integrated sketch.
+The `sketch` format: the stories section of an integrated sketch. Nodes: SketchEpic and SketchStory, which write their own sketch lines (`sketch_lines(depth)`).
 
+------
++ epic_type: SketchEpic
++ story_type: SketchStory
 ----
 + parse(text: str): SketchStoryModel
+	// fills this map and returns it
 	-> SketchOutline.body_for
 + render(story_map: StoryModel | None = None, previous: str | None = None): str
+	// copies the story map into a sketch map, which writes itself
+	-> save
++ save(): str
+	-> SketchEpic.sketch_lines
 
 ## MarkdownStoryModel : StoryModel
 
@@ -260,12 +272,17 @@ The `markdown` format: `story-map.md`, the scenario files beside it, and the inc
 
 ## JsonStoryModel : StoryModel
 
-The `json` format. Nodes: JsonEpic, JsonStory, JsonIncrement, JsonScenario.
+The `json` format. Nodes: JsonEpic, JsonStory, JsonIncrement, JsonScenario; each reads its own record (`from_record`) and writes it (`as_record`).
 
 ----
 + from_workspace(root: Path): JsonStoryModel | None
 + parse(text: str): JsonStoryModel
+	// fills this map and returns it
 + render(story_map: StoryModel, previous: str | None = None): str
+	// copies the story map into a JSON map, which writes itself
+	-> save
++ save(): str
+	// this map as story-graph.json text
 + attach_source_locations(file_name: str): None
 
 ## DiagramStoryModel : StoryModel
@@ -359,6 +376,14 @@ The spelling TypeScript and JavaScript share. Nodes: BraceScenario. Read through
 
 The `typescript` format. Nodes: TypeScriptEpic, TypeScriptStory, TypeScriptScenario.
 
+------
++ story_test_folder: str
+	// the step library folder: the stories workspace root, else the deploy root, unless named
++ story_test_import_path: str
+	// property: the import every story file uses for story-test
++ story_test_file_path: str
+	// property: where the shared story-test.ts seed is written
+
 ## JavaScriptStoryModel : BraceStoryModel
 
 The `javascript` format. Nodes: JavaScriptEpic, JavaScriptStory, JavaScriptScenario.
@@ -376,20 +401,24 @@ Reads one story file: the file's own code around its stories, then each story th
 + read(stories: list[Story], path: str): WrittenBlock | None
 	// the file's code above the first story and below the last
 
-## GraphStoryModel
+## StoryRecording
 
-One loaded story model, written as graph nodes and edges.
+One writing of a story map onto the practice that holds Stories: the practice and graph it writes to, where each node
+sits in the map's own file texts, and how many stories it has announced. Each node's `record` adds itself through it.
 
-+ GraphStoryModel(model: StoryModel)
++ StoryRecording(story_map: StoryModel, practice, on_node: Callable | None)
 ----
-+ record(practice, on_node: Callable | None = None): None
-	// epics, stories, backgrounds, scenarios, steps, and examples onto the stories practice
++ write(): None
++ add(node_id, name, semantic, file, span, story_object, facts=None): Node
++ name_span(file, name, folder): tuple
++ span_of(node, file, fallback_text=""): tuple
 
 ## StoryMapLinks
 
 The `story-map.md` entry and story file each epic, sub-epic, and story links to.
 
-+ StoryMapLinks.from_workspace(root: Path, base: Path | None = None): StoryMapLinks
++ StoryMapLinks.from_workspace(story_map: StoryModel, root: Path): StoryMapLinks
+	// made once for the map placed in the folder root
 ----
 + story_file(story: Story): str
-+ entries(story_map: StoryModel): dict[int, str]
++ entry_for(node): str

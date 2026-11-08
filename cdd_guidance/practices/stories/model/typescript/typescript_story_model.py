@@ -4,29 +4,24 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
-from harness.name.name import Name
+from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
+from harness.annotations.name import Name
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError, example_names_of
 from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
 from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptEpic, TypeScriptStory, _story_test_text
-from cdd_guidance.practices.stories.model.typescript.story_file import (
-    default_story_test_folder,
-    story_test_file_path,
-    story_test_import_path,
-)
+
 
 _SKIP_NAMES = frozenset({"story-test.ts", "givens.ts"})
 
 
-_STORY_TEST_SUFFIX = "_story.test.ts"
-
 
 class TypeScriptStoryModel(BraceStoryModel):
     LEAF_EXTENSION = ".ts"
+    story_test_suffix = "_story.test.ts"
     epic_type = TypeScriptEpic
     story_type = TypeScriptStory
-    language = CodeLanguage.named("typescript")
+    language = TYPESCRIPT
 
     def __init__(
         self,
@@ -35,19 +30,41 @@ class TypeScriptStoryModel(BraceStoryModel):
         story_test_folder: str | None = None,
     ):
         super().__init__(source, tests_root)
-        folder = default_story_test_folder(self.tests_root) if story_test_folder is None else story_test_folder
+        folder = self._default_story_test_folder() if story_test_folder is None else story_test_folder
         self._story_test_folder = folder.strip("/")
+
+    def _default_story_test_folder(self) -> str:
+        """The step library folder when none is named: the stories workspace root, else the deploy root."""
+        root = self.tests_root.strip("/")
+        if root == "stories" or root.startswith("stories/"):
+            return "stories"
+        return root
 
     @property
     def story_test_folder(self) -> str:
         """Step library folder: where story-test.ts sits and where story files import it from."""
         return self._story_test_folder
 
+    @property
+    def story_test_import_path(self) -> str:
+        """The workspace-root import every story file uses for story-test."""
+        return f"{self._story_test_folder}/story-test" if self._story_test_folder else "story-test"
+
+    @property
+    def story_test_file_path(self) -> str:
+        """Where the shared story-test.ts seed is written."""
+        return f"{self.story_test_import_path}.ts"
+
     def save(self) -> Dict[str, str]:
         # WHY: a tree read from TypeScript already brings its own story-test helper; only a new tree needs the seed.
-        seed_path = story_test_file_path(self._story_test_folder)
+        seed_path = self.story_test_file_path
         seed = {} if self.read_from_code() else {seed_path: _story_test_text(self.tests_root)}
         return self.write_epics(seed)
+
+    def parse(self, external: Dict[str, str], *, on_file=None) -> "TypeScriptStoryModel":
+        """A new map read from the story tests in external, path to text, with this model's folders; on_file hears
+        each file as it is read."""
+        return type(self)(tests_root=self.tests_root, story_test_folder=self._story_test_folder).load(external, on_file=on_file)
 
     def _copy_of(self, canonical: StoryModel) -> "TypeScriptStoryModel":
         return type(self)(canonical, tests_root=self.tests_root, story_test_folder=self._story_test_folder)
@@ -64,7 +81,7 @@ class TypeScriptStoryModel(BraceStoryModel):
             f" * Orders: {epic.order_path()}",
             " */",
             "",
-            f'import {{ scenario, story }} from "{story_test_import_path(self._story_test_folder)}";',
+            f'import {{ scenario, story }} from "{self.story_test_import_path}";',
             *example_import,
             "",
         ]
@@ -87,13 +104,13 @@ class TypeScriptStoryModel(BraceStoryModel):
         if "/examples/" in path.replace("\\", "/"):
             return False
         return (
-            name.endswith(_STORY_TEST_SUFFIX)
+            name.endswith(self.story_test_suffix)
             or name.endswith("_story.spec.ts")
             or name.endswith(".story.shared.ts")
         )
 
     def _story_slug_from_filename(self, name: str) -> str | None:
-        suffix = _STORY_TEST_SUFFIX if name.endswith(_STORY_TEST_SUFFIX) else "_story.spec.ts"
+        suffix = self.story_test_suffix if name.endswith(self.story_test_suffix) else "_story.spec.ts"
         if not name.endswith(suffix):
             return None
         return Name(name[: -len(suffix)]).title_slug
@@ -102,6 +119,7 @@ class TypeScriptStoryModel(BraceStoryModel):
         if not isinstance(external, dict):
             raise CodeStoryModelError("TypeScript story map parse expects a path->content dict")
         self.epics.clear()
+        self.source_texts = dict(external)
         seen: set[tuple[str, ...]] = set()
         ordered = self._ordered_paths(external)
         leaves = [path for path in ordered if self.is_story_file(path)]

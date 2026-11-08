@@ -9,7 +9,8 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from harness.graph.graph import Graph, PracticeGraph
+from harness.graph.graph import Graph
+from harness.guidance.guidance import PracticeGuidance
 from harness.graph.rule_context import RuleCheckContext
 
 _SUFFIX = {"python": ".py", "typescript": ".ts", "javascript": ".js"}
@@ -26,7 +27,7 @@ def ce_rule_by_slug(slug: str):
     return rule
 
 
-def practice_from_files(files: dict[str, str]) -> tuple[PracticeGraph, Path]:
+def practice_from_files(files: dict[str, str]) -> tuple[PracticeGuidance, Path]:
     """Write files under a temp root and load the clean engineering working copy from it."""
     temp = tempfile.TemporaryDirectory()
     root = Path(temp.name)
@@ -41,29 +42,31 @@ def practice_from_files(files: dict[str, str]) -> tuple[PracticeGraph, Path]:
     return practice, root
 
 
-def practice_from_class_text(name: str, text: str, relative: str) -> tuple[PracticeGraph, Path]:
+def practice_from_class_text(name: str, text: str, relative: str) -> tuple[PracticeGuidance, Path]:
     """One class node recorded from source the working copy does not scan (markdown model files)."""
     from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
 
     oclass = OoadClass(name=name, sequential_order=1, line=1)
-    oclass.load_source_facts(text)
+    oclass.end_line = text.count("\n") + 1
+    oclass.take_lines(text.split("\n"))
+    oclass.load_source_facts()
     practice, root = practice_from_files({relative: text})
-    practice.add(oclass, f"clean_engineering:OoadClass:{relative}:{name}", relative, 1, text.count("\n") + 1)
+    practice.graph.add(practice, oclass, f"clean_engineering:OoadClass:{relative}:{name}", relative, 1, text.count("\n") + 1)
     return practice, root
 
 
-def practice_from_source(source: str, *, lang: str = "python", filename: str | None = None) -> tuple[PracticeGraph, Path]:
+def practice_from_source(source: str, *, lang: str = "python", filename: str | None = None) -> tuple[PracticeGuidance, Path]:
     name = filename or f"example{_SUFFIX[lang]}"
     return practice_from_files({f"{FIXTURE_FOLDER}/{name}": source.strip() + "\n"})
 
 
-def violations_for_rule(rule, practice: PracticeGraph, root: Path) -> list[str]:
+def violations_for_rule(rule, practice: PracticeGuidance, root: Path) -> list[str]:
     context = RuleCheckContext(practice, root)
     messages: list[str] = []
     for _node_id, message in rule.check_practice(context):
         messages.append(message)
     for node_type in rule.node_types:
-        for node in practice.nodes.get(node_type, []):
+        for node in context.nodes(node_type):
             messages.extend(rule.check(node, context))
     return messages
 

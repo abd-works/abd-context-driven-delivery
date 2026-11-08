@@ -13,34 +13,36 @@ import inspect
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
-from typing import Any, Iterable
+from typing import TYPE_CHECKING, Any, Iterable
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import tool_subject
 from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, ApproachCopy
 from harness.catalog_generator.approach_page import ApproachPage
 from harness.catalog_generator.brand import Brand
-from harness.catalog_generator.catalog_examples import CatalogFidelity, PracticeExamples
-from harness.markdown.front_matter import FrontMatter
+from harness.catalog_generator.catalog_examples import EXAMPLES_FOLDER, CatalogFidelity
 from harness.catalog_generator.hub_board import HubBoard
 from harness.catalog_generator.markdown_html import MarkdownHtml
 from harness.catalog_generator.page_shell import PageShell
-from harness.catalog_generator.stage_columns import STAGE_COLUMNS, StageColumn
+from harness.catalog_generator.stage_columns import StageColumn
 from harness.guidance.action_catalogue import Action, ActionCatalogue
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import NoCatalog
 from harness.installation.files import skill
 from harness.installation.repository_toolsets import RepositoryToolsets
-from harness.markdown.format import Format
-from harness.markdown.markdown import MarkdownText
 from harness.mcp.mcp_server import mcp
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.process.git import Git
+
+if TYPE_CHECKING:
+    from harness.catalog_generator.project_approach import ProjectApproach
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SKILLS_ROOTS = (_REPO_ROOT / ".claude" / "skills", _REPO_ROOT / ".cursor" / "skills")
@@ -61,8 +63,9 @@ _TITLE_LINE = re.compile(r"^#\s+.*\n+", re.MULTILINE)
 
 
 class CatalogPractice:
-    """One practice as the catalog shows it: the live ``PracticeGuidance``, the catalog card it gives itself, and its
-    fidelities placed in the board's stage columns. Every page, board ticket, and grid card for the practice reads it."""
+    """One practice as the catalog shows it: the live ``PracticeGuidance``, the catalog card it gives itself, its place in
+    the practice catalogue, and the catalog's view of each fidelity it shows (a ``CatalogFidelity``), made once and
+    kept with the fidelity's board column. Every page, board ticket, and grid card for the practice reads it."""
 
     _CARD_DEFAULTS: dict[str, Any] = {
         "family": "aad-fam-other",
@@ -72,16 +75,19 @@ class CatalogPractice:
         "spec_blurb": "",
     }
 
-    def __init__(self, practice: PracticeGuidance, skills: SkillSlashName | None = None) -> None:
+    def __init__(self, practice: PracticeGuidance, skills: SkillSlashName | None = None, position: int = 0) -> None:
         self.practice = practice
+        self.position = position
         self._skills = skills or SkillSlashName()
         self._card = self._card_of(type(practice))
 
     @classmethod
     def load_all(cls) -> list[CatalogPractice]:
         """Every practice in the practice catalogue with a fidelity on the board, unless annotated ``@noCatalog``, in the
-        order each practice's catalog card gives."""
-        practices = [cls(practice) for practice in PracticeCatalogue.practices() if not NoCatalog.annotates(type(practice))]
+        order each practice's catalog card gives. Each keeps its place in the catalogue, the order the approach's grids
+        list the practices in."""
+        catalogued = enumerate(PracticeCatalogue.practices())
+        practices = [cls(practice, position=position) for position, practice in catalogued if not NoCatalog.annotates(type(practice))]
         shown = [practice for practice in practices if practice.on_board]
         return sorted(shown, key=lambda practice: (practice.order, practice.display_name))
 
@@ -134,32 +140,52 @@ class CatalogPractice:
     @property
     def fidelities(self) -> list[FidelityGuidance]:
         """The practice's fidelities in declared order, less those annotated ``@noCatalog``."""
-        return [fidelity for fidelity in self.practice.fidelities if not NoCatalog.annotates(fidelity)]
+        return [shown.fidelity for shown in self.shown_fidelities]
 
-    def column_of(self, fidelity: FidelityGuidance) -> StageColumn | None:
-        return STAGE_COLUMNS.of(fidelity.stage)
+    @cached_property
+    def shown_fidelities(self) -> list[CatalogFidelity]:
+        """The catalog's view of each fidelity it shows, in declared order, made once."""
+        return [CatalogFidelity(fidelity) for fidelity in self.practice.fidelities if not NoCatalog.annotates(fidelity)]
 
-    def fidelity_in(self, column: StageColumn) -> FidelityGuidance | None:
+    def fidelity_in(self, column: StageColumn) -> CatalogFidelity | None:
         """The practice's fidelity in ``column``; none when the practice has no fidelity at that stage."""
-        return next((fidelity for fidelity in self.fidelities if self.column_of(fidelity) is column), None)
+        return next((shown for shown in self.shown_fidelities if shown.column is column), None)
+
+    @property
+    def board_fidelities(self) -> list[CatalogFidelity]:
+        """The fidelities that have a column on the board."""
+        return [shown for shown in self.shown_fidelities if shown.column is not None]
 
     @property
     def on_board(self) -> bool:
         """Whether any fidelity has a board column; a practice with none, such as a pattern, has no catalog page."""
-        return any(self.column_of(fidelity) is not None for fidelity in self.fidelities)
+        return bool(self.board_fidelities)
 
     def fidelity_href(self, fidelity: FidelityGuidance) -> str:
         return f"fidelities/{self.key}-{fidelity.name}.html"
 
     @property
+    def examples_folder(self) -> Path:
+        """The practice's ``catalog-examples`` folder, whose files its fidelities show."""
+        return Path(self.practice.module_dir) / EXAMPLES_FOLDER
+
+    def copy_examples_into(self, out_root: Path) -> None:
+        """Copy the practice's example files into the catalog's ``examples/{practice}`` folder, where its fidelity
+        pages and approach panels link them."""
+        if not self.examples_folder.is_dir():
+            return
+        destination = Path(out_root) / "examples" / self.examples_folder.parent.name
+        for path in self.examples_folder.iterdir():
+            if path.is_file() and not path.name.startswith("."):
+                destination.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, destination / path.name)
+
+    @property
     def shared_markdown(self) -> str:
         """The practice-level ``##`` sections of the practice guide, each with its heading: everything but
-        ``## Fidelities``, whose blocks each fidelity page shows. The guide is read with the same ``MarkdownText``
-        that gives each ``FidelityGuidance`` its section."""
-        guide = self.practice.domain_markdown_path()
-        if not guide.is_file():
-            return ""
-        document = MarkdownText(guide.read_text(encoding="utf-8"))
+        ``## Fidelities``, whose blocks each fidelity page shows. They are read from the practice's own document,
+        which gives each ``FidelityGuidance`` its section too."""
+        document = self.practice.document
         names = [name for _start, _end, level, name in document.headings() if level == 2]
         sections = (document.slice_heading(name) for name in names if name.casefold() != "fidelities")
         return "\n\n".join(section for section in sections if section)
@@ -242,41 +268,16 @@ class LifecycleAction:
 
 
 class FidelityTemplate:
-    """The template file a fidelity page shows for the fidelity's default format: a template named for the practice,
-    else the best match in the practice's ``templates`` folder by name, settings, stage, and format folder."""
+    """The template file a fidelity page shows: the one the fidelity reads its template from, in its default format,
+    shown as a code fence with its path inside the practice folder."""
 
-    _NOT_TEMPLATE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".trap"})
-    # The settings a template names its fidelity, artifact, and format in.
-    _SETTING_KEYS = ("fidelity", "artifact", "format")
-    # How strongly each sign ties a template to the fidelity.
-    _NAMED_FOR_FIDELITY = 100
-    _NAME_HOLDS_FIDELITY = 40
-    _SETTINGS_NAME_FIDELITY = 50
-    _SETTINGS_NAME_STAGE = 30
-    _IN_FORMAT_FOLDER = 5
-    _PRODUCTION_TEMPLATE = -20
-    _CODE_TEMPLATE = 10
-    _MAIN_FLOW_SCENARIO = 25
-
-    def __init__(self, fidelity: FidelityGuidance) -> None:
-        self.fidelity = fidelity
-        self.module_dir = Path(fidelity.practice_guidance.module_dir).resolve()
-        self.templates_root = self.module_dir / "templates"
-        self._format = Format(fidelity.default_format)
-        self._column = STAGE_COLUMNS.of(fidelity.stage)
+    def __init__(self, shown: CatalogFidelity) -> None:
+        self.fidelity = shown.fidelity
+        self.module_dir = Path(self.fidelity.practice_guidance.module_dir).resolve()
 
     @property
     def path(self) -> Path | None:
-        if not self.fidelity.default_format or not self.templates_root.is_dir():
-            return None
-        named = self._named_template_file()
-        if named is not None:
-            return named
-        scored = self._scored_templates()
-        if scored:
-            scored.sort(key=lambda pair: (-pair[0], len(pair[1].parts), pair[1].as_posix()))
-            return scored[0][1].resolve()
-        return self._fallback_root_template()
+        return self.fidelity.template_file
 
     @property
     def relative_path(self) -> str:
@@ -311,98 +312,6 @@ class FidelityTemplate:
             f'<pre class="code-fence"><code class="language-{html.escape(self.language)}">'
             f"{html.escape(self.body)}</code></pre>"
         )
-
-    def _format_aliases(self) -> tuple[str, ...]:
-        return tuple(dict.fromkeys((self._format.short, self._format.name)))
-
-    def _named_template_file(self) -> Path | None:
-        extension = self._format.template_extension
-        for slug in Name(self.fidelity.practice_guidance.key).spellings:
-            for stem in (f"{slug}-templates", f"{slug}-template"):
-                found = self._named_stem_path(stem, extension)
-                if found is not None:
-                    return found
-        return None
-
-    def _named_stem_path(self, stem: str, extension: str) -> Path | None:
-        if extension:
-            preferred = self.templates_root / f"{stem}{extension}"
-            if preferred.is_file():
-                return preferred.resolve()
-        for path in sorted(self.templates_root.glob(f"{stem}.*")):
-            return path.resolve()
-        return None
-
-    def _search_roots(self) -> list[Path]:
-        root = self.templates_root
-        roots = [root / alias for alias in self._format_aliases() if (root / alias).is_dir()]
-        return roots or [root]
-
-    def _candidate_template_paths(self) -> list[Path]:
-        return [path for root in self._search_roots() for path in root.rglob("*") if self._is_template_candidate(path)]
-
-    def _is_template_candidate(self, path: Path) -> bool:
-        if not path.is_file():
-            return False
-        if "sketch" in path.name.lower() or "components" in path.parts or ".codeql" in path.parts:
-            return False
-        return path.suffix.lower() not in self._NOT_TEMPLATE_SUFFIXES
-
-    def _scored_templates(self) -> list[tuple[int, Path]]:
-        scored = [(self._name_score(path) + self._settings_score(path), path) for path in self._candidate_template_paths()]
-        return [(score, path) for score, path in scored if score > 0]
-
-    def _name_score(self, path: Path) -> int:
-        fidelity = Name(self.fidelity.name).kebab
-        stem = Name(path.stem).kebab
-        score = 0
-        if stem == fidelity:
-            score += self._NAMED_FOR_FIDELITY
-        elif fidelity in stem:
-            score += self._NAME_HOLDS_FIDELITY
-        if any(alias == path.parent.name.lower() for alias in self._format_aliases()):
-            score += self._IN_FORMAT_FOLDER
-        if "production" in path.name.lower():
-            score += self._PRODUCTION_TEMPLATE
-        if path.suffix == ".tpl":
-            score += self._CODE_TEMPLATE
-        if self.fidelity.name == "scenarios" and "main-flow" in stem:
-            score += self._MAIN_FLOW_SCENARIO
-        return score
-
-    def _settings_score(self, path: Path) -> int:
-        tokens = self._settings_tokens(path)
-        score = self._SETTINGS_NAME_FIDELITY if {self.fidelity.name.lower(), Name(self.fidelity.name).kebab} & tokens else 0
-        stage_tokens = set(self._column.template_tokens) if self._column is not None else set()
-        return score + (self._SETTINGS_NAME_STAGE if stage_tokens & tokens else 0)
-
-    def _settings_tokens(self, path: Path) -> set[str]:
-        """The values a template's settings give its fidelity, artifact, and format, in lower case."""
-        try:
-            settings = FrontMatter(path.read_text(encoding="utf-8")).settings.lower()
-        except (OSError, UnicodeDecodeError):
-            return set()
-        tokens: set[str] = set()
-        for key in self._SETTING_KEYS:
-            listed = re.search(rf"{key}\s*:\s*\[([^\]]*)\]", settings)
-            single = re.search(rf"{key}\s*:\s*([^\n]+)", settings)
-            values = listed.group(1).split(",") if listed else [single.group(1)] if single else []
-            tokens.update(value.strip().strip("\"'").lower() for value in values)
-        return {token for token in tokens if token}
-
-    def _fallback_root_template(self) -> Path | None:
-        extension = self._format.template_extension
-        aliases = self._format_aliases()
-        root_files = [
-            path for path in self.templates_root.iterdir()
-            if path.is_file() and "sketch" not in path.name.lower()
-            and (not extension or path.suffix == extension or path.suffix.lstrip(".") in aliases)
-        ]
-        if len(root_files) == 1:
-            return root_files[0].resolve()
-        fidelity = Name(self.fidelity.name).kebab
-        named = [path for path in root_files if fidelity in Name(path.stem).kebab]
-        return sorted(named)[0].resolve() if named else None
 
 
 class GitCitation:
@@ -442,19 +351,6 @@ class GitCitation:
             hostname, _, path = url[len("git@"):].partition(":")
             url = f"https://{hostname}/{path}"
         return url[: -len(".git")] if url.endswith(".git") else url
-
-
-class CatalogPage:
-    """One generated HTML page written under an output root."""
-
-    def __init__(self, out_root: Path) -> None:
-        self.out_root = Path(out_root)
-
-    def write(self, relative_path: str, html_text: str) -> Path:
-        target = self.out_root / relative_path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(html_text, encoding="utf-8")
-        return target
 
 
 class SkillSlashName:
@@ -522,7 +418,7 @@ class DetailPage:
         return None
 
     @property
-    def highlighted_fidelity(self) -> FidelityGuidance | None:
+    def highlighted_fidelity(self) -> CatalogFidelity | None:
         return None
 
     def _header(self, kind: str, title: str) -> str:
@@ -576,7 +472,7 @@ class PracticePage(DetailPage):
 
     @property
     def _fidelities(self) -> str:
-        entries = "".join(self._fidelity_entry(fidelity) for fidelity in self.practice.fidelities)
+        entries = "".join(self._fidelity_entry(shown) for shown in self.practice.shown_fidelities)
         if not entries:
             return ""
         return (
@@ -586,13 +482,12 @@ class PracticePage(DetailPage):
             "</section>\n"
         )
 
-    def _fidelity_entry(self, fidelity: FidelityGuidance) -> str:
-        shown = CatalogFidelity(fidelity)
+    def _fidelity_entry(self, shown: CatalogFidelity) -> str:
         opening = MarkdownHtml(shown.opening).html if shown.opening else ""
         return (
             '<div class="practice-fidelity">'
             f'<h3 class="practice-fidelity__title">'
-            f'<a href="../{html.escape(self.practice.fidelity_href(fidelity))}">{html.escape(shown.label)}</a></h3>'
+            f'<a href="../{html.escape(self.practice.fidelity_href(shown.fidelity))}">{html.escape(shown.label)}</a></h3>'
             f'<div class="practice-fidelity__opening">{opening}</div>'
             f"{shown.examples_html}"
             "</div>"
@@ -608,7 +503,7 @@ class FidelityPage(DetailPage):
     def __init__(
         self,
         practice: CatalogPractice,
-        fidelity: FidelityGuidance,
+        fidelity: CatalogFidelity,
         citation: GitCitation,
         actions: list[LifecycleAction],
     ) -> None:
@@ -619,23 +514,23 @@ class FidelityPage(DetailPage):
 
     @property
     def href(self) -> str:
-        return self.practice.fidelity_href(self.fidelity)
+        return self.practice.fidelity_href(self.fidelity.fidelity)
 
     @property
     def title(self) -> str:
-        return f"{CatalogFidelity(self.fidelity).label} — {self.practice.display_name}"
+        return f"{self.fidelity.label} — {self.practice.display_name}"
 
     @property
     def highlighted_practice(self) -> CatalogPractice:
         return self.practice
 
     @property
-    def highlighted_fidelity(self) -> FidelityGuidance:
+    def highlighted_fidelity(self) -> CatalogFidelity:
         return self.fidelity
 
     @property
     def body(self) -> str:
-        label = CatalogFidelity(self.fidelity).label
+        label = self.fidelity.label
         return (
             self._header(f"{self.practice.display_name} · fidelity", label)
             + f"{self._chat_command}\n"
@@ -660,9 +555,9 @@ class FidelityPage(DetailPage):
         )
 
     def _guidance(self, label: str) -> str:
-        section = self.fidelity.section
+        section = self.fidelity.fidelity.section
         guidance = MarkdownHtml(f"## {label}\n\n{section}" if section else section).guidance_html
-        examples = CatalogFidelity(self.fidelity).examples_html
+        examples = self.fidelity.examples_html
         return self._after_overview(guidance, examples) if examples else guidance
 
     def _after_overview(self, guidance: str, insertion: str) -> str:
@@ -676,7 +571,7 @@ class FidelityPage(DetailPage):
 
     @property
     def _template(self) -> str:
-        default_format = self.fidelity.default_format
+        default_format = self.fidelity.fidelity.default_format
         template = FidelityTemplate(self.fidelity)
         path = template.path
         if path is None or not path.is_file():
@@ -882,9 +777,10 @@ _SOURCE_DOCUMENTS = (
 
 @agent_toolset
 class Catalog:
-    """The top-level entry point - the only class ``generate_cdd_catalog.py`` calls. Holds the repository citation and
-    the practices, lifecycle actions, and utilities it renders, and always copies the Foundry commons into
-    ``out_root``."""
+    """The top-level entry point - the only class ``generate_cdd_catalog.py`` calls. Holds the project it is generated
+    for, the repository citation, the brand it wears, the approach copy, and the practices, lifecycle actions, and
+    utilities it renders; it writes every page under ``out_root``, a project's own approach page among them, and always
+    copies the Foundry commons there."""
 
     def __init__(
         self,
@@ -895,13 +791,12 @@ class Catalog:
         approach_md_path: str | Path | None = None,
         project: str | Path | None = None,
     ) -> None:
-        self._project_folder = Path(project).resolve() if project is not None else Path.cwd().resolve()
+        self.project = CatalogProject(project if project is not None else Path.cwd())
         checkout = GitCitation(repo_url, ref) if repo_url and ref else GitCitation.from_checkout()
         self.citation = GitCitation(repo_url or checkout.repo_url, ref or checkout.ref)
         self._named_out_root = Path(out_root) if out_root else None
         self.approach_md_path = Path(approach_md_path) if approach_md_path is not None else APPROACH_MARKDOWN
-        self.brands_root = Path(brands_root) if brands_root is not None else Brand().collection
-        self.brand: Path | None = None
+        self.brand = Brand(collection=brands_root)
         self._practices: list[CatalogPractice] | None = None
         self._utilities: list[Utility] | None = None
         self._lifecycle_actions: list[LifecycleAction] | None = None
@@ -917,11 +812,6 @@ class Catalog:
     @property
     def repo_url(self) -> str:
         return self.citation.repo_url
-
-    @property
-    def project(self) -> CatalogProject:
-        """The project this catalog is generated for: the folder a tool call names, else the folder it was made in."""
-        return CatalogProject(self._project_folder)
 
     @property
     def out_root(self) -> Path:
@@ -960,7 +850,7 @@ class Catalog:
 
     @property
     def brands(self) -> dict[str, Path]:
-        return Brand(collection=self.brands_root).folders()
+        return self.brand.folders()
 
     @mcp
     @skill
@@ -976,7 +866,7 @@ class Catalog:
         brand folder; empty uses bundled abd-works."""
         if self.project.shows_own_guidance:
             return self.project.generate_with_own_guidance(self.out_root, str(brand))
-        self.brand = Brand(collection=self.brands_root).resolve(str(brand)) if brand else None
+        self.brand.wear(str(brand))
         self._render_catalog()
         return f"Catalog regenerated into {self.out_root} using {self.citation.repo_url}@{self.citation.ref}"
 
@@ -990,8 +880,7 @@ class Catalog:
         Bundled ``abd-works`` is always available."""
         if not name:
             return f"Known brands: {', '.join(sorted(self.brands))}"
-        self.brand = Brand(collection=self.brands_root).apply_named(self.out_root, name)
-        return f"Applied brand {name} under {self.brand}"
+        return f"Applied brand {name} under {self.brand.apply_named(self.out_root, name)}"
 
     @mcp
     @skill
@@ -1001,11 +890,13 @@ class Catalog:
         artifacts. ``examples_json`` is optional JSON mapping practice → stage → path relative to the project; when
         blank, use ``.context/project-approach-examples.json`` and auto-discovery. ``project_title`` names the page;
         blank uses the saved title, else the project folder's name."""
-        from harness.catalog_generator.project_approach import ProjectApproach
+        from harness.catalog_generator.project_approach import ProjectApproach, ProjectFiles
 
-        approach = ProjectApproach.for_project(self.project.root, project_title).with_examples_json(examples_json)
+        files = ProjectFiles(self.project.root, self.practices)
+        approach = ProjectApproach.for_project(files, project_title).with_examples_json(examples_json)
         approach.save_examples()
-        return approach.generate(self.out_root, brands_root=self.brands_root)
+        written = self._write_project_approach(approach)
+        return f"Wrote project approach slide to {written}"
 
     @mcp
     @skill
@@ -1063,12 +954,16 @@ class Catalog:
         return "Project approach slide generated."
 
     def write_page(self, relative_path: str, html_text: str) -> Path:
-        return CatalogPage(self.out_root).write(relative_path, html_text)
+        """Write one page at ``relative_path`` under ``out_root``."""
+        target = self.out_root / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(html_text, encoding="utf-8")
+        return target
 
     def _render_catalog(self) -> None:
         """Write every catalog page under ``self.out_root``."""
         self.out_root.mkdir(parents=True, exist_ok=True)
-        Brand(collection=self.brands_root, folder=self.brand).copy_commons(self.out_root)
+        self.brand.copy_commons(self.out_root)
         board = self.board
         practice_pages = [PracticePage(practice) for practice in self.practices]
         action_pages = [ActionPage(action) for action in self.lifecycle_actions]
@@ -1084,9 +979,9 @@ class Catalog:
     @property
     def _fidelity_pages(self) -> list[FidelityPage]:
         return [
-            FidelityPage(practice, fidelity, self.citation, self.lifecycle_actions)
+            FidelityPage(practice, shown, self.citation, self.lifecycle_actions)
             for practice in self.practices
-            for fidelity in practice.fidelities
+            for shown in practice.shown_fidelities
         ]
 
     @property
@@ -1142,21 +1037,33 @@ class Catalog:
         )
 
     def _write_approach_pages(self) -> None:
-        PracticeExamples().copy_into(self.out_root)
+        for practice in self.practices:
+            practice.copy_examples_into(self.out_root)
         page = ApproachPage(self.approach_copy, self.practices, self.out_root)
+        self._write_approach(page, title=_SITE_TITLE, h1=_HEADLINE, after_subhead=self._repo_link)
+        for file_name, page_html in page.principle_pages.items():
+            self.write_page(file_name, page_html)
+
+    def _write_project_approach(self, approach: ProjectApproach) -> Path:
+        """Write a project's own approach page, a ``ProjectApproach``, with the project's examples staged beside it."""
+        self.out_root.mkdir(parents=True, exist_ok=True)
+        self.brand.copy_commons(self.out_root)
+        page = ApproachPage(self.approach_copy, self.practices, self.out_root, approach.staged_into(self.out_root))
+        return self._write_approach(page, title=approach.page_title, h1=approach.headline, after_subhead=approach.repo_link)
+
+    def _write_approach(self, page: ApproachPage, *, title: str, h1: str, after_subhead: str) -> Path:
+        """Write the approach page's stage example pages, then the page itself as ``cdd-approach.html``."""
         page.write_stage_example_pages()
         shell = PageShell(
-            title=_SITE_TITLE,
-            h1=_HEADLINE,
+            title=title,
+            h1=h1,
             tagline="",
             subhead=self.approach_copy.subhead,
-            after_subhead=self._repo_link,
+            after_subhead=after_subhead,
             body_inner=page.body,
             body_wrap_class="approach-wrap",
         )
-        self.write_page("cdd-approach.html", shell.html)
-        for file_name, page_html in page.principle_pages.items():
-            self.write_page(file_name, page_html)
+        return self.write_page("cdd-approach.html", shell.html)
 
     def _write_source_document(self, document: _SourceDocument) -> None:
         if not document.source.is_file():
@@ -1187,14 +1094,13 @@ class Catalog:
     def _fidelity_cards(self) -> list[str]:
         return [
             self._card(
-                fidelity.name,
-                practice.fidelity_href(fidelity),
-                f"{practice.display_name} · {practice.column_of(fidelity).key}",
+                shown.name,
+                practice.fidelity_href(shown.fidelity),
+                f"{practice.display_name} · {shown.column.key}",
                 label="Fidelity",
             )
             for practice in self.practices
-            for fidelity in practice.fidelities
-            if practice.column_of(fidelity) is not None
+            for shown in practice.board_fidelities
         ]
 
     def _write_grid(self, name: str, heading: str, tagline: str, cards: list[str], pages: list[DetailPage] | None) -> None:

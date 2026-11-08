@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import html
 import json
-import re
+from functools import cached_property
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 from urllib.parse import quote, urlencode
@@ -18,7 +18,8 @@ from urllib.parse import quote, urlencode
 from harness.design_canvas.canvas import DesignCanvas, artboard, box, stem, thumbnail
 from harness.design_canvas.look import BACKGROUND, FONTS, LOOK
 from cdd_guidance.practices.ux.model.claude_design.nodes import ClaudeDesignUxMap
-from harness.name.name import Name
+from cdd_guidance.practices.ux.model.ux_map import UxMap
+from harness.annotations.name import Name
 from cdd_guidance.practices.ux.model.story_link import key_of
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
@@ -140,30 +141,33 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         graph=None,
         *,
         workspace: Optional[str] = None,
-        screens=None,
+        ux_map: Optional[UxMap] = None,
         sources: Optional[Dict[str, str]] = None,
     ) -> None:
-        """A canvas of source's story map. *screens* is a UxMap (or its screens); with only a *workspace* (the canvas
-        root), the UX map beside it — ``ux.json`` in the folder that holds the canvas — supplies them. *sources* maps a
-        story (``Story``) or scenario (``Story › Scenario``) to its ``path:line`` in the story code: the explorer
-        offers to copy an "open in the file viewer" request for it."""
+        """A canvas of source's story map, drawn with the screens of ux_map, the UX map the caller holds; the canvas
+        keeps that map as a Claude Design map, which places the screens. *workspace* is the canvas root, whose
+        ``project`` folder holds what people already made on the canvas. *sources* maps a story (``Story``) or
+        scenario (``Story › Scenario``) to its ``path:line`` in the story code: the explorer offers to copy an "open in
+        the file viewer" request for it."""
         super().__init__(source, graph)
-        self.workspace = Path(workspace) if workspace else None
-        self.screens = self._screens(screens)
+        self.screen_map = self._screen_map(ux_map)
+        self.screens = list(self.screen_map.screens)
         self.sources = dict(sources or {})
+        self.canvas = DesignCanvas(self.name if self.name and self.name != "StoryModel" else "Story Map",
+                                   Path(workspace) / "project" if workspace else None)
 
     def render(
         self,
         canonical: Optional[StoryModel] = None,
         previous: Optional[str] = None,
         workspace: Optional[str] = None,
-        screens=None,
+        ux_map: Optional[UxMap] = None,
         sources: Optional[Dict[str, str]] = None,
     ) -> str:
-        """The canvas files as JSON, drawn on a new canvas of canonical (else of this map) made for these screens and
-        sources, so this canvas keeps its own."""
+        """The canvas files as JSON, drawn on a new canvas of canonical (else of this map) made for this UX map and
+        these sources, so this canvas keeps its own."""
         source = canonical if canonical is not None else self
-        drawn = type(self)(source, workspace=workspace, screens=screens, sources=sources)
+        drawn = type(self)(source, workspace=workspace, ux_map=ux_map, sources=sources)
         return json.dumps(drawn.files(), indent=1, ensure_ascii=False)
 
     def parse(self, text: str) -> "ClaudeDesignStoryModel":
@@ -172,21 +176,23 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
     # -- canvas ---------------------------------------------------------------------------
 
     def files(self) -> Dict[str, str]:
-        return self.canvas().files()
+        return self.drawn.files()
 
-    def canvas(self) -> DesignCanvas:
-        """One story-map artboard holds every bar, card and thumbnail: one Play, one live page to draw."""
-        canvas = DesignCanvas(self.name if self.name and self.name != "StoryModel" else "Story Map")
+    @cached_property
+    def drawn(self) -> DesignCanvas:
+        """The canvas with this map drawn on it, drawn once. One story-map artboard holds every bar, card and
+        thumbnail: one Play, one live page to draw."""
+        canvas = self.canvas
         canvas.add_page(self.story_map_page, "Story map")
         canvas.add_page(self.screens_page, "Story explorer")
-        for page in ClaudeDesignUxMap.pages(self.screens, self._screen_files()):
+        for page in self.screen_map.pages(self._screen_files()):
             canvas.add_page(page["id"], page["name"])
         width, height, text = self._story_map()
         canvas.add_board("Main.dc.html", {"x": 0, "y": 0, "w": width, "h": height, "page": self.story_map_page,
                                           "title": "Story map", "is_interactive": True, "expand": "fill"}, text)
         canvas.add_board(f"{self.screens_folder}/explorer.dc.html", {"x": 0, "y": 0, "w": self.explorer_width, "h": self.explorer_height, "page": self.screens_page,
                                                                      "title": "Story explorer", "is_interactive": True, "expand": "fill"}, self._explorer())
-        for name, board in ClaudeDesignUxMap.boards(self.screens, self._screen_files()).items():
+        for name, board in self.screen_map.boards(self._screen_files()).items():
             canvas.add_board(name, board)
             focus = self._stories_shown_on(name)
             if focus:
@@ -284,7 +290,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         return cells
 
     def _prototypes(self) -> List[str]:
-        return ClaudeDesignUxMap.prototype_names(self.screens)
+        return self.screen_map.prototype_names()
 
     # -- explorer -------------------------------------------------------------------------
 
@@ -346,52 +352,34 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
 
     def _screen_files(self) -> List[str]:
         """Screen artboards already in the canvas's screens folder: each needs a place on the Screens page."""
-        folder = self.workspace / "project" / self.screens_folder if self.workspace else None
-        if folder is None or not folder.is_dir():
-            return []
-        return [f"{self.screens_folder}/{path.name}" for path in sorted(folder.glob("*.dc.html")) if path.name != "explorer.dc.html"]
+        explorer = f"{self.screens_folder}/explorer.dc.html"
+        return [name for name in self.canvas.artboards_in(self.screens_folder) if name != explorer]
 
     fixture_scripts = ("fixtures/canvas-fixtures.js",)
 
     def _fixture_scripts(self) -> List[str]:
         """A pattern's fixtures bundle, when the canvas has one: a screen inside the explorer loads its fixtures from it."""
-        root = self.workspace / "project" if self.workspace else None
-        return [script for script in self.fixture_scripts if root is not None and (root / script).is_file()]
+        return [script for script in self.fixture_scripts if self.canvas.holds(script)]
 
     def _stylesheets(self) -> List[str]:
         """The stylesheets the prototype screens link, so a screen drawn inside the explorer keeps its own look."""
-        found: List[str] = []
-        root = self.workspace / "project" if self.workspace else None
-        for prototype in [*self._prototypes(), *self._screen_files()]:
-            path = root / prototype if root else None
-            if path is None or not path.is_file():
-                continue
-            for href in re.findall(r'<link rel="stylesheet" href="([^"]+)"', path.read_text(encoding="utf-8")):
-                if href not in found:
-                    found.append(href)
-        return found
+        return self.canvas.stylesheets_linked_by([*self._prototypes(), *self._screen_files()])
 
     def _blank(self, screen) -> bool:
-        root = self.workspace / "project" if self.workspace else None
-        if root is None or not screen.image:
-            return False
-        path = root / screen.image
-        return path.is_file() and path.stat().st_size < self.blank_image_bytes
+        size = self.canvas.size_of(screen.image) if screen.image else None
+        return size is not None and size < self.blank_image_bytes
 
-    def _screens(self, screens) -> List:
-        if screens is None and self.workspace is not None:
-            from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
-
-            screens = JsonUxMap.from_workspace(self.workspace) or JsonUxMap.from_workspace(self.workspace.parent)
-        if screens is None:
-            return []
-        return list(getattr(screens, "screens", screens))
+    def _screen_map(self, ux_map: Optional[UxMap]) -> ClaudeDesignUxMap:
+        """The Claude Design map this canvas places its screens with: ux_map itself when it is one, else a copy."""
+        if isinstance(ux_map, ClaudeDesignUxMap):
+            return ux_map
+        return ClaudeDesignUxMap.copy_of(ux_map) if ux_map is not None else ClaudeDesignUxMap.create()
 
 
 def shown_on(node, screens: Iterable) -> List:
     """The screens a step, scenario or story is shown on: its ``shownOn`` edges, else the screens that list it, which
     is how a story map drawn on its own graph finds the screens on the UX map's graph."""
-    edged = [edge.child for edge in node.practice.edges_from(_SHOWN_ON, node)]
+    edged = [edge.child for edge in node.graph.edges_from(_SHOWN_ON, node)]
     if edged:
         return edged
     return [screen for screen in screens if screen.lists(node)]

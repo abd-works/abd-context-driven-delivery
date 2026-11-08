@@ -1,6 +1,6 @@
 # Hooks — object model (model fidelity)
 
-Markdown channel for **`harness/hooks`**. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet*, *AgentTool*, *ToolCall*, and *InstallDestination* belong to `harness/agent_tools`, *Destination* to `harness/annotations`, *Installation*, *RepositoryToolsets*, and *ContextConfig* to `harness/installation`, *RunningProcess*, *StoppableProcess*, and *ProcessNotStopped* to `harness/process`, and *Session* to `space/session`; they appear here only as names this module uses. *PromptLog* (`tools/prompt_log`) is one toolset whose members are hooks; it keeps its own model.
+Markdown channel for **`harness/hooks`**. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet*, *AgentTool*, *ToolCall*, and *InstallDestination* belong to `harness/agent_tools`, *Destination* to `harness/annotations`, *Installation*, *RepositoryToolsets*, and *ContextConfig* to `harness/installation`, *RunningProcess*, *StoppableProcess*, and *ProcessNotStopped* to `harness/process`, and *Session* and its *ChatInjections* to `space/session`; they appear here only as names this module uses. *PromptLog* (`tools/prompt_log`) is one toolset whose members are hooks; it keeps its own model.
 
 **Install** writes files. **Runtime** is the IDE running `hook_server.py` with the event's JSON on stdin; that script finds or starts one long-running *HookServer* per repository through *HookDaemon* and passes the event to it. `@Hook` and `@mcp` on the same operation remain two independent installs.
 
@@ -46,16 +46,19 @@ Class annotation. Turns off, or keeps out of the install, every hook on that too
 	// false keeps the toolset's hooks out of hook-handlers.json
 ----
 + annotate(toolset): toolset
-	// sets _hooks_disabled and _hooks_deploy
+	// keeps itself on the class as `_hooks`; read through disabled_on(toolset) and deploys(toolset)
 	// write `@Hooks(disabled=True)` above `@agent_toolset` so the annotation stays on the registered type
 
-## HookInstallation : Installation                                <!-- Md -->
+## HookInstallation : ServerInstallation                                <!-- Md -->
 
 Install-time writer for hook artifacts. Same walk as markdown and MCP; only the leaf writes differ.
 
-+ HookInstallation(ide: str, path: Path, *, python: str | None = None, repo: Path | None = None)
++ HookInstallation(layout: IdeLayout, path: Path, *, python: str | None = None, repo: Path | None = None)
 ------
-+ python: str
++ interpreter: PythonInterpreter
++ handlers_file: HookHandlersFile
++ manifest: HooksManifest
++ daemon: HookDaemon
 + server: HookServer | None
 + diagnosis: dict | None
 + dispatch_command: str
@@ -120,8 +123,9 @@ A hooks file is not the JSON object it should be; the install stops and names th
 
 The stdin JSON for one firing. Handlers read it through the named properties; it also reads as a mapping of every field the IDE sent.
 
-+ HookPayload(fields: Mapping)
-+ HookPayload.from_stdin(raw: bytes): HookPayload
++ HookPayload(fields: Mapping, checkout: Path | None = None)
+	// checkout: the checkout of the hook server that received the event
++ HookPayload.from_stdin(raw: bytes, checkout: Path | None = None): HookPayload
 	// strips UTF-8 BOMs; empty or unreadable raw → allow-only result at HookServer.handle_stdin, not here
 ------
 + hook_event_name: str
@@ -137,7 +141,12 @@ The stdin JSON for one firing. Handlers read it through the named properties; it
 + workspace_roots: list[Path]
 + project: Path | None
 	// the first workspace root, else the folder Claude Code ran in
++ session: Session | None
+	// the session open in the project, else in the checkout that received the event; read once for the event
+	-> ToolCall.session_in(project or checkout)
 ----
++ received_in(checkout: Path): HookPayload
+	// itself when it already names the checkout that received it
 + edited_path(): str
 	// file_path, path, or uri; else the path inside tool_input
 
@@ -201,7 +210,7 @@ The toolsets whose hooks the server runs.
 	-> HookHandlersFile.refs
 ------
 + << composition >> toolsets: list[AgentToolSet]
-	// skips toolsets named in AgentToolSet.HOSTED_ONLY_CLASS_NAMES
+	// skips toolsets whose class is annotated @hosted_only
 + repo_root: Path | None
 + failures: list[tuple[str, BaseException]]
 	// a reference that does not load (bad reference, missing module or class, not a toolset, constructor mismatch)
@@ -222,21 +231,6 @@ One hook handler was skipped: its toolset did not load, or it raised while answe
 + cause: BaseException | None
 ----
 
-## ChatInjections                                                 <!-- Md -->
-
-The rules a hook gave each chat of one session, so the next prompt in the same chat gets them again and no other chat does.
-
-+ ChatInjections(session: Session, repo_root: Path)
-------
-----
-+ path_for(chat_id: str): Path
-	// {session}/chat-injections/{chat}.md
-+ keep(result: HookResult, payload: HookPayload): None
-	// writes the chat's injection and the session's last-chat-injected-rules.md
-+ replay(payload: HookPayload, result: HookResult): HookResult
-	// on beforeSubmitPrompt with no rules of its own; a saved edit-rules dump is dropped, not replayed
-+ is_rules_dump(body: str): bool
-
 ## HookServer                                                     <!-- Md -->
 
 The hooks of one checkout, loaded once in its hook daemon. It runs the enabled handlers for each event and merges their answers.
@@ -245,25 +239,24 @@ The hooks of one checkout, loaded once in its hook daemon. It runs the enabled h
 ------
 + << association >> catalog: HandlerCatalog
 + exceptions: list[HookIllegitimateHandler]
-+ session: Session | None
-	// the session open in .sessions/session.json (main when none), read for each event the way every tool call reads it
-	-> ToolCall(project=repo_root).session
-+ chat_injections: ChatInjections | None
-	// none when no sessions are registered; the event is still answered
 ----
 + show_toasts_with(show: Callable[[str, list[Path]], Any]): None
 	// the notifier registers itself when it is loaded, so a hook names its toast and never the notifier
-+ from_toolsets(repo_root: Path, toolsets: list | None = None): HookServer
++ from_repository(toolsets: RepositoryToolsets): HookServer
+	// the toolsets the installed hook-handlers.json lists, else every class the repository defines; every module is imported either way
 + from_handlers(handlers: Path, repo: Path): HookServer
 	-> notify_exceptions()
 + handle_stdin(raw: bytes): HookResult
 	// empty or unreadable raw → permission allow
 	-> HookPayload.from_stdin
 	-> dispatch(payload)
+	// with the event's session: its ChatInjections keep the rules and replay them on beforeSubmitPrompt
+	-> HookPayload.session
 	-> ChatInjections.keep
 	-> ChatInjections.replay
 + dispatch(payload: HookPayload): HookResult
 	// no event → permission allow
+	-> HookPayload.received_in(repo_root)
 	-> HandlerCatalog.for_event
 	-> HookHandler.is_enabled
 	-> HookHandler.invoke
@@ -276,9 +269,10 @@ The hooks of one checkout, loaded once in its hook daemon. It runs the enabled h
 	-> HandlerCatalog.event_names
 + notice(): str
 + notify_exceptions(): None
-- _append_debug(message: str): None
-	// dispatch.debug in the open session's logs folder
-	-> Session.hook_log
+- _append_debug(payload: HookPayload, message: str): None
+	// dispatch.debug in the logs folder of the session the event works in
+	-> HookPayload.session
+	-> Session.append_hook_log
 
 ## HookDaemon                                                     <!-- Md -->
 
@@ -308,9 +302,8 @@ The hook daemon of one checkout: it listens on the one port the checkout's daemo
 + spawn(): None
 	// the daemon imports from the checkout, through RepositoryToolsets.pythonpath and pycache_prefix
 + serve(server: HookServer | None = None): None
-	// with no server, imports every toolset module the repository defines first, so their registrations hold here
-	-> RepositoryToolsets.import_modules
-	-> HookServer.from_toolsets
+	// with no server, loads every toolset class the repository defines first, so their registrations hold here
+	-> HookServer.from_repository(self.toolsets)
 
 ## HookDaemonAddress                                              <!-- Md -->
 
@@ -335,5 +328,5 @@ Where a running hook daemon answers.
   hook-handlers.json              HookHandlersFile
   hook-server.json                HookDaemon.state_path — the running daemon's address
 .sessions/{name}/logs/            dispatch.debug, prompt-log.txt
-.sessions/{name}/chat-injections/ ChatInjections
+.sessions/{name}/chat-injections/ ChatInjections (space/session)
 ```

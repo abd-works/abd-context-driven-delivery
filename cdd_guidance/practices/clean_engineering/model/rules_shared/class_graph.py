@@ -29,18 +29,18 @@ class ClassGraph:
     def __init__(self, context: "RuleCheckContext") -> None:
         self.classes = [
             node
-            for node in context.practice.nodes.get("OoadClass", [])
+            for node in context.nodes("OoadClass")
             if node.name != _HOLDER and not is_test_code(node.source.file)
         ]
         self.by_name: dict[str, list["Node"]] = {}
         for node in self.classes:
             self.by_name.setdefault(node.name, []).append(node)
         self._operations: dict[str, list["Node"]] = {}
-        for edge in context.practice.edges.get("owns", []):
+        for edge in context.edges("owns"):
             if edge.child.type == "Operation" and edge.parent.type == "OoadClass":
                 self._operations.setdefault(edge.parent.node_id, []).append(edge.child)
         self._defining: dict[str, set[str]] = {}
-        for node in context.practice.nodes.get("OoadClass", []):
+        for node in context.nodes("OoadClass"):
             for operation in self.operations(node):
                 self._defining.setdefault(operation.name, set()).add(node.node_id)
 

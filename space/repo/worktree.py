@@ -36,47 +36,44 @@ class WorktreeNotRemovedError(RuntimeError):
 
 
 class Worktree:
-    """One checkout of the repository: its folder and the branch checked out there."""
+    """One checkout of the repository, as the *Worktrees* that listed it found it: its folder and the branch checked out
+    there. Its repository is the checkout's own *Repo*, made once when first asked for; the main clone's is the
+    repository that listed it."""
 
-    __slots__ = ("path", "branch", "_repository", "sync_failure")
+    __slots__ = ("path", "_branch_name", "_branch", "_worktrees", "_repository", "sync_failure")
 
-    def __init__(self, path: Path | str, branch: Branch | None, *, repository: Repo | None = None) -> None:
-        self.path = Path(path)
-        self.branch = branch
+    def __init__(self, worktrees: Worktrees, path: Path | str, branch_name: str, *, repository: Repo | None = None) -> None:
+        self._worktrees = worktrees
+        self.path = Path(path).resolve()
+        self._branch_name = (branch_name or "").strip()
+        self._branch: Branch | None = None
         self._repository = repository
         # Why the last fetch or pull from origin failed; empty while this checkout is up to date with origin.
         self.sync_failure = ""
 
-    @classmethod
-    def from_repo(cls, repository: Repo) -> Worktree:
-        """The checkout ``repository`` works in, with the branch it has checked out."""
-        name = (repository.current_branch or "").strip()
-        return cls(repository.root, repository.branch_named(name) if name else None, repository=repository)
-
-    @classmethod
-    def from_checkout(cls, path: Path | str, branch_name: str) -> Worktree:
-        """The checkout at ``path`` with ``branch_name`` checked out; its branch acts in that checkout."""
-        repository = _repo_at(path)
-        name = (branch_name or "").strip()
-        return cls(repository.root, repository.branch_named(name) if name else None, repository=repository)
-
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Worktree):
             return NotImplemented
-        return self.path == other.path and self.branch == other.branch
+        return self.path == other.path and self._branch_name == other._branch_name
 
     def __hash__(self) -> int:
-        return hash((self.path, self.branch))
+        return hash((self.path, self._branch_name))
 
     def __repr__(self) -> str:
-        branch = self.branch.name if self.branch is not None else ""
-        return f"Worktree(path={self.path!r}, branch={branch!r})"
+        return f"Worktree(path={self.path!r}, branch={self._branch_name!r})"
 
     @property
     def repository(self) -> Repo:
         if self._repository is None:
             self._repository = _repo_at(self.path)
         return self._repository
+
+    @property
+    def branch(self) -> Branch | None:
+        """The branch checked out here, acting in this checkout; none for a checkout on no branch."""
+        if self._branch is None and self._branch_name:
+            self._branch = self.repository.branch_named(self._branch_name)
+        return self._branch
 
     def fetch_pull(self) -> None:
         """Bring this checkout up to date with origin. A checkout that cannot reach origin, or whose branch has moved
@@ -94,16 +91,16 @@ class Worktree:
 
     def close(self, commit_message: str) -> Branch:
         """Commit and push the branch checked out here, then remove this checkout; the branch stays open."""
-        repository = self.repository
-        branch = repository.branch_named(repository.current_branch)
+        branch = self.repository.current_branch
         branch.save(commit_message)
-        _repo_at(repository.primary_root()).worktrees.remove(self)
+        self._worktrees.remove(self)
         return branch
 
 
 class Worktrees:
     """The checkouts of one repository, as ``git worktree`` lists them: the main clone and each linked worktree, each
-    with the branch checked out there. A branch is opened in a sibling folder of the main clone."""
+    with the branch checked out there. A branch is opened in a sibling folder of the main clone. Each listed *Worktree*
+    keeps the *Worktrees* that listed it, which removes it when it closes."""
 
     def __init__(self, repo: Repo) -> None:
         self._repo = repo
@@ -113,7 +110,12 @@ class Worktrees:
         for block in listing.split("\n\n"):
             fields = dict(line.split(" ", 1) for line in block.splitlines() if " " in line)
             if "worktree" in fields:
-                yield Worktree.from_checkout(Path(fields["worktree"]), fields.get("branch", "").removeprefix(_BRANCH_REF))
+                yield self._listed(Path(fields["worktree"]), fields.get("branch", "").removeprefix(_BRANCH_REF))
+
+    def at(self, folder: Path | str) -> Worktree | None:
+        """The checkout git lists at folder; none when git lists none there."""
+        wanted = Path(folder).resolve()
+        return next((tree for tree in self if tree.path == wanted), None)
 
     def of(self, branch: Branch) -> Worktree | None:
         """The checkout that has branch checked out; none when no checkout has it."""
@@ -126,8 +128,8 @@ class Worktrees:
         if existing is not None and existing.path.resolve() != self._repo.root:
             existing.fetch_pull()
             return existing
-        if self._repo.current_branch == branch.name:
-            opened = Worktree.from_repo(self._repo)
+        if self._repo.current_branch == branch:
+            opened = self._listed(self._repo.root, branch.name)
             opened.fetch_pull()
             return opened
         try:
@@ -165,7 +167,12 @@ class Worktrees:
             self._repo.git.run("worktree", "add", str(dest), branch.name)
         else:
             self._repo.git.run("worktree", "add", "-b", branch.name, str(dest), branch.start_point)
-        return Worktree.from_checkout(dest, branch.name)
+        return self._listed(dest, branch.name)
+
+    def _listed(self, folder: Path, branch_name: str) -> Worktree:
+        """The checkout at folder with branch_name checked out; the main clone's repository is the one held here."""
+        path = Path(folder).resolve()
+        return Worktree(self, path, branch_name, repository=self._repo if path == self._repo.root else None)
 
     def remove(self, worktree: Worktree) -> None:
         """Remove worktree's folder and forget it, forcing the folder away when git cannot delete a locked checkout.

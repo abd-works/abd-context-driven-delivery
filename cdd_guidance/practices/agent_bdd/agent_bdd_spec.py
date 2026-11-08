@@ -16,8 +16,7 @@ from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     ToolRunDeadline,
     ToolsetInvoke,
     ToolRunTimedOut,
-    looks_like_tools_run_output,
-    yaml_from_prompt,
+    ToolsRunYaml,
 )
 from space.session.sessions import Sessions
 from space.session.throwaway_project import ThrowawayProject
@@ -76,12 +75,12 @@ with description("an agent spec file"):
                 "action: repair\n"
                 "Return the complete response.\n"
             )
-            body = yaml_from_prompt(prompt)
+            body = ToolsRunYaml().yaml_from_prompt(prompt)
             expect(body).to(equal("toolset: cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle\naction: repair"))
 
         with it("should not mistake python source for run output"):
             garbage = "lines = [f\"toolset: {invoke['toolset']}\", f\"action: {invoke['action']}\"]"
-            expect(looks_like_tools_run_output(garbage)).to(equal(False))
+            expect(ToolsRunYaml().looks_like_tools_run_output(garbage)).to(equal(False))
 
 
 with description("an in-process toolset run with a timeout"):

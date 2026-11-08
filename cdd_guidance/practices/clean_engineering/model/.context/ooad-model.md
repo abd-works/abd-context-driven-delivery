@@ -2,13 +2,13 @@
 
 *CleanEngineeringModel* is one class model that every format reads and writes: modules holding classes, each with properties, operations and their parameters, and the relationships its properties name. A nested module is a module whose parent is a module. Every node is a graph node (*ModelNode*), so the same objects the formats build are the nodes the graph holds.
 
-A format is one subclass of *CleanEngineeringModel*: markdown, JSON, sketch, Python, TypeScript, JavaScript, Java, and draw.io. Each format reads text with `parse(text)` and writes a model with `render(canonical, previous)`. Markdown also reads a file through the walk on the base nodes: `load(path)` asks `has_more_module` / `get_next_module_from_file`, each module asks `has_more_class` / `get_next_class_from_file`, and each class loads its properties, operations, and relationships the same way. A format overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its text contains.
+A format is one subclass of *CleanEngineeringModel*: markdown, JSON, sketch, Python, TypeScript, JavaScript, Java, and draw.io. Each format reads text with `parse(text)`, which fills the format model itself and returns it, and writes with `render(canonical, previous)`: the format model becomes the canonical model once through `translate_from`, as its own subclasses of the modules and classes, then writes itself. Markdown also reads a file through the walk on the base nodes: `load(path)` asks `has_more_module` / `get_next_module_from_file`, each module asks `has_more_class` / `get_next_class_from_file`, and each class loads its properties, operations, and relationships the same way. A format overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its text contains.
 
 One format's model becomes another's through `translate_from(source)`: each node copies what it says itself (`update_self`), then matches the source's children to its own by name, else by order, and builds each new child in its own format through `load_module`, `load_class`, `load_property`, `load_operation`, or `load_parameter`.
 
 Callers use the base nodes. The practice picks a format by name from `CleanEngineering(...).formats`. A class's bases and stereotypes are part of what it says itself, so every format writes and reads them and `update_self`, `clone`, and `as_record` copy them. Text a format cannot read raises *UnreadableSource*; the graph read records each such file on its folder, where the `source-parses` rule reports it.
 
-*CleanEngineering* (`practices/clean_engineering/clean_engineering.py`) says what the graph reads from the practice, and its readers are in `practices/clean_engineering/model/graph_reading.py`. When `Graph.load_working_copy`, `Graph.load_files`, or `Graph.refresh` reads files, `WorkingCopy.fill` in `harness/graph/working_copy.py` asks each practice the graph holds to read, in dependency order. Clean Engineering reads each source file with its language's model and adds each folder as a *Module* (`load_folder_facts`), and each class, property, operation, and parameter the parser built, as nodes; `load_source_facts` and `load_span_facts` fill the facts its rules read. It then reads every `.context/*-model.md` in scope with *MarkdownCleanEngineeringModel* into *ModelDescriptions*. DDD reads after Clean Engineering and sees its classes as building blocks.
+*CleanEngineering* (`practices/clean_engineering/clean_engineering.py`) says what the graph reads from the practice, and its readers are in `practices/clean_engineering/model/graph_reading.py`. When `Graph.load_working_copy`, `Graph.load_files`, or `Graph.refresh` reads files, `WorkingCopy.fill` in `harness/graph/working_copy.py` asks each practice the graph holds to read, in dependency order. *CleanEngineering* reads each source file with the class model of its language, which it finds among its own formats by the file's extension (`format_for`, which every practice has), and adds each folder as a *Module* that holds its *ModuleContext* (`load_folder_facts`), and each class, property, operation, and parameter the parser built, as nodes. The parser keeps the file's text on its module and the lines each class and operation spans on that class and operation (`take_lines`), so `load_source_facts` and `load_span_facts` read no file again. Each folder owns the folders under it and depends (`dependsOn` edges) on the folders its files import from; it keeps the class names its files import (`imported_names`). It then reads every `.context/*-model.md` in scope with its markdown format and keeps the members they describe (`CleanEngineeringModel.described_members`) on the practice's root as `model_members`. DDD reads after Clean Engineering and sees its classes as building blocks.
 
 ```
 model = CleanEngineering().formats["markdown"]().parse(text)
@@ -19,7 +19,7 @@ python = PythonCleanEngineeringModel().render(model, previous)
 
 - **Purpose:** One class model for every format. Callers see the base nodes; a format only differs in how it reads and spells its text.
 - **Seam (terms):** CleanEngineeringModel, UnreadableSource, Module, OoadClass, Property, Operation, Parameter, Relationship, CodeBody
-- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*), actions/sketch (*SketchOutline*, *SketchLens*), practices/clean_engineering/model/drawio (*DrawIOCleanEngineeringModel*)
+- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*), actions/sketch (*SketchOutline*), harness/guidance (*SketchLens*), practices/clean_engineering/model/drawio (*DrawIOCleanEngineeringModel*)
 
 *ModelNode*, *ModelChildren*, *Graph*, *SketchOutline*, and *SketchLens* are owned by the modules above; this model only uses them. The draw.io format — *DrawIOCleanEngineeringModel*, *DrawIOModule*, *DrawIOClass*, and its *DrawIOImportedClass* — is modelled in [drawio-model.md](../drawio/.context/drawio-model.md).
 
@@ -36,21 +36,14 @@ A source file its language cannot read, such as Python that does not parse. Read
 ----
 + translate_from(source: OoadNode): None
 	Invariant: source has the same semantic type as this node, else TranslationError
-	// update_self, then reconcile each child collection: match by name, else by order; a source child with no match is built by the pair's load
+	// update_self, then each child list reconciles itself with the source's
 	-> update_self
-	-> child_collections
+	-> reconcile_children
 + update_self(source: OoadNode): None
 	// each node copies what it says itself, not its children
-+ child_collections(source: OoadNode): list[ChildCollectionPair]
-
-## ChildCollectionPair
-
-One child list on this node, the same list on the source, and the operation that builds a new child in this node's format.
-
-------
-+ self_children: list[OoadNode]
-+ source_children: list[OoadNode]
-+ load: Callable[[OoadNode], OoadNode]
++ reconcile_children(source: OoadNode): None
+	// each child list this node holds becomes the source's: ModelChildren.reconcile(source children, the load_* that builds a child in this format)
+	-> ModelChildren.reconcile
 
 ## TranslationError : Exception
 
@@ -59,14 +52,14 @@ Raised when `translate_from` is given a node of another semantic type.
 ## CleanEngineeringModel : OoadNode
 
 + CleanEngineeringModel(name: str | Graph = "", sequential_order: int = 1, graph: Graph | None = None)
-	// opened on a graph: the model copies the modules another model already holds on that graph
+	// opened on a graph: a model named `model` whose nodes live on that graph
 ------
 + path: str
 + modules: list[Module]
 	// composition — a module has no model outside this class model
-+ module_type: type
-	// the format's module class the walk builds
 ----
++ is_modules_view: bool
+	// property: modules only, no class carries a member or a drawn relationship
 + load(path: str): CleanEngineeringModel
 	// stores path, empties modules, then runs the same walk for every format
 	-> load_content
@@ -106,6 +99,10 @@ Raised when `translate_from` is given a node of another semantic type.
 + classes: list[OoadClass]
 	// composition — a class has no module outside this module
 ----
++ path_parent: str | None
+	// property: the module path that holds this one; None at the top
++ external_deps(): list[str]
+	// dependencies other than the module's path parent
 + public_terms(): list[str]
 	// seam terms, or the class names, or the seam string
 + append_module(module: Module): None
@@ -116,9 +113,19 @@ Raised when `translate_from` is given a node of another semantic type.
 + load(): None
 	-> load_modules
 	-> load_classes
-+ load_source_facts(text: str, file: Path, root: Path): None
-	// the graph facts one parsed source file gives: its imports, the classes that share it, and which of them compose their peers
-+ import_targets(text: str, file: Path, root: Path): list[str]
++ source_text: str
+	// the text of the file this module was read from, kept by its parser
++ imported_names: list[str]
+	// the class names its code imports or reaches as module.Class
++ module_context: ModuleContext
+	// a folder's module card, made once by load_folder_facts
++ take_lines(text: str): None
+	// keeps the file's text, and gives each class the lines it spans
+	-> OoadClass.take_lines
++ load_source_facts(file: Path, root: Path): None
+	// the graph facts the file it was read from gives: its imports, the class names it imports, and the classes that share it.
+	// The graph keeps each class apart from its module, so the module gives each class its peers' names
++ import_targets(file: Path, root: Path): list[str]
 	// root-relative paths of the relative script imports
 + load_folder_facts(folder: Path): None
 	// the graph facts a code folder gives: its module card, whether it holds .context/bounded-context.md, and its source files
@@ -162,13 +169,19 @@ Raised when `translate_from` is given a node of another semantic type.
 	// the classes it extends or implements, as its declaration names them
 + peer_names: list[str]
 	// the other classes in the same source file
++ composes_peers: bool
+	// an Entity or Aggregate Root builds the peers it owns; derived from its stereotypes
++ span: SourceText
+	// the lines it spans in its file, kept by take_lines
 + module_helpers: list[list]
 	// the module's private functions only this class calls
 ----
 + place_relationship(relationship: Relationship): None
 	// puts the relationship on every property whose type names its target. Inheritance is not a property relationship
-	-> Property.derive_relationship
-+ load_source_facts(class_text: str): None
+	-> Property.take_relationship
++ take_lines(lines: list[str]): None
+	// keeps the lines from its line to its end line, and each operation's
++ load_source_facts(): None
 	// the shape and source-span facts the graph reads: operation shapes, property names, what the constructor builds, prose comments
 + declared_bases(known_names: list[str]): list[str]
 	// its bases, then the I{Class} contract it implements when known_names hold one
@@ -195,7 +208,7 @@ Raised when `translate_from` is given a node of another semantic type.
 + load_next_relationship(): Relationship
 + get_next_relationship_from_file(): Relationship
 
-## Property : OoadNode
+## Property : InvariantHolder, OoadNode
 
 + Property(name: str, sequential_order: int = 0, type_hint: str = "", description: str = "", graph: Graph | None = None)
 ------
@@ -216,6 +229,14 @@ Raised when `translate_from` is given a node of another semantic type.
 + callees: list[str]
 	// a derived property can ask collaborators for its value, written under it as -> Sessions.saved
 ----
++ take_note(text: str): None
+	// a // line under the field: its stereotype, its cardinality, where it comes from, or an invariant
+	-> derive_relationship
++ take_relationship(relationship: Relationship): None
+	// becomes the field a relationship drawn to its type stands for
+	-> derive_relationship
++ notes(): list[str]
+	// origin, cardinality, then invariants, in file order
 + derive_relationship(): None
 	// a relationship exists only when the type names a domain class; an unmarked lower-case collection adds none
 + save(): str
@@ -223,7 +244,7 @@ Raised when `translate_from` is given a node of another semantic type.
 + clone(): Property
 + as_record(): dict
 
-## Operation : OoadNode
+## Operation : InvariantHolder, OoadNode
 
 + Operation(name: str, sequential_order: int = 0, return_type: str = "", description: str = "", callees: list[str] | None = None, parameters: list[str] | None = None)
 ------
@@ -247,15 +268,18 @@ Raised when `translate_from` is given a node of another semantic type.
 + end_line: int | None
 + line_count: int | None
 ----
-+ load_span_facts(source_span: str): None
++ source_lines: tuple[int, int]
+	// its line through its end line, else as many lines as its body counts
++ span: SourceText
++ take_lines(lines: list[str]): None
++ model_member(file: str): dict
+	// how the graph saves it for the model document at file
++ load_span_facts(): None
 	// the facts the operation rules read from its own source lines: private reach, I/O mixed with domain work, swallowed or empty-case exceptions, prose comments
 	-> SourceText
 + load_brace_body_facts(body: str): None
 	// what the rules measure on a brace-language body: control-flow depth, catches, unnamed numbers, reads of a peer's private fields
 	-> SourceText
-+ load_python_function_facts(node: FunctionDef): None
-	// the same measures read from Python's syntax tree, plus the parameters a tuple packs
-	-> PythonFunctionBody
 + save(): str
 	// name(parameters): return type, with - for a private name
 + load_parameter(source: Parameter): Parameter
@@ -266,6 +290,18 @@ Raised when `translate_from` is given a node of another semantic type.
 + has_more_parameter(): bool
 + load_next_parameter(): Parameter
 + get_next_parameter_from_file(): Parameter
+
+## InvariantHolder
+
+What a property and an operation share: the // invariant lines under them.
+
+------
++ invariants: list[Invariant]
++ description: str
+	// the invariant lines joined, for formats that still read it
+----
++ add_invariant(text: str): None
++ invariant_lines(): list[str]
 
 ## Invariant : OoadNode
 
@@ -321,11 +357,11 @@ A Python function read from its syntax tree, and what the rules measure in it.
 ------
 + type_hint: str
 + operation_name: str
+	// derived from the operation that holds it
 + property_setter: bool
-	// the parameter is the one value a property setter takes
+	// the parameter is the one value a property setter takes; derived from the operation that holds it
 ----
 + save(): str
-+ load_operation_facts(operation: Operation): None
 
 ## Relationship
 
@@ -343,18 +379,6 @@ Optional on a property. Cardinality lives here. A class reads these from its pro
 + translate_from(source: Relationship): None
 + clone(): Relationship
 + as_record(): dict
-
-## ModelDescriptions
-
-Every member the model documents describe, by `Class.member`, with the document that describes it. The graph keeps them as the Clean Engineering practice root's `model_members` fact, so a BDD realization can follow an interaction into a class the load left out.
-
-------
-+ is_empty: bool
-+ model_members: dict[str, dict]
-	// each member's kind, interactions, parameters, return type, and document
-----
-+ read(model: CleanEngineeringModel, file: str): None
-	// a later document's description of the same member replaces an earlier one
 
 ## ModuleContext
 
@@ -397,11 +421,10 @@ What sits above a class declaration in brace-language source: its doc comment an
 The `markdown` format: a `#` heading per module and a `##` card per class, or a document of class cards under deeper headings.
 
 ------
-+ module_type: MarkdownModule
-----
 + parse(text: str): MarkdownCleanEngineeringModel
-	// a card document keeps each card's text, so an unchanged class writes back as it was read
-+ render(canonical: CleanEngineeringModel | None = None, previous: str | None = None): str
+	// fills this model and returns it; a card document keeps each card's text, so an unchanged class writes back as it was read
++ render(canonical: CleanEngineeringModel | None = None): str
+	// a markdown model handed in writes itself; any other is translated in, then this model writes itself
 	-> translate_from
 	-> MarkdownModule.render
 + load_module(source: Module): MarkdownModule
@@ -419,13 +442,17 @@ The `markdown` format: a `#` heading per module and a `##` card per class, or a 
 + render_cards(module_level: int, card_level: int): str
 + load_class(source: OoadClass): MarkdownOoadClass
 + get_next_class_from_file(): MarkdownOoadClass
-	-> MarkdownOoadClass.parse_body
+	-> MarkdownOoadClass.read_card
 
 ## MarkdownOoadClass : OoadClass
 
 ------
 ----
-+ parse_body(heading: ClassHeading, body: str, sequential_order: int): MarkdownOoadClass
++ read_card(heading: ClassHeading, body: str, sequential_order: int): MarkdownOoadClass
+	// class operation: the class a card shows, named and marked by its heading
+	-> read_body
++ read_body(body: str): None
+	// the class reads its own card body: intent, constructor, properties, operations, and the dependencies it names
 + render(known_names: list[str] | None = None): str
 + heading(known_names: list[str]): ClassHeading
 	-> OoadClass.declared_bases
@@ -458,7 +485,7 @@ The `json` format: one array of module records.
 + parse(text: str): JsonCleanEngineeringModel
 	// raises JsonParseError when the text is not the module array
 	-> JsonModule.from_record
-+ render(canonical: CleanEngineeringModel | None = None, previous: str | None = None): str
++ render(canonical: CleanEngineeringModel | None = None): str
 + load_module(source: Module): JsonModule
 
 ## JsonModule : Module
@@ -532,6 +559,7 @@ How a language writes the receiver, a constructor call, and the end of a stateme
 How one programming language spells what every code format writes the same way. Python, TypeScript, JavaScript, and Java are instances, not subtypes: they differ only in data. Stories and BDD code formats use the same instances.
 
 + CodeLanguage(name: str, line_comment: str, indent: str, unfinished: str, spelling: CodeSpelling, type_names: dict[str, str])
+	// one instance per language, held as the module constants PYTHON, TYPESCRIPT, JAVASCRIPT, and JAVA
 ------
 + name: str
 + line_comment: str
@@ -539,8 +567,6 @@ How one programming language spells what every code format writes the same way. 
 + unfinished: str
 	// the statement that fails loudly when a body is not written. Never a silent no-op
 ----
-+ named(name: str): CodeLanguage
-	// the instance for python, typescript, javascript, or java
 + comment(text: str): str
 + is_unfinished(text: str): bool
 	// the body is empty, a placeholder (... or pass), or this language's unfinished statement
@@ -590,14 +616,18 @@ The source lines around one block of code that no node holds, kept exactly as re
 + inline: str
 + closing: list[str]
 + close: list[str]
++ << composition >> lead_body: CodeBody
+	// made once when the reader sets lead
++ << composition >> closing_body: CodeBody
+	// made once when the reader sets closing
++ << composition >> inside_body: CodeBody
+	// made once when the reader sets inside or inline
 ----
 + is_in(language: CodeLanguage, key: str | tuple | None): bool
 + split_inside(lines: list[str], inside: tuple[int, int], children: list[tuple[int, int]]): tuple
 	// the lines inside one block as setup, the lines above each child, and the lines after the last child
 + inside_for(body: CodeBody): list[str] | None
 	// the lines exactly as read while the model's body still says the same
-+ lead_body(): CodeBody
-+ closing_body(): CodeBody
 
 ## CallGraphEntry
 
@@ -611,78 +641,95 @@ One line of an indented call graph, written with the same `->` and `<-` arrows a
 
 ## CodeCleanEngineeringModel : CleanEngineeringModel
 
-A class model written as code. The walk and the body rule live here; a language only spells the lines.
+A class model written as code. The walk and the body rule live here; each language's module, class, property, and operation spell their own lines.
 
 ------
 + language: CodeLanguage
-	// each language model sets its instance
++ module_type: type[CodeModule]
+	// the language's module, whose class_type, operation_type, and property_type are the language's parts
++ suffixes: tuple[str, ...]
+	// the source file extensions it reads
 ----
++ file_module(): Module
+	// the module the last parsed text forms, kept with that text even when it holds no class
 + render(canonical: CleanEngineeringModel, previous: str | None = None): str
 	Invariant: an operation body read in this language is written back exactly as read
-	// previous set: each operation keeps the previous file's body when the canonical body is not in this language
-	// file header with the preamble, then per module: a === name === banner comment, then each class
-	-> parse
+	// becomes the canonical model once, as the language's parts, then writes itself
+	-> translate_from
 	-> render_class
 + operation_body(class_name: str, operation_name: str): CodeBody
 	// the body this model read. "constructor" finds the constructor in any language
-+ render_class(oclass: OoadClass, known_names: list[str], kept: CodeCleanEngineeringModel): list[str]
-	// an interface: signatures only. Otherwise class open, properties with their notes, constructor, operations, class close
-	// one blank line between member groups
-+ render_operation(operation: Operation, contract: bool, previous: CodeBody): list[str]
-	// signature, then render_body unless contract
++ render_class(oclass: CodeClass, known_names: list[str], kept: CodeCleanEngineeringModel): list[str]
+	// the class's stand-in lines, else its opening, properties with their notes, constructor, operations, closing
+	-> CodeClass.opening
+	-> CodeProperty.lines
+	-> CodeOperation.signature
 + render_body(operation: Operation, previous: CodeBody): list[str]
-	// a body in this language: body.lines_in
-	// an empty body: invariant comments, then language.interaction for each callee, then language.unfinished
-	// a body from another language: its text commented out, then language.unfinished
-	// the constructor ends with a field assignment per parameter instead of language.unfinished
 	-> CodeBody.in_language_of
 	-> CodeBody.lines_in
-+ doc_text(operation: Operation): str
-	// the description when it is the operation's own text, not one joined from its comments
-+ file_header(canonical: CleanEngineeringModel, preamble: CodeBody): list[str]
-+ class_open(oclass: OoadClass, known_names: list[str]): list[str]
-	// a blank line, the doc comment, the stereotype decorators, then the declaration for its kind: an interface, or a class with the bases it declares
-	-> OoadClass.declared_bases
-+ class_doc(intent: str): list[str]
-+ class_intent(oclass: OoadClass): str
-+ stereotype_decorators(oclass: OoadClass): list[str]
-	// none for a language that marks stereotypes in the doc comment
-+ interface_declaration(oclass: OoadClass): list[str]
-+ class_declaration(oclass: OoadClass, bases: list[str]): list[str]
-	// class Name extends Base implements Contract, Other {
-+ heritage(bases: list[str]): tuple
-	// the one base a class extends, and the bases it implements
-+ class_modifiers(implemented: list[str]): str
-+ class_close(has_members: bool): list[str]
-+ property_line(prop: Property, contract: bool): list[str]
-+ constructor_lines(oclass: OoadClass, constructor: Operation | None, body: list[str]): list[str]
-+ constructor_parameters(oclass: OoadClass, constructor: Operation | None): list[tuple]
-	// the constructor's own parameters, else the class properties
-+ signature(operation: Operation, contract: bool): list[str]
-+ block_close(): list[str]
-	// each language overrides the spelling operations above. None of them decides what a body holds
++ file_header(preamble: CodeBody): list[str]
 
-## BraceCleanEngineeringModel : CodeCleanEngineeringModel
-
-A class model written in a brace language: TypeScript, JavaScript, or Java. They read through one parse.
+## CodeModule : Module
 
 ------
++ class_type: type[CodeClass]
 ----
-+ parse(text: str): BraceCleanEngineeringModel
-	-> CFamilyParse.parse
++ load_module(source: Module): CodeModule
++ load_class(source: OoadClass): CodeClass
+
+## CodeClass : OoadClass
+
+A class as one language writes it.
+
+------
++ language: CodeLanguage
++ property_type: type[CodeProperty]
++ operation_type: type[CodeOperation]
++ is_contract: bool
+----
++ constructor(): CodeOperation | None
++ stand_in_lines(): list[str] | None
+	// lines written instead of the class; JavaScript writes an example type as a note
++ opening(known_names: list[str]): list[str]
+	// a blank line, the doc comment, the stereotype decorators, then the declaration for its kind
++ doc, doc_intent, stereotype_decorators, interface_declaration, class_declaration, heritage, class_modifiers
++ closing(has_members: bool): list[str]
++ block_close(): list[str]
++ constructor_lines(constructor: Operation | None, body: list[str]): list[str]
++ constructor_parameters(constructor: Operation | None): list[tuple]
+	// the constructor's own parameters, else the class properties
+
+## CodeProperty : Property
+
++ note_lines(): list[str]
++ lines(contract: bool): list[str]
+
+## CodeOperation : Operation
+
++ doc_text(): str
+	// the description when it is the operation's own text, not one joined from its comments
++ signature(contract: bool): list[str]
++ is_constructor_of(oclass: OoadClass): bool
++ answers_to(oclass: OoadClass, operation_name: str): bool
+
+## BraceCleanEngineeringModel : CFamilyParse, CodeCleanEngineeringModel
+
+A class model written in a brace language: TypeScript, JavaScript, or Java. Each reads its own text through the brace-language reading it shares.
 
 ## CFamilyParse
 
-Reads brace-language source — TypeScript, JavaScript, and Java — into one module of classes, with each operation's body kept in its language.
+The brace-language reading mixed into BraceCleanEngineeringModel: reads TypeScript, JavaScript, or Java source into the model's own one module of classes, with each operation's body kept in the model's language.
 
-+ CFamilyParse(model_factory: Callable[[], CleanEngineeringModel], class_factory: Callable[..., OoadClass], language: CodeLanguage)
 ------
++ language: CodeLanguage
+	// the language of the model it is mixed into
 ----
-+ parse(text: str): CleanEngineeringModel
-	// the preamble, each class with its doc comment, stereotypes, and the bases its heritage clause names, then the top-level functions
++ parse(text: str): CFamilyParse
+	// fills the model's modules with the language's own parts and returns the model
+	// the preamble, each class with its doc comment, stereotypes, and the bases its heritage clause names, each field with its line, then the top-level functions
+	// every operation records its line and its end line
 	-> ClassHead.above
-+ method_span_in_text(text: str, name: str, fallback_line: int = 1): tuple[int, int]
-	// the lines a brace-language method spans, when the graph load has no end line
+	-> Module.take_lines
 
 ## PythonCleanEngineeringModel : CodeCleanEngineeringModel
 
@@ -690,22 +737,32 @@ The `python` format.
 
 ------
 + language: CodeLanguage
-	// CodeLanguage.named("python")
+	// PYTHON (the code_body constant)
 ----
 + parse(text: str): PythonCleanEngineeringModel
 	// read from the syntax tree; text that does not parse raises UnreadableSource
-+ load_module(source: Module): PythonModule
-+ file_header, class_open, class_close, property_line, constructor_lines, signature, block_close
-	// Python spelling only. The stereotypes are decorators with no arguments: @aggregate_root
++ file_header(preamble: CodeBody): list[str]
 
-## PythonModule : Module
+## PythonModule : CodeModule
+
+Keeps the syntax tree its file was read into.
 
 ------
++ tree: ast.Module | None
 ----
-+ load_source_facts(text: str, file: Path, root: Path): None
++ keep_tree(tree: ast.Module): None
 	// also records the module's private functions only one class calls
-+ import_targets(text: str, file: Path, root: Path): list[str]
-	// every import and from-import, absolute or relative
++ import_targets(file: Path, root: Path): list[str]
+	// every import and from-import, absolute or relative, read from the kept tree
+
+## PythonClass : CodeClass, PythonProperty : CodeProperty, PythonOperation : CodeOperation
+
+Python spelling. The stereotypes are decorators with no arguments: @aggregate_root.
+
++ PythonOperation.from_function(node: FunctionDef, text: str): PythonOperation
+	// the whole operation from its own syntax tree: signature, body as written, and what the rules measure
+	-> PythonFunctionBody
++ PythonProperty.from_annotation(node: AnnAssign, order: int): PythonProperty
 
 ## TypeScriptCleanEngineeringModel : BraceCleanEngineeringModel
 
@@ -713,10 +770,10 @@ The `typescript` format.
 
 ------
 + language: CodeLanguage
-	// CodeLanguage.named("typescript")
+	// TYPESCRIPT (the code_body constant)
 ----
-+ class_doc, class_intent, stereotype_decorators, interface_declaration, class_modifiers, property_line, constructor_lines, signature
-	// TypeScript spelling only. The stereotypes are decorators with no arguments: @AggregateRoot()
+	// its parts, TypeScriptClass, TypeScriptProperty, TypeScriptOperation, spell TypeScript.
+	// The stereotypes are decorators with no arguments: @AggregateRoot()
 
 ## JavaScriptCleanEngineeringModel : BraceCleanEngineeringModel
 
@@ -724,12 +781,11 @@ The `javascript` format.
 
 ------
 + language: CodeLanguage
-	// CodeLanguage.named("javascript")
+	// JAVASCRIPT (the code_body constant)
 ----
-+ render_class(oclass: OoadClass, known_names: list[str], kept: CodeCleanEngineeringModel): list[str]
-	// an example extension class becomes a comment pointing at its base type
-+ interface_declaration, class_declaration, property_line, constructor_lines, signature
-	// JavaScript spelling only. JavaScript has no interfaces, so an interface is a class that says it is one, and the bases past the one it extends are named in an // implements line
+	// its parts, JavaScriptClass, JavaScriptProperty, JavaScriptOperation, spell JavaScript. An example extension class
+	// becomes a comment pointing at its base type. JavaScript has no interfaces, so an interface is a class that says it
+	// is one, and the bases past the one it extends are named in an // implements line
 
 ## JavaCleanEngineeringModel : BraceCleanEngineeringModel
 
@@ -737,10 +793,9 @@ The `java` format.
 
 ------
 + language: CodeLanguage
-	// CodeLanguage.named("java")
+	// JAVA (the code_body constant)
 ----
-+ interface_declaration, class_modifiers, property_line, constructor_lines, signature
-	// Java spelling only
+	// its parts, JavaClass, JavaProperty, JavaOperation, spell Java
 
 ## DiagramNode
 
@@ -781,14 +836,13 @@ A module on a page: purpose, seam, nesting, and height. The format fills the lab
 
 ------
 + nested: bool
++ seam_bullets: int
+	// how many seam terms the card lists before it ends the list with `...`; six unless a subclass says otherwise
 ----
 + height(): int
 + header_height(): int
 + purpose_line(): str
 + shown_seam_terms(): list[str]
-+ external_deps(): list[str]
-	// dependencies other than the module's path parent
-+ load_class(source: OoadClass): DiagramClass
 
 ## ContainmentForest
 
@@ -806,9 +860,6 @@ Path nesting and dependency depth for ordering modules on a page.
 
 The diagram format draw.io extends. A modules view (`is_modules_view`: modules with no class members to show) stops at modules; a class view continues through properties and operations.
 
-------
-+ module_type: DiagramModule
-
 ## Geometry
 
 + Geometry(x: float, y: float, width: float, height: float)
@@ -822,14 +873,6 @@ The diagram format draw.io extends. A modules view (`is_modules_view`: modules w
 + overlaps(other: Geometry): bool
 + shifted(dx: float, dy: float): Geometry
 + moved_to(x: float, y: float): Geometry
-
-## DiagramCard
-
-A box to place or route around for a view with no diagram node of its own, such as the DDD aggregate view. Placement and routing read only `cell_id`, `geometry`, and `group`.
-
-+ DiagramCard(cell_id: str, width: float, height: float, group: str = "", x: float = 0, y: float = 0)
-------
-+ geometry: Geometry
 
 ## DiagramArrow
 
@@ -854,7 +897,7 @@ The line drawn between two cards for every relationship one class has to another
 
 Finds the grid position for every card that leaves the fewest crossings and the shortest arrows.
 
-+ CardPlacement(cards: list[DiagramNode | DiagramCard], arrows: list[DiagramArrow])
++ CardPlacement(cards: list[DiagramNode], arrows: list[DiagramArrow])
 	Invariant: a base sits above what derives from it, and an owner above what it owns
 	Invariant: the search is seeded, so the same model always gives the same diagram
 ------
@@ -867,7 +910,7 @@ Finds the grid position for every card that leaves the fewest crossings and the 
 
 Routes every arrow between the placed cards.
 
-+ ArrowRouter(cards: list[DiagramNode | DiagramCard], arrows: list[DiagramArrow], obstacles: list[Geometry] = (), kept_paths: list[list] = ())
++ ArrowRouter(cards: list[DiagramNode], arrows: list[DiagramArrow], obstacles: list[Geometry] = (), kept_paths: list[list] = ())
 	Invariant: an arrow never passes through a card or runs along another arrow, and each has its own end points
 	Invariant: the inheritance arrows of two or more subclasses that reach one base from the same side join into one trunk — a drop from each subclass to a shared bar, and one line from the bar to one point on the base; a single subclass keeps a direct arrow
 ------

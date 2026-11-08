@@ -9,7 +9,7 @@ from harness.installation.destination import data_of  # noqa: E402
 from mamba import before, context, description, it
 
 from harness.graph.graph import EdgeType, Graph, Node, Source
-from harness.graph.saved_graph import SavedPractice
+from harness.graph.saved_graph import SavedGraph, SavedPractice
 
 
 def _saved_node(node_id: str, name: str, type: str, file: str, end_line: int, stage: str) -> dict:
@@ -20,7 +20,7 @@ with description("a graph"):
     with context("with a failing operation and a passing operation"):
         with before.all:
             self.graph = Graph()
-            self.graph._practice_roots["clean_engineering"] = _HERE
+            self.graph.open(_HERE)
             self.practice = self.graph.practice("clean_engineering")
             self.failure = Node(
                 self.practice, "Operation", "clean_engineering:Operation:failure.ts:failure:Account", "failure", Source(".", 1, 1)
@@ -29,10 +29,8 @@ with description("a graph"):
             self.register = Node(
                 self.practice, "Operation", "clean_engineering:Operation:register.ts:register:Account", "register", Source(".", 1, 1)
             )
-            root = self.practice.root_node
+            root = self.graph.root_of(self.practice)
             root.children.extend([self.failure, self.register])
-            self.practice.apply_rule("limit-operation-parameters", ["Operation"])
-            self.practice.apply_rule("keep-operations-small-focused", ["Operation"])
             self.graph.filter.select_rules(["limit-operation-parameters"])
             self.graph.filter.select_violations()
 
@@ -53,23 +51,23 @@ with description("a graph"):
     with context("with a relationship selected"):
         with before.all:
             self.graph = Graph()
-            self.graph._practice_roots["clean_engineering"] = _HERE
+            self.graph.open(_HERE)
             self.practice = self.graph.practice("clean_engineering")
             self.module = Node(self.practice, "Module", "id:module", "account-credentials", Source(".", 1, 1))
             self.class_node = Node(self.practice, "OoadClass", "id:class", "AccountCredentials", Source(".", 1, 1))
             self.other = Node(self.practice, "OoadClass", "id:other", "Customer", Source(".", 1, 1))
             self.module.stage = "discovery"
             self.class_node.stage = "implementation"
-            root = self.practice.root_node
+            root = self.graph.root_of(self.practice)
             root.children.extend([self.module, self.class_node, self.other])
-            self.practice.record(EdgeType("owns", 2, "direct"), self.module, self.class_node)
+            self.graph.record(EdgeType("owns", 2, "direct"), self.module, self.class_node)
             self.graph.filter.select_relationships(["owns"])
 
         with it("should keep the stage from the query on the node"):
             expect(self.class_node.stage).to(equal("implementation"))
 
         with it("should give the edge the child node's stage"):
-            edge = self.practice.edges["owns"][0]
+            edge = self.graph.edges_of(self.practice, "owns")[0]
             expect(edge.stage).to(equal("implementation"))
 
         with it("should return the nodes on the selected edge"):
@@ -79,18 +77,18 @@ with description("a graph"):
 
     with context("with a saved node that carries a stage"):
         with before.all:
-            self.practice = Graph().practice("clean_engineering")
+            graph = Graph()
             saved = {"nodes": [_saved_node("id", "AccountCredentials", "OoadClass", "account.ts", 4, "implementation")]}
-            self.practice.restore(SavedPractice.from_record("clean_engineering", saved))
-            self.node = self.practice.by_id["id"]
+            graph.restored_from(SavedGraph([], {"clean_engineering": SavedPractice.from_record("clean_engineering", saved)}))
+            self.node = graph.node("id")
 
         with it("should store the stage on the node"):
             expect(self.node.stage).to(equal("implementation"))
 
     with context("with a package between a module and a class"):
         with before.all:
-            self.practice = Graph().practice("clean_engineering")
-            self.practice.by_id[self.practice.root_node.node_id] = self.practice.root_node
+            graph = Graph()
+            root = graph.root_of(graph.practice("clean_engineering"))
             module, package = "clean_engineering:Module:src/domain:domain", "clean_engineering:Package:src/domain/customer:customer"
             customer = "clean_engineering:OoadClass:src/domain/customer/Customer.ts:Customer"
             saved = SavedPractice.from_record("clean_engineering", {
@@ -100,15 +98,14 @@ with description("a graph"):
                     _saved_node(customer, "Customer", "OoadClass", "src/domain/customer/Customer.ts", 3, "implementation"),
                 ],
                 "edges": [
-                    {"parent": self.practice.root_node.node_id, "child": module, "kind": "owns", "order": 1, "display": "direct"},
+                    {"parent": root.node_id, "child": module, "kind": "owns", "order": 1, "display": "direct"},
                     {"parent": module, "child": package, "kind": "owns", "order": 2, "display": "direct"},
                     {"parent": package, "child": customer, "kind": "owns", "order": 2, "display": "direct"},
                 ],
             })
-            self.practice.restore(saved)
-            self.practice.restore_links(saved)
-            self.practice.root_node.populate()
-            self.tree = data_of(self.practice.root_node.serialize())
+            graph.restored_from(SavedGraph([], {"clean_engineering": saved}))
+            root.populate()
+            self.tree = data_of(root.serialize())
 
         with it("should parent the package on the module"):
             package = next(child for child in self.tree["children"][0]["children"] if child["name"] == "customer")

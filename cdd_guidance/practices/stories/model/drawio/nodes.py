@@ -2,16 +2,17 @@
 
 Two views:
 - story-map  render(canonical)            - Epic -> Epic -> Story grid
-- thin-slice DrawIOIncrement.save / DrawIOIncrement.load - increment rows across epic columns
+- thin-slice DrawIOStoryModel.save_thin_slice / load_thin_slice - increment rows across epic columns
 """
 
 from __future__ import annotations
 
 import re
 import xml.etree.ElementTree as ET
+from pathlib import Path
 from typing import Dict, List, Optional
 
-from harness.name.name import Name
+from harness.annotations.name import Name
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
@@ -19,6 +20,7 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramStoryModel,
 )
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks
+from cdd_guidance.practices.stories.model.source_location import path_from
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel, StoryType
 
 
@@ -50,14 +52,6 @@ class DrawIOIncrement(DiagramIncrement):
     @classmethod
     def story_y_offset(cls) -> int:
         return (cls.lane_height - DiagramStory.size) // 2
-
-    @classmethod
-    def save(cls, story_map: StoryModel) -> str:
-        return DrawIOStoryModel()._write_thin_slice(story_map)
-
-    @classmethod
-    def load(cls, text: str) -> List["DrawIOIncrement"]:
-        return DrawIOStoryModel()._read_thin_slice(text)
 
 
 class DrawIOStory(DiagramStory):
@@ -101,7 +95,7 @@ class DrawIOStory(DiagramStory):
 
     @property
     def y(self) -> int:
-        return self._layout().story_y
+        return self._story_line_y()
 
     def cells(self, parent_id: str) -> List["DrawIOStoryModel.Vertex"]:
         actor = self.actors[0].strip() if self.actors else ""
@@ -161,7 +155,7 @@ class DrawIOEpic(DiagramEpic):
     def y(self) -> int:
         if not isinstance(self.parent, Epic):
             return self.row_y
-        return self._layout().sub_epic_y(self.depth)
+        return self._sub_epic_bar_y(self.depth)
 
     @property
     def x(self) -> int:
@@ -227,7 +221,7 @@ class DrawIOEpic(DiagramEpic):
             else:
                 estimate_x = self.x + self.tighten
             drawn.append(DrawIOStoryModel.Vertex.make(
-                f"{self.cell_id}/estimate", label, estimate_x, self._layout().story_y,
+                f"{self.cell_id}/estimate", label, estimate_x, self._story_line_y(),
                 max(self.bar_width - (estimate_x - self.x) - self.tighten, 80),
                 DiagramStory.size, self.estimate_style,
             ))
@@ -311,7 +305,7 @@ class DrawIOStoryModel(DiagramStoryModel):
     """DrawIO story-map I/O. IS the format-typed tree root.
 
     load reads a file into these nodes. save writes the nodes you edited.
-    The thin-slice table is DrawIOIncrement.save and DrawIOIncrement.load.
+    The thin-slice view is save_thin_slice and load_thin_slice, over this map's own increments.
     """
 
     class Vertex:
@@ -344,12 +338,12 @@ class DrawIOStoryModel(DiagramStoryModel):
             self.node = node
             return self
 
-        def take_links(self, entries: Dict[int, str], links: StoryMapLinks) -> None:
+        def take_links(self, links: StoryMapLinks) -> None:
             """``link`` opens the story's own file when it has one, otherwise its ``story-map.md`` entry;
             ``entry`` keeps the story-map entry."""
             if self.node is None:
                 return
-            self.entry = entries.get(id(self.node), "")
+            self.entry = links.entry_for(self.node)
             story_file = links.story_file(self.node) if isinstance(self.node, Story) else ""
             self.link = story_file or self.entry
 
@@ -384,19 +378,17 @@ class DrawIOStoryModel(DiagramStoryModel):
         """Draw the story map. In a *workspace* folder, each epic, sub-epic, and story cell links to its
         ``story-map.md`` entry there, and a story to its own file when one exists. With no target file,
         the cell has no link."""
-        links = StoryMapLinks.from_workspace(workspace) if workspace else None
         drawn = type(self)(canonical if canonical is not None else self)
-        return drawn._drawing(links)
+        if workspace:
+            drawn.links = StoryMapLinks.from_workspace(drawn, workspace)
+        return drawn.save()
 
     def save(self) -> str:
-        return self._drawing(None)
-
-    def _drawing(self, links: Optional[StoryMapLinks]) -> str:
+        """Draw this story map; each cell links where the links of the folder it was placed in say."""
         vertices = [vertex for epic in self.epics for vertex in epic.cells()]
-        if links is not None:
-            entries = links.entries(self)
+        if self.links is not None:
             for vertex in vertices:
-                vertex.take_links(entries, links)
+                vertex.take_links(self.links)
         mxfile = ET.Element("mxfile", attrib={"host": "app.diagrams.net"})
         diagram = ET.SubElement(mxfile, "diagram", attrib={"name": "Story Map", "id": "story-map"})
         graph_model = ET.SubElement(diagram, "mxGraphModel")
@@ -411,6 +403,21 @@ class DrawIOStoryModel(DiagramStoryModel):
     def parse(self, text: str) -> "DrawIOStoryModel":
         """Format-adapter entry point used by PracticeGuidance.render; same as load."""
         return self.load(text)
+
+    @classmethod
+    def from_workspace(cls, path: Path, *, on_file=None, project: Optional[Path] = None) -> "DrawIOStoryModel":
+        """The story map drawn in the .drawio file at path, each epic and everything under it naming that file as a
+        path from project (from the file's own folder without one)."""
+        path = Path(path).resolve()
+        file = path_from(Path(project).resolve() if project is not None else path.parent, path)
+        if on_file is not None:
+            on_file(file)
+        text = path.read_text(encoding="utf-8")
+        loaded = cls().load(text)
+        loaded.source_texts[file] = text
+        for epic in loaded.epics:
+            epic.place_in(file)
+        return loaded
 
     def load(self, text: str) -> "DrawIOStoryModel":
         """Read the story map by where its cells sit, not their order in the file: draw.io saves cells back to
@@ -501,8 +508,8 @@ class DrawIOStoryModel(DiagramStoryModel):
 
     # -- Thin-slice view -------------------------------------------------------
 
-    def _write_thin_slice(self, canonical: StoryModel) -> str:
-        """Render a swim-lane grid: epic/sub-epic columns x increment rows.
+    def save_thin_slice(self) -> str:
+        """This map's increments as a swim-lane grid: epic/sub-epic columns x increment rows.
 
         Row 1: Epic headers (same positions as story-map view).
         Row 2: Sub-epic headers.
@@ -517,16 +524,16 @@ class DrawIOStoryModel(DiagramStoryModel):
         ET.SubElement(graph_root, "mxCell", attrib={"id": "1", "parent": "0"})
 
         story_x: Dict[str, List[int]] = {}
-        for epic in canonical.epics:
+        for epic in self.epics:
             for name, xs in epic.story_xs().items():
                 story_x.setdefault(name, []).extend(xs)
 
         grid_width = (
-            canonical.epics[-1].x + canonical.epics[-1].width - DiagramEpic.left_margin
-            if canonical.epics else 200
+            self.epics[-1].x + self.epics[-1].width - DiagramEpic.left_margin
+            if self.epics else 200
         )
 
-        for epic in canonical.epics:
+        for epic in self.epics:
             vertex = self._cell(epic.slug, epic.name)
             vertex.x = epic.x
             vertex.y = epic.y
@@ -546,11 +553,11 @@ class DrawIOStoryModel(DiagramStoryModel):
         lane_start_x = DiagramEpic.left_margin - DrawIOIncrement.label_width
         lane_total_width = DrawIOIncrement.label_width + grid_width
         header_bottom = max(
-            (sub.y + sub.bar_height for epic in canonical.epics for sub in [epic, *epic.epics]),
+            (sub.y + sub.bar_height for epic in self.epics for sub in [epic, *epic.epics]),
             default=DiagramEpic.row_y + DiagramEpic.bar_height,
         )
         lane_y = DrawIOIncrement.lane_top_y(header_bottom)
-        for inc in canonical.increments:
+        for inc in self.increments:
             inc_slug = inc.slug if hasattr(inc, "slug") else Name(inc.name).title_slug or "node"
             # Background strip (no text).
             background = self._cell(f"inc-lane/{inc_slug}/bg", "")
@@ -592,8 +599,9 @@ class DrawIOStoryModel(DiagramStoryModel):
         body = ET.tostring(mxfile, encoding="unicode")
         return "<?xml version='1.0' encoding='utf-8'?>\n" + body
 
-    def _read_thin_slice(self, text: str) -> List[DrawIOIncrement]:
-        """Parse a thin-slicing.drawio document into increment nodes."""
+    def load_thin_slice(self, text: str) -> "DrawIOStoryModel":
+        """Read a thin-slicing.drawio document into this map's increments, each delivering the map's own stories
+        that its lane names, and return this map."""
         try:
             root_el = ET.fromstring(text)
         except ET.ParseError as err:
@@ -601,34 +609,26 @@ class DrawIOStoryModel(DiagramStoryModel):
         tree = root_el if root_el.tag == "mxGraphModel" else root_el.find(".//mxGraphModel")
         if tree is None:
             raise DrawIOParseError("No mxGraphModel found")
-
-        # Build a map from inc_slug to increment so stories can be appended in
-        # cell order regardless of document ordering.
-        slug_to_inc: Dict[str, DrawIOIncrement] = {}
-        increments: List[DrawIOIncrement] = []
+        stories = {story.name: story for story in self.every_story()}
+        lanes: Dict[str, List[Story]] = {}
+        names: Dict[str, str] = {}
+        # Cells are read in document order, so a lane's stories may come before its label.
         for cell in tree.findall(".//mxCell[@vertex='1']"):
             style = cell.attrib.get("style", "")
-            value = cell.attrib.get("value", "")
-            cell_id_attr = cell.attrib.get("id", "")
+            parts = cell.attrib.get("id", "").split("/", 2)
+            if len(parts) < 2:
+                continue
             if style.startswith("inc-lane-label;"):
-                # Label cell carries the increment name; id = "inc-lane/{slug}"
-                parts = cell_id_attr.split("/", 2)
-                if len(parts) >= 2:
-                    inc_slug = parts[1]
-                    inc = DrawIOIncrement(value.strip(), len(increments) + 1)
-                    slug_to_inc[inc_slug] = inc
-                    increments.append(inc)
-            elif style.startswith("increment-story;"):
-                parts = cell_id_attr.split("/", 3)
-                if len(parts) >= 3:
-                    inc_slug = parts[1]
-                    inc = slug_to_inc.get(inc_slug)
-                    if inc is not None:
-                        story = DrawIOStory(value.strip(), len(inc.stories) + 1)
-                        story.increment = inc
-                        inc.stories.append(story)
-        return increments
-
+                names[parts[1]] = cell.attrib.get("value", "").strip()
+                lanes.setdefault(parts[1], [])
+            elif style.startswith("increment-story;") and len(parts) >= 3:
+                story = stories.get(cell.attrib.get("value", "").strip())
+                if story is not None:
+                    lanes.setdefault(parts[1], []).append(story)
+        self.increments = [
+            DrawIOIncrement(names[slug], order, lanes[slug]) for order, slug in enumerate((slug for slug in lanes if slug in names), start=1)
+        ]
+        return self
 
     def _cell(self, cell_id, label) -> "DrawIOStoryModel.Vertex":
         vertex = self.Vertex()

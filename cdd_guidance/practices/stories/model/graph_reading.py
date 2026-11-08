@@ -1,14 +1,17 @@
 """How Stories takes part in the graph: it reads the story tests (or, when there are none, the story maps) into a
-story model and adds its epics, stories, scenarios, steps, and examples to its practice graph, then links each step to
-the operations it calls and each example to the classes and properties it shows."""
+story model, which writes itself onto the graph, then links each step to the operations it calls and each example to
+the classes and properties it shows."""
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from harness.graph.graph import Graph, PracticeGraph
 from harness.graph.skipped_folders import scanned_files
+
+if TYPE_CHECKING:
+    from cdd_guidance.practices.stories.stories import Stories
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 _FUNCTION_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b")
@@ -24,93 +27,75 @@ def align_story_node(node) -> None:
     elif node.type in {"Scenario", "Story", "Background"}:
         node.source.widen_to_call_close()
     elif node.type == "Example":
-        node.source.align_to_example_export(node.practice.source_root, node.name)
+        node.source.align_to_example_export(node.graph.source_root_of(node.practice), node.name)
 
 
-def read_stories(practice: PracticeGraph) -> None:
-    """Read the story tests (or, when there are none, the story maps) into a story model and add its epics, stories,
-    scenarios, steps, and examples to the Stories practice graph."""
-    from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
+class StoriesReading:
+    """One read of the Stories practice's working copy: the story tests under its root, through the TypeScript format
+    Stories holds, or the story maps there when there are none; with edited files, only what they touch."""
 
-    graph = practice.graph
-    model = _typescript_model(practice)
-    if not model.epics:
-        graph.report_progress("stories · markdown")
-        model = _story_map_model(practice)
-    graph.report_progress("stories · record")
-    GraphStoryModel(model).record(practice, on_node=lambda detail: graph.report_progress(f"stories · record · {detail}"))
+    def __init__(self, practice: Stories) -> None:
+        self.practice = practice
+        self.graph = practice.graph
+        self.root = Path(self.graph.source_root_of(practice))
 
+    def story_map(self):
+        model = self._story_tests()
+        if model.epics:
+            return model
+        self.graph.report_progress("stories · markdown")
+        return self._story_maps()
 
-def link_steps_and_examples(graph: Graph) -> None:
-    """Link each step to the operations it calls and each example to the classes and properties it shows, when the
-    graph holds both Stories and Clean Engineering."""
-    if "stories" in graph.practices and "clean_engineering" in graph.practices:
-        _StoryLinks(graph).link()
+    def _story_tests(self):
+        sources = self._typescript_files()
+        files: dict[str, str] = {}
+        for index, path in enumerate(sources, start=1):
+            relative = path.relative_to(self.root).as_posix()
+            self.graph.report_progress(f"stories · {index}/{len(sources)} · {relative}")
+            files[relative] = path.read_text(encoding="utf-8")
+        self.graph.report_progress("stories · parse")
+        return self.practice.typescript_stories.parse(files, on_file=lambda detail: self.graph.report_progress(f"stories · parse · {detail}"))
 
+    def _story_maps(self):
+        """The story maps under the practice's root; with edited files, only the story maps among them."""
+        on_file = lambda detail: self.graph.report_progress(f"stories · markdown · {detail}")  # noqa: E731
+        edited = self.graph.edited_files()
+        if edited is None:
+            return self.practice.read_folder(self.root, on_file=on_file)
+        return self.practice.read_files(edited, self.root, on_file=on_file)
 
-def _typescript_model(practice: PracticeGraph):
-    from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
-
-    graph = practice.graph
-    root = Path(practice.source_root)
-    sources = _typescript_files(graph, root)
-    files: dict[str, str] = {}
-    for index, path in enumerate(sources, start=1):
-        relative = path.relative_to(root).as_posix()
-        graph.report_progress(f"stories · {index}/{len(sources)} · {relative}")
-        files[relative] = path.read_text(encoding="utf-8")
-    graph.report_progress("stories · parse")
-    return TypeScriptStoryModel("tests").load(files, on_file=lambda detail: graph.report_progress(f"stories · parse · {detail}"))
-
-
-def _story_map_model(practice: PracticeGraph):
-    """The story maps under the practice's root; with edited files, only the story maps among them."""
-    from cdd_guidance.practices.stories.model.story_model import StoryModel
-
-    graph = practice.graph
-    root = Path(practice.source_root)
-    on_file = lambda detail: graph.report_progress(f"stories · markdown · {detail}")  # noqa: E731
-    edited = graph.edited_files()
-    if edited is None:
-        return StoryModel.load(root, on_file=on_file)
-    return StoryModel.load_files(edited, root, on_file=on_file)
-
-
-def _typescript_files(graph: Graph, folder: Path) -> list[Path]:
-    """TypeScript under folder; with edited files, each whole story folder that holds one. A story reads its examples
-    and steps from sibling files, so one edited file needs its story's other files."""
-    from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
-
-    edited = graph.edited_files()
-    if edited is not None and not any(path.suffix.lower() in {".ts", ".tsx"} for path in edited):
-        return []
-    found = scanned_files(folder, {".ts", ".tsx"})
-    if edited is None:
-        return found
-    model = TypeScriptStoryModel("tests")
-    stories = {path.parent for path in found if model.is_story_file(path.as_posix())}
-    stories = {story for story in stories if any(story == file.parent or story in file.parents for file in edited)}
-    return [path for path in found if path in edited or any(story in path.parents for story in stories)]
+    def _typescript_files(self) -> list[Path]:
+        """TypeScript under the root; with edited files, each whole story folder that holds one. A story reads its
+        examples and steps from sibling files, so one edited file needs its story's other files."""
+        edited = self.graph.edited_files()
+        if edited is not None and not any(path.suffix.lower() in {".ts", ".tsx"} for path in edited):
+            return []
+        found = scanned_files(self.root, {".ts", ".tsx"})
+        if edited is None:
+            return found
+        reader = self.practice.typescript_stories
+        stories = {path.parent for path in found if reader.is_story_file(path.as_posix())}
+        stories = {story for story in stories if any(story == file.parent or story in file.parents for file in edited)}
+        return [path for path in found if path in edited or any(story in path.parents for story in stories)]
 
 
-class _StoryLinks:
+class StoryLinks:
     """The edges between the Stories practice and Clean Engineering: a step invokes the operations it calls, an epic
     uses the modules those operations sit in, and an example demonstrates the classes it names and retrieves the
-    properties it reads."""
+    properties it reads. Each is read from the text of the files the story map Stories recorded was read from."""
 
-    def __init__(self, graph: Graph) -> None:
-        self.graph = graph
-        self.root = Path(graph.folder) if graph.folder else None
-        self.stories = graph.practice("stories")
-        self.clean = graph.practice("clean_engineering")
-        self._lines: dict[str, list[str]] = {}
+    def __init__(self, stories: Stories, clean) -> None:
+        self.stories = stories
+        self.clean = clean
+        self.graph = stories.graph
+        self.texts: dict[str, str] = stories.recorded_map.source_texts
 
     def link(self) -> None:
         operations: dict[str, list] = {}
-        for operation in self.clean.nodes.get("Operation", []):
+        for operation in self.graph.nodes_of(self.clean, "Operation"):
             operations.setdefault(operation.name, []).append(operation)
-        steps = [node for node in self.stories.by_id.values() if node.type in {"Step", "Given", "When", "Then"}]
-        examples = [node for node in self.stories.by_id.values() if node.type == "Example"]
+        steps = [node for node in self.graph.nodes_of(self.stories) if node.type in {"Step", "Given", "When", "Then"}]
+        examples = self.graph.nodes_of(self.stories, "Example")
         for index, step in enumerate(steps, start=1):
             self.graph.report_progress(f"stories · steps · {index}/{len(steps)} · {step.name}")
             self._link_step(step, operations, examples)
@@ -124,51 +109,43 @@ class _StoryLinks:
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [operation for name in called for operation in operations.get(name, ())]
         epic = self._epic_for(step) if matched else None
-        modules = {node.name: node for node in self.clean.nodes.get("Module", [])}
+        modules = {node.name: node for node in self.graph.nodes_of(self.clean, "Module")}
         for operation in matched:
-            self.stories.link("invokes", step, operation, "relationship")
-            self.clean.link("invokedBy", operation, step, "relationship")
+            self.graph.link("invokes", step, operation, "relationship")
+            self.graph.link("invokedBy", operation, step, "relationship")
             module = modules.get(Path(operation.source.file).parent.name)
             if module is not None and epic is not None:
-                self.clean.link("usedBy", module, epic, "relationship")
-                self.stories.link("uses", epic, module, "relationship")
+                self.graph.link("usedBy", module, epic, "relationship")
+                self.graph.link("uses", epic, module, "relationship")
         if step.get_fact("phase"):
             for example in examples:
                 if re.search(rf"\b{re.escape(example.name)}\b", body):
-                    self.stories.link("observes", step, example, "relationship")
+                    self.graph.link("observes", step, example, "relationship")
 
     def _link_example(self, example, text: str) -> None:
-        for class_node in self.clean.nodes.get("OoadClass", []):
+        for class_node in self.graph.nodes_of(self.clean, "OoadClass"):
             if re.search(rf"\b{re.escape(class_node.name)}\b", text):
-                self.stories.link("demonstrates", example, class_node, "grouped")
-                self.clean.link("demonstrates", class_node, example, "grouped")
-                self.clean.link("demonstratedThrough", class_node, example, "relationship")
-        for prop in self.clean.nodes.get("Property", []):
+                self.graph.link("demonstrates", example, class_node, "grouped")
+                self.graph.link("demonstrates", class_node, example, "grouped")
+                self.graph.link("demonstratedThrough", class_node, example, "relationship")
+        for prop in self.graph.nodes_of(self.clean, "Property"):
             if re.search(rf"\.{re.escape(prop.name)}\b", text):
-                self.stories.link("retrievedUsing", example, prop, "relationship")
-                self.clean.link("retrievedUsing", prop, example, "relationship")
+                self.graph.link("retrievedUsing", example, prop, "relationship")
+                self.graph.link("retrievedUsing", prop, example, "relationship")
 
     def _step_body(self, step) -> str:
-        """The step's line and the lines after it; each file is read once per load."""
-        if self.root is None or not step.source.file:
-            return ""
-        lines = self._lines.get(step.source.file)
-        if lines is None:
-            path = self.root / step.source.file
-            lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
-            self._lines[step.source.file] = lines
+        """The step's line and the lines after it, from the text of the file it was read from."""
+        lines = self.texts.get(step.source.file, "").splitlines() if step.source.file else []
         start = max(0, step.source.start_line - 1)
         return "\n".join(lines[start : start + _STEP_LINES])
 
     def _function_sources(self) -> dict[str, str]:
-        """Each declared ``function name`` in the .ts files, mapped to the first file that declares it."""
-        if self.root is None:
-            return {}
-        files = scanned_files(self.root, {".ts"})
+        """Each declared ``function name`` in the TypeScript the story map was read from, mapped to the first file's
+        text that declares it."""
         sources: dict[str, str] = {}
-        for index, file in enumerate(files, start=1):
-            self.graph.report_progress(f"stories · example sources · {index}/{len(files)} · {file.relative_to(self.root).as_posix()}")
-            text = file.read_text(encoding="utf-8")
+        for file, text in sorted(self.texts.items()):
+            if not file.endswith(".ts"):
+                continue
             for name in _FUNCTION_DECLARATION.findall(text):
                 sources.setdefault(name, text)
         return sources

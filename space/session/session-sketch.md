@@ -76,9 +76,12 @@ Sessions, a session, and its log
 ### **CallSessions**
 
 ----
++ saved_in(project: Path): Session
+	// the session open in project, for work that serves no call, such as a hook event
+	-> Sessions.saved
 + open_in(call: ToolCall): Session
 	// the session open in the call's project, with the call's chat
-	-> Sessions.saved
+	-> saved_in(call.project)
 + named_in(session_file: str, call: ToolCall): Session
 	// the session a board command names by its session.json, with the call's chat
 	-> Session.from_file
@@ -227,8 +230,6 @@ Sessions, a session, and its log
 	// the next line points at chat, once
 + injected_rules: InjectedRules
 	// the rules a hook gave the agent since the last line, which the next line names
-+ append_chat(action: str, chat: ChatPointer): None
-	// points action's earlier lines at chat
 + seed_first_loop(): None
 + next_loop(): Loop
 + loop_at(number: int): Loop
@@ -248,18 +249,15 @@ Sessions, a session, and its log
 
 ### **Loop**
 
-+ Loop(number: int, log: SessionLog, entries: list[str])
++ Loop(number: int, entries: list[str])
 ------
 + number: int
 	// the marker `--- {number}`
 + entries: list[str]
 	// the log lines from this marker to the next
 ----
-+ text(): str
 + expanded_text(): str
 	// each line followed by the transcript lines its chat covers; a range shown earlier is named, not repeated
-+ inject(chat_file: Path, action: str | None): None
-	-> SessionLog.append_chat
 
 ### **LogEntry**
 
@@ -309,15 +307,15 @@ Sessions, a session, and its log
 
 ### **PracticeSessionOutput**
 
-+ PracticeSessionOutput(name: str, session: Session)
++ PracticeSessionOutput(guidance: PracticeGuidance, session: Session)
 ------
 + name: str
 	// data field
 + session: Session
 + session_file: str
 	// data field
-+ guideline: PracticeGuidance
-	// loads on first use
++ guidance: PracticeGuidance
+	// the session's one instance of the practice, which its graph holds
 + fidelities: GuidanceCollection
 + enabled: bool
 	// data field
@@ -345,10 +343,6 @@ Sessions, a session, and its log
 + keep_root(root: Path): None
 + of_fidelity(fidelity: FidelityGuidance): FidelitySessionOutput
 	// what PracticeGuidance.work_in gives each fidelity
-+ keep_format(): None
-	-> FidelitySessionOutput.keep_format
-+ use_kept_format(): None
-	-> FidelitySessionOutput.kept_format
 + log_validation(violations: list[str]): None
 	// Validate logs each run this way
 	-> SessionLog.line
@@ -546,13 +540,6 @@ it should return the log lines for that loop number
   -> expect(entries).to equal the lines under that marker
 ```
 
-##### with a chat to place under the lines
-
-```
--> session.log.loop_at(number).inject(chat_file)
-it should show the chat and the response under the lines they belong to
-  -> expect(session.log.loop_at(number).text()).to contain the chat and the response
-```
 
 ### an action
 
@@ -579,10 +566,12 @@ it should leave session.log unchanged
 
 ```
 -> session.practice(name)
-it should hold that practice's guideline
-  -> expect(session.practice(name).guideline).to be that practice guideline
-it should hold a graph of its own, apart from the guideline an action works with
-  -> expect(session.graph.practices[name].guidance).not_to be session.practice(name).guideline
+it should hold that practice's guidance in memory
+  -> expect(session.practice(name).guidance).to be a PracticeGuidance
+it should be the one practice the session's graph holds
+  -> expect(session.graph.every_practice[name]).to be session.practice(name).guidance
+it should be the same practice the next call in the session works with
+  -> expect(next call's session.practice(name).guidance).to be session.practice(name).guidance
 it should return that same practice on the next ask
   -> expect(session.practice(name)).to be the entry from the first ask
 it should list every practice CDD has, opened or not

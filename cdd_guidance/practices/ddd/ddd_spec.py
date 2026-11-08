@@ -36,9 +36,9 @@ _support = _DddSpecSupport()
 
 with description("a Ddd toolset"):
     with context("that is created"):
-        with context("with discovery stage"):
-            with it("should resolve to bounded_context and default to markdown format"):
-                tool = Ddd(stage="discovery")
+        with context("with its defaults"):
+            with it("should work at bounded_context in the markdown format"):
+                tool = Ddd()
                 expect(tool.fidelities.current.name).to(equal("bounded_context"))
                 expect(tool.format).to(equal("markdown"))
 

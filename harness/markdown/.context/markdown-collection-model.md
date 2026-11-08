@@ -1,6 +1,6 @@
 # markdown collection — class model on `markdown.py`
 
-Not a second Markdown. Collection shape lives on *MarkdownCollection*. *Markdown.coerce* stays HTML / str / dict / `from_markdown` — it does not test list. *YamlFields* and *MarkdownText* are in the same file; *RulesCollection* and *Guidance* belong to `harness/guidance` and appear here only as callers.
+Not a second Markdown. Collection shape lives on *MarkdownCollection*. *Markdown.coerce* stays HTML / str / dict / `from_markdown` — it does not test list. *YamlFields* (which parses ```yaml blocks; the owner of the text applies them) and *MarkdownText* are in the same file; *RulesCollection* and *Guidance* belong to `harness/guidance` and appear here only as callers.
 
 **Out of scope:** nested toolsets, *GuidanceCollection* (a *MarkdownCollection* subclass in `harness/guidance`), fidelities, *ToolSetCollection*.
 
@@ -26,8 +26,6 @@ parent: Any
 markdown: str
 	# must be the original extract; never a formatted() rebuild
 	# one file → that file
-yaml: dict[str, str]
-	# leftover yaml keys as string values
 ----
 child(name: str, body: str) -> Any
 	# none here; a subclass such as GuidanceCollection makes one entry per section block
@@ -35,7 +33,7 @@ from_markdown(text: str, parent: Any = None) -> MarkdownCollection
 	# one entry per section child block, keyed by its name
 	-> MarkdownText.section_child_blocks
 	-> child
-	-> YamlFields.assign_yaml
+	# a child reads its own block's settings, as GuidanceCollection's fidelities do
 from_section(markdown: Markdown, return_type, parent: Any = None) -> Any
 	# list → from_markdown of the extracted section
 	# return_type.from_markdown → that builder (Markdown.built_by), keeping the section's text on the result

@@ -155,8 +155,8 @@ class HubBoard:
         if fidelity is None:
             return f'<div class="aad-skill-row {practice.family} aad-skill-row--empty" data-family="{html.escape(practice.key)}"></div>'
         ticket = self._ticket(
-            str(BoardLabel(fidelity.name)),
-            path_prefix + practice.fidelity_href(fidelity),
+            fidelity.label,
+            path_prefix + practice.fidelity_href(fidelity.fidelity),
             practice.family,
             stage=column.key,
             perspective=practice.perspective,

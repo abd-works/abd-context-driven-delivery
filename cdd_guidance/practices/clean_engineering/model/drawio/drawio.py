@@ -7,6 +7,7 @@ It has no partition, grill, sketch, or fidelities of its own; CleanEngineering c
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.markdown import markdown
@@ -17,6 +18,9 @@ from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model im
     DrawIOCleanEngineeringModel,
 )
 
+if TYPE_CHECKING:
+    from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+
 
 @agent_toolset
 class Drawio:
@@ -26,10 +30,12 @@ class Drawio:
     validate/scan layout rules → repair (sub-agent) on definitive failures.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, practice: CleanEngineering) -> None:
+        # The Clean Engineering practice whose formats read the source a diagram is drawn from.
+        self.practice = practice
         self.source_format = "markdown"
-        self.previous = ""
-        self.keep_positioning = False
+        # The one Draw.io model this toolset writes; its `previous` and `keep_positioning` are the layout policy.
+        self.channel = DrawIOCleanEngineeringModel()
         self.scan_root = None
         self.rule = None
 
@@ -58,43 +64,16 @@ class Drawio:
         """
         model = self._parse_source(content)
         out = Path(path)
-        prev = self._previous_xml(out)
-        channel = DrawIOCleanEngineeringModel()
-        channel.previous = prev or None
-        channel.keep_positioning = self.keep_positioning
-        rendered = channel.render(model)
+        if self.channel.keep_positioning and not self.channel.previous and out.exists():
+            self.channel.previous = out.read_text(encoding="utf-8")
+        rendered = self.channel.render(model)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(rendered, encoding="utf-8")
         return str(out.resolve())
 
     def _parse_source(self, content: str):
-        from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (
-            MarkdownCleanEngineeringModel,
-        )
-        from cdd_guidance.practices.clean_engineering.model.json.json_class_model import (
-            JsonCleanEngineeringModel,
-        )
-        from cdd_guidance.practices.clean_engineering.model.python.python_class_model import (
-            PythonCleanEngineeringModel,
-        )
-        parsers: dict[str, type] = {
-            "markdown": MarkdownCleanEngineeringModel,
-            "json": JsonCleanEngineeringModel,
-            "python": PythonCleanEngineeringModel,
-            "drawio": DrawIOCleanEngineeringModel,
-        }
-        if self.source_format not in parsers:
-            raise ValueError(
-                f"Unsupported source_format {self.source_format!r}. "
-                f"Choose from: {sorted(parsers)}"
-            )
-        return parsers[self.source_format](name="", sequential_order=1).parse(content)
-
-    def _previous_xml(self, out: Path) -> str:
-        prev = self.previous
-        if self.keep_positioning and not prev and out.exists():
-            return out.read_text(encoding="utf-8")
-        return prev
+        """The class model content describes, read in source_format by the practice's own format."""
+        return self.practice.model_in(self.source_format, content)
 
     @agent_tool
     def scan(self, paths: list[str]) -> str:

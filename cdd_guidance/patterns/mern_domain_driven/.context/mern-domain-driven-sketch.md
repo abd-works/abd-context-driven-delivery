@@ -54,9 +54,6 @@ class MernDomainDriven(PracticeGuidance):
 
     def __init__(self) -> None:
         # format="typescript", default_workspace_folder="packages"
-
-    def _stories(self) -> Stories:
-        """Stories companion pinned at acceptance_tests fidelity, typescript format."""
 ```
 
 `generate`, `validate`, and the other actions are the shared actions run on this

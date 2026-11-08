@@ -318,4 +318,4 @@ class CliAgentBlock(AgentBlock):
             prompt_path.parent.mkdir(parents=True, exist_ok=True)
             prompt_path.write_text(prompt, encoding="utf-8")
             prompt = f"Read and follow the instructions in {prompt_path.relative_to(self._workspace).as_posix()}"
-        return CursorCli(resume=session.chat_id, print_mode=True).command(prompt, str(self._workspace))
+        return session.streaming_cli.command(prompt, str(self._workspace))

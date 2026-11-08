@@ -25,9 +25,8 @@ with description("rule categories"):
     with context("on an operation and a class"):
         with before.each:
             self.graph = Graph()
-            self.graph._practice_roots = {"clean_engineering": Path(".")}
+            self.graph.open(Path("."))
             self.practice = self.graph.practice("clean_engineering")
-            self.practice.graph = self.graph
             self.failure = Node(self.practice, "Operation", "clean_engineering:Operation:failure", "failure", Source(".", 1, 2))
             self.register = Node(self.practice, "Operation", "clean_engineering:Operation:register", "register", Source(".", 3, 4))
             self.account = Node(self.practice, "OoadClass", "clean_engineering:OoadClass:AccountCredentials", "AccountCredentials", Source(".", 1, 8))
@@ -35,9 +34,10 @@ with description("rule categories"):
                 "limit-operation-parameters",
                 "Operation 'failure' takes 4 parameters (maximum 3, excluding self).",
             )
-            self.practice.root_node.children = [self.failure, self.register, self.account]
+            root = self.graph.root_of(self.practice)
+            root.children = [self.failure, self.register, self.account]
             for node in (self.failure, self.register, self.account):
-                node.parent = self.practice.root_node
+                node.parent = root
 
         with it("should attach the parameter rule to the operation that fails it"):
             rule = rule_on(data_of(self.failure.serialize()), "limit-operation-parameters")
@@ -78,9 +78,8 @@ with description("rule categories"):
                 expect("rules" in names).to(equal(False))
 
             with it("should attach that violation on the nodes the filter returns"):
-                self.practice.by_id[self.failure.node_id] = self.failure
-                self.practice.by_id[self.register.node_id] = self.register
-                self.practice.nodes["Operation"] = [self.failure, self.register]
+                self.graph.hold(self.failure)
+                self.graph.hold(self.register)
                 returned = data_of(self.graph.return_nodes())
                 failure = next(node for node in returned if node["name"] == "failure")
                 expect([rule["status"] for rule in failure["rules"]]).to(equal(["violating"]))

@@ -49,7 +49,8 @@ with description("a fidelity's page"):
     with before.all:
         self.actions = LifecycleAction.load_all()
         practice = CatalogPractice(Ddd(), skills=SkillSlashName([]))
-        self.page = FidelityPage(practice, Ddd().fidelities["tactics"], _CITATION, self.actions).body
+        tactics = next(shown for shown in practice.shown_fidelities if shown.name == "tactics")
+        self.page = FidelityPage(practice, tactics, _CITATION, self.actions).body
 
     with it("should open with the chat command, escaped for a browser"):
         expect("/ddd &lt;action&gt; tactics" in self.page).to(be_true)

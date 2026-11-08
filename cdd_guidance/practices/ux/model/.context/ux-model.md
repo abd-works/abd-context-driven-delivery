@@ -13,7 +13,7 @@ drawio = DrawioUxMap.create().render(ux_map)
 
 - **Purpose:** Keep the information architecture as one UX map — screens, regions, controls, and the transitions between screens — so a diagram, a JSON file, and an HTML mockup stay the same hierarchy every later fidelity reads.
 - **Seam (terms):** UxMap, Screen, Region, Control, StoryDemoControl, StoryStep, Interaction, UxComponent, Transition, ContentType, NavComponent, UxContext, ReferencePaths, and one UxMap subclass per format
-- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*), harness/name (*Name*); the Claude Design story canvas also uses practices/stories/model (*DiagramStoryModel*, *StoryModel*) and harness/design_canvas (*DesignCanvas*)
+- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*), harness/annotations (*Name*); the Claude Design story canvas also uses practices/stories/model (*DiagramStoryModel*, *StoryModel*) and harness/design_canvas (*DesignCanvas*)
 
 These dependencies are owned by the modules named; this model only uses them. A screen names the stories, scenarios, and steps it shows as text keyed the way Stories keys them; the graph turns each name into a `shownOn` edge from the Stories node to the screen (`harness/graph/schema_edges.py`). A link from one screen to another — a transition, a tab's chrome, an interaction's destination, a nav destination — holds the *Screen* itself, so renaming a screen keeps it.
 
@@ -46,7 +46,7 @@ Every node of the map. Each child belongs to its owner on the graph: a screen, t
 	// class field: where this format's map sits in a folder, as glob patterns tried in order
 ----
 + create(name: str | Graph = "UxMap", sequential_order: int = 0, graph: Graph | None = None): UxMap
-	// class operation: a new map, or, given a graph, the map already on that graph
+	// class operation: a new map; given a graph in place of a name, a map whose nodes live on that graph
 + from_workspace(root: Path): UxMap | None
 	// class operation: the map this format reads from its file in root; none when the folder has no such file
 	-> workspace_file(root)
@@ -248,7 +248,7 @@ Ordered paths to story or object-model JavaScript, each stored once.
 
 ## Formats
 
-Each format class below is a *UxMap* subclass. It overrides `parse`, `render`, and `workspace_files`, and builds the base node types; a reader or writer class beside it holds the steps.
+Each format class below is a *UxMap* subclass. It overrides `parse`, `save`, and `workspace_files`, and names the node types it is made of (`screen_type`, `region_type`, `control_type`, `story_demo_control_type`), which its reader and `UxMap.copy_of` make. `render(ux_map)` copies the map it is given into the format's own class (`copy_of`), which writes itself with `save`; a reader class beside it holds the reading steps.
 
 ## JsonUxMap : UxMap
 
@@ -258,7 +258,9 @@ The `json` format: the whole map as one JSON document; every other format can ro
 + parse(content: str | dict): UxMap
 	-> JsonUxMapReader.read
 + render(ux_map: UxMap): str
-	-> JsonUxMapWriter.map_record
+	-> copy_of(ux_map).save
++ map_record(): dict
+	// this map; a link to a screen is written as that screen's name
 
 ## JsonUxMapReader
 
@@ -267,21 +269,21 @@ The `json` format: the whole map as one JSON document; every other format can ro
 + read(): UxMap
 	Invariant: every screen is on the map before any link to a screen is read, so a transition, a tab, or a destination names a screen that is already there
 
-## JsonUxMapWriter
+## HtmlUxMap : JsonUxMap
 
-+ map_record(ux_map: UxMap): dict
-	// a link to a screen is written as that screen's name
-
-## HtmlUxMap : UxMap
-
-The `html` format: the mockup review page, product screens on the left and the story explorer on the right, with the JSON map embedded in a `ux-map-json` comment. Files: `{folder}.html`, `index.html`, `mockup.html`, `ux.html`.
+The `html` format: the mockup review page, product screens on the left and the story explorer on the right, with the JSON map embedded in a `ux-map-json` comment. It is the JSON format inside a page: parse and render ask the JSON format for the document the page carries. Files: `{folder}.html`, `index.html`, `mockup.html`, `ux.html`.
 
 ----
 + parse(content: str): UxMap
 	// raises UxMapNotEmbedded when the page carries no ux-map-json comment
 	-> JsonUxMap.parse
-+ render(ux_map: UxMap): str
-	// fills templates/html/mockup_shell.html; each control carries the data attributes the Story Demo runner reads
++ save(): str
+	// fills templates/html/mockup_shell.html; each HtmlControl writes its own markup and the data attributes the Story Demo runner reads
+	-> JsonUxMap.save
+
+## HtmlControl : Control, HtmlStoryDemoControl : StoryDemoControl, HtmlControl
+
+The HTML page's controls: `html()` writes a visible affordance for the control type with the data attributes its interactions and the Story Demo runner read.
 
 ## UxMapNotEmbedded : ValueError
 
@@ -293,11 +295,14 @@ The `drawio` format: a Site Map page and a Detailed IA page, written through the
 + cli_timeout_seconds: float
 ----
 + parse(content: str): UxMap
-	// JSON content reads through JsonUxMap; otherwise raises UnreadableDrawio when content is not XML
+	// raises UnreadableDrawio when content is not XML; JSON content is read with source json
 	-> DrawioUxMapReader.read
 + render(ux_map: UxMap): str
+	// copies ux_map into a DrawioUxMap (DrawioScreen, DrawioRegion), which draws itself
++ cli_state(target: str): dict
+	// its screens' and regions' own cli_record parts, and its transitions
++ save(): str
 	// raises DrawioCliMissing, DrawioCliFailed, or DrawioCliTimedOut
-	-> ux_map_to_cli_state
 
 ## DrawioUxMapReader
 
@@ -336,13 +341,14 @@ The `claude_design` format: one board per prototype screen, each on its own canv
 	// the boards as JSON
 + parse(content: str): UxMap
 	// raises ClaudeDesignScreensNotReadable: screens are placed from the UX map and edited on the canvas
-+ prototype_names(screens): list[str]
-+ names(screens, files = ()): list[str]
++ prototype_names(): list[str]
++ names(files = ()): list[str]
 + title(name: str): str
 + page_of(name: str): str
-+ pages(screens, files = ()): list[dict]
-+ boards(screens, files = ()): dict[str, dict]
++ pages(files = ()): list[dict]
++ boards(files = ()): dict[str, dict]
+	// each over this map's own screens
 
 ## ClaudeDesignStoryModel
 
-The Claude Design story canvas — the story map, the story explorer, and the screens each story is shown on — is a Stories *DiagramStoryModel* drawn in `claude_design/story_canvas.py`, described in `claude_design/story_canvas.md`. It reads this map's screens and *ClaudeDesignUxMap*'s page and folder.
+The Claude Design story canvas — the story map, the story explorer, and the screens each story is shown on — is a Stories *DiagramStoryModel* drawn in `claude_design/story_canvas.py`, described in `claude_design/story_canvas.md`. It holds the UX map it is drawn with as a *ClaudeDesignUxMap*, which places the screens, and its *DesignCanvas*, which answers what the canvas project already holds.

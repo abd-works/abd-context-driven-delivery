@@ -23,6 +23,7 @@ import cdd_guidance.practices  # noqa: F401 - generator package on path
 from harness.markdown import Markdown
 
 from cdd_guidance.actions.satisfy.satisfy import Satisfy
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.actions.validate.validate import Validate
 
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "clean_engineering"
@@ -246,3 +247,11 @@ with description("clean_engineering content helpers"):
         with it("should return a sorted list"):
             names = CleanEngineeringKit().format_subdirectory_names(_CLEAN_ENGINEERING_DIR)
             expect(names).to(equal(sorted(names)))
+
+
+with description("the Clean Engineering practice reading a source file"):
+    with it("should read a .tsx file with its TypeScript format"):
+        expect(type(CleanEngineering().format_for(Path("cart.tsx"))).__name__).to(equal("TypeScriptCleanEngineeringModel"))
+
+    with it("should read a .py file with its Python format"):
+        expect(type(CleanEngineering().format_for(Path("cart.py"))).__name__).to(equal("PythonCleanEngineeringModel"))

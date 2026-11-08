@@ -5,8 +5,12 @@ implementation; see space/kanban/app for the worked example."""
 
 from __future__ import annotations
 
+from functools import cached_property
+
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
+
+from cdd_guidance.patterns.cdd_web_domain_access.graph_overlay import WebDomainAccessOverlay
 
 
 @agent_toolset
@@ -20,3 +24,8 @@ class CddWebDomainAccess(PracticeGuidance):
             format="typescript",
             default_workspace_folder="harness",
         )
+
+    @cached_property
+    def graph_overlay(self) -> WebDomainAccessOverlay:
+        """What this pattern gives the knowledge graph on top of the practices: a DDD node for each file that reaches the domain from outside Python, and the rules on them. Made once and kept."""
+        return WebDomainAccessOverlay(self)

@@ -27,146 +27,32 @@ class JsonUxMap(UxMap):
         return JsonUxMapReader(ux_map, data).read()
 
     def render(self, ux_map: UxMap) -> str:
-        return json.dumps(JsonUxMapWriter().map_record(ux_map), indent=2) + "\n"
+        """ux_map in this format: copied into a map of this format, which writes itself."""
+        return type(self).copy_of(ux_map).save()
 
+    def save(self) -> str:
+        return json.dumps(self.map_record(), indent=2) + "\n"
 
-class JsonUxMapReader:
-    """Reads one JSON document into a new map. Every screen is on the map before any link to a screen is read, so a
-    transition, a tab, or a destination names a screen that is already there."""
-
-    def __init__(self, ux_map: UxMap, data: dict[str, Any]) -> None:
-        self.ux_map = ux_map
-        self.data = data
-
-    def read(self) -> UxMap:
-        with self.ux_map.batch_schema_sync():
-            self._read_map_fields()
-            screens = self.data.get("screens", [])
-            for index, screen_data in enumerate(screens):
-                self.ux_map.append_screen(self._screen_shell(screen_data, index))
-            for screen, screen_data in zip(self.ux_map.screens, screens):
-                self._read_screen(screen, screen_data)
-            self._read_components()
-        return self.ux_map
-
-    def _read_map_fields(self) -> None:
-        self.ux_map.scope = self.data.get("scope", "")
-        self.ux_map.story_references = self.data.get("story_references", [])
-        self.ux_map.object_references = self.data.get("object_references", [])
-        self.ux_map.context.notes = list(self.data.get("notes", []))
-        self.ux_map.context.invariants = list(self.data.get("invariants", []))
-
-    def _screen_shell(self, screen_data: dict[str, Any], index: int) -> Screen:
-        return Screen(
-            screen_data.get("name", f"Screen {index}"),
-            index,
-            screen_data.get("slug", ""),
-            screen_data.get("layout", ""),
-            screen_data.get("description", ""),
-            graph=self.ux_map.graph,
-        )
-
-    def _read_screen(self, screen: Screen, screen_data: dict[str, Any]) -> None:
-        screen.chrome_of = self._screen_named(screen_data.get("chrome_of", ""))
-        screen.inactive_tabs = list(screen_data.get("inactive_tabs", []))
-        for story in screen_data.get("story_names", []):
-            screen.show_story(story)
-        for scenario in screen_data.get("scenario_names", []):
-            screen.show_scenario(scenario)
-        for step in screen_data.get("step_names", []):
-            screen.show_step(step)
-        screen.domain_terms = list(screen_data.get("domain_terms", []))
-        screen.domain_concepts = list(screen_data.get("domain_concepts", []))
-        screen.image = screen_data.get("image", "")
-        screen.prototype = screen_data.get("prototype", "")
-        for index, region_data in enumerate(screen_data.get("regions", [])):
-            screen.append_region(self._region(region_data, index))
-
-    def _region(self, region_data: dict[str, Any], index: int) -> Region:
-        region = Region(region_data.get("name", f"Region {index}"), index, region_data.get("area", ""), self.ux_map.graph)
-        for control_index, control_data in enumerate(region_data.get("controls", [])):
-            region.append_control(self._control(control_data, control_index))
-        return region
-
-    def _control(self, control_data: dict[str, Any], index: int) -> Control:
-        name = control_data.get("name", f"Control {index}")
-        common = (name, index, control_data.get("control_type", ""), control_data.get("label", ""),
-                  control_data.get("bound_field", ""))
-        if control_data.get("kind") == "StoryDemoControl" or control_data.get("story_steps"):
-            control: Control = StoryDemoControl(
-                *common,
-                control_data.get("story_steps"),
-                control_data.get("set_input", ""),
-                control_data.get("item_story_steps"),
-                control_data.get("item_value", ""),
-                control_data.get("item_label", ""),
-                graph=self.ux_map.graph,
-            )
-        else:
-            control = Control(*common, graph=self.ux_map.graph)
-        control.states = list(control_data.get("states", []))
-        for interaction_index, interaction_data in enumerate(control_data.get("interactions", [])):
-            control.append_interaction(self._interaction(interaction_data, interaction_index))
-        return control
-
-    def _interaction(self, interaction_data: dict[str, Any], index: int) -> Interaction:
-        return Interaction(
-            interaction_data.get("name", f"Interaction {index}"),
-            index,
-            interaction_data.get("trigger", ""),
-            interaction_data.get("effect", ""),
-            self._screen_named(interaction_data.get("destination", "")),
-            self.ux_map.graph,
-        )
-
-    def _read_components(self) -> None:
-        graph = self.ux_map.graph
-        for index, transition_data in enumerate(self.data.get("transitions", [])):
-            self.ux_map.transitions.append(Transition(
-                transition_data.get("name", f"Transition {index}"),
-                index,
-                self._screen_named(transition_data.get("from_screen", "")),
-                self._screen_named(transition_data.get("to_screen", "")),
-                transition_data.get("trigger", ""),
-                transition_data.get("nav_type", "action"),
-                graph,
-            ))
-        for index, content_data in enumerate(self.data.get("content_types", [])):
-            content_type = ContentType(content_data.get("name", f"ContentType {index}"), index,
-                                       content_data.get("hierarchy", ""), graph)
-            content_type.key_actions = list(content_data.get("key_actions", []))
-            self.ux_map.content_types.append(content_type)
-        for index, nav_data in enumerate(self.data.get("nav_components", [])):
-            nav = NavComponent(nav_data.get("name", f"Nav {index}"), index, nav_data.get("ux_type", ""), graph)
-            nav.destinations = [self.ux_map.find_screen(name) for name in nav_data.get("destinations", [])]
-            self.ux_map.nav_components.append(nav)
-
-    def _screen_named(self, name: str) -> Optional[Screen]:
-        return self.ux_map.find_screen(name) if name else None
-
-
-class JsonUxMapWriter:
-    """Writes a map as the JSON document JsonUxMapReader reads. A link to a screen is written as that screen's name."""
-
-    def map_record(self, ux_map: UxMap) -> dict[str, Any]:
+    def map_record(self) -> dict[str, Any]:
+        """This map as the JSON document JsonUxMapReader reads. A link to a screen is written as that screen's name."""
         return {
-            "name": ux_map.name,
-            "scope": ux_map.scope,
-            "story_references": ux_map.story_references.as_list(),
-            "object_references": ux_map.object_references.as_list(),
-            "notes": list(ux_map.context.notes),
-            "invariants": list(ux_map.context.invariants),
-            "screens": [self._screen_record(screen) for screen in ux_map.screens],
-            "transitions": [self._transition_record(transition) for transition in ux_map.transitions],
+            "name": self.name,
+            "scope": self.scope,
+            "story_references": self.story_references.as_list(),
+            "object_references": self.object_references.as_list(),
+            "notes": list(self.context.notes),
+            "invariants": list(self.context.invariants),
+            "screens": [self._screen_record(screen) for screen in self.screens],
+            "transitions": [self._transition_record(transition) for transition in self.transitions],
             "content_types": [
                 {"name": content_type.name, "hierarchy": content_type.hierarchy,
                  "key_actions": list(content_type.key_actions)}
-                for content_type in ux_map.content_types
+                for content_type in self.content_types
             ],
             "nav_components": [
                 {"name": nav.name, "ux_type": nav.ux_type,
                  "destinations": [screen.name for screen in nav.destinations]}
-                for nav in ux_map.nav_components
+                for nav in self.nav_components
             ],
         }
 
@@ -228,6 +114,121 @@ class JsonUxMapWriter:
             "trigger": transition.trigger,
             "nav_type": transition.nav_type,
         }
+
+
+class JsonUxMapReader:
+    """Reads one JSON document into a new map. Every screen is on the map before any link to a screen is read, so a
+    transition, a tab, or a destination names a screen that is already there."""
+
+    def __init__(self, ux_map: UxMap, data: dict[str, Any]) -> None:
+        self.ux_map = ux_map
+        self.data = data
+
+    def read(self) -> UxMap:
+        with self.ux_map.batch_schema_sync():
+            self._read_map_fields()
+            screens = self.data.get("screens", [])
+            for index, screen_data in enumerate(screens):
+                self.ux_map.append_screen(self._screen_shell(screen_data, index))
+            for screen, screen_data in zip(self.ux_map.screens, screens):
+                self._read_screen(screen, screen_data)
+            self._read_components()
+        return self.ux_map
+
+    def _read_map_fields(self) -> None:
+        self.ux_map.scope = self.data.get("scope", "")
+        self.ux_map.story_references = self.data.get("story_references", [])
+        self.ux_map.object_references = self.data.get("object_references", [])
+        self.ux_map.context.notes = list(self.data.get("notes", []))
+        self.ux_map.context.invariants = list(self.data.get("invariants", []))
+
+    def _screen_shell(self, screen_data: dict[str, Any], index: int) -> Screen:
+        return self.ux_map.screen_type(
+            screen_data.get("name", f"Screen {index}"),
+            index,
+            screen_data.get("slug", ""),
+            screen_data.get("layout", ""),
+            screen_data.get("description", ""),
+            graph=self.ux_map.graph,
+        )
+
+    def _read_screen(self, screen: Screen, screen_data: dict[str, Any]) -> None:
+        screen.chrome_of = self._screen_named(screen_data.get("chrome_of", ""))
+        screen.inactive_tabs = list(screen_data.get("inactive_tabs", []))
+        for story in screen_data.get("story_names", []):
+            screen.show_story(story)
+        for scenario in screen_data.get("scenario_names", []):
+            screen.show_scenario(scenario)
+        for step in screen_data.get("step_names", []):
+            screen.show_step(step)
+        screen.domain_terms = list(screen_data.get("domain_terms", []))
+        screen.domain_concepts = list(screen_data.get("domain_concepts", []))
+        screen.image = screen_data.get("image", "")
+        screen.prototype = screen_data.get("prototype", "")
+        for index, region_data in enumerate(screen_data.get("regions", [])):
+            screen.append_region(self._region(region_data, index))
+
+    def _region(self, region_data: dict[str, Any], index: int) -> Region:
+        region = self.ux_map.region_type(region_data.get("name", f"Region {index}"), index, region_data.get("area", ""), self.ux_map.graph)
+        for control_index, control_data in enumerate(region_data.get("controls", [])):
+            region.append_control(self._control(control_data, control_index))
+        return region
+
+    def _control(self, control_data: dict[str, Any], index: int) -> Control:
+        name = control_data.get("name", f"Control {index}")
+        common = (name, index, control_data.get("control_type", ""), control_data.get("label", ""),
+                  control_data.get("bound_field", ""))
+        if control_data.get("kind") == "StoryDemoControl" or control_data.get("story_steps"):
+            control: Control = self.ux_map.story_demo_control_type(
+                *common,
+                control_data.get("story_steps"),
+                control_data.get("set_input", ""),
+                control_data.get("item_story_steps"),
+                control_data.get("item_value", ""),
+                control_data.get("item_label", ""),
+                graph=self.ux_map.graph,
+            )
+        else:
+            control = self.ux_map.control_type(*common, graph=self.ux_map.graph)
+        control.states = list(control_data.get("states", []))
+        for interaction_index, interaction_data in enumerate(control_data.get("interactions", [])):
+            control.append_interaction(self._interaction(interaction_data, interaction_index))
+        return control
+
+    def _interaction(self, interaction_data: dict[str, Any], index: int) -> Interaction:
+        return Interaction(
+            interaction_data.get("name", f"Interaction {index}"),
+            index,
+            interaction_data.get("trigger", ""),
+            interaction_data.get("effect", ""),
+            self._screen_named(interaction_data.get("destination", "")),
+            self.ux_map.graph,
+        )
+
+    def _read_components(self) -> None:
+        graph = self.ux_map.graph
+        for index, transition_data in enumerate(self.data.get("transitions", [])):
+            self.ux_map.transitions.append(Transition(
+                transition_data.get("name", f"Transition {index}"),
+                index,
+                self._screen_named(transition_data.get("from_screen", "")),
+                self._screen_named(transition_data.get("to_screen", "")),
+                transition_data.get("trigger", ""),
+                transition_data.get("nav_type", "action"),
+                graph,
+            ))
+        for index, content_data in enumerate(self.data.get("content_types", [])):
+            content_type = ContentType(content_data.get("name", f"ContentType {index}"), index,
+                                       content_data.get("hierarchy", ""), graph)
+            content_type.key_actions = list(content_data.get("key_actions", []))
+            self.ux_map.content_types.append(content_type)
+        for index, nav_data in enumerate(self.data.get("nav_components", [])):
+            nav = NavComponent(nav_data.get("name", f"Nav {index}"), index, nav_data.get("ux_type", ""), graph)
+            nav.destinations = [self.ux_map.find_screen(name) for name in nav_data.get("destinations", [])]
+            self.ux_map.nav_components.append(nav)
+
+    def _screen_named(self, name: str) -> Optional[Screen]:
+        return self.ux_map.find_screen(name) if name else None
 
 
 def _name_of(screen: Optional[Screen]) -> str:

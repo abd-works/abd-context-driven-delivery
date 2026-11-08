@@ -4,8 +4,11 @@ import type { BoardPage } from '../board/board-page'
 import type { Activation } from '../board/board-store'
 import type { TicketClient } from './ticket-client'
 
-const FIRST_LEAVING = ['commit', 'push']
-const LEFT_STEPS: Record<string, string> = { commit: 'committed', push: 'pushed', merge: 'merged to main' }
+// Leaving writes a handoff for the session left, and commits and pushes the branch its work is on while that branch is
+// checked out; merge waits for the person to choose it.
+const FIRST_LEAVING = ['handoff', 'commit', 'push']
+const HANDOFF_ONLY = ['handoff']
+const LEFT_STEPS: Record<string, string> = { handoff: 'handoff written', commit: 'committed', push: 'pushed', merge: 'merged to main' }
 const OPENED_STEPS: Record<string, string> = { branch: 'branch created', worktree: 'worktree created' }
 // A branch read that failed is offered as missing, since the page has already shown the failure.
 const missingBranch = (name: string): BranchData => ({ name, exists: false, is_checked_out: false })
@@ -44,13 +47,14 @@ export class ActivationClient {
   async start(ticket: TicketClient, isClosing: boolean): Promise<void> {
     ticket.select()
     const active = this.page.board.activeTicket
-    const [branch, leavingBranch] = await Promise.all([ticket.branch(), active ? active.branch() : null])
+    // The branch the work being left is on, its own or main, which leaving commits and pushes.
+    const [branch, leavingBranch] = await Promise.all([ticket.branch(), active ? active.workBranch() : null])
     const leavingTitle = isClosing ? ticket.title : (active?.title ?? '')
     this.show({
       ticket,
       isClosing,
       leavingTitle,
-      leaving: leavingBranch?.is_checked_out ? FIRST_LEAVING : [],
+      leaving: leavingBranch?.is_checked_out ? FIRST_LEAVING : HANDOFF_ONLY,
       opening: branch?.exists ? [] : ['branch'],
       branch: branch ?? missingBranch(ticket.name),
       leavingBranch,

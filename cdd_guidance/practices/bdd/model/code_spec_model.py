@@ -7,10 +7,9 @@ import re
 import textwrap
 from typing import Callable, List, Optional, Tuple, Union
 
+from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, TYPESCRIPT, CodeBody, CodeLanguage, WrittenBlock
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
-from cdd_guidance.practices.clean_engineering.model.call_graph import render_call_graph_block
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock
 
 _SIGNATURE = "BDD: SIGNATURE"
 _SPEC = "spec"
@@ -60,7 +59,7 @@ class CodeBddModel(BddModel):
             lines = lines + self._render_block(description, (), first=False)
         if written is not None:
             return "\n".join(lines + written.closing)
-        lines.extend(self.top_level_gap() + self._foreign(canonical, "closing_body", ""))
+        lines.extend(self.top_level_gap() + self._foreign(canonical.written and canonical.written.closing_body, ""))
         return "\n".join(lines).strip("\n") + "\n"
 
     def _render_block(self, node: BehaviorBlock, parents: tuple, first: bool) -> List[str]:
@@ -71,9 +70,9 @@ class CodeBddModel(BddModel):
         if written is not None:
             opened, closing, closed = written.lead + written.heading, written.closing, written.close
         else:
-            opened = self._gap(len(parents), first) + self._foreign(node, "lead_body", indent)
+            opened = self._gap(len(parents), first) + self._foreign(node.written and node.written.lead_body, indent)
             opened.append(f"{indent}{self.block_open(self._kind(node, len(parents)), node.name)}")
-            closing = self._foreign(node, "closing_body", inner)
+            closing = self._foreign(node.written and node.written.closing_body, inner)
             closed = [f"{indent}{line}" for line in self.block_close()]
         if isinstance(node, Observation):
             return opened + self._render_body(node, path, written) + closed
@@ -147,11 +146,11 @@ class CodeBddModel(BddModel):
             return self.top_level_gap()
         return [] if first else [""]
 
-    def _foreign(self, node: Union[BddModel, BehaviorBlock], part: str, indent: str) -> List[str]:
-        """Lines another language wrote around this block, commented out so nothing is lost."""
-        if node.written is None:
+    def _foreign(self, written_part: Optional[CodeBody], indent: str) -> List[str]:
+        """Lines another language wrote around a block, commented out so nothing is lost."""
+        if written_part is None:
             return []
-        return getattr(node.written, part)().lines_in(self.language, indent, "")
+        return written_part.lines_in(self.language, indent, "")
 
     def _kind(self, node: BehaviorBlock, depth: int) -> str:
         if isinstance(node, Observation):
@@ -164,7 +163,7 @@ class CodeBddModel(BddModel):
 
     def _realization(self, observation: Observation) -> List[str]:
         """The realization call graph for an it nobody has written: surface lines, then calls, as comments."""
-        graph = textwrap.dedent(render_call_graph_block(observation.call_graph)).splitlines()
+        graph = textwrap.dedent(observation.call_graph.block()).splitlines()
         lines = [f"-> {surface}" for surface in observation.surface_lines] + graph
         return [self.language.comment(line) for line in lines]
 
@@ -195,7 +194,9 @@ class CodeBddModel(BddModel):
 class PythonBddModel(CodeBddModel):
     """Mamba specs: `with description(...)`, `with context(...)`, `with it(...)` blocks."""
 
-    language = CodeLanguage.named("python")
+    language = PYTHON
+    # The spec files this model reads.
+    suffixes = (".py",)
 
     def check_readable(self, text: str) -> None:
         try:
@@ -281,7 +282,9 @@ class PythonBddModel(CodeBddModel):
 class TypeScriptBddModel(CodeBddModel):
     """Vitest / Jest specs: `describe(...)`, `it(...)`, `test(...)` blocks found by bracket matching."""
 
-    language = CodeLanguage.named("typescript")
+    language = TYPESCRIPT
+    # The spec files this model reads: a JavaScript spec's describe tree is written the same way.
+    suffixes = (".ts", ".tsx", ".js", ".jsx")
 
     def parse_code(self, text: str) -> "TypeScriptBddModel":
         self._text = text

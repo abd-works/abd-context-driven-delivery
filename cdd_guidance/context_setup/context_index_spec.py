@@ -29,6 +29,7 @@ from cdd_guidance.context_setup.context_index import (
     EmbeddingProvider,
     RankedChunk,
     SearchResult,
+    SegmentIndex,
 )
 from harness.agent_tools.agent_tools import AgentInstructions
 
@@ -249,6 +250,36 @@ with description("a ContextIndex"):
         with it("should return only as many chunks as exist (not crash)"):
             result = self._ci.search("anything", self._out, top_k=100)
             expect(len(result.chunks)).to(equal(1))
+
+    # ── The index embed saves ──────────────────────────────────────────────────
+
+    with context("whose embed saved two segments into a folder that is opened again"):
+        with before.each:
+            self._tmp = tempfile.TemporaryDirectory()
+            self._root = Path(self._tmp.name)
+            fixture._root = self._root
+            fixture._name = "story-segment.md"
+            fixture._content = "---\nview: story\n---\nUser story content.\n"
+            story = fixture._write_segment()
+            fixture._name = "plain-segment.md"
+            fixture._content = "Plain content.\n"
+            plain = fixture._write_segment()
+            out = self._root / "rag"
+            fixture._make_index().embed([str(story), str(plain)], out_path=str(out))
+            self._index = SegmentIndex.opened(out)
+
+        with after.each:
+            self._tmp.cleanup()
+
+        with it("should hold one entry per segment, in the order embed was given them"):
+            expect([segment.section for segment in self._index.segments]).to(equal(["story-segment", "plain-segment"]))
+
+        with it("should keep the view each segment's front matter names, general when it names none"):
+            expect([segment.view for segment in self._index.segments]).to(equal(["story", "general"]))
+
+        with it("should answer a search with the entry its vector was saved beside"):
+            query = FakeEmbeddingProvider().embed_query("---\nview: story\n---\nUser story content.\n")
+            expect(self._index.ranked(query, top_k=1)[0].section).to(equal("story-segment"))
 
     # ── AgentTool: ask (expansion tests) ────────────────────────────────────────
 

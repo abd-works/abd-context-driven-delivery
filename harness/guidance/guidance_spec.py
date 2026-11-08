@@ -410,3 +410,68 @@ with description("practice and fidelity template files"):
             scenarios = stories.fidelities.entries["scenarios"]
             expect(scenarios.instructions).to(contain("conforms to this schema"))
             expect(scenarios.instructions).to(contain("story:"))
+
+
+with description("a fidelity read from its practice's document"):
+    with before.all:
+        from harness.guidance.practice_catalogue import PracticeCatalogue
+
+        self.stories = PracticeCatalogue.create("stories")
+        self.story_map = self.stories.fidelities["story_map"]
+
+    with context("with a ```yaml settings block"):
+        with it("should hold the approach's stage its block names"):
+            from harness.guidance.stages import STAGES
+
+            expect(self.story_map.approach_stage is STAGES.of("discovery")).to(equal(True))
+
+        with it("should take the files its block says it writes"):
+            expect(self.story_map.outputs["markdown"]).to(equal(".context/story-map.md"))
+
+        with it("should leave a setting it does not know to its reader"):
+            from harness.guidance.guidance import FidelityGuidance
+
+            fidelity = FidelityGuidance(name="sample")
+            fidelity.apply_settings({"globs": "**/*.md", "stage": "discovery"})
+            expect(hasattr(fidelity, "globs")).to(equal(False))
+
+    with context("with a template in the format it works in"):
+        with it("should give the file its template is read from"):
+            expect(self.story_map.template_file.as_posix()).to(contain("stories/templates/md/story-map.md"))
+
+        with it("should read its template from that file"):
+            expect(self.story_map.templates).to(equal(self.story_map.template_file.read_text(encoding="utf-8").strip()))
+
+    with context("with a path its outputs name"):
+        with it("should declare a file at the end of that path"):
+            expect(self.story_map.declares("app/.context/story-map.md")).to(equal(True))
+
+        with it("should not declare a file its outputs do not name"):
+            expect(self.story_map.declares("app/.context/ux-context.md")).to(equal(False))
+
+        with it("should declare it in the format whose output names it"):
+            expect(self.story_map.declares("app/.context/story-map.md", "markdown")).to(equal(True))
+
+        with it("should not declare it in another format"):
+            expect(self.story_map.declares("app/.context/story-map.md", "drawio")).to(equal(False))
+
+    with context("with its practice's document read twice"):
+        with it("should read it once"):
+            expect(self.stories.document is self.stories.document).to(equal(True))
+
+        with it("should give the fidelity its block from that document"):
+            expect(self.story_map.section).to(equal(self.stories.document.fidelity_block("story_map")))
+
+
+with description("the guidance classes whose tools run only through what holds them"):
+    with it("should mark the practice base class as hosted only"):
+        from harness.annotations.annotation import HostedOnly
+        from harness.guidance.guidance import PracticeGuidance
+
+        expect(HostedOnly.annotates(PracticeGuidance)).to(equal(True))
+
+    with it("should leave a practice that subclasses it a toolset of its own"):
+        from cdd_guidance.practices.stories.stories import Stories
+        from harness.annotations.annotation import HostedOnly
+
+        expect(HostedOnly.annotates(Stories)).to(equal(False))

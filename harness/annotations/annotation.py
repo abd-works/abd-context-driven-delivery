@@ -126,6 +126,23 @@ class OmissionAnnotation(Annotation):
         return super().annotates(target) or super().annotates(getattr(target, "__func__", None))
 
 
+class HostedOnly(OmissionAnnotation):
+    """A class whose tools run only through the practice or toolset that holds it, such as a practice's rules or its
+    fidelities: install and the hook server load no toolset of it on its own. Each subclass, such as a practice, is a
+    toolset of its own, so the annotation is read on the class it was written on and is not inherited."""
+
+    flag = "_hosted_only"
+
+    @classmethod
+    def annotates(cls, target: Any) -> bool:
+        """True when target, a class or an instance of one, was itself annotated, not a class it derives from."""
+        owner = target if isinstance(target, type) else type(target)
+        return bool(vars(owner).get(cls.flag, False))
+
+
+hosted_only = HostedOnly
+
+
 class Destination(Annotation):
     """An annotation that names where a member is published: a skill, a command, a rules file, an MCP tool, or a
     hook. Each publisher defines its own kind with the ``channel`` it writes, and the kind registers in

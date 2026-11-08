@@ -14,7 +14,7 @@ from mamba import after, before, context, description, it
 from harness.mcp.mcp_server import McpHost
 from space.session import Sessions
 
-_FILE_MANAGER = "tools.file_manager.file_manager:FileManager"
+_FILE_MANAGER = "space.session.file_manager:FileManager"
 _GENERATE = "cdd_guidance.actions.generate.generate:Generate"
 
 

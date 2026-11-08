@@ -16,6 +16,7 @@ from mamba import after, before, context, description, it
 
 from cdd_guidance.practices.stories.stories import Stories
 from harness.agent_tools.agent_tools import AgentInstructions
+from harness.installation.ide_layout import IdeLayout
 
 _SAMPLE_MARKDOWN = """\
 (E) Manage Customer Orders
@@ -32,9 +33,9 @@ def _expanded(stories, action_name):
 
 
 with description("Stories"):
-    with context("that resolves discovery stage to story_map"):
+    with context("with its defaults"):
         with before.each:
-            self.stories = Stories(stage="discovery")
+            self.stories = Stories()
 
         with it("should default format to markdown"):
             expect(self.stories.format).to(equal("markdown"))
@@ -68,8 +69,6 @@ with description("Stories"):
             with before.each:
                 import tempfile
 
-                from cdd_guidance.practices.stories.model.story_model import StoryModel
-
                 self.root = Path(tempfile.mkdtemp(prefix="cdd-story-layout-"))
                 (self.root / "story-map.md").write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
                 names = {"{epic}": "move-work-on-board", "{sub-epic}": "display-board", "{story}": "open-board", "{story_snake}": "open_board"}
@@ -79,7 +78,7 @@ with description("Stories"):
                 story_test = self.root / self.filled
                 story_test.parent.mkdir(parents=True)
                 story_test.write_text('with story("Open Board"):\n    with scenario("Open it"):\n        with given("a board"):\n            pass\n', encoding="utf-8")
-                self.model = StoryModel.load_files([str(story_test)], self.root)
+                self.model = Stories().read_files([story_test], self.root)
 
             with after.each:
                 import shutil
@@ -98,8 +97,6 @@ with description("Stories"):
             with before.each:
                 import tempfile
 
-                from cdd_guidance.practices.stories.model.story_model import StoryModel
-
                 self.root = Path(tempfile.mkdtemp(prefix="cdd-story-layout-"))
                 story_map = self.root / Stories(fidelity="story_map").fidelities.current.outputs["markdown"]
                 story_map.parent.mkdir(parents=True)
@@ -107,7 +104,7 @@ with description("Stories"):
                 story_test = self.root / "move-work-on-board" / "display-board" / "open-board" / "open_board_story.test.py"
                 story_test.parent.mkdir(parents=True)
                 story_test.write_text('with story("Open Board"):\n    with scenario("Open it"):\n        with given("a board"):\n            pass\n', encoding="utf-8")
-                self.model = StoryModel.load_files([str(story_test)], self.root)
+                self.model = Stories().read_files([story_test], self.root)
 
             with after.each:
                 import shutil
@@ -129,7 +126,7 @@ with description("Stories"):
                 story_map = self.root / "tests" / "story-map.md"
                 story_map.parent.mkdir(parents=True)
                 story_map.write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
-                Session(self.root).practice("stories").guideline = self.stories
+                self.stories.work_in(Session(self.root).practice("stories"))
                 self.model = self.stories.read_paths("tests", "python")
 
             with after.each:
@@ -254,7 +251,7 @@ with description("Stories"):
             tool = stories.tools["instructions"]
             with tempfile.TemporaryDirectory() as tmp:
                 FileInstallation(
-                    "Cursor", tmp, "skill", mcp_mode=True, repo=_REPO_ROOT
+                    IdeLayout("Cursor"), tmp, "skill", mcp_mode=True, repo=_REPO_ROOT
                 ).write(tool)
                 text = next(Path(tmp).rglob("SKILL.md")).read_text(encoding="utf-8")
             expect(text).to(contain("storyNode:"))
@@ -290,7 +287,7 @@ with description("Stories"):
             from space.session.session import Session
 
             self.stories = Stories(fidelity="scenarios")
-            Session(self.tempdir.name).practice("stories").guideline = self.stories
+            self.stories.work_in(Session(self.tempdir.name).practice("stories"))
             self.result = self.stories.render(
                 format="typescript",
                 content=_SAMPLE_MARKDOWN,

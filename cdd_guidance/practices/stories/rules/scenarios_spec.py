@@ -10,7 +10,6 @@ if str(_REPO) not in sys.path:
 from expects import contain, equal, expect  # noqa: E402
 from mamba import before, context, description, it  # noqa: E402
 
-from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel  # noqa: E402
 from cdd_guidance.practices.stories.model.story_model import Background, Epic, Scenario, Step, StepType, Story, StoryModel  # noqa: E402
 from cdd_guidance.practices.stories.rules.scenarios import (  # noqa: E402
     AndChaining,
@@ -19,7 +18,8 @@ from cdd_guidance.practices.stories.rules.scenarios import (  # noqa: E402
     GivenNamesComplexStateRootFirst,
     OutlineRequiresManyPermutations,
 )
-from harness.graph.graph import Edge, EdgeType, Graph, Node, Source  # noqa: E402
+from harness.graph.graph import EdgeType, Graph, Node, Source  # noqa: E402
+from harness.graph.saved_graph import SavedGraph  # noqa: E402
 from harness.graph.rule_context import RuleCheckContext  # noqa: E402
 
 
@@ -57,33 +57,24 @@ def _loaded(scenario: Scenario, graph: Graph | None = None) -> RuleCheckContext:
     model = StoryModel()
     model.append_epic(epic)
     practice = (graph or Graph()).practice("stories")
-    GraphStoryModel(model).record(practice)
+    model.record(practice)
     return RuleCheckContext(practice, None)
 
 
 def _read_back(context: RuleCheckContext) -> RuleCheckContext:
     """The same graph as graph.json gives it back: each node a plain node holding the facts the object it was read
     from saved."""
-    practice = context.practice
-    for type_name, nodes in practice.nodes.items():
-        for index, node in enumerate(nodes):
-            plain = Node(practice, node.type, node.node_id, node.name, node.source)
-            plain.data = node.facts
-            nodes[index] = plain
-            practice.by_id[node.node_id] = plain
-    for edges in practice.edges.values():
-        for position, edge in enumerate(edges):
-            edges[position] = Edge(edge.kind, edge.order, edge.display, practice.by_id.get(edge.parent.node_id, edge.parent), practice.by_id.get(edge.child.node_id, edge.child))
-    return context
+    restored = SavedGraph.from_graph(context.graph).restored_graph()
+    return RuleCheckContext(restored.practice(context.practice.key), None)
 
 
 def _scenario_hits(rule, context: RuleCheckContext) -> list[str]:
-    return [hit for node in context.practice.nodes["Scenario"] for hit in rule.check(node, context)]
+    return [hit for node in context.nodes("Scenario") for hit in rule.check(node, context)]
 
 
 def _given_hits(context: RuleCheckContext) -> list[str]:
     rule = GivenNamesComplexStateRootFirst()
-    return [hit for node in context.practice.nodes["Given"] for hit in rule.check(node, context)]
+    return [hit for node in context.nodes("Given") for hit in rule.check(node, context)]
 
 
 def _order_aggregate(graph: Graph) -> None:
@@ -92,13 +83,13 @@ def _order_aggregate(graph: Graph) -> None:
 
     def add(kind: str, name: str) -> Node:
         node = Node(ddd, kind, f"ddd:{kind}:order:{name}", name, Source("order", 1, 1))
-        ddd.nodes.setdefault(kind, []).append(node)
+        graph.hold(node)
         return node
 
     aggregate = add("Aggregate", "order")
-    ddd.record(EdgeType("root", 1, "direct"), aggregate, add("EntityRoot", "Order"))
+    graph.record(EdgeType("root", 1, "direct"), aggregate, add("EntityRoot", "Order"))
     for kind, name in (("Entity", "LineItem"), ("ValueObject", "ShippingAddress")):
-        ddd.record(EdgeType("owns", 2, "direct"), aggregate, add(kind, name))
+        graph.record(EdgeType("owns", 2, "direct"), aggregate, add(kind, name))
 
 
 with description("a scenario on a story graph"):

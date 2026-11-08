@@ -7,11 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from harness.agent_tools.agent_tools import AgentTool, InstallDestination
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.installation.destination import Installation
 from harness.installation.ide_layout import IdeLayout
-from harness.markdown.front_matter import FrontMatter
-from harness.markdown.markdown import MarkdownText
+from harness.markdown.markdown import MarkdownFile
 from harness.annotations.annotation import Destination, NamedDestination, annotation_kinds
 
 
@@ -33,10 +32,6 @@ class Rules(Destination):
 skill = Skill
 command = Command
 rules = Rules
-
-
-# The channels a file installation writes an ``@agent_tool`` to; its other channels take only instructions.
-_FILE_CHANNELS = frozenset({InstallDestination.SKILL, InstallDestination.COMMAND, InstallDestination.RULE})
 
 
 class InstructionsUnreadableAtInstall(Exception):
@@ -63,18 +58,20 @@ class FileInstallation(Installation):
     _REFERENCE_LINK = re.compile(r"\]\((?:\.\./)+references/([\w.-]+\.md)\)")
     _RULE_FILE_NAME = re.compile(r"`(practices/[\w/.-]+)\.mdc`")
 
+    # The channels a file installation writes, in the order a tool's files are written.
+    CHANNELS = (InstallDestination.SKILL, InstallDestination.COMMAND, InstallDestination.RULE)
+
     def __init__(
         self,
-        ide: str,
+        layout: IdeLayout,
         path: Path | str,
         destination: str = "",
         mcp_mode: bool = False,
         repo: Path | str | None = None,
     ) -> None:
-        super().__init__(ide, path, repo=repo)
+        super().__init__(layout, path, repo=repo)
         self.destination = destination
         self.mcp_mode = mcp_mode
-        self.layout = IdeLayout(ide)
 
     def relative_path(self, toolset: Any, name: str) -> Path:
         """Where the file for toolset's operation name goes, from the IDE folder."""
@@ -84,21 +81,20 @@ class FileInstallation(Installation):
             skill_folder = self._skill_folder(toolset, operation)
             return Path("skills") / (skill_folder if self.layout.nests_skills else self._flat_skill_folder(skill_folder)) / "SKILL.md"
         if self.destination == InstallDestination.COMMAND:
-            parent = folder.parent if getattr(toolset, "practice_guidance", None) is not None and folder.name else folder
+            parent = folder.parent if toolset.is_part_of_practice and folder.name else folder
             return Path(self.layout.commands_folder) / parent / f"{self._command_stem(toolset, operation)}.md"
         if self.destination == InstallDestination.RULE:
             return self._rule_path(toolset, folder)
         return self.folder_for(toolset) / name
 
     def write(self, tool: AgentTool) -> None:
-        if not self.destination or (tool.kind == "tool" and self.destination not in _FILE_CHANNELS):
+        if not self.destination or (tool.kind == "tool" and self.destination not in self.CHANNELS):
             return
         parts = self._parts(tool)
         relative = self.relative_path(tool.toolset, tool.deploy_name)
         body = "\n\n".join(part for part in parts if part).rstrip()
         text = f"{body}\n" if body else ""
         if self.destination == InstallDestination.RULE:
-            text = MarkdownText(text).without_yaml
             text = self._rules_front_matter(text, tool.toolset) + text
         elif self.destination == InstallDestination.SKILL:
             text = self._skill_front_matter(relative.parent.name, self._skill_overview(tool.toolset, parts)) + text
@@ -107,9 +103,9 @@ class FileInstallation(Installation):
     def write_standing_rule(self, source: Path) -> None:
         """Install one always-on rule from ``cdd_guidance/rules``: ``.md`` scoped by ``paths`` for
         Claude Code, the source front matter as written for every other IDE."""
-        text = source.read_text(encoding="utf-8")
+        front_matter = MarkdownFile(source).front_matter
+        text = front_matter.text
         if self.layout.scopes_rules_by_paths:
-            front_matter = FrontMatter(text)
             fields, body = front_matter.fields, front_matter.content
             globs = "" if fields.get("alwaysApply") == "true" else fields.get("globs", "")
             text = self._claude_rules_front_matter(fields.get("description", source.stem), globs) + body
@@ -136,14 +132,14 @@ class FileInstallation(Installation):
     def _guidance_slug(self, toolset: Any) -> str | None:
         """The kebab slug of a practice or fidelity's guidance toolset, whose files are named after it; none for any
         other toolset."""
-        if getattr(toolset, "practice_guidance", None) is None:
+        if not toolset.is_part_of_practice:
             return None
         slug = getattr(toolset, "slug", None)
         return Name(str(slug)).kebab if slug else None
 
     def _rule_path(self, toolset: Any, folder: Path) -> Path:
         suffix = self.layout.rule_suffix
-        if getattr(toolset, "practice_guidance", None) is None:
+        if not toolset.is_part_of_practice:
             return Path("rules") / folder.with_suffix(suffix)
         parent = folder.parent if folder.name else folder
         return Path("rules") / parent / f"{self._guidance_slug(toolset) or self._command_stem(toolset, folder.name)}{suffix}"
@@ -188,9 +184,6 @@ class FileInstallation(Installation):
             return ""
         toolset = tool.toolset
         guide = getattr(toolset, "schema_guide", None)
-        if not callable(guide):
-            practice = getattr(toolset, "practice_guidance", None)
-            guide = getattr(practice, "schema_guide", None) if practice is not None else None
         return (guide() or "").strip() if callable(guide) else ""
 
     def _instructions_at_install(self, tool: AgentTool) -> str:
@@ -211,9 +204,9 @@ class FileInstallation(Installation):
             return self._instructions_at_install(tool)
         if self.destination == InstallDestination.RULE:
             result = getattr(tool.toolset, tool.name, None)
-            markdown = getattr(result, "markdown", None)
-            if isinstance(markdown, str) and markdown.strip():
-                return markdown.strip()
+            prose = getattr(result, "prose", None)
+            if isinstance(prose, str) and prose.strip():
+                return prose.strip()
             formatted = getattr(result, "formatted", None)
             if callable(formatted):
                 return str(formatted()).strip()

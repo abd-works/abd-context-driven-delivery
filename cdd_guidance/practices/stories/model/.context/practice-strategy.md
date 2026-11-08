@@ -8,7 +8,7 @@
 
 - **Every format reads and writes through the same operations.** `parse(text)` reads text in that format into a new model of its class; `render(model)` writes a model in that format. Stories formats also take the previous text, so a code format keeps the code already written for nodes that did not change. A format that is drawn from the model and edited elsewhere — the Claude Design canvas and screens — raises from `parse` instead of guessing.
 
-- **Callers reach a format by name.** `render(format, content)` on the practice finds the format class among its `formats` and reads or writes through it, so there is no second way to pick a format from a file's type. `StoryModel.load(folder)` reads a story map folder into the base root. A UX format reads its own file from a folder with `from_workspace(root)`.
+- **Callers reach a format by name.** `render(format, content)` on the practice finds the format class among its `formats` and reads or writes through it, so there is no second way to pick a format from a file's type. `Stories.read_folder(folder)` and `Stories.read_files(files, project)` read story maps and story tests through the practice's own formats. A UX format reads its own file from a folder with `from_workspace(root)`.
 
 - **The copy constructor rebuilds children in this format.** `StoryModel(source)` copies the source's epics and increments into this format's node types, named by a type field on the parent (`epic_type`, `story_type`, `increment_type`, and `scenario_type` on a story). The new model does not keep the source's format types. That is how `render(canonical)` converts: it copies the canonical model into its own class, then writes.
 

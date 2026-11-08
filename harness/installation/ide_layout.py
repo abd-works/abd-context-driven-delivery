@@ -12,6 +12,8 @@ class IdeLayout:
     IDE means adding it here."""
 
     DEFAULT_IDE = "Cursor"
+    # The open project as Cursor and VS Code spell it inside a user-level MCP server entry.
+    PROJECT_FOLDER = "${workspaceFolder}"
     _FOLDERS = {"Cursor": ".cursor", "VS Code": ".github", "Kilo": ".kilo", "Claude": ".claude"}
 
     def __init__(self, ide: str) -> None:

@@ -5,11 +5,11 @@ import re
 
 from harness.graph.violation import Violation
 
-from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import (
     DrawioPage,
-    DrawioScanner,
     class_title_in,
 )
+from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
 
 class ClassTitleNoMarkdownBoldScanner(DrawioScanner):
@@ -17,8 +17,8 @@ class ClassTitleNoMarkdownBoldScanner(DrawioScanner):
 
     def scan_page(self, page: DrawioPage) -> list[Violation]:
         violations = []
-        for cell in page.root.iter("mxCell"):
-            title = class_title_in(cell.get("value") or "") if cell.get("vertex") == "1" else None
+        for cell in page.vertices:
+            title = class_title_in(cell.get("value") or "")
             if title and "**" in title:
                 violations.append(self.violation(
                     page,

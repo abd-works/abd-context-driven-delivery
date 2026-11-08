@@ -32,47 +32,42 @@ def parse_arrow_line(stripped: str) -> Optional[tuple[str, str]]:
     return None
 
 
-def parse_call_graph_block(text: str) -> List[CallGraphEntry]:
-    """Parse a fenced or plain call-graph block into entries."""
-    entries: List[CallGraphEntry] = []
-    for raw in text.splitlines():
-        if not raw.strip():
-            continue
-        indent = len(raw) - len(raw.lstrip(" "))
-        depth = indent // 2
-        stripped = raw.strip()
-        arrow = parse_arrow_line(stripped)
-        if arrow is not None:
-            kind, payload = arrow
-            entries.append(CallGraphEntry(depth=depth, kind=kind, text=payload))
-            continue
-        entries.append(CallGraphEntry(depth=depth, kind="call", text=stripped))
-    return entries
+class CallGraph(list):
+    """An indented call graph: the operations a step or an observation reaches, one CallGraphEntry per line. It reads
+    itself from a text block and writes itself as one."""
 
+    @classmethod
+    def parse(cls, text: str) -> "CallGraph":
+        """The call graph a fenced or plain call-graph block holds."""
+        graph = cls()
+        for raw in text.splitlines():
+            if not raw.strip():
+                continue
+            depth = (len(raw) - len(raw.lstrip(" "))) // 2
+            stripped = raw.strip()
+            arrow = parse_arrow_line(stripped)
+            kind, payload = arrow if arrow is not None else ("call", stripped)
+            graph.append(CallGraphEntry(depth=depth, kind=kind, text=payload))
+        return graph
 
-def render_call_graph_block(entries: Iterable[CallGraphEntry]) -> str:
-    """Render entries as an indented call-graph text block (no fences)."""
-    lines: List[str] = []
-    for entry in entries:
-        pad = "  " * entry.depth
-        if entry.kind == "out":
-            lines.append(f"{pad}-> {entry.text}")
-        elif entry.kind == "in":
-            lines.append(f"{pad}<- {entry.text}")
-        else:
-            lines.append(f"{pad}{entry.text}")
-    return "\n".join(lines)
+    @classmethod
+    def of_callees(cls, callees: Iterable[str]) -> "CallGraph":
+        """Flat ``->`` callees from a model operation, each one level deeper than the one before."""
+        return cls(CallGraphEntry(depth=index + 1, kind="out", text=text) for index, text in enumerate(callees))
 
+    def block(self) -> str:
+        """This call graph as an indented text block, without fences."""
+        lines: List[str] = []
+        for entry in self:
+            pad = "  " * entry.depth
+            arrow = {"out": "-> ", "in": "<- "}.get(entry.kind, "")
+            lines.append(f"{pad}{arrow}{entry.text}")
+        return "\n".join(lines)
 
-def call_graph_to_callees(entries: Iterable[CallGraphEntry]) -> List[str]:
-    """Flat outbound interaction list (clean-engineering ``callees`` shape)."""
-    callees: List[str] = []
-    for entry in entries:
-        if entry.kind == "out" and entry.text and entry.text not in callees:
-            callees.append(entry.text)
-    return callees
-
-
-def callees_to_call_graph(callees: Iterable[str]) -> List[CallGraphEntry]:
-    """Lift flat ``->`` callees from a model operation into graph entries."""
-    return [CallGraphEntry(depth=index + 1, kind="out", text=text) for index, text in enumerate(callees)]
+    def callees(self) -> List[str]:
+        """The outbound calls, each once: the clean-engineering ``callees`` shape."""
+        found: List[str] = []
+        for entry in self:
+            if entry.kind == "out" and entry.text and entry.text not in found:
+                found.append(entry.text)
+        return found

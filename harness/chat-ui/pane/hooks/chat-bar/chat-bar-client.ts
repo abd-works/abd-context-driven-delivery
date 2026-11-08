@@ -91,6 +91,14 @@ export class ChatBarClient {
       .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice.key), progress.fidelity.slug === this.selected))
   }
 
+  // The fidelities the session card lists a folder beside: practices that write under one folder share it, so each
+  // folder is listed once, beside the first fidelity that writes there.
+  get foldersListedBeside(): Set<string> {
+    const first = new Map<string, string>()
+    for (const fidelity of this.fidelities) if (fidelity.folder && !first.has(fidelity.folder)) first.set(fidelity.folder, fidelity.slug)
+    return new Set(first.values())
+  }
+
   // The fidelity the action button acts on: the one a person selected, else the ticket's next, else the first shown.
   get actionFidelity(): FidelityProgressClient | null {
     return this.selectedFidelity ?? this.fidelities.find(fidelity => fidelity.slug === this.ticket?.next?.fidelity.slug) ?? this.fidelities[0] ?? null
@@ -189,5 +197,5 @@ export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Prom
 }
 
 export async function runHandoff($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
-  await $.prompt.fill({ text: `Write a handoff for ticket ${chatBar.sessionName} with /space-session-handoff-session.`, mode: 'append' })
+  await $.prompt.fill({ text: `Write a handoff for ticket ${chatBar.sessionName} with /space-session-handoff-session session=${chatBar.sessionFile}`, mode: 'append' })
 }

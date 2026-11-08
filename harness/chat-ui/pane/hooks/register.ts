@@ -7,7 +7,8 @@ import { openedBoard } from './board-chat/board-server'
 import { currentChatBar, refreshChatBar } from './chat-bar/chat-bar-client'
 import { ChatBarView } from './chat-bar/chat-bar-view'
 import { currentActionPicker } from './chat-bar/action-picker-client'
-import { currentFidelityFiles } from './chat-bar/fidelity-files-client'
+import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
+import { FidelityFilesView } from './chat-bar/fidelity-files-view'
 import { currentChatBarView } from './chat-bar/session-dialogs-client'
 import { reasonOf } from './failure'
 import {
@@ -107,10 +108,17 @@ export const register: Register = on => {
       chatBar: await currentChatBar($),
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
-      files: await currentFidelityFiles($),
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
       width: e.props.bodyColumns,
     })
+  })
+
+  // The files pane beside the chat: a fidelity's files or its validation report, never drawn in the chat itself.
+  on('ui.render', { component: 'Pane', requestId: FILES_PANE }, async ($, e) => FidelityFilesView($, $.ui.resolve(e), await currentFidelityFiles($)))
+
+  on('ui.close', { id: FILES_PANE }, async ($, e, next) => {
+    if (e.origin === 'person') await forgetFiles($)
+    return next(e)
   })
 
   on('prompt.compose', async ($, e, next) => {

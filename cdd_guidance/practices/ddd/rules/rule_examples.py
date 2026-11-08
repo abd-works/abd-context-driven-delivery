@@ -1,7 +1,8 @@
 """Spec support: evaluate DDD tactical rules against python/_examples fixtures.
 
-The fixture goes through the clean engineering working-copy build; the DDD building block
-for the chosen kind then loads its own tactical facts, exactly as the DDD practice's graph reader does.
+The fixture goes through the clean engineering working-copy build; the DDD practice that extends that Clean Engineering
+practice then sees the chosen class as the building block of the chosen kind, exactly as the DDD practice's graph
+reading does.
 """
 
 from __future__ import annotations
@@ -9,8 +10,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_source
-from harness.graph.rule_context import RuleCheckContext
+from cdd_guidance.practices.ddd.model.graph_reading import BuildingBlock
 from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
+from harness.graph.rule_context import RuleCheckContext
 
 
 def ddd_rule_by_slug(slug: str):
@@ -22,29 +24,27 @@ def ddd_rule_by_slug(slug: str):
     return rule
 
 
-def _node_type_for_class(clean, class_node) -> str:
-    """The building block the DDD practice's graph reader names the class: its stereotypes first, then its name."""
-    names = {node.name for node in clean.nodes.get("OoadClass", [])}
-    kind = TacticalClass(class_node.name, class_node.get_fact("stereotypes") or []).inferred_kind(names)
-    if kind is None and class_node.name.endswith("Repository"):
+def _kind_of(tactical: TacticalClass, names: set[str]) -> str:
+    """The building block the DDD practice's graph reading names the class: its stereotypes first, then its name."""
+    kind = tactical.inferred_kind(names)
+    if kind is None and tactical.name.endswith("Repository"):
         return "Repository"
-    if kind is None and class_node.name.endswith("Service"):
+    if kind is None and tactical.name.endswith("Service"):
         return "DomainService"
     return kind or "Entity"
 
 
 def _ddd_node(source: str, class_name: str, kind: str | None, lang: str, filename: str | None):
-    from cdd_guidance.practices.ddd.model.graph_reading import tactical_block
-
     clean, root = practice_from_source(source, lang=lang, filename=filename)
-    class_node = next((node for node in clean.nodes.get("OoadClass", []) if node.name == class_name), None)
+    classes = clean.graph.nodes_of(clean, "OoadClass")
+    class_node = next((node for node in classes if node.name == class_name), None)
     if class_node is None:
         raise ValueError(f"class {class_name!r} not found in parsed source")
-    kind = kind or _node_type_for_class(clean, class_node)
-    source = class_node.source
-    ddd = clean.graph.practice("ddd")
-    node = ddd.add(tactical_block(class_node, kind), f"ddd:{kind}:{source.file}:{class_name}", source.file, source.start_line, source.end_line)
-    node.set_fact("folder", class_node.get_fact("folder"))
+    ddd = next(practice for practice in clean.graph.every_practice.values() if practice.extended is clean)
+    tactical = TacticalClass(class_node)
+    kind = kind or _kind_of(tactical, {node.name for node in classes})
+    place = class_node.source
+    node = clean.graph.add(ddd, BuildingBlock(ddd, tactical, kind), f"ddd:{kind}:{place.file}:{class_name}", place.file, place.start_line, place.end_line)
     return node, ddd, root
 
 

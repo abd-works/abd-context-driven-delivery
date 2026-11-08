@@ -12,9 +12,11 @@ from __future__ import annotations
 import re
 from typing import List, Optional
 
+from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph, CallGraphEntry
 from harness.graph.graph import Node
 from harness.graph.saved_graph import SavedGraph
 
@@ -26,12 +28,13 @@ _MEMBER_TYPES = ("Operation", "Property")
 
 
 class GraphBddModel(BddModel):
-    """Reads a saved graph (`Graph.write_json`, `graph.save_json`) into descriptions whose observations carry their realization."""
+    """Reads a saved graph (`Graph.saved`, `graph.save_json`) into descriptions whose observations carry their realization."""
 
     def parse(self, text: str) -> "GraphBddModel":
         graph = SavedGraph.from_text(text).restored_graph()
-        self._bdd = graph.practice("bdd")
-        self._clean = graph.practice("clean_engineering")
+        self._graph = graph
+        self._bdd = graph.practice_of(Bdd)
+        self._clean = graph.practice_of(CleanEngineering)
         for nodes in self._behavior_by_file().values():
             self._read_spec(sorted(nodes, key=lambda node: (node.source.start_line, -node.source.end_line)))
         return self
@@ -40,7 +43,7 @@ class GraphBddModel(BddModel):
         """The describe-tree nodes of each spec file."""
         by_file: dict[str, List[Node]] = {}
         for node_type in _BEHAVIOR_TYPES:
-            for node in self._bdd.nodes.get(node_type, []):
+            for node in self._graph.nodes_of(self._bdd, node_type):
                 by_file.setdefault(node.source.file, []).append(node)
         return by_file
 
@@ -73,12 +76,12 @@ class GraphBddModel(BddModel):
         parent.contexts.append(node)
         return node
 
-    def _realization(self, observation: Node) -> List[CallGraphEntry]:
-        entries: List[CallGraphEntry] = []
-        for edge in self._bdd.edges_from("invokes", observation):
+    def _realization(self, observation: Node) -> CallGraph:
+        entries = CallGraph()
+        for edge in self._graph.edges_from("invokes", observation):
             facts = _member_facts(edge.child)
             entries.extend(self._call(facts.get("owner", ""), edge.child.name, 0, set(), facts))
-        return entries or [CallGraphEntry(depth=0, kind="call", text=NO_OPERATION)]
+        return entries or CallGraph([CallGraphEntry(depth=0, kind="call", text=NO_OPERATION)])
 
     def _call(self, owner: str, name: str, depth: int, trail: set, code_facts: Optional[dict] = None) -> List[CallGraphEntry]:
         """A call on owner.name, then the interactions the model gives it, then what it returns."""
@@ -101,12 +104,12 @@ class GraphBddModel(BddModel):
 
     def _described_members(self) -> dict:
         """The members the Clean Engineering model describes, by `Class.member`, as its practice's root records them."""
-        return self._clean.root_node.get_fact("model_members", {}) or {}
+        return self._graph.root_of(self._clean).get_fact("model_members", {}) or {}
 
     def _code_facts(self, owner: str, name: str) -> Optional[dict]:
         """The facts on the code's member owner.name, when the graph loaded it."""
         for node_type in _MEMBER_TYPES:
-            for member in self._clean.nodes.get(node_type, []):
+            for member in self._graph.nodes_of(self._clean, node_type):
                 if member.name == name and member.facts.get("owner") == owner:
                     return _member_facts(member)
         return None

@@ -20,13 +20,15 @@ from harness.catalog_generator.catalog_examples import (
 from harness.catalog_generator.markdown_html import MarkdownHtml
 from harness.catalog_generator.page_shell import PageShell
 from harness.catalog_generator.stage_columns import STAGE_COLUMNS, StageColumn
-from harness.name.name import Name
+from harness.annotations.name import Name
 
 # The colour families the approach cycles through for a stage's first three chips.
 _ITEM_FAMILIES = ("sdd", "uxd", "arc")
 _ITERATE_AND_LEARN = "iterate-and-learn"
 _PRODUCT_ENGINEERING = "product-engineering"
 _EMPHASIS = re.compile(r"\*([^*]+)\*")
+# The approach's stage examples are this practice's artifacts.
+_STAGE_EXAMPLES_PRACTICE = "stories"
 _APPROACH_SCRIPT = '<script src="commons/catalog-approach.js?v=cdd-1"></script>'
 _LIBRARY_HEAD = (
     '<a class="approach-grid__label approach-grid__label--cdd" href="cdd-approach.html">'
@@ -172,7 +174,8 @@ class RefineBoard:
 
 class ApproachGrids:
     """The boards drawn under the approach's principles and in its library, for a catalog's practices in the order of
-    the practice catalogue. On a project's approach page the examples are the project's own, under ``catalog_root``."""
+    the practice catalogue, which each practice keeps as its position. On a project's approach page the examples are
+    the project's own, under ``catalog_root``."""
 
     def __init__(
         self,
@@ -181,10 +184,7 @@ class ApproachGrids:
         catalog_root: Path | None,
         project_examples: ProjectExampleSources | None = None,
     ) -> None:
-        from harness.guidance.practice_catalogue import PracticeCatalogue
-
-        by_key = {practice.key: practice for practice in practices}
-        self.practices = [by_key[key] for key in PracticeCatalogue.keys() if key in by_key]
+        self.practices = sorted(practices, key=lambda practice: practice.position)
         self.stages = stages
         self.catalog_root = catalog_root
         self.project_examples = project_examples
@@ -287,18 +287,16 @@ class ApproachGrids:
     def _practice_panels(self, practice) -> tuple[dict[str, str], dict[str, str]]:
         panels: dict[str, str] = {}
         openings: dict[str, str] = {}
-        for fidelity in practice.fidelities:
-            if STAGE_COLUMNS.of(fidelity.stage) is None:
-                continue
-            relative = self.project_examples.file_for(practice.key, fidelity.stage) if self.project_examples else None
+        for shown in practice.board_fidelities:
+            relative = self.project_examples.file_for(practice.key, shown.stage) if self.project_examples else None
             examples = "".join(
                 ExampleFile(path).panel_html(editor_id=self._editor_id(practice, path), catalog_href=relative)
-                for path in self._practice_files(fidelity, relative)
+                for path in self._practice_files(shown, relative)
             )
-            panel = self._panel(fidelity.stage, examples)
+            panel = self._panel(shown.stage, examples)
             if panel:
-                panels[fidelity.stage] = panel
-                openings[fidelity.stage] = CatalogFidelity(fidelity).opening
+                panels[shown.stage] = panel
+                openings[shown.stage] = shown.opening
         return panels, openings
 
     def _editor_id(self, practice, path: Path) -> str:
@@ -306,10 +304,10 @@ class ApproachGrids:
         suffix = path.suffix.lstrip(".")
         return f"monaco-{Name(f'{practice.key}-{path.stem}-{suffix}').title_slug}"
 
-    def _practice_files(self, fidelity, relative: Path | None) -> list[Path]:
+    def _practice_files(self, shown: CatalogFidelity, relative: Path | None) -> list[Path]:
         if self.project_examples and self.catalog_root is not None:
             return [Path(self.catalog_root) / relative] if relative else []
-        return CatalogFidelity(fidelity).panel_example_files
+        return shown.panel_example_files
 
     def _panel(self, stage_id: str, examples: str) -> str:
         """One stage's examples in an expandable column; empty when there are none."""
@@ -321,11 +319,11 @@ class ApproachGrids:
         )
 
     def _stories_opening(self, stage_id: str) -> str:
-        """The opening of the Stories fidelity at ``stage_id``: the approach's stage examples are Stories'."""
-        from harness.guidance.practice_catalogue import PracticeCatalogue
-
-        fidelity = next((each for each in PracticeCatalogue.practice("stories").fidelities if each.stage == stage_id), None)
-        return CatalogFidelity(fidelity).opening if fidelity is not None else ""
+        """The opening of the Stories fidelity at ``stage_id``, among the practices the grids show: the approach's
+        stage examples are Stories'."""
+        stories = next((practice for practice in self.practices if practice.key == _STAGE_EXAMPLES_PRACTICE), None)
+        shown = next((each for each in stories.shown_fidelities if each.stage == stage_id), None) if stories else None
+        return shown.opening if shown is not None else ""
 
     def _monaco_scripts(self, panels: dict[str, str]) -> str:
         return MONACO_LOADER_SCRIPTS if any("catalog-monaco" in panel for panel in panels.values()) else ""
@@ -349,7 +347,7 @@ class ApproachGrids:
             return '<div class="approach-grid__ticket approach-grid__ticket--empty"></div>'
         return (
             f'<a class="approach-grid__ticket approach-grid__ticket--{html.escape(practice.perspective)}" '
-            f'href="{html.escape(practice.fidelity_href(fidelity))}">{html.escape(CatalogFidelity(fidelity).label)}</a>'
+            f'href="{html.escape(practice.fidelity_href(fidelity.fidelity))}">{html.escape(fidelity.label)}</a>'
         )
 
 

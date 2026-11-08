@@ -24,12 +24,9 @@ from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.call_graph import (
+    CallGraph,
     CallGraphEntry,
-    callees_to_call_graph,
-    call_graph_to_callees,
     parse_arrow_line,
-    parse_call_graph_block,
-    render_call_graph_block,
 )
 
 
@@ -52,11 +49,10 @@ with description("Property"):
 
     with context("given ordered invariant lines"):
         with before.each:
-            from cdd_guidance.practices.clean_engineering.model.property import append_invariant
 
             self.prop = Property(name="verified", type_hint="boolean")
-            append_invariant(self.prop, "persisted KYC on the party")
-            append_invariant(self.prop, "flips true on confirmIdentity when PersonaInquiry.verified")
+            self.prop.add_invariant("persisted KYC on the party")
+            self.prop.add_invariant("flips true on confirmIdentity when PersonaInquiry.verified")
 
         with it("should keep each line in order"):
             expect([item.sequential_order for item in self.prop.invariants]).to(equal([1, 2]))
@@ -394,16 +390,10 @@ with description("a clean engineering model on a graph"):
 
     with it("should record participants and belongsTo"):
         practice = self.graph.practice("clean_engineering")
-        participants = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("participants", [])]
-        belongs = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("belongsTo", [])]
+        participants = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "participants")]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "belongsTo")]
         expect(participants).to(contain(("orders", "Order"), ("Order", "place")))
         expect(belongs).to(contain(("Order", "orders"), ("place", "Order")))
-
-    with it("should open the same model from the graph"):
-        restored = CleanEngineeringModel(self.graph)
-        expect(restored.modules[0].name).to(equal("orders"))
-        expect(restored.modules[0].classes[0].name).to(equal("Order"))
-        expect(restored.modules[0].classes[0].operations[0].name).to(equal("place"))
 
 
 with description("call graph lines"):
@@ -413,14 +403,45 @@ with description("call graph lines"):
 
     with it("should round-trip an indented graph"):
         text = "cart.checkout()\n  -> payment.charge()\n  <- receipt\n"
-        entries = parse_call_graph_block(text)
+        entries = CallGraph.parse(text)
         expect(entries[0].kind).to(equal("call"))
-        expect(call_graph_to_callees(entries)).to(equal(["payment.charge()"]))
-        expect(render_call_graph_block(entries)).to(equal(text.strip()))
+        expect(entries.callees()).to(equal(["payment.charge()"]))
+        expect(entries.block()).to(equal(text.strip()))
 
     with it("should lift flat callees into graph entries"):
-        entries = callees_to_call_graph(["a.fetch()", "b.save()"])
+        entries = CallGraph.of_callees(["a.fetch()", "b.save()"])
         expect(entries).to(equal([
             CallGraphEntry(depth=1, kind="out", text="a.fetch()"),
             CallGraphEntry(depth=2, kind="out", text="b.save()"),
         ]))
+
+
+with description("a class's property list reconciling itself with another class's"):
+    with before.each:
+        self.target = OoadClass("Cart", 1, properties=[Property("items", 1), Property("owner", 2)])
+        self.kept = self.target.properties[0]
+        self.source = OoadClass("Cart", 1, properties=[Property("items", 1, type_hint="list[Item]")])
+        self.target.properties.reconcile(self.source.properties, self.target.load_property)
+
+    with it("should keep the property of the same name"):
+        expect(self.target.properties[0]).to(be(self.kept))
+
+    with it("should take what the source says of it"):
+        expect(self.kept.type_hint).to(equal("list[Item]"))
+
+    with it("should drop the property the source does not hold"):
+        expect([prop.name for prop in self.target.properties]).to(equal(["items"]))
+
+
+with description("a class read from its file"):
+    with before.each:
+        self.oclass = OoadClass("Cart", 1, line=2)
+        self.oclass.end_line = 3
+        self.oclass.stereotypes = ["Aggregate Root"]
+        self.oclass.take_lines(["# head", "class Cart:", "    # Interaction: total", "tail"])
+
+    with it("should keep the lines it spans"):
+        expect(self.oclass.span.text).to(equal("class Cart:\n    # Interaction: total"))
+
+    with it("should compose its peers as an aggregate root"):
+        expect(self.oclass.composes_peers).to(be_true)

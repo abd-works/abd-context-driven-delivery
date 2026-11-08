@@ -5,6 +5,7 @@ from __future__ import annotations
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
+from harness.agent_tools.agent_tools import AgentInstructions
 from harness.installation.files import skill
 from harness.markdown.format import Format
 from harness.mcp.mcp_server import mcp
@@ -57,8 +58,8 @@ class Generate(GuidanceAction):
         return "\n\n".join(render for render in renders if render)
 
     def _earlier_render(self, practice: PracticeGuidance) -> str:
-        current = practice.fidelities.current
-        wanted = Format(practice.format).name
+        current = self.fidelity_of(practice)
+        wanted = Format(current.format if current is not None else practice.format).name
         earlier = self._fidelity_before(practice, current) if current is not None else None
         if earlier is None or not wanted or wanted not in {Format(label).name for label in earlier.outputs}:
             return ""
@@ -82,35 +83,25 @@ class Generate(GuidanceAction):
         """The files fidelity has in this session, by the format it declares them in, each a path from the project."""
         return {label: [entry.path for entry in entries if entry.exists] for label, entries in fidelity.files().items()}
 
-    def _generate_item(self, item) -> None:
+    def _generate_item(self, item) -> str:
+        """What generating one listed guidance asks for: the text itself, or the instructions of the fidelity this
+        generate works at and what its practice says about writing the artifact. The recipe reads the text returned."""
         if isinstance(item, str):
-            instructions(item)
-            self.generate_output()
-        else:
-            item.instructions
-            item.generate_output()
-        self.generate_fixes_from_validate()
-        self.add_generate_header_to_generated()
+            return item
+        return "\n\n".join(part.strip() for part in (item.instructions, item.generate_output()) if part and part.strip())
 
     def _where_outputs_go(self) -> str:
-        outputs = [item.output_paths() for item in self.listed() if isinstance(item, PracticeGuidance)]
+        worked = [self.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
+        outputs = [fidelity.output_paths() for fidelity in worked if fidelity is not None]
         places = [f"{label}: {', '.join(paths)}" for listed in outputs for label, paths in listed.items()]
         if not places:
             return ""
         return f"Save each format you write at its path, filling any {{name}} from the work: {'; '.join(places)}"
 
-    @agent_instructions
-    def add_generate_header_to_generated(self) -> str:
-        """Prepend the following block verbatim as the very first lines of the file you are writing - before any imports, before any code."""
-        return (
-            '"""\n'
-            '"""\n'
-        )
-
-    @agent_instructions
-    def generate_output(self) -> str:
-        """Write this context tool's artifact for the current fidelity. Override on the practice; the default writes nothing."""
-        return ""
+    def fix_instructions(self) -> str:
+        """What generate_fixes_from_validate tells the agent, expanded for the guidance this generate works on, so another
+        action such as Satisfy can hand the fixes on after its own validate."""
+        return AgentInstructions.for_callable(Generate.generate_fixes_from_validate, self).expand({}).instructions
 
     @agent_instructions
     def generate_fixes_from_validate(self) -> str:

@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from harness.guidance.stages import DISCOVERY, IMPLEMENTATION, SPECIFICATION, STAGES, ApproachStage, StageScope
-from harness.name.name import Name
+from harness.annotations.name import Name
 
 
 @dataclass(frozen=True)
@@ -13,12 +13,10 @@ class StageColumn:
 
     The stage's name, title, and scope come from the approach's stages. ``key`` is the column's name in the page
     markup, its styles, and its scripts (discovery, spec, engineer), so they keep working whatever the stage is called.
-    ``template_tokens`` are the words a practice template's front matter uses for the stage.
     """
 
     stage: ApproachStage
     key: str
-    template_tokens: tuple[str, ...]
 
     @property
     def label(self) -> str:
@@ -39,26 +37,18 @@ class StageColumns:
     def __iter__(self):
         return iter(self._columns)
 
-    def of(self, stage: str) -> StageColumn | None:
-        """The column that holds fidelities whose stage is ``stage``; none for a stage the board has no column for."""
-        return next((column for column in self._columns if column.stage.name == stage), None)
+    def of(self, stage: ApproachStage | None) -> StageColumn | None:
+        """The column that holds fidelities in ``stage``; none for a stage the board has no column for."""
+        return next((column for column in self._columns if column.stage is stage), None)
 
     @property
     def stages(self) -> tuple[str, ...]:
         return tuple(column.stage.name for column in self._columns)
 
 
-# The catalog's own names for each stage's column, by the stage's name: its key in the page markup, and the words
-# practice templates' front matter use for it.
+# The catalog's own name for each stage's column, by the stage's name: its key in the page markup.
 _COLUMN_KEYS = {DISCOVERY: "discovery", SPECIFICATION: "spec", IMPLEMENTATION: "engineer"}
-_TEMPLATE_TOKENS = {
-    DISCOVERY: ("discovery",),
-    SPECIFICATION: ("exploration", "specification", "spec"),
-    IMPLEMENTATION: ("engineering", "engineer"),
-}
-STAGE_COLUMNS = StageColumns(
-    tuple(StageColumn(stage, _COLUMN_KEYS[stage.name], _TEMPLATE_TOKENS[stage.name]) for stage in STAGES)
-)
+STAGE_COLUMNS = StageColumns(tuple(StageColumn(stage, _COLUMN_KEYS[stage.name]) for stage in STAGES))
 
 
 class BoardLabel:

@@ -1,4 +1,4 @@
-"""StoryDemoControl extends Control - JSON + HTML emit."""
+"""StoryDemoControl extends Control - JSON, and the HTML its page control writes."""
 
 import sys
 from pathlib import Path
@@ -13,7 +13,7 @@ if str(_REPO) not in sys.path:
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
 from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, StoryDemoControl, StoryStep
 from cdd_guidance.practices.ux.model.ux_map import UxMap
-from cdd_guidance.practices.ux.model.html.nodes import _render_control
+from cdd_guidance.practices.ux.model.html.nodes import HtmlControl, HtmlStoryDemoControl
 
 
 with description("StoryDemoControl"):
@@ -55,7 +55,7 @@ with description("StoryDemoControl"):
         expect(control.bound_field).to(equal("character"))
 
     with it("should emit data-bound-field and data-story-steps in HTML"):
-        control = StoryDemoControl(
+        control = HtmlStoryDemoControl(
             "Create Character",
             0,
             "button",
@@ -63,18 +63,18 @@ with description("StoryDemoControl"):
             "character",
             [{"kind": "when", "label": "the Player creates a Character"}],
         )
-        html = _render_control(control)
+        html = control.html()
         expect('data-bound-field="character"' in html).to(equal(True))
         expect("data-story-steps=" in html).to(equal(True))
         expect("the Player creates a Character" in html).to(equal(True))
 
     with it("should omit data-story-steps for vanilla Control"):
-        control = Control("Done", 0, "button", "Done", "")
-        html = _render_control(control)
+        control = HtmlControl("Done", 0, "button", "Done", "")
+        html = control.html()
         expect("data-story-steps" in html).to(equal(False))
 
     with it("should emit generic bound-list Interactive attrs"):
-        control = StoryDemoControl(
+        control = HtmlStoryDemoControl(
             "Products",
             0,
             "bound-list",
@@ -86,7 +86,7 @@ with description("StoryDemoControl"):
             "name",
             "{name} . {unitPrice}",
         )
-        html = _render_control(control)
+        html = control.html()
         expect("data-bound-list" in html).to(equal(True))
         expect('data-bound-field="catalog.products"' in html).to(equal(True))
         expect('data-set-input="product"' in html).to(equal(True))
@@ -94,7 +94,7 @@ with description("StoryDemoControl"):
         expect('data-item-value="name"' in html).to(equal(True))
 
     with it("should emit data-input-field for number controls"):
-        control = StoryDemoControl(
+        control = HtmlStoryDemoControl(
             "Quantity",
             0,
             "number",
@@ -103,7 +103,7 @@ with description("StoryDemoControl"):
             [],
             "quantity",
         )
-        html = _render_control(control)
+        html = control.html()
         expect('data-input-field="quantity"' in html).to(equal(True))
         expect('type="number"' in html).to(equal(True))
 

@@ -1,4 +1,4 @@
-"""Install CDD toolsets by calling harness/installer/installer.py."""
+"""Install CDD toolsets by calling harness/installation/installer.py."""
 from __future__ import annotations
 
 import argparse
@@ -42,16 +42,18 @@ def main() -> int:
         "Only switches the server: run a plain install as well when skills, rules, or commands changed.",
     )
     args = parser.parse_args()
-    from harness.installer.installer import Installer
+    # The MCP and hook installations register with the Installer when their modules are imported.
+    import harness.hooks.hooks  # noqa: F401
+    from harness.installation.installer import Installer
     from harness.mcp.mcp_server import McpInstallation
 
     installer = Installer(ide=args.ide, path=args.path, repo=_REPO)
-    server = McpInstallation(installer.ide, installer.path, repo=_REPO)
+    server = McpInstallation(installer.layout, installer.path, repo=_REPO)
     # Switching the code the server runs takes seconds; a full install takes a minute, so the switch runs alone.
     if args.pin_runtime or args.serve_from_checkout:
         print(f"cdd server: {server.pin_server() if args.pin_runtime else server.serve_from_checkout()}")
-        if installer.ide == "Claude":
-            print(f"cdd-board: {installer.claude_plugins.install_board()}")
+        if installer.layout.is_claude_code:
+            print(f"cdd-board: {server.claude_plugins.install_board()}")
         return 0
     if args.self:
         installer.install_self(replace=not args.no_replace)

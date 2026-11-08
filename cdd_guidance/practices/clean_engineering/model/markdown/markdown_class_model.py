@@ -48,7 +48,6 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
-from cdd_guidance.practices.clean_engineering.model.property import append_invariant, invariant_lines, property_notes, take_property_note
 from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names, split_top_level
 
 
@@ -129,17 +128,17 @@ class MarkdownOoadClass(OoadClass):
         methods = [operation for operation in self.operations if operation.name not in {self.name, "constructor"}]
         lines = [self._public_line(self._constructor_line(constructors))]
         for operation in constructors:
-            lines.extend(self._notes_under(operation.callees, invariant_lines(operation)))
+            lines.extend(self._notes_under(operation.callees, operation.invariant_lines()))
         lines.append("------")
         for prop in self.properties:
             lines.append(self._property_line(prop))
-            lines.extend(self._notes_under(prop.callees, property_notes(prop)))
+            lines.extend(self._notes_under(prop.callees, prop.notes()))
         lines.append("----")
         for operation in methods:
             if is_interface_name(self.name) and operation.name.startswith("_"):
                 continue
             lines.append(self._public_line(operation.render()))
-            lines.extend(self._notes_under(operation.callees, invariant_lines(operation)))
+            lines.extend(self._notes_under(operation.callees, operation.invariant_lines()))
         lines.extend(f"---<<{item.label}>>--> {item.target}" for item in self.dependencies)
         return lines
 
@@ -202,19 +201,170 @@ class MarkdownOoadClass(OoadClass):
         return ""
 
     @classmethod
-    def parse_body(cls, heading: ClassHeading, body: str, sequential_order: int) -> "MarkdownOoadClass":
-        host = MarkdownCleanEngineeringModel(name="", sequential_order=1)
-        host._class_order = sequential_order
-        parsed = host._parse_class(heading.name, body)
-        loaded = cls(name=parsed.name, sequential_order=sequential_order)
+    def read_card(cls, heading: ClassHeading, body: str, sequential_order: int) -> "MarkdownOoadClass":
+        """The class a card shows: named and marked by its heading, filled from its body."""
+        loaded = cls(name=heading.name, sequential_order=sequential_order)
         loaded.stereotypes = list(heading.stereotypes)
         loaded.bases = list(heading.bases)
-        loaded.intent = parsed.intent
-        loaded.properties = parsed.properties
-        loaded.operations = parsed.operations
-        loaded.collaborators = list(parsed.collaborators)
-        loaded.dependencies = list(parsed.dependencies)
+        loaded.read_body(body)
         return loaded
+
+    def read_body(self, body: str) -> None:
+        """Read this class's card body: its intent, its constructor, its properties and operations, and the
+        dependencies it names."""
+        dependencies = [
+            Relationship(target=found.group("target"), kind="dependency", label=found.group("label"))
+            for found in (_DEPENDENCY.match(line) for line in body.splitlines()) if found
+        ]
+        body = "\n".join(line for line in body.splitlines() if not _DEPENDENCY.match(line))
+        parts6 = re.split(r"(?m)^-{6}\s*$", body, maxsplit=1)
+        pre6 = parts6[0] if parts6 else ""
+        post6 = parts6[1] if len(parts6) > 1 else ""
+
+        intent_lines: List[str] = []
+        constructor_notes: List[str] = []
+        constructor_line = ""
+        seen_signature = False
+        for line in pre6.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if stripped.startswith("//"):
+                if seen_signature:
+                    constructor_notes.append(stripped[2:].strip())
+                continue
+            if stripped.startswith("->") or stripped.startswith("+") or stripped.startswith("-"):
+                seen_signature = True
+                if stripped.startswith("+") or stripped.startswith("-"):
+                    constructor_line = stripped
+                continue
+            if re.match(r"^\w[\w\s]*\(", stripped):
+                seen_signature = True
+                constructor_line = stripped
+                continue
+            if not seen_signature:
+                intent_lines.append(stripped)
+        intent = "\n".join(intent_lines)
+
+        parts4 = re.split(r"(?m)^-{4}\s*$", post6, maxsplit=1)
+        props_text = parts4[0] if parts4 else ""
+        ops_text = parts4[1] if len(parts4) > 1 else ""
+
+        props = self._read_properties(props_text)
+        ops = self._read_operations(ops_text)
+        for prop in props:
+            prop.derive_relationship()
+        if constructor_line:
+            for constructor in self._read_operations(constructor_line):
+                for note in constructor_notes:
+                    constructor.add_invariant(note)
+                ops.insert(0, constructor)
+        self.intent = intent
+        self.properties = props
+        self.operations = ops
+        for relationship in dependencies:
+            self.place_relationship(relationship)
+
+
+    _CE_STEREOTYPE_KINDS = {
+        "composition": "composition",
+        "aggregation": "aggregation",
+        "association": "association",
+    }
+
+
+    def _strip_ce_prefix(self, line: str) -> tuple[str, str | None]:
+        """Strip CE OOAD format prefix from a property/operation line.
+
+        Handles lines like:
+          + << composition >> identity: Identity
+          + name: string
+          + save(): void
+          - privateOp(): void
+        Returns (bare_line, stereotype_kind | None).
+        stereotype_kind is one of "composition", "aggregation", "association" or None.
+        """
+        # Strip leading "+" (public) visibility marker used in CE OOAD markdown
+        if line.startswith("+"):
+            line = line[1:].strip()
+        # Extract and strip UML stereotype annotation like "<< composition >>"
+        kind: str | None = None
+        m = re.match(r"^<<\s*(\w+)\s*>>\s*", line)
+        if m:
+            raw_kind = m.group(1).lower()
+            kind = self._CE_STEREOTYPE_KINDS.get(raw_kind)
+            line = line[m.end():].strip()
+        return line, kind
+
+
+    def _read_properties(self, text: str) -> List[Property]:
+        """The properties a card lists. ``+ << composition >> identity: Identity`` is a property whose stereotype
+        names the relationship it stands for."""
+        props: List[Property] = []
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            if stripped.startswith("//"):
+                if props:
+                    props[-1].take_note(stripped[2:])
+                continue
+            if stripped.startswith("->"):
+                if props:
+                    props[-1].callees.append(stripped[2:].strip())
+                continue
+            original = stripped
+            stripped, rel_kind = self._strip_ce_prefix(stripped)
+            if "<<" in original and rel_kind is None:
+                continue
+            if not stripped:
+                continue
+            # Skip lines that look like operations
+            if re.match(r"^_?\w+\s*\(", stripped):
+                continue
+            # Optional props may be written `name?: Type` or `name: Type | null`.
+            m = re.match(r"^(\w+)\??:\s*(.+)", stripped)
+            if m:
+                prop_name = m.group(1)
+                type_raw = m.group(2).strip()
+                prop = Property(name=prop_name, type_hint=type_raw)
+                if rel_kind:
+                    prop.stereotype = rel_kind
+                props.append(prop)
+            elif re.match(r"^\w+$", stripped):
+                props.append(Property(name=stripped))
+        return props
+
+
+    def _read_operations(self, text: str) -> List[Operation]:
+        """The operations a card lists, with the call-graph arrows and invariant notes written under each."""
+        ops: List[Operation] = []
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            if stripped.startswith("//"):
+                if ops:
+                    ops[-1].add_invariant(stripped[2:])
+                continue
+            if stripped.startswith("->") or stripped.startswith("→"):
+                if ops:
+                    arrow = parse_arrow_line(stripped)
+                    callee = arrow[1] if arrow else stripped[2:].strip()
+                    if callee and callee not in ops[-1].callees:
+                        ops[-1].callees.append(callee)
+                continue
+            private = stripped.startswith("- ")
+            body = stripped[2:].strip() if private else stripped
+            body, ret_kind = self._strip_ce_prefix(body)
+            m = re.match(r"^(_?\w+)\(([^)]*)\)(?::\s*(.+))?", body)
+            if not m:
+                continue
+            op_name = ("_" if private and not m.group(1).startswith("_") else "") + m.group(1)
+            params = split_top_level(m.group(2))
+            ret = (m.group(3) or "").strip()
+            ops.append(Operation(name=op_name, parameters=params, return_type=ret))
+        return ops
 
 
 class MarkdownModule(Module):
@@ -223,7 +373,7 @@ class MarkdownModule(Module):
         heading = re.match(r"^#{2,3}\s+(.+)", class_block)
         class_heading = ClassHeading.read(heading.group(1)) if heading else ClassHeading("")
         body = class_block[heading.end():].lstrip("\n") if heading else class_block
-        return MarkdownOoadClass.parse_body(class_heading, body, len(self.classes) + 1)
+        return MarkdownOoadClass.read_card(class_heading, body, len(self.classes) + 1)
 
     def load_class(self, source: OoadClass) -> MarkdownOoadClass:
         loaded = MarkdownOoadClass(name=source.name, sequential_order=source.sequential_order)
@@ -282,12 +432,16 @@ class MarkdownModule(Module):
 
 class MarkdownCleanEngineeringModel(CleanEngineeringModel):
 
+    def __init__(self, name: str = "", sequential_order: int = 1, graph=None) -> None:
+        super().__init__(name, sequential_order, graph)
+        # A card document as it was read: its lines in place, with each module where it stood; None for a plain one.
+        self._card_parts: Optional[list] = None
+        self._card_levels = (0, 0)
+
     def load_module(self, source: Module) -> MarkdownModule:
         loaded = MarkdownModule(name=source.name, sequential_order=source.sequential_order)
         loaded.update_self(source)
         return loaded
-
-    module_type = None
 
     def load_content(self) -> None:
         from pathlib import Path
@@ -305,11 +459,11 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         self._block_index += 1
         heading = re.match(r"^#\s+(.+)", block)
         if heading is None:
-            module = self.module_type(name="", sequential_order=self._module_order)
+            module = MarkdownModule(name="", sequential_order=self._module_order)
             self._module_order += 1
             return module
         body = block[heading.end():].lstrip("\n")
-        module = self.module_type(name=heading.group(1).strip(), sequential_order=self._module_order)
+        module = MarkdownModule(name=heading.group(1).strip(), sequential_order=self._module_order)
         self._module_order += 1
         parts = re.split(r"(?m)^(?=##\s)", body, maxsplit=1)
         self._apply_module_preamble(module, parts[0].strip())
@@ -320,17 +474,19 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
     def parse(self, text: str) -> "MarkdownCleanEngineeringModel":
         headings = self._headings(text)
         card_levels = [level for _index, level, raw in headings if _CARD_HEADING.match(raw)]
+        self.modules = []
+        self._card_parts = None
         if card_levels and min(card_levels) - 2 >= 2:
-            return self._parse_card_document(text, headings, min(card_levels))
-        model = type(self)(name="", sequential_order=1)
+            self._parse_card_document(text, headings, min(card_levels))
+            return self
         self._module_order = 1
         for block in re.split(r"(?m)^(?=#\s)", text):
             module = self._module_from_h1(block.strip())
             if module is None:
                 continue
-            model.modules.append(module)
+            self.modules.append(module)
             self._module_order += 1
-        return model
+        return self
 
     def _module_from_h1(self, block: str) -> MarkdownModule | None:
         if not block:
@@ -389,7 +545,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             class_heading = ClassHeading.read(heading.group(1))
             if not class_heading.name or class_heading.name.lower().startswith("module "):
                 continue
-            parsed = MarkdownOoadClass.parse_body(class_heading, class_block[heading.end():].lstrip("\n"), class_order)
+            parsed = MarkdownOoadClass.read_card(class_heading, class_block[heading.end():].lstrip("\n"), class_order)
             module.classes.append(parsed)
             class_order += 1
 
@@ -406,12 +562,12 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 found.append((index, len(heading.group(1)), line))
         return found
 
-    def _parse_card_document(self, text: str, headings: List[tuple], card_level: int) -> "MarkdownCleanEngineeringModel":
+    def _parse_card_document(self, text: str, headings: List[tuple], card_level: int) -> None:
         """A document title over modules, resource groups, and bold class cards, each one level
         deeper (`#` title, `##` module, `###` group, `####` card). A module is a heading at the
         module level with a card under it; every other line stays where it was written."""
         module_level = card_level - 2
-        model = type(self)(name="", sequential_order=1)
+        model = self
         model._card_levels = (module_level, card_level)
         model._card_parts = []
         heading_at = {index: level for index, level, _raw in headings}
@@ -448,7 +604,6 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 continue
             (module._card_parts if module is not None else model._card_parts).append(line)
         close_card()
-        return model
 
     def _module_starts(self, headings: List[tuple], module_level: int, card_level: int) -> set:
         starts = set()
@@ -467,7 +622,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
     def _append_card(self, module: MarkdownModule, card: str) -> None:
         class_heading = ClassHeading.read(card.split("\n", 1)[0].lstrip("#"))
         body = card.split("\n", 1)[1] if "\n" in card else ""
-        loaded = MarkdownOoadClass.parse_body(class_heading, body, len(module.classes) + 1)
+        loaded = MarkdownOoadClass.read_card(class_heading, body, len(module.classes) + 1)
         loaded.keep_card(card, class_heading)
         module.classes.append(loaded)
         module._card_parts.append(loaded)
@@ -487,12 +642,13 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 out.append(module.render_cards(module_level, card_level))
         return "".join(out)
 
-    def render(self, canonical: Optional[CleanEngineeringModel] = None, previous: Optional[str] = None) -> str:
-        if getattr(canonical, "_card_parts", None) is not None:
-            return canonical._render_cards()
-        if canonical is not None:
+    def render(self, canonical: Optional[CleanEngineeringModel] = None) -> str:
+        """Write this model; handed another model, a markdown one writes itself and any other is translated in first."""
+        if canonical is not None and canonical is not self:
+            if isinstance(canonical, MarkdownCleanEngineeringModel):
+                return canonical.render()
             self.translate_from(canonical)
-        if getattr(self, "_card_parts", None) is not None:
+        if self._card_parts is not None:
             return self._render_cards()
         return "\n".join(module.render() for module in self.modules)
 
@@ -604,195 +760,3 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         elif key == "purpose":
             module.description = body.strip()
 
-    def _parse_class(self, name: str, body: str) -> OoadClass:
-        dependencies = [
-            Relationship(target=found.group("target"), kind="dependency", label=found.group("label"))
-            for found in (_DEPENDENCY.match(line) for line in body.splitlines()) if found
-        ]
-        body = "\n".join(line for line in body.splitlines() if not _DEPENDENCY.match(line))
-        parts6 = re.split(r"(?m)^-{6}\s*$", body, maxsplit=1)
-        pre6 = parts6[0] if parts6 else ""
-        post6 = parts6[1] if len(parts6) > 1 else ""
-
-        intent_lines: List[str] = []
-        constructor_notes: List[str] = []
-        constructor_line = ""
-        seen_signature = False
-        for line in pre6.splitlines():
-            stripped = line.strip()
-            if not stripped:
-                continue
-            if stripped.startswith("//"):
-                if seen_signature:
-                    constructor_notes.append(stripped[2:].strip())
-                continue
-            if stripped.startswith("->") or stripped.startswith("+") or stripped.startswith("-"):
-                seen_signature = True
-                if stripped.startswith("+") or stripped.startswith("-"):
-                    constructor_line = stripped
-                continue
-            if re.match(r"^\w[\w\s]*\(", stripped):
-                seen_signature = True
-                constructor_line = stripped
-                continue
-            if not seen_signature:
-                intent_lines.append(stripped)
-        intent = "\n".join(intent_lines)
-
-        parts4 = re.split(r"(?m)^-{4}\s*$", post6, maxsplit=1)
-        props_text = parts4[0] if parts4 else ""
-        ops_text = parts4[1] if len(parts4) > 1 else ""
-
-        props, _rels = self._parse_properties_and_relationships(props_text)
-        ops, _op_rels = self._parse_operations_and_relationships(ops_text)
-        self._relationships_from_properties(props)
-        if constructor_line:
-            constructors, _ = self._parse_operations_and_relationships(constructor_line)
-            for constructor in constructors:
-                for note in constructor_notes:
-                    append_invariant(constructor, note)
-                ops.insert(0, constructor)
-        return MarkdownOoadClass(
-            name=name,
-            sequential_order=self._class_order,
-            intent=intent,
-            properties=props,
-            operations=ops,
-            relationships=dependencies,
-        )
-
-
-    _CE_STEREOTYPE_KINDS = {
-        "composition": "composition",
-        "aggregation": "aggregation",
-        "association": "association",
-    }
-
-
-    def _strip_ce_prefix(self, line: str) -> tuple[str, str | None]:
-        """Strip CE OOAD format prefix from a property/operation line.
-
-        Handles lines like:
-          + << composition >> identity: Identity
-          + name: string
-          + save(): void
-          - privateOp(): void
-        Returns (bare_line, stereotype_kind | None).
-        stereotype_kind is one of "composition", "aggregation", "association" or None.
-        """
-        # Strip leading "+" (public) visibility marker used in CE OOAD markdown
-        if line.startswith("+"):
-            line = line[1:].strip()
-        # Extract and strip UML stereotype annotation like "<< composition >>"
-        kind: str | None = None
-        m = re.match(r"^<<\s*(\w+)\s*>>\s*", line)
-        if m:
-            raw_kind = m.group(1).lower()
-            kind = self._CE_STEREOTYPE_KINDS.get(raw_kind)
-            line = line[m.end():].strip()
-        return line, kind
-
-
-    def _parse_properties_and_relationships(self, text: str) -> tuple[List[Property], List[Relationship]]:
-        """Parse properties AND extract Relationship objects from CE OOAD stereotype annotations.
-
-        A line like ``+ << composition >> identity: Identity`` produces both a
-        Property(name="identity", type_hint="Identity") and a
-        Relationship(kind="composition", target="Identity").
-        """
-        props: List[Property] = []
-        rels: List[Relationship] = []
-        for line in text.splitlines():
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
-                continue
-            if stripped.startswith("//"):
-                if props:
-                    take_property_note(props[-1], stripped[2:])
-                continue
-            if stripped.startswith("->"):
-                if props:
-                    props[-1].callees.append(stripped[2:].strip())
-                continue
-            original = stripped
-            stripped, rel_kind = self._strip_ce_prefix(stripped)
-            if "<<" in original and rel_kind is None:
-                continue
-            if not stripped:
-                continue
-            # Skip lines that look like operations
-            if re.match(r"^_?\w+\s*\(", stripped):
-                continue
-            # Optional props may be written `name?: Type` or `name: Type | null`.
-            m = re.match(r"^(\w+)\??:\s*(.+)", stripped)
-            if m:
-                prop_name = m.group(1)
-                type_raw = m.group(2).strip()
-                prop = Property(name=prop_name, type_hint=type_raw)
-                if rel_kind:
-                    prop.stereotype = rel_kind
-                props.append(prop)
-            elif re.match(r"^\w+$", stripped):
-                props.append(Property(name=stripped))
-        return props, rels
-
-
-    def _relationships_from_properties(self, props: List[Property]) -> None:
-        """A relationship is optional on the property. A primitive or a third-party type has none."""
-
-        for prop in props:
-            prop.derive_relationship()
-
-    def _parse_operations_and_relationships(self, 
-        text: str,
-    ) -> tuple[List[Operation], List[Relationship]]:
-        """Parse operations and infer association edges from return/param types.
-
-        Property stereotypes remain the place for composition/aggregation. Method
-        signatures default to association so return types like ``viewPortability():
-        Portability`` and params like ``portNumber(info: PortingInfo)`` become edges.
-        An optional ``<< composition|aggregation|association >>`` on the op line
-        applies to the return type only.
-        """
-        ops: List[Operation] = []
-        rels: List[Relationship] = []
-        for line in text.splitlines():
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
-                continue
-            if stripped.startswith("//"):
-                if ops:
-                    append_invariant(ops[-1], stripped[2:])
-                continue
-            if stripped.startswith("->") or stripped.startswith("→"):
-                if ops:
-                    arrow = parse_arrow_line(stripped)
-                    callee = arrow[1] if arrow else stripped[2:].strip()
-                    if callee and callee not in ops[-1].callees:
-                        ops[-1].callees.append(callee)
-                continue
-            private = stripped.startswith("- ")
-            body = stripped[2:].strip() if private else stripped
-            body, ret_kind = self._strip_ce_prefix(body)
-            m = re.match(r"^(_?\w+)\(([^)]*)\)(?::\s*(.+))?", body)
-            if not m:
-                continue
-            op_name = ("_" if private and not m.group(1).startswith("_") else "") + m.group(1)
-            params = split_top_level(m.group(2))
-            ret = (m.group(3) or "").strip()
-            ops.append(Operation(name=op_name, parameters=params, return_type=ret))
-
-            kind = ret_kind or "association"
-            for target in domain_type_names(ret):
-                rels.append(Relationship(kind=kind, target=target))
-            for param in params:
-                # name: Type  or  name?: Type
-                pm = re.match(r"^(\w+)\??:\s*(.+)$", param)
-                if not pm:
-                    continue
-                for target in domain_type_names(pm.group(2)):
-                    rels.append(Relationship(kind="association", target=target))
-        return ops, rels
-
-
-MarkdownCleanEngineeringModel.module_type = MarkdownModule

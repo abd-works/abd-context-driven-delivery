@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import builtins
+import functools
 import inspect
 import re
 import textwrap
@@ -126,8 +127,9 @@ class RecipeSource:
     def __init__(self, recipe: Callable[..., Any]) -> None:
         self._recipe = recipe
 
-    @property
+    @functools.cached_property
     def module(self) -> ast.Module:
+        """The recipe's source, parsed once."""
         return ast.parse(textwrap.dedent(inspect.getsource(self._recipe)))
 
     @property
@@ -246,7 +248,7 @@ class RecipeExpansion:
         self._instructions = instructions
         self._toolset = instructions.toolset
         self._recipe = instructions.callable
-        self._source = RecipeSource(self._recipe)
+        self._source = instructions.recipe_source
         self._defining_class = defining_class
         self._expanding = self._expanding_with_this(expanding)
         self._mode = self._declared_mode(self._toolset)

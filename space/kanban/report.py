@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from harness.graph.saved_graph import SavedGraph, SavedGraphOutdated
 from harness.graph.violation import UNKNOWN_LOCATION, Violation
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.rule import Rule
@@ -64,20 +66,27 @@ class ReportRule:
 
 
 class Report:
-    """The rules a validation found broken. With no report it is empty, and it says when it has no saved graph, because
-    the graph's rules are then missing from it."""
+    """The rules a validation found broken. With no report it is empty, and it says when it has no saved graph, or its
+    saved graph is in a shape the graph no longer writes, because the graph's rules are then missing from it."""
 
-    def __init__(self, path: str = "", text: str = "", rules: list[ReportRule] | None = None, has_saved_graph: bool = False) -> None:
+    def __init__(self, path: str = "", text: str = "", rules: list[ReportRule] | None = None, has_saved_graph: bool = False, is_out_of_date: bool = False) -> None:
         self._path = path
         self._text = text
         self._rules = list(rules or [])
         self._has_saved_graph = has_saved_graph
+        self._is_out_of_date = is_out_of_date
 
     @classmethod
     def from_reports(cls, folder: str, reports: list[Report]) -> Report:
         """Every rule broken in reports, each listed once though two fidelities' reports share it, the latest first."""
         rules = {rule.identity: rule for report in reversed(reports) for rule in report.rules}
-        return cls(folder, "", list(reversed(rules.values())), all(report.has_saved_graph for report in reports))
+        return cls(
+            folder,
+            "",
+            list(reversed(rules.values())),
+            all(report.has_saved_graph for report in reports),
+            any(report.is_out_of_date for report in reports),
+        )
 
     @property
     @data_field
@@ -100,6 +109,13 @@ class Report:
         return self._has_saved_graph
 
     @property
+    @data_field
+    def is_out_of_date(self) -> bool:
+        """The saved graph was written in a shape the graph no longer reads, so validating again is the way to its rules."""
+        return self._is_out_of_date
+
+    @property
+    @data_field
     def violation_count(self) -> int:
         """Graph hits and judged findings together."""
         return sum(rule.count for rule in self._rules)
@@ -109,21 +125,19 @@ class ReportFile:
     """A validation report of one fidelity, saved in a session folder, with the graph the validation checked saved
     beside it. It knows which of its practice's rules it answers for."""
 
-    # The session holds the fidelity's reports and the folder the saved graph names its files from; the repository
-    # names the report's files from its top.
+    # The fidelity is the one its session holds, so it lists its own reports; the session its practice works in names
+    # the folder the saved graph names its files from, and its repository names the report's files from its top.
 
-    def __init__(self, file: Path, fidelity: FidelityGuidance, session: Session, repo: Repo) -> None:
+    def __init__(self, file: Path, fidelity: FidelityGuidance) -> None:
         self._file = file
         self._fidelity = fidelity
-        self._session = session
-        self._repo = repo
 
     @classmethod
-    def from_fidelity(cls, fidelity: FidelityGuidance, session: Session, repo: Repo) -> ReportFile | None:
-        """The latest report of fidelity in session that has its result, else its latest; none when it has none.
-        Validate saves a report before the agent judges it, so a report with no judgment and no saved graph yet does
-        not hide an earlier one that has its result."""
-        own = [cls(path, fidelity, session, repo) for path in fidelity.reports()]
+    def from_fidelity(cls, fidelity: FidelityGuidance) -> ReportFile | None:
+        """The latest report of fidelity in the session its practice works in that has its result, else its latest;
+        none when it has none. Validate saves a report before the agent judges it, so a report with no judgment and no
+        saved graph yet does not hide an earlier one that has its result."""
+        own = [cls(path, fidelity) for path in fidelity.reports()]
         with_result = [report for report in own if report.has_result]
         return (with_result or own or [None])[-1]
 
@@ -150,16 +164,30 @@ class ReportFile:
         return bool(Judgment.from_report(self.text))
 
     def report(self) -> Report:
-        """The rules broken on the nodes of the saved graph, then each rule the agent's judgment fails that the graph did not hit."""
+        """The rules broken on the nodes of the saved graph, then each rule the agent's judgment fails that the graph did
+        not hit. A saved graph in a shape the graph no longer writes gives no rules, and the report says it is out of date."""
         text = self.text
-        graph_rules = self._graph_rules() if self._graph.is_file() else []
+        has_graph = self._graph.is_file()
+        try:
+            graph_rules = self._graph_rules() if has_graph else []
+            is_out_of_date = False
+        except SavedGraphOutdated:
+            graph_rules, is_out_of_date = [], True
         hit = {rule.rule.slug for rule in graph_rules}
         judged = [rule for rule in self._judged_rules(text) if rule.rule.slug not in hit]
-        return Report(self._repo.path_from_top(self._file), text, graph_rules + judged, self._graph.is_file())
+        return Report(self._repo.path_from_top(self._file), text, graph_rules + judged, has_graph, is_out_of_date)
 
     @property
     def _practice(self) -> PracticeGuidance:
         return self._fidelity.practice_guidance
+
+    @property
+    def _session(self) -> Session:
+        return self._practice.session
+
+    @property
+    def _repo(self) -> Repo:
+        return self._session.repo
 
     @property
     def _workpath(self) -> Path:
@@ -192,7 +220,7 @@ class ReportFile:
 
     def _has_newer_report(self, earlier: FidelityGuidance) -> bool:
         """Whether an earlier fidelity was validated after this report was written, so its own report answers for its rules."""
-        latest = ReportFile.from_fidelity(earlier, self._session, self._repo)
+        latest = ReportFile.from_fidelity(earlier)
         return latest is not None and latest.stamp > self.stamp
 
     def _rule_named(self, name: str) -> Rule:
@@ -216,10 +244,10 @@ class ReportFile:
 
     def _scanned_rules(self) -> set[str]:
         """The rules a scanner checks now; a saved graph keeps the hits of a scanner deleted since it was saved."""
-        from harness.graph.saved_graph import SavedGraph
-
-        restored = SavedGraph.from_text(self._graph.read_text(encoding="utf-8"), str(self._graph)).restored_graph()
-        return set(restored.practice(self._practice.key).checks())
+        text = self._graph.read_text(encoding="utf-8")
+        # A graph saved from several graphs is a list of their violating nodes, with no overlays.
+        saved = SavedGraph([], {}) if isinstance(json.loads(text or "{}"), list) else SavedGraph.from_text(text, str(self._graph))
+        return set(saved.restored_graph().practice(self._practice.key).checks())
 
     def _judged_rules(self, text: str) -> list[ReportRule]:
         """Each rule the judgment fails, once however many judged files fail it, with its findings at the judged files' lines."""

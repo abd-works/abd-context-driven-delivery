@@ -8,7 +8,7 @@ from expects import equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import description, it
 
-from harness.graph.graph import Edge, EdgeType, Graph, Node, Source
+from harness.graph.graph import EdgeType, Graph, Node, Source
 from harness.graph.pattern_overlays import PatternOverlays
 
 
@@ -19,9 +19,10 @@ with description("pattern overlays"):
         expect(PatternOverlays([str(folder)]).paths).to(equal(named))
 
     with it("should rebuild the tree from edges that still point at the practice root"):
-        practice = Graph().practice("ddd")
-        practice.source_root = "."
-        root = practice.root_node
+        graph = Graph()
+        graph.open(Path("."))
+        practice = graph.practice("ddd")
+        root = graph.root_of(practice)
         child = Node(
             practice,
             "Aggregate",
@@ -29,13 +30,11 @@ with description("pattern overlays"):
             "account",
             Source("src/account.ts", 1, 10),
         )
-        practice.by_id[child.node_id] = child
-        practice.nodes.setdefault("Aggregate", []).append(child)
-        practice.edge_types["owns"] = EdgeType("owns", 2, "direct")
-        practice.edges["owns"] = [Edge("owns", 2, "direct", root, child)]
-        practice.rebuild_tree()
-        expect(len(practice.root_node.children)).to(equal(1))
-        expect(practice.root_node.children[0].node_id).to(equal(child.node_id))
+        graph.hold(child)
+        graph.record(EdgeType("owns", 2, "direct"), root, child)
+        graph.rebuild_tree(practice)
+        expect(len(root.children)).to(equal(1))
+        expect(root.children[0].node_id).to(equal(child.node_id))
 
     with it("should add the lern nodes when that overlay is applied to the example"):
         from harness.graph.graph import Graph
@@ -44,10 +43,10 @@ with description("pattern overlays"):
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
         data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
-        names = {node.type for node in graph.practice("ddd").by_id.values()}
+        names = {node.type for node in graph.nodes_of(graph.practice("ddd"))}
         expect("NodeRoot" in names).to(equal(True))
         expect("ClientRoot" in names).to(equal(True))
-        story_types = {node.type for node in graph.practice("stories").by_id.values()}
+        story_types = {node.type for node in graph.nodes_of(graph.practice("stories"))}
         expect("StoryShared" in story_types).to(equal(True))
 
     with it("should load the full source file for a lern domain node"):
@@ -57,7 +56,7 @@ with description("pattern overlays"):
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
         data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
-        domain_nodes = [node for node in graph.practice("ddd").by_id.values() if node.type == "NodeRoot"]
+        domain_nodes = [node for node in graph.nodes_of(graph.practice("ddd")) if node.type == "NodeRoot"]
         expect(len(domain_nodes) > 0).to(equal(True))
         node = domain_nodes[0]
         expect(node.source.end_line > 1).to(equal(True))
@@ -70,7 +69,7 @@ with description("pattern overlays"):
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
         data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
-        ddd_tree = data_of(graph.practice("ddd").root_node.serialize())
+        ddd_tree = data_of(graph.root_of(graph.practice("ddd")).serialize())
 
         def walk(node):
             yield node

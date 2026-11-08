@@ -1,19 +1,25 @@
 """Assemble agent instructions from @markdown properties."""
 from __future__ import annotations
 
+import functools
 import importlib
 import inspect
 import json
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
-from harness.name.name import Name
+from harness.annotations.annotation import hosted_only
+from harness.annotations.name import Name
+from harness.guidance.action_catalogue import FidelityActions
+from harness.guidance.declared_file import DeclaredFile
 from harness.guidance.documents import load_document
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.rule import Rule, RulesCollection
 from harness.guidance.schema import Schema
+from harness.guidance.sketch_lens import SketchLens
+from harness.guidance.stages import STAGES, ApproachStage
 from harness.agent_tools.agent_tools import (
     collect,
     agent_instructions,
@@ -30,6 +36,7 @@ from harness.mcp.mcp_server import mcp
 from harness.markdown import (
     Markdown,
     MarkdownCollection,
+    MarkdownScope,
     MarkdownText,
     markdown,
     markdownCollection,
@@ -86,9 +93,14 @@ class Guidance:
         typ = type(self)
         return f"{typ.__module__}:{typ.__name__}"
 
+    @functools.cached_property
+    def _own_name(self) -> Name:
+        """The guidance's name, made once from its declared slug or its class."""
+        return Name(self.domain_slug or type(self).__name__)
+
     @property
     def slug(self) -> str:
-        return Name(self.domain_slug or type(self).__name__).kebab
+        return self._own_name.kebab
 
     @property
     def install_folder(self) -> Path:
@@ -100,6 +112,21 @@ class Guidance:
             return Path(inspect.getfile(type(self))).resolve().parent
         except (TypeError, OSError):
             return Path(".")
+
+    @property
+    def markdown_scope(self) -> MarkdownScope:
+        """Where this guidance's markdown lives, handed to each Markdown it reads: the folder beside its class, its
+        ``{slug}.md``, and the format it works in."""
+        folder = self.module_dir
+        return MarkdownScope(folder, self.domain_slug or folder.name, format=self.format or None)
+
+    def _section(self, label: str) -> Markdown:
+        """The Markdown of one of its own labelled sections, made once and kept, so a second read answers from the
+        text the first read found."""
+        held = vars(self).setdefault("_held_sections", {})
+        if label not in held:
+            held[label] = Markdown.from_label(self, label)
+        return held[label]
 
     @markdownCollection("shared rules")
     @rules
@@ -117,13 +144,13 @@ class Guidance:
     @data_field
     def overview(self) -> str:
         """Its Overview section: what this guidance is for, which a person reads on its help."""
-        return Markdown.from_label(self, "overview").extract()
+        return self._section("overview").extract()
 
     @property
     @data_field
     def guidance(self) -> str:
         """Its Guidance section: how to do the work well, which a person reads on its help."""
-        return Markdown.from_label(self, "guidance").extract()
+        return self._section("guidance").extract()
 
     @property
     @data_field(key="rules")
@@ -196,6 +223,7 @@ class Guidance:
         )
 
 
+@hosted_only
 @toolset_collection
 class GuidanceCollection(MarkdownCollection, Guidance):
     def __init__(self, entries: dict[str, Guidance] | None = None, parent: Any = None) -> None:
@@ -203,16 +231,20 @@ class GuidanceCollection(MarkdownCollection, Guidance):
         Guidance.__init__(self)
         self.current: Guidance | None = None
 
-    def child_for_stage(self, stage: str) -> Guidance:
-        values = self.entries.values() if isinstance(self.entries, dict) else self.entries
-        for child in values:
-            if getattr(child, "stage", "") == stage:
-                return child
-        raise KeyError(stage)
+    def at_stage(self, stage: ApproachStage | None) -> FidelityGuidance:
+        """The fidelity that holds stage as the stage it is in; KeyError when none does."""
+        found = next((fidelity for fidelity in self if fidelity.approach_stage is stage and stage is not None), None)
+        if found is None:
+            raise KeyError(stage.name if stage is not None else stage)
+        return found
 
     @classmethod
     def child(cls, name: str, body: str = "") -> FidelityGuidance:
-        return FidelityGuidance(name=name)
+        """The fidelity a ``### name`` block of the practice document declares, with the settings its ```yaml block
+        gives it."""
+        fidelity = FidelityGuidance(name=name)
+        fidelity.apply_settings(MarkdownText(body).yaml_fields)
+        return fidelity
 
     @collect
     def overview(self) -> str: ...
@@ -233,14 +265,26 @@ class GuidanceCollection(MarkdownCollection, Guidance):
     def instructions(self) -> str: ...
 
 
+@hosted_only
 @identity("key")
 class PracticeGuidance(Guidance):
     sketch_titles: tuple[str, ...] = ()
     """The headings that open this practice's section of a sketch, lower case, such as `stories:`."""
+    sketch_lens: ClassVar[SketchLens] = SketchLens(())
+    """This practice's section of a sketch, made once from its ``sketch_titles`` when the practice class is made, so its
+    sketch format and a sketch's reader hold it rather than naming the practice."""
     SHORT_NAME: str = ""
     """The practice's name where there is little room, such as `CE` on a session board's chip."""
     COLOUR: str = ""
     """The colour a session board draws the practice's chips and tiles in, such as `#6BCB77` for Stories."""
+    shows_every_fidelity: bool = False
+    """Whether scoped markdown shows every fidelity's block even when one is current, as DDD's does; otherwise it shows
+    only the current fidelity's."""
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if cls.sketch_lens.titles != cls.sketch_titles:
+            cls.sketch_lens = SketchLens(cls.sketch_titles)
 
     def __init__(
         self,
@@ -249,10 +293,34 @@ class PracticeGuidance(Guidance):
         default_workspace_folder: str = ".",
         formats: dict[str, Any] | None = None,
     ) -> None:
+        self._own_format: str | None = None
         super().__init__(format=format)
         self.default_workspace_folder = default_workspace_folder
         self._formats = dict(formats or {})
         self._activate(fidelity=fidelity)
+
+    @property
+    def format(self) -> str | None:
+        """The format this practice works in: the format its current fidelity works in, which that fidelity holds; the
+        practice's own while it has no current fidelity."""
+        current = self._current_fidelity
+        return current.format if current is not None else self._own_format
+
+    @format.setter
+    def format(self, value: str | None) -> None:
+        """Work in value: its current fidelity keeps it, or the practice itself while it has none."""
+        current = self._current_fidelity
+        if current is not None:
+            current.format = value
+        else:
+            self._own_format = value
+
+    @property
+    def _current_fidelity(self) -> FidelityGuidance | None:
+        """The current fidelity, read without reading the fidelities from the practice's document when nothing has
+        read them yet, since none can be current then."""
+        fidelities = vars(self).get("fidelities")
+        return getattr(fidelities, "current", None)
 
     @markdownCollection("shared rules")
     @rules
@@ -260,12 +328,27 @@ class PracticeGuidance(Guidance):
     def rules(self) -> RulesCollection:
         """Shared rules as a collection."""
 
+    @property
+    def markdown_scope(self) -> MarkdownScope:
+        """Where this practice's markdown lives, at its current fidelity and format, read without reading the
+        fidelities from the practice's document when nothing has read them yet."""
+        current = self._current_fidelity
+        return replace(super().markdown_scope, fidelity=current.name if current is not None else None)
+
+    @functools.cached_property
+    def document(self) -> MarkdownText:
+        """The practice's own document, ``{key}.md`` beside its class, read once: its sections and each fidelity's
+        block are read from this text."""
+        path = self.domain_markdown_path()
+        return MarkdownText(path.read_text(encoding="utf-8") if path.is_file() else "")
+
     def checked_rule_collections(self) -> list[RulesCollection]:
-        """The rule collections a validate of this practice checks: its shared rules, then its current fidelity's, or
-        every fidelity's when it has no current one. A fidelity that shares the practice's collection is listed once."""
+        """The rule collections a validate of this practice checks: its current fidelity's, which start with the shared
+        rules, or the shared rules and every fidelity's when it has no current one."""
         current = self.fidelities.current
-        chosen = [current] if current is not None else list(self.fidelities)
-        collections = [self.rules, *(fidelity.rules for fidelity in chosen)]
+        if current is not None:
+            return current.checked_rule_collections()
+        collections = [self.rules, *(fidelity.rules for fidelity in self.fidelities)]
         return list({id(collection): collection for collection in collections if collection is not None}.values())
 
     def every_rule(self) -> list[Rule]:
@@ -280,8 +363,13 @@ class PracticeGuidance(Guidance):
     # names the graph rules it checks. The graph names no practice, so these words live here, on the practice.
 
     graph: Any = None
-    """The graph that holds this practice (harness/graph's *Graph*); none for a practice no graph holds, such as the one
-    an action works with at a fidelity and format of its own."""
+    """The graph that holds this practice (harness/graph's *Graph*), which keeps the practice's nodes and edges; none for
+    a practice no graph holds. A session's practices are held by the session's graph, so the practice an action works
+    with is the one the graph reads."""
+
+    extended: PracticeGuidance | None = None
+    """The practice whose types this practice's schema builds on, which ``extends`` names, held by reference: the one of
+    the same set of practices, such as the session's Clean Engineering for its DDD."""
 
     reads_after: tuple[str, ...] = ()
     """The practices whose nodes this one reads while it reads its own; the graph reads them first."""
@@ -322,11 +410,12 @@ class PracticeGuidance(Guidance):
     def align_node(self, node: Any) -> None:
         """Move node's source onto the lines that declare it, when this practice's reader found it by a nearby line."""
 
-    def read_working_copy(self, practice_graph: Any) -> None:
-        """Read this practice's nodes and edges into practice_graph from the working copy its graph is loading."""
+    def read_working_copy(self) -> None:
+        """Read this practice's nodes and edges into its graph from the working copy that graph is loading."""
 
-    def link_to_other_practices(self, graph: Any) -> None:
-        """Record the edges between this practice's nodes and other practices' nodes, once every practice is read."""
+    def link_to_other_practices(self) -> None:
+        """Record the edges between this practice's nodes and other practices' nodes in its graph, once every practice
+        is read."""
 
     def graph_checks(self) -> dict[str, Any]:
         """Every graph rule (a *PracticeGraphRule*) this practice checks, by slug; read once."""
@@ -338,6 +427,13 @@ class PracticeGuidance(Guidance):
     def own_graph_checks(self) -> dict[str, Any]:
         """The graph rules this practice's ``rules`` package lists; a practice that checks more overrides this."""
         return rules_in(f"{self.package}.rules") if self.package else {}
+
+    def checks(self) -> dict[str, Any]:
+        """The graph rules this practice checks, with those the pattern overlays its graph applies add to it, by slug."""
+        merged = dict(self.graph_checks())
+        if self.graph is not None:
+            merged.update(self.graph.overlay_checks_of(self))
+        return merged
 
     def language_checks(self, language: str) -> dict[str, Any]:
         """The graph rules this practice checks only on nodes read from a file in ``language``, such as ``drawio``."""
@@ -385,37 +481,6 @@ class PracticeGuidance(Guidance):
         current = getattr(getattr(self, "fidelities", None), "current", None)
         return current.output_paths() if current is not None else {}
 
-    def project_rules(self) -> list:
-        """The custom rules the project keeps for this practice in `.context/rules/{practice}/rules.md`, and for a
-        fidelity in a folder named after it, each tagged project; none when the practice works in no folder."""
-        from harness.guidance.project_rules import ProjectRulesets
-
-        folder = self._working_folder()
-        if folder is None or not folder.is_dir():
-            return []
-        rules: list = []
-        seen: set[Path] = set()
-        for rules_dir in ProjectRulesets(folder).folders_for(self.key):
-            rules.extend(self._project_rules_in(rules_dir / "rules.md", None, seen))
-            for fidelity in self.fidelities.entries:
-                for spelling in Name(fidelity).spellings:
-                    rules.extend(self._project_rules_in(rules_dir / spelling / "rules.md", fidelity, seen))
-        return rules
-
-    def _project_rules_in(self, path: Path, fidelity: str | None, seen: set[Path]) -> list:
-        """The rules in one project rules file, once each however many spellings lead to it."""
-        if not path.is_file() or path.resolve() in seen:
-            return []
-        seen.add(path.resolve())
-        collection = RulesCollection.from_markdown(path.read_text(encoding="utf-8"), fidelity=fidelity)
-        return [
-            rule.attribute_to(self.key, tag="project", shared=fidelity is None) for rule in collection
-        ]
-
-    def _working_folder(self) -> Path | None:
-        """The folder the session this practice works in works in; none while it works in no session."""
-        return self.session.root if self.session is not None else None
-
     @property
     def supported_formats(self) -> frozenset:
         own = dict(getattr(self, "_formats", None) or {})
@@ -425,19 +490,16 @@ class PracticeGuidance(Guidance):
     
     ## workspace integration to move
 
-    def _activate(self, fidelity: str | None = None, stage: str | None = None) -> None:
+    def _activate(self, fidelity: str | None = None) -> None:
         if getattr(self, "_activating", False):
             return
         self._activating = True
         try:
-            self._activate_fidelity(fidelity, stage)
+            self._activate_fidelity(fidelity)
         finally:
             self._activating = False
 
-    def _activate_fidelity(self, fidelity: str | None, stage: str | None) -> None:
-        if stage is not None:
-            child = self.fidelities.child_for_stage(stage)
-            fidelity = getattr(child, "name", None) or fidelity
+    def _activate_fidelity(self, fidelity: str | None) -> None:
         if fidelity is not None:
             self._make_current(fidelity)
         if self.format:
@@ -445,15 +507,22 @@ class PracticeGuidance(Guidance):
         self._check_format()
 
     def _make_current(self, fidelity: str) -> None:
-        """Make fidelity current; the practice takes its default format when it works in none yet."""
+        """Make fidelity current. A format the practice was made with, before it had a current fidelity, is the one that
+        fidelity works in; otherwise the fidelity keeps its own."""
         entries = self.fidelities.entries
         if entries and fidelity not in entries:
             raise ValueError(f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(entries)}")
         if fidelity not in entries:
             return
-        if not self.format and entries[fidelity].default_format:
-            self.format = entries[fidelity].default_format
+        if self._own_format:
+            entries[fidelity].format = self._own_format
         self.fidelities.current = entries[fidelity]
+
+    def work_at(self, fidelity: str) -> FidelityGuidance:
+        """Work at fidelity, one of this practice's by name, from now on: it is the practice's current fidelity until
+        another is worked at. The practice keeps it; nothing sets it back."""
+        self._make_current(fidelity)
+        return self.fidelities.current
 
     def _check_format(self) -> None:
         """Raise ValueError for a format the practice does not write: one its adapters do not read, or, for a practice
@@ -505,15 +574,10 @@ class PracticeGuidance(Guidance):
         return "\n\n".join(part for part in self._guidance_parts() if part)
 
     def _guidance_parts(self) -> list[str]:
-        parts = [Markdown.from_label(self, "guidance").extract().strip()]
+        """The practice's own Guidance section, then its current fidelity's guidance and companion text, which that
+        fidelity answers."""
         current = self.fidelities.current
-        if current is not None:
-            parts.append(Markdown.from_label(current, "guidance").extract().strip())
-        companion = self.clean_engineering_companion
-        extra = companion.instructions if companion is not None else ""
-        if isinstance(extra, str):
-            parts.append(extra.strip())
-        return parts
+        return [self._section("guidance").extract().strip(), *(current.guidance_parts() if current is not None else ())]
 
 
     @property
@@ -530,13 +594,20 @@ class PracticeGuidance(Guidance):
             if part
         )
 
-    @property
+    @functools.cached_property
     def schema(self) -> str:
-        """The practice schema at ``{practice}/model/schema.yaml``."""
-        path = self.module_dir / "model" / "schema.yaml"
-        if not path.is_file():
-            return ""
-        return path.read_text(encoding="utf-8").strip()
+        """The practice schema at ``{practice}/model/schema.yaml``, read once."""
+        path = self._schema_path
+        return path.read_text(encoding="utf-8").strip() if path.is_file() else ""
+
+    @property
+    def _schema_path(self) -> Path:
+        return self.module_dir / "model" / "schema.yaml"
+
+    @functools.cached_property
+    def schema_types(self) -> Schema:
+        """The types the practice schema declares, read once for the process."""
+        return Schema.load(self._schema_path)
 
     def schema_guide(self) -> str:
         """Tell an action to conform its output to this practice schema."""
@@ -552,13 +623,13 @@ class PracticeGuidance(Guidance):
         """Each node type of the practice schema with the fidelity that creates it and every higher fidelity: a node a
         low fidelity creates also belongs to the higher ones, which build it out rather than replace it."""
         order = [fidelity.name for fidelity in self.fidelities]
-        created = Schema(self.schema).fidelities()
+        created = self.schema_types.fidelities()
         return {node: order[order.index(fidelity):] for node, fidelity in created.items() if fidelity in order}
 
     def schema_fidelity_errors(self) -> list[str]:
         """What is wrong between the practice schema and the practice's fidelities: a schema with no node fidelity, or a
         node fidelity that is not one of the practice's. Empty when they agree."""
-        created = Schema(self.schema).fidelities()
+        created = self.schema_types.fidelities()
         if not created:
             return ["schema defines no node fidelity entries"]
         declared = sorted(fidelity.name for fidelity in self.fidelities)
@@ -601,6 +672,16 @@ class PracticeGuidance(Guidance):
             return getattr(importlib.import_module(module_path), attr)
         return entry
 
+    def format_for(self, file: Path) -> Any:
+        """A new model of the file's format: the one among this practice's formats whose adapter reads the file's
+        extension, such as Python for ``cart_spec.py``. A format whose adapter names no ``suffixes`` reads no file by
+        its extension. Raises ValueError when none of its formats reads it."""
+        suffix = file.suffix.lower()
+        for name in self.formats:
+            adapter = self._format_adapter(name)
+            if suffix in getattr(adapter, "suffixes", ()):
+                return adapter()
+        raise ValueError(f"No {type(self).__name__} format reads {file.name}")
 
     def read_paths(self, paths: list[str] | str, source: str | None = None) -> Any:
         """What render converts from the files at paths: their text, one after another, read from the project of the
@@ -708,6 +789,14 @@ class PracticeGuidance(Guidance):
         return target.render(parsed, **kwargs)
 
     def _live_adapter(self, format_name: str) -> Any:
+        """The format's adapter, made once on first use and kept by the format it reads and writes."""
+        adapters = vars(self).setdefault("_live_adapters", {})
+        name = Format(format_name).name
+        if name not in adapters:
+            adapters[name] = self._made_adapter(name)
+        return adapters[name]
+
+    def _made_adapter(self, format_name: str) -> Any:
         """The format's adapter, made the way its class says: through its own ``create``, with the folder tests are
         written under when its constructor takes ``tests_root``, or bare. An adapter whose constructor needs more is
         used as its class, whose operations read and write the format."""
@@ -741,25 +830,14 @@ class PracticeGuidance(Guidance):
     
 
     def scoped_markdown(self) -> str:
-        """Overview, practice sections, and the active fidelity (or every fidelity)."""
-        parts = [
-            Markdown.from_label(self, label).extract()
-            for label in ("overview", "guidance", "shared rules", "language")
-        ]
-        md_path = self.domain_markdown_path()
-        if md_path.is_file():
-            current = self.fidelities.current
-            current_name = current.name if current is not None else None
-            for name, body in MarkdownText(md_path.read_text(encoding="utf-8")).fidelity_blocks():
-                if self._skip_inactive_fidelity(current_name, name):
-                    continue
-                parts.append(f"### {name}\n\n{body}")
+        """Overview, practice sections, and the current fidelity's block, or every fidelity's when none is current."""
+        parts = [self._section(label).extract() for label in ("overview", "guidance", "shared rules", "language")]
+        current = self.fidelities.current
+        current_name = current.name if current is not None else None
+        shown = [fidelity for fidelity in self.fidelities if self.shows_every_fidelity or current_name in (None, fidelity.name)]
+        parts.extend(fidelity.titled_section for fidelity in shown)
         return "\n\n".join(part for part in parts if part.strip())
 
-    def _skip_inactive_fidelity(self, current_name: str | None, name: str) -> bool:
-        if not current_name:
-            return False
-        return Name(current_name).snake != Name(name).snake
 
 
 def _folder_of(paths: list[str] | str) -> str:
@@ -773,6 +851,7 @@ def _folder_of(paths: list[str] | str) -> str:
     return str(path.parent) if path.parent.is_dir() else ""
 
 
+@hosted_only
 @identity("slug")
 @agent_toolset
 class FidelityGuidance(Guidance):
@@ -802,6 +881,38 @@ class FidelityGuidance(Guidance):
         if clean_engineering is not None:
             self.clean_engineering = clean_engineering
 
+    def apply_settings(self, settings: dict[str, Any]) -> None:
+        """Take the settings its block's ```yaml gives it: the stage it is in, its default format, the files it writes
+        in each format, its Clean Engineering companion, and what a validate judges it on. A setting it does not know
+        is the reader's, such as a rules block's ``globs``, and stays unread here."""
+        if "stage" in settings:
+            self.stage = str(settings["stage"] or "")
+        if "default_format" in settings:
+            self.default_format = str(settings["default_format"] or "")
+        if "outputs" in settings:
+            self.outputs = settings["outputs"] if isinstance(settings["outputs"], dict) else {}
+        if "clean_engineering" in settings:
+            self.clean_engineering = str(settings["clean_engineering"] or "")
+        if "judged_on" in settings:
+            self.judged_on = str(settings["judged_on"] or "artifacts")
+
+    @property
+    def stage(self) -> str:
+        """The stage this fidelity's **Stage:** names, such as `discovery`."""
+        return self._stage
+
+    @stage.setter
+    def stage(self, value: str) -> None:
+        """Name the stage this fidelity is in; the approach's stage of that name is held from now on."""
+        self._stage = value or ""
+        self._approach_stage = STAGES.of(self._stage)
+
+    @property
+    def approach_stage(self) -> ApproachStage | None:
+        """The approach's stage this fidelity is in, held since its stage was named; none for a name that is no
+        stage."""
+        return self._approach_stage
+
     @property
     def is_judged_on_graph(self) -> bool:
         """Whether a validate judges this fidelity against the graph it builds from the code."""
@@ -816,6 +927,7 @@ class FidelityGuidance(Guidance):
     @name.setter
     def name(self, value: str) -> None:
         self._name = value or ""
+        vars(self).pop("_own_name", None)
 
     @property
     @data_field
@@ -827,6 +939,7 @@ class FidelityGuidance(Guidance):
     @outputs.setter
     def outputs(self, value: dict[str, str | list[str]]) -> None:
         self._outputs = dict(value or {})
+        vars(self).pop("_declared_files", None)
 
     def work_in(self, session_output: Any) -> None:
         """Work in a session through session_output, the FidelitySessionOutput holding what this fidelity has there."""
@@ -865,6 +978,22 @@ class FidelityGuidance(Guidance):
     def _reports_folder(self) -> Path | None:
         return self.session_output.reports_folder if self.session_output is not None else None
 
+    def schema_guide(self) -> str:
+        """Its practice's schema guide, which its output conforms to; none when it belongs to no practice."""
+        practice = self.practice_guidance
+        return practice.schema_guide() if practice is not None else ""
+
+    @property
+    def is_part_of_practice(self) -> bool:
+        """A fidelity is a part of the practice that holds it; one made apart from any practice is not."""
+        return self.practice_guidance is not None
+
+    @property
+    def is_served_on_mcp(self) -> bool:
+        """Only a fidelity its practice holds is served; one made apart from any practice has no practice to reach it
+        through."""
+        return self.practice_guidance is not None
+
     @property
     def practice_guidance(self) -> PracticeGuidance | None:
         parent = getattr(self, "parent", None)
@@ -874,17 +1003,22 @@ class FidelityGuidance(Guidance):
 
     @property
     def format(self) -> str | None:
-        """The format this fidelity works in. A Clean Engineering companion writes the code of the fidelity it is the
-        companion of, so while that fidelity's practice works in a code format the companion works in it too, read when
-        asked so it follows that practice."""
-        served = self.companion_of.practice_guidance if self.companion_of is not None else None
-        if served is not None and Format(served.format).is_code:
-            return served.format
-        return getattr(self, "_format", None)
+        """The format this fidelity works in: the one it last used, which it keeps in the session its practice works
+        in, else its default. A Clean Engineering companion writes the code of the fidelity it is the companion of, so
+        while that fidelity works in a code format the companion works in it too, read when asked so it follows it."""
+        served = self.companion_of.format if self.companion_of is not None else None
+        if served is not None and Format(served).is_code:
+            return served
+        kept = self.session_output.kept_format if self.session_output is not None else ""
+        return kept or getattr(self, "_format", None)
 
     @format.setter
     def format(self, value: str | None) -> None:
+        """Work in value from now on; in a session, the fidelity keeps it there, so the next action on it works in it
+        without being told."""
         self._format = value
+        if value and self.session_output is not None:
+            self.session_output.keep_format(value)
 
     @property
     @data_field
@@ -895,8 +1029,9 @@ class FidelityGuidance(Guidance):
     def default_format(self, value: str) -> None:
         """value as a practice document writes it, such as ``markdown (md)``: its first word, as the format's name."""
         self._default_format = Format(self._first_word(value)).name if value else ""
-        if self._default_format:
-            self.format = self._default_format
+        # Each read of the fidelity's document names its default again; a format already chosen stays.
+        if self._default_format and not getattr(self, "_format", None):
+            self._format = self._default_format
 
     def _first_word(self, value: str) -> str:
         return value.split()[0].strip("()`") if value.strip() else ""
@@ -926,12 +1061,25 @@ class FidelityGuidance(Guidance):
         """A companion fidelity, or its name as a practice document writes it, such as ``code (Clean Engineering)``."""
         self._clean_engineering = Name(self._first_word(value)).snake if isinstance(value, str) else value
 
+    @functools.cached_property
+    def _own_name(self) -> Name:
+        """The fidelity's name in its practice, made once."""
+        return Name(self.name)
+
     @property
     @data_field
     def slug(self) -> str:
-        parent = self.practice_guidance.slug if self.practice_guidance is not None else super().slug
-        leaf = Name(self.name).kebab
+        parent = self.practice_guidance.slug if self.practice_guidance is not None else Name(type(self).__name__).kebab
+        leaf = self._own_name.kebab
         return f"{parent}-{leaf}" if leaf else parent
+
+    @property
+    def markdown_scope(self) -> MarkdownScope:
+        """Where this fidelity's markdown lives: its own ``### {name}`` block of its practice's document, with the
+        practice's templates and examples at this fidelity and the format it works in."""
+        practice = self.practice_guidance
+        base = practice.markdown_scope if practice is not None else super().markdown_scope
+        return replace(base, fidelity=self.name or None, format=self.format or None, in_fidelity_block=True)
 
     @property
     def install_folder(self) -> Path:
@@ -944,24 +1092,104 @@ class FidelityGuidance(Guidance):
     def scaffold(self) -> str:
         """This fidelity's Scaffold subsection: the names a first cut writes, which are what a partition index lists;
         empty when the fidelity has none."""
-        return Markdown.from_label(self, "scaffold").extract().strip()
+        return self._section("scaffold").extract().strip()
 
     @property
     def section(self) -> str:
-        """This fidelity's whole ``### {name}`` block in its practice's markdown: overview, sketch, guidance, and rules."""
+        """This fidelity's whole ``### {name}`` block in its practice's document: overview, sketch, guidance, and
+        rules."""
         practice = self.practice_guidance
-        if practice is None:
-            return ""
-        path = practice.domain_markdown_path()
-        if not path.is_file():
-            return ""
-        return MarkdownText(path.read_text(encoding="utf-8")).fidelity_block(self.name)
+        return practice.document.fidelity_block(self.name) if practice is not None else ""
+
+    @property
+    def titled_section(self) -> str:
+        """Its block under its own ``### {name}`` heading, as a practice's scoped markdown shows it; empty when the
+        practice document has no block for it."""
+        body = self.section
+        return f"### {self.name}\n\n{body}" if body else ""
 
     @markdownCollection
     @rules
     @agent_tool
     def rules(self) -> RulesCollection:
         """Fidelity rules section."""
+
+    def checked_rule_collections(self) -> list[RulesCollection]:
+        """The rule collections a validate of this fidelity checks: its practice's shared rules, then its own. A
+        collection it shares with its practice is listed once."""
+        practice = self.practice_guidance
+        collections = [practice.rules if practice is not None else None, self.rules]
+        return list({id(collection): collection for collection in collections if collection is not None}.values())
+
+    def every_rule(self) -> list[Rule]:
+        """Every rule of its practice, shared and each fidelity's: a saved graph holds the whole practice's hits, so a
+        report on this fidelity still shows each hit's rule text; its own rules when it belongs to no practice."""
+        practice = self.practice_guidance
+        return practice.every_rule() if practice is not None else super().every_rule()
+
+    @property
+    def examples(self) -> str:
+        """Its practice's examples at this fidelity, in the format it works in; none when it belongs to no practice."""
+        practice = self.practice_guidance
+        if practice is None:
+            return ""
+        return str(Markdown.from_label(practice, "examples", fidelity=self.name, format=self.format).extract() or "").strip()
+
+    def generate_output(self) -> str:
+        """What its practice tells the agent about writing this fidelity's artifact: the practice's generate_output
+        recipe, expanded, so a practice that renders a format itself, such as Clean Engineering's draw.io, says so."""
+        practice = self.practice_guidance
+        return practice.instruction("generate_output").expand({}).instructions if practice is not None else ""
+
+    def guidance_parts(self) -> list[str]:
+        """Its own guidance, then its Clean Engineering companion's instructions: what a practice working at this
+        fidelity adds to its own guidance."""
+        companion = self.clean_engineering
+        return [self._section("guidance").extract().strip(), companion.instructions.strip() if companion is not None else ""]
+
+    @property
+    def templates(self) -> str:
+        """Its template in the format it works in, else in its default format: a companion writing TypeScript still
+        shows Clean Engineering's reference template when no TypeScript one exists."""
+        located = self._template_markdown()
+        return located.extract().strip() if located is not None else ""
+
+    @property
+    def template_file(self) -> Path | None:
+        """The file its template is read from, in the format it works in, else its default format; none when it has
+        no template."""
+        located = self._template_markdown()
+        return located.location.path if located is not None else None
+
+    def _template_markdown(self) -> Markdown | None:
+        for format in [spelling for spelling in dict.fromkeys((self.format, self.default_format)) if spelling] or [""]:
+            located = Markdown.from_label(self, "templates", format=format)
+            path = located.location.path
+            if path is not None and path.is_file():
+                return located
+        return None
+
+    def declares(self, path: str, format: str = "") -> bool:
+        """Whether path, written from the project's root or absolute, is a file one of its outputs names, in format when
+        one is named: a declared file such as ``{bounded_context}/{aggregate}/{aggregate}.ts`` matches the end of a
+        path. A declared folder names no file."""
+        held = self._declared_files
+        chosen = held.get(format, []) if format else [declared for files in held.values() for declared in files]
+        return any(declared.pattern.search(path) for declared in chosen)
+
+    @functools.cached_property
+    def _declared_files(self) -> dict[str, list[DeclaredFile]]:
+        """The files each format of its outputs declares, by format."""
+        return {
+            label: [DeclaredFile(name) for name in ([names] if isinstance(names, str) else names) if name and not name.endswith("/")]
+            for label, names in self.outputs.items()
+        }
+
+    @functools.cached_property
+    def actions(self) -> FidelityActions:
+        """The actions that work on this fidelity, each run on it: ``fidelity.actions.generate(format="drawio")``.
+        The actions register with the action catalogue, so guidance names none of them."""
+        return FidelityActions(self)
 
     @property
     @mcp
@@ -972,21 +1200,17 @@ class FidelityGuidance(Guidance):
         practice = self.practice_guidance
         parent = ()
         templates = ""
-        companion_text = ""
         if practice is not None:
             parent = (
                 (practice.overview or "").strip(),
-                Markdown.from_label(practice, "guidance").extract().strip(),
+                practice._section("guidance").extract().strip(),
                 (practice.rules.markdown or "").strip(),
             )
-            companion = self.clean_engineering
-            companion_text = (
-                companion.instructions if isinstance(companion, FidelityGuidance) else ""
-            )
-            templates = self._template(practice)
+            templates = self.templates
             if templates:
                 templates = f"#### Template\n\n{templates}"
-        schema = practice.schema_guide() if practice is not None else ""
+        companion = self.clean_engineering if practice is not None else None
+        schema = self.schema_guide()
         return "\n\n".join(
             part
             for part in (
@@ -996,17 +1220,7 @@ class FidelityGuidance(Guidance):
                 (self.guidance or "").strip(),
                 (self.rules.markdown or "").strip(),
                 templates,
-                companion_text,
+                companion.instructions if companion is not None else "",
             )
             if part
         )
-
-    def _template(self, practice: PracticeGuidance) -> str:
-        """This fidelity's template in the format it works in, else in its default format: a companion writing
-        TypeScript still shows Clean Engineering's reference template when no TypeScript one exists."""
-        formats = [spelling for spelling in dict.fromkeys((self.format, self.default_format)) if spelling] or [""]
-        for format in formats:
-            found = Markdown.from_label(practice, "templates", fidelity=self.name, format=format).extract().strip()
-            if found:
-                return found
-        return ""

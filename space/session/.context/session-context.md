@@ -25,7 +25,7 @@ session --> set when ever a session is opened, created etc
 
             log context --> files and folder paths being passed in;
             log the guideline, fidelity, format and actions invoked, logg hgest graph node per prqactice if known
-            chat-log --> every log line carries chat id, transcript JSONL path, and line range for continued conversations; append_chat / append-log repair missing pointers; mark-loop and tool lines in the same loop should share the thread so read_loop inlines the full dialogue
+            chat-log --> every log line carries chat id, transcript JSONL path, and line range for continued conversations; append-log repairs missing pointers; mark-loop and tool lines in the same loop should share the thread so read_loop inlines the full dialogue
             log f rules were injected if so what files matched what rules only log rule names, sort and sp[earat by practidce and fidelity ]
             errors - if tools fail for ANY reason, tool , code, etc log it but dont swallow i! write fullt rce to session.err and point the log entry to a session.err line 
             log time stamp 

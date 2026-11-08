@@ -186,7 +186,7 @@ export class AccountRepository {
                 lang="typescript",
                 filename="account.ts",
             )
-            repo = next(n for n in practice.nodes.get("OoadClass", []) if n.name == "AccountRepository")
+            repo = next(n for n in practice.graph.nodes_of(practice, "OoadClass") if n.name == "AccountRepository")
             from harness.graph.rule_context import RuleCheckContext
 
             context = RuleCheckContext(practice, root)
@@ -390,8 +390,9 @@ export class NumberExamples {
                 "# Customer\n\nAccount, Customer Profile, Identity verification\n",
                 encoding="utf-8",
             )
-            practice = Graph().practice("ddd")
-            practice.source_root = str(root)
+            graph = Graph()
+            graph.open(Path(str(root)))
+            practice = graph.practice("ddd")
             practice._temp_dir = temp  # type: ignore[attr-defined]
             rel = "src/customer/.context/bounded-context.md"
             node = Node(
@@ -420,8 +421,9 @@ export class NumberExamples {
                 "# numbers\n\n- **Seam (terms):** NumberInventory\n\n## Constraint\n\nUse search flows.\n",
                 encoding="utf-8",
             )
-            practice = Graph().practice("ddd")
-            practice.source_root = str(root)
+            graph = Graph()
+            graph.open(Path(str(root)))
+            practice = graph.practice("ddd")
             practice._temp_dir = temp  # type: ignore[attr-defined]
             rel = "src/inventory/numbers"
             node = Node(

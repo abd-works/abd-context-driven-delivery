@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -19,10 +20,13 @@ FILES_CREATED_AT = "2026-10-28T18:00:00Z"
 
 
 class DesignCanvas:
-    """The pages, boards and artboard files of one Claude Design canvas."""
+    """The pages, boards and artboard files of one Claude Design canvas, and the files its project folder already
+    holds: the artboards people edited there, the stylesheets they link, and the images they show."""
 
-    def __init__(self, title: str) -> None:
+    def __init__(self, title: str, project: Optional[Path] = None) -> None:
         self.title = title
+        # The canvas's project folder (``<version>/project``) when it is already on disk; none for a canvas drawn fresh.
+        self.project = Path(project) if project is not None else None
         self._pages: List[dict] = []
         self._boards: Dict[str, dict] = {}
         self._order: List[str] = []
@@ -41,6 +45,32 @@ class DesignCanvas:
         self._order.append(name)
         if text is not None:
             self._files[f"{PROJECT}/{name}"] = text
+
+    def artboards_in(self, folder: str) -> List[str]:
+        """The artboards already in folder of the project, as ``folder/<name>.dc.html``, in name order."""
+        found = self.project / folder if self.project is not None else None
+        if found is None or not found.is_dir():
+            return []
+        return [f"{folder}/{path.name}" for path in sorted(found.glob("*.dc.html"))]
+
+    def holds(self, name: str) -> bool:
+        """True when the project already holds the file name, a path under ``project/``."""
+        return self.project is not None and (self.project / name).is_file()
+
+    def size_of(self, name: str) -> Optional[int]:
+        """The bytes in the project's file name; none when the project does not hold it."""
+        return (self.project / name).stat().st_size if self.holds(name) else None
+
+    def stylesheets_linked_by(self, names: List[str]) -> List[str]:
+        """The stylesheets the project's artboards names link, each once, in the order they are first linked."""
+        found: List[str] = []
+        for name in names:
+            if not self.holds(name):
+                continue
+            for href in re.findall(r'<link rel="stylesheet" href="([^"]+)"', (self.project / name).read_text(encoding="utf-8")):
+                if href not in found:
+                    found.append(href)
+        return found
 
     def files(self) -> Dict[str, str]:
         """Every file the canvas writes, ``canvas.json`` included, by path."""

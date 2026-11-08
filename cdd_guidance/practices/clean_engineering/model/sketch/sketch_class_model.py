@@ -6,7 +6,8 @@ import re
 import textwrap
 from typing import List, Optional
 
-from cdd_guidance.actions.sketch.sketch_outline import SketchLens, SketchOutline
+from cdd_guidance.actions.sketch.sketch_outline import SketchOutline
+from harness.guidance.sketch_lens import SketchLens
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
@@ -14,17 +15,13 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 )
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in
 from cdd_guidance.practices.clean_engineering.model.operation import Operation, Parameter
-from cdd_guidance.practices.clean_engineering.model.property import (
-    Property,
-    append_invariant,
-    invariant_lines,
-    property_notes,
-    take_property_note,
-)
+from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
 
 _NESTING_INDENT = 2
 _SECTION_TITLE = "clean engineering:"
+# The Clean Engineering section of a sketch, opened by either of its headings; the practice declares these titles.
+_LENS = SketchLens(("ce:", _SECTION_TITLE))
 _TOP_MODULE_DEPTH = 3
 _CLASS_DEPTH = 5
 _DEEPEST_HEADING = 6
@@ -50,63 +47,78 @@ _PROSE = re.compile(
 )
 
 
+class SketchOoadClass(OoadClass):
+    """A class in the sketch notation: its heading, then a fence of its members."""
+
+    def sketch_lines(self, depth: int) -> List[str]:
+        marks = "".join(f" <<{item}>>" for item in self.stereotypes)
+        bases = f" : {', '.join(self.bases)}" if self.bases else ""
+        lines = [f"{'#' * depth} {self.name}{marks}{bases}", ""]
+        members: List[str] = []
+        for prop in self.properties:
+            members.append(prop.name)
+            members.extend(f"{_MEMBER_INDENT}// {note}" for note in _property_notes(prop))
+        for operation in self.operations:
+            members.append(_operation_line(operation))
+            members.extend(f"{_MEMBER_INDENT}-> {callee}" for callee in operation.callees)
+            members.extend(f"{_MEMBER_INDENT}// {note}" for note in operation.invariant_lines())
+        if members:
+            lines.extend([_FENCE, *members, _FENCE, ""])
+        return lines
+
+
+class SketchModule(Module):
+    """A module in the sketch notation: a `name/` heading, its own classes, then its nested modules, so each class
+    is read back under its module."""
+
+    def load_module(self, source: Module) -> "SketchModule":
+        return SketchModule(name=source.name, sequential_order=source.sequential_order)
+
+    def load_class(self, source: OoadClass) -> SketchOoadClass:
+        return SketchOoadClass(name=source.name, sequential_order=source.sequential_order)
+
+    def sketch_lines(self, depth: int) -> List[str]:
+        lines = [f"{'#' * min(depth, _DEEPEST_HEADING)} {self.name}/", ""]
+        for oclass in self.classes:
+            lines.extend(oclass.sketch_lines(min(max(_CLASS_DEPTH, depth + 1), _DEEPEST_HEADING)))
+        for nested in self.modules:
+            lines.extend(nested.sketch_lines(depth + 1))
+        return lines
+
+
 class SketchCleanEngineeringModel(CleanEngineeringModel):
+    lens = _LENS
+
+    def load_module(self, source: Module) -> SketchModule:
+        return SketchModule(name=source.name, sequential_order=source.sequential_order)
+
     def parse(self, text: str) -> "SketchCleanEngineeringModel":
+        """Read the sketch's clean engineering section into this model's own modules, and return it."""
         declared = _MODULE.search(text)
-        model_name = declared.group(1) if declared else "KnowledgeGraph"
-        model = type(self)(name=model_name, sequential_order=1)
-        body = SketchOutline(text, _NESTING_INDENT).body_for(SketchLens.of("clean_engineering"))
-        model.modules = _modules_in(body, model_name)
-        return model
+        self.name = declared.group(1) if declared else "KnowledgeGraph"
+        body = SketchOutline(text, _NESTING_INDENT).body_for(self.lens)
+        self.modules = _modules_in(body, self.name)
+        return self
 
     def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
         """The `clean engineering:` section of a sketch; in previous, it replaces the section already there."""
-        section = _SketchSection(canonical).lines()
+        if canonical is not self:
+            self.translate_from(canonical)
+        section = self.section_lines()
         if not previous:
             return "\n".join(section) + "\n"
         return _with_section_replaced(previous, section)
 
-
-class _SketchSection:
-    """One model written in the sketch notation: module headings, class headings, and a fence of members."""
-
-    def __init__(self, canonical: CleanEngineeringModel) -> None:
-        self._canonical = canonical
-        self._lines: List[str] = []
-
-    def lines(self) -> List[str]:
-        self._lines = [f"## {_SECTION_TITLE}", "", f"**Module:** `{self._canonical.name}`", ""]
-        for module in self._canonical.modules:
-            self._write_module(module, _TOP_MODULE_DEPTH)
-        return self._lines
-
-    def _write_module(self, module: Module, depth: int) -> None:
-        """A module's own classes come before its nested modules, so each class is read back under its module."""
-        self._lines.extend([f"{'#' * min(depth, _DEEPEST_HEADING)} {module.name}/", ""])
-        for oclass in module.classes:
-            self._write_class(oclass, min(max(_CLASS_DEPTH, depth + 1), _DEEPEST_HEADING))
-        for nested in module.modules:
-            self._write_module(nested, depth + 1)
-
-    def _write_class(self, oclass: OoadClass, depth: int) -> None:
-        marks = "".join(f" <<{item}>>" for item in oclass.stereotypes)
-        bases = f" : {', '.join(oclass.bases)}" if oclass.bases else ""
-        self._lines.extend([f"{'#' * depth} {oclass.name}{marks}{bases}", ""])
-        members: List[str] = []
-        for prop in oclass.properties:
-            members.append(prop.name)
-            members.extend(f"{_MEMBER_INDENT}// {note}" for note in _property_notes(prop))
-        for operation in oclass.operations:
-            members.append(_operation_line(operation))
-            members.extend(f"{_MEMBER_INDENT}-> {callee}" for callee in operation.callees)
-            members.extend(f"{_MEMBER_INDENT}// {note}" for note in invariant_lines(operation))
-        if members:
-            self._lines.extend([_FENCE, *members, _FENCE, ""])
+    def section_lines(self) -> List[str]:
+        lines = [f"## {_SECTION_TITLE}", "", f"**Module:** `{self.name}`", ""]
+        for module in self.modules:
+            lines.extend(module.sketch_lines(_TOP_MODULE_DEPTH))
+        return lines
 
 
 def _property_notes(prop: Property) -> List[str]:
     stereotype = [f"<<{prop.stereotype}>>"] if prop.stereotype in _RELATIONSHIP_KINDS else []
-    return stereotype + property_notes(prop)
+    return stereotype + prop.notes()
 
 
 def _operation_line(operation: Operation) -> str:
@@ -131,7 +143,7 @@ def _with_section_replaced(previous: str, section: List[str]) -> str:
 
 def _section_span(lines: List[str]) -> Optional[tuple]:
     """Where the clean engineering section starts in a sketch and the line where the next peer heading ends it."""
-    lens = SketchLens.of("clean_engineering")
+    lens = _LENS
     first: Optional[int] = None
     depth = 0
     fenced = False
@@ -152,7 +164,7 @@ def _section_span(lines: List[str]) -> Optional[tuple]:
 def _modules_in(body: str, loose_name: str) -> List[Module]:
     """Each `name/` line opens a module, nested under the one above it when written further in.
     Classes written before any module line belong to a module named after the sketch."""
-    loose = Module(name=loose_name, sequential_order=1)
+    loose = SketchModule(name=loose_name, sequential_order=1)
     top: List[Module] = []
     open_modules: List[tuple] = []
     owner = loose
@@ -168,7 +180,7 @@ def _modules_in(body: str, loose_name: str) -> List[Module]:
         while open_modules and open_modules[-1][0] >= indent:
             open_modules.pop()
         siblings = open_modules[-1][1].modules if open_modules else top
-        owner = Module(name=heading.group(1), sequential_order=len(siblings) + 1)
+        owner = SketchModule(name=heading.group(1), sequential_order=len(siblings) + 1)
         siblings.append(owner)
         open_modules.append((indent, owner))
     _add_classes(owner, section)
@@ -227,7 +239,7 @@ def _classes_in(text: str) -> list[OoadClass]:
             continue
         headed = _CLASS.match(stripped)
         if headed and (current is None or headed.group(1) != current.name):
-            current = OoadClass(name=headed.group(1), sequential_order=len(classes) + 1)
+            current = SketchOoadClass(name=headed.group(1), sequential_order=len(classes) + 1)
             current.stereotypes = marks_in(headed.group(2) or "")
             current.bases = [base.strip() for base in split_top_level(headed.group(3) or "") if base.strip()]
             classes.append(current)
@@ -262,7 +274,7 @@ def _uml_classes(text: str) -> list[OoadClass]:
         indent = len(raw) - len(raw.lstrip(" "))
         heading = _BOLD_CLASS.match(stripped)
         if heading and indent == 0:
-            current = OoadClass(name=heading.group(1), sequential_order=len(classes) + 1)
+            current = SketchOoadClass(name=heading.group(1), sequential_order=len(classes) + 1)
             classes.append(current)
             index += 1
             continue
@@ -275,7 +287,7 @@ def _uml_classes(text: str) -> list[OoadClass]:
             index = _add_uml_member(current, lines, index, operation, prop)
             continue
         if current.operations and re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", stripped):
-            append_invariant(current.operations[-1], stripped)
+            current.operations[-1].add_invariant(stripped)
         index += 1
     return classes
 
@@ -307,11 +319,11 @@ def _add_uml_member(oclass, lines, index, operation_match, prop_match) -> int:
             index += 1
             continue
         if stripped.startswith("//"):
-            append_invariant(owner, stripped[2:].strip())
+            owner.add_invariant(stripped[2:].strip())
             index += 1
             continue
         if re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", stripped):
-            append_invariant(owner, stripped)
+            owner.add_invariant(stripped)
             index += 1
             continue
         break
@@ -330,12 +342,12 @@ def _add_member(oclass: OoadClass, lines: list[str], index: int) -> int:
             if callee not in operation.callees:
                 operation.callees.append(callee)
         for note in nested.notes:
-            append_invariant(operation, note)
+            operation.add_invariant(note)
         oclass.operations.append(operation)
         return nested.end
     prop = Property(name=tokens[0])
     for note in nested.notes:
-        take_property_note(prop, note)
+        prop.take_note(note)
     oclass.properties.append(prop)
     return nested.end
 

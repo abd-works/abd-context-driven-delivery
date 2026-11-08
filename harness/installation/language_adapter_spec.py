@@ -7,7 +7,7 @@ from pathlib import Path
 from expects import be_false, be_true, contain, equal, expect, have_key, raise_error
 from mamba import before, context, description, it
 
-from harness.installer.install_diagnostics import InstallDiagnostics
+from harness.installation.install_diagnostics import InstallDiagnostics
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 _REPO = Path(__file__).resolve().parents[2]
@@ -24,6 +24,7 @@ from harness.installation.destination import (  # noqa: E402
     identity,
     language_adapter,
 )
+from harness.installation.ide_layout import IdeLayout  # noqa: E402
 from harness.installation.language_adapter import (  # noqa: E402
     LanguageAdapterInstallation,
     MissingIdentityError,
@@ -42,7 +43,7 @@ _IDENTITY_FLAG = Identity.flag
 
 
 def _install(install_path, references=_KANBAN):
-    adapters = LanguageAdapterInstallation("Claude", install_path, repo=_REPO)
+    adapters = LanguageAdapterInstallation(IdeLayout("Claude"), install_path, repo=_REPO)
     for reference in references:
         adapters.record(AgentToolSet.instantiate(reference))
     adapters.write_all()
@@ -227,7 +228,7 @@ with description("a language adapter"):
 
         with it("should track every file it writes, so clean removes them"):
             tracked = []
-            adapters = LanguageAdapterInstallation("Claude", self.install_path, repo=_REPO)
+            adapters = LanguageAdapterInstallation(IdeLayout("Claude"), self.install_path, repo=_REPO)
             adapters.track_writes_with(tracked.append)
             adapters.record(AgentToolSet.instantiate("space.kanban.ticket:Ticket"))
             adapters.write_all()
@@ -448,7 +449,7 @@ with description("a language adapter"):
     with description("the generated views of an annotated toolset"):
         with before.all:
             install_path = Path(tempfile.mkdtemp(prefix="language-adapter-views-"))
-            _install(install_path, ("harness.installation._examples.note:Note", "tools.file_manager.file_manager:FileManager"))
+            _install(install_path, ("harness.installation._examples.note:Note", "space.session.file_manager:FileManager"))
             root = install_path / _ADAPTERS
             self.note = (root / "harness/installation/_examples/note.ts").read_text(encoding="utf-8")
             self.views = (root / "harness/installation/_examples/note-views.tsx").read_text(encoding="utf-8")
@@ -509,7 +510,7 @@ with description("a language adapter"):
 
         with description("the shared file views"):
             with it("should read files through the file manager's generated client"):
-                expect(self.file_views).to(contain("from './tools/file_manager/file-manager'"))
+                expect(self.file_views).to(contain("from './space/session/file-manager'"))
 
             with it("should take Monaco from the application"):
                 expect(self.file_views).to(contain("from '@monaco-editor/react'"))

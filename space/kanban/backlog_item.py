@@ -8,7 +8,7 @@ from pathlib import Path
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.destination import data_field, identity, language_adapter
-from harness.name.name import Name
+from harness.annotations.name import Name
 from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
 from space.kanban.ticket import Ticket
 from harness.mcp.mcp_server import mcp
@@ -127,10 +127,8 @@ class BacklogItem(Card):
         return self._path.parent if self._path.parent.name == self._path.stem else self._path.with_suffix("")
 
     def _ticket_brought_back(self, kept_folder: Path) -> Ticket:
-        session = self._board.sessions.load(kept_folder).reopen()
-        return Ticket(session, self._board)
+        return self._board.ticket_of(self._board.sessions.load(kept_folder).reopen())
 
     def _ticket_opened(self, scope: str, path: str) -> Ticket:
         ticket = self._board.open_ticket(self.title, scope, "", path)
-        ticket.session.log.record(f"backlog {self._path}")
-        return ticket
+        return ticket.record(f"backlog {self._path}")

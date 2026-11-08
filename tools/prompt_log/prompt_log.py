@@ -12,14 +12,13 @@ Appends to ``.sessions/{name}/logs/prompt-log.txt`` in the project being worked 
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.hooks.hook_server import HookPayload
 from harness.hooks.hooks import Hook, Hooks, hook
 from harness.installation.destination import noCatalog
-from space.session.session_log import SessionLog
+from space.session.session_log import LogTimestamp
 
 # A long prompt or file is shown by its first lines, cut at a length a person can still scan in the log.
 _PREVIEW_LINES = 8
@@ -114,7 +113,7 @@ class PromptLogEntry:
         return self
 
     def _header(self, event: str) -> str:
-        stamp = SessionLog.timestamp(datetime.now(timezone.utc))
+        stamp = LogTimestamp.now()
         chat = self._payload.conversation_id[:_SHOWN_ID_LENGTH]
         generation = self._payload.generation_id[:_SHOWN_ID_LENGTH]
         model = self._payload.get("model", "")
@@ -144,18 +143,16 @@ class PromptLog:
     """Audit what Cursor sends the model — one ``@Hook`` per event, each writing that event's entry to the log.
 
     The log is the file the toolset was made with; made with none, ``prompt-log.txt`` in the logs folder of the session
-    open in the project the event happened in, read for each event so the log follows a session switch."""
+    the event works in, which each event reads, so the log follows a session switch."""
 
     def __init__(self, log: Path | None = None) -> None:
         self._log = log
 
     def log_for(self, payload: HookPayload) -> Path:
-        """The file payload's entry is written to."""
+        """The file payload's entry is written to: the toolset's own, else the one in the session the event works in."""
         if self._log is not None:
             return self._log
-        from space.session.sessions import Sessions
-
-        return Sessions(payload.project).saved.hook_log(_LOG_NAME)
+        return payload.session.hook_log(_LOG_NAME)
 
     def _append(self, payload: HookPayload, entry: PromptLogEntry) -> None:
         path = self.log_for(payload)

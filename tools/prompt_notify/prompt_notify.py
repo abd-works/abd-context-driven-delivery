@@ -14,6 +14,7 @@ import re
 import shutil
 import sys
 from datetime import datetime, timezone
+from functools import cached_property
 from pathlib import Path
 from typing import ClassVar
 
@@ -22,12 +23,12 @@ from typing import ClassVar
 _CDD_CHECKOUT = Path(__file__).resolve().parents[2]
 
 from harness.agent_tools.agent_tools import agent_toolset
-from harness.name.name import Name
+from harness.annotations.name import Name
 from harness.installation.destination import noCatalog
 from harness.annotations.annotation import Toast
 from harness.hooks.hook_server import TOAST_ARROW, HookPayload, HookServer, rules_toast
 from harness.hooks.hooks import hook
-from space.session.session_log import SessionLog
+from space.session.session_log import LogTimestamp
 
 TOAST_NOTICE = ".cursor/prompt-notify-toast.json"
 IDE_TOAST_EXTENSION = "cdd.prompt-notify-0.0.1"
@@ -43,7 +44,6 @@ class PromptNotify:
     """Echo detected action, practice, fidelity, and guideline names on preToolUse."""
 
     _catalog: ClassVar[list[tuple[str, str]] | None] = None
-    _echo_toolsets: ClassVar[list | None] = None
     _installed_extension: ClassVar[Path | None] = None
 
     # Each hook event is handled by the hook server's one instance, so nothing about one event is kept on it: two
@@ -82,7 +82,7 @@ class PromptNotify:
     def on_pre_tool_use(self, payload: HookPayload) -> dict:
         """Toast what the tool call uses in every workspace folder of the chat that made it."""
         self.install_ide_toast_extension()
-        result = self.handle(payload, toolsets=self.echo_toolsets())
+        result = self.handle(payload, toolsets=self.echo_toolsets)
         message = result.get("user_message")
         if message:
             self.show_toast(str(message), payload.workspace_roots)
@@ -105,7 +105,7 @@ class PromptNotify:
         if not invoked:
             return None
         searched = self._walk_toolsets(
-            toolsets if toolsets is not None else self.echo_toolsets()
+            toolsets if toolsets is not None else self.echo_toolsets
         )
         for toolset in searched:
             found = self._echo_on_toolset(invoked, toolset)
@@ -117,12 +117,15 @@ class PromptNotify:
         action_names = {self._mcp_tool_name(payload), payload.tool_name}
         return self._catalog_match(self._haystacks(payload), action_names)
 
+    @cached_property
     def echo_toolsets(self) -> list:
-        """The toolsets installed in the CDD checkout, whose @Toast annotations say which tool calls toast; loaded once per
-        process. A toolset that fails to load raises, so a broken toolset is seen rather than silently not toasting."""
-        if type(self)._echo_toolsets is None:
-            type(self)._echo_toolsets = self._load_echo_toolsets()
-        return type(self)._echo_toolsets
+        """The toolsets the CDD checkout defines, whose @Toast annotations say which tool calls toast; loaded once by the
+        hook server's one notifier. A toolset that fails to load raises, so a broken toolset is seen rather than silently
+        not toasting."""
+        from harness.agent_tools.agent_tools import AgentToolSet
+        from harness.installation.repository_toolsets import RepositoryToolsets
+
+        return AgentToolSet.from_items(RepositoryToolsets(_CDD_CHECKOUT).collect())
 
     def show_toast(self, toast: str, workspace_roots: list[Path]) -> list[Path]:
         """Show toast in every workspace folder of the chat it is for, the toast files written. The hook server hands
@@ -153,7 +156,7 @@ class PromptNotify:
         return self.detect(payload)
 
     def _log_echo(self, tool_name: str, kind: str, label: str) -> None:
-        stamp = SessionLog.timestamp(datetime.now(timezone.utc))
+        stamp = LogTimestamp.now()
         sys.stderr.write(f"{stamp} [prompt-notify] tool={tool_name} {kind}={label}\n")
 
     def _catalog_match(
@@ -200,12 +203,6 @@ class PromptNotify:
         if not self._has_toast(begin.callable):
             return None
         return "action", Name(str(getattr(toolset, "slug", match.name))).kebab
-
-    def _load_echo_toolsets(self) -> list:
-        from harness.installer.installer import Installer
-        from harness.agent_tools.agent_tools import AgentToolSet
-
-        return AgentToolSet.from_items(Installer(repo=_CDD_CHECKOUT).toolsets.collect())
 
     def _toast_folders(self, workspace_roots: list[Path | str]) -> list[Path]:
         """Each workspace folder once, as Windows names it when Cursor sends `/c:/...`."""
@@ -266,7 +263,7 @@ class PromptNotify:
     def _echo_kind_label(self, tool) -> tuple[str, str]:
         toolset = tool.toolset
         if tool.name == "instructions":
-            if getattr(toolset, "practice_guidance", None) is not None:
+            if toolset.is_part_of_practice:
                 return "fidelity", tool.slug
             return "practice", getattr(toolset, "slug", tool.name)
         if tool.name == "begin":
@@ -287,7 +284,7 @@ class PromptNotify:
         toolset = tool.toolset
         slug = str(getattr(toolset, "slug", "") or "")
         names = {f"{slug}.{tool.name}", f"{slug}_{tool.name}", tool.name}
-        if getattr(toolset, "practice_guidance", None) is not None:
+        if toolset.is_part_of_practice:
             names.add(tool.slug)
         if tool.name == "instructions" and slug:
             names.add(slug)
@@ -316,7 +313,7 @@ class ToastFile:
 
     def show(self, message: str, now: datetime) -> Path:
         """Write message as this folder's toast, joined with the toast already there when it is from the same burst."""
-        notice = {"message": self._joined_with_previous(message, now), "at": SessionLog.timestamp(now)}
+        notice = {"message": self._joined_with_previous(message, now), "at": str(LogTimestamp(now))}
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(notice, ensure_ascii=False) + "\n", encoding="utf-8")
         return self.path
@@ -343,7 +340,7 @@ class ToastFile:
 
     def _time_of(self, stamp: str) -> datetime | None:
         try:
-            return datetime.fromisoformat(stamp)
+            return LogTimestamp.read(stamp).moment
         except ValueError:
             return None
 

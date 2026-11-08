@@ -7,12 +7,10 @@ import { callTool, currentChatBar, refreshChatBar, type ChatBarClient } from './
 import { cancelClose, cancelSwitch, currentChatBarView, pickSession, showClose } from './session-dialogs-client'
 
 // The person's moves between sessions: open one, create one, close the active one. Each is one ticket tool; the
-// dialogs they open and close are in session-dialogs-client.ts.
+// dialogs they open and close, and what they chose, are in session-dialogs-client.ts.
 
-// What the board's activation dialog chooses first: leave the old session committed and pushed, open the new one on
-// its own branch and worktree.
-const LEAVING = ['commit', 'push']
-const OPENING = ['branch', 'worktree']
+// What a close did, in the board's words, ahead of what came of the session.
+const LEFT_STEPS: Record<string, string> = { handoff: 'handoff written', commit: 'committed', push: 'pushed', merge: 'merged to main' }
 
 // ticket.close refused to close the session. reason is the server's own text.
 export class CloseRefused {
@@ -20,8 +18,9 @@ export class CloseRefused {
 }
 
 export async function activateSession($: EngineInterface, sessionName: string): Promise<ChatBarClient> {
+  const { leaving, opening } = await currentChatBarView($)
   try {
-    await callTool<TicketData>($, 'ticket.activate', { ticket: sessionName, leaving: LEAVING, opening: OPENING })
+    await callTool<TicketData>($, 'ticket.activate', { ticket: sessionName, leaving, opening })
   } catch (failure) {
     $.ui.toast(`${sessionName} did not open: ${reasonOf(failure)}`)
   }
@@ -42,12 +41,12 @@ export async function createSession($: EngineInterface, sessionName: string): Pr
   return currentChatBar($)
 }
 
-// The close dialog offers to commit and push only when the session's own branch is checked out, since those steps act
-// on whatever is checked out.
+// The close dialog offers to commit and push the branch the session's work is on, its own or main, only while it is
+// checked out, since those steps act on whatever is checked out.
 export async function openClose($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
   try {
-    const branch = await callTool<BranchData>($, 'ticket.branch', { ticket: chatBar.sessionName })
-    await showClose($, branch.is_checked_out)
+    const branch = await callTool<BranchData>($, 'ticket.work_branch', { ticket: chatBar.sessionName })
+    await showClose($, branch.is_checked_out ? branch.name : null)
   } catch (failure) {
     $.ui.toast(`${chatBar.sessionName} cannot close: ${reasonOf(failure)}`)
   }
@@ -55,16 +54,15 @@ export async function openClose($: EngineInterface, chatBar: ChatBarClient): Pro
 
 // Null when closing leaves no session active.
 export async function closeSession($: EngineInterface, chatBar: ChatBarClient): Promise<ChatBarClient | null | CloseRefused> {
-  const { closing } = await currentChatBarView($)
-  const leaving = closing?.hasBranch ? LEAVING : []
+  const { leaving } = await currentChatBarView($)
   try {
     await callTool<TicketData>($, 'ticket.close', { ticket: chatBar.sessionName, leaving })
   } catch (failure) {
     $.ui.toast(`${chatBar.title} did not close: ${reasonOf(failure)}`)
     return new CloseRefused(reasonOf(failure))
   }
-  const left = leaving.length ? `${chatBar.title}: committed, pushed · ` : ''
-  $.ui.toast(`${left}Session ${chatBar.title} closed`)
+  const left = leaving.map(step => LEFT_STEPS[step] ?? step)
+  $.ui.toast(`${left.length ? `${chatBar.title}: ${left.join(', ')} · ` : ''}Session ${chatBar.title} closed`)
   await cancelClose($)
   await refreshChatBar($)
   const after = await currentChatBar($)

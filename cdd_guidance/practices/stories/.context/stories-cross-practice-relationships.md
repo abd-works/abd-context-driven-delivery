@@ -15,4 +15,4 @@ Stories records its links to Clean Engineering after both practices are read ont
 | shownOn | Story, Scenario, Step | Screen | The screen's `story_names`, `scenario_names` (`Story › Scenario`), or `step_names` (`Story › Scenario › Step`) hold the node's key |
 | shows | Screen | Story | Recorded on UX with shownOn |
 
-A story model loaded on the graph (`GraphStoryModel.record`, described in `practices/stories/model/.context/story-model.md`) carries the steps and examples these links start from.
+A story model loaded on the graph (`StoryModel.record`, described in `practices/stories/model/.context/story-model.md`) carries the steps and examples these links start from.

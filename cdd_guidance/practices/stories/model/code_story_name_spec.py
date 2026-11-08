@@ -3,26 +3,27 @@
 from expects import equal, expect
 from mamba import description, it
 
-from cdd_guidance.practices.stories.model.java.nodes import JavaStory
-from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptStory
-from cdd_guidance.practices.stories.model.python.nodes import PythonStory
+from cdd_guidance.practices.stories.model.java.java_story_model import JavaStoryModel
+from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
+from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
 from cdd_guidance.practices.stories.model.story_model import Story
-from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptStory
+from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
-_LANGUAGES = (TypeScriptStory, JavaScriptStory, PythonStory, JavaStory)
+_LANGUAGES = (TypeScriptStoryModel, JavaScriptStoryModel, PythonStoryModel, JavaStoryModel)
 
 
-def _read_back(story_type, name: str) -> str:
+def _read_back(model_type, name: str) -> str:
     story = Story(name, 1)
     story.actors = ["Customer"]
-    return story_type.load_all(story_type.create(story))[0].name
+    model = model_type()
+    return model.story_type.load_all(model.story_text(model.story_type(story)))[0].name
 
 
 with description("a story test written in each language") as self:
     with it("should read back a story name that ends in a parenthetical"):
-        names = [_read_back(story_type, "Pay Bill (By Card)") for story_type in _LANGUAGES]
+        names = [_read_back(model_type, "Pay Bill (By Card)") for model_type in _LANGUAGES]
         expect(names).to(equal(["Pay Bill (By Card)"] * len(_LANGUAGES)))
 
     with it("should read back a story name without the tier-neutral marker"):
-        names = [_read_back(story_type, "Pay Bill (tier-neutral)") for story_type in _LANGUAGES]
+        names = [_read_back(model_type, "Pay Bill (tier-neutral)") for model_type in _LANGUAGES]
         expect(names).to(equal(["Pay Bill"] * len(_LANGUAGES)))

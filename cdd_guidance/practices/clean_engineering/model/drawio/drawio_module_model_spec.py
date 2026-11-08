@@ -16,7 +16,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.drawio.drawio import Drawio
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import (
     DrawIOCleanEngineeringModel,
 )
@@ -132,9 +132,9 @@ def _render_kept(model, previous):
 
 
 def _create_kept(content, path):
-    toolset = Drawio()
+    toolset = CleanEngineering().drawio
     toolset.source_format = 'markdown'
-    toolset.keep_positioning = True
+    toolset.channel.keep_positioning = True
     return toolset.create_diagram(content, path)
 
 

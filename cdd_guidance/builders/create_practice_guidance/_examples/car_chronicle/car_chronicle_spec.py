@@ -56,9 +56,6 @@ with description("a ChronicleWithOutput domain"):
         with it("should not declare its own repair action"):
             expect("repair" in type(self.chronicle).__dict__).to(equal(False))
 
-        with it("should name the toolset car_chronicle"):
-            expect(self.chronicle.toolset_name).to(equal("car_chronicle"))
-
         with it("should add an epic through the nested tool"):
             expect(self.chronicle.add_epic()).to(equal("epic added"))
 

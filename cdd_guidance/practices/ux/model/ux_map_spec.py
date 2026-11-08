@@ -17,7 +17,7 @@ from cdd_guidance.practices.ux.model.ux_map import ScreenNotOnMap, UxMap
 
 
 def edge_pairs(graph, kind):
-    return [(edge.parent.name, edge.child.name) for edge in graph.practice("ux").edges.get(kind, [])]
+    return [(edge.parent.name, edge.child.name) for edge in graph.edges_of(graph.practice("ux"), kind)]
 
 
 with description("a UxMap"):
@@ -72,14 +72,10 @@ with description("a ux map on a graph"):
 
     with it("should record screens and belongsTo"):
         practice = self.graph.practice("ux")
-        screens = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("screens", [])]
-        belongs = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("belongsTo", [])]
+        screens = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "screens")]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "belongsTo")]
         expect(screens).to(contain(("UxMap", "Catalog")))
         expect(belongs).to(contain(("Catalog", "UxMap")))
-
-    with it("should open the same map from the graph"):
-        restored = UxMap.create(self.graph)
-        expect(restored.screens[0].name).to(equal("Catalog"))
 
     with context("with a screen that holds regions, controls, and interactions"):
         with before.each:
@@ -126,3 +122,28 @@ with description("a ux map on a graph"):
         with it("should keep its link when a screen is renamed"):
             self.cart.name = "Basket"
             expect(self.opens_cart.to_screen.name).to(equal("Basket"))
+
+
+with description("a UxMap copied into a format"):
+    with before.each:
+        from cdd_guidance.practices.ux.model.drawio.nodes import DrawioRegion, DrawioScreen, DrawioUxMap
+        from cdd_guidance.practices.ux.model.ux_map_spec_fixture import OrderingMap, outline
+
+        self.source = OrderingMap().build(UxMap.create())
+        self.copy = DrawioUxMap.copy_of(self.source)
+        self.outline = outline
+        self.screen_type = DrawioScreen
+        self.region_type = DrawioRegion
+
+    with it("should hold the same screens, regions, controls, links, and context"):
+        expect(self.outline(self.copy)).to(equal(self.outline(self.source)))
+
+    with it("should make its screens of the format's screen type"):
+        expect(all(isinstance(screen, self.screen_type) for screen in self.copy.screens)).to(equal(True))
+
+    with it("should make its regions of the format's region type"):
+        regions = [region for screen in self.copy.screens for region in screen.regions]
+        expect(all(isinstance(region, self.region_type) for region in regions)).to(equal(True))
+
+    with it("should keep its nodes on a graph of its own"):
+        expect(self.copy.graph).not_to(be(self.source.graph))

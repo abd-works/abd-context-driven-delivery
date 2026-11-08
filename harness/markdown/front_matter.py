@@ -18,6 +18,11 @@ class FrontMatter:
         self._lines = text.splitlines()
 
     @property
+    def text(self) -> str:
+        """The whole file as written, settings and content."""
+        return self._text
+
+    @property
     def settings(self) -> str:
         """The settings text, with a comment block's ``#`` marks removed; empty when the file opens with none."""
         if not self._lines:

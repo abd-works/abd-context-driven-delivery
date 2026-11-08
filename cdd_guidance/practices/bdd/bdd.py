@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
+
+if TYPE_CHECKING:
+    from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
 
 @agent_toolset
@@ -47,15 +52,27 @@ class Bdd(PracticeGuidance):
     # In the knowledge graph: BDD's describe trees, linked to the Clean Engineering members each observation drives.
     node_types = ("Spec", "Description", "Context", "Observation")
 
-    def read_working_copy(self, practice_graph) -> None:
+    def read_working_copy(self) -> None:
         """Each spec file's language model reads its describe tree, whose spec, descriptions, contexts, and observations
-        are added to the BDD practice graph as they are."""
+        are added to its graph as they are."""
         from cdd_guidance.practices.bdd.model.graph_reading import read_specs
 
-        read_specs(practice_graph)
+        read_specs(self)
 
-    def link_to_other_practices(self, graph) -> None:
-        """Link each observation to the operations and properties of the code it drives."""
-        from cdd_guidance.practices.bdd.model.graph_reading import link_observations
+    def link_to_other_practices(self) -> None:
+        """Link each observation to the operations and properties of the code it drives, when the graph reads Clean
+        Engineering too."""
+        from cdd_guidance.practices.bdd.model.graph_reading import ObservationLinks
 
-        link_observations(graph)
+        clean = self.clean_engineering_practice
+        if clean is not None and clean in self.graph.practices.values():
+            ObservationLinks(self, clean).link()
+
+    @property
+    def clean_engineering_practice(self) -> CleanEngineering | None:
+        """The Clean Engineering practice the graph this practice is read in holds: the code each observation drives."""
+        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+
+        held = self.graph.every_practice.values() if self.graph is not None else ()
+        return next((practice for practice in held if isinstance(practice, CleanEngineering)), None)
+

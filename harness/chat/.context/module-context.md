@@ -7,7 +7,7 @@ The MCP tools are `chat.list`, `chat.send(kind, text)`, `chat.messages`, `chat.r
 
 - **Purpose:** Let the board drive any connected chat — send it a command and follow that command until the chat has shown and finished it — without the chats and the board sharing a process.
 - **Seam (terms):** Chat, ChatCommand, ChatMessage, ChatNotConnectedError, `chat.list`, `chat.send`, `chat.messages`, `chat.remove`, `chat.resend`, `chat.check_in`, `chat.confirm`, `chat.finish`
-- **Dependencies (one-way):** `harness/agent_tools` (the toolset annotations, and *ChatPointer*, which finds a chat's transcript by its id), `harness/installation`, `harness/mcp`. It imports nothing from space, tools, or cdd_guidance, so it sits in harness above harness/mcp.
+- **Dependencies (one-way):** `harness/agent_tools` (the toolset annotations, and *ChatPointer*, which finds a chat's transcript by its id; the chat finds it once and keeps its path in `chat.json`, so reading its title again does not search the Claude projects folder), `harness/installation`, `harness/mcp`. It imports nothing from space, tools, or cdd_guidance, so it sits in harness above harness/mcp.
 
 ## Constraint
 

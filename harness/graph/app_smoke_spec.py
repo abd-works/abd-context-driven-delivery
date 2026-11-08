@@ -16,7 +16,7 @@ _PRACTICES = ["clean_engineering", "stories", "ddd", "bdd", "ux"]
 
 def direct_counts(graph: Graph, practice: str) -> dict[str, int]:
     loaded = graph.practice(practice)
-    return {name: loaded.node_count(name) for name in loaded.node_types}
+    return {name: len(graph.nodes_of(loaded, name)) for name in graph.node_types_of(loaded)}
 
 
 with description("an example graph"):
@@ -32,50 +32,50 @@ with description("an example graph"):
                 expect(self.inventory["clean_engineering"]["node_counts"]).to(equal(direct_counts(self.graph, "clean_engineering")))
 
             with it("should count the same edges as the graph"):
-                expect(self.inventory["clean_engineering"]["edge_count"]).to(equal(self.graph.practice("clean_engineering").edge_count))
+                expect(self.inventory["clean_engineering"]["edge_count"]).to(equal(len(self.graph.edges_of(self.graph.practice("clean_engineering")))))
 
             with it("should list the same node types as the graph"):
-                expect(self.inventory["clean_engineering"]["node_types"]).to(equal(sorted(self.graph.practice("clean_engineering").node_types)))
+                expect(self.inventory["clean_engineering"]["node_types"]).to(equal(sorted(self.graph.node_types_of(self.graph.practice("clean_engineering")))))
 
         with context("with stories"):
             with it("should count the same nodes as the graph"):
                 expect(self.inventory["stories"]["node_counts"]).to(equal(direct_counts(self.graph, "stories")))
 
             with it("should count the same edges as the graph"):
-                expect(self.inventory["stories"]["edge_count"]).to(equal(self.graph.practice("stories").edge_count))
+                expect(self.inventory["stories"]["edge_count"]).to(equal(len(self.graph.edges_of(self.graph.practice("stories")))))
 
             with it("should list the same node types as the graph"):
-                expect(self.inventory["stories"]["node_types"]).to(equal(sorted(self.graph.practice("stories").node_types)))
+                expect(self.inventory["stories"]["node_types"]).to(equal(sorted(self.graph.node_types_of(self.graph.practice("stories")))))
 
         with context("with domain driven design"):
             with it("should count the same nodes as the graph"):
                 expect(self.inventory["ddd"]["node_counts"]).to(equal(direct_counts(self.graph, "ddd")))
 
             with it("should count the same edges as the graph"):
-                expect(self.inventory["ddd"]["edge_count"]).to(equal(self.graph.practice("ddd").edge_count))
+                expect(self.inventory["ddd"]["edge_count"]).to(equal(len(self.graph.edges_of(self.graph.practice("ddd")))))
 
             with it("should list the same node types as the graph"):
-                expect(self.inventory["ddd"]["node_types"]).to(equal(sorted(self.graph.practice("ddd").node_types)))
+                expect(self.inventory["ddd"]["node_types"]).to(equal(sorted(self.graph.node_types_of(self.graph.practice("ddd")))))
 
         with context("with behavior driven development"):
             with it("should count the same nodes as the graph"):
                 expect(self.inventory["bdd"]["node_counts"]).to(equal(direct_counts(self.graph, "bdd")))
 
             with it("should count the same edges as the graph"):
-                expect(self.inventory["bdd"]["edge_count"]).to(equal(self.graph.practice("bdd").edge_count))
+                expect(self.inventory["bdd"]["edge_count"]).to(equal(len(self.graph.edges_of(self.graph.practice("bdd")))))
 
             with it("should list the same node types as the graph"):
-                expect(self.inventory["bdd"]["node_types"]).to(equal(sorted(self.graph.practice("bdd").node_types)))
+                expect(self.inventory["bdd"]["node_types"]).to(equal(sorted(self.graph.node_types_of(self.graph.practice("bdd")))))
 
         with context("with experience design"):
             with it("should count the same nodes as the graph"):
                 expect(self.inventory["ux"]["node_counts"]).to(equal(direct_counts(self.graph, "ux")))
 
             with it("should count the same edges as the graph"):
-                expect(self.inventory["ux"]["edge_count"]).to(equal(self.graph.practice("ux").edge_count))
+                expect(self.inventory["ux"]["edge_count"]).to(equal(len(self.graph.edges_of(self.graph.practice("ux")))))
 
             with it("should list the same node types as the graph"):
-                expect(self.inventory["ux"]["node_types"]).to(equal(sorted(self.graph.practice("ux").node_types)))
+                expect(self.inventory["ux"]["node_types"]).to(equal(sorted(self.graph.node_types_of(self.graph.practice("ux")))))
 
         with context("with operations selected"):
             with before.all:
@@ -85,7 +85,7 @@ with description("an example graph"):
                 expect({row["type"] for row in self.rows}).to(equal({"Operation"}))
 
             with it("should count the same operations as the graph"):
-                expect(len(self.rows)).to(equal(self.graph.practice("clean_engineering").node_count("Operation")))
+                expect(len(self.rows)).to(equal(len(self.graph.nodes_of(self.graph.practice("clean_engineering"), "Operation"))))
 
         with context("with clean engineering chosen in the filter"):
             with it("should offer the node types clean engineering holds"):

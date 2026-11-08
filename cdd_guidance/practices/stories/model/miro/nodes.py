@@ -1,7 +1,7 @@
 """Miro format story nodes - all seven StoryNode subtypes plus I/O.
 
 load reads a canvas-composer SVG. save writes the nodes you edited.
-The thin-slice table is MiroIncrement.save and MiroIncrement.load.
+The thin-slice table is MiroStoryModel.save_thin_slice and load_thin_slice.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ import html
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional
 
-from harness.name.name import Name
+from harness.annotations.name import Name
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
@@ -31,108 +31,6 @@ class MiroIncrement(DiagramIncrement):
         return "<tr>" + "".join(
             f"<td>{html.escape(cell, quote=True)}</td>" for cell in cells
         ) + "</tr>"
-
-    @classmethod
-    def from_cells(cls, cells: List[str], order: int) -> Optional["MiroIncrement"]:
-        if not cells:
-            return None
-        name = cells[0].strip()
-        if not name:
-            return None
-        increment = cls(name, order)
-        for story_name in cells[1:]:
-            story_name = story_name.strip()
-            if not story_name:
-                continue
-            story = MiroStory(story_name, len(increment.stories) + 1)
-            story.increment = increment
-            increment.stories.append(story)
-        return increment
-
-    @classmethod
-    def save(cls, story_map: StoryModel) -> str:
-        headers = ["Increment"]
-        story_column: Dict[str, int] = {}
-        column = 1
-        for epic in story_map.epics:
-            if epic.stories:
-                headers.append(epic.name)
-                for story in epic.stories:
-                    story_column[story.name] = column
-                column += 1
-            for sub_epic in epic.epics:
-                leaves = sub_epic.leaves()
-                if not sub_epic.epics:
-                    headers.append(f"{epic.name} / {sub_epic.name}")
-                else:
-                    for leaf in leaves:
-                        headers.append(f"{epic.name} / … / {leaf.name}")
-                for leaf in leaves:
-                    for story in leaf.stories:
-                        story_column[story.name] = column
-                    column += 1
-        header_cells = "".join(f"<th>{html.escape(header, quote=True)}</th>" for header in headers)
-        rows = "\n        ".join(
-            increment.table_row(len(headers), story_column) for increment in story_map.increments
-        )
-        column_count = len(headers)
-        table_width = cls.label_width + (column_count - 1) * (MiroStory.pitch + 20)
-        table_height = 60 + len(story_map.increments) * 40
-        table = (
-            f'<foreignObject id="thin-slice-table" x="0" y="0" '
-            f'width="{table_width}" height="{table_height}" '
-            f'data-type="table" data-title="Thin Slicing">'
-            f"<table><thead><tr>{header_cells}</tr></thead>"
-            f"<tbody>\n        {rows}\n      </tbody></table>"
-            f"</foreignObject>"
-        )
-        return (
-            "<?xml version='1.0' encoding='utf-8'?>\n"
-            '<svg xmlns="http://www.w3.org/2000/svg">\n'
-            f"  {table}\n"
-            "</svg>"
-        )
-
-    @classmethod
-    def load(cls, text: str) -> List["MiroIncrement"]:
-        try:
-            root_el = ET.fromstring(text.split("\n", 1)[1] if text.startswith("<?") else text)
-        except ET.ParseError as err:
-            raise MiroParseError(f"Not valid SVG: {err}") from err
-        foreign = cls._foreign_object(root_el, "table")
-        if foreign is None:
-            raise MiroParseError("No table foreignObject found in thin-slice SVG")
-        body = None
-        for element in foreign.iter():
-            if cls._local_name(element) == "tbody":
-                body = element
-                break
-        if body is None:
-            return []
-        increments: List[MiroIncrement] = []
-        for row in body:
-            if cls._local_name(row) != "tr":
-                continue
-            cells = [
-                cell.text or "" for cell in row if cls._local_name(cell) == "td"
-            ]
-            increment = cls.from_cells(cells, len(increments) + 1)
-            if increment is not None:
-                increments.append(increment)
-        return increments
-
-    @staticmethod
-    def _local_name(element: ET.Element) -> str:
-        tag = element.tag
-        return tag.split("}")[-1] if "}" in tag else tag
-
-    @classmethod
-    def _foreign_object(cls, root_el: ET.Element, data_type: str) -> Optional[ET.Element]:
-        for element in root_el.iter():
-            if cls._local_name(element) == "foreignObject" and element.get("data-type") == data_type:
-                return element
-        return None
-
 
 class MiroStory(DiagramStory):
     """A Miro board reads at a coarser zoom than a DrawIO page, so story cards and
@@ -157,7 +55,7 @@ class MiroStory(DiagramStory):
 
     @property
     def y(self) -> int:
-        return self._layout().story_y
+        return self._story_line_y()
 
     def shapes(self, parent_id: str) -> List[dict]:
         parent = self.parent
@@ -214,7 +112,7 @@ class MiroEpic(DiagramEpic):
     @property
     def y(self) -> int:
         if isinstance(self.parent, Epic):
-            return self._layout().sub_epic_y(self.depth)
+            return self._sub_epic_bar_y(self.depth)
         return self.row_y
 
     @property
@@ -303,7 +201,7 @@ class MiroStoryModel(DiagramStoryModel):
     """Miro story-map I/O. IS the format-typed tree root.
 
     load reads a file into these nodes. save writes the nodes you edited.
-    The thin-slice table is MiroIncrement.save and MiroIncrement.load.
+    The thin-slice table is save_thin_slice and load_thin_slice, over this map's own increments.
     """
 
     def render(self, canonical: StoryModel | None = None, previous: str | None = None) -> str:
@@ -313,6 +211,67 @@ class MiroStoryModel(DiagramStoryModel):
     def parse(self, text: str) -> "MiroStoryModel":
         """Read a canvas-composer SVG into a Miro story map; the format-adapter entry point Stories renders through."""
         return self.load(text)
+
+    def save_thin_slice(self) -> str:
+        """This map's increments as a thin-slice table: one column per epic or sub-epic, one row per increment."""
+        headers = ["Increment"]
+        story_column: Dict[str, int] = {}
+        column = 1
+        for epic in self.epics:
+            if epic.stories:
+                headers.append(epic.name)
+                for story in epic.stories:
+                    story_column[story.name] = column
+                column += 1
+            for sub_epic in epic.epics:
+                leaves = sub_epic.leaves()
+                if not sub_epic.epics:
+                    headers.append(f"{epic.name} / {sub_epic.name}")
+                else:
+                    for leaf in leaves:
+                        headers.append(f"{epic.name} / … / {leaf.name}")
+                for leaf in leaves:
+                    for story in leaf.stories:
+                        story_column[story.name] = column
+                    column += 1
+        return self._thin_slice_svg(headers, story_column)
+
+    def _thin_slice_svg(self, headers: List[str], story_column: Dict[str, int]) -> str:
+        header_cells = "".join(f"<th>{html.escape(header, quote=True)}</th>" for header in headers)
+        rows = "\n        ".join(increment.table_row(len(headers), story_column) for increment in self.increments)
+        table_width = MiroIncrement.label_width + (len(headers) - 1) * (MiroStory.pitch + 20)
+        table_height = 60 + len(self.increments) * 40
+        table = (
+            f'<foreignObject id="thin-slice-table" x="0" y="0" '
+            f'width="{table_width}" height="{table_height}" '
+            f'data-type="table" data-title="Thin Slicing">'
+            f"<table><thead><tr>{header_cells}</tr></thead>"
+            f"<tbody>\n        {rows}\n      </tbody></table>"
+            f"</foreignObject>"
+        )
+        return "<?xml version='1.0' encoding='utf-8'?>\n" '<svg xmlns="http://www.w3.org/2000/svg">\n' f"  {table}\n" "</svg>"
+
+    def load_thin_slice(self, text: str) -> "MiroStoryModel":
+        """Read a thin-slice table into this map's increments, each delivering the map's own stories its row names,
+        and return this map."""
+        try:
+            root_el = ET.fromstring(text.split("\n", 1)[1] if text.startswith("<?") else text)
+        except ET.ParseError as err:
+            raise MiroParseError(f"Not valid SVG: {err}") from err
+        foreign = _foreign_object(root_el, "table")
+        if foreign is None:
+            raise MiroParseError("No table foreignObject found in thin-slice SVG")
+        body = next((element for element in foreign.iter() if _local_name(element) == "tbody"), None)
+        rows = [] if body is None else [row for row in body if _local_name(row) == "tr"]
+        stories = {story.name: story for story in self.every_story()}
+        increments: List[MiroIncrement] = []
+        for row in rows:
+            cells = [(cell.text or "").strip() for cell in row if _local_name(cell) == "td"]
+            if cells and cells[0]:
+                delivered = [stories[name] for name in cells[1:] if name in stories]
+                increments.append(MiroIncrement(cells[0], len(increments) + 1, delivered))
+        self.increments = increments
+        return self
 
     def save(self) -> str:
         """Write this story map's nodes as a Miro canvas-composer SVG."""
@@ -398,3 +357,15 @@ class MiroStoryModel(DiagramStoryModel):
     def _xe(self, value: str) -> str:
         """XML-escape a string for use in SVG attributes and text."""
         return html.escape(value, quote=True)
+
+
+def _local_name(element: ET.Element) -> str:
+    tag = element.tag
+    return tag.split("}")[-1] if "}" in tag else tag
+
+
+def _foreign_object(root_el: ET.Element, data_type: str) -> Optional[ET.Element]:
+    for element in root_el.iter():
+        if _local_name(element) == "foreignObject" and element.get("data-type") == data_type:
+            return element
+    return None

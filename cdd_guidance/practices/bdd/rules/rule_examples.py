@@ -31,7 +31,7 @@ def violations_for_spec_source(rule, source: str, *, filename: str = "widget_spe
     return [
         message
         for node_type in rule.node_types
-        for node in practice.nodes.get(node_type, [])
+        for node in context.nodes(node_type)
         for message in rule.check(node, context)
     ]
 

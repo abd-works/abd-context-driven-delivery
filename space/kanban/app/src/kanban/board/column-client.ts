@@ -21,12 +21,13 @@ export class ColumnClient {
     return this.data.name
   }
 
+  // The column says its own kind: backlog, stage, or complete.
   get isStage(): boolean {
-    return this.data.work_required !== undefined
+    return this.data.kind === 'stage'
   }
 
   get isBacklog(): boolean {
-    return this.data.items !== undefined
+    return this.data.kind === 'backlog'
   }
 
   // How much of the solution a stage's work covers; none on the Backlog and Complete.

@@ -3,18 +3,17 @@
 from __future__ import annotations
 
 import os
-import re
 from functools import cache
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Callable
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.declared_file import DeclaredFile
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
-from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
-from tools.file_manager.file_manager import FileEntry
+from harness.installation.context_config import CONTEXT_FOLDER
+from space.session.file_manager import FileEntry
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, GuidanceCollection, PracticeGuidance
@@ -40,16 +39,13 @@ class PracticeRootInContextError(ValueError):
 @language_adapter(language="typescript")
 @agent_toolset
 class PracticeSessionOutput:
-    """What one practice has in one session: its guideline, the paths it reads, whether it is on, the folder it writes
-    under, and the files each of its fidelities declares."""
+    """What one practice has in one session: the session's own instance of the practice, which the session's graph
+    holds too, whether it is on, the folder it writes under, and the files each of its fidelities declares."""
 
-    # The guideline and folders load on first use: the board asks every ticket's session
-    # which practices are enabled after every cdd call, and that question needs none of them.
-
-    def __init__(self, name: str, session: Session) -> None:
-        self._name = name
+    def __init__(self, guidance: PracticeGuidance, session: Session) -> None:
+        self._guidance = guidance
+        self._name = guidance.key
         self._session = session
-        self._guideline: PracticeGuidance | None = None
 
     @classmethod
     @tool_subject
@@ -77,19 +73,10 @@ class PracticeSessionOutput:
         return self._session.session_file_from_project
 
     @property
-    def guideline(self) -> PracticeGuidance:
-        """This session's own copy of the practice's guidance, which knows the session, so each of its fidelities can
-        find the files it declares in this session."""
-        if self._guideline is None:
-            self.guideline = PracticeCatalogue.create(self.name)
-        return self._guideline
-
-    @guideline.setter
-    def guideline(self, guidance: PracticeGuidance) -> None:
-        """Work with guidance, the practice an action was given, at its fidelity; it now works in this session, and
-        each of its fidelities holds what it has in this session, so it answers its outputs and files itself."""
-        guidance.work_in(self)
-        self._guideline = guidance
+    def guidance(self) -> PracticeGuidance:
+        """The session's one instance of the practice: the one its graph holds and its actions work with. It works in
+        this session, so each of its fidelities finds the files it declares here."""
+        return self._guidance
 
     def of_fidelity(self, fidelity: FidelityGuidance) -> FidelitySessionOutput:
         """What fidelity, one of this practice's, has in this session."""
@@ -98,35 +85,36 @@ class PracticeSessionOutput:
     @property
     def fidelities(self) -> GuidanceCollection:
         """The practice's fidelities, such as story_map, by name, each able to list its files in this session."""
-        return self.guideline.fidelities
+        return self._guidance.fidelities
 
     @property
-    def _saved(self) -> dict:
+    def saved(self) -> dict:
         """What session.json's ``practices`` keeps for this practice: whether it is on, and the format each fidelity was
         last given, which each fidelity's FidelitySessionOutput reads and saves for itself."""
         return dict(self._session.fields.get("practices", {}).get(self.name, {}))
 
-    def _save(self, **values: object) -> None:
+    def save(self, **values: object) -> None:
+        """Merge values into what session.json's ``practices`` keeps for this practice."""
         saved = self._session.fields.get("practices", {})
-        self._session.save_fields(practices={**saved, self.name: {**self._saved, **values}})
+        self._session.save_fields(practices={**saved, self.name: {**self.saved, **values}})
 
     @property
     @data_field
     def enabled(self) -> bool:
         """Whether the session works on this practice: true until a person turns it off."""
-        return self._saved.get("enabled", True)
+        return self.saved.get("enabled", True)
 
     @mcp
     @agent_tool
     @noSessionLog
     def enable(self, is_enabled: bool) -> PracticeSessionOutput:
         """Turn this practice on or off for its session, saved in its session.json."""
-        self._save(enabled=is_enabled)
+        self.save(enabled=is_enabled)
         return self
 
     @property
     def _current_fidelity(self) -> FidelityGuidance | None:
-        return self.guideline.fidelities.current
+        return self._guidance.fidelities.current
 
     @property
     def working_fidelity(self) -> str:
@@ -136,31 +124,17 @@ class PracticeSessionOutput:
 
     @property
     def working_format(self) -> str:
-        """The format this practice works in, such as drawio; empty when it has none."""
-        return self.guideline.format or ""
-
-    def keep_format(self) -> None:
-        """Save the format this practice works in as its current fidelity's, so the next action on that fidelity in
-        this session works in it without being told."""
-        current = self._current_fidelity
-        if current is not None and self.guideline.format:
-            current.session_output.keep_format(self.guideline.format)
-
-    def use_kept_format(self) -> None:
-        """Work in the format last kept for the current fidelity; the fidelity's own format when none was kept."""
-        current = self._current_fidelity
-        kept = current.session_output.kept_format if current is not None else ""
-        if kept:
-            self.guideline.format = kept
+        """The format this practice works in, such as drawio: its current fidelity's; empty when it has none."""
+        return self._guidance.format or ""
 
     def log_validation(self, violations: list[str]) -> None:
         """Log a validate of this practice at its working fidelity in its session's log, with each violation's
         synopsis; no violations is a validate that passed."""
         detail = " ".join(violations)
-        self._session.log.line(f"validate {type(self.guideline).__name__} {self.working_fidelity} {detail}".rstrip())
+        self._session.log.line(f"validate {type(self._guidance).__name__} {self.working_fidelity} {detail}".rstrip())
 
     @property
-    def _chosen_outputs(self) -> dict:
+    def chosen_outputs(self) -> dict:
         """What session.json's ``outputs`` keeps for this practice: the root a person chose, and under each fidelity's
         name what that fidelity keeps for itself."""
         return dict(self._session.fields.get("outputs", {}).get(self.name, {}))
@@ -173,13 +147,13 @@ class PracticeSessionOutput:
     def _chosen_or_configured_root(self) -> str | None:
         """Where this practice writes, relative to the session's root, when someone said: the root a person chose in
         this session, else the folder the project's ``.context/config.json`` names for the practice."""
-        return self._chosen_outputs.get("root") or ContextConfig(self._session.repo_path).practice_folder(self.name)
+        return self.chosen_outputs.get("root") or self._session.context_config.practice_folder(self.name)
 
     @property
     def folder(self) -> Path:
         """The folder this practice writes its code under: the root chosen or configured,
         else the practice's own default folder under the session's root, such as src for BDD."""
-        relative = self._chosen_or_configured_root or self.guideline.default_workspace_folder
+        relative = self._chosen_or_configured_root or self._guidance.default_workspace_folder
         return (self._session.root / relative).resolve()
 
     @property
@@ -200,7 +174,7 @@ class PracticeSessionOutput:
     @data_field
     def is_root_chosen(self) -> bool:
         """Whether a person chose this practice's root, rather than it being the default."""
-        return bool(self._chosen_outputs.get("root"))
+        return bool(self.chosen_outputs.get("root"))
 
     @mcp
     @agent_tool
@@ -217,14 +191,14 @@ class PracticeSessionOutput:
         if CONTEXT_FOLDER in Path(root).parts:
             raise PracticeRootInContextError(self.name, Path(root))
         relative = os.path.relpath(Path(root).resolve(), self._session.root)
-        self._save_chosen_outputs({**self._chosen_outputs, "root": Path(relative).as_posix()})
+        self._save_chosen_outputs({**self.chosen_outputs, "root": Path(relative).as_posix()})
 
     @mcp
     @agent_tool
     @noSessionLog
     def use_default_root(self) -> PracticeSessionOutput:
         """Write this practice's files under its default root again: the workpath plus the practice's own folder."""
-        self._save_chosen_outputs({key: value for key, value in self._chosen_outputs.items() if key != "root"})
+        self._save_chosen_outputs({key: value for key, value in self.chosen_outputs.items() if key != "root"})
         return self
 
 
@@ -249,7 +223,7 @@ class FidelitySessionOutput:
     def _chosen(self) -> dict:
         """What session.json's ``outputs`` keeps for this fidelity: its own root, and a file name per format for a
         single-file output."""
-        return dict(self._practice._chosen_outputs.get(self._fidelity.name, {}))
+        return dict(self._practice.chosen_outputs.get(self._fidelity.name, {}))
 
     @property
     def root(self) -> Path:
@@ -261,11 +235,11 @@ class FidelitySessionOutput:
     @property
     def kept_format(self) -> str:
         """The format this fidelity was last given in the session; empty when none was kept."""
-        return self._practice._saved.get("formats", {}).get(self._fidelity.name, "")
+        return self._practice.saved.get("formats", {}).get(self._fidelity.name, "")
 
     def keep_format(self, format: str) -> None:
         """Keep format as the one this fidelity works in, so the next action on it in the session works in it."""
-        self._practice._save(formats={**self._practice._saved.get("formats", {}), self._fidelity.name: format})
+        self._practice.save(formats={**self._practice.saved.get("formats", {}), self._fidelity.name: format})
 
     def output_paths(self) -> dict[str, list[str]]:
         """Where this fidelity writes each format in the session: its declared paths under its root. session.json can
@@ -282,40 +256,45 @@ class FidelitySessionOutput:
         # Asking git what the branch changed is slow, and a project that is no repository has no branch, so it is asked
         # only once a pattern finds files.
         worked_on = cache(self._session.session_files.worked_on)
-        return {label: [entry for path in paths for entry in self._declared_files(path, worked_on)] for label, paths in self.output_paths().items()}
+        return {
+            label: [entry for path in paths for entry in self._declared_files(label, path, worked_on)]
+            for label, paths in self.output_paths().items()
+        }
 
     def has_output(self) -> bool:
         """Whether a file this fidelity declares is already in the session, such as one a person wrote. Unlike
         ``files`` it never asks git: a pattern counts only in a session with a folder of its own, since on the whole
         repository a pattern also finds other sessions' files, and the board asks this of every fidelity."""
         own_folder = self._session.root != self._session.repo.root
-        patterns = [self._as_pattern(declared) for paths in self.output_paths().values() for declared in paths]
-        return any(self._exists(pattern) for pattern in patterns if own_folder or "*" not in pattern)
+        declared = [(label, self._declared(path)) for label, paths in self.output_paths().items() for path in paths]
+        return any(self._exists(label, file) for label, file in declared if own_folder or file.names_one_path)
 
-    def _declared_files(self, declared: str, worked_on: Callable[[], set[Path] | None]) -> list[FileEntry]:
-        """A declared path, or each file of this session's that a pattern finds; a pattern that finds none stays as
-        written, not yet there."""
+    def _declared(self, path: str) -> DeclaredFile:
+        """A declared path under this fidelity's root, as a path from the project."""
+        return DeclaredFile(self._session.repo.path_from_top(path))
+
+    def _declared_files(self, label: str, path: str, worked_on: Callable[[], set[Path] | None]) -> list[FileEntry]:
+        """A declared path, or each file of this session's that the fidelity declares where a pattern searches; a
+        pattern that finds none stays as its search, not yet there."""
         repo = self._session.repo
-        pattern = self._as_pattern(declared)
-        if "*" not in pattern:
-            return [FileEntry(pattern, (repo.root / pattern).exists())]
-        found = repo.file_manager.find(pattern)
+        declared = self._declared(path)
+        if declared.names_one_path:
+            return [FileEntry(declared.glob, (repo.root / declared.glob).exists())]
+        found = self._found(label, declared)
         mine = worked_on() if found else None
-        found = [path for path in found if mine is None or path.resolve() in mine]
-        return [FileEntry(repo.path_from_top(path), True) for path in found] or [FileEntry(pattern, False)]
+        found = [file for file in found if mine is None or file.resolve() in mine]
+        return [FileEntry(repo.path_from_top(file), True) for file in found] or [FileEntry(declared.glob, False)]
 
-    def _exists(self, pattern: str) -> bool:
-        """Whether a file the pattern, or the plain path, names is in the repository."""
-        repo = self._session.repo
-        return bool(repo.file_manager.find(pattern)) if "*" in pattern else (repo.root / pattern).exists()
+    def _found(self, label: str, declared: DeclaredFile) -> list[Path]:
+        """The files a declared pattern's search finds that this fidelity declares in the format label: a name used
+        twice in one declared path must be the same text both times."""
+        return [file for file in self._session.session_files.find(declared.glob) if self._fidelity.declares(file.as_posix(), label)]
 
-    def _as_pattern(self, declared: str) -> str:
-        """A declared path, as a path from the project with its named parts, such as `{module}/{module}-model.md`, as
-        wildcards. A named folder can be a module several folders deep, so it matches folders at any depth; a named part
-        of a file name matches within it. A path with no named parts stays the plain path."""
-        relative = self._session.repo.path_from_top(declared)
-        folders = re.sub(r"\{[^{}/]+\}/", "**/", relative)
-        return re.sub(r"\{[^{}/]+\}", "*", folders)
+    def _exists(self, label: str, declared: DeclaredFile) -> bool:
+        """Whether a file the declared path names is in the repository."""
+        if declared.names_one_path:
+            return (self._session.repo.root / declared.glob).exists()
+        return bool(self._found(label, declared))
 
     def _output_names(self, declared: str | list[str], chosen_name: str | None) -> list[str]:
         """The file names a declared output writes: the chosen name in place of the declared one for a single-file

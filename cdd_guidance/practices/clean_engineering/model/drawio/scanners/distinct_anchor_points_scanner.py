@@ -5,12 +5,12 @@ from xml.etree import ElementTree as ET
 
 from harness.graph.violation import Violation
 
-from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import (
     DrawioPage,
-    DrawioScanner,
     anchor_fractions,
     share_inheritance_trunk,
 )
+from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
 # Anchor fractions are compared to two places, so 0.501 and 0.5 are the same point.
 ANCHOR_PRECISION = 2

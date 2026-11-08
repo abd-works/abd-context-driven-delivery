@@ -4,16 +4,16 @@ from mamba import before, context, description, it
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
-from cdd_guidance.practices.clean_engineering.model.property import Property, append_invariant
+from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.sketch.sketch_class_model import SketchCleanEngineeringModel
 
 
 def _shop() -> CleanEngineeringModel:
     lines = Property(name="lines")
     lines.cardinality = "1..*"
-    append_invariant(lines, "never empty after checkout")
+    lines.add_invariant("never empty after checkout")
     add_line = Operation(name="addLine", parameters=["product", "quantity"], callees=["lines.append"])
-    append_invariant(add_line, "before checkout")
+    add_line.add_invariant("before checkout")
     order = OoadClass(
         name="Order",
         sequential_order=1,
