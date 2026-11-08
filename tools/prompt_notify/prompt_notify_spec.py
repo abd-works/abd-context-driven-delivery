@@ -21,6 +21,8 @@ from harness.annotations.annotation import Toast
 from tools.prompt_notify.prompt_notify import PromptNotify
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.hooks.hook_server import HookPayload
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 _prompt_notify = PromptNotify()
 

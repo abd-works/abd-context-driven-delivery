@@ -15,8 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.process.process import BackgroundStart, PythonInterpreter
-from harness.process.running_process import RunningProcess
-from harness.process.stoppable_process import ProcessNotStopped, StoppableProcess
+from harness.process.process import ProcessNotStopped, RunningProcess, StoppableProcess
 
 if TYPE_CHECKING:
     from harness.hooks.hook_server import HookServer
@@ -37,8 +36,7 @@ _PING_TIMEOUT_SECONDS = 5
 _SOURCE_STAMP_FILES = (
     Path("harness/hooks/hook_daemon.py"),
     Path("harness/hooks/hook_server.py"),
-    Path("harness/process/running_process.py"),
-    Path("harness/process/stoppable_process.py"),
+    Path("harness/process/process.py"),
     Path("harness/guidance/rule.py"),
     Path("harness/guidance_actions/guidance_actions.py"),
 )

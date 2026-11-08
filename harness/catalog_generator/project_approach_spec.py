@@ -17,6 +17,7 @@ from mamba import context, description, it
 
 from harness.catalog_generator.catalog_generator import Catalog, CatalogPractice
 from harness.catalog_generator.project_approach import ExampleClassifier, ProjectApproach, ProjectFiles
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 _PRACTICES = CatalogPractice.load_all()
 

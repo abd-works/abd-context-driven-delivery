@@ -9,6 +9,7 @@ from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, ApproachC
 from harness.catalog_generator.approach_page import ApproachGrids, ApproachPage, PrincipleBullets
 from harness.catalog_generator.catalog_generator import CatalogPractice
 from harness.catalog_generator.hub_board import HubBoard
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 _HAND_EDITED_MD = """# Approach
 

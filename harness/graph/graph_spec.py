@@ -13,6 +13,8 @@ from harness.graph.graph import EdgeType, Graph, Node, Source
 from harness.guidance.guidance import PracticeGuidance
 from harness.graph.explorer import PracticeInventory
 from harness.graph.pattern_overlays import PatternOverlays
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's overlays
 
 _ROOT = _HERE
 _SAMPLE = _ROOT / "_examples" / "input"

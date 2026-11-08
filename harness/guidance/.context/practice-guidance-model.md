@@ -216,8 +216,6 @@ applies_to: AppliesTo
 	// which edited files the rules apply to: always, or the files its glob patterns match
 practice_key: str
 fidelity_name: str
-markdown_block: str
-	// the original Rules markdown of the practice and its active fidelity
 ----
 matches(path: str): bool
 from_markdown(text: str, fidelity: str | None, parent): RulesCollection
@@ -243,34 +241,41 @@ from_markdown(text: str): AppliesTo
 
 ## PracticeCatalogue
 
-Every practice CDD ships, in the order the approach walks them: Stories, DDD, UX, Clean Engineering, BDD.
+Every practice CDD ships, in the order the approach walks them: Stories, DDD, UX, Clean Engineering, BDD. The package that defines the practices registers their classes when it is imported; the framework names none of them.
 
 PracticeCatalogue
 ------
 ----
+register(*practice_classes: type[PracticeGuidance])
+	// called by cdd_guidance/practices when it is imported; each class by its key (its folder's name)
 keys(): tuple[str, ...]
-	// imports no practice code
+	// PracticesNotRegistered when no package registered the practices in this process
 has(key: str): bool
+holds(practice_class: type): bool
 practices(): tuple[PracticeGuidance, ...]
 	// the shared instances
 practice(key: str): PracticeGuidance
 create(key: str): PracticeGuidance
 	Invariant: outside a session, a caller that changes a practice's fidelity or format makes its own instance here; a session makes its set once with create_all
+create_all(): list[PracticeGuidance]
+	-> PracticeGuidance.hold_set
+	// each practice holds the one it extends and the Clean Engineering practice whose fidelities accompany its own, from the same set
 practice_class(key: str): type[PracticeGuidance]
-module_of(key: str): str
 practice_named(slug: str): PracticeGuidance | None
 toolset_ref(slug: str): str | dict | None
 	// the toolset ref a guidance action lists for a practice's or fidelity's slug, or a fidelity's bare name
 
 ## ActionCatalogue
 
-Every action CDD ships, read from the folders under `cdd_guidance/actions`: each folder holds its toolset as the class of the folder's name in Pascal case, and each operation that toolset installs as a skill is one *Action*; a `@noDeploy` operation is not installed, so it is no action. A new action folder joins the catalogue by being there.
+Every action CDD ships: `cdd_guidance/actions` registers each action folder's toolset when it is imported, and each operation that toolset installs as a skill is one *Action*; a `@noDeploy` operation is not installed, so it is no action. A new action folder joins the catalogue by being there.
 
 ActionCatalogue
 ------
 ----
+register(*toolset_classes: type)
+	// called by cdd_guidance/actions when it is imported
 toolsets(): tuple[type, ...]
-	// imported on first use and kept for the process
+	// the registered toolsets, kept for the process
 actions(): tuple[Action, ...]
 names(): tuple[str, ...]
 has(name: str): bool

@@ -16,7 +16,7 @@ from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_origin, get_type_hints
 
-from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, OnSubject, ToolSubjectLoader
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, OnSubject, ToolsetMembers
 from harness.annotations.name import Name
 from harness.installation.destination import DataClass, Installation, SourceFile
 from harness.installation.ide_layout import IdeLayout
@@ -182,7 +182,7 @@ class _FieldHint:
     @property
     def is_shape(self) -> bool:
         """A class that annotates properties as its data."""
-        return isinstance(self.hint, type) and bool(DataClass(self.hint).fields)
+        return isinstance(self.hint, type) and bool(DataClass.of(self.hint).fields)
 
     @property
     def is_reference(self) -> bool:
@@ -217,16 +217,16 @@ class _DataShape:
         """Each field's type by its name in the data. A field only some kinds of a class have, such as a stage's WIP
         limit on a column, is optional, so one type holds every kind. The names resolve the types a module imports only
         for type checking."""
-        fields = {key: self.field_hint(field) for key, field in DataClass(self._shape).fields.items()}
+        fields = {key: self.field_hint(field) for key, field in DataClass.of(self._shape).fields.items()}
         for sub in self._subclasses(self._shape):
-            for key, field in DataClass(sub).fields.items():
+            for key, field in DataClass.of(sub).fields.items():
                 fields.setdefault(key, NotRequired[self.field_hint(field)])
         return fields
 
     def field_hint(self, field: property) -> object:
         getter = field.fget
         hint = get_type_hints(getter, globalns=getter.__globals__, localns=dict(self._names), include_extras=True)["return"]
-        return Annotated[hint, _REFERENCE] if DataClass(self._shape).sends_by_identity(field) else hint
+        return Annotated[hint, _REFERENCE] if DataClass.of(self._shape).sends_by_identity(field) else hint
 
     def _subclasses(self, cls: type) -> list[type]:
         return [found for sub in cls.__subclasses__() for found in (sub, *self._subclasses(sub))]
@@ -251,7 +251,7 @@ class TypeScriptOperation:
         self.result = owner.result_of(tool)
         self.path_tail = Name(tool.name).kebab
         self.label = _PythonName(tool.name).label
-        self.annotated_edits = DataClass(type(owner.toolset)).edited_by(tool.callable)
+        self.annotated_edits = DataClass.of(type(owner.toolset)).edited_by(tool.callable)
 
     @property
     def returns_itself(self) -> bool:
@@ -327,7 +327,7 @@ class TypeScriptToolset:
         self._imports: set[tuple[str, str]] = set()
         self.name = type(toolset).__name__
         self.slug = toolset.slug
-        self.identity_fields = DataClass(type(toolset)).identity
+        self.identity_fields = DataClass.of(type(toolset)).identity
 
     @property
     def file_path(self) -> PurePosixPath:
@@ -357,7 +357,7 @@ class TypeScriptToolset:
     def _data_shape(self) -> type | None:
         """The toolset's class when it annotates properties as its data."""
         toolset_class = type(self.toolset)
-        return toolset_class if DataClass(toolset_class).fields else None
+        return toolset_class if DataClass.of(toolset_class).fields else None
 
     @property
     def peer_classes(self) -> dict[str, type]:
@@ -460,16 +460,16 @@ class TypeScriptToolset:
             return _TypeText(self._reference_type(get_args(hint)[0])).as_list
         if hint is type(None):
             return "null"
-        fields = DataClass(hint).fields
+        fields = DataClass.of(hint).fields
         shape = self._shape(hint)
-        named = [f"{name}: {self._identity_type(shape.field_hint(fields[name]))}" for name in DataClass(hint).identity]
+        named = [f"{name}: {self._identity_type(shape.field_hint(fields[name]))}" for name in DataClass.of(hint).identity]
         return f"{{ {'; '.join(named)} }}"
 
     def _identity_type(self, hint: object) -> str:
         """An identity field's type: an object with an identity of its own is named by that identity alone, as
         `DataClass.reference` sends it, such as a progress's fidelity as `{ slug: string }`."""
         held = _FieldHint(hint).unwrapped
-        if isinstance(held, type) and DataClass(held).identity:
+        if isinstance(held, type) and DataClass.of(held).identity:
             return self._reference_type(held)
         return self._hint_type(hint)
 
@@ -579,7 +579,7 @@ class TypeScriptToolset:
         """Where the data holds the value of identity field: the field itself, or, for a field holding an object named
         by one field of its own, that field inside it (`ticket?.name`)."""
         held = _FieldHint(self._shape(type(self.toolset)).fields.get(field)).unwrapped if self._data_shape else None
-        named = DataClass(held).identity if isinstance(held, type) else ()
+        named = DataClass.of(held).identity if isinstance(held, type) else ()
         return f"{field}?.{named[0]}" if len(named) == 1 else field
 
     def _named(self, identity: tuple[str, ...]) -> list[str]:
@@ -605,7 +605,7 @@ class TypeScriptToolset:
         """The arguments that name the object, its loader's: a loader with none, like the current board's, names none."""
         if not OnSubject.annotates(tool.callable):
             return ()
-        load = ToolSubjectLoader(type(self.toolset)).loader
+        load = ToolsetMembers.of(type(self.toolset)).subject_loader.loader
         return tuple(inspect.signature(load).parameters)
 
     def result_of(self, tool: AgentTool) -> str:
@@ -720,7 +720,7 @@ class TypeScriptViews:
         target = _FieldHint(hint).unwrapped
         is_union = get_origin(target) in (Union, types.UnionType)
         options = [option for option in get_args(target) if option is not type(None)] if is_union else [target]
-        named = DataClass(options[0]).identity if len(options) == 1 else ()
+        named = DataClass.of(options[0]).identity if len(options) == 1 else ()
         if len(named) != 1:
             return value
         may_be_none = is_union and type(None) in get_args(target)
@@ -824,7 +824,7 @@ class LanguageAdapterInstallation(Installation):
 
     def record(self, toolset: Any) -> None:
         """Remember toolset when its class is annotated for TypeScript."""
-        if _TYPESCRIPT in DataClass(type(toolset)).languages:
+        if _TYPESCRIPT in DataClass.of(type(toolset)).languages:
             self._recorded.append(toolset)
 
     def write_all(self) -> list[Path]:
@@ -838,7 +838,7 @@ class LanguageAdapterInstallation(Installation):
         for peer in peers.values():
             files.update({root / Path(path): text for path, text in peer.render().items()})
         for peer in peers.values():
-            if DataClass(type(peer.toolset)).shares_file_views:
+            if DataClass.of(type(peer.toolset)).shares_file_views:
                 files[root / _FILES_FILE] = self._file_views(peer)
         return [self._written(path, text) for path, text in files.items()]
 

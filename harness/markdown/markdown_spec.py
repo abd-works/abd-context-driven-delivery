@@ -245,3 +245,10 @@ with description("a markdown property"):
             expect(lambda: _MistypedSampleTool().mistyped).to(
                 raise_error(MarkdownTypeUnresolved, contain("_MistypedSampleTool.mistyped", "NoSuchShape"))
             )
+
+
+with description("an owner's markdown section"):
+    with context("that is read twice in the same scope"):
+        with it("should be read from the one Markdown the owner keeps"):
+            instance = SampleTool()
+            expect(Markdown.held_by(instance, "guidance")).to(be(Markdown.held_by(instance, "guidance")))

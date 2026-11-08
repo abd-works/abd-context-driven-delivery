@@ -127,15 +127,11 @@ class _CoreInject:
         return {"additional_context": "core rules"}
 
 
-def _guidelines_dispatch(root: Path, toolsets: list, config: str | dict | None = None) -> dict:
-    if config is not None:
+def _guidelines_dispatch(root: Path, toolsets: list, guidelines: dict | None = None) -> dict:
+    if guidelines is not None:
         from harness.installation.context_config import ContextConfig
 
-        cfg = ContextConfig(root)
-        if isinstance(config, dict):
-            cfg.save(config)
-        else:
-            cfg.set_guidelines(config)
+        ContextConfig(root).update(guidelines=guidelines)
     server = HookServer(root, HandlerCatalog(toolsets, root))
     return server.dispatch(
         HookPayload(
@@ -209,7 +205,7 @@ with description("hook dispatch"):
                 out = _guidelines_dispatch(
                     Path(tmp),
                     [_PatternInject],
-                    "lern_domain_driven: disabled\n",
+                    {"lern_domain_driven": "disabled"},
                 )
             expect(_PatternInject.calls).to(equal([]))
             expect(out).to(equal({"permission": "allow"}))
@@ -227,7 +223,7 @@ with description("hook dispatch"):
                 out = _guidelines_dispatch(
                     Path(tmp),
                     [_PatternInject],
-                    "lern-domain-driven: enabled\n",
+                    {"lern-domain-driven": "enabled"},
                 )
             expect(_PatternInject.calls).to(equal(["lern"]))
             expect(out["additional_context"]).to(equal("lern rules"))
@@ -239,7 +235,7 @@ with description("hook dispatch"):
                 out = _guidelines_dispatch(
                     Path(tmp),
                     [_PatternInject, _CoreInject],
-                    "lern_domain_driven: disabled\n",
+                    {"lern_domain_driven": "disabled"},
                 )
             expect(_PatternInject.calls).to(equal([]))
             expect(_CoreInject.calls).to(equal(["core"]))
