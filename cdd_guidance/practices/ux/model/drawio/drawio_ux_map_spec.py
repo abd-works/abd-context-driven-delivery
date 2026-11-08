@@ -74,8 +74,12 @@ with description("a UX map drawn as a draw.io information architecture"):
         with it("should link the transition to the screens on the read map"):
             expect(self.parsed.transitions[0].to_screen).to(be(self.parsed.find_screen("Character Sheet - Abilities")))
 
-        with it("should keep the regions on the read map's graph"):
-            expect(self.parsed.find_screen("Character Sheet").regions[0].graph).to(be(self.parsed.graph))
+        with it("should bring its regions onto the graph that adopts the read map"):
+            from harness.graph.graph import Graph
+
+            graph = Graph()
+            self.parsed.join(graph.practice("ux"))
+            expect(self.parsed.find_screen("Character Sheet").regions[0].graph).to(be(graph))
 
     with context("that is not XML"):
         with it("should refuse it as an unreadable diagram"):

@@ -236,10 +236,10 @@ class MarkdownScenario(Scenario):
 
     def document_text(self) -> str:
         """This scenario in a scenarios document: each line as it was read, with its heading and steps written anew
-        where the model changed them; a scenario not read from a document is written as its heading and steps."""
+        where the model changed them; a scenario not read from a document is written whole, as ``lines`` writes it."""
         parts = self.markdown_parts
         if parts is None:
-            parts = [_HEADING_LINE, "\n", *((_STEP_LINE, self) for _ in _StepLines.steps_of(self)), "\n"]
+            return "\n".join(self.lines())
         name, is_outline, heading = self.markdown_heading or ("", False, None)
         out: List[str] = []
         steps = _StepLines(parts)
@@ -262,20 +262,11 @@ class MarkdownScenario(Scenario):
                 on_file(rel)
             return cls.parse_file(root, rel)
         scenarios: List["MarkdownScenario"] = []
-        seen: set = set()
-        for pattern in (
-            "**/scenarios/*.md", "**/scenarios/**/*.md", "**/scenarios.md",
-            "**/md/*.md", "**/md/**/*.md", "**/*_story.test.md", "**/*_story.spec.md",
-            "**/story-scenarios.md", "**/stories/**/*.md",
-        ):
-            for md in root.glob(pattern):
-                rel = str(md.relative_to(root)).replace("\\", "/")
-                if rel in seen:
-                    continue
-                seen.add(rel)
-                if on_file is not None:
-                    on_file(rel)
-                scenarios.extend(cls.parse_file(md, rel))
+        for md in StoryMapFiles(root).scenario_files_below():
+            rel = md.relative_to(root).as_posix()
+            if on_file is not None:
+                on_file(rel)
+            scenarios.extend(cls.parse_file(md, rel))
         return scenarios
 
     @classmethod
@@ -706,15 +697,11 @@ class MarkdownStory(Story):
 
     def document_text(self) -> str:
         """This story in a scenarios document: each line as it was read, with its heading, steps, and scenarios
-        written anew where the model changed them; a story not read from a document is written as its heading, its
-        backgrounds, and its scenarios."""
+        written anew where the model changed them; a story not read from a document is written as its heading, then its
+        section as its own scenarios file writes it."""
         parts = self.markdown_parts
         if parts is None:
-            parts = [_HEADING_LINE, "\n"]
-            for background in self.backgrounds:
-                parts.extend(["### Background\n", "\n"])
-                parts.extend((_STEP_LINE, background) for _ in _StepLines.steps_of(background))
-                parts.append("\n")
+            return "\n".join([f"# Story: {self.name}", "", *self._scenario_section_lines()]).rstrip() + "\n"
         name, heading = self.markdown_heading or ("", None)
         out: List[str] = []
         steps = _StepLines(parts)

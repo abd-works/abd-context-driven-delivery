@@ -115,3 +115,27 @@ with description("a scenarios Markdown document") as self:
         with it("should write the document it was given"):
             result = Stories(fidelity="scenarios").render("markdown", self.text, source="markdown")
             expect(result["content"]).to(equal(self.text))
+
+
+def _unread_story():
+    """A story not read from a document: a story background and a scenario with an example of its own."""
+    from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStory
+    from cdd_guidance.practices.stories.model.story_model import Background, Step, StepType
+
+    story = MarkdownStory("Submit Order", 1)
+    background = Background("a filled cart", 1)
+    background.steps = [Step("a cart with a lamp", StepType.GIVEN, 1, keyword="Given")]
+    story.backgrounds.append(background)
+    scenario = MarkdownScenario("Pay for the order", 1, "Submit Order")
+    scenario.steps = [Step("the customer pays", StepType.WHEN, 1, keyword="When"), Step("the order is placed", StepType.THEN, 2, keyword="Then")]
+    scenario.examples["lamp order"] = {"total": "20"}
+    story.scenarios.append(scenario)
+    return story
+
+
+with description("a story not read from a scenarios document"):
+    with it("should write its background as the story's own, as its scenarios file does"):
+        expect(_unread_story().document_text()).to(contain("### Story Background: a filled cart"))
+
+    with it("should write each scenario whole, its examples included"):
+        expect(_unread_story().document_text()).to(contain("lamp order"))

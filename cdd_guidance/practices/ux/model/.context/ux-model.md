@@ -245,7 +245,7 @@ Ordered paths to story or object-model JavaScript, each stored once.
 
 ## Formats
 
-Each format class below is a *UxMap* subclass. It overrides `parse`, `save`, and `workspace_files`, and names the node types it is made of (`screen_type`, `region_type`, `control_type`, `story_demo_control_type`, `transition_type`, `content_type_type`, `nav_component_type`), which its reading and `UxMap.copy_of` make. `render(canonical)` copies the map it is given into the format's own class (`copy_of`), which writes itself with `save`; a reader class beside it holds the reading steps.
+Each format class below is a *UxMap* subclass. It overrides `parse`, `save`, and `workspace_files`, and names the node types it is made of (`screen_type`, `region_type`, `control_type`, `story_demo_control_type`, `transition_type`, `content_type_type`, `nav_component_type`), which its reading and `copy_of` make. `render(canonical)` asks the format's own map to copy the map it is given (`copy_of`, an instance method as a story map's is); the copy is detached, keeping the stories each screen shows by key, and writes itself with `save`. Each format's map reads its own file in `parse`, and its screens, regions, and other nodes read their own part of it.
 
 ## JsonUxMap : UxMap
 
@@ -295,7 +295,9 @@ The `drawio` format: a Site Map page and a Detailed IA page, written through the
 ----
 + parse(content: str): UxMap
 	// raises UnreadableDrawio when content is not XML; JSON content is read with source json
-	-> DrawioUxMapReader.read
+	-> read_pages
++ read_pages(root_element: Element): None
+	// screens from the Site Map page (DrawioScreen.from_cell), then each screen reads its regions from its own box on the Detailed IA page (DrawioScreen.read_regions, DrawioRegion.from_cell), then the transitions drawn between screens. An edge labelled "there / back" is two transitions
 + render(canonical: UxMap): str
 	// copies ux_map into a DrawioUxMap (DrawioScreen, DrawioRegion), which draws itself
 + cli_state(target: str): dict
@@ -303,28 +305,16 @@ The `drawio` format: a Site Map page and a Detailed IA page, written through the
 + save(): str
 	// raises DrawioCliMissing, DrawioCliFailed, or DrawioCliTimedOut
 
-## DrawioUxMapReader
-
-+ DrawioUxMapReader(ux_map: UxMap, root_element: Element)
-----
-+ read(): UxMap
-	// screens from the Site Map page, then each screen's regions from the Detailed IA page, then the transitions drawn between screens. An edge labelled "there / back" is two transitions
-
 ## MarkdownUxMap : UxMap
 
 The `markdown` format: the scope, then the invariants and notes as bullet lists under their own headings. It carries no screens. Files: `.context/ux-context.md`, `ux-context.md`, `.context/context.md`, `context.md`.
 
 ----
 + parse(content: str): UxMap
-	-> MarkdownContextReader.read
-+ render(canonical: UxMap): str
-
-## MarkdownContextReader
-
-+ MarkdownContextReader(ux_map: UxMap)
-----
-+ read(content: str): None
+	-> read_text
++ read_text(content: str): None
 	// any line outside the scope, or a bullet under any other heading, is a note
++ render(canonical: UxMap): str
 
 ## ClaudeDesignUxMap : UxMap
 

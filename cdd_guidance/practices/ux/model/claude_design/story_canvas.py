@@ -372,7 +372,8 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         """The Claude Design map this canvas places its screens with: ux_map itself when it is one, else a copy."""
         if isinstance(ux_map, ClaudeDesignUxMap):
             return ux_map
-        return ClaudeDesignUxMap.copy_of(ux_map) if ux_map is not None else ClaudeDesignUxMap.create()
+        screens = ClaudeDesignUxMap.create()
+        return screens.copy_of(ux_map) if ux_map is not None else screens
 
 
 def shown_on(node, screens: Iterable) -> List:

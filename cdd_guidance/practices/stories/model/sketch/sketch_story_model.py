@@ -34,13 +34,52 @@ _ESTIMATE = re.compile(r"^\*\s+(\S.+)$")
 _INCREMENT = re.compile(r"^~>\s*(.+)$")
 _STEP = re.compile(r"^(given|when|then|and|but)\s+(.+)$", re.I)
 _STEP_TYPES = {"given": StepType.GIVEN, "when": StepType.WHEN, "then": StepType.THEN}
+_CHAINED = ("and", "but")
+
+
+def _epic_name(text: str) -> str:
+    """A line's name without the `(E)` an outline marks an epic with."""
+    headed = _OUTLINE_EPIC.match(text)
+    return headed.group(1) if headed else text
 
 
 class SketchStep(Step):
     """A step in the sketch: `{keyword} {text}` at pad, then each step chained onto it one level in."""
 
+    @classmethod
+    def from_line(cls, keyword: str, text: str, order: int) -> "SketchStep":
+        return cls(text, _STEP_TYPES.get(keyword, StepType.THEN), order, keyword=keyword)
+
     def sketch_lines(self, pad: str, keyword: str) -> List[str]:
         return [f"{pad}{keyword} {self.text}"] + [f"{pad}    {extra.keyword.lower()} {extra.text}" for extra in self.ands]
+
+    def read_lines(self, lines: List[_Line]) -> None:
+        """The `and` and `but` lines under this step, each chained onto it."""
+        for line in lines:
+            self.chain(line.text)
+
+    def chain(self, text: str) -> bool:
+        """Chain an `and` or `but` line onto this step; false for any other line."""
+        step = _STEP.match(text)
+        if step is None or step.group(1).lower() not in _CHAINED:
+            return False
+        keyword = step.group(1).lower()
+        self.ands = [*self.ands, SketchStep(step.group(2), self.step_type, len(self.ands) + 1, keyword=keyword)]
+        return True
+
+
+def _read_steps(lines: List[_Line], take) -> None:
+    """Each step the lines write, with the `and` and `but` lines chained onto the step before them, handed to take."""
+    last: Optional[SketchStep] = None
+    for line, nested in _under(lines):
+        step = _STEP.match(line.text)
+        if step is None:
+            continue
+        if last is not None and last.chain(line.text):
+            continue
+        last = SketchStep.from_line(step.group(1).lower(), step.group(2), 1)
+        last.read_lines(nested)
+        take(last)
 
 
 class SketchBackground(Background):
@@ -58,6 +97,14 @@ class SketchScenario(Scenario):
     step_type = SketchStep
     background_type = SketchBackground
 
+    def read_lines(self, lines: List[_Line]) -> None:
+        """Its steps: the lines under its name."""
+        _read_steps(lines, self.take_step)
+
+    def take_step(self, step: SketchStep) -> None:
+        step.sequential_order = len(self.steps) + 1
+        self.steps.append(step)
+
     def sketch_lines(self, pad: str) -> List[str]:
         steps = [line for step in self.steps for line in step.sketch_lines(pad + "    ", step.keyword.lower())]
         return [f"{pad}{self.name}"] + steps
@@ -68,6 +115,38 @@ class SketchStory(Story):
 
     scenario_type = SketchScenario
     background_type = SketchBackground
+
+    @classmethod
+    def from_match(cls, match: "re.Match", order: int) -> "SketchStory":
+        """The story a `{actor} --> {story}` line names, a system story's kind in front."""
+        story = cls(match.group("name").strip(), order, StoryType.from_mark(match.group("kind")))
+        actor = match.group("actor").strip()
+        if actor:
+            story.actors = [actor]
+        return story
+
+    def read_lines(self, lines: List[_Line]) -> None:
+        """The lines under the story: its background's `given` lines before any scenario, then each scenario named
+        with its steps under it. A step with no scenario to hold it opens one named for the story."""
+        for line, nested in _under(lines):
+            if _STEP.match(line.text):
+                _read_steps([line, *nested], self._take_step)
+                continue
+            scenario = SketchScenario(line.text, len(self.scenarios) + 1, self.name)
+            self.scenarios.append(scenario)
+            scenario.read_lines(nested)
+
+    def _take_step(self, step: SketchStep) -> None:
+        if step.keyword.lower() == "given" and not self.scenarios:
+            if not self.backgrounds:
+                self.backgrounds.append(SketchBackground("background", 1))
+            background = self.backgrounds[-1]
+            step.sequential_order = len(background.steps) + 1
+            background.steps = [*background.steps, step]
+            return
+        if not self.scenarios:
+            self.scenarios.append(SketchScenario(self.name, 1, self.name))
+        self.scenarios[-1].take_step(step)
 
     def sketch_lines(self, depth: int) -> List[str]:
         pad = "    " * depth
@@ -84,6 +163,23 @@ class SketchStory(Story):
 
 class SketchEpic(Epic):
     """An epic in the sketch: its name, its estimate, its stories, then its nested epics, one level deeper each."""
+
+    def read_lines(self, lines: List[_Line]) -> None:
+        """The lines under the epic: its estimate, each story with its scenarios, and each nested epic with its own."""
+        for line, nested in _under(lines):
+            estimate = _ESTIMATE.match(line.text)
+            if estimate:
+                self.estimate = estimate.group(1)
+                continue
+            story = _STORY.match(_epic_name(line.text))
+            if story:
+                read = SketchStory.from_match(story, len(self.stories) + 1)
+                self.append_story(read)
+                read.read_lines(nested)
+                continue
+            child = SketchEpic(_epic_name(line.text), len(self.epics) + 1)
+            self.append_epic(child)
+            child.read_lines(nested)
 
     def sketch_lines(self, depth: int) -> List[str]:
         pad = "    " * depth
@@ -108,8 +204,41 @@ class SketchStoryModel(StoryModel):
         self.epics = []
         self.increments = []
         body = SketchOutline(text, _NESTING_INDENT).body_for(self.lens)
-        _SketchReader(self).read(body)
+        self.read_lines(self._story_lines(body))
         return self
+
+    def read_lines(self, lines: List[_Line]) -> None:
+        """Each epic at the left edge with the lines under it; a story with no epic above it sits in a `Stories` epic."""
+        for line, nested in _under(lines):
+            story = _STORY.match(_epic_name(line.text))
+            if story is None:
+                epic = SketchEpic(_epic_name(line.text), len(self.epics) + 1)
+                self.append_epic(epic)
+                epic.read_lines(nested)
+                continue
+            if not self.epics:
+                self.append_epic(SketchEpic("Stories", 1))
+            read = SketchStory.from_match(story, len(self.epics[-1].stories) + 1)
+            self.epics[-1].append_story(read)
+            read.read_lines(nested)
+
+    def _story_lines(self, body: str) -> List[_Line]:
+        """The lines of the body that write the map; the increments it lists after `~>` are taken here, with the prose
+        under them up to the next blank line."""
+        lines: List[_Line] = []
+        in_increments = False
+        for raw in body.splitlines():
+            stripped = raw.strip()
+            if not stripped or stripped.startswith(("//", "#", "Fidelity:")):
+                in_increments = in_increments and bool(stripped)
+                continue
+            increment = _INCREMENT.match(stripped)
+            if increment is not None:
+                in_increments = True
+                self.append_increment(Increment(increment.group(1), len(self.increments) + 1))
+            elif not in_increments:
+                lines.append(_Line(raw))
+        return lines
 
     def render(self, canonical: StoryModel | None = None, previous: str | None = None) -> str:
         """Write canonical (this map when none is given) as a sketch: copied into a sketch map, which writes itself.
@@ -123,123 +252,25 @@ class SketchStoryModel(StoryModel):
         return "\n".join(lines) + ("\n" if lines else "")
 
 
-class _SketchReader:
-    """Reads sketch lines into the sketch map that parses them, keeping the epic, story, scenario, and step each next
-    line belongs under. One reader serves one parse."""
+class _Line:
+    """One line of the stories section: its text, and how deep its indent puts it."""
 
-    def __init__(self, model: "SketchStoryModel") -> None:
-        self.model = model
-        self.epic: Optional[Epic] = None
-        self.nested: List[Epic] = []
-        self.story: Optional[Story] = None
-        self.story_level = 0
-        self.scenario: Optional[Scenario] = None
-        self.last_step: Optional[Step] = None
-        self.in_increments = False
-
-    def read(self, body: str) -> None:
-        for raw in body.splitlines():
-            stripped = raw.strip()
-            if not stripped or stripped.startswith(("//", "#", "Fidelity:")):
-                self.in_increments = self.in_increments and bool(stripped)
-                continue
-            if self._read_increment(stripped) or self.in_increments:
-                continue
-            self._read_line(stripped, self._level_of(raw))
-
-    def _read_line(self, stripped: str, level: int) -> None:
-        estimate = _ESTIMATE.match(stripped)
-        if estimate:
-            self._estimate(estimate.group(1))
-            return
-        step = _STEP.match(stripped)
-        if step and self.story is not None:
-            self._add_step(step.group(1).lower(), step.group(2))
-            return
-        headed = _OUTLINE_EPIC.match(stripped)
-        name = headed.group(1) if headed else stripped
-        story = _STORY.match(name)
-        if story:
-            self._add_story(story, level)
-        elif self.story is not None and level > self.story_level:
-            self._add_scenario(name)
-        else:
-            self._add_epic(name, level)
-
-    def _level_of(self, raw: str) -> int:
+    def __init__(self, raw: str) -> None:
+        self.text = raw.strip()
         indent = len(raw) - len(raw.lstrip(" "))
-        return indent // _NESTING_INDENT if indent % _NESTING_INDENT == 0 else indent // 2
+        self.level = indent // _NESTING_INDENT if indent % _NESTING_INDENT == 0 else indent // 2
 
-    def _read_increment(self, stripped: str) -> bool:
-        increment = _INCREMENT.match(stripped)
-        if increment is None:
-            return False
-        self.in_increments = True
-        self.model.append_increment(Increment(increment.group(1), len(self.model.increments) + 1))
-        return True
 
-    def _estimate(self, estimate: str) -> None:
-        target = self.nested[-1] if self.nested else self.epic
-        if target is not None:
-            target.estimate = estimate
-
-    def _add_epic(self, name: str, level: int) -> None:
-        self.story, self.scenario, self.last_step = None, None, None
-        if level <= 0:
-            self.epic = SketchEpic(name, len(self.model.epics) + 1)
-            self.model.append_epic(self.epic)
-            self.nested = []
-            return
-        parent = self._holder(level)
-        if parent is None:
-            return
-        child = SketchEpic(name, len(parent.epics) + 1)
-        parent.append_epic(child)
-        self.nested.append(child)
-
-    def _add_story(self, match: "re.Match", level: int) -> None:
-        if self.epic is None:
-            self.epic = SketchEpic("Stories", 1)
-            self.model.append_epic(self.epic)
-        parent = self._holder(level)
-        story = SketchStory(match.group("name").strip(), len(parent.stories) + 1, StoryType.from_mark(match.group("kind")))
-        actor = match.group("actor").strip()
-        if actor:
-            story.actors = [actor]
-        parent.append_story(story)
-        self.story, self.story_level = story, level
-        self.scenario, self.last_step = None, None
-
-    def _holder(self, level: int) -> Optional[Epic]:
-        """The epic a line at *level* sits under: the nested epic one level up, else the top-level epic."""
-        while len(self.nested) >= level:
-            self.nested.pop()
-        return self.nested[-1] if self.nested else self.epic
-
-    def _add_scenario(self, name: str) -> None:
-        self.scenario = SketchScenario(name, len(self.story.scenarios) + 1, self.story.name)
-        self.story.scenarios.append(self.scenario)
-        self.last_step = None
-
-    def _add_step(self, keyword: str, text: str) -> None:
-        if keyword in {"and", "but"} and self.last_step is not None:
-            extra = SketchStep(text, self.last_step.step_type, len(self.last_step.ands) + 1, keyword=keyword)
-            self.last_step.ands = [*self.last_step.ands, extra]
-            return
-        step = SketchStep(text, _STEP_TYPES.get(keyword, StepType.THEN), 1, keyword=keyword)
-        self.last_step = step
-        if keyword == "given" and self.scenario is None:
-            self._add_background_step(step)
-            return
-        if self.scenario is None:
-            self._add_scenario(self.story.name)
-            self.last_step = step
-        step.sequential_order = len(self.scenario.steps) + 1
-        self.scenario.steps.append(step)
-
-    def _add_background_step(self, step: Step) -> None:
-        if not self.story.backgrounds:
-            self.story.backgrounds.append(SketchBackground("background", 1))
-        background = self.story.backgrounds[-1]
-        step.sequential_order = len(background.steps) + 1
-        background.steps = [*background.steps, step]
+def _under(lines: List[_Line]) -> List[tuple]:
+    """The lines a node holds, each with the lines nested under it: a line at the shallowest depth among them opens an
+    entry, and the deeper lines after it are its own."""
+    if not lines:
+        return []
+    depth = min(line.level for line in lines)
+    entries: List[tuple] = []
+    for line in lines:
+        if line.level <= depth or not entries:
+            entries.append((line, []))
+        else:
+            entries[-1][1].append(line)
+    return entries

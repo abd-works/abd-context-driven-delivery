@@ -1,17 +1,22 @@
-"""Where story maps sit. This is the one place that knows a story map's file name and which folders are searched for
-one, so the practice, the markdown format, and a story test's reader all find the same files."""
+"""Where story maps and story files sit. This is the one place that knows a story map's file name, a story's own file
+name, the files scenarios are written in, and which folders are searched for them, so the practice, the markdown
+format, its links, and a story test's reader all find the same files."""
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import List, Optional
+import os
+from pathlib import Path, PurePosixPath
+from typing import Iterator, List, Optional
 
 from harness.annotations.name import Name
+from harness.graph.skipped_folders import skips_folder
 
 STORY_MAP_SUFFIXES = (".md", ".drawio")
 # Documents go in a folder's `.context` while code sits straight in the folder, so a story map may sit in either.
 CONTEXT_FOLDER = ".context"
 _MARKDOWN = ".md"
+# A story's own markdown file: `submit_order_story.test.md`, `submit_order_story.spec.md`.
+STORY_FILE_SUFFIXES = ("_story.test.md", "_story.spec.md")
 
 
 def is_story_map_file(path) -> bool:
@@ -43,9 +48,47 @@ class StoryMapFiles:
         own = [path for path in self._maps_in(self.folder) if path.suffix.lower() == _MARKDOWN]
         if own:
             return own
-        return sorted(path.resolve() for path in self.folder.rglob(f"*{_MARKDOWN}") if is_story_map_file(path))
+        return sorted(path for path in self._markdown_below() if is_story_map_file(path))
+
+    def story_files_below(self) -> List[Path]:
+        """Each story's own markdown file in this folder and the folders below it."""
+        return sorted(path for path in self._markdown_below() if path.name.endswith(STORY_FILE_SUFFIXES))
+
+    def scenario_files_below(self) -> List[Path]:
+        """Each markdown file scenarios are written in, in this folder and the folders below it: in a `scenarios`, `md`
+        or `stories` folder, a `scenarios.md` or `story-scenarios.md`, or a story's own file. Grouped by the kind of
+        file in that order, then by path, so a folder's scenarios read in the same order every time."""
+        found = [(kind, path) for path in self._markdown_below() for kind in [_scenario_file_kind(PurePosixPath(path.relative_to(self.folder).as_posix()))] if kind is not None]
+        return [path for _kind, path in sorted(found)]
+
+    def _markdown_below(self) -> Iterator[Path]:
+        """Every markdown file in this folder and the folders below it, entering each folder's `.context`, where
+        documents are kept, and no folder a working-copy scan never enters."""
+        for folder, folders, names in os.walk(self.folder):
+            folders[:] = sorted(name for name in folders if name == CONTEXT_FOLDER or not skips_folder(name))
+            yield from (Path(folder, name).resolve() for name in sorted(names) if name.lower().endswith(_MARKDOWN))
 
     def _maps_in(self, folder: Path) -> List[Path]:
         context = folder / CONTEXT_FOLDER
         beside = list(context.iterdir()) if context.is_dir() else []
         return sorted(path.resolve() for path in [*folder.iterdir(), *beside] if path.is_file() and is_story_map_file(path))
+
+
+# The folders and file names scenarios are written in, in the order a folder's scenario files are read.
+_SCENARIO_FOLDERS = ("scenarios", "md")
+_SCENARIO_FILES = ("scenarios.md",)
+_STORY_SCENARIO_FILES = ("story-scenarios.md",)
+_STORIES_FOLDER = "stories"
+
+
+def _scenario_file_kind(relative: PurePosixPath) -> Optional[int]:
+    """Which kind of scenario file a path is, by the order they are read in; none for another markdown file."""
+    folders = relative.parts[:-1]
+    kinds = (
+        any(folder in _SCENARIO_FOLDERS[:1] for folder in folders) or relative.name in _SCENARIO_FILES,
+        any(folder in _SCENARIO_FOLDERS[1:] for folder in folders),
+        relative.name.endswith(STORY_FILE_SUFFIXES),
+        relative.name in _STORY_SCENARIO_FILES,
+        _STORIES_FOLDER in folders,
+    )
+    return next((index for index, matches in enumerate(kinds) if matches), None)

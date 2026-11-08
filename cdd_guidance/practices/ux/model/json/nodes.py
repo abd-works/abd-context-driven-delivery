@@ -31,13 +31,13 @@ class JsonControl(Control):
 
     @classmethod
     def from_record(cls, record: dict[str, Any], index: int, ux_map: "JsonUxMap") -> Control:
-        """The control a record writes, on ux_map's graph: a Story Demo control when the record says it is one."""
+        """The control a record writes: a Story Demo control when the record says it is one."""
         common = (record.get("name", f"Control {index}"), index, record.get("control_type", ""),
                   record.get("label", ""), record.get("bound_field", ""))
         if record.get("kind") == _STORY_DEMO or record.get("story_steps"):
             control = ux_map.story_demo_control_type.demo_from_record(common, record, ux_map)
         else:
-            control = cls(*common, graph=ux_map.graph)
+            control = cls(*common)
         control.read_states_and_interactions(record, ux_map)
         return control
 
@@ -51,7 +51,6 @@ class JsonControl(Control):
                 interaction.get("trigger", ""),
                 interaction.get("effect", ""),
                 ux_map.screen_named(interaction.get("destination", "")),
-                ux_map.graph,
             ))
 
     def as_record(self) -> dict[str, Any]:
@@ -83,7 +82,6 @@ class JsonStoryDemoControl(StoryDemoControl, JsonControl):
             record.get("item_story_steps"),
             record.get("item_value", ""),
             record.get("item_label", ""),
-            graph=ux_map.graph,
         )
 
     def as_record(self) -> dict[str, Any]:
@@ -103,7 +101,7 @@ class JsonRegion(Region):
 
     @classmethod
     def from_record(cls, record: dict[str, Any], index: int, ux_map: "JsonUxMap") -> "JsonRegion":
-        region = cls(record.get("name", f"Region {index}"), index, record.get("area", ""), ux_map.graph)
+        region = cls(record.get("name", f"Region {index}"), index, record.get("area", ""))
         for control_index, control in enumerate(record.get("controls", [])):
             region.append_control(ux_map.control_type.from_record(control, control_index, ux_map))
         return region
@@ -124,7 +122,6 @@ class JsonScreen(Screen):
             record.get("slug", ""),
             record.get("layout", ""),
             record.get("description", ""),
-            graph=ux_map.graph,
         )
 
     def read_record(self, record: dict[str, Any], ux_map: "JsonUxMap") -> None:
@@ -176,7 +173,6 @@ class JsonTransition(Transition):
             ux_map.screen_named(record.get("to_screen", "")),
             record.get("trigger", ""),
             record.get("nav_type", "action"),
-            ux_map.graph,
         )
 
     def as_record(self) -> dict[str, Any]:
@@ -194,7 +190,7 @@ class JsonContentType(ContentType):
 
     @classmethod
     def from_record(cls, record: dict[str, Any], index: int, ux_map: "JsonUxMap") -> "JsonContentType":
-        content_type = cls(record.get("name", f"ContentType {index}"), index, record.get("hierarchy", ""), ux_map.graph)
+        content_type = cls(record.get("name", f"ContentType {index}"), index, record.get("hierarchy", ""))
         content_type.key_actions = list(record.get("key_actions", []))
         return content_type
 
@@ -207,7 +203,7 @@ class JsonNavComponent(NavComponent):
 
     @classmethod
     def from_record(cls, record: dict[str, Any], index: int, ux_map: "JsonUxMap") -> "JsonNavComponent":
-        nav = cls(record.get("name", f"Nav {index}"), index, record.get("ux_type", ""), ux_map.graph)
+        nav = cls(record.get("name", f"Nav {index}"), index, record.get("ux_type", ""))
         nav.destinations = [ux_map.find_screen(name) for name in record.get("destinations", [])]
         return nav
 
@@ -258,7 +254,7 @@ class JsonUxMap(UxMap):
 
     def render(self, canonical: UxMap) -> str:
         """canonical in this format: copied into a map of this format, which writes itself."""
-        return type(self).copy_of(canonical).save()
+        return self.copy_of(canonical).save()
 
     def save(self) -> str:
         return json.dumps(self.map_record(), indent=2) + "\n"

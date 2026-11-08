@@ -132,7 +132,7 @@ class Stories(PracticeGuidance):
         """Story tests in code carry their epic and sub-epic only in their folders, under the story map that names them,
         so they are read as files beside that map, not as one run of text. Paths and node paths are named from the
         project, as every path in a session is."""
-        if not Format(source or self.format).is_code:
+        if not (Format(source).is_code if source else self.format.is_code):
             return super().read_paths(paths, source)
         named = [Path(entry) for entry in ([paths] if isinstance(paths, str) else paths)]
         project = self._project_of(named)

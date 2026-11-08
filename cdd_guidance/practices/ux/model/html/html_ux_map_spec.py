@@ -58,6 +58,9 @@ with description("a UX map written as an HTML mockup"):
 
     with context("with the story map on the map's graph"):
         with before.each:
+            from harness.graph.graph import Graph
+
+            self.source = OrderingMap().build(UxMap.create(Graph()))
             ordering_story_map(self.source.graph)
             self.source.find_screen("Cart").show_story("Check Out")
             self.rendered = HtmlUxMap.create().render(self.source)

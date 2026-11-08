@@ -38,9 +38,13 @@ with description("a UX map written as JSON"):
             browse = self.parsed.find_screen("Catalog").regions[0].controls[0]
             expect(browse.interactions[0].destination).to(be(self.parsed.find_screen("Cart")))
 
-        with it("should keep every node on the read map's graph"):
+        with it("should bring every node onto the graph that adopts the read map"):
+            from harness.graph.graph import Graph
+
+            graph = Graph()
+            self.parsed.join(graph.practice("ux"))
             control = self.parsed.find_screen("Catalog").regions[0].controls[0]
-            expect(control.interactions[0].graph).to(be(self.parsed.graph))
+            expect(control.interactions[0].graph).to(be(graph))
 
         with it("should read each content type and navigation component as the JSON format's own node"):
             kinds = (type(self.parsed.content_types[0]), type(self.parsed.nav_components[0]))

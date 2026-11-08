@@ -29,7 +29,7 @@ class DrawIOMapCell(DrawIOModule):
 
 
 class DrawIOContextCell(DrawIOMapCell):
-    """A bounded context on the map: a module whose purpose line says it is one."""
+    """A bounded context on the map: a module whose cell style names its kind (`kind=boundedContext;`)."""
 
     KIND = "boundedContext"
     PURPOSE = "bounded context"
