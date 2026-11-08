@@ -15,6 +15,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import threading
 from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
@@ -27,13 +28,19 @@ WORKER_MODULE = "harness.graph.graph_worker"
 _ERROR_TAIL_CHARACTERS = 4000
 # Windows' CREATE_NO_WINDOW: the worker opens no console window beside a windowless server.
 _CREATE_NO_WINDOW = 0x08000000
+# The part of a worker build the server does itself, writing what its graph holds into the order and reading the
+# worker's answer back into its graph, is CPU-bound Python in the interpreter every chat shares. Builds take turns at
+# it, so the event loop waits for one build's turn at most, never for several builds' at once.
+_SERVER_TURN = threading.Lock()
 
 
 class BuildStep(str, Enum):
-    """What a build does with the graph it is given: read the working copy into it and run the rules (``read``), or
-    only run the rules on what it holds (``check``), as a graph read back from ``graph.json`` does."""
+    """What a build does with the graph it is given: read the working copy into it and run the rules (``read``); drop
+    the nodes of the files in scope, read those files again, and run the rules (``refresh``); or only run the rules on
+    what it holds (``check``), as a graph read back from ``graph.json`` does."""
 
     READ = "read"
+    REFRESH = "refresh"
     CHECK = "check"
 
 
@@ -49,8 +56,9 @@ class GraphBuildFailed(RuntimeError):
 class BuildOrder:
     """One build as a worker process carries it out: the step, the folder the graph loads, each chosen practice's
     source root, the pattern overlays, the edited files a load is limited to (none for the whole folder), the graph as
-    it is before the step, and the modules that register the practices and patterns the graph holds, which the worker
-    imports so its catalogues hold the same classes."""
+    it is before the step, the modules that register the practices and patterns the graph holds, which the worker
+    imports so its catalogues hold the same classes, and whether the worker saves the graph it built in the folder's
+    ``graph.json``."""
 
     def __init__(
         self,
@@ -61,6 +69,7 @@ class BuildOrder:
         scope: list[str] | None,
         state: SavedGraph,
         modules: list[str],
+        saves: bool = False,
     ) -> None:
         self.step = BuildStep(step)
         self.folder = folder
@@ -69,6 +78,7 @@ class BuildOrder:
         self.scope = None if scope is None else list(scope)
         self.state = state
         self.modules = list(modules)
+        self.saves = saves
 
     @classmethod
     def from_text(cls, text: str) -> BuildOrder:
@@ -81,6 +91,7 @@ class BuildOrder:
             document.get("scope"),
             SavedGraph.from_document(document["state"]),
             list(document.get("modules") or []),
+            bool(document.get("saves")),
         )
 
     @property
@@ -94,6 +105,7 @@ class BuildOrder:
                 "scope": self.scope,
                 "state": self.state.document,
                 "modules": self.modules,
+                "saves": self.saves,
             },
             separators=(",", ":"),
         )
@@ -104,22 +116,25 @@ class WorkerBuild:
     progress one line at a time, which goes on to report_progress, and writes the graph it built to a file of its
     own."""
 
-    def __init__(self, order: BuildOrder, report_progress: Callable[[str], None]) -> None:
-        self.order = order
+    def __init__(self, report_progress: Callable[[str], None]) -> None:
         self._report_progress = report_progress
 
-    def result(self) -> SavedGraph:
-        """The graph the worker built; ``GraphBuildFailed`` when the worker exits with an error."""
+    def carry_out(self, ordered: Callable[[], BuildOrder], hold: Callable[[SavedGraph], None]) -> None:
+        """Make the order and write it, run the worker on it, then hold the graph it built; ``GraphBuildFailed`` when
+        the worker exits with an error, and then nothing is held. Making the order and holding the answer each take the
+        server's turn; the worker runs while other builds take theirs."""
         with tempfile.TemporaryDirectory(prefix="cdd-graph-build-") as folder:
             order_file = Path(folder) / "order.json"
             result_file = Path(folder) / "graph.json"
             errors_file = Path(folder) / "errors.txt"
-            order_file.write_text(self.order.text, encoding="utf-8")
+            with _SERVER_TURN:
+                order_file.write_text(ordered().text, encoding="utf-8")
             with open(errors_file, "w", encoding="utf-8") as errors:
                 exit_code = self._run([str(order_file), str(result_file)], errors)
             if exit_code != 0:
                 raise GraphBuildFailed(exit_code, errors_file.read_text(encoding="utf-8", errors="replace"))
-            return SavedGraph.from_text(result_file.read_text(encoding="utf-8"))
+            with _SERVER_TURN:
+                hold(SavedGraph.from_text(result_file.read_text(encoding="utf-8")))
 
     def _run(self, arguments: list[str], errors) -> int:
         process = subprocess.Popen(

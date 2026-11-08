@@ -641,9 +641,9 @@ class McpHost:
 
     def _call_from_chat(self, name: str, arguments: dict[str, object] | None) -> ToolCall:
         """The call as the chat sent it: the tool it names, the project its header names, and the chat its arguments
-        name, answered by this host."""
+        name, answered by this host for that chat."""
         resolved = self._checkout_server.resolve_call_name(name)
-        return ToolCall.sent(arguments, self._requested_project(resolved), tool=resolved, mcp_host=self)
+        return ToolCall.sent(arguments, self._requested_project(resolved), tool=resolved, mcp_host=self, answers_a_chat=True)
 
     async def _answer_off_loop(self, call: ToolCall) -> object:
         """Run the call on a worker thread, because a synchronous call on the event loop holds every other chat's
@@ -700,13 +700,12 @@ class McpHost:
         raise ProjectNotNamed(tool)
 
     def _answer_reporting(self, call: ToolCall, reporter: Callable[[str], None] | None) -> object:
-        """Answer a chat's call on its worker thread: its progress goes to reporter, and the work it does knows it
-        answers a chat (``answering_a_chat``), so work that would hold the interpreter runs in a worker process."""
-        # Read them from their modules as they are now: a restart imports them again, and tools read the new ones.
+        """Answer a chat's call on its worker thread: its progress goes to reporter. The call says it answers a chat
+        (``call.answers_a_chat``), so work it starts that would hold the interpreter runs in a worker process."""
+        # Read it from its module as it is now: a restart imports it again, and tools read the new one.
         from harness.agent_tools.progress import reporting_to
-        from harness.mcp.tool_calls import answering_a_chat
 
-        with reporting_to(reporter), answering_a_chat():
+        with reporting_to(reporter):
             return self.answer(call)
 
     def dispatch(self, name: str, arguments: dict[str, object] | None = None, project: Path | None = None) -> object:

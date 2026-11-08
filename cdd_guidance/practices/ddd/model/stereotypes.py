@@ -57,6 +57,14 @@ def plain_class_name(name: str) -> str:
     return plain.split(" extends ", 1)[0].split(" : ", 1)[0].strip()
 
 
+def root_kept_by(class_name: str) -> Optional[str]:
+    """The class a repository called class_name says it keeps: `Cart` for `CartRepository`; None for any other name."""
+    name = plain_class_name(class_name)
+    if name.endswith(_REPOSITORY) and name != _REPOSITORY:
+        return name[: -len(_REPOSITORY)]
+    return None
+
+
 def kind_named_by(stereotypes: Iterable[str]) -> Optional[str]:
     """The building block a list of stereotypes names; None for none, or for a class marked as another system's."""
     lowered = {item.lower() for item in stereotypes}
@@ -84,9 +92,7 @@ class TacticalClass:
     @property
     def kept_root_name(self) -> Optional[str]:
         """The class a repository's name says it keeps: `Cart` for `CartRepository`; None for any other name."""
-        if self.name.endswith(_REPOSITORY) and self.name != _REPOSITORY:
-            return self.name[: -len(_REPOSITORY)]
-        return None
+        return root_kept_by(self.name)
 
     @property
     def building_block_stereotypes(self) -> List[str]:
