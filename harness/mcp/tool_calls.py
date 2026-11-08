@@ -8,7 +8,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 
 import anyio
@@ -20,6 +22,45 @@ logger = logging.getLogger(__name__)
 _UNCOLLECTED_RESULT_SECONDS = 600
 
 Reporter = Callable[[str], None]
+# The fewest seconds between two progress reports a caller hears; the reports in between are dropped.
+_REPORT_SECONDS = 0.25
+# True for the code a chat's call runs, on a worker thread beside the event loop that answers every chat.
+_ANSWERING_A_CHAT: ContextVar[bool] = ContextVar("answering_a_chat", default=False)
+
+
+@contextmanager
+def answering_a_chat() -> Iterator[None]:
+    """Run the block as the answer to a chat's call, on a worker thread beside the event loop that answers every chat."""
+    token = _ANSWERING_A_CHAT.set(True)
+    try:
+        yield
+    finally:
+        _ANSWERING_A_CHAT.reset(token)
+
+
+def is_answering_a_chat() -> bool:
+    """True inside a call the cdd server answers for a chat. Every chat shares the server's one interpreter, so work
+    that would hold it for minutes, such as a graph build, runs in a worker process instead: in the server's own
+    interpreter it slows the event loop until the server stops accepting connections."""
+    return _ANSWERING_A_CHAT.get()
+
+
+class ThrottledReporter:
+    """Passes a tool's progress reports on to reporter, at most one each quarter second; the reports in between are
+    dropped. A graph build reports each node it checks, and every report a caller hears is a message the event loop
+    sends, so passing on every one would keep the loop from answering anyone else."""
+
+    def __init__(self, reporter: Reporter, seconds: float = _REPORT_SECONDS) -> None:
+        self._reporter = reporter
+        self._seconds = seconds
+        self._last = -seconds
+
+    def __call__(self, message: str) -> None:
+        now = time.monotonic()
+        if now - self._last < self._seconds:
+            return
+        self._last = now
+        self._reporter(message)
 
 
 class ToolCallStopped(Exception):

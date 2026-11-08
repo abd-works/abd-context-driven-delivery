@@ -234,6 +234,9 @@ class Screen(UxNode):
         self._sync_schema_edges()
 
     def _shown_nodes(self, kind: str) -> List[Node]:
+        """The Stories nodes this screen's links of kind name on its graph; none while no practice holds the screen."""
+        if self.practice is None:
+            return []
         found = (link.resolved_on(self.graph) for link in self._story_links if link.kind == kind)
         return [node for node in found if node is not None]
 

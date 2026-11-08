@@ -13,6 +13,7 @@ if str(_REPO) not in sys.path:
 from expects import equal, expect, raise_error
 from mamba import after, before, context, description, it
 
+from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.mcp.cdd_home import CddHome, RuntimeRecordUnreadable
 
 BOARD_MOD = Path("harness") / "chat-ui" / "pane"
@@ -111,3 +112,17 @@ with description("a cdd home's runtime record") as self:
             except RuntimeRecordUnreadable:
                 pass
             expect(self.home.runtime_record.read_text(encoding="utf-8")).to(equal('{"source": '))
+
+
+with description("a cdd home's server environment") as self:
+    with before.each:
+        self.root = Path(tempfile.mkdtemp(prefix="cdd-home-"))
+        self.home = CddHome(self.root / ".cdd")
+        self.checkout = _checkout_with_board_mod(self.root)
+        self.home.serve_from(self.checkout)
+
+    with after.each:
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    with it("should keep the server's bytecode where the checkout's toolsets keep theirs, as the hook daemon does"):
+        expect(self.home.server_environment["PYTHONPYCACHEPREFIX"]).to(equal(RepositoryToolsets(self.checkout).pycache_prefix()))

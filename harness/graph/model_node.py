@@ -128,13 +128,23 @@ class ModelWithoutPractice(TypeError):
         self.model_class = model_class
 
 
+class ModelDetached(LookupError):
+    """A model object no practice holds was asked for its graph. A parser's objects belong to no graph until the
+    practice it reads for adopts them, so nothing builds a graph of its own for them."""
+
+    def __init__(self, model: "ModelNode") -> None:
+        super().__init__(f"{type(model).__name__} {model.name!r} belongs to no graph: no practice has adopted it")
+        self.model = model
+
+
 class ModelNode(Node):
     """Base model object for one practice. Its practice registers it (``register_practice``), and subclasses name the
     belongsTo pairs.
 
     An object made without a graph is detached: it belongs to no practice yet and records no edge. It joins a graph,
-    with its whole tree, when a part of a graph adopts it or when something asks for its graph; only then are the edges
-    its lists hold recorded, so parsing a file into objects builds no graph."""
+    with its whole tree, when a practice adopts it (``join``) or an owner on a graph takes it as a part; only then are
+    the edges its lists hold recorded, so parsing a file into objects builds no graph. Asking a detached object for its
+    graph raises ``ModelDetached``."""
 
     _semantic_type_name: str = "Node"
     _belongs: set[tuple[str, str]] = set()
@@ -187,25 +197,16 @@ class ModelNode(Node):
         self.sequential_order = sequential_order
         self._ready = False
         if graph is not None:
-            self._join(graph.practice_of(type(self).practice_kind()))
+            self.join(graph.practice_of(type(self).practice_kind()))
 
 
     @property
     def graph(self) -> Graph:
-        """The graph that holds this object. A detached object's tree joins a graph of its own the first time it is
-        asked; the catalogue's practices that graph makes register every model class (``register_practice``)."""
+        """The graph that holds this object: its practice's. ``ModelDetached`` for an object no practice holds yet,
+        since a detached object belongs to no graph until a practice adopts it (``join``)."""
         if self.practice is None:
-            root = self._detached_root()
-            graph = Graph()
-            root._join(graph.practice_of(type(root).practice_kind()))
+            raise ModelDetached(self)
         return self.practice.graph
-
-    def _detached_root(self) -> "ModelNode":
-        """The outermost detached object above this one, whose whole tree joins a graph together."""
-        node = self
-        while isinstance(node.parent, ModelNode) and node.parent.practice is None:
-            node = node.parent
-        return node
 
     @property
     def has_source_file(self) -> bool:
@@ -228,7 +229,7 @@ class ModelNode(Node):
             # A detached owner records its edges when its tree joins a graph.
             return
         if child.practice is not self.practice:
-            child._join(self.practice)
+            child.join(self.practice)
         self._record_child_edge(child, kind)
         self._sync_schema_edges()
 
@@ -251,9 +252,10 @@ class ModelNode(Node):
         if target.graph is self.graph:
             self.graph.record(EdgeType.from_kind(kind, "relationship"), self, target)
 
-    def _join(self, practice) -> None:
-        """Make this object and its whole tree practice's nodes: each leaves the graph it was in, carrying the edges
-        between them, and the edges its own lists hold are recorded in practice's graph."""
+    def join(self, practice) -> None:
+        """Make this object and its whole tree practice's nodes, as a practice does with the objects its parser made:
+        each leaves the graph it was in, carrying the edges between them, and the edges its own lists hold are recorded
+        in practice's graph."""
         subtree = self.subtree()
         members = {id(node) for node in subtree}
         carried = []
@@ -307,7 +309,11 @@ class ModelNode(Node):
 
     @contextmanager
     def batch_schema_sync(self) -> Iterator[None]:
-        """Hold schema-edge rebuilds on this object's graph until a batch of child links is finished."""
+        """Hold schema-edge rebuilds on this object's graph until a batch of child links is finished. A detached object
+        records no edge, so there is nothing to hold."""
+        if self.practice is None:
+            yield
+            return
         with self.graph.schema_sync_held():
             yield
 
