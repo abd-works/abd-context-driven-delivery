@@ -25,6 +25,7 @@ from harness.installation.destination import (  # noqa: E402
     language_adapter,
 )
 from harness.installation.ide_layout import IdeLayout  # noqa: E402
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 from harness.installation.language_adapter import (  # noqa: E402
     LanguageAdapterInstallation,
     MissingIdentityError,

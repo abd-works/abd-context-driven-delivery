@@ -11,6 +11,8 @@ from pathlib import Path
 from harness.annotations.name import Name
 from harness.guidance.action_catalogue import ActionCatalogue
 
+import cdd_guidance.practices  # noqa: F401 - the actions work on the practices, so those are registered with them
+
 
 def _action_toolsets() -> list[type]:
     """Each action folder's toolset class, in folder order."""

@@ -10,7 +10,6 @@ import os
 import re
 import socket
 import sys
-import tempfile
 import threading
 from collections.abc import Callable, Iterable
 from pathlib import Path
@@ -45,7 +44,6 @@ CALL_SECONDS = 10
 LONG_CALL_SECONDS = 600
 # What loading a toolset's module, making the toolset, or reading a tool's schema raises when that toolset's code or
 # configuration is wrong. The server skips that toolset or tool and serves the rest; anything else stops the start.
-_TOOLSET_LOAD_FAILURES = (ImportError, SyntaxError, NameError, AttributeError, TypeError, ValueError, LookupError, OSError)
 _LEGAL_MCP_NAME = re.compile(r"[A-Za-z0-9_.-]+")
 # Claude Code names the cdd plugin's tools mcp__plugin_cdd_cdd__{tool}, so this one entry allows every one of them.
 CLAUDE_TOOLS_PERMISSION = "mcp__plugin_cdd_cdd"
@@ -149,15 +147,7 @@ class McpInstallation(ServerInstallation):
     def _user_level(self) -> bool:
         """Whether the entry goes in the IDE's user-level MCP config. A temp install tree keeps its entry in the tree,
         so specs never touch the user's own config."""
-        return self.layout.user_mcp_config is not None and not self._is_temp_path(self.path)
-
-    def _is_temp_path(self, path: Path) -> bool:
-        try:
-            resolved = path.resolve()
-            temp = Path(tempfile.gettempdir()).resolve()
-            return resolved == temp or temp in resolved.parents
-        except OSError:
-            return False
+        return self.layout.user_mcp_config is not None and not self.is_temporary
 
     @property
     def manifest_path(self) -> Path:
@@ -391,7 +381,7 @@ class McpServer:
             return
         try:
             tool.input_schema
-        except _TOOLSET_LOAD_FAILURES as unreadable:
+        except AgentToolSet.LOAD_FAILURES as unreadable:
             self.skip(name, _SkippedTool(name, f"its argument schema cannot be read: {unreadable}", unreadable))
             return
         if tool.kind == "tool":
@@ -415,7 +405,7 @@ class McpServer:
     def _loaded(self, item: Any) -> list[Any]:
         try:
             return AgentToolSet.from_items([item])
-        except _TOOLSET_LOAD_FAILURES as error:
+        except AgentToolSet.LOAD_FAILURES as error:
             self.skip(str(item), error)
             return []
 
@@ -423,7 +413,7 @@ class McpServer:
         try:
             for each in (toolset, *toolset.child_toolsets()):
                 self._enroll_toolset(each)
-        except _TOOLSET_LOAD_FAILURES as error:
+        except AgentToolSet.LOAD_FAILURES as error:
             self.skip(toolset.registration_name, error)
 
     def for_project(self, project: Path) -> McpServer:

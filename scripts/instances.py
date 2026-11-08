@@ -17,7 +17,7 @@ _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from harness.process.running_process import RunningProcess  # noqa: E402
+from harness.process.process import RunningProcess  # noqa: E402
 
 GRAPH_WEB_PORTS: tuple[int, ...] = (3000,)
 GRAPH_APP_PORTS: tuple[int, ...] = (5173, 5174, 5175, 5176)

@@ -1,14 +1,24 @@
-"""How the hook server, the MCP server, and the scripts start a process on this computer: in the background with no
-console window on Windows, or with a Python whose console output a caller reads."""
+"""Processes on this computer: how the hook server, the MCP server, and the scripts start one, in the background with
+no console window on Windows or with a Python whose console output a caller reads, and how they ask whether one named by
+its process id still runs, or stop it."""
 from __future__ import annotations
 
+import os
+import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import IO
 
 # Windows' CREATE_BREAKAWAY_FROM_JOB: the child leaves the starter's job, so it outlives the chat that started it.
 _CREATE_BREAKAWAY_FROM_JOB = 0x01000000
+# The access right that lets Windows open a process only to ask about it.
+_PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+# The exit code Windows reports for a process that has not exited.
+_STILL_ACTIVE = 259
+# How long a stop waits between looks at whether the process has ended.
+_POLL_SECONDS = 0.05
 
 
 class PythonInterpreter:
@@ -80,3 +90,74 @@ class BackgroundStart:
             startupinfo=self.startupinfo,
             close_fds=True,
         )
+
+
+class RunningProcess:
+    """A process by its id, to ask whether it is still running. A hook server's lock file, a daemon's address file,
+    and the instances script all name a process this way."""
+
+    def __init__(self, pid: int) -> None:
+        self.pid = int(pid or 0)
+
+    @property
+    def alive(self) -> bool:
+        """True while the process runs. Windows is asked through ``OpenProcess``, because ``os.kill(pid, 0)`` on
+        Windows ends the process rather than asking about it; elsewhere a process this user may not signal still
+        counts as running."""
+        if self.pid <= 0:
+            return False
+        if sys.platform == "win32":
+            import ctypes
+
+            kernel = ctypes.windll.kernel32
+            handle = kernel.OpenProcess(_PROCESS_QUERY_LIMITED_INFORMATION, False, self.pid)
+            if not handle:
+                return False
+            # A process that has exited can still be opened while another process holds a handle to it.
+            code = ctypes.c_ulong()
+            try:
+                answered = kernel.GetExitCodeProcess(handle, ctypes.byref(code))
+            finally:
+                kernel.CloseHandle(handle)
+            return not answered or code.value == _STILL_ACTIVE
+        try:
+            os.kill(self.pid, 0)
+        except PermissionError:
+            return True
+        except OSError:
+            return False
+        return True
+
+
+class ProcessNotStopped(Exception):
+    """A process was asked to stop and is still running."""
+
+    def __init__(self, pid: int, cause: BaseException | None = None) -> None:
+        reason = f": {cause}" if cause is not None else ""
+        super().__init__(f"process {pid} is still running after it was asked to stop{reason}")
+        self.pid = pid
+        self.cause = cause
+
+
+class StoppableProcess(RunningProcess):
+    """A process by its id that this one may end, such as the server an address file names. An id of 0 and this
+    process's own id are never signalled: a blank or stale file must not end the process that reads it."""
+
+    def stop(self, wait_seconds: float) -> None:
+        """End the process and wait up to ``wait_seconds`` for it to exit. A process already gone needs nothing."""
+        if self.pid <= 0 or self.pid == os.getpid():
+            return
+        try:
+            os.kill(self.pid, signal.SIGTERM)
+        except OSError as refused:
+            if self.alive:
+                raise ProcessNotStopped(self.pid, refused) from refused
+            return
+        self._wait_until_ended(wait_seconds)
+
+    def _wait_until_ended(self, wait_seconds: float) -> None:
+        deadline = time.monotonic() + wait_seconds
+        while self.alive:
+            if time.monotonic() >= deadline:
+                raise ProcessNotStopped(self.pid)
+            time.sleep(_POLL_SECONDS)

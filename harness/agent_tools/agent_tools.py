@@ -11,19 +11,26 @@ import textwrap
 import types
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Mapping, cast, get_args, get_origin, get_type_hints
+from typing import Any, Callable, ClassVar, Mapping, get_type_hints
 
 from harness.annotations.name import Name
 from harness.agent_tools.parameter_schema import ParameterSchema
 from harness.agent_tools.tool_call import ToolCall
-from harness.markdown.markdown import Markdown, MarkdownCollection
+from harness.markdown.markdown import Markdown, MarkdownCollection, OperationProperty
 from harness.annotations.annotation import Annotation, annotation_kinds
-from harness.agent_tools.sub_agent.annotation import SubAgentAnnotation
 from harness.agent_tools.recipe import ExpansionMode, ExpansionResult, RecipeExpansion, RecipePlaceholders, RecipeSource
 
 ContextDocument = dict[str, Any]
 ArgumentDocument = dict[str, Any]
-TypeAnnotation = Any
+SUB_AGENT_CALLER_PREAMBLE = """Hand work to a background sub-agent and continue without waiting.
+
+Do not perform the delegated work in this conversation. Do not wait for the
+sub-agent to finish.
+
+Launch the Task tool with run_in_background true and subagent_type
+generalPurpose. Pass the instructions below as the task prompt.
+
+Tell the user you launched a non-blocking sub-agent and summarize what you delegated."""
 # A `@tool_subject` loader or a class tool that takes this argument is handed the checkout of the project its call works
 # on. No caller passes it, so it is not one of the tool's arguments.
 CALLED_PROJECT = "project"
@@ -157,15 +164,7 @@ class Collect:
     def _property(self, operation: Callable[..., Any]) -> property:
         self._name = operation.__name__
         self._return_type = self._declared_return(operation)
-
-        def getter(owner: Any) -> Any:
-            return self.of(owner)
-
-        getter.__doc__ = operation.__doc__
-        getter.__name__ = self._name
-        getter.__annotations__ = dict(getattr(operation, "__annotations__", {}))
-        annotation_kinds.copy_annotations(operation, getter)
-        return property(getter)
+        return OperationProperty(operation).reading(self.of)
 
     def of(self, collection: Any) -> Any:
         """The collected value of this property on collection's children."""
@@ -476,6 +475,12 @@ class AgentToolSet(AgentToolSetOrigin):
     publishes."""
 
     _mode: str = "instructions"
+    LOAD_FAILURES: ClassVar[tuple[type[BaseException], ...]] = (
+        ImportError, SyntaxError, NameError, AttributeError, TypeError, ValueError, LookupError, OSError
+    )
+    """What making or reading a toolset raises when its code cannot be loaded, such as a module that does not import or
+    a constructor that needs more than configuration gives it. A server that loads every toolset skips one that raises
+    these, names it, and serves the rest."""
     parameter_notes: ClassVar[dict[str, str]] = {}
     """What an agent reads about a parameter, by its name, after the description of every tool on this toolset that
     takes it; a guidance action explains its ``guidance`` parameter this way."""
@@ -520,10 +525,6 @@ class AgentToolSet(AgentToolSetOrigin):
             toolset = cls.instantiate({"toolset": item, "context": dict(context)} if isinstance(item, str) and context is not None else item)
             made.setdefault(type(toolset), toolset)
         return list(made.values())
-
-    @classmethod
-    def instantiate_all(cls, items: list) -> list:
-        return [cls.instantiate(item) for item in items]
 
     @classmethod
     def _made(cls, toolset: type, context: dict[str, Any]) -> Any:
@@ -666,7 +667,7 @@ class AgentToolSet(AgentToolSetOrigin):
     def _rehost_collection_tools(self, collection: Any, prefix: str) -> dict[str, AgentTool]:
         found: dict[str, AgentTool] = {}
         for name, tool in (getattr(collection, "tools", None) or {}).items():
-            if prefix and name == "inject_rules":
+            if prefix and PublishedWhereHeld.annotates(tool.callable):
                 continue
             found[f"{prefix}{name}"] = AgentTool(
                 name=name,
@@ -814,6 +815,21 @@ class AgentTool(AgentToolDestination):
     toolset: AgentToolSet
     _body: str | None = field(default=None, repr=False)
 
+    # The line a skill or command ends with to tell the agent which MCP tool runs it. A tool writes it, and the
+    # installer reads the tool names back from installed files, so both go through here.
+    INVOKE_PREFIX: ClassVar[str] = "Use MCP tool:"
+    _INVOKED_NAME: ClassVar[re.Pattern[str]] = re.compile(r"Use MCP tool:\s*`([A-Za-z0-9_.-]+)")
+
+    @classmethod
+    def invoked_names(cls, text: str) -> list[str]:
+        """The MCP tool each ``Use MCP tool:`` line in text names."""
+        return cls._INVOKED_NAME.findall(text)
+
+    @classmethod
+    def is_invoke_line(cls, line: str) -> bool:
+        """Whether line is a ``Use MCP tool:`` line."""
+        return line.strip().casefold().startswith(cls.INVOKE_PREFIX.casefold())
+
     @property
     def slug(self) -> str:
         return self.toolset.slug
@@ -846,7 +862,7 @@ class AgentTool(AgentToolDestination):
             suffix = str(params)
         except (TypeError, ValueError):
             suffix = "()"
-        return f"Use MCP tool: `{self.mcp_name}{suffix}`"
+        return f"{self.INVOKE_PREFIX} `{self.mcp_name}{suffix}`"
 
     @functools.cached_property
     def parameter_schema(self) -> ParameterSchema:
@@ -951,63 +967,6 @@ class AgentTool(AgentToolDestination):
             return self.toolset.overview.strip()
         return self.docstring or self.callable.__name__
 
-    @property
-    def parameters(self) -> dict[str, str]:
-        sig = inspect.signature(self.callable)
-        parameters: dict[str, str] = {}
-        for name, param in sig.parameters.items():
-            if name in ("self", "cls"):
-                continue
-            if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
-                continue
-            parameters[name] = self._format_type(param.annotation)
-        return parameters
-
-    @property
-    def response(self) -> str | None:
-        sig = inspect.signature(self.callable)
-        if sig.return_annotation is inspect.Signature.empty:
-            return None
-        return self._format_type(sig.return_annotation)
-
-    def _format_type(self, annotation: TypeAnnotation) -> str:
-        if annotation is inspect.Parameter.empty:
-            return "str"
-        if isinstance(annotation, str):
-            return self._format_type_from_string(annotation)
-        origin = get_origin(annotation)
-        if origin is list:
-            return self._format_list_type(annotation)
-        if origin is dict:
-            return "dict"
-        return self._format_builtin_type(annotation, origin)
-
-    def _format_type_from_string(self, annotation_text: str) -> str:
-        origin_name, _, args_text = annotation_text.partition("[")
-        if origin_name == "list":
-            element_text = args_text.rstrip("]") if args_text else "str"
-            return f"list[{self._format_type(element_text)}]"
-        return annotation_text
-
-    def _format_list_type(self, annotation: Any) -> str:
-        args = get_args(annotation)
-        element_type = self._format_type(args[0]) if args else "str"
-        return f"list[{element_type}]"
-
-    def _format_builtin_type(self, annotation: Any, origin: Any) -> str:
-        if annotation is str:
-            return "str"
-        if annotation is int:
-            return "int"
-        if annotation is float:
-            return "float"
-        if annotation is bool:
-            return "bool"
-        if annotation in (None, type(None)):
-            return "None"
-        if origin is not None:
-            return getattr(annotation, "__name__", str(origin))
-        return getattr(annotation, "__name__", str(annotation))
 
 @dataclass
 class AgentOperation(AgentTool):
@@ -1094,7 +1053,7 @@ class AgentInstructions(AgentTool):
         """The recipe expanded for one call's arguments: its instructions, the tools it names, and its result line,
         with every placeholder filled."""
         expansion = RecipeExpansion(self, arguments).run()
-        placeholders = RecipePlaceholders(arguments, set(self.parameters), self.toolset)
+        placeholders = RecipePlaceholders(arguments, set(self.parameter_schema.names), self.toolset)
         lines = (placeholders.filled(part) for part in expansion.prompt)
         instructions = "\n\n".join(line for line in lines if line.strip())
         return ExpansionResult(
@@ -1249,6 +1208,31 @@ class ToolSetCollectionAnnotation(_ClassJoiningAnnotation):
         return target
 
 
+class PublishedWhereHeld(Annotation):
+    """A collection's tool that only the toolset holding the collection itself publishes: a toolset that reaches the
+    collection through one of its child toolsets, as a practice reaches each fidelity's rules, does not publish it as
+    its own. A practice's rule injection serves its shared rules this way, and each fidelity's rules are not injected
+    a second time through the practice."""
+
+    flag = "_published_where_held"
+    copied = False
+
+
+class SubAgentAnnotation(Annotation):
+    """Annotate an @agent_tool or @agent_instructions member for non-blocking sub-agent launch: its description starts with
+    the hand-off to a background sub-agent. The ``sub-agent.sub_agent`` operation itself is the SubAgent toolset in
+    tools/sub_agent."""
+
+    flag = "_sub_agent"
+
+    @classmethod
+    def with_hand_off(cls, text: str) -> str:
+        """text with the hand-off to a background sub-agent in front of it."""
+        preamble = SUB_AGENT_CALLER_PREAMBLE.strip()
+        body = (text or "").strip()
+        return f"{preamble}\n\n{body}" if body else preamble
+
+
 class NoSessionLog(Annotation):
     """Keep an operation's calls out of the session log. Use it on reads an agent or a mod repeats often, such as the
     session board, so the log keeps the work that was done rather than every look at it."""
@@ -1285,6 +1269,8 @@ class TakesCalledProject(Annotation):
 
 
 noSessionLog = NoSessionLog
+subAgent = SubAgentAnnotation()
+published_where_held = PublishedWhereHeld
 tool_subject = ToolSubject
 
 

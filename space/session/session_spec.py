@@ -875,7 +875,7 @@ with description("a practice"):
             with before.each:
                 from harness.installation.context_config import ContextConfig
 
-                ContextConfig(self.repo).set_practice_folders({"bdd": "."})
+                ContextConfig(self.repo).update(practice_folders={"bdd": "."})
                 Sessions(self.repo).switch("alpha")
                 self.session = Sessions(self.called).current()
                 self.opened = self.session.practice("bdd")

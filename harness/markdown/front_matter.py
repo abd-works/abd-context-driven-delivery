@@ -8,6 +8,26 @@ _COMMENT_FENCES = ("# ---", "#---")
 _HEADING = re.compile(r"^#{1,6}\s", re.MULTILINE)
 
 
+class FlatSettings:
+    """Settings written as flat ``key: value`` lines, as a front matter block or a simple ```yaml block writes them:
+    each value as written, without its quotes. Blank lines, ``#`` comments, and list items are not settings, and nested
+    YAML is not read here; a reader that has PyYAML reads that."""
+
+    def __init__(self, text: str) -> None:
+        self._text = text
+
+    @property
+    def fields(self) -> dict[str, str]:
+        found: dict[str, str] = {}
+        for raw in self._text.splitlines():
+            line = raw.strip()
+            if not line or line.startswith(("#", "- ")) or ":" not in line:
+                continue
+            key, _, value = line.partition(":")
+            found[key.strip()] = value.strip().strip("'\"")
+        return found
+
+
 class FrontMatter:
     """The settings at the top of a file: a YAML block between ``---`` lines, or, in a code template, the same block
     written as ``# ---`` comment lines. The catalog reads a template's settings to match it to a fidelity and drops an
@@ -39,12 +59,7 @@ class FrontMatter:
     def fields(self) -> dict[str, str]:
         """Each ``key: value`` line of the settings, the value as written without its quotes; a settings block is a
         flat list of names, so nested YAML is not read here."""
-        found: dict[str, str] = {}
-        for line in self.settings.splitlines():
-            key, separator, value = line.partition(":")
-            if separator:
-                found[key.strip()] = value.strip().strip('"')
-        return found
+        return FlatSettings(self.settings).fields
 
     @property
     def content(self) -> str:

@@ -123,13 +123,10 @@ class Guidance:
         folder = self.module_dir
         return MarkdownScope(folder, self.domain_slug or folder.name, format=self.format or None)
 
-    def _section(self, label: str) -> Markdown:
-        """The Markdown of one of its own labelled sections, made once and kept, so a second read answers from the
-        text the first read found."""
-        held = vars(self).setdefault("_held_sections", {})
-        if label not in held:
-            held[label] = Markdown.from_label(self, label)
-        return held[label]
+    def section_text(self, label: str) -> str:
+        """The prose of one of its own labelled sections, such as its Overview, from the Markdown it keeps for that
+        section, so a second read answers from the text the first read found."""
+        return Markdown.held_by(self, label).extract()
 
     @markdownCollection("shared rules")
     @rules
@@ -147,13 +144,13 @@ class Guidance:
     @data_field
     def overview(self) -> str:
         """Its Overview section: what this guidance is for, which a person reads on its help."""
-        return self._section("overview").extract()
+        return self.section_text("overview")
 
     @property
     @data_field
     def guidance(self) -> str:
         """Its Guidance section: how to do the work well, which a person reads on its help."""
-        return self._section("guidance").extract()
+        return self.section_text("guidance")
 
     @property
     @data_field(key="rules")
@@ -602,7 +599,7 @@ class PracticeGuidance(Guidance):
         """The practice's own Guidance section, then its current fidelity's guidance and companion text, which that
         fidelity answers."""
         current = self.fidelities.current
-        return [self._section("guidance").extract().strip(), *(current.guidance_parts() if current is not None else ())]
+        return [self.section_text("guidance").strip(), *(current.guidance_parts() if current is not None else ())]
 
 
     @property
@@ -856,7 +853,7 @@ class PracticeGuidance(Guidance):
 
     def scoped_markdown(self) -> str:
         """Overview, practice sections, and the current fidelity's block, or every fidelity's when none is current."""
-        parts = [self._section(label).extract() for label in ("overview", "guidance", "shared rules", "language")]
+        parts = [self.section_text(label) for label in ("overview", "guidance", "shared rules", "language")]
         current = self.fidelities.current
         current_name = current.name if current is not None else None
         shown = [fidelity for fidelity in self.fidelities if self.shows_every_fidelity or current_name in (None, fidelity.name)]
@@ -1130,7 +1127,7 @@ class FidelityGuidance(Guidance):
     def scaffold(self) -> str:
         """This fidelity's Scaffold subsection: the names a first cut writes, which are what a partition index lists;
         empty when the fidelity has none."""
-        return self._section("scaffold").extract().strip()
+        return self.section_text("scaffold").strip()
 
     @property
     def section(self) -> str:
@@ -1183,7 +1180,7 @@ class FidelityGuidance(Guidance):
         """Its own guidance, then its Clean Engineering companion's instructions: what a practice working at this
         fidelity adds to its own guidance."""
         companion = self.clean_engineering
-        return [self._section("guidance").extract().strip(), companion.instructions.strip() if companion is not None else ""]
+        return [self.section_text("guidance").strip(), companion.instructions.strip() if companion is not None else ""]
 
     @property
     def templates(self) -> str:
@@ -1241,7 +1238,7 @@ class FidelityGuidance(Guidance):
         if practice is not None:
             parent = (
                 (practice.overview or "").strip(),
-                practice._section("guidance").extract().strip(),
+                practice.section_text("guidance").strip(),
                 (practice.rules.markdown or "").strip(),
             )
             templates = self.templates

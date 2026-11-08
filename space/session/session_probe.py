@@ -29,9 +29,9 @@ class SessionProbe:
     def run(self) -> dict[str, Any]:
         """The probe's result for diagnostics.json: green when every check passed, else red with what failed. A probe's
         job is to report a failure, so one raised while probing is reported red with its trace, not raised."""
-        from harness.installation.bootstrap import ensure_import_path
+        from harness.installation.repository_toolsets import RepositoryToolsets
 
-        ensure_import_path(_CDD_REPO)
+        RepositoryToolsets(_CDD_REPO).ensure_import_path()
         try:
             return self._report(*self._run_actions())
         except Exception as failure:

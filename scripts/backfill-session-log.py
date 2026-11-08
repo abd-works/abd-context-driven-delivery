@@ -47,11 +47,11 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    from harness.installation.bootstrap import ensure_import_path
+    from harness.installation.repository_toolsets import RepositoryToolsets
     from space.session import Sessions
     from harness.agent_tools.chat_pointer import ChatPointer
 
-    ensure_import_path(_REPO)
+    RepositoryToolsets(_REPO).ensure_import_path()
     transcript = Path(args.transcript).resolve()
     line_numbers = _transcript_line_count(transcript)
     workpath = _REPO / "space"

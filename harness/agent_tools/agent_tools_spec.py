@@ -1320,7 +1320,7 @@ with description("a domain class whose constructor takes collaborators"):
 
         with it("should take the loader's argument before the operation's own"):
             forward = AgentToolSet.instantiate(Parcel).tools["forward"]
-            expect(list(forward.parameters)).to(equal(["parcel", "destination"]))
+            expect(list(forward.parameter_schema.names)).to(equal(["parcel", "destination"]))
 
         with it("should run the operation on the object the call names"):
             forward = AgentToolSet.instantiate(Parcel).tools["forward"]
@@ -1328,7 +1328,7 @@ with description("a domain class whose constructor takes collaborators"):
 
         with it("should leave a classmethod tool to take only its own arguments"):
             receive = AgentToolSet.instantiate(Parcel).tools["receive"]
-            expect(list(receive.parameters)).to(equal(["label"]))
+            expect(list(receive.parameter_schema.names)).to(equal(["label"]))
 
     with context("whose loader takes the project the call works on"):
         with before.each:
@@ -1336,7 +1336,7 @@ with description("a domain class whose constructor takes collaborators"):
 
         with it("should leave the project out of the tool's arguments, since no caller passes it"):
             ship = AgentToolSet.instantiate(Crate).tools["ship"]
-            expect(list(ship.parameters)).to(equal(["crate"]))
+            expect(list(ship.parameter_schema.names)).to(equal(["crate"]))
 
         with it("should load the object from the project the call works on"):
             ship = AgentToolSet.instantiate(Crate).tools["ship"]
@@ -1350,7 +1350,7 @@ with description("a domain class whose constructor takes collaborators"):
         with context("with a classmethod tool that takes the project too"):
             with it("should leave the project out of its arguments"):
                 pack = AgentToolSet.instantiate(Crate).tools["pack"]
-                expect(list(pack.parameters)).to(equal(["label"]))
+                expect(list(pack.parameter_schema.names)).to(equal(["label"]))
 
             with it("should hand it the project the call works on"):
                 pack = AgentToolSet.instantiate(Crate).tools["pack"]

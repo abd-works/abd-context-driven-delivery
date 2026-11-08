@@ -11,6 +11,7 @@ from harness.agent_tools.agent_tools import (
     collect,
     agent_toolset,
     instructions,
+    published_where_held,
 )
 from harness.annotations.annotation import hosted_only
 from harness.annotations.name import Name
@@ -158,6 +159,7 @@ class RulesCollection(MarkdownCollection):
         ```yaml settings, which say where they apply."""
         return MarkdownText(self.markdown or "").without_yaml
 
+    @published_where_held
     @hook("postToolUse", disabled=True)
     def inject_rules(self, payload: HookPayload) -> dict[str, Any]:
         """The rules that apply to the file the agent just edited, as context for its next step. The session notes

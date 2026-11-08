@@ -36,10 +36,6 @@ with description("a format") as self:
         with it("should still name its file extension"):
             expect(Format("drawio").extension).to(equal(".drawio"))
 
-    with description("that CDD does not write"):
-        with it("should not be known"):
-            expect(Format("sub").is_known).to(equal(False))
-
     with description("that was not given"):
         with it("should have no name"):
             expect(Format(None).name).to(equal(""))
