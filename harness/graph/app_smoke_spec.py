@@ -1,5 +1,6 @@
 """The graph's tools report the same practice counts as Graph, a node-type filter keeps that type, and a node opens on its source."""
 
+import tempfile
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
@@ -24,7 +25,7 @@ with description("an example graph"):
         with before.all:
             self.graph = Graph()
             roots = {name: str(_SAMPLE) for name in _PRACTICES}
-            data_of(self.graph.load_working_copy(str(_HERE), roots, database=str(_SAMPLE)))
+            data_of(self.graph.load_working_copy(str(_HERE), roots, database=tempfile.mkdtemp(prefix="cdd-graph-spec-")))
             self.inventory = data_of(self.graph.inventory())["practices"]
 
         with context("with clean engineering"):

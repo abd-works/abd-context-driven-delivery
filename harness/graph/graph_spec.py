@@ -1,6 +1,7 @@
 """A graph loaded from the account-credentials working copy."""
 
 import json
+import tempfile
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
@@ -167,7 +168,7 @@ with description("a graph"):
         with before.all:
             self.graph = Graph()
             roots = {name: str(_SAMPLE) for name in _PRACTICES}
-            data_of(self.graph.load_working_copy(str(_ROOT), roots, database=str(_SAMPLE), force=True))
+            data_of(self.graph.load_working_copy(str(_ROOT), roots, database=tempfile.mkdtemp(prefix="cdd-graph-spec-"), force=True))
 
         with context("with clean engineering"):
             with before.all:
@@ -900,7 +901,7 @@ with description("a graph"):
         with before.all:
             self.full = Graph()
             roots = {name: str(_SAMPLE) for name in _PRACTICES}
-            data_of(self.full.load_working_copy(str(_ROOT), roots, database=str(_SAMPLE), force=True))
+            data_of(self.full.load_working_copy(str(_ROOT), roots, database=tempfile.mkdtemp(prefix="cdd-graph-spec-"), force=True))
 
         with context("with an edited entity root"):
             with before.all:

@@ -1,5 +1,6 @@
 """Pattern overlays extend practice query packs without replacing them."""
 
+import tempfile
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
@@ -11,6 +12,16 @@ from mamba import description, it
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.pattern_overlays import PatternOverlays
+
+
+def _sample_copy() -> Path:
+    """A throwaway copy of the example working copy, so the graph a load saves in its ``.context`` never lands in the
+    shared sample that other specs, such as validate's, copy and read back."""
+    import shutil
+
+    copy = Path(tempfile.mkdtemp(prefix="cdd-graph-spec-")) / "input"
+    shutil.copytree(_HERE / "_examples" / "input", copy, ignore=shutil.ignore_patterns("graph.json"))
+    return copy
 
 
 with description("pattern overlays"):
@@ -40,7 +51,7 @@ with description("pattern overlays"):
     with it("should add the lern nodes when that overlay is applied to the example"):
         from harness.graph.graph import Graph
 
-        sample = _HERE / "_examples" / "input"
+        sample = _sample_copy()
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
         data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
@@ -53,7 +64,7 @@ with description("pattern overlays"):
     with it("should load the full source file for a lern domain node"):
         from harness.graph.graph import Graph
 
-        sample = _HERE / "_examples" / "input"
+        sample = _sample_copy()
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
         data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
@@ -66,7 +77,7 @@ with description("pattern overlays"):
     with it("should parent lern tier files on their aggregate in the explorer tree"):
         from harness.graph.graph import Graph
 
-        sample = _HERE / "_examples" / "input"
+        sample = _sample_copy()
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
         data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))

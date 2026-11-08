@@ -1,5 +1,6 @@
 """The explorer names the practice, file, and rule while a working copy loads."""
 
+import tempfile
 from pathlib import Path
 
 from expects import equal, expect
@@ -19,7 +20,7 @@ with description("a working copy load"):
             self.messages = []
             roots = {name: str(_SAMPLE) for name in _PRACTICES}
             with reporting_to(self.messages.append):
-                self.graph.load_working_copy(str(_SAMPLE), roots, database=str(_SAMPLE), force=True)
+                self.graph.load_working_copy(str(_SAMPLE), roots, database=tempfile.mkdtemp(prefix="cdd-graph-spec-"), force=True)
 
         with it("should name the saved-graph check first"):
             expect(self.messages[0]).to(equal("Checking the saved graph"))
