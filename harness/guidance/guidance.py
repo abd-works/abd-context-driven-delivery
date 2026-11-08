@@ -722,7 +722,7 @@ class PracticeGuidance(Guidance):
         adapters = self.formats
         if format not in adapters:
             raise ValueError(
-                f"Unsupported format {format.name!r}. Choose from: {sorted(adapters)}"
+                f"Unsupported format {str(format)!r}. Choose from: {sorted(adapters)}"
             )
         entry = adapters[format]
         if isinstance(entry, tuple):
@@ -798,7 +798,8 @@ class PracticeGuidance(Guidance):
             return content
         if self._is_tool(content):
             return self._instantiate_from_tool(content, source)
-        source_format = source or self.format
+        # A subclass or a spec names the source by its text, such as "typescript"; a Format made from a Format is itself.
+        source_format = Format(source or self.format)
         if not source_format:
             raise ValueError("source format is not set")
         if source_format.is_code and content in ("", None):
@@ -883,7 +884,7 @@ class PracticeGuidance(Guidance):
         )
 
     def _incoming(self, format: Format, content: Any) -> Any:
-        if format.is_code:
+        if Format(format).is_code:
             if isinstance(content, dict):
                 return content
             if isinstance(content, str):
