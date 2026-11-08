@@ -44,7 +44,7 @@ Rounds 1 and 2 wrote several findings to a bullet, so their counts are ranges. T
   - Round 3 confirmed 10 round-1 bugs and about 14 structural fixes as fixed.
   - The repeats were all in code no spec covered: hooks, relative paths, and round trips with no round-trip spec.
   - This is why the round-5 fix agents write the failing spec before each fix.
-- **The graph scanners have not yet added a finding the AI judges missed.** In round 5 every graph cycle came from spec or `_examples` imports. Fixing the scanners is now a task of its own.
+- **The graph scanners missed real cycles in round 5.** Every cycle they reported came from spec or `_examples` imports. But the metrics run ([code-metrics-trend.md](code-metrics-trend.md)) found 11 real import cycles at `d71e0b20`, closed by imports written inside functions, which the folder-level scanner could not see. The round-5 fixes removed 9 of them and fixed the scanner.
 
 ## Round 5 by area
 
@@ -95,3 +95,5 @@ From round 5 on, each round runs validate, writes a report, has agents fix it, a
 | Round | Bad resource orientation | Shadow models | Duplicated functions | Goal total | Change from last round | Regressions | Notes |
 |---|---|---|---|---|---|---|---|
 | 5 | 68 | 33 | 62 | 163 | baseline | — | First cross-file round. Nine fix agents ran on it |
+
+**Code metrics beside the findings.** [code-metrics-trend.md](code-metrics-trend.md) measures each round's input revision with standard tools. From round 6 on, each round also records the metrics that track bad resource orientation: classes with CBO above 14 (43 at the tip), classes with LCOM4 above 1 (252), runtime import cycles (2), the top module fan-in (62), the WMC of the largest classes (`Graph`, `PracticeGuidance`), and duplicated lines (0.42%). Shadow models and semantic duplicates are mostly invisible to these metrics, so the AI findings stay the measure for those two classes.
