@@ -1127,7 +1127,7 @@ class Graph:
         in it before. A folder with nothing saved opens holding no node until a load reads it."""
         self.open(folder)
         with self._changing:
-            saved = self._saved_file().read()
+            saved = self.saved_file.read()
             if saved is None:
                 return
             self.overlays = list(saved.overlays)
@@ -1305,7 +1305,7 @@ class Graph:
             self._choose_roots({name: (Path(folder) / root).resolve() for name, root in practices.items()})
             self.overlays = list(overlays or [])
             self.report_progress("Checking the saved graph")
-            saved = None if force else self._saved_file().holding(self._roots_by_key(), self.overlays)
+            saved = None if force else self.saved_file.holding(self._roots_by_key(), self.overlays)
             if saved is not None:
                 self.report_progress("Loading the saved graph")
                 self._load_saved(saved)
@@ -1562,11 +1562,13 @@ class Graph:
         """
         if self._folder is None:
             return GraphSaved("")
-        saved_file = self._saved_file()
+        saved_file = self.saved_file
         return GraphSaved(str(saved_file.write(SavedGraph.from_graph(self).merged_over(saved_file.read()))))
 
-    def _saved_file(self) -> SavedGraphFile:
-        """The saved graph file of the loaded folder, made once for each folder the graph loads."""
+    @property
+    def saved_file(self) -> SavedGraphFile:
+        """The saved graph file of the loaded folder, made once for each folder the graph loads; a validate that checks
+        the session's saved graph reads it here."""
         folder = self._folder or Path()
         held = self._saved_graph_file
         if held is None or held[0] != folder:

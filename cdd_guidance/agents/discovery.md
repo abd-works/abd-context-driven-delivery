@@ -29,7 +29,7 @@ Load the umbrella skill for each selected lens to establish shared vocabulary an
 
 When source material is available, evaluate it directly and answer questions from evidence. Maintain a question-and-answer log with source references, answers, confidence levels, and deferred roles.
 
-**For sketching or grilling:** Defer to the **Sketcher agent** (`@sketcher`). Use `@sketcher` to run the grill-sketch-confirm cycle at discovery fidelity, working through each lens theme in sequence. When the sketch is confirmed, return here to generate formal discovery artifacts.
+**For sketching or grilling:** Run the `actions-sketch` skill (the Sketch action) to run the grill-sketch-confirm cycle at discovery fidelity, working through each lens theme in sequence. When the sketch is confirmed, return here to generate formal discovery artifacts.
 
 Output persistence is mandatory. Create and update at least one markdown artifact file for each meaningful action pass; report its path in the response.
 

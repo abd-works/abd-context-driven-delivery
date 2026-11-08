@@ -40,7 +40,6 @@ _RUNS_SHARED = re.compile(r"\bitBehavesLike\(")
 _STUB = re.compile(r"\bvi\.(?:mock|fn|spyOn|stubGlobal)\(|\bjest\.(?:mock|fn|spyOn)\(")
 _STUBBED_REQUEST = re.compile(r"\bpage\.route\(|\bcontext\.route\(")
 _PATHS_MODULE_SUFFIX = "-paths.ts"
-_TEST_SETUP_GLOBS = ("tests/**/vitest.setup.ts", "tests/**/repositories.ts", "tests/vitest.setup.ts")
 
 
 
@@ -250,17 +249,3 @@ class AggregateFolder:
         """[file, line, path] for each browser path written as a literal outside the aggregate's `*-paths.ts`."""
         files = sorted((self.root / self.folder).glob("*.ts*"))
         return [found for file in files if not file.name.endswith(_PATHS_MODULE_SUFFIX) for found in TierFile.at(self.root, file).web_path_literals()]
-
-
-def test_setup_text(root: Path, story_test_folder: str) -> str:
-    """The text of every test setup file under root, which a reset repository instance is named in, including the
-    repositories file in the pattern's story_test_folder."""
-    seen: set[Path] = set()
-    parts: list[str] = []
-    for pattern in (*_TEST_SETUP_GLOBS, f"{story_test_folder}/repositories.ts"):
-        for path in root.glob(pattern):
-            if path in seen or not path.is_file():
-                continue
-            seen.add(path)
-            parts.append(path.read_text(encoding="utf-8"))
-    return "\n".join(parts)
