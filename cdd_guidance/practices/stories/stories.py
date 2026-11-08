@@ -199,17 +199,15 @@ class Stories(PracticeGuidance):
         return next((adapter for adapter in adapters if issubclass(adapter, CodeStoryModel) and adapter.reads_story_test(path)), None)
 
     def _story_map_file(self, path: Path, project: Path, on_file=None):
-        """The story map in the file at path, read by the format its extension names."""
+        """The story map in the file at path, read by the format that reads its extension."""
         from cdd_guidance.practices.stories.model.story_model import StoryModel
 
-        adapter = self._format_adapter(Format.from_extension(path.suffix).name)
-        return adapter.from_workspace(path, on_file=on_file, project=project) or StoryModel()
+        return self.format_for(path).from_workspace(path, on_file=on_file, project=project) or StoryModel()
 
     def _maps_beside(self, tests: list[Path]) -> list[Path]:
         """The story map each story test belongs to: in its own folder, or the nearest folder above it, since story
         tests sit in epic folders below their map."""
         return list(dict.fromkeys(found for path in tests for found in [StoryMapFiles(path.parent).nearest()] if found))
-
 
 
 StoryNode.register_practice(Stories)

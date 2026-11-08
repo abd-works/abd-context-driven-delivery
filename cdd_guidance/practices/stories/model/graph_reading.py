@@ -15,8 +15,6 @@ if TYPE_CHECKING:
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 _FUNCTION_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b")
-# A step's own lines and the calls just after it: the lines a step's operations are read from.
-_STEP_LINES = 40
 
 
 def align_story_node(node) -> None:
@@ -96,24 +94,24 @@ class StoryLinks:
             operations.setdefault(operation.name, []).append(operation)
         steps = [node for node in self.graph.nodes_of(self.stories) if node.type in {"Step", "Given", "When", "Then"}]
         examples = self.graph.nodes_of(self.stories, "Example")
+        modules = set(self.graph.nodes_of(self.clean, "Module"))
         for index, step in enumerate(steps, start=1):
             self.graph.report_progress(f"stories · steps · {index}/{len(steps)} · {step.name}")
-            self._link_step(step, operations, examples)
+            self._link_step(step, operations, examples, modules)
         sources = self._function_sources()
         for index, example in enumerate(examples, start=1):
             self.graph.report_progress(f"stories · examples · {index}/{len(examples)} · {example.name}")
             self._link_example(example, sources.get(example.name, ""))
 
-    def _link_step(self, step, operations: dict[str, list], examples: list) -> None:
+    def _link_step(self, step, operations: dict[str, list], examples: list, modules: set) -> None:
         body = self._step_body(step)
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [operation for name in called for operation in operations.get(name, ())]
         epic = self._epic_for(step) if matched else None
-        modules = {node.name: node for node in self.graph.nodes_of(self.clean, "Module")}
         for operation in matched:
             self.graph.link("invokes", step, operation, "relationship")
             self.graph.link("invokedBy", operation, step, "relationship")
-            module = modules.get(Path(operation.source.file).parent.name)
+            module = self._module_of(operation, modules)
             if module is not None and epic is not None:
                 self.graph.link("usedBy", module, epic, "relationship")
                 self.graph.link("uses", epic, module, "relationship")
@@ -134,10 +132,16 @@ class StoryLinks:
                 self.graph.link("retrievedUsing", prop, example, "relationship")
 
     def _step_body(self, step) -> str:
-        """The step's line and the lines after it, from the text of the file it was read from."""
-        lines = self.texts.get(step.source.file, "").splitlines() if step.source.file else []
-        start = max(0, step.source.start_line - 1)
-        return "\n".join(lines[start : start + _STEP_LINES])
+        """The step's own text and the body its story test gives it."""
+        return f"{step.name}\n{step.body.text}"
+
+    def _module_of(self, operation, modules: set):
+        """The Clean Engineering module that holds the operation: the nearest node above it in the graph that is one
+        of modules."""
+        owner = self.graph.direct_parent(operation)
+        while owner is not None and owner not in modules:
+            owner = self.graph.direct_parent(owner)
+        return owner
 
     def _function_sources(self) -> dict[str, str]:
         """Each declared ``function name`` in the TypeScript the story map was read from, mapped to the first file's
@@ -158,3 +162,4 @@ class StoryLinks:
         while node is not None and not (isinstance(node, Epic) and not isinstance(node.parent, Epic)):
             node = node.parent
         return node
+

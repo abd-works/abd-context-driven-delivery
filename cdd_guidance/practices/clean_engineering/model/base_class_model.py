@@ -131,7 +131,9 @@ class OoadNode(ModelNode):
         super().__init__(name, sequential_order, graph)
 
     def translate_from(self, source: "OoadNode") -> None:
-        if self.semantic_type() != source.semantic_type():
+        """Become source, which is this node's kind or a kind built on it, such as a DDD entity for a class."""
+        kinds = {getattr(kind, "_semantic_type_name", None) for kind in type(source).__mro__}
+        if self.semantic_type() not in kinds:
             raise TranslationError(
                 f"Cannot translate from {source.semantic_type()} into {self.semantic_type()}"
             )

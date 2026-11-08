@@ -197,7 +197,7 @@ class MiroStoryModel(DiagramStoryModel):
 
     def render(self, canonical: StoryModel | None = None, previous: str | None = None) -> str:
         """Draw canonical, or this story map when none is given, as a Miro canvas-composer SVG."""
-        return type(self)(canonical if canonical is not None else self).save()
+        return self.copy_of(canonical if canonical is not None else self).save()
 
     def parse(self, text: str) -> "MiroStoryModel":
         """Read a canvas-composer SVG into a Miro story map; the format-adapter entry point Stories renders through."""

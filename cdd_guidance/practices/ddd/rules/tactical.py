@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import re
 
+from cdd_guidance.practices.clean_engineering.model.operation import CONSTRUCTOR_NAMES
 from harness.graph.practice_rule import PracticeGraphRule
 
 _TACTICAL_CLASS = (
@@ -16,7 +17,6 @@ _TACTICAL_CLASS = (
     "Factory",
     "Specification",
 )
-_CONSTRUCTORS = frozenset({"constructor", "__init__"})
 _TECHNICAL_SUFFIXES = frozenset({"result", "response", "dto", "request"})
 _AGENT_NOUNS = frozenset({"manager", "helper", "processor", "handler", "controller"})
 _CAMEL = re.compile(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])")
@@ -45,7 +45,7 @@ class FlaccidDataObject(PracticeGraphRule):
     def check(self, node, context) -> list[str]:
         if node.type == "ValueObject" or not node.has_fact("operation_shapes"):
             return []
-        public_ops = [name for name in node.get_fact("public_operation_names", []) if name not in _CONSTRUCTORS]
+        public_ops = [name for name in node.get_fact("public_operation_names", []) if name not in CONSTRUCTOR_NAMES]
         props = len(node.get_fact("property_names", [])) or context.child_count(node, ("properties",))
         if props and not public_ops:
             return [f"{node.type} '{node.name}' has properties but no public operations."]

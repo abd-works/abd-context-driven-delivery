@@ -378,12 +378,12 @@ class CodeStoryModel(StoryModel):
         no code for in this language takes that tree's code for the same epic, story, scenario, and step."""
         if isinstance(previous, str) and previous:
             raise CodeStoryModelError("previous must be the path-to-content map of the story tree already on disk")
-        model = self._copy_of(canonical)
+        model = self.copy_of(canonical)
         if previous:
             model._adopt_code(self.parse(previous))
         return model.save()
 
-    def _copy_of(self, canonical: StoryModel) -> "CodeStoryModel":
+    def copy_of(self, canonical: StoryModel) -> "CodeStoryModel":
         """canonical in this language, with this model's settings."""
         return type(self)(canonical, tests_root=self._tests_root)
 

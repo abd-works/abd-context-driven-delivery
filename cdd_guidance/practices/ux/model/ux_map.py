@@ -50,6 +50,7 @@ class UxMap(UxNode):
     region_type: type[Region] = Region
     control_type: type[Control] = Control
     story_demo_control_type: type[StoryDemoControl] = StoryDemoControl
+    transition_type: type[Transition] = Transition
     """The node types this format's map is made of; a format that writes a node its own way names its subclass here,
     and every reader and copy of the map makes its nodes through them."""
 
@@ -136,7 +137,7 @@ class UxMap(UxNode):
 
     def _take_components(self, source: "UxMap", screens: dict) -> None:
         for transition in source.transitions:
-            self.transitions.append(Transition(
+            self.transitions.append(self.transition_type(
                 transition.name, transition.sequential_order, screens.get(id(transition.from_screen)),
                 screens.get(id(transition.to_screen)), transition.trigger, transition.nav_type, self.graph,
             ))

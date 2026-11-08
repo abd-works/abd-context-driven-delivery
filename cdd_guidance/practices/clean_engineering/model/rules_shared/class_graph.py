@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from cdd_guidance.practices.clean_engineering.model.operation import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.clean_engineering.model.rules_shared.typed_and_comments import is_test_code
 
 if TYPE_CHECKING:
@@ -18,7 +19,6 @@ if TYPE_CHECKING:
 
 # `self.column_name = ...` or `this.columnName: string = ...` in a constructor: a field the class holds.
 _ASSIGNED_FIELD = re.compile(r"(?:self|this)\.(\w+)\s*(?::\s*([^=\n]+?))?\s*=(?!=)")
-_CONSTRUCTORS = frozenset({"__init__", "constructor"})
 _IDENTIFIER = re.compile(r"[A-Za-z_]\w*")
 _HOLDER = "_module"
 
@@ -59,7 +59,7 @@ class ClassGraph:
         for prop in getattr(model, "properties", None) or []:
             found[prop.name] = getattr(prop, "type_hint", "") or found.get(prop.name, "")
         for operation in getattr(model, "operations", None) or []:
-            if operation.name not in _CONSTRUCTORS:
+            if not operation.is_constructor:
                 continue
             for name, hint in _ASSIGNED_FIELD.findall(getattr(operation.body, "text", "") or ""):
                 found.setdefault(name, (hint or "").strip())
@@ -68,7 +68,7 @@ class ClassGraph:
     def has_behavior(self, node: "Node") -> bool:
         """A class with any operation beyond construction and property access."""
         return any(
-            not shape.get("is_property") and shape["name"] not in _CONSTRUCTORS and not shape["name"].startswith("__")
+            not shape.get("is_property") and shape["name"] not in CONSTRUCTOR_NAMES and not shape["name"].startswith("__")
             for shape in node.get_fact("operation_shapes", []) or []
         )
 

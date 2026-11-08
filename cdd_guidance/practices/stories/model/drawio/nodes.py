@@ -290,6 +290,7 @@ class _PlacedCell:
 
 
 class DrawIOStoryModel(DiagramStoryModel):
+    suffixes = (".drawio",)
     epic_type = DrawIOEpic
     story_type = DrawIOStory
     increment_type = DrawIOIncrement
@@ -369,7 +370,7 @@ class DrawIOStoryModel(DiagramStoryModel):
         """Draw the story map. In a *workspace* folder, each epic, sub-epic, and story cell links to its
         ``story-map.md`` entry there, and a story to its own file when one exists. With no target file,
         the cell has no link."""
-        drawn = type(self)(canonical if canonical is not None else self)
+        drawn = self.copy_of(canonical if canonical is not None else self)
         if workspace:
             drawn.links = StoryMapLinks.from_workspace(drawn, workspace)
         return drawn.save()

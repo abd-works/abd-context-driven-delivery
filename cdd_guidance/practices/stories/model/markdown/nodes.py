@@ -212,6 +212,24 @@ class MarkdownScenario(Scenario):
         # The story's own background read above this scenario, which the scenario carries to its story.
         self.story_backgrounds: Optional[List[Background]] = None
 
+    def lines(self) -> List[str]:
+        """This scenario as markdown: its heading, its own backgrounds, its steps in Given, When, Then order, and its
+        examples table."""
+        kind = "Scenario Outline" if self.is_outline else "Scenario"
+        lines = [f"### {kind}: {self.name}", ""]
+        for background in self.backgrounds:
+            if background.steps:
+                lines.extend(["### Background", ""])
+                lines.extend(line for step in background.steps for line in step_lines(step))
+                lines.append("")
+        lines.extend(line for step in self.steps_in(StepType.GIVEN) for line in step_lines(step))
+        for when_steps, then_steps in self.when_then_runs():
+            lines.extend(line for step in [*when_steps, *then_steps] for line in step_lines(step))
+        if self.examples:
+            lines.append("")
+        lines.extend(example_table_lines(self.examples))
+        return lines if lines[-1] == "" else lines + [""]
+
     @classmethod
     def from_workspace(cls, root: "Path", *, on_file=None) -> List["MarkdownScenario"]:
         """Find all scenario markdown files under *root* and return parsed scenarios."""
@@ -611,11 +629,14 @@ class MarkdownScenario(Scenario):
         return self._path.stem.replace("-", " ")
 
 
+def step_line(step: Step) -> str:
+    """One step as markdown writes it: `*Given* a cart`."""
+    return f"*{step.keyword}* {MarkdownStep.prose(step)}"
+
+
 def step_lines(step: Step) -> List[str]:
     """A step and the steps chained onto it as markdown lines, with its realization fence when it has a call graph."""
-    lines = [f"*{step.keyword}* {MarkdownStep.prose(step)}"]
-    for extra in step.ands:
-        lines.append(f"*{extra.keyword}* {MarkdownStep.prose(extra)}")
+    lines = [step_line(step)] + [step_line(extra) for extra in step.ands]
     if getattr(step, "call_graph", None):
         lines.extend(["", "```realization", step.call_graph.block(), "```"])
     return lines
@@ -628,8 +649,7 @@ def example_table_lines(examples) -> List[str]:
     buckets: List[tuple] = []
     index: dict = {}
     for name, example in examples.items():
-        cells = dict(example.cells())
-        cells.setdefault("example", name)
+        cells = {"example": name, **example.cells()}
         headers = tuple(cells.keys())
         group = str(cells.get("group") or "")
         key = (group, headers)
@@ -650,31 +670,11 @@ def example_table_lines(examples) -> List[str]:
     return lines
 
 
-def scenario_lines(scenario: Scenario) -> List[str]:
-    """One scenario as markdown: its heading, its own backgrounds, its steps in Given, When, Then order, and its
-    examples table."""
-    kind = "Scenario Outline" if getattr(scenario, "is_outline", False) else "Scenario"
-    lines = [f"### {kind}: {scenario.name}", ""]
-    for background in scenario.backgrounds:
-        if background.steps:
-            lines.extend(["### Background", ""])
-            lines.extend(line for step in background.steps for line in step_lines(step))
-            lines.append("")
-    lines.extend(line for step in scenario.steps_in(StepType.GIVEN) for line in step_lines(step))
-    for when_steps, then_steps in scenario.when_then_runs():
-        lines.extend(line for step in [*when_steps, *then_steps] for line in step_lines(step))
-    records = scenario.examples.table()
-    if records:
-        headers = list(records[0].keys())
-        lines.extend(["", "### Examples", "", "| " + " | ".join(headers) + " |", "| " + " | ".join("---" for _ in headers) + " |"])
-        lines.extend("| " + " | ".join(str(record.get(header, "")) for header in headers) + " |" for record in records)
-    lines.append("")
-    return lines
-
-
 # -- Leaf node types -----------------------------------------------------------
 
 class MarkdownStory(Story):
+    scenario_type = MarkdownScenario
+
     def __init__(self, name: "str | Story", sequential_order: int = 0, story_type: StoryType = StoryType.USER) -> None:
         super().__init__(name, sequential_order, story_type)
         # The heading (name, line) and the lines the story was read with in a scenarios document, so an unchanged
@@ -717,7 +717,7 @@ class MarkdownStory(Story):
             # The story background's own examples sit in its section, so they read back onto the story.
             lines.extend(example_table_lines(background.examples))
         for scenario in self.scenarios:
-            lines.extend(scenario_lines(scenario))
+            lines.extend(scenario.lines())
         return lines
 
     def _shared_examples(self):
@@ -856,7 +856,7 @@ class _StepLines:
         if as_read is not None:
             return as_read
         indent = "  " if continuation else ""
-        return f"{indent}*{step.keyword}* {MarkdownStep.prose(step)}  \n"
+        return f"{indent}{step_line(step)}  \n"
 
 
 class MarkdownParseError(Exception):
@@ -868,6 +868,7 @@ class MarkdownStoryModel(StoryModel):
     attach_source_locations stamps SourceLocation onto nodes after parsing.
     """
 
+    suffixes = (".md",)
     epic_type = MarkdownEpic
     story_type = MarkdownStory
 
@@ -936,14 +937,13 @@ class MarkdownStoryModel(StoryModel):
 
     def render(
         self,
-        story_map: "MarkdownStoryModel",
+        canonical: StoryModel,
         previous: Optional[str] = None,
         workspace: Optional[str] = None,
     ) -> str:
-        """Write the story map, copied into a markdown map when it is in another format. In a *workspace* folder,
-        each story that has its own markdown file there links to it; a story with no file stays plain text."""
-        if not isinstance(story_map, MarkdownStoryModel):
-            story_map = type(self)(story_map)
+        """Write canonical, copied into a markdown map when it is in another format. In a *workspace* folder, each
+        story that has its own markdown file there links to it; a story with no file stays plain text."""
+        story_map = canonical if isinstance(canonical, MarkdownStoryModel) else self.copy_of(canonical)
         document = story_map.scenario_document
         if document is not None:
             return self._render_scenario_document(document)

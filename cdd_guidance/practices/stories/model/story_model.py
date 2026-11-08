@@ -465,6 +465,8 @@ def _steps_key(steps: List["Step"]) -> tuple:
 
 class Background(StoryNode):
     _semantic_type_name = "Background"
+    step_type = Step
+    """The step type this format's backgrounds are made of; a copy of a background makes its steps through it."""
 
     def __init__(self, name: "str | Background" = "background", sequential_order: int = 1) -> None:
         source = name if isinstance(name, Background) else None
@@ -477,7 +479,7 @@ class Background(StoryNode):
         if source is not None:
             self.take_code_from(source)
             for step in source.steps:
-                self._steps.append(Step(step))
+                self._steps.append(type(self).step_type(step))
 
     @property
     def steps(self) -> List["Step"]:
@@ -525,6 +527,10 @@ class Scenario(StoryNode):
     """
 
     _semantic_type_name = "Scenario"
+    step_type = Step
+    background_type = Background
+    """The step and background types this format's scenarios are made of; a copy of a scenario makes its parts
+    through them."""
 
     def __init__(
         self,
@@ -547,9 +553,9 @@ class Scenario(StoryNode):
         if source is not None:
             self.take_code_from(source)
             for background in source.backgrounds:
-                self.backgrounds.append(Background(background))
+                self.backgrounds.append(type(self).background_type(background))
             for step in source.steps:
-                self.steps.append(Step(step))
+                self.steps.append(type(self).step_type(step))
 
     @property
     def backgrounds(self) -> List[Background]:
@@ -876,6 +882,7 @@ class Epic(StoryNode):
 class Story(StoryNode):
     _semantic_type_name = "Story"
     scenario_type = Scenario
+    background_type = Background
 
     def __init__(
         self,
@@ -898,7 +905,7 @@ class Story(StoryNode):
             return
         self.take_code_from(source)
         for background in source.backgrounds:
-            self.backgrounds.append(Background(background))
+            self.backgrounds.append(type(self).background_type(background))
         for scenario in source.scenarios:
             self.scenarios.append(type(self).scenario_type(scenario))
 
@@ -1003,6 +1010,10 @@ class StoryModel(StoryNode):
         self.links = None
         if isinstance(source, StoryModel):
             self._copy_map(source)
+
+    def copy_of(self, canonical: "StoryModel") -> "StoryModel":
+        """canonical copied into this format's node types, so this format's nodes write it."""
+        return type(self)(canonical)
 
     @property
     def epics(self) -> List[Epic]:
