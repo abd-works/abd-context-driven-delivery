@@ -12,18 +12,19 @@ if TYPE_CHECKING:
 
 
 class NamedSeamAndConstraint(PracticeGraphRule):
+    """A module card names the module's seam, `**Seam (terms):**`, and its constraint, what callers must or must not
+    do. A folder with no card is `missing-module-context`'s to report."""
+
     slug = "named-seam-and-constraint"
     node_types = ("Module",)
 
     def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
-        if not node.has_fact("has_module_context"):
+        if not node.get_fact("has_module_context"):
             return []
-        if node.get_fact("has_module_context") or node.get_fact("has_bounded_context"):
+        missing = [part for part, fact in (("**Seam (terms):**", "names_seam"), ("a Constraint", "names_constraint")) if not node.get_fact(fact)]
+        if not missing:
             return []
-        return [
-            f"Module '{node.name}' is missing .context/module-context.md "
-            "or .context/bounded-context.md."
-        ]
+        return [f"Module '{node.name}' card does not name {' or '.join(missing)}; say what callers use and what they must not do."]
 
 
 class PublicSeamOnly(PracticeGraphRule):

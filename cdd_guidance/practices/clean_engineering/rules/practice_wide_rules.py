@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from harness.graph.practice_rule import PracticeGraphRule
 
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.clean_engineering.model.rules_shared.class_graph import ClassGraph
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -160,20 +161,29 @@ def _importers_by_name(context: "RuleCheckContext", modules: list["Node"]) -> di
 
 
 class ExtensionsLiveWithTheDomain(PracticeGraphRule):
+    """A class that joins one of its own package's types with the class of another package it is named after extends
+    that other package's domain, so it belongs beside the class it extends: kept in the base package, it makes the base
+    package depend on every domain it is extended for. `GraphEpic(Epic, Node)` in the framework that declares `Node`
+    is the case; in the package that declares `Epic` it is where it belongs."""
+
     slug = "extensions-live-with-the-domain"
     node_types = ("OoadClass",)
 
     def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
-        if not node.name.startswith("Graph") or "Epic" not in node.name or not node.has_fact("bases"):
+        if is_test_code(node.source.file or ""):
             return []
-        relative = (node.source.file or "").replace("\\", "/")
-        if "/framework/" in relative or relative.startswith("framework/"):
+        classes = context.index(ClassGraph)
+        own_folder = _parent_folder(node.source.file or "")
+        homes = {base: {_parent_folder(declared.source.file or "") for declared in classes.by_name.get(base, [])} for base in _base_names(node)}
+        own = [base for base, folders in homes.items() if own_folder in folders]
+        # The domain class an extension extends is the one it is named after: `GraphEpic` extends `Epic`.
+        extended = [base for base, folders in homes.items() if folders and own_folder not in folders and node.name.endswith(base)]
+        if not own or not extended:
             return []
-        if any(base == "Epic" or base.endswith("Epic") for base in node.get_fact("bases")):
-            return []
+        home = sorted(homes[extended[0]])[0]
         return [
-            f"Class '{node.name}' should extend the framework Epic in the domain module, "
-            "not stand alone."
+            f"Class '{node.name}' extends {', '.join(extended)} from '{home}' with this package's {', '.join(own)}: "
+            f"it is an extension of '{home}' and belongs there, so this package does not depend on it."
         ]
 
 
@@ -208,6 +218,11 @@ def _sibling_modules(node: "Node", context: "RuleCheckContext") -> list[str]:
         for other in context.nodes("Module")
         if other is not node and other.source.file and _parent_folder(other.source.file) == parent
     ]
+
+
+def _base_names(node: "Node") -> list[str]:
+    """The classes a class names as its bases, each by its own name: `pkg.Epic` is `Epic`."""
+    return [str(base).rsplit(".", 1)[-1] for base in node.get_fact("bases", []) or []]
 
 
 def _parent_folder(path: str) -> str:

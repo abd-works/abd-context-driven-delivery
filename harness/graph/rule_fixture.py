@@ -27,6 +27,10 @@ class RuleFixture:
         graph.load_working_copy(str(self.root), {practice.key: str(self.root)}, force=True)
         self.practice = practice
 
+    def read_only(self, paths: list[str]) -> None:
+        """Read again only the files or folders at paths, as a load of the files being edited does."""
+        self.practice.graph.load_files(str(self.root), [self.practice.key], paths)
+
     @property
     def context(self) -> RuleCheckContext:
         """What a rule check reads: this fixture's practice and folder."""

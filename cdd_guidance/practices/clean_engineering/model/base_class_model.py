@@ -360,6 +360,8 @@ class Module(OoadNode):
         "has_module_context",
         "has_bounded_context",
         "modules_heading",
+        "names_seam",
+        "names_constraint",
         "model_blocks",
         "is_a_in_context",
         "child_parent_in_context",
@@ -504,6 +506,8 @@ class Module(OoadNode):
         self.has_module_context = module_context.exists()
         self.has_bounded_context = (folder / ".context" / "bounded-context.md").is_file()
         self.modules_heading = module_context.has_modules_heading()
+        self.names_seam = module_context.names_seam()
+        self.names_constraint = module_context.names_constraint()
         self.model_blocks = module_context.model_blocks()
         self.is_a_in_context = bool(_IS_A.search(content))
         self.child_parent_in_context = bool(_CHILD_PARENT.search(content))

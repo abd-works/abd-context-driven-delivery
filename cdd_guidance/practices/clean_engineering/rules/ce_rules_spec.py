@@ -371,6 +371,19 @@ export class NumberExamples {
         with it("should flag model dump blocks in module-context"):
             assert_module_example_pair("modules-not-model-blocks")
 
+    with context("the examples each rule's guidance shows"):
+        with it("should flag a module card that names neither its seam nor its constraint"):
+            assert_module_example_pair("named-seam-and-constraint")
+
+        with it("should flag a module importing from more than eight sibling modules"):
+            assert_module_example_pair("low-coupling")
+
+        with it("should flag a domain extension kept in the framework package"):
+            assert_module_example_pair("extensions-live-with-the-domain")
+
+        with it("should flag an operation that reaches into another object's private state"):
+            assert_module_example_pair("put-logic-on-the-owning-resource")
+
     with context("named-seam-and-constraint"):
         with it("should accept a bounded context that only has bounded-context.md"):
             import tempfile
@@ -634,12 +647,15 @@ with description("Clean Engineering graph rules (inline fault and clean fixtures
             )
 
     with context("extensions-live-with-the-domain"):
-        with it("should flag a Graph epic that stands alone and accept one that extends Epic"):
-            assert_rule_pair(
-                "extensions-live-with-the-domain",
-                "class GraphStoriesEpic:\n    def children(self):\n        return self.stories\n",
-                "class GraphStoriesEpic(Epic):\n    def children(self):\n        return self.stories\n",
-            )
+        with it("should accept a domain extension that joins a framework type beside the domain class it extends"):
+            expect(
+                practice_from_files(
+                    {
+                        "framework/node.py": "class Node:\n    pass\n",
+                        "domain/epic.py": "class Epic:\n    pass\n\n\nclass GraphEpic(Epic, Node):\n    pass\n",
+                    }
+                ).hits(ce_rule_by_slug("extensions-live-with-the-domain"))
+            ).to(equal([]))
 
     with context("write-interactions"):
         with it("should flag a bold Interaction bullet in a markdown class"):

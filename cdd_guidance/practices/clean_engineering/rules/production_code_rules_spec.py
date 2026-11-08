@@ -23,12 +23,11 @@ from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
     ce_rule_by_slug,
     practice_from_files,
     practice_from_source,
-    violations_for_rule,
 )
 
 
 def _hits(slug: str, source: str, filename: str = "example.py") -> list[str]:
-    return violations_for_rule(ce_rule_by_slug(slug), *practice_from_source(source, filename=filename))
+    return practice_from_source(source, filename=filename).hits(ce_rule_by_slug(slug))
 
 
 def _module(folder: str, files: dict[str, str]) -> dict[str, str]:
@@ -146,13 +145,13 @@ with description("the Clean Engineering graph rules"):
         with it("should not count a spec's class as the module's public class"):
             tree = _module("orders", {"order.py": "class Order:\n    pass\n\n\nclass OrderLine:\n    pass\n"})
             tree["orders/order_spec.py"] = "class OrderSpecFixture:\n    pass\n"
-            expect(violations_for_rule(ce_rule_by_slug("no-module-per-class"), *practice_from_files(tree))).to(equal([]))
+            expect(practice_from_files(tree).hits(ce_rule_by_slug("no-module-per-class"))).to(equal([]))
 
         with it("should accept a folder that holds only the base its nested modules share"):
             tree = _module("builders", {"builder.py": "class Builder:\n    pass\n"})
             tree.update(_module("builders/toolset", {"toolset.py": "class ToolsetBuilder:\n    pass\n\n\nclass Step:\n    pass\n"}))
             tree.update(_module("builders/practice", {"practice.py": "class PracticeBuilder:\n    pass\n\n\nclass Part:\n    pass\n"}))
-            expect(violations_for_rule(ce_rule_by_slug("no-module-per-class"), *practice_from_files(tree))).to(equal([]))
+            expect(practice_from_files(tree).hits(ce_rule_by_slug("no-module-per-class"))).to(equal([]))
 
     with context("public-seam-only"):
         with it("should flag internal design in a docstring and accept a public one"):
@@ -160,7 +159,7 @@ with description("the Clean Engineering graph rules"):
 
         with it("should not read the marker it looks for in a string the code holds"):
             tree = _module("rules", {"rules.py": 'MARKER = "## Internal"\n\n\nclass Scanner:\n    def found(self, text: str) -> bool:\n        return MARKER in text\n'})
-            expect(violations_for_rule(ce_rule_by_slug("public-seam-only"), *practice_from_files(tree))).to(equal([]))
+            expect(practice_from_files(tree).hits(ce_rule_by_slug("public-seam-only"))).to(equal([]))
 
     with context("one-way-deps"):
         with it("should flag two files of one folder that import each other and accept a one-way import"):

@@ -1,3 +1,5 @@
-class Order:
-    def total(self) -> int:
-        return 1
+"""Cart module for placing orders."""
+
+
+class Cart:
+    pass

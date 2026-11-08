@@ -10,7 +10,6 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import equal, expect
 from mamba import context, description, it
 
-from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
     assert_files_rule_pair,
@@ -152,11 +151,9 @@ with description("modules across the graph"):
             )
 
         with it("should count a caller outside the validated scope"):
-            practice, root = practice_from_files(_shop_importing("Cart", "Line", "Price"))
-            graph = Graph()
-            graph.load_files(str(root), ["clean_engineering"], ["cart"])
-            scoped = graph.practice("clean_engineering")
-            expect(violations_for_rule(ce_rule_by_slug("deep-module"), scoped, root)).to(
+            fixture = practice_from_files(_shop_importing("Cart", "Line", "Price"))
+            fixture.read_only(["cart"])
+            expect(fixture.hits(ce_rule_by_slug("deep-module"))).to(
                 equal(["Module 'cart' exposes 3 of 5 classes (60%, max 40%) to other modules: Cart, Line, Price. Keep most classes behind a few public ones."])
             )
 
