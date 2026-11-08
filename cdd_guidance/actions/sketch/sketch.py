@@ -20,8 +20,8 @@ _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 class Sketch(GuidanceAction):
     """Sketch a solution interactively before generating the formal artifact."""
 
-    def __init__(self, agent_dir: str = "", session=None, chat=None, call=None) -> None:
-        super().__init__(session, chat, call)
+    def __init__(self, agent_dir: str = "", session=None, call=None) -> None:
+        super().__init__(session, call)
         self._agent_dir = agent_dir
 
     def made_for(self, session, call=None) -> Sketch:

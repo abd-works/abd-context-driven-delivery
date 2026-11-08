@@ -228,16 +228,18 @@ class ContextSetup:
         Emit a verdict per page: PASS | WARN | FAIL.
         FAIL and WARN pages need re-capture; note the reason for each. Every entry in scout_result.failed_pages
         is a FAIL: the browser could not load that page, and its reason says why.
-        If all pages PASS: call context_index.embed(segments_paths=[scout_result.overview_path])
-        to index the extraction overview, which holds a section per captured page, and report capture complete. Stop.
+        If all pages PASS: call context_index.embed(segments_paths=[scout_result.overview_path], out_path=<the folder
+        holding scout_result.overview_path>/rag) to index the extraction overview, which holds a section per captured
+        page, beside it, and report capture complete with the index_path embed returns. Stop.
         If any pages FAIL or WARN: proceed to Step 6.
 
         Step 6 — Complete App Capture (only when Step 5 found FAIL or WARN pages):
         Collect the URLs or slugs of FAIL and WARN pages into missing_pages.
         Call complete_capture(repo_path=repo_path, missing_pages=missing_pages, surface=surface,
         capture_repo=capture_repo).
-        After capture, call context_index.embed(segments_paths=[capture_result.overview_path])
-        to index the updated overview and report all pages captured."""
+        After capture, call context_index.embed(segments_paths=[capture_result.overview_path], out_path=<the folder
+        holding capture_result.overview_path>/rag) to index the updated overview in the same place, and report all pages
+        captured with the index_path embed returns."""
         "The application is at repo_path={{repo_path}}."
         tools(self.smoke_test)
         tools(self.scout_app)
@@ -262,16 +264,16 @@ class ContextSetup:
         word_count > 200, note it for the user — the document may need a semantic re-pass
         before partitioning gives useful results (do not block; continue to Step 2)."""
         tools(self.convert)
-        """Step 2 — Choose Indexers:
+        # The options are the slugs of the practices partition works with, so every word offered is one it accepts.
+        f"""Step 2 — Choose Indexers:
         If indexers is None or empty, ask the user via AskQuestion (allow_multiple=True):
           Which context tools should index this content?
-          Options: stories | clean_engineering | ddd | ux | cdd
+          Options: {' | '.join(self.partition.practice_slugs)}
         Also ask: which tool runs first? (first)
         No tool fires during this step — just collect the user's selection."""
         """Step 3 — Partition (partition is additive; a later pass adds to the index and segments):
         Call partition.partition once, with:
-          guidance = the context tools selected in Step 2, the one named by `first` first; 'cdd' stands for
-            stories and clean-engineering
+          guidance = the context tools selected in Step 2, the one named by `first` first, each as the slug offered
           paths = the markdown_files convert returned in Step 1, the documents it wrote
           out_root = {{folder_path}}, so the index and segments are written beside the documents
         If the user selects no context tool, ask once more; if none is selected then, stop and tell the user that

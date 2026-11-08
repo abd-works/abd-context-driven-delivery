@@ -1,7 +1,7 @@
 # Validation trend, rounds 1–7
 
 **Where it stands (2026-11-08):**
-- The loop's goal total fell from 150 (round 5) to 110 (round 6) to **39** (round 7). The target is under 30, with no high findings in the three goal classes.
+- The loop's goal total fell from 150 (round 5) to 110 (round 6), 39 (round 7) and **31** (round 8). Of round 8's 31, 21 are in old scope, under the target of 30. Two high findings in the goal classes remain, so one more fix round runs.
 - Round 7's fixes are landing now: the graph fixes and the harness-core fixes are merged. The space/tools/actions, harness-upper and practices fixes are still in progress.
 - Round 8 validates next, after a graph smoke check. It is the first round expected to run the graph check in every area since round 5.
 
@@ -108,6 +108,7 @@ The first count gave 163, because it also counted round 5's summary tables of co
 | 5 | 63 | 30 | 57 | 150 | baseline | — | First cross-file round. Nine fix agents ran on it |
 | 6 | 56 | 18 | 36 | 110 | −27% | 1 (0.9%) | 133 findings, 12 high. Shadow models −40%, duplicated functions −37%, resource orientation only −11%. See [round6-report.md](round6-report.md) |
 | 7 | 16 | 3 | 20 | 39 | −65% | 0 | 54 findings, 4 high. Mostly the AI check only, since a DDD crash in the graph worker blocked graph checks. See [round7-report.md](round7-report.md) |
+| 8 | 12 | 4 | 15 | 31 (21 old scope) | −21% (old scope −46%) | 1 | 43 findings, 4 high. The graph check ran in three areas; 10 findings are new scope. A Stories crash on a restored graph blocked the rest. See [round8-report.md](round8-report.md) |
 
 **Code metrics beside the findings.** [code-metrics-trend.md](code-metrics-trend.md) measures each round's input revision with standard tools. From round 6 on, each round also records the metrics that track bad resource orientation: classes with CBO above 14 (43 at the tip), classes with LCOM4 above 1 (252), runtime import cycles (2), the top module fan-in (62), the WMC of the largest classes (`Graph`, `PracticeGuidance`), and duplicated lines (0.42%). Shadow models and semantic duplicates are mostly invisible to these metrics, so the AI findings stay the measure for those two classes.
 
@@ -155,3 +156,20 @@ The first count gave 163, because it also counted round 5's summary tables of co
 - The patterns that held rounds back were stand-in swaps, twins left behind, open skips, and specs that skip the live path. Each one has been turned into a rule in the fix brief, and each validator report since has checked those rules.
 
 **Risk for round 8:** the graph check will run in every area for the first time with the ten Clean Engineering rules switched on in round 6. Their findings count as new scope, so they do not hide the comparison. But they may add real work.
+
+## Round 8 analysis: the old-scope goal is met; two highs hold the loop open
+
+- **In old scope the total is 21, under 30.**
+  - The full total is 31, because the graph check finally ran in three areas and judged code it never had before: 10 findings are new scope.
+  - Resource orientation is at 12 and shadow models at 4, both near their floor. Duplicated functions are at 15, 6 of them new scope.
+- **Two high findings in the goal classes keep the loop open:**
+  - the Stories reader crash on a restored graph
+  - the Grill fidelity regression
+  
+  Both are misses of rules already in the brief: fix every sibling, and specs take the live path. Neither is a new kind of problem, so the loop is not cycling. But it does show that the rules need checking, not just stating.
+- **The next fix round is narrow:**
+  - those two highs
+  - B10 under concurrent refreshes
+  - the scanner false positives, which shrink the next graph check's noise
+  - the remaining low findings
+- **Round 9 is expected to be the confirming round.** It needs graph checks that run in every area, and those depend on the hotfix landing.

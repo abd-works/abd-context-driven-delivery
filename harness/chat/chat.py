@@ -12,6 +12,7 @@ from typing import Callable, Literal, TypeVar
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.data_class import data_field, identity, language_adapter
+from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.mcp.mcp_server import mcp
 from harness.agent_tools.chat_pointer import ChatPointer
 
@@ -116,6 +117,8 @@ class Chat:
 
     def __init__(self, folder: Path) -> None:
         self._folder = folder
+        # What the chat's mod last said at check-in: its name, whether a turn runs, its folder, and its title.
+        self._state_file = JsonFile(folder / STATE_FILE)
 
     @classmethod
     @tool_subject
@@ -141,7 +144,7 @@ class Chat:
             raise ChatNotConnectedError(self.id)
         waiting = self._folder / WAITING
         waiting.mkdir(parents=True, exist_ok=True)
-        (waiting / self._next_file_name()).write_text(json.dumps({"kind": kind, "text": text, "sent_at": self.clock()}), encoding="utf-8")
+        JsonFile(waiting / self._next_file_name()).write({"kind": kind, "text": text, "sent_at": self.clock()})
         return self
 
     @mcp
@@ -176,7 +179,8 @@ class Chat:
         if not taken.is_file():
             return self
         if not is_shown:
-            taken.write_text(json.dumps({**json.loads(taken.read_text(encoding="utf-8")), "reason": reason}), encoding="utf-8")
+            record = JsonFile(taken)
+            record.write({**record.read(), "reason": reason})
         self._move(taken, SHOWN if is_shown else FAILED)
         return self
 
@@ -198,8 +202,8 @@ class Chat:
         for state in (TAKEN, FAILED):
             unshown = self._folder / state / f"{message}.json"
             if unshown.is_file():
-                sent = json.loads(unshown.read_text(encoding="utf-8"))
-                unshown.write_text(json.dumps({key: value for key, value in sent.items() if key != "reason"}), encoding="utf-8")
+                record = JsonFile(unshown)
+                record.write({key: value for key, value in record.read().items() if key != "reason"})
                 self._move(unshown, WAITING)
         return self
 
@@ -240,21 +244,29 @@ class Chat:
 
     @property
     def _state(self) -> dict:
-        path = self._folder / STATE_FILE
-        return _while_windows_holds(lambda: _state_in(path))
+        return _while_windows_holds(self._state_read)
 
-    # A mod that reloads can check in twice at once, so the state is written beside the file and renamed over it whole.
+    def _state_read(self) -> dict:
+        """The state a chat last wrote; none when it never checked in, or when two check-ins written over each other
+        left a file that does not read, so the chat's next check-in writes it afresh. A file Windows holds for another
+        process's rename is read again (``_while_windows_holds``)."""
+        try:
+            return self._state_file.read()
+        except JsonFileUnreadable as unreadable:
+            if isinstance(unreadable.cause, PermissionError):
+                raise unreadable.cause from unreadable
+            return {}
+
+    # A mod that reloads can check in twice at once; the state file is swapped in whole, so neither reads half of it.
     def _write(self, state: dict) -> None:
-        written = self._folder / f"{STATE_FILE}.{os.getpid()}.{threading.get_ident()}"
-        written.write_text(json.dumps(state), encoding="utf-8")
-        _while_windows_holds(lambda: written.replace(self._folder / STATE_FILE))
+        _while_windows_holds(lambda: self._state_file.write(state))
 
     # Oldest first. Each sent command is its own file, so a sender never writes a file the chat is reading. A taken command
     # waits in the taken folder until the chat confirms it, so the board can show what the chat never showed.
     def _take_ready(self, is_busy: bool) -> list[ChatCommand]:
         taken: list[ChatCommand] = []
         for path in self._sent_in(WAITING):
-            command = json.loads(path.read_text(encoding="utf-8"))
+            command = JsonFile(path).read()
             if command["kind"] == "fill" and is_busy:
                 continue
             self._move(path, TAKEN)
@@ -266,9 +278,10 @@ class Chat:
     # with is also done once the chat checks in idle.
     def _finish_worked_on(self, is_busy: bool) -> None:
         for path in self._sent_in(SHOWN):
-            sent = json.loads(path.read_text(encoding="utf-8"))
+            record = JsonFile(path)
+            sent = record.read()
             if is_busy and not sent.get("is_worked_on"):
-                path.write_text(json.dumps({**sent, "is_worked_on": True}), encoding="utf-8")
+                record.write({**sent, "is_worked_on": True})
             elif not is_busy and sent.get("is_worked_on"):
                 self._move(path, DONE)
 
@@ -309,7 +322,7 @@ class Chat:
             path.unlink()
 
     def _message(self, path: Path, state: MessageState) -> ChatMessage:
-        sent = json.loads(path.read_text(encoding="utf-8"))
+        sent = JsonFile(path).read()
         return ChatMessage(path.stem, sent["kind"], sent["text"], sent.get("sent_at", 0.0), state, sent.get("reason", ""))
 
 
@@ -322,17 +335,6 @@ _CHECK_IN_LOCKS_GUARD = threading.Lock()
 def _checking_in(folder: Path) -> threading.Lock:
     with _CHECK_IN_LOCKS_GUARD:
         return _CHECK_IN_LOCKS.setdefault(folder.resolve(), threading.Lock())
-
-
-def _state_in(path: Path) -> dict:
-    """The state a chat last wrote; none when it never checked in, or when two check-ins written over each other left a
-    file that does not read, so the chat's next check-in writes it afresh."""
-    if not path.is_file():
-        return {}
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
 
 
 def _while_windows_holds(operation: Callable[[], T]) -> T:

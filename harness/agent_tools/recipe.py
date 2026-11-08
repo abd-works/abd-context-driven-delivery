@@ -181,25 +181,10 @@ class RecipeSource:
         return bool(others) or all(self._is_empty_return(statement) for statement in returns)
 
     @property
-    def result_template(self) -> str:
-        """The text the recipe's first ``return`` gives, with its names written as placeholders; empty when it has
+    def returned(self) -> ast.Return | None:
+        """The recipe's first ``return``, whose value is the result line a call is answered with; none when it has
         none."""
-        returned = next((statement for statement in self.function_def.body if isinstance(statement, ast.Return)), None)
-        return self.text_of(returned.value) if returned is not None else ""
-
-    def text_of(self, node: ast.expr | None) -> str:
-        """An expression as recipe text: a string as it is, ``self.x`` as ``{{self.x}}``, a name as ``{{name}}``."""
-        if node is None:
-            return ""
-        if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            return node.value.strip()
-        if isinstance(node, ast.JoinedStr):
-            return "".join(self._part_text(part) for part in node.values)
-        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == "self":
-            return "{{self." + node.attr + "}}"
-        if isinstance(node, ast.Name):
-            return "{{" + node.id + "}}"
-        return ast.unparse(node)
+        return next((statement for statement in self.function_def.body if isinstance(statement, ast.Return)), None)
 
     def member_on_self(self, node: ast.AST) -> str | None:
         """The member a ``self.member`` or ``self.member(...)`` expression names; none for any other expression."""
@@ -228,11 +213,6 @@ class RecipeSource:
             member for node in ast.walk(self.module) if isinstance(node, ast.For)
             and (member := self.member_on_self(node.iter)) is not None
         }
-
-    def _part_text(self, part: ast.expr) -> str:
-        if isinstance(part, ast.Constant) and isinstance(part.value, str):
-            return part.value
-        return self.text_of(part.value) if isinstance(part, ast.FormattedValue) else ""
 
     @property
     def docstring(self) -> str:
@@ -289,6 +269,8 @@ class RecipeExpansion:
         self._mode = self._declared_mode(self._toolset)
         self._prompt: list[str] = []
         self._tools: list[str] = []
+        # What the recipe's return gives for this call: the result line the call is answered with.
+        self._result = ""
         self._loop_item_modes: dict[int, str] = {}
         # Every parameter is a name the body can read: one the call left out holds its default, or none when it has none.
         schema = instructions.parameter_schema
@@ -302,10 +284,19 @@ class RecipeExpansion:
     def tools(self) -> list[str]:
         return list(dict.fromkeys(self._tools))
 
+    @property
+    def result(self) -> str:
+        """What the recipe returned for this call's arguments; empty when it returns no text. A recipe that only defers
+        to its parent returns its own text when it has a return of its own, else its parent's."""
+        return self._result
+
     def run(self) -> RecipeExpansion:
         """Walk the body, or the parent's recipe when the body only defers to it; answers this expansion."""
         if self._source.only_defers_to_parent:
-            self._expand_parent()
+            parent = self._expand_parent()
+            returned = self._source.returned
+            own = self._evaluated(returned.value) if returned is not None and returned.value is not None else ""
+            self._result = own.strip() if isinstance(own, str) and own.strip() else parent.result if parent else ""
             return self
         statements = self._source.function_def.body
         if statements and self._source.is_docstring(statements[0]):
@@ -335,6 +326,7 @@ class RecipeExpansion:
             return
         value = self._evaluated(statement.value)
         if isinstance(value, str) and value.strip():
+            self._result = self._result or value.strip()
             self._add_prompt(value.strip())
 
     def _add_prompt(self, text: str) -> None:
@@ -346,13 +338,14 @@ class RecipeExpansion:
         for part in other._prompt:
             self._add_prompt(part)
 
-    def _expand_nested(self, nested: ExpandedRecipe, defining_class: type | None = None) -> None:
-        self._merge(RecipeExpansion(nested, expanding=self._expanding, defining_class=defining_class).run())
+    def _expand_nested(self, nested: ExpandedRecipe, defining_class: type | None = None) -> RecipeExpansion:
+        expansion = RecipeExpansion(nested, expanding=self._expanding, defining_class=defining_class).run()
+        self._merge(expansion)
+        return expansion
 
-    def _expand_parent(self) -> None:
+    def _expand_parent(self) -> RecipeExpansion | None:
         parent = self._instructions.parent_recipe(self._defining_class)
-        if parent is not None:
-            self._expand_nested(*parent)
+        return self._expand_nested(*parent) if parent is not None else None
 
     def _mode_of(self, target: Any) -> str:
         if target is self._toolset:
@@ -463,9 +456,6 @@ class RecipeExpansion:
     def _expand_instructions_arg(self, arg: ast.AST | None) -> bool:
         if arg is None:
             return False
-        if isinstance(arg, ast.JoinedStr) or (isinstance(arg, ast.Constant) and isinstance(arg.value, str)):
-            self._add_prompt(self._source.text_of(arg))
-            return True
         if self._expand_instructions_cross(arg):
             return True
         member = self._wrapped_member_name(arg)
