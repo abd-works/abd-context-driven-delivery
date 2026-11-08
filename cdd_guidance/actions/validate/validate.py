@@ -133,13 +133,11 @@ class Validate(GuidanceAction):
         # This line is the call's validate line; the session board reads the latest one, so no clean line may follow.
         self._logged_session_action = "validate"
 
-    def log_running(self, action: str) -> None:
+    def _log(self, action: str) -> None:
+        """A validate line names each listed practice, which logs its own; any other action logs as every action does."""
         if action != "validate":
-            super().log_running(action)
+            super()._log(action)
             return
-        if self._logged_session_action == action:
-            return
-        self._logged_session_action = action
         self._log_validation_to_session()
 
     def _log_validation_to_session(self) -> None:

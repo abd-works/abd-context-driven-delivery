@@ -3,12 +3,10 @@
 
 The MCP tools `sketch.find_template`, `sketch.save_sketch`, `sketch.list_sketches`, and `sketch.review_sketch` find the practice's sketch template, save the sketch file, list sketch files, and stop for the person to confirm the sketch before the next question.
 
-*SketchOutline* reads one practice's section of a sketch as indented lines. A practice's sketch format holds the *SketchLens* for its section (`SketchStoryModel.lens`), and the practice declares its `sketch_titles` from it, so the format never imports its practice; each practice then holds the same lens (harness/guidance, `PracticeGuidance.sketch_lens`). A sketch format reads its own section with it (`SketchOutline(text).body_for(self.lens)`), so it never parses headings itself. The outline asks every practice CDD has for its lens, so any of their headings ends the section before it.
-
-*DiscoveryDocument* is the header a practice writes at discovery fidelity from a sketch — the front matter naming its artifact, a `# {heading} — {title}` line, and the sketch's sources — read once from the lines above the sketch's first practice section. Stories' story map and DDD's bounded context map both write theirs through it.
+Each practice reads its own section of the saved sketch with *SketchOutline*, which lives with the practices in `cdd_guidance/practices/sketch_document`, so the practices never import an action.
 
 - **Purpose:** Agree the rough shape of a solution in a saved file, reviewed after each theme, before formal generation.
-- **Seam (terms):** Sketch, SketchOutline, DiscoveryDocument, `sketch.sketch`, `sketch.find_template`, `sketch.save_sketch`, `sketch.list_sketches`, `sketch.review_sketch`
+- **Seam (terms):** Sketch, `sketch.sketch`, `sketch.find_template`, `sketch.save_sketch`, `sketch.list_sketches`, `sketch.review_sketch`
 - **Dependencies (one-way):** `cdd_guidance/actions/grill_context` (*GrillContext*), `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*), `harness/guidance` (*PracticeGuidance*), `harness/agent_tools`, `harness/installation`, `harness/mcp`
 
 ## Constraint
