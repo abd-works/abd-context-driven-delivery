@@ -18,7 +18,7 @@ from cdd_guidance.practices.bdd.model.nodes import DescribeBlock
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph, CallGraphEntry
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from harness.graph.graph import Node
+from harness.graph.graph import Graph, Node
 from harness.graph.saved_graph import SavedGraph
 
 # Following interactions further than this many calls deep adds lines nobody reads; a cycle is cut where it repeats.
@@ -32,7 +32,8 @@ class GraphBddModel(BddModel):
     """Reads a saved graph (`Graph.saved`, `graph.save_json`) into descriptions whose observations carry their realization."""
 
     def parse(self, text: str) -> "GraphBddModel":
-        graph = SavedGraph.from_text(text).restored_graph()
+        graph = Graph()
+        graph.restored_from(SavedGraph.from_text(text))
         self._graph = graph
         bdd = graph.practice_of(self.practice_kind())
         self._clean = bdd.clean_engineering_practice

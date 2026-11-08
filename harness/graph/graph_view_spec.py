@@ -106,8 +106,7 @@ with description("a graph"):
                 ],
             })
             graph.restored_from(SavedGraph([], {"clean_engineering": saved}))
-            root.populate()
-            self.tree = data_of(root.serialize())
+            self.tree = data_of(graph.practice("clean_engineering").in_graph.root.serialize())
 
         with it("should parent the package on the module"):
             package = next(child for child in self.tree["children"][0]["children"] if child["name"] == "customer")

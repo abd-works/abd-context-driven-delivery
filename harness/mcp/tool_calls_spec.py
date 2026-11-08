@@ -14,7 +14,7 @@ from expects import be_a, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.tool_call import ToolCall
-from harness.mcp.tool_calls import _StillRunning, _ToolCalls
+from harness.mcp.tool_calls import ThrottledReporter, _StillRunning, _ToolCalls, answering_a_chat, is_answering_a_chat
 
 # Short enough that a held call outlives it; long enough that a released call finishes inside it.
 SHORT_SECONDS = 0.05
@@ -178,3 +178,37 @@ with description("tool calls on worker threads") as self:
 
             anyio.run(cancel_the_caller)
             expect(self.logged.messages).to(contain("MCP tool validate.validate failed after its caller stopped waiting"))
+
+
+with description("a tool's progress reports passed on to its caller"):
+    with before.each:
+        self.heard: list[str] = []
+        self.reporter = ThrottledReporter(self.heard.append, seconds=60)
+
+    with context("that come faster than a caller is told them"):
+        with before.each:
+            for index in range(1000):
+                self.reporter(f"node {index}")
+
+        with it("should pass on the first"):
+            expect(self.heard).to(equal(["node 0"]))
+
+    with context("that come further apart than a caller is told them"):
+        with before.each:
+            spaced = ThrottledReporter(self.heard.append, seconds=0)
+            spaced("reading stories")
+            spaced("checking rules")
+
+        with it("should pass on each"):
+            expect(self.heard).to(equal(["reading stories", "checking rules"]))
+
+
+with description("code a chat's call runs"):
+    with it("should know it answers a chat"):
+        with answering_a_chat():
+            expect(is_answering_a_chat()).to(equal(True))
+
+    with it("should know nothing of a chat once the call is answered"):
+        with answering_a_chat():
+            pass
+        expect(is_answering_a_chat()).to(equal(False))

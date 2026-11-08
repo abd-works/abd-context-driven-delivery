@@ -1,10 +1,11 @@
-"""Folders a working-copy scan never enters: build output, test-run output, caches, dot-folders, and the example and
-fixture folders that hold deliberately faulty or throwaway source.
+"""Folders a working-copy scan never enters: build output, test-run output, caches, dot-folders, and the example,
+fixture, and template folders that hold deliberately faulty, throwaway, or unfinished source.
 
-An `_examples` folder holds each rule's faulty and repaired example, and a `fixtures` folder holds test input; read as
-the project's own code, their faults are reported as the project's. The rule specs copy an example into a folder of its
-own before they read it. `.examples*` folders hold example source the practices read, so they are scanned like any
-other folder.
+An `_examples` folder holds each rule's faulty and repaired example, a `fixtures` folder holds test input, a
+`catalog-examples` folder holds the source the catalog shows for each practice, and a `templates` folder holds the files
+an installer or a practice fills in, with placeholders where the values go; read as the project's own code, their
+faults are reported as the project's. The rule specs copy an example into a folder of its own before they read it.
+`.examples*` folders hold example source the practices read, so they are scanned like any other folder.
 """
 
 from __future__ import annotations
@@ -36,6 +37,8 @@ SKIPPED_FOLDERS = frozenset(
         "htmlcov",
         "_examples",
         "fixtures",
+        "catalog-examples",
+        "templates",
     }
 )
 
