@@ -71,7 +71,7 @@ From round 5 on, each round runs validate, writes a report, has agents fix it, a
 - **shadow models:** concern 2, duplicated shapes and second object models
 - **duplicated functions:** concern 1, plus concern 12, rules decided in both TypeScript and Python
 
-**How it is measured.** The script counts every finding row in a round's area files by the concerns it carries, using the same script every round so the numbers compare (`scratchpad/concerns.py`; rows with several concerns count once per concern). Rounds 6 on use round 5's twelve concerns, area split and status words (new / left / known skip / regression), so the counts mean the same thing.
+**How it is measured.** The script counts every finding row in a round's area files by the concerns it carries, using the same script every round so the numbers compare (`concern_counts.py` beside this file; a row naming several concerns counts once for each). Rounds 6 on use round 5's twelve concerns, area split and status words (new / left / known skip / regression), so the counts mean the same thing.
 
 **Round 5 baseline:**
 
