@@ -301,7 +301,7 @@ const inventory = {
     node_counts: { Aggregate: 2, EntityRoot: 2, Repository: 1, ValueObject: 2 },
     edge_count: 4,
     node_types: ['BoundedContext', 'Aggregate', 'EntityRoot', 'Repository', 'ValueObject'],
-    edge_types: ['owns', 'associates', 'belongsTo'],
+    edge_types: ['owns', 'associates'],
     rules: [],
     tree: domainTree,
   },
@@ -529,7 +529,7 @@ it('should keep the selected node type and drop the other class', async () => {
   await expand(user, 'account');
   await expand(user, 'AccountCredentials');
   expect(screen.getByText('register')).toBeTruthy();
-  const filtered = calls.filter((call) => call.operation === 'return_nodes').at(-1);
+  const filtered = calls.filter((call) => call.operation === 'explorer_trees').at(-1);
   expect(filtered?.body.filter).toMatchObject({ types: ['Operation'] });
 });
 
@@ -663,7 +663,7 @@ it('should send violations when the switch is turned on', async () => {
   await openFolder(user);
   await user.click(screen.getByRole('button', { name: 'Violations' }));
   await waitFor(() =>
-    expect(calls.some((call) => call.operation === 'return_nodes' && (call.body.filter as { violations: boolean }).violations)).toBe(true),
+    expect(calls.some((call) => call.operation === 'explorer_trees' && (call.body.filter as { violations: boolean }).violations)).toBe(true),
   );
 });
 
@@ -905,10 +905,10 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
   if (operation === 'filter_choices') {
     return constrained((body.node_types as string[] | undefined) ?? []);
   }
-  if (operation === 'return_nodes') {
+  if (operation === 'explorer_trees') {
     const picked = body.filter as { practices?: string[]; types?: string[]; violations?: boolean };
     shownViolations = Boolean(picked.violations);
-    return rowsFor(picked.practices ?? [], picked.types ?? [], shownViolations);
+    return treesFor(picked.practices ?? [], picked.types ?? [], shownViolations);
   }
   if (operation === 'source') {
     const nodeId = String(body.node_id);
@@ -1029,6 +1029,29 @@ function violationTree(node: (typeof engineeringTree)): (typeof engineeringTree)
     return children.length > 0 ? { ...node, children } : null;
   }
   return { ...node, children };
+}
+
+type Entry = { type: string; name: string; node_id: string; children: Entry[] };
+
+// Graph.explorer_trees as Python answers it: each named practice's tree, every practice's when none is named, keeping
+// its root, the nodes the filter matches with their rules, and the nodes on the way to them.
+function treesFor(practices: string[], types: string[], violations: boolean): Entry[] {
+  const matched = new Set(rowsFor(practices, types, violations).map((row) => row.node_id));
+  const loaded = inventoryBundle().practices as Record<string, { tree: Entry | null }>;
+  const shown = practices.length ? practices : Object.keys(loaded);
+  return shown.map((name) => loaded[name]?.tree && keptBy(loaded[name].tree!, matched)).filter((tree): tree is Entry => Boolean(tree));
+}
+
+function keptBy(node: Entry, matched: Set<string>): Entry | null {
+  const rules = node.children.filter((child) => child.type === 'rules');
+  const entries = node.children
+    .filter((child) => child.type !== 'rules')
+    .map((child) => keptBy(child, matched))
+    .filter((child): child is Entry => child !== null);
+  if (node.type === 'Practice' || matched.has(node.node_id)) {
+    return { ...node, children: [...entries, ...rules] };
+  }
+  return entries.length > 0 ? { ...node, children: entries } : null;
 }
 
 function rowsFor(practices: string[], types: string[], violations = false) {

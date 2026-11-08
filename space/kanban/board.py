@@ -188,6 +188,13 @@ class Board:
 
     @property
     @data_field(reference=True)
+    def open_tickets(self) -> list[Ticket]:
+        """The tickets a person can switch to, in the board's column order: each in a stage, so neither a backlog item
+        nor a closed ticket. Sent by their names, since their columns send them."""
+        return [card for column in self._columns if isinstance(column, Stage) for card in column.cards]
+
+    @property
+    @data_field(reference=True)
     def active(self) -> Ticket | None:
         """The ticket of the session saved as open; none while main is, since main is not on the board. Sent by its
         name, since its column sends the ticket."""
