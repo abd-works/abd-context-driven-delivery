@@ -2,20 +2,24 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from harness.agent_tools.agent_tools import agent_tool, agent_toolset
+from cdd_guidance.practices.bdd.model.bdd_model import BddModel
+from cdd_guidance.practices.bdd.model.code_spec_model import PythonBddModel, TypeScriptBddModel
+from cdd_guidance.practices.bdd.model.graph_bdd_model import GraphBddModel
+from cdd_guidance.practices.bdd.model.graph_reading import BddGraphReading
+from cdd_guidance.practices.bdd.model.nodes import BehaviorNode
+from cdd_guidance.practices.bdd.model.sketch.sketch_bdd_model import SketchBddModel
+from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
-
-if TYPE_CHECKING:
-    from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
 
 @agent_toolset
-class Bdd(PracticeGuidance):
+class Bdd(BddGraphReading, PracticeGuidance):
     """# Instructions"""
 
-    sketch_titles = ("bdd:", "behavior driven development:")
+    # Its section of a sketch is the one its sketch format reads, held as that one lens.
+    sketch_lens = SketchBddModel.lens
+    sketch_titles = sketch_lens.titles
+    model_classes = (BddModel, BehaviorNode)
     SHORT_NAME = "BDD"
     COLOUR = "#00B894"
 
@@ -40,39 +44,15 @@ class Bdd(PracticeGuidance):
             fidelity=fidelity,
             default_workspace_folder="src",
             formats={
-                "sketch": ("cdd_guidance.practices.bdd.model.sketch.sketch_bdd_model", "SketchBddModel"),
-                "markdown": ("cdd_guidance.practices.bdd.model.bdd_model", "MarkdownBddModel"),
-                "python": ("cdd_guidance.practices.bdd.model.code_spec_model", "PythonBddModel"),
-                "typescript": ("cdd_guidance.practices.bdd.model.code_spec_model", "TypeScriptBddModel"),
+                "sketch": SketchBddModel,
+                # The describe tree as indented lines: the canonical model spells it itself.
+                "markdown": BddModel,
+                "python": PythonBddModel,
+                "typescript": TypeScriptBddModel,
                 # A saved knowledge graph, read only: rendering from it draws the realization fidelity.
-                "graph": ("cdd_guidance.practices.bdd.model.graph_bdd_model", "GraphBddModel"),
+                "graph": GraphBddModel,
             },
         )
 
     # In the knowledge graph: BDD's describe trees, linked to the Clean Engineering members each observation drives.
     node_types = ("Spec", "Description", "Context", "Observation")
-
-    def read_working_copy(self) -> None:
-        """Each spec file's language model reads its describe tree, whose spec, descriptions, contexts, and observations
-        are added to its graph as they are."""
-        from cdd_guidance.practices.bdd.model.graph_reading import read_specs
-
-        read_specs(self)
-
-    def link_to_other_practices(self) -> None:
-        """Link each observation to the operations and properties of the code it drives, when the graph reads Clean
-        Engineering too."""
-        from cdd_guidance.practices.bdd.model.graph_reading import ObservationLinks
-
-        clean = self.clean_engineering_practice
-        if clean is not None and clean in self.graph.practices.values():
-            ObservationLinks(self, clean).link()
-
-    @property
-    def clean_engineering_practice(self) -> CleanEngineering | None:
-        """The Clean Engineering practice the graph this practice is read in holds: the code each observation drives."""
-        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-
-        held = self.graph.every_practice.values() if self.graph is not None else ()
-        return next((practice for practice in held if isinstance(practice, CleanEngineering)), None)
-

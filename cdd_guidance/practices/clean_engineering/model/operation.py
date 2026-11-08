@@ -18,13 +18,17 @@ def operation_body_fingerprint(body: str) -> str:
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from harness.graph.model_node import ModelChildren
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass, OoadNode
+from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
     MIN_DELEGATION_LINES,
     SourceText,
     names_call_io_and_domain,
 )
 from cdd_guidance.practices.clean_engineering.model.property import InvariantHolder
+from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
+
+# `save(cart: Cart, note: str = ""): Receipt` as a model line writes an operation.
+_SIGNATURE = re.compile(r"^(_?\w+)\s*\((.*)\)\s*(?::\s*(.+))?$")
 
 
 class Parameter(OoadNode):
@@ -148,6 +152,20 @@ class Operation(InvariantHolder, OoadNode):
         if parameters:
             self._take_parameters(parameters)
 
+    @classmethod
+    def from_signature(cls, text: str) -> "Operation | None":
+        """The operation a model line such as `save(cart: Cart, note: str = ""): Receipt` writes, each parameter with
+        its type and without its default; none for a line that is no operation. Every format that writes members as
+        such lines reads them here."""
+        match = _SIGNATURE.match(text.strip())
+        if match is None:
+            return None
+        operation = cls(match.group(1), return_type=(match.group(3) or "").strip())
+        for order, part in enumerate(split_top_level(match.group(2) or ""), start=1):
+            name, _, hint = part.partition(":")
+            operation.parameters.append(Parameter(name.strip(), order, hint.split("=")[0].strip()))
+        return operation
+
     def _link(self, child, kind: str) -> None:
         """A parameter it takes keeps it as the operation that declares it."""
         super()._link(child, kind)
@@ -157,7 +175,8 @@ class Operation(InvariantHolder, OoadNode):
     @property
     def owner(self) -> str:
         """The name of the class that declares this operation; ``_module`` for a module function; empty before a class holds it."""
-        return self.parent.name if isinstance(self.parent, OoadClass) else ""
+        parent = self.parent
+        return parent.name if isinstance(parent, OoadNode) and parent.declares(self) else ""
 
     @property
     def parameters(self) -> List[Parameter]:
@@ -297,19 +316,6 @@ class Operation(InvariantHolder, OoadNode):
         self.narrative_comment_lines = copied.narrative_comment_lines
         self.peer_private_access = copied.peer_private_access
 
-    def load_parameters(self) -> None:
-        while self.has_more_parameter():
-            self.parameters.append(self.load_next_parameter())
-
-    def has_more_parameter(self) -> bool:
-        return False
-
-    def load_next_parameter(self) -> Parameter:
-        return self.get_next_parameter_from_file()
-
-    def get_next_parameter_from_file(self) -> Parameter:
-        raise NotImplementedError(f"{type(self).__name__} must implement get_next_parameter_from_file")
-
     def load_parameter(self, source: Parameter) -> Parameter:
         return type(self.parameters[0])(source.name, source.sequential_order, source.type_hint) if self.parameters else Parameter(
             source.name, source.sequential_order, source.type_hint
@@ -319,16 +325,6 @@ class Operation(InvariantHolder, OoadNode):
         assert isinstance(source, Operation)
         if source.parameters:
             self._parameters.reconcile(source.parameters, self.load_parameter)
-
-    def model_member(self, file: str) -> dict:
-        """This operation as the graph saves it for the model document at file."""
-        return {
-            "kind": "Operation",
-            "interactions": list(self.callees),
-            "model_parameters": [[parameter.name, (parameter.type_hint or "").strip()] for parameter in self.parameters],
-            "model_returns": (self.return_type or "").strip(),
-            "model_file": file,
-        }
 
 
 def _span_fingerprint(source_span: str) -> str:

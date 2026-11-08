@@ -5,8 +5,8 @@ import re
 
 from harness.graph.violation import Violation
 
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import (
-    Box,
     DrawioPage,
 )
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
@@ -38,8 +38,8 @@ class LeafNodesNotInHorizontalRowScanner(DrawioScanner):
         return violations
 
 
-def _sized_vertex_boxes(page: DrawioPage) -> dict[str, Box]:
-    boxes: dict[str, Box] = {}
+def _sized_vertex_boxes(page: DrawioPage) -> dict[str, Geometry]:
+    boxes: dict[str, Geometry] = {}
     for cell in page.cells:
         geometry = cell.find("mxGeometry")
         if cell.get("vertex") != "1" or geometry is None or geometry.get("width") is None or geometry.get("height") is None:
@@ -50,7 +50,7 @@ def _sized_vertex_boxes(page: DrawioPage) -> dict[str, Box]:
     return boxes
 
 
-def _lines_of(leaf_ids: set[str], boxes: dict[str, Box]) -> list[list[str]]:
+def _lines_of(leaf_ids: set[str], boxes: dict[str, Geometry]) -> list[list[str]]:
     """The leaves grouped by roughly equal height on the page."""
     lines: dict[int, list[str]] = {}
     for leaf_id in leaf_ids:
@@ -59,7 +59,7 @@ def _lines_of(leaf_ids: set[str], boxes: dict[str, Box]) -> list[list[str]]:
     return list(lines.values())
 
 
-def _wide_line_message(hub_name: str, members: list[str], boxes: dict[str, Box]) -> str | None:
+def _wide_line_message(hub_name: str, members: list[str], boxes: dict[str, Geometry]) -> str | None:
     if len(members) < MIN_ROW_SIZE:
         return None
     y_values = [boxes[member][1] for member in members]

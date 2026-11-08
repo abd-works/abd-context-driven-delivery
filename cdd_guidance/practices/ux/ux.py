@@ -7,6 +7,8 @@ from typing import Any
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 
+from cdd_guidance.practices.ux.model.ux_node import UxNode
+
 
 class NoJavascriptPractice(ValueError):
     """ensure_javascript was asked for JavaScript from a practice that does not write the JavaScript a mockup imports."""
@@ -22,6 +24,7 @@ class Ux(PracticeGuidance):
     """# Instructions"""
 
     sketch_titles = ("ux:", "user experience:")
+    model_classes = (UxNode,)
     SHORT_NAME = "UX"
     COLOUR = "#E84393"
 

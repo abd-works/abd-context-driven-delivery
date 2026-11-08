@@ -8,7 +8,8 @@ from expects import be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from cdd_guidance.practices.agent_bdd.agent_bdd_common import AgentResult
-from cdd_guidance.practices.agent_bdd.agent_block import AgentBlock, agent
+from cdd_guidance.practices.agent_bdd.agent import agent
+from cdd_guidance.practices.agent_bdd.agent_block import AgentBlock
 from cdd_guidance.practices.agent_bdd.agent_chat_bdd import ChatAgentBlock
 
 

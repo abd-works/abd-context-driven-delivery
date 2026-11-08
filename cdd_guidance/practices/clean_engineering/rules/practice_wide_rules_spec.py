@@ -14,12 +14,11 @@ from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
     assert_files_rule_pair,
     ce_rule_by_slug,
     practice_from_files,
-    violations_for_rule,
 )
 
 
 def _hits(slug: str, files: dict[str, str]) -> list[str]:
-    return violations_for_rule(ce_rule_by_slug(slug), *practice_from_files(files))
+    return practice_from_files(files).hits(ce_rule_by_slug(slug))
 
 
 def _module(folder: str, files: dict[str, str]) -> dict[str, str]:

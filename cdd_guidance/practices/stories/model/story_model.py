@@ -93,12 +93,6 @@ class StoryNode(ModelNode, ABC):
         re.IGNORECASE,
     )
 
-    @classmethod
-    def practice_kind(cls) -> type:
-        from cdd_guidance.practices.stories.stories import Stories
-
-        return Stories
-
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None):
         super().__init__(name, sequential_order, graph)
         # Shaping outline sizing (e.g. "approx 2-3 more stories (...)").

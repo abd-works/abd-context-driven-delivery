@@ -7,19 +7,16 @@ It has no partition, grill, sketch, or fidelities of its own; CleanEngineering c
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
+from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
-
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import (
     DrawIOCleanEngineeringModel,
 )
-
-if TYPE_CHECKING:
-    from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
 
 
 @agent_toolset
@@ -30,24 +27,15 @@ class Drawio:
     validate/scan layout rules → repair (sub-agent) on definitive failures.
     """
 
-    def __init__(self, practice: CleanEngineering | None = None) -> None:
-        # The Clean Engineering practice whose formats read the source a diagram is drawn from: the practice that
-        # composes this toolset, or one made for it when the installer or the MCP host makes the toolset on its own.
-        self._practice = practice
-        self.source_format = "markdown"
+    def __init__(self, source: CleanEngineeringModel | None = None) -> None:
+        # The class model the source a diagram is drawn from is read with: the Clean Engineering practice's markdown
+        # format when the practice composes this toolset, else a markdown model of its own, when the installer or the
+        # MCP host makes the toolset on its own. It never needs the practice itself.
+        self.source = source if source is not None else MarkdownCleanEngineeringModel()
         # The one Draw.io model this toolset writes; its `previous` and `keep_positioning` are the layout policy.
         self.channel = DrawIOCleanEngineeringModel()
         self.scan_root = None
         self.rule = None
-
-    @property
-    def practice(self) -> CleanEngineering:
-        """The Clean Engineering practice this toolset reads sources through, made once when no practice composed it."""
-        if self._practice is None:
-            from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-
-            self._practice = CleanEngineering()
-        return self._practice
 
     @property
     def module_dir(self) -> Path:
@@ -72,7 +60,7 @@ class Drawio:
         classes keep their positions, existing relationships keep their routing,
         and only new classes/relationships are laid out. Returns the written path.
         """
-        model = self._parse_source(content)
+        model = self.source.parse(content)
         out = Path(path)
         if self.channel.keep_positioning and not self.channel.previous and out.exists():
             self.channel.previous = out.read_text(encoding="utf-8")
@@ -80,10 +68,6 @@ class Drawio:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(rendered, encoding="utf-8")
         return str(out.resolve())
-
-    def _parse_source(self, content: str):
-        """The class model content describes, read in source_format by the practice's own format."""
-        return self.practice.model_in(self.source_format, content)
 
     @agent_tool
     def scan(self, paths: list[str]) -> str:

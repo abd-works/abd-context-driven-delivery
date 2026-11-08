@@ -42,7 +42,6 @@ from harness.agent_tools._examples.super_delegation.super_delegation_demo import
     ExplicitSuperChild,
     SuperBase,
 )
-from cdd_guidance.practices.agent_bdd.yaml_fence import load_fenced
 from harness.agent_tools.agent_tools import AgentToolSet, ToolsetMembers, ToolsetReference, agent_tool as _tool, tool_subject, tools, instructions
 
 Car = ToolsetReference("cdd_guidance.practices._examples.car.car:Car").toolset_class

@@ -65,23 +65,12 @@ class BehaviorNode(ModelNode):
 
     graph_facts = ("expect_count", "has_implementation", "private_probe", "setup_reach")
 
-    @classmethod
-    def practice_kind(cls) -> type:
-        from cdd_guidance.practices.bdd.bdd import Bdd
-
-        return Bdd
-
     def __init__(self, name: str, sequential_order: int = 1, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
         self.line = 0
         self.end_line = 0
         self.written: Optional[WrittenBlock] = None
         self.setup = CodeBody()
-
-    def take_code_from(self, source: "BehaviorNode") -> None:
-        """Keep the code the source was read with, so a copy in another format can still write it back."""
-        self.written = source.written
-        self.setup = source.setup
 
     def load_span_facts(self, span: str) -> None:
         """Fill the facts this node's own source lines carry, and what its setup reaches: its lines after its own
@@ -97,9 +86,8 @@ class BehaviorNode(ModelNode):
         return [*getattr(self, "contexts", []), *getattr(self, "observations", [])]
 
 
-class Description(BehaviorNode):
-    _semantic_type_name = "Description"
-    _belongs = {("Context", "Description"), ("Observation", "Description"), ("Description", "Spec")}
+class DescribeBlock(BehaviorNode):
+    """A describe or a context: a block that holds contexts and observations, each added through it."""
 
     def __init__(self, name: str, sequential_order: int = 1) -> None:
         super().__init__(name=name, sequential_order=sequential_order)
@@ -107,33 +95,26 @@ class Description(BehaviorNode):
         # Spec code often puts `it` straight under the outermost describe.
         self.observations = ModelChildren(self, "observations")
 
-    def clone(self) -> "Description":
-        cloned = type(self)(self.name, self.sequential_order)
-        cloned.take_code_from(self)
-        for context in self.contexts:
-            cloned.contexts.append(context.clone())
-        for observation in self.observations:
-            cloned.observations.append(observation.clone())
-        return cloned
+    def add_child(self, kind: str, name: str, order: int | None = None) -> "Context | Observation":
+        """A new context (kind ``context``) or observation (kind ``it``) named name, added under this block. order is
+        its place among this block's children as its file has them; by default it comes after the others of its kind."""
+        if kind == "it":
+            observation = Observation(name, order or len(self.observations) + 1)
+            self.observations.append(observation)
+            return observation
+        context = Context(name, order or len(self.contexts) + 1)
+        self.contexts.append(context)
+        return context
 
 
-class Context(BehaviorNode):
+class Description(DescribeBlock):
+    _semantic_type_name = "Description"
+    _belongs = {("Context", "Description"), ("Observation", "Description"), ("Description", "Spec")}
+
+
+class Context(DescribeBlock):
     _semantic_type_name = "Context"
     _belongs = {("Observation", "Context"), ("Context", "Context"), ("Context", "Description")}
-
-    def __init__(self, name: str, sequential_order: int = 1) -> None:
-        super().__init__(name=name, sequential_order=sequential_order)
-        self.observations = ModelChildren(self, "observations")
-        self.contexts = ModelChildren(self, "contexts")
-
-    def clone(self) -> "Context":
-        cloned = type(self)(self.name, self.sequential_order)
-        cloned.take_code_from(self)
-        for observation in self.observations:
-            cloned.observations.append(observation.clone())
-        for context in self.contexts:
-            cloned.contexts.append(context.clone())
-        return cloned
 
 
 class Observation(BehaviorNode):
@@ -146,18 +127,7 @@ class Observation(BehaviorNode):
         self.surface_lines: List[str] = []
         self.body = CodeBody()
 
-    def take_code_from(self, source: "Observation") -> None:
-        super().take_code_from(source)
-        self.body = source.body
-
     def load_span_facts(self, span: str) -> None:
         """An observation also keeps what its whole span reaches, which its realization starts from."""
         super().load_span_facts(span)
         self.reach = reach_of(span)
-
-    def clone(self) -> "Observation":
-        cloned = type(self)(self.name, self.sequential_order)
-        cloned.take_code_from(self)
-        cloned.call_graph = CallGraph(self.call_graph)
-        cloned.surface_lines = list(self.surface_lines)
-        return cloned

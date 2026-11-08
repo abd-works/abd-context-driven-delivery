@@ -9,4 +9,4 @@ The spec helpers in `spec_helpers.py` — such as `invoke_toolset`, `expect_ok_a
 
 ## Constraint
 
-Take every step on the block `with agent(...) as run:` yields, so it acts on that spec's agent session and project. Load the agent's secrets and import paths when `agent(...)` opens, never on import, so the MCP host that imports the practice keeps its own environment. Never mock the harness or the agent's output. Import `agent` from `agent_block`, never the CLI or chat implementation directly. Use the spec helpers instead of copying request and assertion code into each spec.
+Take every step on the block `with agent(...) as run:` yields, so it acts on that spec's agent session and project. Load the agent's secrets and import paths when `agent(...)` opens, never on import, so the MCP host that imports the practice keeps its own environment. Never mock the harness or the agent's output. Import `agent` from `agent.py`, never the CLI or chat implementation directly. Use the spec helpers instead of copying request and assertion code into each spec.

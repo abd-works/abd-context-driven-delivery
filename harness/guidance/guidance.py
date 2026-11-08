@@ -21,6 +21,7 @@ from harness.guidance.schema import Schema
 from harness.guidance.sketch_lens import SketchLens
 from harness.guidance.stages import STAGES, ApproachStage
 from harness.agent_tools.agent_tools import (
+    ToolsetReference,
     collect,
     agent_instructions,
     agent_tool,
@@ -90,8 +91,7 @@ class Guidance:
 
     @property
     def registration_name(self) -> str:
-        typ = type(self)
-        return f"{typ.__module__}:{typ.__name__}"
+        return ToolsetReference.from_class(type(self)).text
 
     @functools.cached_property
     def _own_name(self) -> Name:
@@ -281,10 +281,17 @@ class PracticeGuidance(Guidance):
     """Whether scoped markdown shows every fidelity's block even when one is current, as DDD's does; otherwise it shows
     only the current fidelity's."""
 
+    model_classes: tuple[type, ...] = ()
+    """The model object classes (harness/graph's *ModelNode* subclasses) whose objects are this practice's graph nodes:
+    its model's base classes, and any subclass that belongs to this practice though its base belongs to another. Making
+    the practice class registers it on each, so a model object finds its practice without importing it."""
+
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         if cls.sketch_lens.titles != cls.sketch_titles:
             cls.sketch_lens = SketchLens(cls.sketch_titles)
+        for model_class in cls.__dict__.get("model_classes", ()):
+            model_class.practice_class = cls
 
     def __init__(
         self,
@@ -434,10 +441,6 @@ class PracticeGuidance(Guidance):
         if self.graph is not None:
             merged.update(self.graph.overlay_checks_of(self))
         return merged
-
-    def language_checks(self, language: str) -> dict[str, Any]:
-        """The graph rules this practice checks only on nodes read from a file in ``language``, such as ``drawio``."""
-        return {}
 
     @property
     @data_field
@@ -682,6 +685,12 @@ class PracticeGuidance(Guidance):
             if suffix in getattr(adapter, "suffixes", ()):
                 return adapter()
         raise ValueError(f"No {type(self).__name__} format reads {file.name}")
+
+    @property
+    def readable_suffixes(self) -> frozenset[str]:
+        """Every file extension one of this practice's formats reads, such as ``.py`` and ``.ts``: the files its graph
+        reading reads, the same table ``format_for`` picks a format from."""
+        return frozenset(suffix for name in self.formats for suffix in getattr(self._format_adapter(name), "suffixes", ()))
 
     def read_paths(self, paths: list[str] | str, source: str | None = None) -> Any:
         """What render converts from the files at paths: their text, one after another, read from the project of the

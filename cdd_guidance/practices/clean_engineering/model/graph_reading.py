@@ -1,6 +1,7 @@
 """How Clean Engineering takes part in the graph: it reads each source file with the class model of its language, from
 its own formats, and adds the folders, classes, properties, operations, and parameters it parsed to its graph as nodes;
-and it keeps the members its model documents describe on the practice's root."""
+and it keeps the class models its model documents describe, so a realization can follow an interaction the model gives
+a member."""
 
 from __future__ import annotations
 
@@ -8,27 +9,45 @@ import os
 import re
 from pathlib import Path
 
-from harness.graph.graph import Graph, Node, Source
+from harness.graph.graph import Graph, Node
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import scanned_files, skips_folder
 
-CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py"}
+from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, UnreadableSource
+from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.rules_shared.typed_and_comments import is_test_code
+
 _CLASS_NAMES = re.compile(r"\bclass\s+(\w+)")
-# What the operation rules measure on a body; a getter's Property node records them for its getter.
-_GETTER_MEASURES = ("line_count", "max_control_flow_depth", "has_bare_catch", "swallows_exceptions")
 
 
 class GraphReading:
     """Clean Engineering's operations over the graph it is read in: reading the code, then the model documents."""
 
     graph: Graph
+    # The class model each model document read describes, by the document's path from the source root.
+    _model_documents: dict[str, CleanEngineeringModel] = {}
+    # Whether the model documents have been read for the graph this practice is in.
+    _documents_read: bool = False
 
     def read_working_copy(self) -> None:
         """Read each source file with its language's class model, adding the folders, classes, properties, operations,
-        and parameters it parsed as nodes, and keep the members the model documents describe on the practice's root."""
+        and parameters it parsed as nodes, and keep the class model each model document describes."""
         with schema_sync_paused():
             self._read_code()
             self._read_model_documents()
+
+    def described_member(self, owner: str, name: str) -> Operation | Property | None:
+        """The operation or property a Clean Engineering model document describes as owner.name; none when none does.
+        A graph read back from a saved file reads the documents under its source root the first time it is asked."""
+        if not self._documents_read:
+            self._read_model_documents()
+        for model in self._model_documents.values():
+            found = model.described_member(owner, name)
+            if found is not None:
+                return found
+        return None
 
     ## the code
 
@@ -38,8 +57,8 @@ class GraphReading:
 
     def _read_code(self) -> None:
         self.graph.report_progress("clean_engineering · folders")
-        folders = _code_folders(self._source_root, self.graph.scope_folders())
-        files = self.graph.source_files(self._source_root, CODE_SUFFIXES)
+        folders = self._code_folders(self.graph.scope_folders())
+        files = self.graph.source_files(self._source_root, self.readable_suffixes)
         modules = self._parsed_modules(files)
         self._class_names = {cls.name for module in modules.values() for cls in module.classes}
         self._class_names |= self._class_names_in(self._unparsed_declaring_files(files))
@@ -59,8 +78,6 @@ class GraphReading:
     def _parsed_modules(self, files: list[Path]) -> dict:
         """Each source file's module, read by its language's class model, with its source facts loaded. A file that does
         not parse is kept in ``_unreadable`` with the reason, so the source-parses rule reports it."""
-        from cdd_guidance.practices.clean_engineering.model.base_class_model import UnreadableSource
-
         self._unreadable: dict[Path, str] = {}
         modules: dict = {}
         for index, file in enumerate(files, start=1):
@@ -88,7 +105,7 @@ class GraphReading:
         if self.graph.edited_files() is None:
             return []
         parsed = set(files)
-        return [path for path in scanned_files(self._source_root, CODE_SUFFIXES) if path not in parsed]
+        return [path for path in scanned_files(self._source_root, self.readable_suffixes) if path not in parsed]
 
     def _class_names_in(self, files: list[Path]) -> set[str]:
         names = set()
@@ -103,10 +120,8 @@ class GraphReading:
     def _record_imported_names(self, folder: Node, relative: str, module) -> None:
         """The class names a production file imports, kept on its folder for the deep-module rule; a refresh keeps the
         names the folder's other files import."""
-        from cdd_guidance.practices.clean_engineering.model.rules_shared.typed_and_comments import is_test_code
-
         if not is_test_code(relative):
-            _merge_fact(folder, "imported_names", module.imported_names)
+            folder.merge_fact("imported_names", module.imported_names)
 
     def _record_unreadable(self, folders: dict, nodes: dict) -> None:
         """Each file that did not parse, on the module that holds it, so validate reports it instead of skipping it.
@@ -137,26 +152,22 @@ class GraphReading:
         node = self.graph.add(self, cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", relative, cls.line, cls.end_line)
         self.graph.link("owns", folder, node)
         self.graph.link("belongsTo", node, folder, "relationship")
-        for prop in _properties_of(cls):
+        for prop in cls.public_properties:
             self._property(relative, node, prop)
         for operation in cls.operations:
             if not operation.is_property:
                 self._operation(relative, node, operation)
 
-    def _property(self, relative: str, cls: Node, prop) -> None:
-        """A field the class declares, or a getter, which is a property read through an operation."""
+    def _property(self, relative: str, cls: Node, prop: Operation | Property) -> None:
+        """A field the class declares, or a getter: the operation that reads it, which is the property's node."""
         prop_id = f"clean_engineering:Property:{relative}:{prop.name}:{cls.name}"
         line = prop.line or 1
-        if prop.type == "Property":
-            node = self.graph.add(self, prop, prop_id, relative, line, line)
+        if isinstance(prop, Property):
             hint = prop.type_hint or ""
         else:
-            node = self.graph.add_named(self, "Property", prop_id, prop.name, Source(relative, line, line, str(self._source_root)))
+            prop.type = "Property"
             hint = prop.name[:1].upper() + prop.name[1:]
-            for fact in _GETTER_MEASURES:
-                node.set_fact(fact, getattr(prop, fact, None))
-        # A property found only by a getter has no parsed object to name its class, so the node does.
-        node.set_fact("owner", cls.name)
+        node = self.graph.add(self, prop, prop_id, relative, line, line)
         self.graph.link("properties", cls, node, "grouped")
         if not _names_class(hint, self._class_names):
             return
@@ -183,24 +194,57 @@ class GraphReading:
                 if other_node is not None:
                     self.graph.link("returns", node, other_node, "relationship")
 
+    def _code_folders(self, scope: list[Path] | None) -> dict:
+        """A module owns a module card (``.context/module-context.md``). Any other folder with source is a package.
+        Each is the folder's Module, made once with its folder, which holds its card. With a scope, only those folders
+        are read."""
+        root = self._source_root
+        if scope is not None:
+            found = {folder.relative_to(root).as_posix(): self._folder_module(folder, os.listdir(folder)) for folder in scope}
+            return {rel: module for rel, module in found.items() if module is not None}
+        folders: dict = {}
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [name for name in dirnames if not skips_folder(name)]
+            folder = Path(dirpath)
+            rel = folder.relative_to(root)
+            module = self._folder_module(folder, filenames) if rel != Path(".") else None
+            if module is not None:
+                folders[rel.as_posix()] = module
+        return folders
+
+    def _folder_module(self, folder: Path, filenames: list[str]) -> Module | None:
+        """The folder's Module, typed ``Module`` when it holds a module card and ``Package`` when it holds only source;
+        none for a folder with neither."""
+        has_code = any(Path(name).suffix.lower() in self.readable_suffixes for name in filenames)
+        if not has_code and not (folder / ".context").is_dir():
+            return None
+        module = Module(name=folder.name, sequential_order=1)
+        module.load_folder_facts(folder)
+        if module.has_module_context:
+            module.type = "Module"
+        elif has_code:
+            module.type = "Package"
+        else:
+            return None
+        return module
+
     def _class_named(self, name: str) -> Node | None:
         return next((node for node in self.graph.nodes_of(self, "OoadClass") if node.name == name), None)
 
     ## the model documents
 
     def _read_model_documents(self) -> None:
-        """The Clean Engineering model documents for the folders in scope, ``{folder}/.context/*-model.md``. The
-        practice's root holds every member they describe, by ``Class.member``, so a realization can follow an
-        interaction into a class the load left out without a second copy of the class among the code's nodes."""
-        described: dict = {}
+        """The Clean Engineering model documents for the folders in scope, ``{folder}/.context/*-model.md``, each kept
+        as the class model it describes, so a realization can follow an interaction into a class the load left out
+        without a second copy of the class among the code's nodes. A refresh reads only some documents, so the models
+        the others describe stay; a whole load reads them all again."""
+        if self.graph.edited_files() is None or not self._documents_read:
+            self._model_documents = {}
+        self._documents_read = True
         for file in self._model_files():
             relative = file.relative_to(self._source_root).as_posix()
             self.graph.report_progress(f"clean_engineering · model · {relative}")
-            described.update(self.model_in("markdown", file.read_text(encoding="utf-8")).described_members(relative))
-        if described:
-            # A refresh reads only some model documents, so the members the others describe stay.
-            root = self.graph.root_of(self)
-            root.set_fact("model_members", {**(root.get_fact("model_members") or {}), **described})
+            self._model_documents[relative] = MarkdownCleanEngineeringModel().parse(file.read_text(encoding="utf-8"))
 
     def _model_files(self) -> list[Path]:
         """Each scoped folder's and each of its parents' ``.context/*-model.md``, up to the root. ``.context`` is a
@@ -228,53 +272,6 @@ class GraphReading:
                     break
                 folder = folder.parent
         return folders
-
-
-def _merge_fact(node: Node, key: str, values: list) -> None:
-    """Add values to a list fact the node keeps: on its parsed object's own field, or among the facts a node read back
-    from a saved graph keeps."""
-    kept = node.get_fact(key) or []
-    merged = sorted(set(kept) | set(values))
-    if key in getattr(node, "graph_facts", ()):
-        setattr(node, key, merged)
-    else:
-        node.set_fact(key, merged)
-
-
-def _code_folders(root: Path, scope: list[Path] | None = None) -> dict:
-    """A module owns a module card (``.context/module-context.md``). Any other folder with source is a package. Each is
-    the folder's Module, made once with its folder, which holds its card. With a scope, only those folders are read."""
-    if scope is not None:
-        found = {folder.relative_to(root).as_posix(): _folder_module(folder, os.listdir(folder)) for folder in scope}
-        return {rel: module for rel, module in found.items() if module is not None}
-    folders: dict = {}
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [name for name in dirnames if not skips_folder(name)]
-        folder = Path(dirpath)
-        rel = folder.relative_to(root)
-        module = _folder_module(folder, filenames) if rel != Path(".") else None
-        if module is not None:
-            folders[rel.as_posix()] = module
-    return folders
-
-
-def _folder_module(folder: Path, filenames: list[str]):
-    """The folder's Module, typed ``Module`` when it holds a module card and ``Package`` when it holds only source; none
-    for a folder with neither."""
-    from cdd_guidance.practices.clean_engineering.model.base_class_model import Module
-
-    has_code = any(Path(name).suffix.lower() in CODE_SUFFIXES for name in filenames)
-    if not has_code and not (folder / ".context").is_dir():
-        return None
-    module = Module(name=folder.name, sequential_order=1)
-    module.load_folder_facts(folder)
-    if module.has_module_context:
-        module.type = "Module"
-    elif has_code:
-        module.type = "Package"
-    else:
-        return None
-    return module
 
 
 def _nearest(path: str, folders: dict) -> str:
@@ -306,24 +303,6 @@ def _imported_folders(targets: list[str], held: dict, own: str) -> list:
         if folder and folder != own:
             found[folder] = held[folder]
     return [found[folder] for folder in sorted(found)]
-
-
-def _properties_of(cls) -> list:
-    """The class's properties: the fields its parser read, then its getters, each once, in line order. A static field
-    belongs to the class, not to its instances, and a name starting with `_` is private."""
-    found = []
-    seen = set()
-    for prop in cls.properties:
-        if str(prop.name).startswith("_") or prop.name in seen or prop.is_static:
-            continue
-        seen.add(prop.name)
-        found.append(prop)
-    for operation in cls.operations:
-        if not operation.is_property or operation.name in seen or str(operation.name).startswith("_"):
-            continue
-        seen.add(operation.name)
-        found.append(operation)
-    return sorted(found, key=lambda member: (member.line or 1, member.name))
 
 
 def _names_class(hint: str, class_names: set[str]) -> bool:

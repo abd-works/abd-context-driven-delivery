@@ -11,6 +11,8 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+from typing import get_type_hints
+
 from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
@@ -42,7 +44,7 @@ with description("Diagnose toolset"):
             # Arrange / Act
             tool = diagnose_tool()
             # Assert
-            expect(tool.response).to(equal("str"))
+            expect(get_type_hints(tool.callable)["return"]).to(equal(str))
 
     with context("diagnose sub-agent instructions"):
         with it("describes building a feedback loop in Phase 1"):

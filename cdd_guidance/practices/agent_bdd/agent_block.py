@@ -1,12 +1,11 @@
 """The agent a spec drives inside ``with agent(...) as run:``: one block of instructs, toolset runs, and judgements.
 
-``agent(workspace, session_file)`` opens the block: the cursor-agent CLI (``agent_cli_bdd.py``) or in-chat inbox files
-(``agent_chat_bdd.py``), chosen by ``AGENT_BDD_IN_CHAT``. Both are an *AgentBlock*, which owns everything a step does
-except how the agent answers: logging, the artifact files, toolset runs in the block's workspace, and the judge's verdict.
+``agent(workspace, session_file)`` (``agent.py``) opens the block: the cursor-agent CLI (``agent_cli_bdd.py``) or
+in-chat inbox files (``agent_chat_bdd.py``). Both are an *AgentBlock*, which owns everything a step does except how the
+agent answers: logging, the artifact files, toolset runs in the block's workspace, and the judge's verdict.
 """
 from __future__ import annotations
 
-import os
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -29,8 +28,6 @@ from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     ToolsetInvoke,
     _ShellCapture,
 )
-from cdd_guidance.practices.agent_bdd.conf import AgentBddConf
-from cdd_guidance.practices.agent_bdd.yaml_fence import YamlFence
 
 
 class AgentBlock:
@@ -41,7 +38,6 @@ class AgentBlock:
     def __init__(self, workspace: Path, session_file: Path) -> None:
         self._workspace = workspace.resolve()
         self._session_file = session_file
-        self._yaml = YamlFence()
         # Reads and runs the toolset requests the prompts hold, in this block's workspace.
         self._tools_run_yaml = ToolsRunYaml(self._workspace)
         self._log = HarnessLog(self.log_name)
@@ -159,19 +155,7 @@ class AgentBlock:
     def _recorded_response(self, prefix: str, cli_output: str) -> RunResponse:
         self._write_artifact(f"{prefix}-cli-output.yaml", cli_output)
         response = RunResponse.from_cli_output(cli_output)
-        fields = {
-            "ok": response.ok,
-            "toolset": response.toolset,
-            "tool": response.tool,
-            "action": response.action,
-            "result": response.result,
-            "instructions": response.instructions,
-            "tools": response.tools,
-            "arguments": response.arguments,
-            "resources": response.resources,
-        }
-        self._write_artifact(f"{prefix}-ai-response.yaml",
-                             self._yaml.dump_manifest({key: value for key, value in fields.items() if value is not None}))
+        self._write_artifact(f"{prefix}-ai-response.yaml", self._tools_run_yaml.manifest(response))
         return response
 
     def _echo(self, heading: str, text: str) -> None:
@@ -189,21 +173,3 @@ class AgentBlock:
         self._instruct_count += 1
         return f"instruct-{self._instruct_count:03d}-{label}"
 
-
-@contextmanager
-def agent(workspace: Path, session_file: Path, *, in_chat: bool | None = None) -> Iterator[AgentBlock]:
-    """The agent block for the steps inside: in chat when in_chat is set, or when ``AGENT_BDD_IN_CHAT`` says so, else
-    the cursor-agent CLI. The agent's secrets and import paths load here, when a spec runs an agent, so importing the
-    practice leaves the MCP host's environment alone."""
-    AgentBddConf().configure()
-    chosen = _in_chat_from_env() if in_chat is None else in_chat
-    if chosen:
-        from cdd_guidance.practices.agent_bdd.agent_chat_bdd import ChatAgentBlock as block_type
-    else:
-        from cdd_guidance.practices.agent_bdd.agent_cli_bdd import CliAgentBlock as block_type
-    with block_type.opened(workspace, session_file) as block:
-        yield block
-
-
-def _in_chat_from_env() -> bool:
-    return os.environ.get("AGENT_BDD_IN_CHAT", "").strip().lower() in {"1", "true", "yes"}

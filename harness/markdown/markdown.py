@@ -12,7 +12,7 @@ from typing import Any, Callable, Literal, TypeVar, get_args, get_origin, get_ty
 from harness.annotations.name import Name
 from harness.annotations.annotation import annotation_kinds, hosted_only
 from harness.markdown.format import TEMPLATE_FOLDER_NAMES, Format
-from harness.markdown.front_matter import FrontMatter
+from harness.markdown.front_matter import FrontMatter, SettingLines
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
@@ -596,17 +596,7 @@ class YamlFields:
             loaded = yaml.safe_load(body)
             if isinstance(loaded, dict):
                 return loaded
-        return self.pairs(body)
-
-    def pairs(self, body: str) -> dict[str, str]:
-        fields: dict[str, str] = {}
-        for raw in body.splitlines():
-            line = raw.strip()
-            if not line or line.startswith("#") or ":" not in line or line.startswith("- "):
-                continue
-            key, _, value = line.partition(":")
-            fields[key.strip()] = value.strip().strip("'\"")
-        return fields
+        return SettingLines(body).fields
 
     def yaml_fields(self, text: str) -> dict[str, Any]:
         merged: dict[str, Any] = {}
@@ -705,7 +695,7 @@ class MarkdownCollection:
                 vars(owner)[fn.__name__] = result
             return result
 
-        return MarkdownProperty(fn).reading(read)
+        return OperationProperty(fn).reading(read)
 
     def markdown_collection(
         self, fn: _F | str | None = None, *, label: str | None = None
@@ -838,7 +828,7 @@ class Markdown:
             section = Markdown.from_label(owner, label)
             return section.read_into(section.return_type_of(fn, str))
 
-        return MarkdownProperty(fn).reading(read)
+        return OperationProperty(fn).reading(read)
 
     def return_type_of(self, fn: Callable[..., Any], default: Any) -> Any:
         """The type fn's annotations say it returns; default when they name none."""
@@ -849,9 +839,10 @@ class Markdown:
         return hints.get("return", default)
 
 
-class MarkdownProperty:
-    """A property made from an operation whose body is empty: its value is read from markdown, and it carries the
-    operation's name, docstring, annotations, and copied annotations, so it installs the way the operation would."""
+class OperationProperty:
+    """A property made from an operation whose body is empty, such as a ``@markdown`` read or a ``@collect`` across a
+    collection: it carries the operation's name, docstring, annotations, and copied annotations, so it installs the way
+    the operation would. Every property that stands in for an operation is built here."""
 
     def __init__(self, operation: Callable[..., Any]) -> None:
         self._operation = operation

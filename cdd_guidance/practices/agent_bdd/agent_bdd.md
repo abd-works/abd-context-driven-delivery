@@ -12,7 +12,7 @@ Read `practices/bdd/bdd.md` § Overview — the underlying test discipline appli
 
 ### Harness
 
-- **`same-harness-interface`** — `agent(workspace, session_file)` in `practices/agent_bdd/agent_block.py` opens the cursor-agent CLI block (`agent_cli_bdd.py`) or the in-chat inbox block (`agent_chat_bdd.py`), chosen by `AGENT_BDD_IN_CHAT`. Both are an *AgentBlock* with the same steps, so specs never import either implementation directly.
+- **`same-harness-interface`** — `agent(workspace, session_file)` in `practices/agent_bdd/agent.py` opens the cursor-agent CLI block (`agent_cli_bdd.py`) or the in-chat inbox block (`agent_chat_bdd.py`), chosen by `AGENT_BDD_IN_CHAT`. Both are an *AgentBlock* with the same steps, so specs never import either implementation directly.
 - **`steps-on-the-block`** — Take every step on the block the `with` yields: `with agent(...) as run:`, then `run.instruct`, `run.instruct_use_tool`, `run.run_toolset`, `run.ai_judge`, `run.read_workspace`, `run.generate_and_judge`. The block holds the agent session and the workspace its toolset runs work in, so each step acts on the session and project this spec opened, never on whichever one the process opened last.
 
 ### instruct vs instruct_use_tool
@@ -55,7 +55,7 @@ Whenever an agent-harness spec (`agent()`, `run.instruct`, `run.instruct_use_too
 
 If the live-agent layer is not needed, follow `practices/bdd/bdd-development.mdc`.
 
-- **`same-harness-interface`** — `agent(workspace, session_file)` in `practices/agent_bdd/agent_block.py` opens the CLI or the in-chat block, chosen by `AGENT_BDD_IN_CHAT`. Specs never import either implementation directly.
+- **`same-harness-interface`** — `agent(workspace, session_file)` in `practices/agent_bdd/agent.py` opens the CLI or the in-chat block, chosen by `AGENT_BDD_IN_CHAT`. Specs never import either implementation directly.
 - **`steps-on-the-block`** — Take every step on the block `with agent(...) as run:` yields, so it acts on this spec's agent session and project.
 - **`instruct-for-setup`** — Use `run.instruct(prompt)` for file reads, priming, and natural-language steps.
 - **`instruct-run-for-toolset`** — Use `run.instruct_use_tool(prompt)` when the agent must return a fenced YAML CLI response.
@@ -76,7 +76,7 @@ If the live-agent layer is not needed, follow `practices/bdd/bdd-development.mdc
 # Generate
 
 1. Read `practices/bdd/bdd.md` § Overview — the underlying test discipline applies here too.
-2. Read § Overview above and the harness surface: `practices/agent_bdd/agent_block.py` (`agent` and the *AgentBlock* it yields), `practices/agent_bdd/agent_bdd_common.py` (types `AgentResult`, `RunResponse`, `JudgeResult`).
+2. Read § Overview above and the harness surface: `practices/agent_bdd/agent.py` (`agent`) and `practices/agent_bdd/agent_block.py` (the *AgentBlock* it yields), `practices/agent_bdd/agent_bdd_common.py` (types `AgentResult`, `RunResponse`, `JudgeResult`).
 3. Scaffold from `templates/agent_bdd-templates.py`:
    - `with description(...)` → `with context(...)` → `with it(...)` → `with agent(...) as run:`.
    - Assert immediately after each step — `expect(response.ok).to(be_true)` right after `run.instruct_use_tool`, `run.ai_judge(...)` right after the final `run.instruct`. No `self.*`, no `before.all`.

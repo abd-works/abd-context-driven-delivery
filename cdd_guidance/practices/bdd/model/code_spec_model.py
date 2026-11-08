@@ -7,11 +7,11 @@ import re
 import textwrap
 from typing import Callable, List, Optional, Tuple, Union
 
-from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, TYPESCRIPT, CodeBody, CodeLanguage, WrittenBlock
+from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT, PYTHON, TYPESCRIPT, BraceCall, CodeBody, CodeLanguage, WrittenBlock
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
+from cdd_guidance.practices.bdd.model.spec_source import SIGNATURE
 
-_SIGNATURE = "BDD: SIGNATURE"
 _SPEC = "spec"
 _MAMBA_BLOCKS = {"description": "description", "describe": "description", "context": "context", "it": "it", "_it": "it"}
 # Playwright names its blocks through `test`: `test.describe(...)`, `test.describe.serial(...)`, and `test(...)`.
@@ -109,7 +109,7 @@ class CodeBddModel(BddModel):
         return []
 
     def marker_line(self) -> str:
-        return self.language.comment(_SIGNATURE)
+        return self.language.comment(SIGNATURE)
 
     def _read_block(self, node: Union[BddModel, BehaviorBlock], inside: Tuple[int, int], children: List[ChildBlock]) -> List[str]:
         """Read the lines inside one block: setup before the first child, each child with the lines above it,
@@ -168,7 +168,7 @@ class CodeBddModel(BddModel):
         return [self.language.comment(line) for line in lines]
 
     def _body(self, text: str) -> CodeBody:
-        marker = text.strip() in {self.marker_line(), self.language.comment(_SIGNATURE)}
+        marker = text.strip() in {self.marker_line(), self.language.comment(SIGNATURE)}
         return CodeBody("" if marker else text, self.language)
 
     def _inline(self, node: BehaviorBlock, lead: List[str], heading: List[str], inline: str) -> BehaviorBlock:
@@ -196,7 +196,7 @@ class PythonBddModel(CodeBddModel):
 
     language = PYTHON
     # The spec files this model reads.
-    suffixes = (".py",)
+    suffixes = language.suffixes
 
     def check_readable(self, text: str) -> None:
         try:
@@ -229,7 +229,7 @@ class PythonBddModel(CodeBddModel):
         return ["pass"]
 
     def marker_line(self) -> str:
-        return f"pass  {self.language.comment(_SIGNATURE)}"
+        return f"pass  {self.language.comment(SIGNATURE)}"
 
     def _child_blocks(self, statements: List[ast.stmt], parent: ParentBlock) -> List[ChildBlock]:
         return [
@@ -284,13 +284,13 @@ class TypeScriptBddModel(CodeBddModel):
 
     language = TYPESCRIPT
     # The spec files this model reads: a JavaScript spec's describe tree is written the same way.
-    suffixes = (".ts", ".tsx", ".js", ".jsx")
+    suffixes = language.suffixes + JAVASCRIPT.suffixes
 
     def parse_code(self, text: str) -> "TypeScriptBddModel":
         self._text = text
         self._lines = text.split("\n")
         blocks = [block for block in (self._block(match) for match in _SCRIPT_BLOCK.finditer(text)) if block]
-        descriptions = [block for block in self._tree(blocks) if block["kind"] == "describe"]
+        descriptions = [block for block in self._tree(blocks) if block.kind == "describe"]
         self._read_spec(self._lines, self._child_blocks(descriptions, None))
         return self
 
@@ -304,79 +304,64 @@ class TypeScriptBddModel(CodeBddModel):
     def block_close(self) -> List[str]:
         return ["});"]
 
-    def _block(self, match: re.Match) -> Optional[dict]:
-        """One describe/it/test call: kind, name, and the lines of its call, its opening brace, and its closing brace."""
-        close = self._matching(self._text.index("(", match.start()), "(", ")")
-        if close is None:
-            return None
-        arrow = self._text.find("=>", match.end(), close)
-        brace = self._text.find("{", arrow if arrow >= 0 else match.end(), close)
-        inner_end = self._matching(brace, "{", "}") if brace >= 0 else None
-        if inner_end is None:
-            return None
-        end = close + 1 if not self._text.startswith(";", close + 1) else close + 2
-        return {
-            "kind": match.group(1),
-            "name": match.group(3),
-            "span": (match.start(), end),
-            "inner": (brace + 1, inner_end),
-            "lines": tuple(self._text.count("\n", 0, index) for index in (match.start(), brace, inner_end, end - 1)),
-            "children": [],
-        }
+    def _block(self, match: re.Match) -> Optional["DescribeCall"]:
+        """One describe/it/test call, when its parentheses and its callback's braces both close."""
+        call = DescribeCall(self._text, match)
+        return call if call.is_whole else None
 
-    def _tree(self, blocks: List[dict]) -> List[dict]:
+    def _tree(self, blocks: List["DescribeCall"]) -> List["DescribeCall"]:
         """Each block under the innermost enclosing describe; a call inside an it body stays part of that body."""
-        roots: List[dict] = []
-        open_blocks: List[dict] = []
+        roots: List[DescribeCall] = []
+        open_blocks: List[DescribeCall] = []
         inside_it_until = -1
         for block in blocks:
-            if block["span"][0] < inside_it_until:
+            if block.start < inside_it_until:
                 continue
-            while open_blocks and open_blocks[-1]["inner"][1] < block["span"][0]:
+            while open_blocks and open_blocks[-1].inner_end < block.start:
                 open_blocks.pop()
-            (open_blocks[-1]["children"] if open_blocks else roots).append(block)
-            if block["kind"] in {"it", "test"}:
-                inside_it_until = block["span"][1]
+            (open_blocks[-1].children if open_blocks else roots).append(block)
+            if block.kind in {"it", "test"}:
+                inside_it_until = block.end
             else:
                 open_blocks.append(block)
         return roots
 
-    def _child_blocks(self, blocks: List[dict], parent: ParentBlock) -> List[ChildBlock]:
-        return [(block["lines"][0], block["lines"][3], self._reader(block, parent)) for block in blocks]
+    def _child_blocks(self, blocks: List["DescribeCall"], parent: ParentBlock) -> List[ChildBlock]:
+        return [(block.lines[0], block.lines[3], self._reader(block, parent)) for block in blocks]
 
-    def _reader(self, block: dict, parent: ParentBlock) -> Callable[[List[str], int], object]:
+    def _reader(self, block: "DescribeCall", parent: ParentBlock) -> Callable[[List[str], int], object]:
         return lambda lead, order: self._node(block, parent, lead, order)
 
-    def _node(self, block: dict, parent: ParentBlock, lead: List[str], order: int) -> BehaviorBlock:
-        kind = block["kind"]
+    def _node(self, block: "DescribeCall", parent: ParentBlock, lead: List[str], order: int) -> BehaviorBlock:
+        kind = block.kind
         mapped = "it" if kind in {"it", "test"} else ("description" if kind == "describe" and parent is None else "context")
-        start, brace, inner_end, end = block["lines"]
-        node = _behavior_node(mapped, parent, block["name"], order, start + 1, end + 1)
+        start, brace, inner_end, end = block.lines
+        node = _behavior_node(mapped, parent, block.name, order, start + 1, end + 1)
         if parent is None:
             self._roots.append(node)
         if brace == inner_end:
-            return self._inline(node, lead, self._lines[start : end + 1], self._text[slice(*block["inner"])])
-        node.written = WrittenBlock(self.language, block["name"], lead, self._lines[start : brace + 1])
+            return self._inline(node, lead, self._lines[start : end + 1], block.body(self._text))
+        node.written = WrittenBlock(self.language, block.name, lead, self._lines[start : brace + 1])
         node.written.close = self._lines[inner_end : end + 1]
         if isinstance(node, Observation):
             node.written.inside = self._lines[brace + 1 : inner_end]
             node.body = self._body("\n".join(node.written.inside))
             return node
-        children = self._child_blocks(block["children"], node)
+        children = self._child_blocks(block.children, node)
         node.written.closing = self._read_block(node, (brace + 1, inner_end), children)
         return node
 
-    def _matching(self, open_index: int, opener: str, closer: str) -> Optional[int]:
-        """The index of the bracket that closes the one at open_index; None when the text never closes it."""
-        depth = 0
-        for index in range(open_index, len(self._text)):
-            if self._text[index] == opener:
-                depth += 1
-            elif self._text[index] == closer:
-                depth -= 1
-                if depth == 0:
-                    return index
-        return None
+
+class DescribeCall(BraceCall):
+    """A `describe`, `context`, `it`, or `test` call read from a script spec: the call with its kind, the line of its
+    start, its opening brace, its closing brace and its end, and the calls nested in its callback."""
+
+    def __init__(self, text: str, match: re.Match) -> None:
+        super().__init__(text, match.start(), text.index("(", match.start()), match.group(3))
+        self.kind = match.group(1)
+        self.children: List[DescribeCall] = []
+        points = (self.start, self.brace, self.inner_end or 0, self.end - 1)
+        self.lines = tuple(text.count("\n", 0, index) for index in points)
 
 
 def _behavior_node(kind: str, parent: ParentBlock, name: str, order: int, line: int, end_line: int):

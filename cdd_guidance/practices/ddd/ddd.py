@@ -5,6 +5,19 @@ from __future__ import annotations
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 
+from cdd_guidance.practices.ddd.model.nodes import (
+    Aggregate,
+    BoundedContext,
+    DomainEvent,
+    DomainService,
+    Entity,
+    Factory,
+    InvariantObject,
+    Repository,
+    Specification,
+    ValueObject,
+)
+
 
 @agent_toolset
 class Ddd(PracticeGuidance):
@@ -13,6 +26,20 @@ class Ddd(PracticeGuidance):
     Depends on CleanEngineering (lazy import to avoid circular imports at
     module load time).
     """
+
+    # Every DDD node belongs to DDD, though most subclass a Clean Engineering node.
+    model_classes = (
+        InvariantObject,
+        Entity,
+        ValueObject,
+        Repository,
+        DomainService,
+        DomainEvent,
+        Specification,
+        Factory,
+        Aggregate,
+        BoundedContext,
+    )
 
     sketch_titles = ("ddd:", "domain driven design:")
     SHORT_NAME = "DDD"

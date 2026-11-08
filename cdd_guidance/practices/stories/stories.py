@@ -10,6 +10,8 @@ from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from harness.markdown.format import Format
 
+from cdd_guidance.practices.stories.model.story_model import StoryNode
+
 
 class PracticeOutsideSession(Exception):
     """Raised when a practice is asked to read files by path but works in no session that names their project."""
@@ -20,6 +22,7 @@ class Stories(PracticeGuidance):
     """# Instructions"""
 
     sketch_titles = ("stories:",)
+    model_classes = (StoryNode,)
     SHORT_NAME = "Stories"
     COLOUR = "#6BCB77"
 

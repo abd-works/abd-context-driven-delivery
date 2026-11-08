@@ -15,6 +15,9 @@ from typing import Any, Callable, Generic, Mapping, TypeVar
 from cdd_guidance.practices.agent_bdd.cursor_cli import CursorCli
 from cdd_guidance.practices.agent_bdd.yaml_fence import YamlFence
 
+# Reads and writes the fenced YAML a run answers with; it holds nothing but the fence's language.
+_YAML = YamlFence()
+
 try:
     import yaml
 except ImportError:  # pragma: no cover
@@ -214,6 +217,20 @@ class RunResponse:
     tools: list[str] | None = None
     arguments: dict[str, Any] | None = None
 
+    def as_record(self) -> dict[str, Any]:
+        """This response as a run writes it: ok, toolset, and result, then each other field it has."""
+        record: dict[str, Any] = {"ok": self.ok, "toolset": self.toolset, "result": self.result}
+        optional = {
+            "tool": self.tool,
+            "action": self.action,
+            "instructions": self.instructions,
+            "tools": self.tools,
+            "arguments": self.arguments,
+            "resources": self.resources or None,
+        }
+        record.update({key: value for key, value in optional.items() if value is not None})
+        return record
+
     @classmethod
     def from_dict(cls, run_mapping: dict[str, Any]) -> RunResponse:
         if not isinstance(run_mapping, dict):
@@ -237,7 +254,7 @@ class RunResponse:
 
     @classmethod
     def from_cli_output(cls, text: str) -> RunResponse:
-        data = YamlFence().load_fenced(text)
+        data = _YAML.load_fenced(text)
         if not isinstance(data, dict):
             raise AgentHarnessError(f"run output is not a mapping: {text[:200]!r}")
         return cls.from_dict(data)
@@ -300,7 +317,7 @@ class AgentSession:
 
     @classmethod
     def from_workspace(
-        cls, session_file: Path, workspace: Path, *, fresh: bool = False
+        cls, session_file: Path, workspace: Path, cli: CursorCli, *, fresh: bool = False
     ) -> AgentSession:
         log = HarnessLog("cursor_channel")
         if not fresh:
@@ -309,7 +326,7 @@ class AgentSession:
                 log.write(f"session resumed: {existing.chat_id} ({session_file.name})")
                 return existing
         log.write(f"creating new session for {session_file.name} in {workspace} ...")
-        chat_id = CursorCli().create_chat(str(workspace.resolve()))
+        chat_id = cli.create_chat(str(workspace.resolve()))
         session = cls(chat_id=chat_id, session_file=session_file)
         session.save()
         log.write(f"session created: {session.chat_id}")
@@ -400,7 +417,6 @@ class ToolsRunYaml:
 
     def __init__(self, workspace: Path | None = None) -> None:
         self._workspace = workspace
-        self._fence = YamlFence()
 
     def looks_like_tools_run_output(self, text: str) -> bool:
         has_ok_line = any(line.strip().startswith("ok:") for line in text.splitlines())
@@ -474,7 +490,11 @@ class ToolsRunYaml:
         if self._workspace is None:
             raise AgentHarnessError("a run request runs in a workspace; this reader was made with none", prefix=prefix)
         response = invoke_run_request(parsed, self._workspace, timeout_seconds)
-        return self._fence.fenced(self._fence.dump_manifest(response_to_dict(response)))
+        return _YAML.fenced(self.manifest(response))
+
+    def manifest(self, response: RunResponse) -> str:
+        """The response as the YAML a run writes."""
+        return _YAML.dump_manifest(response.as_record())
 
 
 class ToolsetInvoke:
@@ -658,20 +678,3 @@ class _TimedAttempt(Generic[_Outcome]):
         return self._result  # type: ignore[return-value]
 
 
-def response_to_dict(response: RunResponse) -> dict[str, Any]:
-    payload: dict[str, Any] = {
-        "ok": response.ok,
-        "toolset": response.toolset,
-        "result": response.result,
-    }
-    if response.tool:
-        payload["tool"] = response.tool
-    if response.action:
-        payload["action"] = response.action
-    if response.instructions is not None:
-        payload["instructions"] = response.instructions
-    if response.tools is not None:
-        payload["tools"] = response.tools
-    if response.arguments is not None:
-        payload["arguments"] = response.arguments
-    return payload

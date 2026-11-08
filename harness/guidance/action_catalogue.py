@@ -7,7 +7,7 @@ import inspect
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Protocol
 
-from harness.agent_tools.agent_tools import InstallDestination
+from harness.agent_tools.agent_tools import InstallDestination, ToolsetReference
 from harness.annotations.name import Name
 from harness.installation.files import Skill  # noqa: F401 - defining Skill registers the skill channel this reads
 from harness.annotations.annotation import annotation_kinds
@@ -51,7 +51,7 @@ class Action:
     def toolset_ref(self) -> str:
         """The toolset as a toolset ref names it, by its module's full name, such as
         ``cdd_guidance.actions.generate.generate:Generate``."""
-        return f"{self._toolset_class.__module__}:{self._toolset_class.__name__}"
+        return ToolsetReference.from_class(self._toolset_class).text
 
     @property
     def operation(self):

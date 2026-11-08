@@ -4,7 +4,7 @@
 # harness: in_chat
 # session: practices/agent_bdd/.agent_bdd_sessions/generate-action-example.json
 """Example — helpers: read → run_toolset → follow → ai_judge."""
-from cdd_guidance.practices.agent_bdd.agent_block import agent
+from cdd_guidance.practices.agent_bdd.agent import agent
 from cdd_guidance.practices.agent_bdd.spec_helpers import (
     expect_instructions_contain,
     expect_ok_action,

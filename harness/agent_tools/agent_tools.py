@@ -11,19 +11,18 @@ import textwrap
 import types
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Mapping, cast, get_args, get_origin, get_type_hints
+from typing import Any, Callable, ClassVar, Mapping, cast, get_type_hints
 
 from harness.annotations.name import Name
 from harness.agent_tools.parameter_schema import ParameterSchema
 from harness.agent_tools.tool_call import ToolCall
-from harness.markdown.markdown import Markdown, MarkdownCollection
+from harness.markdown.markdown import Markdown, MarkdownCollection, OperationProperty
 from harness.annotations.annotation import Annotation, annotation_kinds
 from harness.agent_tools.sub_agent.annotation import SubAgentAnnotation
 from harness.agent_tools.recipe import ExpansionMode, ExpansionResult, RecipeExpansion, RecipePlaceholders, RecipeSource
 
 ContextDocument = dict[str, Any]
 ArgumentDocument = dict[str, Any]
-TypeAnnotation = Any
 # A `@tool_subject` loader or a class tool that takes this argument is handed the checkout of the project its call works
 # on. No caller passes it, so it is not one of the tool's arguments.
 CALLED_PROJECT = "project"
@@ -85,8 +84,7 @@ class ToolSetCollection:
 
     @property
     def registration_name(self) -> str:
-        typ = type(self)
-        return f"{typ.__module__}:{typ.__name__}"
+        return ToolsetReference.from_class(type(self)).text
 
     def attach(self, instance: Any, name: str | None = None) -> None:
         MarkdownCollection.attach(self, instance, name)
@@ -115,15 +113,7 @@ class Collect:
     def _property(self, operation: Callable[..., Any]) -> property:
         self._name = operation.__name__
         self._return_type = self._declared_return(operation)
-
-        def getter(owner: Any) -> Any:
-            return self.of(owner)
-
-        getter.__doc__ = operation.__doc__
-        getter.__name__ = self._name
-        getter.__annotations__ = dict(getattr(operation, "__annotations__", {}))
-        annotation_kinds.copy_annotations(operation, getter)
-        return property(getter)
+        return OperationProperty(operation).reading(self.of)
 
     def of(self, collection: Any) -> Any:
         """The collected value of this property on collection's children."""
@@ -261,6 +251,17 @@ class ToolsetReference:
         if not self._class_name:
             raise ValueError(f"expected <module>:<Class>, got {reference!r}")
         self._reference = reference
+
+    @classmethod
+    def from_class(cls, toolset_class: type) -> "ToolsetReference":
+        """The reference that names toolset_class: its module's full name and its own, ``<module>:<Class>``. Every
+        ``module:Class`` CDD writes is made here."""
+        return cls(f"{toolset_class.__module__}:{toolset_class.__name__}")
+
+    @property
+    def text(self) -> str:
+        """The reference as configuration and the installer write it, ``<module>:<Class>``."""
+        return self._reference
 
     @property
     def toolset_class(self) -> type:
@@ -446,8 +447,7 @@ class AgentToolSetOrigin:
 
     @property
     def registration_name(self) -> str:
-        typ = type(self)
-        return f"{typ.__module__}:{typ.__name__}"
+        return ToolsetReference.from_class(type(self)).text
 
     @property
     def description(self) -> str:
@@ -944,62 +944,11 @@ class AgentTool(AgentToolDestination):
         return self.docstring or self.callable.__name__
 
     @property
-    def parameters(self) -> dict[str, str]:
-        sig = inspect.signature(self.callable)
-        parameters: dict[str, str] = {}
-        for name, param in sig.parameters.items():
-            if name in ("self", "cls"):
-                continue
-            if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
-                continue
-            parameters[name] = self._format_type(param.annotation)
-        return parameters
-
-    @property
-    def response(self) -> str | None:
-        sig = inspect.signature(self.callable)
-        if sig.return_annotation is inspect.Signature.empty:
-            return None
-        return self._format_type(sig.return_annotation)
-
-    def _format_type(self, annotation: TypeAnnotation) -> str:
-        if annotation is inspect.Parameter.empty:
-            return "str"
-        if isinstance(annotation, str):
-            return self._format_type_from_string(annotation)
-        origin = get_origin(annotation)
-        if origin is list:
-            return self._format_list_type(annotation)
-        if origin is dict:
-            return "dict"
-        return self._format_builtin_type(annotation, origin)
-
-    def _format_type_from_string(self, annotation_text: str) -> str:
-        origin_name, _, args_text = annotation_text.partition("[")
-        if origin_name == "list":
-            element_text = args_text.rstrip("]") if args_text else "str"
-            return f"list[{self._format_type(element_text)}]"
-        return annotation_text
-
-    def _format_list_type(self, annotation: Any) -> str:
-        args = get_args(annotation)
-        element_type = self._format_type(args[0]) if args else "str"
-        return f"list[{element_type}]"
-
-    def _format_builtin_type(self, annotation: Any, origin: Any) -> str:
-        if annotation is str:
-            return "str"
-        if annotation is int:
-            return "int"
-        if annotation is float:
-            return "float"
-        if annotation is bool:
-            return "bool"
-        if annotation in (None, type(None)):
-            return "None"
-        if origin is not None:
-            return getattr(annotation, "__name__", str(origin))
-        return getattr(annotation, "__name__", str(annotation))
+    def parameters(self) -> list[str]:
+        """The names of the arguments a caller passes, in order; their types are ParameterSchema's to say."""
+        signature = inspect.signature(self.callable)
+        skipped = (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+        return [name for name, param in signature.parameters.items() if name not in ("self", "cls") and param.kind not in skipped]
 
 @dataclass
 class AgentOperation(AgentTool):

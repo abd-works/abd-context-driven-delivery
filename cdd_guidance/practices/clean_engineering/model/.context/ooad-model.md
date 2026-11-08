@@ -2,13 +2,13 @@
 
 *CleanEngineeringModel* is one class model that every format reads and writes: modules holding classes, each with properties, operations and their parameters, and the relationships its properties name. A nested module is a module whose parent is a module. Every node is a graph node (*ModelNode*), so the same objects the formats build are the nodes the graph holds.
 
-A format is one subclass of *CleanEngineeringModel*: markdown, JSON, sketch, Python, TypeScript, JavaScript, Java, and draw.io. Each format reads text with `parse(text)`, which fills the format model itself and returns it, and writes with `render(canonical, previous)`: the format model becomes the canonical model once through `translate_from`, as its own subclasses of the modules and classes, then writes itself. Markdown also reads a file through the walk on the base nodes: `load(path)` asks `has_more_module` / `get_next_module_from_file`, each module asks `has_more_class` / `get_next_class_from_file`, and each class loads its properties, operations, and relationships the same way. A format overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its text contains.
+A format is one subclass of *CleanEngineeringModel*: markdown, JSON, sketch, Python, TypeScript, JavaScript, Java, and draw.io. Each format reads text with `parse(text)`, which fills the format model itself and returns it, and writes with `render(canonical, previous)`: the format model becomes the canonical model once through `translate_from`, as its own subclasses of the modules and classes, then writes itself. A caller reading a file reads its text and hands it to `parse`; there is no second way in. A member written as a model line, `save(cart: Cart): Receipt` or `identity: Identity`, is read by `Operation.from_signature` and `Property.from_signature`, which every format that writes such lines uses.
 
 One format's model becomes another's through `translate_from(source)`: each node copies what it says itself (`update_self`), then matches the source's children to its own by name, else by order, and builds each new child in its own format through `load_module`, `load_class`, `load_property`, `load_operation`, or `load_parameter`.
 
 Callers use the base nodes. The practice picks a format by name from `CleanEngineering(...).formats`. A class's bases and stereotypes are part of what it says itself, so every format writes and reads them and `update_self`, `clone`, and `as_record` copy them. Text a format cannot read raises *UnreadableSource*; the graph read records each such file on its folder, where the `source-parses` rule reports it.
 
-*CleanEngineering* (`practices/clean_engineering/clean_engineering.py`) says what the graph reads from the practice, and its readers are in `practices/clean_engineering/model/graph_reading.py`. When `Graph.load_working_copy`, `Graph.load_files`, or `Graph.refresh` reads files, `WorkingCopy.fill` in `harness/graph/working_copy.py` asks each practice the graph holds to read, in dependency order. *CleanEngineering* reads each source file with the class model of its language, which it finds among its own formats by the file's extension (`format_for`, which every practice has), and adds each folder as a *Module* that holds its *ModuleContext* (`load_folder_facts`), and each class, property, operation, and parameter the parser built, as nodes. The parser keeps the file's text on its module and the lines each class and operation spans on that class and operation (`take_lines`), so `load_source_facts` and `load_span_facts` read no file again. Each folder owns the folders under it and depends (`dependsOn` edges) on the folders its files import from; it keeps the class names its files import (`imported_names`). It then reads every `.context/*-model.md` in scope with its markdown format and keeps the members they describe (`CleanEngineeringModel.described_members`) on the practice's root as `model_members`. DDD reads after Clean Engineering and sees its classes as building blocks.
+*CleanEngineering* (`practices/clean_engineering/clean_engineering.py`) says what the graph reads from the practice, and its readers are in `practices/clean_engineering/model/graph_reading.py`. When `Graph.load_working_copy`, `Graph.load_files`, or `Graph.refresh` reads files, `WorkingCopy.fill` in `harness/graph/working_copy.py` asks each practice the graph holds to read, in dependency order. *CleanEngineering* reads each source file with the class model of its language, which it finds among its own formats by the file's extension (`format_for`, which every practice has), and adds each folder as a *Module* that holds its *ModuleContext* (`load_folder_facts`), and each class, property, operation, and parameter the parser built, as nodes. The parser keeps the file's text on its module and the lines each class and operation spans on that class and operation (`take_lines`), so `load_source_facts` and `load_span_facts` read no file again. Each folder owns the folders under it and depends (`dependsOn` edges) on the folders its files import from; it keeps the class names its files import (`imported_names`). It then reads every `.context/*-model.md` in scope with its markdown format and keeps the class model each one describes on the practice, which answers `described_member(owner, name)`: the operation or property a model document describes, so a realization follows the model's interactions without a second copy of any member in the graph. A graph read back from `graph.json` reads the documents under its source root the first time it is asked. DDD reads after Clean Engineering and sees its classes as building blocks.
 
 ```
 model = CleanEngineering().formats["markdown"]().parse(text)
@@ -29,6 +29,9 @@ A source file its language cannot read, such as Python that does not parse. Read
 
 ## OoadNode : ModelNode
 
+`model/ooad_node.py`, beside the members and the classes that build on it, so `base_class_model` imports `property` and `operation` and neither imports it back. The practice registers it (`CleanEngineering.model_classes`), so a node finds its practice without importing it.
+
+
 + OoadNode(name: str, sequential_order: int, graph: Graph | None = None)
 ------
 + name: str
@@ -44,6 +47,8 @@ A source file its language cannot read, such as Python that does not parse. Read
 + reconcile_children(source: OoadNode): None
 	// each child list this node holds becomes the source's: ModelChildren.reconcile(source children, the load_* that builds a child in this format)
 	-> ModelChildren.reconcile
++ declares(member: OoadNode): bool
+	// only a class declares members: an operation's or property's owner is the class that declares it
 
 ## TranslationError : Exception
 
@@ -54,34 +59,22 @@ Raised when `translate_from` is given a node of another semantic type.
 + CleanEngineeringModel(name: str | Graph = "", sequential_order: int = 1, graph: Graph | None = None)
 	// opened on a graph: a model named `model` whose nodes live on that graph
 ------
-+ path: str
 + modules: list[Module]
 	// composition — a module has no model outside this class model
 ----
 + is_modules_view: bool
 	// property: modules only, no class carries a member or a drawn relationship
-+ load(path: str): CleanEngineeringModel
-	// stores path, empties modules, then runs the same walk for every format
-	-> load_content
-	-> load_modules
 + parse(text: str): CleanEngineeringModel
 	// every format reads its own text
 + save(): str
++ described_member(owner: str, name: str): Operation | Property | None
+	// the member the class owner describes as name; an operation before a property of the same name
 + every_class(): list[OoadClass]
 	// every class in every module, nested modules included, in module order
 + clone(): CleanEngineeringModel
 + as_record(): dict
 + load_module(source: Module): Module
 	// a new module in this format, for translate_from
-+ load_content(): None
-	// a file format prepares its cursor over path
-+ load_modules(): None
-	// while has_more_module: append load_next_module()
-+ has_more_module(): bool
-+ load_next_module(): Module
-	// module = get_next_module_from_file()
-	-> module.load
-+ get_next_module_from_file(): Module
 
 ## Module : OoadNode
 
@@ -105,8 +98,6 @@ Raised when `translate_from` is given a node of another semantic type.
 	// dependencies other than the module's path parent
 + public_terms(): list[str]
 	// seam terms, or the class names, or the seam string
-+ append_module(module: Module): None
-+ append_class(oclass: OoadClass): None
 + load_module(source: Module): Module
 + load_class(source: OoadClass): OoadClass
 	// a new class in this format, for translate_from
@@ -132,21 +123,6 @@ Raised when `translate_from` is given a node of another semantic type.
 	-> ModuleContext.model_blocks
 + clone(): Module
 + as_record(): dict
-+ load_modules(): None
-+ has_more_module(): bool
-+ load_next_module(): Module
-	// child = get_next_module_from_file()
-	-> child.load
-+ get_next_module_from_file(): Module
-+ load_classes(): None
-	// while has_more_class: append_class(load_next_class())
-+ has_more_class(): bool
-+ load_next_class(): OoadClass
-	// class = get_next_class_from_file()
-	-> oclass.load_properties
-	-> oclass.load_operations
-	-> oclass.load_relationships
-+ get_next_class_from_file(): OoadClass
 
 ## OoadClass : OoadNode
 
@@ -190,23 +166,6 @@ Raised when `translate_from` is given a node of another semantic type.
 + load_relationship(source: Relationship): Relationship
 + clone(): OoadClass
 + as_record(): dict
-+ load_properties(): None
-	// while has_more_property: append load_next_property()
-+ has_more_property(): bool
-+ load_next_property(): Property
-+ get_next_property_from_file(): Property
-+ load_operations(): None
-	// while has_more_operation: append load_next_operation()
-+ has_more_operation(): bool
-+ load_next_operation(): Operation
-	// operation = get_next_operation_from_file()
-	-> operation.load_parameters
-+ get_next_operation_from_file(): Operation
-+ load_relationships(): None
-	// while has_more_relationship: place_relationship(load_next_relationship())
-+ has_more_relationship(): bool
-+ load_next_relationship(): Relationship
-+ get_next_relationship_from_file(): Relationship
 
 ## Property : InvariantHolder, OoadNode
 
@@ -272,8 +231,6 @@ Raised when `translate_from` is given a node of another semantic type.
 	// its line through its end line, else as many lines as its body counts
 + span: SourceText
 + take_lines(lines: list[str]): None
-+ model_member(file: str): dict
-	// how the graph saves it for the model document at file
 + load_span_facts(): None
 	// the facts the operation rules read from its own source lines: private reach, I/O mixed with domain work, swallowed or empty-case exceptions, prose comments
 	-> SourceText
@@ -285,11 +242,6 @@ Raised when `translate_from` is given a node of another semantic type.
 + load_parameter(source: Parameter): Parameter
 + clone(): Operation
 + as_record(): dict
-+ load_parameters(): None
-	// while has_more_parameter: append load_next_parameter()
-+ has_more_parameter(): bool
-+ load_next_parameter(): Parameter
-+ get_next_parameter_from_file(): Parameter
 
 ## InvariantHolder
 
@@ -428,10 +380,6 @@ The `markdown` format: a `#` heading per module and a `##` card per class, or a 
 	-> translate_from
 	-> MarkdownModule.render
 + load_module(source: Module): MarkdownModule
-+ load_content(): None
-	// cursor is the # headings in the file. One file
-+ has_more_module(): bool
-+ get_next_module_from_file(): MarkdownModule
 
 ## MarkdownModule : Module
 
@@ -441,8 +389,6 @@ The `markdown` format: a `#` heading per module and a `##` card per class, or a 
 	// heading, description, Purpose / Seam (terms) / Dependencies when the module shows no members, then each class card
 + render_cards(module_level: int, card_level: int): str
 + load_class(source: OoadClass): MarkdownOoadClass
-+ get_next_class_from_file(): MarkdownOoadClass
-	-> MarkdownOoadClass.read_card
 
 ## MarkdownOoadClass : OoadClass
 
@@ -609,7 +555,6 @@ The source lines around one block of code that no node holds, kept exactly as re
 ------
 + language: CodeLanguage
 + key: str | tuple | None
-+ path: str
 + lead: list[str]
 + heading: list[str]
 + inside: list[str]

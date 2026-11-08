@@ -11,6 +11,7 @@ from cdd_guidance.practices.clean_engineering.model.class_stereotypes import Cla
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
 
 _CLASS_RE = re.compile(
@@ -245,20 +246,9 @@ class CFamilyParse:
         brace_open = class_body.find("{", search_from)
         if brace_open < 0:
             return
-        close_idx = self._closing_brace_index(class_body, brace_open)
-        if close_idx >= 0:
+        close_idx = SourceText(class_body).closing_bracket(brace_open)
+        if close_idx is not None:
             op.end_line = self._line_at(self._text, self._body_start + close_idx)
-
-    def _closing_brace_index(self, text: str, open_index: int) -> int:
-        depth = 0
-        for index in range(open_index, len(text)):
-            if text[index] == "{":
-                depth += 1
-            elif text[index] == "}":
-                depth -= 1
-                if depth == 0:
-                    return index
-        return -1
 
     def _constructed_types(self, body: str, start_line: int) -> list[tuple[str, int]]:
         found: list[tuple[str, int]] = []
@@ -375,8 +365,8 @@ class CFamilyParse:
             open_index += 1
         if open_index >= len(text):
             return None, -1
-        close_index = self._closing_brace_index(text, open_index)
-        if close_index < 0:
+        close_index = SourceText(text).closing_bracket(open_index)
+        if close_index is None:
             return None, -1
         return text[open_index + 1 : close_index], open_index + 1
 

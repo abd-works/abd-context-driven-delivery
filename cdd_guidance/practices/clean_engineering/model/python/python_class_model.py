@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
-    Module,
     UnreadableSource,
     companion_interface_name,
     is_interface_name,
@@ -37,10 +36,6 @@ _FUTURE_IMPORT = "from __future__ import annotations"
 _ABC_IMPORT = "from abc import ABC, abstractmethod"
 
 
-def python_type(hint: str) -> str:
-    """A type written the way Python writes generics: `Collection<Root>` from another language is `Collection[Root]`,
-    so the file reads back as Python."""
-    return (hint or "").replace("<", "[").replace(">", "]")
 Function = ast.FunctionDef | ast.AsyncFunctionDef
 
 
@@ -192,7 +187,7 @@ class PythonModule(CodeModule):
 class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
     language = PYTHON
     module_type = PythonModule
-    suffixes = (".py",)
+    suffixes = language.suffixes
 
     def parse(self, text: str) -> "PythonCleanEngineeringModel":
         """The model the Python text declares. Text that is not valid Python raises UnreadableSource."""
