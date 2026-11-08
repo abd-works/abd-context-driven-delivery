@@ -25,13 +25,13 @@ Load the umbrella skill for each selected lens to establish shared vocabulary an
 - `clean-engineering-model` for typed class participants, operations, relationships, public module interfaces, and explicit constructor dependencies without production method bodies.
 - `bdd-behavior` for executable describe/it test hierarchies containing behavior signatures without test implementation code.
 
-Run the `generate` action skill for each practice. When complete run the `get_fix_violation_instructions` for each practice and fix any returned violations.
+Run the `actions-generate` skill (the Generate action) for each practice. When it is complete, run the `actions-satisfy` skill for each practice: it validates the artifacts and applies the fixes the validate report names.
 
 ## Working Method
 
 When evaluating source material or discovery artifacts, answer questions from evidence. Maintain a question-and-answer log with source references, decisions, confidence levels, and deferred implementation checks.
 
-**For sketching or grilling:** Defer to the `Sketch` skill to run the grill-sketch-confirm cycle at specification fidelity, working through each lens theme in sequence. When the sketch is confirmed, return here to generate formal specification artifacts.
+**For sketching or grilling:** Run the `actions-sketch` skill (the Sketch action) to run the grill-sketch-confirm cycle at specification fidelity, working through each lens theme in sequence. When the sketch is confirmed, return here to generate formal specification artifacts.
 
 Output persistence is mandatory. Create and update at least one markdown artifact file for each meaningful action pass; report its path in the response.
 

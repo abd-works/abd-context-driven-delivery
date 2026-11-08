@@ -7,7 +7,7 @@ from pathlib import Path
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
 from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, Segment
-from harness.agent_tools import agent_instructions, agent_toolset, tools
+from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
 from harness.agent_tools.recipe import RecipePlaceholders
@@ -80,12 +80,6 @@ class Partition(GuidanceAction):
             "Named-entry completeness verified (length-only is a false PASS)."
         )
 
-    def _corpus_steps(self, item, context: str, out_root: str | None, paths: list[str] | str | None) -> str:
-        """What partitioning the corpus asks for one listed guidance: what its index lists, then the index and the
-        segments, both in the folder the call names."""
-        steps = (self._guidance_to_index_by(item), self.index(context, out_root, paths), self.segment(out_root))
-        return "\n\n".join(step for step in steps if step)
-
     @mcp
     @skill
     @agent_instructions
@@ -103,11 +97,9 @@ class Partition(GuidanceAction):
         out_root: folder for the index and segments. Omit it to use the session path."""
         self._work_on(guidance)
         source = self.source_label(context, paths)
-
-        def on(item) -> str:
-            return self._corpus_steps(item, context, out_root, paths)
-
-        self.run(on, action="partition")
+        self.run(self._guidance_to_index_by, action="partition")
+        instructions(self.index(context, out_root, paths))
+        instructions(self.segment(out_root))
         "After writing the index and segments, call refresh with exactly the files you wrote, so the session's graph holds them as they are now; nothing watches the files."
         if self._session is not None:
             tools(self.graph.refresh)

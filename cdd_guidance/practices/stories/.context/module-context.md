@@ -5,7 +5,7 @@ The same story model is written in many formats — sketch, markdown, JSON, draw
 
 - **Purpose:** Keep one Epic → Story → Scenario hierarchy that discovery, specification, and tests all read, so scope and behaviour stay traceable from the map to the code.
 - **Seam (terms):** Stories, `stories.instructions`, `stories-story-map`, `stories-scenarios`, `stories-acceptance-tests`, `render`
-- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `harness/markdown`, `harness/annotations` (*Name*), `cdd_guidance/actions/sketch` (*SketchOutline*), `cdd_guidance/practices/clean_engineering` (its class model, for code formats). `cdd_guidance/practices/ux` depends on Stories: its screens show the stories, and it draws the Claude Design story canvas from the story model. Stories imports neither UX nor anything that imports it back.
+- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `harness/markdown`, `harness/annotations` (*Name*), `cdd_guidance/practices/sketch_document` (*SketchOutline*, *DiscoveryDocument*), `cdd_guidance/practices/clean_engineering` (its class model, for code formats). `cdd_guidance/practices/ux` depends on Stories: its screens show the stories, and it draws the Claude Design story canvas from the story model. Stories imports neither UX nor anything that imports it back.
 
 ## Constraint
 

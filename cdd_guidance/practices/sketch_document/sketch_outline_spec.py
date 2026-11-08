@@ -11,10 +11,11 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import equal, expect
+from expects import contain, equal, expect
 from mamba import before, description, it
 
-from cdd_guidance.actions.sketch.sketch_outline import SketchOutline
+from cdd_guidance.practices.sketch_document.discovery_document import DiscoveryDocument
+from cdd_guidance.practices.sketch_document.sketch_outline import SketchOutline
 from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.ddd.ddd import Ddd
@@ -140,3 +141,37 @@ with description("a sketch written flat beneath a bare lens marker"):
                 "ddd:\n  Customer | custom\n    customer\n", 2
             ).body_for(Ddd.sketch_lens)
         ).to(equal("Customer | custom\n  customer\n"))
+
+
+_OVERVIEW_FIRST = """# Shop — sketch
+
+## Overview
+
+source: checkout interviews
+
+## stories:
+
+### Pay For Cart
+"""
+
+
+with description("a sketch whose header has a section of its own above the practice sections"):
+    with it("should take its title from the header"):
+        expect(SketchOutline(_OVERVIEW_FIRST).title).to(equal("Shop"))
+
+    with it("should take its sources from anywhere above the first practice section"):
+        expect(SketchOutline(_OVERVIEW_FIRST).sources).to(equal("checkout interviews"))
+
+    with description("that a practice writes its discovery document from"):
+        with it("should name the sources the sketch's header gives"):
+            document = DiscoveryDocument("story-map", "Story Map", _OVERVIEW_FIRST)
+            expect(document.lines("Pay For Cart")).to(contain("**Sources / context:** checkout interviews"))
+
+        with it("should head the document with the sketch's title"):
+            document = DiscoveryDocument("story-map", "Story Map", _OVERVIEW_FIRST)
+            expect(document.lines("Pay For Cart")).to(contain("# Story Map — Shop"))
+
+
+with description("a sketch that names no lens, read for its header"):
+    with it("should have no title, since all of it is one section"):
+        expect(SketchOutline(_FLAT).title).to(equal(""))
