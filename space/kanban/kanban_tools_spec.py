@@ -838,6 +838,18 @@ with description("the board tools") as self:
                 (self.project.root / ".context" / "story-map.md").write_text("# Story Map\n", encoding="utf-8")
                 chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-story-map", "ddd-bounded-context"])
                 self.markdown = next(chip for chip in chips if chip["label"] == "markdown")
+                self.chips_named = lambda label: [chip for chip in chips if chip["label"] == label and chip["starts_picked"]]
+
+        with context("with an action bar opened on its story map, its markdown written"):
+            with before.each:
+                (self.project.root / ".context").mkdir(exist_ok=True)
+                (self.project.root / ".context" / "story-map.md").write_text("# Story Map
+", encoding="utf-8")
+                chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-story-map"])
+                self.markdown = next(chip for chip in chips if chip["label"] == "markdown")
+
+            with it("should open with a chip every fidelity has made left unpicked"):
+                expect(self.markdown["starts_picked"]).to(be_false)
 
             with it("should count the fidelities that offer the markdown chip"):
                 expect(self.markdown["offered"]).to(equal(2))
@@ -845,8 +857,12 @@ with description("the board tools") as self:
             with it("should count the fidelities that have a file in it already"):
                 expect(self.markdown["made"]).to(equal(1))
 
-            with it("should open with a chip already made in left unpicked"):
-                expect(self.markdown["starts_picked"]).to(be_false)
+            # B6: the bounded context still has no markdown of its own, so a stage Run writes its default format.
+            with it("should open picked while a fidelity whose default it holds has not made it"):
+                expect(self.markdown["starts_picked"]).to(be_true)
+
+            with it("should open the code chip unpicked, since no fidelity here defaults to code"):
+                expect(self.chips_named("code")).to(equal([]))
 
             with it("should send each fidelity's own format for the chip"):
                 expect(self.markdown["formats"]).to(equal(["markdown"]))

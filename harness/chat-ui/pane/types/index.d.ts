@@ -37,7 +37,8 @@ export type ChatBarViewJson = {
 export type ActionPickerJson = { isOpen: boolean; chosenAction: string | null }
 
 // The files view of the selected fidelity: one tab per file fidelity-progress.files declares, its text once session.read_file read it.
-export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: string | null }[]; shown: string | null } | null
+// isOutOfDate: a report's saved graph is in a shape the graph no longer reads, so the tab offers Validate again.
+export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: string | null }[]; shown: string | null; isOutOfDate: boolean } | null
 
 declare module 'claude-code' {
   interface PluginState {

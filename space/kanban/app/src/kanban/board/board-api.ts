@@ -3,6 +3,10 @@ import type { BoardStore } from './board-store'
 const BOARD_HEADER = 'X-CDD-Board'
 const API_ROOT = '/api'
 const NOT_CONNECTED = 503
+// A call still running after this long says so: the shared cdd server can be busy for minutes.
+const SLOW_CALL_MILLISECONDS = 8_000
+// The board's own read runs every two seconds, so it says nothing when slow.
+const BOARD_READ = '/board/show'
 
 export type Send = (path: string, init?: RequestInit) => Promise<Response>
 
@@ -27,7 +31,10 @@ export class BoardApi {
   }
 
   private async call<T>(path: string, init: RequestInit | undefined, reachesCdd: boolean): Promise<T | null> {
-    const response = await this.send(`${API_ROOT}${path}`, init).catch(() => null)
+    const slow = path === BOARD_READ ? undefined : setTimeout(() => this.waitingOn(path), SLOW_CALL_MILLISECONDS)
+    const response = await this.send(`${API_ROOT}${path}`, init)
+      .catch(() => null)
+      .finally(() => clearTimeout(slow))
     if (!response) {
       this.store.change({ serverFailure: 'The session board server is not answering.' })
       return null
@@ -36,6 +43,10 @@ export class BoardApi {
     if (response.ok) return reachesCdd ? this.accepted(body) : body
     this.refused(response.status, body?.error ?? `The server answered ${response.status}.`)
     return null
+  }
+
+  private waitingOn(path: string): void {
+    this.store.toast(`Still waiting on ${path.slice(1)}: the cdd server is busy, so it can take a while.`)
   }
 
   // A route that reaches cdd answered, so cdd is back.

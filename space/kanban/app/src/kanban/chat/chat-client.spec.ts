@@ -13,20 +13,22 @@ beforeEach(() => board.reset())
 afterAll(() => board.close())
 
 describe('Send commands to a chat', () => {
-  it('should choose the only chat connected', async () => {
-    const { page } = await board.page()
-    await board.chat('chat-1').checkIn()
-    await page.chat.refresh()
-    expect(page.store.state.targetChat).toBe('chat-1')
-  })
-
-  // Every button that sends to a chat is off with none chosen, so the board chooses one and the picker shows which.
-  it('should choose the first of several when none has been picked', async () => {
+  // The list reorders as chats work, so the first one is whichever was busy last: a command sent there would reach an
+  // unrelated chat. Only a chat a person picks, or the ticket's own, is sent to.
+  it('should choose no chat until a person picks one', async () => {
     const { page } = await board.page()
     await board.chat('chat-1').checkIn()
     await board.chat('chat-2').checkIn()
     await page.chat.refresh()
-    expect(page.store.state.targetChat).toBe('chat-1')
+    expect([page.store.state.targetChat, page.chat.canSend]).toEqual([null, true])
+  })
+
+  it('should ask for a chat rather than send with none chosen', async () => {
+    const { page, asked } = await board.page()
+    await board.chat('chat-1').checkIn()
+    await page.chat.refresh()
+    await page.chat.command('/actions-validate a')
+    expect([asked.filter(request => request.path.endsWith('/send')), page.store.state.toasts.at(-1)?.text]).toEqual([[], 'Pick the chat to send to in the chat list first.'])
   })
 
   it('should choose again the chat a person picked once it is back', async () => {

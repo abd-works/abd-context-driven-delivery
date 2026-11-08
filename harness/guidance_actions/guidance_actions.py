@@ -113,13 +113,19 @@ class GuidanceArgument:
 
     def _slug_words(self) -> list:
         words = [word for word in self._guidance.split() if not word.startswith(_SESSION_WORD)]
-        formats = [word[len(_FORMAT_WORD):].split(",")[0] for word in words if word.startswith(_FORMAT_WORD)]
+        listed = next((word[len(_FORMAT_WORD):].split(",") for word in words if word.startswith(_FORMAT_WORD)), [])
         slugs = [slug for word in words if not word.startswith(_FORMAT_WORD) for slug in word.split(",") if slug]
         named = [self._named(slug) for slug in slugs]
         if not named or None in named:
             return []
-        format = formats[0] if formats else ""
-        return [NamedGuidance(guidance, format) for guidance in named]
+        return [NamedGuidance(guidance, self._listed_format_of(guidance, listed)) for guidance in named]
+
+    def _listed_format_of(self, guidance: PracticeGuidance | FidelityGuidance, listed: list[str]) -> str:
+        """The first listed format the guidance writes: a stage Run lists the formats of every fidelity it acts on, and
+        each fidelity takes its own. A practice, or a fidelity that writes none of them, takes the first."""
+        outputs = guidance.outputs if isinstance(guidance, FidelityGuidance) else {}
+        written = [name for name in listed if name in outputs]
+        return (written or listed or [""])[0]
 
     def _item(self, item: Any) -> Any:
         """One Guidance as item names it; none for a string that names none."""

@@ -13,7 +13,7 @@ function GridCornerView() {
   const label = state.hidesDisabled ? 'Show practices not enabled' : 'Hide practices not enabled'
   return (
     <div className="grid-corner">
-      <span>context-driven-delivery</span>
+      <span>{page.board.project}</span>
       <button className="icon-button corner-toggle" aria-label={label} aria-expanded={!state.hidesDisabled} title={label} onClick={() => page.layout.toggleHiddenPractices()}>
         <ChevronIcon isTurned={state.hidesDisabled} />
       </button>

@@ -69,9 +69,11 @@ story('View Fidelity Files', CHAT_BAR, () => {
     when('the Person opens the diagram in draw.io', async ($, on, scene) => {
       await scene.pane.press({ key: 'file-drawio' })
     })
-    // Open in draw.io press -> openInDrawio($, path) -> $.prompt.submit; the agent follows the drawio-viewer rule
-    then('the chat is asked to open pane/.context/chat-bar-model.drawio in the draw.io viewer', async ($, on, scene) => {
-      expect(scene.world.submits).toContain('Open pane/.context/chat-bar-model.drawio in the draw.io viewer.')
+    // Open in draw.io press -> openInDrawio($, path) -> the viewer answers on its port -> $.process.run(opener, url)
+    // Evidence: observed: e2e-report §4 — the button submitted a prompt to the chat as the user; it opens the viewer directly
+    then('the draw.io viewer opens on pane/.context/chat-bar-model.drawio, and nothing is sent to the chat', async ($, on, scene) => {
+      expect(scene.world.installs.at(-1)?.at(-1)).toBe('http://127.0.0.1:8791/edit?f=pane%2F.context%2Fchat-bar-model.drawio')
+      expect([scene.world.submits.filter(text => text !== 'look'), scene.world.fills, scene.world.sent]).toEqual([[], [], []])
     })
     and('a markdown tab offers no draw.io button', async ($, on, scene) => {
       await scene.pane.press({ key: 'file-pane/.context/chat-bar-model.md' })
@@ -93,6 +95,25 @@ story('View Fidelity Files', CHAT_BAR, () => {
       const pane = await filesPaneOf($)
       expect(textOf(await findText(pane, /secrets/))).toBe("../secrets.txt is outside the session's roots")
       await pane.unmount()
+    })
+  })
+  scenario("Say a report's saved graph is out of date in its tab", ({ given, when, then, and }) => {
+    // Evidence: observed: e2e-report §4 — the chat bar's report tab showed no out-of-date notice, as the board's does
+    given("checkout-flow's clean-engineering-model has 7 violations in a report whose saved graph is out of date", async ($, on, scene) => {
+      scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'clean-engineering-model': { ...VALIDATED, progress: 'violations', violations: 7 } }))
+      scene.world.reports['clean-engineering-model'] = { ...MODEL_REPORT, has_saved_graph: true, is_out_of_date: true }
+    })
+    when('the Person presses the count 7', async ($, on, scene) => {
+      await scene.ui.press({ key: 'violations-clean-engineering-model' })
+      scene.pane = await filesPaneOf($)
+    })
+    then("the report's tab says its saved graph is out of date", async ($, on, scene) => {
+      expect(textOf(await findText(scene.pane, /out of date/))).toBe("This report's saved graph is out of date, so its graph's rules are not shown. Validate again to read them.")
+    })
+    and("Validate again puts clean-engineering-model's validate command in the prompt", async ($, on, scene) => {
+      await scene.pane.press({ key: 'validate-again' })
+      expect(scene.world.fills).toEqual(['/actions-validate clean-engineering-model session=.sessions/checkout-flow/session.json'])
+      await scene.pane.unmount()
     })
   })
   scenario('Read the violations from their count', ({ given, when, then, and }) => {

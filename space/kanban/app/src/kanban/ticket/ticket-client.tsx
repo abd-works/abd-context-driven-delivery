@@ -177,15 +177,23 @@ export class TicketClient extends TicketClientGenerated {
     this.page.board.select(this.address)
   }
 
-  // A person clicking the ticket: it opens in the details, and the board's commands go to its chat, the one working in its
-  // worktree. With no chat there yet, a new one opens there, after the worktree when the ticket has none. A ticket in
-  // Complete has closed its work, so it gets no new branch, worktree, or chat.
-  async choose(): Promise<void> {
+  // A person clicking the ticket: it opens in the details, and the board's commands go to its chat, the one working in
+  // its worktree, when it has one. A press only selects: opening a worktree and a chat is the card's own button.
+  choose(): void {
     this.select()
+    const found = this.chat.found
+    if (found) this.page.chat.choose(found.id)
+  }
+
+  get canOpenChat(): boolean {
+    return !this.isClosed && !this.chat.found
+  }
+
+  // A new chat opens on the ticket's worktree, after the worktree when the ticket has none. A ticket in Complete has
+  // closed its work, so it gets no new branch, worktree, or chat.
+  async openChat(): Promise<void> {
     const chat = this.chat
-    const found = chat.found
-    if (found) return this.page.chat.choose(found.id)
-    if (this.isClosed || !chat.beginOpening()) return
+    if (!this.canOpenChat || !chat.beginOpening()) return
     chat.start(await this.worktreeOpened())
   }
 
@@ -253,16 +261,16 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   fillSplit(): Promise<void> {
-    return this.chat.fill(`Split ticket ${this.name} into child tickets, one per story on its story map: call ticket.create with parent ${this.name} for each story.`)
+    return this.chat.fill(this.inSession(`Split ticket ${this.name} into child tickets, one per story on its story map: call ticket.create with parent ${this.name} for each story.`))
   }
 
   // Closing ends the chat's session and leaves the ticket where it is; moving it into Complete is what completes it.
   closeSession(): Promise<void> {
-    return this.chat.command(CLOSE_SESSION_COMMAND)
+    return this.chat.command(this.inSession(CLOSE_SESSION_COMMAND))
   }
 
   fillHandoff(): Promise<void> {
-    return this.chat.fill(`Write a handoff for ticket ${this.name} with /space-session-handoff-session.`)
+    return this.chat.fill(this.inSession(`Write a handoff for ticket ${this.name} with /space-session-handoff-session`))
   }
 
   // A report's fixes are for the ticket whose report it is, so they name its session and go to its chat.

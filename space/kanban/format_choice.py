@@ -18,7 +18,8 @@ class FormatChoice:
     picked."""
 
     # A fidelity uses its default format from a group that holds it, else the first format it offers there. A bar
-    # opens ready to run: on each group that holds a fidelity's default, unless output is already there in it.
+    # opens ready to run: on each group that holds the default of a fidelity that has not made it yet, so a stage Run
+    # writes each fidelity in its own default format.
 
     def __init__(self, label: str, offering: list[tuple[FidelityGuidance, list[str], dict[str, list[FileEntry]]]]) -> None:
         self._label = label
@@ -59,8 +60,12 @@ class FormatChoice:
     @property
     @data_field
     def starts_picked(self) -> bool:
-        """Whether the bar opens with the chip picked: it holds a fidelity's default format and nothing is made in it."""
-        return self.made == 0 and any(fidelity.default_format in in_group for fidelity, in_group, _ in self._offering)
+        """Whether the bar opens with the chip picked: it holds the default format of a fidelity that has no file in it
+        yet."""
+        return any(fidelity.default_format in in_group and not self._has_made(fidelity.default_format, files) for fidelity, in_group, files in self._offering)
+
+    def _has_made(self, format_name: str, files: dict[str, list[FileEntry]]) -> bool:
+        return any(entry.exists for entry in files.get(format_name, []))
 
     def _used(self, fidelity: FidelityGuidance, in_group: list[str]) -> str:
         return fidelity.default_format if fidelity.default_format in in_group else in_group[0]
