@@ -38,9 +38,6 @@ _STORY_FOLDER = "tests/onboard-a-customer/authenticate-user"
 _ENTITY_ROOT_FILE = "src/account-credentials/account-credentials.ts"
 _STORY_FILE = f"{_STORY_FOLDER}/authenticate_user.story.shared.ts"
 _SPEC_FILE = f"{_STORY_FOLDER}/authenticate_user.story.server.spec.ts"
-# The edited spec, still a behavior sketch: its `it` has no test body and no `BDD: SIGNATURE` marker, which
-# framework-syntax asks for. The sample's own spec is a finished test, which the behavior rules leave alone.
-_SKETCH_WITHOUT_MARKER = "describe('a customer account', () => {\n  it('should sign the customer up', () => {});\n});\n"
 
 # Five parameters, over the three limit-operation-parameters allows.
 _OVER_LIMIT = "export class {name} {{\n  place(a: string, b: string, c: string, d: string, e: string): void {{}}\n}}\n"
@@ -417,7 +414,6 @@ with description("a validate action on practice guidance") as self:
             # A copy of the sample in a folder of its own, so it is a project of its own as a checked-out one is.
             sample = Path(tempfile.mkdtemp()) / "input"
             shutil.copytree(_SAMPLE, sample)
-            (sample / _SPEC_FILE).write_text(_SKETCH_WITHOUT_MARKER, encoding="utf-8")
             self.action = Validate(session=_working_in(self.project, sample, sample))
             self.session = Path(self.action.session.session_path)
 
@@ -431,9 +427,9 @@ with description("a validate action on practice guidance") as self:
             expect(report).to(contain("verb-noun-format"))
             expect(report).to(contain(f"[{_STORY_FILE}]("))
 
-        with it("should report the framework-syntax violation on the edited spec"):
+        with it("should report the observable-behavior violation on the edited spec"):
             report = self.action.validate(guidance=["bdd-development"], paths=[_SPEC_FILE])
-            expect(report).to(contain("framework-syntax"))
+            expect(report).to(contain("observable-behavior"))
             expect(report).to(contain(f"[{_SPEC_FILE}]("))
 
         with it("should report only the violations of the guidance's own practice"):
@@ -463,7 +459,7 @@ with description("a validate action on practice guidance") as self:
             with it("should report to each call the violations of the file it checks"):
                 expect(self.failures).to(equal([]))
                 expect(self.reports["ddd-tactics"]).to(contain("private-method-naming"))
-                expect(self.reports["bdd-development"]).to(contain("framework-syntax"))
+                expect(self.reports["bdd-development"]).to(contain("observable-behavior"))
 
         # Calls running at once would each read the graph the last one wrote.
         with it("should write no graph that every call in the session shares"):
