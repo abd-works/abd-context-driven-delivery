@@ -449,6 +449,12 @@ with description("a fidelity read from its practice's document"):
         with it("should not declare a file its outputs do not name"):
             expect(self.story_map.declares("app/.context/ux-context.md")).to(equal(False))
 
+        with it("should declare it in the format whose output names it"):
+            expect(self.story_map.declares("app/.context/story-map.md", "markdown")).to(equal(True))
+
+        with it("should not declare it in another format"):
+            expect(self.story_map.declares("app/.context/story-map.md", "drawio")).to(equal(False))
+
     with context("with its practice's document read twice"):
         with it("should read it once"):
             expect(self.stories.document is self.stories.document).to(equal(True))

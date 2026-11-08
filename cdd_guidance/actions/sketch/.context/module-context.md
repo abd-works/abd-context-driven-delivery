@@ -3,10 +3,10 @@
 
 The MCP tools `sketch.find_template`, `sketch.save_sketch`, `sketch.list_sketches`, and `sketch.review_sketch` find the practice's sketch template, save the sketch file, list sketch files, and stop for the person to confirm the sketch before the next question.
 
-*SketchOutline* reads one practice's section of a sketch as indented lines, and *SketchLens* names that practice (`SketchLens.of("stories")`), so a practice's sketch format can read its own section without parsing headings itself.
+*SketchOutline* reads one practice's section of a sketch as indented lines. Each practice holds its *SketchLens* (harness/guidance, `PracticeGuidance.sketch_lens`, made from its `sketch_titles`), and a practice's sketch format reads its own section with it (`SketchOutline(text).body_for(Stories.sketch_lens)`), so it never parses headings itself or names its practice. The outline asks every practice CDD has for its lens, so any of their headings ends the section before it.
 
 - **Purpose:** Agree the rough shape of a solution in a saved file, reviewed after each theme, before formal generation.
-- **Seam (terms):** Sketch, SketchOutline, SketchLens, `sketch.sketch`, `sketch.find_template`, `sketch.save_sketch`, `sketch.list_sketches`, `sketch.review_sketch`
+- **Seam (terms):** Sketch, SketchOutline, `sketch.sketch`, `sketch.find_template`, `sketch.save_sketch`, `sketch.list_sketches`, `sketch.review_sketch`
 - **Dependencies (one-way):** `cdd_guidance/actions/grill_context` (*GrillContext*), `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*), `harness/guidance` (*PracticeGuidance*), `harness/agent_tools`, `harness/installation`, `harness/mcp`
 
 ## Constraint

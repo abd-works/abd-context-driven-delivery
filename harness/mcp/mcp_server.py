@@ -460,7 +460,7 @@ class McpServer:
         return self.repo in path.parents and self.venv not in path.parents
 
     def _enroll_toolset(self, toolset: Any) -> None:
-        if getattr(toolset, "practice_guidance", "missing") is None:
+        if not toolset.is_served_on_mcp:
             return
         for tool in toolset.tools_for(InstallDestination.MCP):
             self.enroll(tool)

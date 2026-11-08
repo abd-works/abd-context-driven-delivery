@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import os
-import re
 from functools import cache
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Callable
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
+from harness.guidance.declared_file import DeclaredFile
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 from harness.installation.context_config import CONTEXT_FOLDER
@@ -256,41 +256,45 @@ class FidelitySessionOutput:
         # Asking git what the branch changed is slow, and a project that is no repository has no branch, so it is asked
         # only once a pattern finds files.
         worked_on = cache(self._session.session_files.worked_on)
-        return {label: [entry for path in paths for entry in self._declared_files(path, worked_on)] for label, paths in self.output_paths().items()}
+        return {
+            label: [entry for path in paths for entry in self._declared_files(label, path, worked_on)]
+            for label, paths in self.output_paths().items()
+        }
 
     def has_output(self) -> bool:
         """Whether a file this fidelity declares is already in the session, such as one a person wrote. Unlike
         ``files`` it never asks git: a pattern counts only in a session with a folder of its own, since on the whole
         repository a pattern also finds other sessions' files, and the board asks this of every fidelity."""
         own_folder = self._session.root != self._session.repo.root
-        patterns = [self._as_pattern(declared) for paths in self.output_paths().values() for declared in paths]
-        return any(self._exists(pattern) for pattern in patterns if own_folder or "*" not in pattern)
+        declared = [(label, self._declared(path)) for label, paths in self.output_paths().items() for path in paths]
+        return any(self._exists(label, file) for label, file in declared if own_folder or file.names_one_path)
 
-    def _declared_files(self, declared: str, worked_on: Callable[[], set[Path] | None]) -> list[FileEntry]:
-        """A declared path, or each file of this session's that a pattern finds; a pattern that finds none stays as
-        written, not yet there."""
+    def _declared(self, path: str) -> DeclaredFile:
+        """A declared path under this fidelity's root, as a path from the project."""
+        return DeclaredFile(self._session.repo.path_from_top(path))
+
+    def _declared_files(self, label: str, path: str, worked_on: Callable[[], set[Path] | None]) -> list[FileEntry]:
+        """A declared path, or each file of this session's that the fidelity declares where a pattern searches; a
+        pattern that finds none stays as its search, not yet there."""
         repo = self._session.repo
-        pattern = self._as_pattern(declared)
-        if "*" not in pattern:
-            return [FileEntry(pattern, (repo.root / pattern).exists())]
-        found = self._session.session_files.find(pattern)
+        declared = self._declared(path)
+        if declared.names_one_path:
+            return [FileEntry(declared.glob, (repo.root / declared.glob).exists())]
+        found = self._found(label, declared)
         mine = worked_on() if found else None
-        found = [path for path in found if mine is None or path.resolve() in mine]
-        return [FileEntry(repo.path_from_top(path), True) for path in found] or [FileEntry(pattern, False)]
+        found = [file for file in found if mine is None or file.resolve() in mine]
+        return [FileEntry(repo.path_from_top(file), True) for file in found] or [FileEntry(declared.glob, False)]
 
-    def _exists(self, pattern: str) -> bool:
-        """Whether a file the pattern, or the plain path, names is in the repository."""
-        if "*" in pattern:
-            return bool(self._session.session_files.find(pattern))
-        return (self._session.repo.root / pattern).exists()
+    def _found(self, label: str, declared: DeclaredFile) -> list[Path]:
+        """The files a declared pattern's search finds that this fidelity declares in the format label: a name used
+        twice in one declared path must be the same text both times."""
+        return [file for file in self._session.session_files.find(declared.glob) if self._fidelity.declares(file.as_posix(), label)]
 
-    def _as_pattern(self, declared: str) -> str:
-        """A declared path, as a path from the project with its named parts, such as `{module}/{module}-model.md`, as
-        wildcards. A named folder can be a module several folders deep, so it matches folders at any depth; a named part
-        of a file name matches within it. A path with no named parts stays the plain path."""
-        relative = self._session.repo.path_from_top(declared)
-        folders = re.sub(r"\{[^{}/]+\}/", "**/", relative)
-        return re.sub(r"\{[^{}/]+\}", "*", folders)
+    def _exists(self, label: str, declared: DeclaredFile) -> bool:
+        """Whether a file the declared path names is in the repository."""
+        if declared.names_one_path:
+            return (self._session.repo.root / declared.glob).exists()
+        return bool(self._found(label, declared))
 
     def _output_names(self, declared: str | list[str], chosen_name: str | None) -> list[str]:
         """The file names a declared output writes: the chosen name in place of the declared one for a single-file

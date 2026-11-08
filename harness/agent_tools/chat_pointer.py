@@ -8,7 +8,6 @@ import os
 import re
 from pathlib import Path
 
-from harness.annotations.name import Name
 
 # A chat id becomes part of a file pattern, so only the letters, digits, and dashes of an id may reach it.
 _CHAT_ID = re.compile(r"[0-9A-Za-z-]+")
@@ -85,24 +84,6 @@ class ChatPointer:
         if not path_text or not _LINE_RANGE.fullmatch(lines):
             return None
         return cls(match.group(1), Path(path_text), lines)
-
-    @classmethod
-    def in_chat_file(cls, path: Path) -> tuple[ChatPointer, str]:
-        """The pointer for a chat saved as a file, and the chat's text. The file may start with ``chat-id:`` and
-        ``lines:`` headers and a blank line; without them the file's name is the id and the text is every line."""
-        if not path.is_file():
-            return cls(path.stem, path, ""), ""
-        lines = path.read_text(encoding="utf-8").splitlines()
-        blank = next((index for index, line in enumerate(lines) if not line.strip()), None)
-        headers = cls._headers(lines[:blank] if blank is not None else lines)
-        body = "\n".join(lines[blank + 1:] if blank is not None else []).strip()
-        chat_id = headers.get("chat-id") or headers.get("conversation-id") or path.stem
-        return cls(chat_id, path, headers.get("lines") or cls._lines_of(body)), body
-
-    @staticmethod
-    def _headers(lines: list[str]) -> dict[str, str]:
-        """The ``key: value`` header lines above a chat file's first blank line, by kebab-case key."""
-        return {Name(key.strip()).kebab: value.strip() for key, _, value in (line.partition(":") for line in lines if ":" in line)}
 
     @staticmethod
     def _lines_of(body: str) -> str:

@@ -71,7 +71,7 @@ class GraphReading:
                 self._unreadable[file] = f"cannot be read: {error}"
                 continue
             try:
-                module = self.code_model_for(file).parse(text).file_module()
+                module = self.format_for(file).parse(text).file_module()
             except UnreadableSource as unreadable:
                 self._unreadable[file] = str(unreadable)
                 continue

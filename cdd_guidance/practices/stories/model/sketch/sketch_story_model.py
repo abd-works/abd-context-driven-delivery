@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from typing import List, Optional
 
-from cdd_guidance.actions.sketch.sketch_outline import SketchLens, SketchOutline
+from cdd_guidance.actions.sketch.sketch_outline import SketchOutline
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
     Epic,
@@ -78,7 +78,7 @@ class SketchEpic(Epic):
 class SketchStoryModel(StoryModel):
     epic_type = SketchEpic
     story_type = SketchStory
-    lens = SketchLens(Stories.sketch_titles)
+    lens = Stories.sketch_lens
     """The section of a sketch Stories writes, opened by the headings the Stories practice declares."""
 
     def parse(self, text: str) -> "SketchStoryModel":

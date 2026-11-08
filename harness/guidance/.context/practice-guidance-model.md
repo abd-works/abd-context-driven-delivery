@@ -72,6 +72,8 @@ formats: dict[str, Any]
 supported_formats: frozenset
 sketch_titles: tuple[str, ...]
 	// the headings that open this practice's section of a sketch, such as "stories:"
+sketch_lens: SketchLens
+	// made once from sketch_titles; the practice's sketch format reads its section of a sketch with it
 SHORT_NAME: str
 	// the practice's name where there is little room, such as "CE" on a session board chip
 COLOUR: str
@@ -115,6 +117,8 @@ render(format: str, content: Any, source: str | None, previous: str): dict
 		# otherwise: parse content into the object model, then render the target format
 		-> formats[source or self.format].parse
 		-> formats[format].render
+format_for(file: Path): Any
+	// a new model of the file's format: the format whose adapter's suffixes hold the file's extension; ValueError when none does
 read_paths(paths: list[str] | str, source: str | None): Any
 	-> load_document
 render_files(format: str, paths: list[str] | str, source: str | None): dict
@@ -159,7 +163,19 @@ rules: RulesCollection
 	// the fidelity's Rules section
 instructions: str
 	// practice overview, guidance, and shared rules, the companion's instructions, the template, and this fidelity's own text
+templates: str
+	// its template in the format it works in, else its default format
+examples: str
+	// its practice's examples at this fidelity and format
 ----
+checked_rule_collections(): list[RulesCollection]
+	// the practice's shared rules, then its own
+every_rule(): list[Rule]
+	-> practice_guidance.every_rule
+generate_output(): str
+	// the practice's generate_output recipe, expanded
+declares(path: str, format: str = ""): bool
+	// a file one of its outputs names, in format when one is named; DeclaredFile matches the end of the path
 work_in(session_output: FidelitySessionOutput): None
 output_paths(): dict[str, list[str]]
 	-> session_output.output_paths

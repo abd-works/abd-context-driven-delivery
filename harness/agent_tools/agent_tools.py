@@ -582,6 +582,19 @@ class AgentToolSet(AgentToolSetOrigin):
     def tools_for(self, destination: str) -> list[AgentTool]:
         return [tool for tool in self.tools.values() if tool.install_to(destination)]
 
+    @property
+    def is_part_of_practice(self) -> bool:
+        """Whether this toolset is one part of a practice, such as one of its fidelities: its files and commands sit in
+        its practice's folder, named after its own slug, and its own instructions are published under that slug. A
+        toolset is a whole of its own unless it says otherwise."""
+        return False
+
+    @property
+    def is_served_on_mcp(self) -> bool:
+        """Whether the cdd server publishes this toolset's tools: every toolset but a part of a practice made apart from
+        any practice, whose tools are reached only through the practice that holds it."""
+        return True
+
     def for_call(self, call: ToolCall) -> Any:
         """This toolset as call works on it. A toolset keeps no state of one call, so it serves every call itself; a
         toolset that does, such as a guidance action, answers one made for call."""
@@ -809,7 +822,7 @@ class AgentTool(AgentToolDestination):
     def mcp_name(self) -> str:
         """The name MCP publishes this tool under and the session log records it by: ``{toolset slug}.{name}``. A
         practice's own instructions are published under the practice's slug alone."""
-        if getattr(self.toolset, "practice_guidance", None) is not None and self.name == "instructions":
+        if self.toolset.is_part_of_practice and self.name == "instructions":
             return self.slug
         return f"{self.slug}.{self.name}"
 

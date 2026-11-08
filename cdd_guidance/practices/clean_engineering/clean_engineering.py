@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio import Drawio
-from pathlib import Path
-
-from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
 from cdd_guidance.practices.clean_engineering.model.java.java_class_model import JavaCleanEngineeringModel
@@ -79,16 +76,6 @@ class CleanEngineering(GraphReading, PracticeGuidance):
 
     def language_checks(self, language: str) -> dict:
         return rules_in(f"{self.package}.model.drawio.rules") if language == "drawio" else {}
-
-    def code_model_for(self, file: Path) -> CodeCleanEngineeringModel:
-        """A new class model of the source file's language: the code format among this practice's formats that reads the
-        file's extension."""
-        suffix = file.suffix.lower()
-        for name in self.formats:
-            adapter = self._format_adapter(name)
-            if suffix in getattr(adapter, "suffixes", ()):
-                return adapter()
-        raise ValueError(f"No Clean Engineering format reads {file.name}")
 
     def model_in(self, format: str, content: str):
         """The class model content describes, read by this practice's adapter for format."""

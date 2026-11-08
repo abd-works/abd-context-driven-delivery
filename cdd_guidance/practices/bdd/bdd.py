@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 
 if TYPE_CHECKING:
-    from cdd_guidance.practices.bdd.model.bdd_model import BddModel
     from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
 
@@ -78,12 +76,3 @@ class Bdd(PracticeGuidance):
         held = self.graph.every_practice.values() if self.graph is not None else ()
         return next((practice for practice in held if isinstance(practice, CleanEngineering)), None)
 
-    def spec_model_for(self, file: Path) -> BddModel:
-        """A new model of the spec file's language: the code format among this practice's formats that reads the file's
-        extension."""
-        suffix = file.suffix.lower()
-        for name in self.formats:
-            adapter = self._format_adapter(name)
-            if suffix in getattr(adapter, "suffixes", ()):
-                return adapter()
-        raise ValueError(f"No BDD format reads {file.name}")

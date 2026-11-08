@@ -33,9 +33,10 @@ class Render(GuidanceAction):
         def on(item):
             if isinstance(item, str):
                 return item
+            practice = self.practice_of(item)
             if paths:
-                return item.render_files(format, paths, source)
-            return item.render(format, item if loaded in ("", None) else loaded, source=source)
+                return practice.render_files(format, paths, source)
+            return practice.render(format, practice if loaded in ("", None) else loaded, source=source)
 
         converted = self.each(on)
         tools(self.act_quickly)

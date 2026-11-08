@@ -53,6 +53,10 @@ mode: ExpansionMode
 	// classes whose tools run only through the practice or toolset that holds them; install and the hook server skip them
 parameter_notes: dict[str, str]
 	// parameter name -> note added after the description of each tool that takes it
+is_part_of_practice: bool
+	// false; a fidelity its practice holds says true, so installs and MCP name it after its own slug in its practice's folder
+is_served_on_mcp: bool
+	// true; a fidelity made apart from any practice says false, so the cdd server skips it
 ----
 instruction(name: str): AgentInstructions
 	// the @agent_instructions member called name; a recipe names its members by name in its source
@@ -188,7 +192,6 @@ taken_from(arguments: dict | None): tuple[ChatPointer | None, dict]
 	// the chat named in a call's arguments, and the arguments left for the tool
 from_claude_chat(chat_id: str): ChatPointer | None
 in_log_line(line: str): ChatPointer | None
-in_chat_file(path: Path): tuple[ChatPointer, str]
 transcript_text(): list[str]
 
 ## GuidanceAgentOperation : AgentOperation                        <!-- Md -->

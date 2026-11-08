@@ -8,7 +8,7 @@ import json
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from harness.annotations.annotation import hosted_only
 from harness.annotations.name import Name
@@ -18,6 +18,7 @@ from harness.guidance.documents import load_document
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.rule import Rule, RulesCollection
 from harness.guidance.schema import Schema
+from harness.guidance.sketch_lens import SketchLens
 from harness.guidance.stages import STAGES, ApproachStage
 from harness.agent_tools.agent_tools import (
     collect,
@@ -269,10 +270,18 @@ class GuidanceCollection(MarkdownCollection, Guidance):
 class PracticeGuidance(Guidance):
     sketch_titles: tuple[str, ...] = ()
     """The headings that open this practice's section of a sketch, lower case, such as `stories:`."""
+    sketch_lens: ClassVar[SketchLens] = SketchLens(())
+    """This practice's section of a sketch, made once from its ``sketch_titles`` when the practice class is made, so its
+    sketch format and a sketch's reader hold it rather than naming the practice."""
     SHORT_NAME: str = ""
     """The practice's name where there is little room, such as `CE` on a session board's chip."""
     COLOUR: str = ""
     """The colour a session board draws the practice's chips and tiles in, such as `#6BCB77` for Stories."""
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if cls.sketch_lens.titles != cls.sketch_titles:
+            cls.sketch_lens = SketchLens(cls.sketch_titles)
 
     def __init__(
         self,
@@ -662,6 +671,16 @@ class PracticeGuidance(Guidance):
             return getattr(importlib.import_module(module_path), attr)
         return entry
 
+    def format_for(self, file: Path) -> Any:
+        """A new model of the file's format: the one among this practice's formats whose adapter reads the file's
+        extension, such as Python for ``cart_spec.py``. A format whose adapter names no ``suffixes`` reads no file by
+        its extension. Raises ValueError when none of its formats reads it."""
+        suffix = file.suffix.lower()
+        for name in self.formats:
+            adapter = self._format_adapter(name)
+            if suffix in getattr(adapter, "suffixes", ()):
+                return adapter()
+        raise ValueError(f"No {type(self).__name__} format reads {file.name}")
 
     def read_paths(self, paths: list[str] | str, source: str | None = None) -> Any:
         """What render converts from the files at paths: their text, one after another, read from the project of the
@@ -962,6 +981,22 @@ class FidelityGuidance(Guidance):
     def _reports_folder(self) -> Path | None:
         return self.session_output.reports_folder if self.session_output is not None else None
 
+    def schema_guide(self) -> str:
+        """Its practice's schema guide, which its output conforms to; none when it belongs to no practice."""
+        practice = self.practice_guidance
+        return practice.schema_guide() if practice is not None else ""
+
+    @property
+    def is_part_of_practice(self) -> bool:
+        """A fidelity is a part of the practice that holds it; one made apart from any practice is not."""
+        return self.practice_guidance is not None
+
+    @property
+    def is_served_on_mcp(self) -> bool:
+        """Only a fidelity its practice holds is served; one made apart from any practice has no practice to reach it
+        through."""
+        return self.practice_guidance is not None
+
     @property
     def practice_guidance(self) -> PracticeGuidance | None:
         parent = getattr(self, "parent", None)
@@ -1089,6 +1124,26 @@ class FidelityGuidance(Guidance):
         collections = [practice.rules if practice is not None else None, self.rules]
         return list({id(collection): collection for collection in collections if collection is not None}.values())
 
+    def every_rule(self) -> list[Rule]:
+        """Every rule of its practice, shared and each fidelity's: a saved graph holds the whole practice's hits, so a
+        report on this fidelity still shows each hit's rule text; its own rules when it belongs to no practice."""
+        practice = self.practice_guidance
+        return practice.every_rule() if practice is not None else super().every_rule()
+
+    @property
+    def examples(self) -> str:
+        """Its practice's examples at this fidelity, in the format it works in; none when it belongs to no practice."""
+        practice = self.practice_guidance
+        if practice is None:
+            return ""
+        return str(Markdown.from_label(practice, "examples", fidelity=self.name, format=self.format).extract() or "").strip()
+
+    def generate_output(self) -> str:
+        """What its practice tells the agent about writing this fidelity's artifact: the practice's generate_output
+        recipe, expanded, so a practice that renders a format itself, such as Clean Engineering's draw.io, says so."""
+        practice = self.practice_guidance
+        return practice.instruction("generate_output").expand({}).instructions if practice is not None else ""
+
     def guidance_parts(self) -> list[str]:
         """Its own guidance, then its Clean Engineering companion's instructions: what a practice working at this
         fidelity adds to its own guidance."""
@@ -1117,15 +1172,21 @@ class FidelityGuidance(Guidance):
                 return located
         return None
 
-    def declares(self, path: str) -> bool:
-        """Whether path, written from the project's root, is a file one of its outputs names: a declared file such as
-        ``{bounded_context}/{aggregate}/{aggregate}.ts`` matches the end of a path. A declared folder names no file."""
-        return any(declared.pattern.search(path) for declared in self._declared_files)
+    def declares(self, path: str, format: str = "") -> bool:
+        """Whether path, written from the project's root or absolute, is a file one of its outputs names, in format when
+        one is named: a declared file such as ``{bounded_context}/{aggregate}/{aggregate}.ts`` matches the end of a
+        path. A declared folder names no file."""
+        held = self._declared_files
+        chosen = held.get(format, []) if format else [declared for files in held.values() for declared in files]
+        return any(declared.pattern.search(path) for declared in chosen)
 
     @functools.cached_property
-    def _declared_files(self) -> list[DeclaredFile]:
-        names = (name for names in self.outputs.values() for name in ([names] if isinstance(names, str) else names))
-        return [DeclaredFile(name) for name in names if name and not name.endswith("/")]
+    def _declared_files(self) -> dict[str, list[DeclaredFile]]:
+        """The files each format of its outputs declares, by format."""
+        return {
+            label: [DeclaredFile(name) for name in ([names] if isinstance(names, str) else names) if name and not name.endswith("/")]
+            for label, names in self.outputs.items()
+        }
 
     @functools.cached_property
     def actions(self) -> FidelityActions:
@@ -1152,7 +1213,7 @@ class FidelityGuidance(Guidance):
             if templates:
                 templates = f"#### Template\n\n{templates}"
         companion = self.clean_engineering if practice is not None else None
-        schema = practice.schema_guide() if practice is not None else ""
+        schema = self.schema_guide()
         return "\n\n".join(
             part
             for part in (

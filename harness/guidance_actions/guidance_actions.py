@@ -124,17 +124,20 @@ class GuidanceArgument:
 
 class _NamedPractice:
     """The practice CDD has that one listed Guidance names, with the fidelity and format it names: a ref, a ref mapping,
-    or a practice already made, whose current fidelity and format are the ones it names. A mapping with constructor
+    a practice already made, whose current fidelity and format are the ones it names, or one of a practice's fidelities,
+    which names its practice at that fidelity and in its format. A mapping with constructor
     arguments of its own, or any other guidance, names no practice of a session."""
 
     def __init__(self, raw: Any) -> None:
-        from harness.guidance.guidance import PracticeGuidance
+        from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 
         self.key: str | None = None
         self.fidelity = ""
         self.format = ""
         if isinstance(raw, PracticeGuidance):
-            self._made(raw)
+            self._made(raw, raw.fidelities.current)
+        elif isinstance(raw, FidelityGuidance) and raw.practice_guidance is not None:
+            self._made(raw.practice_guidance, raw)
         elif isinstance(raw, dict) and not raw.get("context"):
             self.key = PracticeCatalogue.key_of(str(raw.get("toolset") or ""))
             self.fidelity = str(raw.get("fidelity") or "")
@@ -142,13 +145,13 @@ class _NamedPractice:
         elif isinstance(raw, str):
             self.key = PracticeCatalogue.key_of(raw)
 
-    def _made(self, practice: Any) -> None:
+    def _made(self, practice: Any, fidelity: Any) -> None:
+        """A practice already made, at fidelity, one of its own, or at none."""
         if not PracticeCatalogue.has(practice.key):
             return
-        current = practice.fidelities.current
         self.key = practice.key
-        self.fidelity = current.name if current is not None else ""
-        self.format = practice.format or ""
+        self.fidelity = fidelity.name if fidelity is not None else ""
+        self.format = (fidelity.format if fidelity is not None else practice.format) or ""
 
 
 class ActionWorksInNoSession(Exception):
@@ -270,16 +273,34 @@ class GuidanceAction:
         self._tool_items = argument.items if self._guidance_text is None else []
 
     def _work_on_listed(self, worked_on: str | list) -> None:
-        """Work on what another action already took: its text, or the Guidance it listed, as the same objects."""
+        """Work on what another action already took: its text, or the Guidance it listed, as the same objects. A
+        fidelity ``each`` handed it is its practice, worked at that fidelity."""
         self._guidance_worked_on = worked_on
         if isinstance(worked_on, str):
             self._guidance_text = worked_on
             self._tool_items = []
             self._listed_items = None
             return
+        listed = [self._held(item) for item in worked_on]
         self._guidance_text = None
-        self._tool_items = list(worked_on)
-        self._listed_items = list(worked_on)
+        self._tool_items = list(listed)
+        self._listed_items = list(listed)
+
+    def _held(self, item: Any) -> Any:
+        """item as this action lists it: a fidelity is its practice, which this action works at that fidelity on; any
+        other Guidance is itself."""
+        practice = self.practice_of(item)
+        if practice is not item:
+            self._worked_at[id(practice)] = item
+        return practice
+
+    def practice_of(self, item: Any) -> Any:
+        """The practice item belongs to: a fidelity's practice; item itself for a practice, other guidance, or text."""
+        from harness.guidance.guidance import FidelityGuidance
+
+        if isinstance(item, FidelityGuidance) and item.practice_guidance is not None:
+            return item.practice_guidance
+        return item
 
     def guidance_text(self) -> str | None:
         """The string to run this action on, when guidance was not a Guidance list."""
@@ -300,7 +321,7 @@ class GuidanceAction:
         from raw when it names no practice of this action's session."""
         named = _NamedPractice(raw)
         if self._session is None or named.key is None:
-            return AgentToolSet.instantiate(raw)
+            return AgentToolSet.instantiate(self._held(raw))
         practice = self._session.practice(named.key).guidance
         fidelity = practice.work_at(named.fidelity) if named.fidelity else practice.fidelities.current
         if named.format:
@@ -325,7 +346,12 @@ class GuidanceAction:
     def fidelity_of(self, item: Any) -> Any:
         """The fidelity this action works at on item, one of the Guidance it lists: the one its guidance named, read
         when the action listed it, so another call working on another fidelity of the same practice never changes it;
-        item's current fidelity for guidance no session holds, and none for text."""
+        item's current fidelity for guidance no session holds, a fidelity ``each`` handed out is itself, and none for
+        text."""
+        from harness.guidance.guidance import FidelityGuidance
+
+        if isinstance(item, FidelityGuidance):
+            return item
         if id(item) in self._worked_at:
             return self._worked_at[id(item)]
         return getattr(getattr(item, "fidelities", None), "current", None)
@@ -351,11 +377,21 @@ class GuidanceAction:
         return inner
 
     def each(self, operation: Callable[[Any], Any]) -> list:
-        """Run ``operation`` once on a guidance string, or once per Guidance."""
+        """Run ``operation`` once on a guidance string, or once per Guidance. A listed practice is handed over as the
+        fidelity this action works at on it, which answers its own instructions, templates, examples, rules and
+        generate_output, so another call that moves the practice to another fidelity never changes this one's text;
+        Guidance with no fidelity is handed over itself. A recipe reads only what the operation returns, so an
+        operation gives its text back rather than reading it into nothing."""
         text = self._guidance_text
         if text is not None:
             return [operation(text)]
-        return [operation(item) for item in self.listed()]
+        return [operation(self.at_fidelity(item)) for item in self.listed()]
+
+    def at_fidelity(self, item: Any) -> Any:
+        """item, one of the Guidance this action lists, as the fidelity this action works at on it; item itself when it
+        has none."""
+        fidelity = self.fidelity_of(item)
+        return fidelity if fidelity is not None else item
 
     def run(self, operation: Callable[[Any], Any], *, action: str = "") -> list:
         """Run ``operation`` on the guidance this action works on: once on its string, or once per Guidance."""

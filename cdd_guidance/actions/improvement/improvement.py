@@ -27,11 +27,10 @@ class Improvement(GuidanceAction):
         self._work_on(guidance)
         self.repair_loop
 
-        def on(item) -> None:
+        def on(item) -> str:
             if isinstance(item, str):
-                return
-            item.examples
-            item.templates
+                return ""
+            return "\n\n".join(part.strip() for part in (str(item.examples or ""), item.templates or "") if part.strip())
 
         self.run(on, action="repair")
         "After the fix is written, call refresh with exactly the files you wrote, so the session's graph holds them as they are now; nothing watches the files."
