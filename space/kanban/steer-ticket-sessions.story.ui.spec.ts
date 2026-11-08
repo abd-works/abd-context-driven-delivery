@@ -173,9 +173,9 @@ test.describe('with no chat connected', () => {
       test('Then a dialog headed Switch from Checkout flow to Billing report offers commit and push, chosen, and merge, not chosen', async ({ page }) => {
         const dialog = page.getByRole('dialog')
         await expect(dialog.getByRole('heading', { name: 'Switch from Checkout flow to Billing report' })).toBeVisible()
-        await expect(dialog.getByRole('checkbox', { name: 'Commit changes on Checkout flow' })).toBeChecked()
-        await expect(dialog.getByRole('checkbox', { name: 'Push Checkout flow to origin' })).toBeChecked()
-        await expect(dialog.getByRole('checkbox', { name: 'Merge Checkout flow into main' })).not.toBeChecked()
+        await expect(dialog.getByRole('checkbox', { name: 'Commit changes on checkout-flow' })).toBeChecked()
+        await expect(dialog.getByRole('checkbox', { name: 'Push checkout-flow to origin' })).toBeChecked()
+        await expect(dialog.getByRole('checkbox', { name: 'Merge checkout-flow into main' })).not.toBeChecked()
       })
 
       test('And it offers a branch for billing-report, chosen', async ({ page }) => {
@@ -218,8 +218,8 @@ test.describe('with no chat connected', () => {
       test('Then a dialog headed Close session Checkout flow offers commit and push, chosen', async ({ page }) => {
         const dialog = page.getByRole('dialog')
         await expect(dialog.getByRole('heading', { name: 'Close session Checkout flow' })).toBeVisible({ timeout: 8_000 })
-        await expect(dialog.getByRole('checkbox', { name: 'Commit changes on Checkout flow' })).toBeChecked()
-        await expect(dialog.getByRole('checkbox', { name: 'Push Checkout flow to origin' })).toBeChecked()
+        await expect(dialog.getByRole('checkbox', { name: 'Commit changes on checkout-flow' })).toBeChecked()
+        await expect(dialog.getByRole('checkbox', { name: 'Push checkout-flow to origin' })).toBeChecked()
       })
     })
   })

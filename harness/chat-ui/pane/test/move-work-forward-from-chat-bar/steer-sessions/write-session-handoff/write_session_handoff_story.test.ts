@@ -22,7 +22,7 @@ story('Write Session Handoff', CHAT_BAR, () => {
     })
     // ChatBarView press -> runHandoff($, chatBar) -> $.prompt.fill
     then("the chat's prompt holds Write a handoff for ticket checkout-flow with /space-session-handoff-session.", async ($, on, scene) => {
-      expect(scene.world.fills).toEqual(['Write a handoff for ticket checkout-flow with /space-session-handoff-session.'])
+      expect(scene.world.fills).toEqual(['Write a handoff for ticket checkout-flow with /space-session-handoff-session session=.sessions/checkout-flow/session.json'])
     })
   })
 })

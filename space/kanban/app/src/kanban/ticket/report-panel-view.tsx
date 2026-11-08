@@ -31,9 +31,24 @@ export function ReportStatsView({ panel }: { panel: ReportPanel }) {
   )
 }
 
-function ReportStandingView({ panel }: { panel: ReportPanel }) {
+function OutOfDateView({ panel, isOff }: { panel: ReportPanel; isOff: boolean }) {
+  const { progress } = panel
+  return (
+    <>
+      <p className="panel-warning">This report's saved graph is out of date, so its graph's rules are not shown. Validate again to read them.</p>
+      {progress ? (
+        <button className="ghost-button" disabled={isOff} title={isOff ? 'Connect a chat to validate' : 'Ask the chat to validate this fidelity again'} onClick={() => void panel.ticket.validateAgain(progress)}>
+          Validate again
+        </button>
+      ) : null}
+    </>
+  )
+}
+
+function ReportStandingView({ panel, isOff }: { panel: ReportPanel; isOff: boolean }) {
   const { report } = panel
   if (!report.path) return <p className="panel-note">No validation report yet.</p>
+  if (report.isOutOfDate) return <OutOfDateView panel={panel} isOff={isOff} />
   // The raw text stands in for the rules only when none could be read from it; otherwise it pushes them out of view.
   if (!report.hasSavedGraph) {
     return (
@@ -51,7 +66,7 @@ export function ReportPanelBodyView({ panel }: { panel: ReportPanel }) {
   const isOff = panel.ticket.isLocked || !page.chat.canSend
   return (
     <div className="panel-body report-body" key={state.board?.project}>
-      <ReportStandingView panel={panel} />
+      <ReportStandingView panel={panel} isOff={isOff} />
       {panel.report.rules.length ? (
         <button className="ghost-button" disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : 'Ask the chat to fix all violations found in this report'} onClick={() => void panel.ticket.fixReport(panel.report)}>
           Fix all violations

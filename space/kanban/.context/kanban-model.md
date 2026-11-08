@@ -80,7 +80,7 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 + sessions: Sessions
 	// the sessions of its repository: each one a ticket, and which is open
 + file: Path
-	// `.sessions/_board.json`, what the repository's sessions share on the board, such as each stage's WIP limit
+	// `.sessions/_board.json`, what the repository's sessions share on the board, such as each stage's WIP limit; the board is its one reader and writer, and reads it once per board read
 	-> Sessions.folder
 + project: str
 	// data field: the repository folder's name
@@ -89,10 +89,10 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 + << composition >> columns: list[Column]
 	// data field; always Backlog, then one Stage for each `ApproachStage` in `STAGES` (`harness/guidance/stages.py`), then Complete
 + << composition >> tickets: list[Ticket]
-	// one per session of the repository
+	// one per session of the repository, made once per board read and kept until `reread`
 	-> Sessions.all
 + << aggregation >> backlog_items: list[BacklogItem]
-	// every idea file in `.sessions/_backlog/`, and every ticket folder kept there
+	// every idea file in `.sessions/_backlog/`, and every ticket folder kept there, read once per board read and kept until `reread`
 	-> Sessions.backlog_folder
 + cards: list[Card]
 	// its tickets, then its backlog items
@@ -107,8 +107,8 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 ----
 + load(project: Path): Board
 	// the `@tool_subject` of the `board.*` tools, handed the call's project: the board of that project's main checkout with every practice chosen, so a chat in a ticket's worktree reads the same board
-	-> Repo.checkout_folder
-	-> Repo.primary_root
+	-> Repo.of_project
+	-> Repo.main_clone
 	-> PracticeCatalogue.practices
 + show(): Board
 	// `board.show`
@@ -122,9 +122,18 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 + practice(key: str): PracticeGuidance
 	// the practice whose folder name is key, such as `clean_engineering`; raises `PracticeNotFoundError` for one the board does not have
 + open_ticket(title: str, scope: str, parent: str, path: str): Ticket
-	// a new ticket in Discovery, its session working on path, a folder in the repository
+	// a new ticket in Discovery, its session working on path, a folder in the repository; the session takes its name from the title
 	-> Sessions.create
-	-> Board.ticket
+	-> Board.ticket_of
++ ticket_of(session: Session): Ticket
+	// the ticket of a session just opened, moved between folders, closed, or reopened; the board forgets the cards it has read
+	-> Board.reread
++ reread()
+	// forgets the tickets, backlog items, and worktrees read so far, so the next read sees a change made since
++ wip_limit(stage: Stage): int
+	// the limit saved for stage in `.sessions/_board.json`, else 3
++ set_wip_limit(stage: Stage, limit: int)
+	// saved in `.sessions/_board.json` beside the other stages' limits, keeping whatever else the file holds
 + ticket(name: str): Ticket
 	// read from that ticket's session folder alone, open before closed; none when no session has that name
 	-> Sessions.named
@@ -136,10 +145,12 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 
 Marked `@identity("name")`, so a reference to a column is its name.
 
-+ Column(name: str, board: Board)
++ Column(name: str, kind: str, board: Board)
 ------
 + name: str
 	// data field
++ kind: str
+	// data field: backlog, stage, or complete, so a reader of the board knows which fields the column sends
 + << aggregation >> cards: list[Card]
 	// every card of the board whose column is this one
 	-> Board.cards
@@ -188,7 +199,8 @@ Made for one `ApproachStage` of `STAGES`, which gives its title as the column's 
 + previous_stage: Stage
 	// none before Discovery
 + wip_limit: int
-	// data field: the limit saved for this stage in `.sessions/_board.json`, else 3
+	// data field: the limit the board keeps for this stage
+	-> Board.wip_limit
 + is_over_limit: bool
 	// data field: it holds more tickets than its WIP limit
 + in_progress: list[Ticket]
@@ -201,7 +213,8 @@ Made for one `ApproachStage` of `STAGES`, which gives its title as the column's 
 	// the `@tool_subject` of the `stage.*` tools; refuses a column that is not a stage with `NotAStageError`
 	-> Board.load
 + set_wip_limit(limit: int): Stage
-	// `stage.set_wip_limit`: saved in `.sessions/_board.json` beside the other stages' limits, keeping whatever else the file holds
+	// `stage.set_wip_limit`: the board keeps it
+	-> Board.set_wip_limit
 
 ## Card
 
@@ -236,7 +249,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 + << association >> session: Session
 	// data field: its folders, its practices and their files, and its log
 + << composition >> progress: list[FidelityProgress]
-	// data field: one per fidelity the board requires, in stage order, read from the session log each time; a judgment in the fidelity's latest report that fails a rule fails a validate the log shows passing
+	// data field: one per fidelity the board requires, in stage order, read from the session log once per ticket read and again after the ticket records a line; a judgment in the fidelity's latest report that fails a rule fails a validate the log shows passing
 	-> SessionLog.entries
 	-> FidelityProgress.from_log
 + << association >> column: Column
@@ -270,23 +283,32 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 + branch(): Branch
 	// `ticket.branch`: its own branch, named as the ticket, with whether the repository has it and whether it is checked out, so activating a ticket offers only what is missing and leaving one commits, pushes, and merges only its own branch
 	-> Repo.branch_named
++ work_branch(): Branch
+	// `ticket.work_branch`: the branch its work is on, which leaving commits and pushes: its own branch while it is checked out, else the default branch while the checkout is on it, as for a session with no branch of its own; any other checkout gives its own branch, not checked out
+	-> Ticket.branch
+	-> Repo.branch_named
++ record(line: str): Ticket
+	// writes line to its session's log, a move, a mark, or a review; its progress is read from the log again next time
+	-> SessionLog.record
 + progress_of(slug: str): FidelityProgress
 	// raises `FidelityNotFoundError` for a fidelity the ticket does not have
 + activate(leaving: list[str], opening: list[str]): Ticket
-	// `ticket.activate`: the active ticket leaves its work as leaving says (commit, push, merge), this ticket opens what opening names (branch, worktree), and its session becomes current
+	// `ticket.activate`: the active ticket leaves its work as leaving says (handoff, commit, push, merge), this ticket opens what opening names (branch, worktree), and its session becomes current
 	-> Board.active
 	-> Ticket.leave
 	-> Repo.switch_branch
 	-> Repo.switch_worktree
 	-> Sessions.switch
 + open_worktree(): Ticket
-	// `ticket.open_worktree`: opens its own worktree beside the repository, creating its branch when missing; the ticket comes back from a new board read, which lists the new worktree
+	// `ticket.open_worktree`: opens its own worktree beside the repository, creating its branch when missing; the board forgets the worktrees it listed, so the ticket's next read lists the new one
 	-> Ticket.branch
 	-> Branch.open_in_worktree
-	-> Board.load
+	-> Board.reread
 + leave(leaving: list[str])
-	// commits, pushes, and merges as leaving names, only when the ticket's own branch is checked out
-	-> Branch.is_checked_out
+	// writes a handoff for its session when leaving names handoff, then commits, pushes, and merges as leaving names, only while the branch its work is on is checked out; work on the default branch is committed and pushed there, never merged, and no worktree is removed
+	-> Handoffs.write
+	-> LeavingHandoff.document
+	-> Ticket.work_branch
 	-> Repo.push_commit
 	-> Repo.close_branch
 + move_next(): Ticket
@@ -356,7 +378,7 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 + has_violations: bool
 + is_done: bool
 + << composition >> latest_report: ReportFile
-	// its latest report in its ticket's session that has its result, else its latest; none when it has none
+	// its latest report in its ticket's session that has its result, else its latest; none when it has none; found once per reading of the progress
 	-> ReportFile.from_fidelity
 ----
 + from_log(fidelity: FidelityGuidance, stage: Stage, entries: list[LogEntry], ticket: Ticket): FidelityProgress
@@ -369,8 +391,8 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 	-> Ticket.progress_of
 + finish_review(): FidelityProgress
 	// `fidelity-progress.finish_review`: a person's approval, one `review <practice key> <fidelity>` line in its ticket's session log, as action lines name the practice; answers its progress read again from the log
-	-> SessionLog.record
-	-> FidelityProgress.from_log
+	-> Ticket.record
+	-> Ticket.progress
 + report(): Report
 	// `fidelity-progress.report`: its latest report, with the rules broken on the nodes of the graph saved beside it, then each rule the judgment fails
 	-> ReportFile.report
@@ -478,6 +500,7 @@ The rules a validation found broken, built from the saved report and the graph s
 + has_saved_graph: bool
 	// data field; false when the report has no saved graph, so its graph's rules are missing
 + violation_count: int
+	// data field: graph hits and judged findings together, which the board app shows as they are sent
 ----
 + from_reports(folder: str, reports: list[Report]): Report
 	// every rule broken in reports, each listed once though two fidelities share it
@@ -502,7 +525,8 @@ The rules a validation found broken, built from the saved report and the graph s
 
 A validation report of one fidelity saved in a session folder, with the graph the validation checked saved beside it. It knows which of its practice's rules it answers for.
 
-+ ReportFile(file: Path, fidelity: FidelityGuidance, session: Session, repo: Repo)
++ ReportFile(file: Path, fidelity: FidelityGuidance)
+	// fidelity is the one its session holds: its practice's session names the folder the saved graph names files from, and that session's repository names the report's files from its top
 ------
 + file: Path
 + stamp: str
@@ -513,7 +537,7 @@ A validation report of one fidelity saved in a session folder, with the graph th
 + is_judged_failing: bool
 	-> Judgment.from_report
 ----
-+ from_fidelity(fidelity: FidelityGuidance, session: Session, repo: Repo): ReportFile
++ from_fidelity(fidelity: FidelityGuidance): ReportFile
 	// the fidelity's latest report in the session that has its result, else its latest; none when it has none
 	-> FidelityGuidance.reports
 + report(): Report

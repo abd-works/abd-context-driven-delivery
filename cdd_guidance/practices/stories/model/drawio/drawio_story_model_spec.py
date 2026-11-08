@@ -124,6 +124,72 @@ with description("a DrawIO Story Map") as self:
                 equal(["Customer"])
             )
 
+    with context("that holds a Story directly under a top-level Epic"):
+        with before.each:
+            self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
+            story = DrawIOStory("Story 2.1", 1, StoryType.USER)
+            story.actors = ["Customer"]
+            self.source.epics[1].append_story(story)
+            self.parsed = self.drawio.load(self.source.save())
+
+        with it("should draw the Story under its Epic"):
+            expect([story.name for story in self.parsed.epics[1].stories]).to(equal(["Story 2.1"]))
+
+    with context("that holds several Stories directly under a top-level Epic"):
+        with before.each:
+            self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
+            for order in range(1, 4):
+                self.source.epics[1].append_story(DrawIOStory(f"Story 2.{order}", order, StoryType.USER))
+
+        with it("should start the next Epic after the last of those Stories"):
+            last_story = self.source.epics[1].stories[-1]
+            expect(self.source.epics[2].x >= last_story.x + DrawIOStory.size).to(be_true)
+
+    with context("rendering the thin-slice view with a story directly under an epic"):
+        with before.each:
+            self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
+            self.source.epics[1].append_story(DrawIOStory("Story 2.1", 1, StoryType.USER))
+            self.source.append_increment(Increment("Increment A", 1, [Story("Story 2.1", 1)]))
+            cells = ET.fromstring(self.source.save_thin_slice()).findall(".//mxCell")
+            self.stories = [c for c in cells if c.attrib.get("style", "").startswith("increment-story;")]
+
+        with it("should place the story in its epic's column"):
+            expect(self.stories).to(have_len(1))
+
+    with context("rendering the thin-slice view with one story name in two sub-epics"):
+        with before.each:
+            self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
+            self.source.epics[0].epics[1].stories[0].name = "Story 1.1.1"
+            self.source.append_increment(
+                Increment("Increment A", 1, [Story("Story 1.1.1", 1), Story("Story 1.1.1", 2)])
+            )
+            cells = ET.fromstring(self.source.save_thin_slice()).findall(".//mxCell")
+            self.stories = [c for c in cells if c.attrib.get("style", "").startswith("increment-story;")]
+            self.ids = [c.attrib["id"] for c in cells]
+
+        with it("should give every cell its own id"):
+            expect(len(set(self.ids))).to(equal(len(self.ids)))
+
+        with it("should place each story under its own sub-epic"):
+            expect(len({c.find("mxGeometry").attrib["x"] for c in self.stories})).to(equal(2))
+
+    with context("that holds a Story with an actor under a nested sub-epic"):
+        with before.each:
+            self.source = DrawIOStoryModel()
+            epic = DrawIOEpic("Epic 1", 1)
+            sub_epic = DrawIOEpic("Epic 1.1", 1)
+            nested_sub_epic = DrawIOEpic("Epic 1.1.1", 1)
+            story = DrawIOStory("Story 1.1.1.1", 1, StoryType.USER)
+            story.actors = ["Customer"]
+            nested_sub_epic.append_story(story)
+            sub_epic.append_epic(nested_sub_epic)
+            epic.append_epic(sub_epic)
+            self.source.append_epic(epic)
+            self.text = self.source.save()
+
+        with it("should draw the actor above the Story"):
+            expect(self.drawio.load(self.text).epics[0].epics[0].epics[0].stories[0].actors).to(equal(["Customer"]))
+
     # draw.io saves cells back to front, so bringing one forward or back moves it in the file without moving it on screen.
     with context("that has been rendered and saved with its cells in reverse order"):
         with before.each:
@@ -196,6 +262,18 @@ with description("a DrawIO Story Map") as self:
             expect(inc_labels).to(have_len(2))
             expect(inc_bgs).to(have_len(2))
             expect(increment_stories).to(have_len(3))
+
+        with it("should start the first increment lane below the sub-epic headers"):
+            cells = ET.fromstring(self.text).findall(".//mxCell[@vertex='1']")
+            header_bottom = max(
+                int(c.find("mxGeometry").attrib["y"]) + int(c.find("mxGeometry").attrib["height"])
+                for c in cells if c.attrib.get("style", "").startswith(("epic", "subepic"))
+            )
+            first_lane_y = min(
+                int(c.find("mxGeometry").attrib["y"])
+                for c in cells if c.attrib.get("style", "").startswith("inc-lane;")
+            )
+            expect(first_lane_y > header_bottom).to(be_true)
 
         with it("should position the second increment lane below the first"):
             tree = ET.fromstring(self.text)

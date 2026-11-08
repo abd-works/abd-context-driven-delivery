@@ -18,12 +18,15 @@ export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; 
 export type ChatBarJson = { board: object | null; problem: string | null }
 
 // Which of the chat bar's boxes is open above the line. switchTo names the session the activation dialog opens;
-// closing holds whether the active session has a branch whose work the close dialog offers to commit and push.
+// closing holds the branch the active session's work is on, checked out, whose work the close dialog offers to commit
+// and push, or null. leaving and opening are what the open dialog has chosen, as ticket.activate and ticket.close take them.
 export type ChatBarViewJson = {
   isSessionListOpen: boolean
   isCardOpen: boolean
   switchTo: string | null
-  closing: { hasBranch: boolean } | null
+  closing: { branch: string | null } | null
+  leaving: string[]
+  opening: string[]
 }
 
 // Whether the action picker's menu is open.

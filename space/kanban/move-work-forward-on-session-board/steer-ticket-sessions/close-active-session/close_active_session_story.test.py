@@ -46,6 +46,42 @@ with story("Close Active Session"):
             pass
         with and_("no ticket is active"):
             pass
+    with scenario("Close a session whose work is on main"):
+        # Evidence: observed: chat-ui-defects backlog item — closing a session on main should commit and push main, as switching a branch does, and not try to delete a worktree; main has no worktree to delete.
+        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), its work on main"):
+            pass
+        with when("the Person closes checkout-flow"):
+            # Person -> Ticket.work_branch()
+            # Ticket <- Branch main, is_checked_out: true
+            pass
+        with then("the close dialog offers to commit and push main"):
+            pass
+        with when("the Person confirms"):
+            # Person -> Ticket.close(['commit', 'push'])
+            # Ticket -> Repo.push_commit('checkout-flow: leave session', sync_remote=True)
+            # Ticket -> Session.close()
+            # Ticket -> Session.move_to_closed()
+            pass
+        with then("main on origin holds the commit checkout-flow: leave session"):
+            pass
+        with and_("the checkout is still on main"):
+            pass
+        with and_("checkout-flow shows in Complete"):
+            pass
+    with scenario("Write a handoff for the session being closed"):
+        # Evidence: observed: chat-ui-defects backlog item — the close and switch dialogs need a Create handoff checkbox, on by default; when it is on, closing or switching writes a handoff for the session being left.
+        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), its story map held on violations"):
+            pass
+        with when("the Person closes checkout-flow with Create handoff chosen"):
+            # Person -> Ticket.close(['handoff'])
+            # Ticket -> Handoffs.write(LeavingHandoff(ticket).document)
+            # Ticket -> Session.close()
+            # Ticket -> Session.move_to_closed()
+            pass
+        with then("checkout-flow's folder in .sessions/_complete holds a handoff"):
+            pass
+        with and_("the handoff names stories-story-map as what comes next"):
+            pass
     with scenario("Complete a ticket that has no branch of its own"):
         # Evidence: observed: activation-client.spec 'should choose nothing to leave when the session has no branch'; kanban_tools_spec 'should commit nothing on a ticket that has no branch'.
         with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card)"):

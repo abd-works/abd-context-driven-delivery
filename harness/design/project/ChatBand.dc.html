@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chat band pane</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 100%; height: 100%; box-sizing: border-box; background: #111113; color: #E8E8ED; font-family: 'JetBrains Mono', monospace; font-size: 13px; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; padding: 6px 10px">
+<div style="font-size: 11px; color: #F2A07A; min-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{vals.toast}}</div>
+<div style="position: relative; display: flex; align-items: center; gap: 12px; padding: 6px 0; border-top: 1px solid #2A2A2A; border-bottom: 1px solid #2A2A2A">
+<span style="color: #3FB27F; width: 16px" aria-label="cdd connected">✓</span>
+<span style="position: relative; display: flex; align-items: center; gap: 4px">
+<span style="font-weight: 700; white-space: nowrap">{{vals.sessionName}}</span>
+<button type="button" onClick="{{vals.toggleSessions}}" aria-label="Choose the active session" style="font: inherit; color: #9B9BA8; background: transparent; border: 1px solid #2A2A2A; border-radius: 3px; padding: 0 4px; cursor: pointer">▾</button>
+<sc-if value="{{vals.isSessionListOpen}}" hint-placeholder-val="{{false}}">
+<div role="listbox" aria-label="Sessions" style="position: absolute; bottom: 100%; left: 0; z-index: 8; margin-bottom: 6px; display: flex; flex-direction: column; padding: 4px; background: #1B1B20; border: 1px solid #2A2A2A; border-radius: 4px; min-width: 280px">
+<sc-for list="{{vals.sessions}}" as="session" hint-placeholder-count="2">
+<button type="button" role="option" onClick="{{session.pick}}" style="{{session.style}}"><span style="{{session.markStyle}}">●</span><span style="flex-grow: 1">{{session.name}}</span><span style="color: #71717A; font-size: 11px">{{session.stage}}</span></button>
+</sc-for>
+</div>
+</sc-if>
+</span>
+<span style="color: #2A2A2A">│</span>
+<span style="display: flex; gap: 3px">
+<sc-for list="{{vals.dots}}" as="dot" hint-placeholder-count="5">
+<span onMouseEnter="{{dot.enter}}" onMouseLeave="{{dot.leave}}" style="position: relative">
+<button type="button" onClick="{{dot.toggle}}" aria-label="{{dot.tip}}" style="{{dot.style}}">■<span style="font-size: 10px; font-weight: 700; color: #EF4444; vertical-align: super; margin-left: 1px">{{dot.count}}</span></button>
+<sc-if value="{{dot.isHovered}}" hint-placeholder-val="{{false}}"><span style="position: absolute; bottom: 150%; left: 50%; transform: translateX(-50%); z-index: 9; white-space: nowrap; font-size: 12px; background: #1B1B20; border: 1px solid #2A2A2A; border-radius: 3px; padding: 2px 8px; color: #E8E8ED">{{dot.tip}}</span></sc-if>
+</span>
+</sc-for>
+</span>
+<span onMouseEnter="{{vals.enterRun}}" onMouseLeave="{{vals.leaveRun}}" style="position: relative; display: flex">
+<button type="button" onClick="{{vals.run}}" aria-label="{{vals.runTip}}" style="font: inherit; font-weight: 700; color: #0B0B0B; background: #E5531A; border: 1px solid #E5531A; border-radius: 3px 0 0 3px; padding: 2px 10px; cursor: pointer">▶</button>
+<button type="button" onClick="{{vals.toggleActions}}" aria-label="Choose the action" style="font: inherit; color: #0B0B0B; background: #E5531A; border: 1px solid #E5531A; border-left: 1px solid #0B0B0B; border-radius: 0 3px 3px 0; padding: 2px 5px; cursor: pointer">▾</button>
+<sc-if value="{{vals.isHoveredRun}}" hint-placeholder-val="{{false}}"><span style="position: absolute; bottom: 150%; left: 50%; transform: translateX(-50%); z-index: 9; white-space: nowrap; font-size: 12px; background: #1B1B20; border: 1px solid #2A2A2A; border-radius: 3px; padding: 2px 8px; color: #E8E8ED">{{vals.runTip}}</span></sc-if>
+<sc-if value="{{vals.isActionMenuOpen}}" hint-placeholder-val="{{false}}">
+<div role="menu" aria-label="Actions" style="position: absolute; bottom: 100%; left: 0; z-index: 8; margin-bottom: 6px; display: flex; flex-direction: column; padding: 4px; background: #1B1B20; border: 1px solid #2A2A2A; border-radius: 4px; min-width: 140px">
+<sc-for list="{{vals.actions}}" as="item" hint-placeholder-count="4">
+<button type="button" role="menuitem" onClick="{{item.pick}}" style="{{item.style}}">{{item.label}}</button>
+</sc-for>
+</div>
+</sc-if>
+</span>
+<span style="display: flex; gap: 4px" role="group" aria-label="Formats">
+<sc-for list="{{vals.formats}}" as="format" hint-placeholder-count="3">
+<span onMouseEnter="{{format.enter}}" onMouseLeave="{{format.leave}}" style="position: relative">
+<button type="button" onClick="{{format.toggle}}" aria-label="{{format.tip}}" style="{{format.style}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: block"><path d="{{format.shape}}"></path></svg></button>
+<sc-if value="{{format.isHovered}}" hint-placeholder-val="{{false}}"><span style="position: absolute; bottom: 150%; left: 50%; transform: translateX(-50%); z-index: 9; white-space: nowrap; font-size: 12px; background: #1B1B20; border: 1px solid #2A2A2A; border-radius: 3px; padding: 2px 8px; color: #E8E8ED">{{format.tip}}</span></sc-if>
+</span>
+</sc-for>
+</span>
+<span style="flex-grow: 1"></span>
+<span style="display: flex; gap: 6px">
+<sc-for list="{{vals.views}}" as="view" hint-placeholder-count="4">
+<span onMouseEnter="{{view.enter}}" onMouseLeave="{{view.leave}}" style="position: relative">
+<button type="button" onClick="{{view.toggle}}" aria-label="{{view.label}}" style="{{view.style}}">{{view.icon}}</button>
+<sc-if value="{{view.isHovered}}" hint-placeholder-val="{{false}}"><span style="position: absolute; bottom: 150%; left: 50%; transform: translateX(-50%); z-index: 9; white-space: nowrap; font-size: 12px; background: #1B1B20; border: 1px solid #2A2A2A; border-radius: 3px; padding: 2px 8px; color: #E8E8ED">{{view.label}}</span></sc-if>
+</span>
+</sc-for>
+</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"vals":{"editor":null},"$preview":{"width":1200,"height":96}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const none = { toast: 'Opened alone: the options on this page drive this band.', sessions: [], dots: [], actions: [], formats: [], views: [] };
+    return { vals: this.props.vals ?? none };
+  }
+}
+</script>
+</body>
+</html>

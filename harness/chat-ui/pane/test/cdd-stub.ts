@@ -20,6 +20,7 @@ export type World = {
   unknown: string[]
   sent: string[]
   fills: string[]
+  submits: string[]
   toasts: string[]
   branches: Record<string, BranchData>
   declared: Record<string, Record<string, FileEntryData[]>>
@@ -33,6 +34,7 @@ export type World = {
   installExit: { exitCode: number; stderr: string }
   timers: (() => void)[]
   installs: string[][]
+  panes: { id: string; title?: string }[]
 }
 
 const cddTools = (count: number) => Array.from({ length: count }, (_, index) => ({ name: `mcp__plugin_cdd_cdd__tool_${index}`, description: '', mcp: true }))
@@ -104,7 +106,7 @@ class Refused extends Error {}
 const files = (world: World, { fidelity }: { fidelity: string }): Record<string, FileEntryData[]> => world.declared[fidelity] ?? {}
 
 // FidelityProgress.report: the asked fidelity's latest validation report; an empty report when it has none.
-const report = (world: World, { fidelity }: { fidelity: string }): ReportData => world.reports[fidelity] ?? ({ path: '', text: '', rules: [], has_saved_graph: false } as ReportData)
+const report = (world: World, { fidelity }: { fidelity: string }): ReportData => world.reports[fidelity] ?? ({ path: '', text: '', rules: [], has_saved_graph: false, is_out_of_date: false } as ReportData)
 
 // Session.read_file: the text of a path under the session's roots, no text once it is gone; a path that climbs out of
 // the roots is refused with PathOutsideRootsError's text.
@@ -113,12 +115,13 @@ function readFile(world: World, { path }: { session: string; path: string }): Fi
   return { path, text: world.texts[path] ?? '' }
 }
 
-// Ticket.branch: the ticket's own branch, named as the ticket; one the repository does not have for a ticket the story
-// gives none.
+// Ticket.branch and Ticket.work_branch: the branch the story gives the ticket, such as main for work on main; for a
+// ticket the story gives none, its own branch, named as the ticket, which the repository does not have.
 const branch = (world: World, { ticket }: { ticket: string }): BranchData => world.branches[ticket] ?? { name: ticket, exists: false, is_checked_out: false }
 
 const TOOLS: Record<string, (world: World, args: any) => unknown> = {
   'ticket.branch': branch,
+  'ticket.work_branch': branch,
   'ticket.move_next': moveNext,
   'fidelity-progress.finish_review': finishReview,
   'ticket.close': close,
@@ -143,6 +146,7 @@ export const OPERATIONS: Record<string, string[]> = {
   'ticket.create': ['title', 'scope', 'parent', 'path'],
   'ticket.activate': ['ticket', 'leaving', 'opening'],
   'ticket.branch': ['ticket'],
+  'ticket.work_branch': ['ticket'],
   'ticket.close': ['ticket', 'leaving'],
   'ticket.move_next': ['ticket'],
   'fidelity-progress.finish_review': ['ticket', 'fidelity'],
@@ -193,6 +197,7 @@ export function cdd(on: any, board: BoardData = boardOf('checkout-flow', checkou
     unknown: [],
     sent: [],
     fills: [],
+    submits: [],
     toasts: [],
     branches: {},
     declared: {},
@@ -206,6 +211,7 @@ export function cdd(on: any, board: BoardData = boardOf('checkout-flow', checkou
     installExit: { exitCode: 0, stderr: '' },
     timers: [],
     installs: [],
+    panes: [],
   }
   on('command.register', () => ({ value: undefined }))
   on('session.id', () => ({ value: 'chat-1' }))
@@ -223,12 +229,24 @@ export function cdd(on: any, board: BoardData = boardOf('checkout-flow', checkou
   })
   on('ui.status', () => ({ value: undefined }))
   on('ui.invalidate', () => ({ value: undefined }))
+  // The panes the chat bar opened beside the chat, the files pane among them, and closed again.
+  on('ui.open', (_: unknown, e: { id: string; title?: string }) => {
+    world.panes = [...world.panes.filter(pane => pane.id !== e.id), { id: e.id, title: e.title }]
+    return { value: { isPlaced: true } }
+  })
+  on('ui.close', (_: unknown, e: { id: string }) => {
+    world.panes = world.panes.filter(pane => pane.id !== e.id)
+    return { value: undefined }
+  })
   on('ui.log', () => ({ value: undefined }))
   on('prompt.fill', (_: unknown, e: { text: string }) => {
     world.fills.push(e.text)
     return { isFilled: true }
   })
-  on('prompt.submit', (_: unknown, e: { text: string }) => ({ text: e.text }))
+  on('prompt.submit', (_: unknown, e: { text: string }) => {
+    world.submits.push(e.text)
+    return { text: e.text }
+  })
   on('command.run', (_: unknown, e: { command: string; args: string }) => {
     world.sent.push(`/${e.command} ${e.args}`.trim())
     return { value: { text: '' } }

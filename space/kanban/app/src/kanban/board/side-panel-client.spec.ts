@@ -174,6 +174,24 @@ describe('Open Validation Report', () => {
     await page.panels.openReport(ticketOn(page), null)
     expect(reportPanel(page).report.path).toBe('.sessions/checkout-flow/validation-reports')
   })
+
+  // A report saved before the graph's shape 2 keeps its graph as it was; the board says so instead of failing to read.
+  describe("with a report whose saved graph is out of date", () => {
+    beforeEach(() => board.write(REPORT_PATH.replace(/\.md$/, '.json'), JSON.stringify({ overlays: [], practices: CLEAN_GRAPH.practices })))
+
+    it('should say the report is out of date', async () => {
+      const { page } = await board.page()
+      await page.panels.openReport(ticketOn(page), storyMapOn(page))
+      expect(reportPanel(page).report.isOutOfDate).toBe(true)
+    })
+
+    it('should send its fidelity to validate again', async () => {
+      const { page } = await board.page()
+      const chat = await board.connectChat(page)
+      await ticketOn(page).validateAgain(storyMapOn(page))
+      expect(await chat.checkIn()).toEqual([{ kind: 'command', text: `/actions-validate ${SLUG} ${SESSION}` }])
+    })
+  })
 })
 
 describe('Fix Report Violations', () => {

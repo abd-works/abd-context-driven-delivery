@@ -1,6 +1,7 @@
 """Draw.io UX channel - CLI Detailed IA + Site Map against the UxMap sketch."""
 
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from expects import be, equal, expect, raise_error
@@ -87,3 +88,30 @@ with description("a UX map drawn as a draw.io information architecture"):
 
         with it("should stop it and say it timed out"):
             expect(lambda: self.writer.render(self.source)).to(raise_error(DrawioCliTimedOut))
+
+    with context("that holds three screens side by side with transitions between them"):
+        with before.each:
+            ux_map = DrawioUxMap.create()
+            screens = {}
+            for order, name in enumerate(["Board", "Editor", "Explorer"]):
+                screens[name] = Screen(name, order)
+                screens[name].append_region(Region("body", 0, "body"))
+                ux_map.append_screen(screens[name])
+            for order, (source, target) in enumerate([("Board", "Explorer"), ("Explorer", "Board"), ("Editor", "Explorer")]):
+                ux_map.transitions.append(Transition(f"go {order}", order, from_screen=screens[source], to_screen=screens[target], trigger=f"go {order}", nav_type="action"))
+            page = ET.fromstring(DrawioUxMap.create().render(ux_map)).find(".//diagram[@name='Detailed IA']")
+            cells = page.findall(".//mxCell")
+            self.screen_top = min(
+                float(cell.find("mxGeometry").get("y"))
+                for cell in cells if cell.get("value") in ("Board", "Editor", "Explorer")
+            )
+            self.lanes = [
+                [float(point.get("y")) for point in cell.findall(".//mxPoint")]
+                for cell in cells if cell.get("edge") == "1"
+            ]
+
+        with it("should route every transition above the screens"):
+            expect(all(points and max(points) < self.screen_top for points in self.lanes)).to(equal(True))
+
+        with it("should give each transition a lane of its own"):
+            expect(len({points[0] for points in self.lanes if points})).to(equal(len(self.lanes)))

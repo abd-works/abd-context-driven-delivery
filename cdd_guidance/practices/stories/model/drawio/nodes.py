@@ -42,9 +42,12 @@ class DrawIOIncrement(DiagramIncrement):
         "fontColor=#000000;fontSize=8;"
     )
 
+    header_gap = 10
+
     @classmethod
-    def lane_top_y(cls) -> int:
-        return DiagramEpic.row_y + DiagramEpic.bar_height + 10
+    def lane_top_y(cls, header_bottom: int) -> int:
+        """The first lane starts below the lowest epic or sub-epic header drawn above it."""
+        return header_bottom + cls.header_gap
 
     @classmethod
     def story_y_offset(cls) -> int:
@@ -189,10 +192,14 @@ class DrawIOEpic(DiagramEpic):
             "fontColor=#000000;fontSize=11;"
         )
 
-    def story_xs(self) -> Dict[str, int]:
-        found = {story.name: story.x for story in self.stories}
+    def story_xs(self) -> Dict[str, List[int]]:
+        """Each story name's columns, left to right; one name can sit under several sub-epics."""
+        found: Dict[str, List[int]] = {}
+        for story in self.stories:
+            found.setdefault(story.name, []).append(story.x)
         for child in self.epics:
-            found.update(child.story_xs())
+            for name, xs in child.story_xs().items():
+                found.setdefault(name, []).extend(xs)
         return found
 
     def cells(self) -> List["DrawIOStoryModel.Vertex"]:
@@ -516,9 +523,10 @@ class DrawIOStoryModel(DiagramStoryModel):
         ET.SubElement(graph_root, "mxCell", attrib={"id": "0"})
         ET.SubElement(graph_root, "mxCell", attrib={"id": "1", "parent": "0"})
 
-        story_x: Dict[str, int] = {}
+        story_x: Dict[str, List[int]] = {}
         for epic in self.epics:
-            story_x.update(epic.story_xs())
+            for name, xs in epic.story_xs().items():
+                story_x.setdefault(name, []).extend(xs)
 
         grid_width = (
             self.epics[-1].x + self.epics[-1].width - DiagramEpic.left_margin
@@ -544,7 +552,11 @@ class DrawIOStoryModel(DiagramStoryModel):
 
         lane_start_x = DiagramEpic.left_margin - DrawIOIncrement.label_width
         lane_total_width = DrawIOIncrement.label_width + grid_width
-        lane_y = DrawIOIncrement.lane_top_y()
+        header_bottom = max(
+            (sub.y + sub.bar_height for epic in self.epics for sub in [epic, *epic.epics]),
+            default=DiagramEpic.row_y + DiagramEpic.bar_height,
+        )
+        lane_y = DrawIOIncrement.lane_top_y(header_bottom)
         for inc in self.increments:
             inc_slug = inc.slug if hasattr(inc, "slug") else Name(inc.name).title_slug or "node"
             # Background strip (no text).
@@ -562,13 +574,18 @@ class DrawIOStoryModel(DiagramStoryModel):
             label.height = DrawIOIncrement.lane_height
             label.style = DrawIOIncrement.label_style
             self._add_cell(graph_root, label)
+            placed: Dict[str, int] = {}
             for story in inc.stories:
                 story_name = story.name
-                x = story_x.get(story_name)
-                if x is None:
+                xs = story_x.get(story_name, [])
+                seen = placed.get(story_name, 0)
+                placed[story_name] = seen + 1
+                if seen >= len(xs):
                     continue
+                x = xs[seen]
+                slug = Name(story_name).title_slug or "node"
                 story_vertex = self._cell(
-                    f"inc-lane/{inc_slug}/{Name(story_name).title_slug or 'node'}",
+                    f"inc-lane/{inc_slug}/{slug}" if seen == 0 else f"inc-lane/{inc_slug}/{slug}-{seen + 1}",
                     story_name,
                 )
                 story_vertex.x = x

@@ -12,6 +12,18 @@ export const BAR = {
   props: { hasSurvey: false, isWorking: false, maxRows: 24, bodyColumns: 160, scroll: { offset: 0, bodyRows: 24 }, view: {} },
 } as const
 
+// The files pane beside the chat, where a fidelity's files and its validation report open.
+export const FILES_PANE = {
+  plugin: 'cdd-board',
+  component: 'Pane',
+  requestId: 'cdd-files',
+  surface: 'desktop',
+  props: { title: 'files', isFocused: false, bodyColumns: 100, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} },
+} as const
+
+// Opens the files pane as a surface draws it once the chat bar has opened it; a step unmounts it when done.
+export const filesPaneOf = ($: any) => $.ui.mount(FILES_PANE)
+
 // How long the engine is given to finish what a timer or the installer started before a step reads the chat bar.
 const ENGINE_SETTLE_MILLISECONDS = 50
 

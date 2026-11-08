@@ -13,7 +13,7 @@ A *BacklogItem* is an idea that is not a session yet. `backlog-item.create` writ
 
 ## Constraint
 
-Read a board from a repository; every column and ticket is read again from `.sessions/` each time it is asked for. Move a ticket only through `ticket.move_next`, `ticket.move_previous`, `ticket.move_to`, `ticket.close`, and `ticket.archive`, so every move is a line in the session log or a folder move that the ticket reads back.
+Read a board from a repository; one board read reads each ticket, backlog item, and worktree from `.sessions/` and git once, and a change made through the board (a ticket opened, moved between folders, closed, reopened, or given a worktree) makes it read them again. Move a ticket only through `ticket.move_next`, `ticket.move_previous`, `ticket.move_to`, `ticket.close`, and `ticket.archive`, so every move is a line in the session log or a folder move that the ticket reads back.
 
 Store only what cannot be read from the work: a ticket's title, scope, parent, workpath, turned-off practices, and each practice root, in its `session.json`, and the WIP limits in `.sessions/_board.json`. Never store a ticket's progress or column; they come from the session log, so a move made by the agent and one made on the board give the same answer.
 

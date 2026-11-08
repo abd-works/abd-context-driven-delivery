@@ -6,6 +6,7 @@ import json
 from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
@@ -14,7 +15,6 @@ from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
-from harness.annotations.name import Name
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.repo.repo import Repo
 from space.session.session_log import LogTimestamp
@@ -22,12 +22,11 @@ from space.session.session import MAIN_SESSION_NAME
 from space.session.sessions import Sessions
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from space.kanban.backlog_item import BacklogItem
     from space.kanban.ticket import Ticket
     from space.repo.repo import Branch
     from space.repo.worktree import Worktree
+    from space.session import Session
 
 BACKLOG_COLUMN = "Backlog"
 COMPLETE_COLUMN = "Complete"
@@ -94,8 +93,7 @@ class Board:
     def load(cls, project: Path | str) -> Board:
         """The board of project, with every practice chosen; a tool call is handed the project the call names. A chat
         in a ticket's worktree reads the board of the project's main checkout, where every ticket's session lives."""
-        checkout = Repo(Repo(project).checkout_folder).primary_root()
-        return cls(Repo(checkout), list(PracticeCatalogue.practices()))
+        return cls(Repo.of_project(Path(project)).main_clone, list(PracticeCatalogue.practices()))
 
     @property
     def repo(self) -> Repo:
@@ -110,6 +108,22 @@ class Board:
     def file(self) -> Path:
         """The file that holds what this repository's sessions share on the board."""
         return self.sessions.folder / _BOARD_FILE
+
+    def wip_limit(self, stage: Stage) -> int:
+        """How many tickets stage holds before its count shows as over its limit: the one a person set, else the default."""
+        return self._shared.get("wip_limits", {}).get(stage.name, DEFAULT_WIP_LIMIT)
+
+    def set_wip_limit(self, stage: Stage, limit: int) -> None:
+        """Keep stage's limit in the board's file beside the other stages' limits and whatever else the sessions share there."""
+        shared = self._shared
+        shared["wip_limits"] = {**shared.get("wip_limits", {}), stage.name: limit}
+        self.file.write_text(json.dumps(shared), encoding="utf-8")
+
+    @cached_property
+    def _shared(self) -> dict:
+        """Everything the board's file holds, read once per board read; the board is its one reader and writer."""
+        path = self.file
+        return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
 
     @property
     @data_field
@@ -135,13 +149,14 @@ class Board:
     def columns(self) -> list[Column]:
         return list(self._columns)
 
-    @property
+    @cached_property
     def tickets(self) -> list[Ticket]:
+        """Every session's ticket, made once per board read: each column, and each ticket's own reads, ask for them."""
         from space.kanban.ticket import Ticket
 
         return [Ticket(session, self) for session in self.sessions.all()]
 
-    @property
+    @cached_property
     def backlog_items(self) -> list[BacklogItem]:
         from space.kanban.backlog_item import BacklogItem
 
@@ -153,6 +168,19 @@ class Board:
         files = list(folder.glob("*.md"))
         kept = [entry / f"{entry.name}.md" for entry in folder.iterdir() if entry.is_dir() and not (folder / f"{entry.name}.md").exists()]
         return [BacklogItem(path, self) for path in sorted([*files, *(path for path in kept if path.is_file())], key=lambda path: path.stem)]
+
+    def ticket_of(self, session: Session) -> Ticket:
+        """The ticket of session, which was just opened, moved between folders, closed, or reopened: the board forgets
+        the cards it has read, so its next read sees the change."""
+        from space.kanban.ticket import Ticket
+
+        self.reread()
+        return Ticket(session, self)
+
+    def reread(self) -> None:
+        """Forget the tickets, backlog items, and worktrees read so far, so the next read sees a change made since."""
+        for read in ("tickets", "backlog_items", "worktrees"):
+            self.__dict__.pop(read, None)
 
     @property
     def cards(self) -> list[Card]:
@@ -185,11 +213,9 @@ class Board:
     def open_ticket(self, title: str, scope: str, parent: str, path: str) -> Ticket:
         """A new ticket titled title in Discovery, its session working on path, a folder in the repository (its top when
         empty)."""
-        name = Name(title).title_slug
         root = self._repo.root
         workpath = (root / path).resolve() if path else root
-        self.sessions.create(name, workpath, title=title, scope=scope, parent=parent)
-        return self.ticket(name)
+        return self.ticket_of(self.sessions.create(title, workpath, title=title, scope=scope, parent=parent))
 
     @mcp
     @agent_tool
@@ -227,14 +253,21 @@ class Board:
 class Column:
     """*Column* is one place on the board: Backlog, a stage, or Complete."""
 
-    def __init__(self, name: str, board: Board) -> None:
+    def __init__(self, name: str, kind: str, board: Board) -> None:
         self._name = name
+        self._kind = kind
         self._board = board
 
     @property
     @data_field
     def name(self) -> str:
         return self._name
+
+    @property
+    @data_field
+    def kind(self) -> str:
+        """backlog, stage, or complete, so a reader of the board knows which fields the column sends."""
+        return self._kind
 
     @property
     def cards(self) -> list[Card]:
@@ -245,7 +278,7 @@ class Backlog(Column):
     """*Backlog* is the first column: the ideas a person has added to the backlog folder."""
 
     def __init__(self, board: Board) -> None:
-        super().__init__(BACKLOG_COLUMN, board)
+        super().__init__(BACKLOG_COLUMN, "backlog", board)
 
     @property
     @data_field
@@ -257,7 +290,7 @@ class Complete(Column):
     """*Complete* is the last column: the tickets whose sessions are closed."""
 
     def __init__(self, board: Board) -> None:
-        super().__init__(COMPLETE_COLUMN, board)
+        super().__init__(COMPLETE_COLUMN, "complete", board)
 
     @property
     @data_field
@@ -271,11 +304,11 @@ class Stage(Column):
     """Show one stage of the board, the tickets at work in it, and how many it takes before it is over its limit."""
 
     # It is a column made for one stage of the approach, which says its scope and the actions run on a fidelity in it.
-    # Every chosen practice's fidelity for the stage goes through its steps. The stage keeps its own WIP limit in the
-    # board's file, `.sessions/_board.json`, beside the other stages' limits.
+    # Every chosen practice's fidelity for the stage goes through its steps. Its WIP limit is kept by the board, in
+    # the board's file, `.sessions/_board.json`, beside the other stages' limits.
 
     def __init__(self, approach: ApproachStage, board: Board) -> None:
-        super().__init__(approach.title, board)
+        super().__init__(approach.title, "stage", board)
         self._approach = approach
 
     @classmethod
@@ -337,7 +370,7 @@ class Stage(Column):
     @property
     @data_field
     def wip_limit(self) -> int:
-        return self._saved_wip_limits.get(self.name, DEFAULT_WIP_LIMIT)
+        return self._board.wip_limit(self)
 
     @property
     @data_field
@@ -359,21 +392,8 @@ class Stage(Column):
     @noSessionLog
     def set_wip_limit(self, limit: int) -> Stage:
         """Set how many tickets this stage holds before its count shows as over its limit."""
-        shared = self._shared_on_board
-        shared["wip_limits"] = {**shared.get("wip_limits", {}), self.name: limit}
-        self._board.file.write_text(json.dumps(shared), encoding="utf-8")
+        self._board.set_wip_limit(self, limit)
         return self
-
-    @property
-    def _saved_wip_limits(self) -> dict[str, int]:
-        """Every stage's limit a person has set, by stage name: one file holds them all."""
-        return self._shared_on_board.get("wip_limits", {})
-
-    @property
-    def _shared_on_board(self) -> dict:
-        """Everything the board's file holds, so a change to one stage's limit keeps whatever else the sessions share there."""
-        path = self._board.file
-        return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
 
 
 class Card(ABC):
