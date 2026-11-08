@@ -31,10 +31,18 @@ export class ChatBarClient {
 
   readonly problem: string | null
 
-  // The open sessions a person can switch to, each with the stage it is in.
-  get sessions(): { name: string; stage: string }[] {
-    const columns = this.board?.columns.filter(column => column.name !== 'Backlog' && column.name !== 'Complete') ?? []
-    return columns.flatMap(column => ticketsOf(column).map(ticket => ({ name: ticket.name, stage: column.name })))
+  // The tickets a person can switch to, as Board.open_tickets names them, each sent whole by the column it is in.
+  get openTickets(): TicketData[] {
+    return (this.board?.open_tickets ?? []).flatMap(named => this.ticketNamed(named.name) ?? [])
+  }
+
+  // What leaving the active session can do with its work, in the order Ticket.leave does it, and those chosen at first.
+  get leaveChoices(): string[] {
+    return this.ticket?.leave_choices ?? []
+  }
+
+  get firstLeaveChoices(): string[] {
+    return this.ticket?.first_leave_choices ?? []
   }
 
   get hasSession(): boolean {
@@ -63,9 +71,10 @@ export class ChatBarClient {
     return this.shown && this.board?.columns.some(column => column.name === this.shown && column.work_required) ? this.shown : this.stage
   }
 
-  // Ticket.is_done answers whether every fidelity of the stage is reviewed, so the action button moves the session on.
+  // Ticket.is_done answers whether every fidelity of the stage is reviewed, so the action button moves the session on;
+  // it is never done outside a stage.
   get canMoveNext(): boolean {
-    return (this.ticket?.is_done ?? false) && this.stage !== 'Complete'
+    return this.ticket?.is_done ?? false
   }
 
   // The board's columns in its order: Backlog, each stage, Complete, each placed against the session's column. Only a
@@ -118,22 +127,21 @@ export class ChatBarClient {
     return [ticket.name, ticket.column.name, next, violations ? `${violations} with violations` : ''].filter(Boolean).join(' · ')
   }
 
-  // The agent context: what the agent is told about the active session in its system prompt, the same session the
-  // person sees.
+  // The agent context: what the Python Ticket tells the agent about the active session in its system prompt, the same
+  // session the person sees.
   get agentContext(): string {
-    const ticket = this.ticket
-    if (!ticket) return ''
-    return (
-      `CDD session board: you are working on ticket ${ticket.name} ("${ticket.title}"), in ${ticket.column.name}. ` +
-      (ticket.next ? `Its next guidance is ${ticket.next.fidelity.slug}. ` : 'Its stage is done and waits for a person to move it. ') +
-      'Each fidelity goes through generate, validate, then review, which a person records on the board.'
-    )
+    return this.ticket?.agent_context ?? ''
   }
 
   // The board names the active session's ticket, which its column sends whole.
   private get ticket(): TicketData | null {
     const active = this.board?.active?.name
-    return this.board?.columns.flatMap(ticketsOf).find(ticket => ticket.name === active) ?? null
+    return active ? this.ticketNamed(active) : null
+  }
+
+  // A ticket the board sends by its name, found where its column sends it whole.
+  private ticketNamed(name: string): TicketData | null {
+    return this.board?.columns.flatMap(ticketsOf).find(ticket => ticket.name === name) ?? null
   }
 
   // The practice a fidelity's progress names, as the board sends it with its colour.

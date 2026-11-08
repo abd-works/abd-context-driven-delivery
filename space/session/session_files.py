@@ -12,8 +12,9 @@ if TYPE_CHECKING:
 
 
 class SessionFiles:
-    """The files one session works with. Its file manager reads under the session's roots; the folder files are its log,
-    handoffs, kept notes, and reports. The files a practice declares are each fidelity's own, through its
+    """The files one session works with, read through two file managers that name paths from two tops: the session's
+    own, named from its workpath, which a page lists and reads; and one named from the project's top, which reads and
+    finds the files the board names that way. The folder files are its log, handoffs, kept notes, and reports. The files a practice declares are each fidelity's own, through its
     FidelitySessionOutput."""
 
     def __init__(self, session: Session) -> None:
@@ -29,7 +30,7 @@ class SessionFiles:
         practices = self._session.practices.values()
         roots = tuple(sorted({practice.folder for practice in practices} | {practice.output_root for practice in practices}))
         if self._file_manager is None or self._file_manager.roots != roots:
-            self._file_manager = FileManager(self._session.root, roots)
+            self._file_manager = FileManager(self._session.work_root, roots)
         return self._file_manager
 
     @property
@@ -44,8 +45,8 @@ class SessionFiles:
 
     def find(self, pattern: str) -> list[Path]:
         """The files pattern names, written from the top of the session's checkout, wherever they are in it: the
-        checkout's file manager, which its sessions hold, searches it."""
-        return self._session.sessions.file_manager.find(pattern)
+        file manager named from the project's top searches it."""
+        return self._from_project.find(pattern)
 
     def in_folder(self) -> list[FileEntry]:
         """Every file in the session's folder, each with its path from the project."""
@@ -62,6 +63,6 @@ class SessionFiles:
         """The files that are the session's work: every file when it works in a folder of its own, which holds only its
         work; on the whole repository, only the files its branch changed."""
         repo = self._session.repo
-        if self._session.root != repo.root:
+        if self._session.work_root != repo.root:
             return None
         return {(repo.root / path).resolve() for path in repo.branch_named(self._session.name).changed_files()}

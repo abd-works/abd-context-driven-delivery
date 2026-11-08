@@ -65,3 +65,4 @@ What each agent skipped, and why, is in `.sessions/ensure-domain-orientation-ref
 **Still open after the running agents:** the old `_skip_inactive_fidelity` and `_activate(stage=...)` hooks in `ddd.py` and `stories.py`; the format as a `Format` object (read as a string by practices and the board); one Clean Engineering companion per session (needs a design). **Last:** the heavy specs in one batch, reinstall and catalog regeneration, a final validation round, and the closing report.
 
 **Round 5 (cross-file validation, 2026-11-08):** see [round5-report.md](round5-report.md): 170 findings, 21 high. Nothing fixed yet.
+- [Trend across rounds 1–5](trend-rounds-1-5.md): findings and severity per round.

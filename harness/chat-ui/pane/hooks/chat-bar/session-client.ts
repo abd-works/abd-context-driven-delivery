@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
-import type { BranchData, TicketData } from '@cdd/space/kanban/ticket'
+import type { CloseChoicesData, TicketData } from '@cdd/space/kanban/ticket'
 
 import { reasonOf } from '../failure'
 import { callTool, currentChatBar, refreshChatBar, type ChatBarClient } from './chat-bar-client'
@@ -30,10 +30,10 @@ export async function activateSession($: EngineInterface, sessionName: string): 
 }
 
 // A new session opens through the same activation dialog as one picked from the list.
-export async function createSession($: EngineInterface, sessionName: string): Promise<ChatBarClient> {
+export async function createSession($: EngineInterface, chatBar: ChatBarClient, sessionName: string): Promise<ChatBarClient> {
   try {
     const created = await callTool<TicketData>($, 'ticket.create', { title: sessionName })
-    await pickSession($, created.name)
+    await pickSession($, chatBar, created)
   } catch (failure) {
     $.ui.toast(`${sessionName} was not created: ${reasonOf(failure)}`)
   }
@@ -41,12 +41,10 @@ export async function createSession($: EngineInterface, sessionName: string): Pr
   return currentChatBar($)
 }
 
-// The close dialog offers to commit and push the branch the session's work is on, its own or main, only while it is
-// checked out, since those steps act on whatever is checked out.
+// The close dialog offers what the Python Ticket answers closing can do with the session's work.
 export async function openClose($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
   try {
-    const branch = await callTool<BranchData>($, 'ticket.work_branch', { ticket: chatBar.sessionName })
-    await showClose($, branch.is_checked_out ? branch.name : null)
+    await showClose($, await callTool<CloseChoicesData>($, 'ticket.close_choices', { ticket: chatBar.sessionName }))
   } catch (failure) {
     $.ui.toast(`${chatBar.sessionName} cannot close: ${reasonOf(failure)}`)
   }

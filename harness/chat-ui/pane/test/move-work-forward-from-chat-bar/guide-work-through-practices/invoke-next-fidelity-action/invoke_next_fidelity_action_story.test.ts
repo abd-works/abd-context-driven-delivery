@@ -21,15 +21,16 @@ story('Invoke Next Fidelity Action', CHAT_BAR, () => {
     when('the Person runs the next action', async ($, on, scene) => {
       await scene.ui.press({ key: 'next-action' })
     })
-    // ChatBarView press -> runAction($, fidelity, 'validate') -> promptCommand -> $.prompt.fill({ text: '/actions-validate ux-mockup format=markdown session=.sessions/checkout-flow/session.json', mode: 'append' })
-    // Evidence: observed: chat-ui-defects backlog item — every action the chat bar sends names its session and its format
-    then("/actions-validate ux-mockup in markdown, in checkout-flow's session, waits in the prompt box for the Person to send", async ($, on, scene) => {
-      expect(scene.world.fills).toEqual(['/actions-validate ux-mockup format=markdown session=.sessions/checkout-flow/session.json'])
+    // ChatBarView press -> runAction($, fidelity, 'validate') -> fidelity.commandFor('validate') <- FidelityProgress.commands -> promptCommand -> $.prompt.fill({ text: '/actions-validate ux-mockup session=.sessions/checkout-flow/session.json', mode: 'append' })
+    // Evidence: observed: chat-ui-defects backlog item — every action the chat bar sends names its session
+    then("/actions-validate ux-mockup, in checkout-flow's session, waits in the prompt box for the Person to send", async ($, on, scene) => {
+      expect(scene.world.fills).toEqual(['/actions-validate ux-mockup session=.sessions/checkout-flow/session.json'])
       expect(scene.world.sent).toEqual([])
     })
   })
-  scenario("Generate in the stage's default format", ({ given, when, then }) => {
-    // Evidence: Stage.default_formats; the generate action renders the earlier fidelity first when its file is missing
+  scenario('Generate in the format the fidelity keeps', ({ given, when, then }) => {
+    // Evidence: round-5 review finding H2 — a format= the chat bar added reset the format a fidelity keeps in its session
+    // (FidelityGuidance.format) on every press; the command FidelityProgress gives names none
     given("checkout-flow's clean-engineering-model is not started and is the selected fidelity", async ($, on, scene) => {
       scene.world.board = boardOf('checkout-flow', checkoutFlow())
       await scene.ui.press({ key: 'dot-clean-engineering-model' })
@@ -37,9 +38,9 @@ story('Invoke Next Fidelity Action', CHAT_BAR, () => {
     when('the Person runs the next action', async ($, on, scene) => {
       await scene.ui.press({ key: 'next-action' })
     })
-    // ChatBarView press -> runAction($, fidelity, 'generate') -> promptCommand -> $.prompt.fill({ text: '/actions-generate clean-engineering-model format=typescript session=...', mode: 'append' })
-    then("/actions-generate clean-engineering-model in typescript, in checkout-flow's session, waits in the prompt box", async ($, on, scene) => {
-      expect(scene.world.fills).toEqual(['/actions-generate clean-engineering-model format=typescript session=.sessions/checkout-flow/session.json'])
+    // ChatBarView press -> runAction($, fidelity, 'generate') -> fidelity.commandFor('generate') <- FidelityProgress.commands -> $.prompt.fill({ text: '/actions-generate clean-engineering-model session=...', mode: 'append' })
+    then("/actions-generate clean-engineering-model, naming no format, in checkout-flow's session, waits in the prompt box", async ($, on, scene) => {
+      expect(scene.world.fills).toEqual(['/actions-generate clean-engineering-model session=.sessions/checkout-flow/session.json'])
     })
   })
   scenario('Keep the action button on a done fidelity', ({ given, when, then, and }) => {

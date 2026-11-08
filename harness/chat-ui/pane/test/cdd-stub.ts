@@ -7,7 +7,7 @@
 // expects empty, so a test fails when the chat bar calls a name Python dropped.
 import type { BoardData } from '@cdd/space/kanban/board'
 import type { FidelityProgressData, FileEntryData, ReportData } from '@cdd/space/kanban/fidelity-progress'
-import type { BranchData, TicketData } from '@cdd/space/kanban/ticket'
+import type { BranchData, CloseChoicesData, TicketData } from '@cdd/space/kanban/ticket'
 import type { FileTextData } from '@cdd/space/session/session'
 
 import { boardOf, checkoutFlow, HEALTHY, progressOf, STAGE_ORDER } from './examples/chat-bar.examples'
@@ -106,7 +106,7 @@ class Refused extends Error {}
 const files = (world: World, { fidelity }: { fidelity: string }): Record<string, FileEntryData[]> => world.declared[fidelity] ?? {}
 
 // FidelityProgress.report: the asked fidelity's latest validation report; an empty report when it has none.
-const report = (world: World, { fidelity }: { fidelity: string }): ReportData => world.reports[fidelity] ?? ({ path: '', text: '', rules: [], has_saved_graph: false, is_out_of_date: false } as ReportData)
+const report = (world: World, { fidelity }: { fidelity: string }): ReportData => world.reports[fidelity] ?? ({ path: '', text: '', rules: [], has_saved_graph: false, is_out_of_date: false, violation_count: 0 })
 
 // Session.read_file: the text of a path under the session's roots, no text once it is gone; a path that climbs out of
 // the roots is refused with PathOutsideRootsError's text.
@@ -115,13 +115,15 @@ function readFile(world: World, { path }: { session: string; path: string }): Fi
   return { path, text: world.texts[path] ?? '' }
 }
 
-// Ticket.branch and Ticket.work_branch: the branch the story gives the ticket, such as main for work on main; for a
-// ticket the story gives none, its own branch, named as the ticket, which the repository does not have.
-const branch = (world: World, { ticket }: { ticket: string }): BranchData => world.branches[ticket] ?? { name: ticket, exists: false, is_checked_out: false }
+// Ticket.close_choices: a handoff always, and a commit and a push of the branch the story gives the ticket's work, such
+// as main for work on main, while it is checked out; a ticket the story gives no branch has nothing checked out.
+function closeChoices(world: World, { ticket }: { ticket: string }): CloseChoicesData {
+  const work = world.branches[ticket]
+  return work?.is_checked_out ? { branch: work.name, choices: ['handoff', 'commit', 'push'] } : { branch: '', choices: ['handoff'] }
+}
 
 const TOOLS: Record<string, (world: World, args: any) => unknown> = {
-  'ticket.branch': branch,
-  'ticket.work_branch': branch,
+  'ticket.close_choices': closeChoices,
   'ticket.move_next': moveNext,
   'fidelity-progress.finish_review': finishReview,
   'ticket.close': close,
@@ -145,8 +147,7 @@ export const OPERATIONS: Record<string, string[]> = {
   'board.show': [],
   'ticket.create': ['title', 'scope', 'parent', 'path'],
   'ticket.activate': ['ticket', 'leaving', 'opening'],
-  'ticket.branch': ['ticket'],
-  'ticket.work_branch': ['ticket'],
+  'ticket.close_choices': ['ticket'],
   'ticket.close': ['ticket', 'leaving'],
   'ticket.move_next': ['ticket'],
   'fidelity-progress.finish_review': ['ticket', 'fidelity'],

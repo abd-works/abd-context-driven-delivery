@@ -5,7 +5,6 @@ from __future__ import annotations
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
-from harness.agent_tools.agent_tools import AgentInstructions
 from harness.installation.files import skill
 from harness.markdown.format import Format
 from harness.mcp.mcp_server import mcp
@@ -21,7 +20,7 @@ class Generate(GuidanceAction):
     def generate(self, guidance: GuidanceArg) -> str:
         """Write artifacts for each listed guidance at its current fidelity. The shared rules and that fidelity's rules are part of these instructions. After the artifact is written, call validate with the same guidance and paths set to the files you wrote."""
         self._work_on(guidance)
-        rules = self._rules()
+        rules = self.rules_to_follow()
         instructions(rules)
         tools(self._render().render)
         earlier = self._earlier_renders()
@@ -33,16 +32,9 @@ class Generate(GuidanceAction):
         tools(self._validate().validate)
         return ""
 
-    def _rules(self) -> str:
-        """Shared rules and the active fidelity's rules, inlined into generate. Read without running Validate, because
-        nothing has been written yet to check."""
-        return self._inside(Validate).listed_rules()
-
     def _validate(self) -> Validate:
         """Validate as a tool, so its rules are injected again when it is called."""
-        action = self._inside(Validate)
-        action.mode = "tool"
-        return action
+        return self._inside(Validate).as_tool()
 
     def _render(self):
         """Render action, available while generating code from another format."""
@@ -98,12 +90,8 @@ class Generate(GuidanceAction):
             return ""
         return f"Save each format you write at its path, filling any {{name}} from the work: {'; '.join(places)}"
 
-    def fix_instructions(self) -> str:
-        """What generate_fixes_from_validate tells the agent, expanded for the guidance this generate works on, so another
-        action such as Satisfy can hand the fixes on after its own validate."""
-        return AgentInstructions.for_callable(Generate.generate_fixes_from_validate, self).expand({}).instructions
-
     @agent_instructions
     def generate_fixes_from_validate(self) -> str:
-        """Apply fixes implied by the latest validate report before considering generate done, in every format of the fidelity: its documents, its diagrams, and its code, so they still mirror each other. Override on the practice when generate must close those gaps in the same pass."""
+        """The fixes step that follows a validate, which an action such as Satisfy names after asking for validate."""
+        "Apply the fixes the latest validate report names before considering generate done, in every format of the fidelity: its documents, its diagrams, and its code, so they still mirror each other."
         return ""

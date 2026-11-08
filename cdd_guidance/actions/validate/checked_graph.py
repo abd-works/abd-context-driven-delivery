@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
 from harness.graph.saved_graph import SavedGraph
 from harness.graph.violation import Violation
+from harness.installation.destination import data_of
 
 from cdd_guidance.actions.validate.report_files import ReportFiles
-from cdd_guidance.actions.validate.graph_json_reader import (
-    filter_violations_by_path_prefix,
-    load_graph_json_paths,
-    violations_from_graph_json_files,
-)
+from cdd_guidance.actions.validate.graph_json_reader import violations_from_graph_json_files
 
 
 class PathsNotFoundError(FileNotFoundError):
@@ -46,6 +44,7 @@ class CheckedGraph:
         self.prefixes = self._prefixes(edited)
         self._built: SavedGraph | None = None
         self.files: list[Path] = []
+        self._read_violations: list[Violation] | None = None
 
     def check_beside(self, reports: ReportFiles) -> list[Path]:
         """The graph files this call checks: a graph built from the prefixes and written where reports keeps the call's
@@ -57,9 +56,38 @@ class CheckedGraph:
         """The listed practices' violations in the files this call checks: from the graph it built, else from the graph
         files it was named."""
         keys = [fidelity.practice_guidance.key for fidelity in self._fidelities]
-        found = self._built.violations(keys) if self._built is not None else violations_from_graph_json_files(self.files, keys or None)
-        found = filter_violations_by_path_prefix(found, self.prefixes)
+        if self._built is not None:
+            found = self._built.violations(keys)
+        else:
+            found = [violation for violation in self._named_violations() if not keys or violation.practice in keys]
+        if self.prefixes:
+            found = [violation for violation in found if violation.is_under(self.prefixes)]
         return [violation for violation in found if violation.location not in self.unchecked_files]
+
+    def save_at(self, destination: Path) -> None:
+        """Keep the graph this call checked at destination, beside a report, so the report's violations stay on their
+        nodes: the graph it built, the one graph file it was named, or the violations of the several it was named,
+        merged into one node list in the shape ``graph.return_nodes`` answers with."""
+        if destination in self.files or not self.files:
+            return
+        if self._built is not None:
+            destination.write_text(self._built.text, encoding="utf-8")
+        elif len(self.files) == 1:
+            destination.write_bytes(self.files[0].read_bytes())
+        else:
+            nodes = [self._violating_node(violation) for violation in self._named_violations()]
+            destination.write_text(json.dumps(nodes), encoding="utf-8")
+
+    def _named_violations(self) -> list[Violation]:
+        """Every violation in the graph files the call names, read once."""
+        if self._read_violations is None:
+            self._read_violations = violations_from_graph_json_files(self.files)
+        return self._read_violations
+
+    def _violating_node(self, violation: Violation) -> dict[str, Any]:
+        """One violation as the node it was found on."""
+        rule = {"name": violation.rule, "status": "violating", "violations": [data_of(violation)]}
+        return {"practice": violation.practice, "node_id": violation.node_id, "rules": [rule]}
 
     def judged_files(self, on_graph: bool) -> str:
         """Each checked format and its files, for the fidelities judged on this call's graph (on_graph) or on their
@@ -75,9 +103,17 @@ class CheckedGraph:
         if self.prefixes and self._named in (None, True) and self._fidelities:
             return [self._built_at(reports.graph_file())]
         if self._named is True:
-            saved = self.session.root / ".context" / "graph.json"
+            saved = self.session.work_root / ".context" / "graph.json"
             return [saved] if saved.is_file() else []
-        return load_graph_json_paths(self._named)
+        return self._named_files()
+
+    def _named_files(self) -> list[Path]:
+        """The graph files the call names: one path, or several; none for true or nothing."""
+        named = self._named
+        if not named or named is True:
+            return []
+        entries = [named] if isinstance(named, str) else named
+        return [Path(str(entry).strip()) for entry in entries if str(entry).strip()]
 
     def _built_at(self, destination: Path) -> Path:
         """Refresh the session's graph with the edited files, read as they are now, keep the nodes read from them as this
@@ -105,7 +141,7 @@ class CheckedGraph:
         A relative path is read from the project's checkout, where the agent works and every path it sees starts. A
         path that is not there, or not under the session's root, is refused: the graph would be built from nothing,
         and its empty report would read as a clean validate."""
-        root = self.session.root
+        root = self.session.work_root
         named = [(item, self.session.path_named(item)) for item in paths or []]
         unreadable = [item for item, path in named if not path.exists() or not self._under_root(path)]
         if unreadable:
@@ -122,7 +158,7 @@ class CheckedGraph:
             for path in paths
             if "{" not in path
         ]
-        return {path.relative_to(self.session.root).as_posix() for path in others if self.session.root in path.parents}
+        return {path.relative_to(self.session.work_root).as_posix() for path in others if self.session.work_root in path.parents}
 
     def _written_outputs(self) -> list[str]:
         """The folders holding what each listed fidelity declares in its checked format and has already written. The
@@ -133,5 +169,5 @@ class CheckedGraph:
         return sorted(str(folder) for folder in folders if self._under_root(folder))
 
     def _under_root(self, path: Path) -> bool:
-        root = self.session.root
+        root = self.session.work_root
         return path == root or root in path.parents

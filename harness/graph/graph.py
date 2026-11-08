@@ -86,6 +86,8 @@ EDGE_ORDER: dict[str, int] = {
 # A kind only a pattern overlay's schema names: a child sits with the owned children, a relationship after them.
 _DIRECT_KIND_ORDER = 2
 _RELATIONSHIP_KIND_ORDER = 7
+# Kinds no one filters by: belongsTo is the back-edge of every child list, and scopes is left out of the explorer tree.
+_NOT_OFFERED = frozenset({"belongsTo", "scopes"})
 
 
 class EdgeType:
@@ -96,6 +98,11 @@ class EdgeType:
         self.kind = kind
         self.order = order
         self.display = display
+
+    @property
+    def is_offered(self) -> bool:
+        """Whether a person filters the explorer by this kind."""
+        return self.kind not in _NOT_OFFERED
 
     @classmethod
     def from_kind(cls, kind: str, display: Display = "direct") -> EdgeType:
@@ -445,7 +452,7 @@ class Filter:
                 continue
             ordered = sorted(self.graph.edge_types_of(practice).values(), key=lambda edge_type: edge_type.order)
             for edge_type in ordered:
-                if edge_type.kind in found:
+                if edge_type.kind in found or not edge_type.is_offered:
                     continue
                 edges = self.graph.edges_of(practice, edge_type.kind)
                 if any(edge.parent.type in types or edge.child.type in types for edge in edges):
@@ -848,6 +855,20 @@ class Graph:
             self._close_practices()
             for practice in self._held.values():
                 self._open_practice(practice, folder)
+
+    def open_saved(self, folder: Path) -> None:
+        """Open this graph on folder, then read back the graph saved in its ``.context`` when there is one, each saved
+        practice on the source root it was read from, and run its rules: a session opened again shows what was loaded
+        in it before. A folder with nothing saved opens holding no node until a load reads it."""
+        self.open(folder)
+        with self._changing:
+            saved = self._saved_file().read()
+            if saved is None:
+                return
+            self.overlays = list(saved.overlays)
+            kept = {key: practice for key, practice in saved.practices.items() if key in self._held}
+            self._choose_roots({key: Path(practice.source_root) if practice.source_root else folder for key, practice in kept.items()})
+            self._load_saved(saved)
 
     def report_progress(self, message: str) -> None:
         """Tell whoever called the running tool which practice, file, node, or rule is in progress."""
@@ -1549,4 +1570,12 @@ class Graph:
             found.append(FilteredNode(node, ancestors, rules))
         for child in node.children:
             self._collect_nodes(child, chain, wanted, found, seen)
+
+    @mcp
+    @agent_tool
+    def explorer_trees(self, filter: dict | None = None) -> list[ExplorerEntry]:
+        """Return the explorer tree of each practice the filter names, or of every loaded practice when it names none, keeping each practice's root, the nodes the filter matches with their rules, and the nodes on the way to them. filter takes the keys return_nodes takes."""
+        wanted = self.filter.narrowed_by(filter or {})
+        named = [self.practices[key] for key in wanted.practices if key in self.practices] if wanted.practices else list(self.practices.values())
+        return [tree for practice in named if (tree := self.root_of(practice).serialize().kept_by(wanted)) is not None]
 

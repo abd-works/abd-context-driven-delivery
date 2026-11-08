@@ -166,6 +166,12 @@ class Guidance:
         """The rules a validate of this guidance checks, one by one."""
         return [rule for collection in self.checked_rule_collections() for rule in collection]
 
+    def checked_rules_text(self) -> str:
+        """The rules a validate of this guidance checks, as their markdown: what an agent judges against, and what an
+        action that writes or fixes the artifact tells it to follow."""
+        texts = (collection.validate.strip() for collection in self.checked_rule_collections())
+        return "\n\n".join(text for text in texts if text)
+
     def every_rule(self) -> list[Rule]:
         """Every rule this guidance holds, which a report describes beside a saved graph's hits."""
         return list(self.rules or ())
@@ -700,8 +706,9 @@ class PracticeGuidance(Guidance):
     @agent_tool
     def render(self, format: str, content: Any = "", source: str | None = None, previous: str = "") -> dict:
         """Turn content into the practice object model, then render the target format. Content is in source, the
-        format this practice works in when none is named; previous is the target file as it is now."""
-        return self._render(RenderRequest(format, content, source, previous))
+        format this practice works in when none is named; with no content, the practice renders its own model.
+        previous is the target file as it is now."""
+        return self._render(RenderRequest(format, self if content in ("", None) else content, source, previous))
 
     def render_files(self, format: str, paths: list[str] | str, source: str | None = None) -> dict:
         """Render the files at paths into format. A renderer that links to other files, such as a story map linking
@@ -768,7 +775,7 @@ class PracticeGuidance(Guidance):
     def _context_root(self, tool: Any) -> Path:
         """The folder tool's code is read from: the root of the session it works in."""
         session = getattr(tool, "session", None)
-        return session.root if session is not None else Path(".")
+        return session.work_root if session is not None else Path(".")
 
     def _code_tree(self, root: Path, adapter: Any) -> dict[str, str]:
         extension = getattr(adapter, "LEAF_EXTENSION", "") or ""
