@@ -941,8 +941,18 @@ with description("a graph"):
                 expect(nodes_in(self.edited, "stories", self.scope)).to(equal(nodes_in(self.full, "stories", self.scope)))
 
             with it("should find the same story rule violations"):
-                expect(len(violations_in(self.edited, "stories", self.scope))).to(be_above(0))
-                expect(violations_in(self.edited, "stories", self.scope)).to(equal(violations_in(self.full, "stories", self.scope)))
+                # A Given is judged against the DDD aggregates read from the domain code, which a load of the story
+                # file alone does not read, so that one rule is compared only by a full load.
+                read_elsewhere = {"given-names-complex-state-root-first"}
+                edited = {hit for hit in violations_in(self.edited, "stories", self.scope) if hit[0] not in read_elsewhere}
+                full = {hit for hit in violations_in(self.full, "stories", self.scope) if hit[0] not in read_elsewhere}
+                expect(len(edited)).to(be_above(0))
+                expect(edited).to(equal(full))
+
+            with it("should judge each Given by its own step rules"):
+                expect({slug for slug, node_id in violations_in(self.full, "stories", self.scope) if ":Given:" in node_id}).to(
+                    equal({"given-names-complex-state-root-first"})
+                )
 
         with context("with an edited story examples file"):
             with before.all:
