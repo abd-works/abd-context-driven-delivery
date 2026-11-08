@@ -5,7 +5,7 @@
 
 - **Purpose:** Draw the class model as a readable draw.io diagram, and keep the diagram generator honest against its layout rules.
 - **Seam (terms):** Drawio, DrawIOCleanEngineeringModel, `create_diagram`, `render`, `scan`, `keep_positioning`
-- **Dependencies (one-way):** `cdd_guidance/practices/clean_engineering/model` (the class model and its shared diagram layout), `harness/graph` (its scanners and rules are graph rules), `harness/installation`, `harness/agent_tools`, `harness/markdown`. The class model does not import it back.
+- **Dependencies (one-way):** `cdd_guidance/practices/clean_engineering/model` (the class model; the diagram layout every class-shaped view is drawn with lives here, in `diagram/`, since only this format draws it), `harness/graph` (its scanners and rules are graph rules), `harness/installation`, `harness/agent_tools`, `harness/markdown`. The class model does not import it back.
 
 ## Constraint
 

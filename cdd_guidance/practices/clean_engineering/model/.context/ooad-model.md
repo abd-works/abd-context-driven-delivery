@@ -242,8 +242,10 @@ Raised when `translate_from` is given a node of another semantic type.
 + load_span_facts(): None
 	// the facts the operation rules read from its own source lines: private reach, I/O mixed with domain work, swallowed or empty-case exceptions, prose comments
 	-> SourceText
-+ load_brace_body_facts(body: str): None
-	// what the rules measure on a brace-language body: control-flow depth, catches, unnamed numbers, reads of a peer's private fields
++ language: CodeLanguage | None
+	// the language a code operation is written in; none for one read from a model document
++ load_brace_body_facts(body: str, class_name: str): None
+	// what the rules measure on a brace-language body of the class named class_name (empty for a module function): control-flow depth, catches, unnamed numbers, reads of another object's private fields (an object of the same class, by its name, a parameter typed as it, or a `new` of it, is not another)
 	-> SourceText
 + save(): str
 	// name(parameters): return type, with - for a private name
@@ -282,14 +284,15 @@ A span of source in any language — an operation body, a class, a markdown card
 + has_bare_catch(): bool
 + swallows_exceptions(): bool
 + unnamed_numbers(): list[str]
-+ reaches_peer_private(parameter_names: frozenset[str]): bool
++ reaches_peer_private(own_class: str = "", typed_own: frozenset[str] = frozenset()): bool
+	// a read of another object's `_` member; a member of an object of own_class (the class itself, a typed_own parameter, a local built with `new`) is its own
 + mixes_io_and_domain(): bool
 + calls_io_and_domain(): bool
 + raises_on_empty(): bool
+	// a builtin failure raised on an empty value; a failure the program declares is a named refusal and is left out
 + exception_without_message(): str
 + generic_exception_message(): bool
 + mutates_without_record(): bool
-+ private_reach(): bool
 + has_prose_comment(hash_only: bool = False): bool
 + prototype_swap(start_line: int): dict
 + markdown_bullet_lines(): dict
@@ -302,13 +305,15 @@ A span of source in any language — an operation body, a class, a markdown card
 
 A Python function read from its syntax tree, and what the rules measure in it.
 
-+ PythonFunctionBody(node: FunctionDef)
++ PythonFunctionBody(node: FunctionDef, owner: ClassDef | None)
+	// a method keeps the class that declares it; a module function has none
 ------
 ----
 + control_flow_depth(): int
 + except_flags(): tuple[bool, bool]
 + unnamed_numbers(): list[str]
 + reaches_peer_private(): bool
+	// privacy in Python is per class: the class's own name, a parameter typed as it, the other operand of a comparison dunder, a local it builds from the class, and a loop over a field holding the class are all itself
 + packed_parameters(): dict[str, int]
 
 ## Parameter : OoadNode
@@ -320,6 +325,8 @@ A Python function read from its syntax tree, and what the rules measure in it.
 	// derived from the operation that holds it
 + property_setter: bool
 	// the parameter is the one value a property setter takes; derived from the operation that holds it
++ in_typed_language: bool
+	// the operation that holds it is written in a language with a syntax for a parameter's type; plain JavaScript has none
 ----
 + save(): str
 
@@ -442,7 +449,7 @@ The `json` format: one array of module records.
 ------
 ----
 + parse(text: str): JsonCleanEngineeringModel
-	// raises JsonParseError when the text is not the module array
+	// raises UnreadableSource when the text is not JSON or holds neither modules nor classes
 	-> JsonModule.from_record
 + render(canonical: CleanEngineeringModel | None = None): str
 + load_module(source: Module): JsonModule
@@ -487,8 +494,6 @@ The `json` format: one array of module records.
 ----
 + from_record(record: dict): JsonRelationship
 
-## JsonParseError : ValueError
-
 ## SketchCleanEngineeringModel : CleanEngineeringModel
 
 The `sketch` format: the `clean engineering:` section of an integrated sketch, modules as `name/` headings and classes with their members beneath them.
@@ -517,10 +522,13 @@ How a language writes the receiver, a constructor call, and the end of a stateme
 
 How one programming language spells what every code format writes the same way. Python, TypeScript, JavaScript, and Java are instances, not subtypes: they differ only in data. Stories and BDD code formats use the same instances.
 
-+ CodeLanguage(name: str, line_comment: str, indent: str, unfinished: str, spelling: CodeSpelling, type_names: dict[str, str])
++ CodeLanguage(name: str, line_comment: str, indent: str, unfinished: str, spelling: CodeSpelling, type_names: dict[str, str], suffixes: tuple[str, ...] = (), declares_types: bool = True)
 	// one instance per language, held as the module constants PYTHON, TYPESCRIPT, JAVASCRIPT, and JAVA
 ------
 + name: str
++ suffixes: tuple[str, ...]
++ declares_types: bool
+	// false for plain JavaScript, which has no syntax for a parameter's type
 + line_comment: str
 + indent: str
 + unfinished: str
@@ -717,7 +725,7 @@ Keeps the syntax tree its file was read into.
 
 Python spelling. The stereotypes are decorators with no arguments: @aggregate_root.
 
-+ PythonOperation.from_function(node: FunctionDef, text: str): PythonOperation
++ PythonOperation.from_function(node: FunctionDef, text: str, owner: ClassDef | None): PythonOperation
 	// the whole operation from its own syntax tree: signature, body as written, and what the rules measure
 	-> PythonFunctionBody
 + PythonProperty.from_annotation(node: AnnAssign, order: int): PythonProperty

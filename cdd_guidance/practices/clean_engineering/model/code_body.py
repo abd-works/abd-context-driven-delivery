@@ -46,8 +46,11 @@ class CodeLanguage:
         spelling: CodeSpelling,
         type_names: Dict[str, str],
         suffixes: tuple[str, ...] = (),
+        declares_types: bool = True,
     ) -> None:
         self.name = name
+        # False for a language with no syntax for a parameter's type, such as plain JavaScript: nothing there to judge.
+        self.declares_types = declares_types
         # The file extensions source in this language is written with; the one table every reader of code asks.
         self.suffixes = suffixes
         self.line_comment = line_comment
@@ -305,6 +308,7 @@ JAVASCRIPT = CodeLanguage(
     C_FAMILY_SPELLING,
     type_names={},
     suffixes=(".js", ".jsx"),
+    declares_types=False,
 )
 JAVA = CodeLanguage(
     "java",

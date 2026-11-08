@@ -189,10 +189,6 @@ class CodeScenario(Scenario, CodeStoryNode):
         return names
 
     @classmethod
-    def create(cls, scenario) -> List[str]:
-        raise NotImplementedError
-
-    @classmethod
     def steps_from(cls, calls: List[tuple]) -> List[Step]:
         steps: List[Step] = []
         previous: Optional[Step] = None
@@ -313,10 +309,6 @@ class CodeStory(Story, CodeStoryNode):
         written.key = self.code_key
         self.written = written
 
-    def write(self, parent: str, files: Dict[str, str], tests_root: str) -> None:
-        """A language story writes its file. The base story has no file."""
-        return
-
     def add_scenario(self, name: str, body: str, example_names: List[str]) -> None:
         scenario = self.scenario_type(name=name, sequential_order=len(self.scenarios) + 1)
         scenario.read(body, example_names)
@@ -364,11 +356,6 @@ class CodeStory(Story, CodeStoryNode):
                     if background.examples:
                         continue
                     background.examples = self.backgrounds[0].examples.clone(background)
-
-    @classmethod
-    def create(cls, story: Story, **kwargs) -> str:
-        """Write this story in the language file. Each language overrides it."""
-        raise NotImplementedError
 
 
 class CodeIncrement(Increment, CodeStoryNode):

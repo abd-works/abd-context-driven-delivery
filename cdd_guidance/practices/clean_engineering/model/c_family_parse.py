@@ -131,7 +131,7 @@ class CFamilyParse:
             op = self.operation_type(name="constructor", parameters=self._split_params(ctor.group(1)))
             op.line = self._line_at(self._text, self._body_start + ctor.start())
             self._apply_method_end_line(op, body, ctor.end() - 1)
-            oclass.operations.insert(0, self._operation_from_body(op, ctor_body))
+            oclass.operations.insert(0, self._operation_from_body(op, ctor_body, oclass.name))
 
     def _attach_top_level(self, module: Module) -> None:
         top_ops = self._top_level_functions()
@@ -154,7 +154,7 @@ class CFamilyParse:
             op = self.operation_type(name=match.group(1), parameters=self._split_params(match.group(2) or ""))
             op.line = self._line_at(self._text, match.start())
             op.end_line = self._line_at(self._text, body_start + len(body))
-            ops.append(self._operation_from_body(op, body))
+            ops.append(self._operation_from_body(op, body, ""))
         for match in _TOP_ARROW_RE.finditer(self._text):
             if any(start <= match.start() <= end for start, end in class_spans):
                 continue
@@ -166,7 +166,7 @@ class CFamilyParse:
             )
             op.line = self._line_at(self._text, match.start())
             op.end_line = self._line_at(self._text, self._text.find(body, match.end()) + len(body))
-            ops.append(self._operation_from_body(op, body))
+            ops.append(self._operation_from_body(op, body, ""))
         return sorted(ops, key=lambda op: op.line)
 
     def _arrow_body(self, start: int) -> str:
@@ -213,7 +213,7 @@ class CFamilyParse:
             header_start = match.start() + len(header) - len(header.lstrip())
             op.line = self._line_at(self._text, self._body_start + header_start)
             self._apply_method_end_line(op, class_body, match.end() - 1)
-            filled = self._operation_from_body(op, method_body)
+            filled = self._operation_from_body(op, method_body, class_name)
             prefix = class_body[max(0, match.start() - 24) : match.start()]
             header = match.group(0)
             if re.search(r"\bget\s+\w+\s*\(", header) or re.search(r"\bset\s+\w+\s*\(", header):
@@ -222,7 +222,8 @@ class CFamilyParse:
             ops.append(filled)
         return ops
 
-    def _operation_from_body(self, op: Operation, body: str) -> Operation:
+    def _operation_from_body(self, op: Operation, body: str, class_name: str) -> Operation:
+        """The operation filled from its body, declared by the class named class_name (empty for a module function)."""
         code_only = "\n".join(
             line for line in body.splitlines() if not line.strip().startswith("//")
         )
@@ -245,7 +246,7 @@ class CFamilyParse:
         op.line_count = max(1, len([line for line in body.splitlines() if line.strip()]))
         op.body_fingerprint = operation_body_fingerprint(body)
         op.body = CodeBody(body, self.language)
-        op.load_brace_body_facts(body)
+        op.load_brace_body_facts(body, class_name)
         return op
 
     def _apply_method_end_line(self, op: Operation, class_body: str, search_from: int) -> None:

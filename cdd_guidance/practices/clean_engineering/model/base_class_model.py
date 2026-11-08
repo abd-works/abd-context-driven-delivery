@@ -22,6 +22,10 @@ from cdd_guidance.practices.clean_engineering.model.production_code import is_te
 
 _EXAMPLE_EXTENSION_PREFIXES = ("Fake", "Isolated", "Production")
 _SCRIPT_IMPORT = re.compile(r"""(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(?\s*)['"](\.{1,2}/[^'"]+)['"]""")
+# An import or re-export TypeScript erases: `import type { A } from './x'`, or a braced list whose every name is
+# marked `type`. It names a type for an annotation and never runs, as Python's `if TYPE_CHECKING:` imports do.
+_TYPE_IMPORT_STATEMENT = re.compile(r"""\b(?:import|export)\s+type\b[^;'"]*?\bfrom\s*['"][^'"]+['"]""")
+_BRACED_IMPORT_STATEMENT = re.compile(r"""\b(?:import|export)\s*\{([^}]*)\}\s*from\s*['"][^'"]+['"]""")
 _PY_FROM_IMPORT = re.compile(r"^\s*from\s+[\w.]+\s+import\s+(\([^)]*\)|[^\n]+)", re.M)
 _JS_IMPORT = re.compile(r"\bimport\s+(?:type\s+)?([\w$]+)?\s*,?\s*(?:\{([^}]*)\})?\s*from\b")
 _QUALIFIED_CLASS = re.compile(r"\.([A-Z]\w*)\b")
@@ -46,6 +50,17 @@ def class_names_imported_by(source_text: str) -> set:
         names.update(_IMPORT_ALIAS.sub("", item).strip() for item in (braced or "").split(","))
     names.discard("")
     return names
+
+
+def _without_type_imports(source_text: str) -> str:
+    """The source with every import TypeScript erases blanked: `import type …`, and `import { type A, type B } …`."""
+    text = _TYPE_IMPORT_STATEMENT.sub("", source_text)
+    return _BRACED_IMPORT_STATEMENT.sub(lambda match: "" if _all_marked_type(match.group(1)) else match.group(0), text)
+
+
+def _all_marked_type(braced: str) -> bool:
+    names = [item.strip() for item in braced.split(",") if item.strip()]
+    return bool(names) and all(name.startswith("type ") for name in names)
 
 
 def path_parent(name: str) -> Optional[str]:
@@ -473,9 +488,10 @@ class Module(OoadNode):
             oclass.peer_names = peer_names
 
     def import_targets(self, file: Path, root: Path) -> List[str]:
-        """Root-relative paths named by relative script imports (`./x`, `../y`)."""
+        """Root-relative paths named by relative script imports (`./x`, `../y`) that run. A type-only import is erased
+        by TypeScript, so it is no dependency and is left out."""
         targets: List[str] = []
-        for specifier in _SCRIPT_IMPORT.findall(self.source_text):
+        for specifier in _SCRIPT_IMPORT.findall(_without_type_imports(self.source_text)):
             resolved = (file.parent / specifier).resolve()
             if resolved.is_relative_to(root.resolve()):
                 targets.append(resolved.relative_to(root.resolve()).as_posix())

@@ -13,13 +13,13 @@ from cdd_guidance.practices.clean_engineering.model.call_graph import (
     parse_arrow_line,
 )
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation, private_probe_in_text
-from cdd_guidance.practices.bdd.model.spec_source import has_signature_marker
+from cdd_guidance.practices.bdd.model.spec_source import has_signature_marker, is_developed
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 
 
 class BddModel(ModelNode):
     _semantic_type_name = "Spec"
-    graph_facts = ("patches_infrastructure", "signature_marker", "top_level_describes", "private_probe")
+    graph_facts = ("patches_infrastructure", "signature_marker", "developed", "top_level_describes", "private_probe")
     _belongs = {("Description", "Spec")}
 
     def __init__(self, graph: Graph | None = None) -> None:
@@ -57,6 +57,7 @@ class BddModel(ModelNode):
         describe keeps the probes in its own lines."""
         self.patches_infrastructure = bool(_PATCH_DECORATOR.search(text) or _MOCK_PATCH_IMPORT.search(text))
         self.signature_marker = has_signature_marker(text)
+        self.developed = is_developed(text)
         self.top_level_describes = _MAMBA_DESCRIBE.findall(text)
         described = {number for description in self.descriptions for number in range(description.line, description.end_line + 1)}
         outside = "\n".join("" if number in described else line for number, line in enumerate(text.splitlines(), start=1))

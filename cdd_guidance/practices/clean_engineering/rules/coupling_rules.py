@@ -11,6 +11,7 @@ from cdd_guidance.practices.clean_engineering.rules.production_code_rule import 
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import is_interface_name
 from cdd_guidance.practices.clean_engineering.model.graph_reading import parameters_of
+from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
 from cdd_guidance.practices.clean_engineering.rules.class_graph import ClassGraph, names_in
 
 if TYPE_CHECKING:
@@ -108,7 +109,7 @@ def _copied_fields(node: "Node", holders: dict[str, list["Node"]], fields: dict[
         if other is node or _related(node, other) or (len(own), node.node_id) > (len(theirs), other_id):
             continue
         shared = own & theirs
-        if (other.source.file == node.source.file and own == theirs) or _copies(shared, own, theirs):
+        if _copies(shared, own, theirs):
             return [
                 f"Class '{node.name}' copies the fields {sorted(shared)} of '{other.name}'. "
                 "Use one canonical model type."
@@ -149,9 +150,10 @@ def _copied_references(node: "Node", classes: ClassGraph, fields: dict[str, str]
 
 
 def _member_keyed_by_name(field: str, hint: str, classes: ClassGraph) -> str:
-    """`fidelity_states: dict[str, str]` names a member class and keys a dict of one value each by name."""
+    """`fidelity_states: dict[str, str]` names a member class and keys a dict of one value each by name. A dict keyed by
+    anything but a string, such as `dict[int, str]` keyed by `id()`, is keyed by no name."""
     mentioned = names_in(hint)
-    if not mentioned & _KEYED_COLLECTIONS or not mentioned & _STRING_KEYS:
+    if not mentioned & _KEYED_COLLECTIONS or _key_type(hint) not in _STRING_KEYS:
         return ""
     words = _words(field)
     for length in range(len(words) - 1, 0, -1):
@@ -159,6 +161,15 @@ def _member_keyed_by_name(field: str, hint: str, classes: ClassGraph) -> str:
         if member and member not in mentioned:
             return member
     return ""
+
+
+def _key_type(hint: str) -> str:
+    """The first type argument of a keyed collection, its key: `str` for `dict[str, int]` or `Record<string, X>`."""
+    opened = re.search(r"[\[<]", hint)
+    if opened is None:
+        return ""
+    arguments = split_top_level(hint[opened.end() :].rstrip("]> "))
+    return arguments[0].strip() if arguments else ""
 
 
 def _class_named(snake: str, classes: ClassGraph) -> str:

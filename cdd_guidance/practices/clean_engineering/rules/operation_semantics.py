@@ -51,8 +51,10 @@ class KeepOperationsSingleResponsibility(ProductionCodeRule):
 
 
 class ErrorsOutOfExistence(ProductionCodeRule):
-    """Ordinary empty/absent cases should not raise. A raise of a failure the program declares, given what was asked
-    for (``raise UnknownPractice(key, known)``), reports a broken call and passes. A spec helper raises on a missing
+    """Ordinary empty/absent cases should not raise a builtin failure. A raise of a failure the program declares
+    (``raise UnknownPractice(key, known)``, ``raise CommitPathsRequiredError()``) is a named refusal of a broken call
+    and passes, so this rule never asks for a quiet result where ``domain-exception-carries-context`` asks for a named
+    error. A spec helper raises on a missing
     value to fail its example, so only production code is judged."""
 
     slug = "errors-out-of-existence"

@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry, Point, Segment, segments_cross
+from cdd_guidance.practices.clean_engineering.model.drawio.diagram.geometry import Geometry, Point, Segment, segments_cross
 
 # A segment counts as horizontal or vertical when it moves less than this many pixels across.
 STRAIGHT_TOLERANCE = 1

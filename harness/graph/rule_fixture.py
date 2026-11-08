@@ -44,32 +44,28 @@ class RuleFixture:
 
 
 class SchemaRuleRun:
-    """One rule run over one practice's nodes the way the graph runs it in validate: the practice's schema says which
-    node types carry the rule, so a hit on a node whose type does not list the rule is dropped, and a check runs only
-    on the nodes whose rules say it runs there. A rule the schema never applies finds nothing, so its spec fails."""
+    """One rule run over one practice's nodes by the graph's own check, as validate runs it (``InGraph.check``): the
+    practice's schema says which node types carry the rule, a check runs only on the nodes whose rules say it runs
+    there, and a node another practice's class covers skips that practice's checks. A rule the practice does not check,
+    or the schema never applies, finds nothing, so its spec fails."""
 
     def __init__(self, rule, context: RuleCheckContext) -> None:
         self.rule = rule
         self.context = context
 
     def hits(self) -> list[str]:
-        """Each message the rule reports over the whole practice on a node that carries it, then on each node whose
-        rules run it."""
-        slug, context = self.rule.slug, self.context
-        messages = [message for node_id, message in self.rule.check_practice(context) if self._carries(context.node(node_id))]
-        for node in context.nodes():
-            entry = node.rules.entries.get(slug)
-            if entry is not None and entry.runs:
-                messages.extend(self.rule.check(node, context))
-        return messages
+        """Each message the rule recorded, node by node, after the graph has run it."""
+        self.context.practice.in_graph.check(self.rule)
+        return [message for node in self.context.nodes() for message in self._recorded_on(node)]
 
     def node_hits(self, node) -> list[str]:
-        """The messages the rule reports on node alone, when node's rules run it."""
-        entry = node.rules.entries.get(self.rule.slug)
-        return list(self.rule.check(node, self.context)) if entry is not None and entry.runs else []
+        """The messages the rule recorded on node alone, after the graph has run it."""
+        self.context.practice.in_graph.check(self.rule)
+        return self._recorded_on(node)
 
-    def _carries(self, node) -> bool:
-        return node is not None and self.rule.slug in node.rules.slugs
+    def _recorded_on(self, node) -> list[str]:
+        entry = node.rules.entries.get(self.rule.slug)
+        return [violation.message for violation in getattr(entry, "violations", [])]
 
 
 class RulePair:

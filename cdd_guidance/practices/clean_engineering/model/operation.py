@@ -15,7 +15,7 @@ def operation_body_fingerprint(body: str) -> str:
     return hashlib.sha256(normalized.encode()).hexdigest()[:24]
 
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from harness.graph.model_node import ModelChildren
 
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
@@ -37,7 +37,7 @@ CONSTRUCTOR_NAMES = frozenset({"__init__", "constructor"})
 
 class Parameter(OoadNode):
     _semantic_type_name = "Parameter"
-    graph_facts = ("type_hint", "operation_name", "property_setter")
+    graph_facts = ("type_hint", "operation_name", "property_setter", "in_typed_language")
 
     def __init__(self, name: str, sequential_order: int = 0, type_hint: str = "") -> None:
         super().__init__(name, sequential_order)
@@ -49,6 +49,14 @@ class Parameter(OoadNode):
     def operation_name(self) -> str:
         """The name of the operation that declares this parameter; empty before one holds it."""
         return self.operation.name if self.operation is not None else ""
+
+    @property
+    def in_typed_language(self) -> bool:
+        """True when the operation that declares it is written in a language with a syntax for a parameter's type;
+        plain JavaScript has none. A parameter no code operation holds, such as one read from a model document, is
+        judged as typed."""
+        language = self.operation.language if self.operation is not None else None
+        return language is None or language.declares_types
 
     @property
     def property_setter(self) -> bool:
@@ -81,6 +89,8 @@ class Parameter(OoadNode):
 
 class Operation(InvariantHolder, OoadNode):
     _semantic_type_name = "Operation"
+    # The language the operation is written in; a code operation sets it, one read from a model document has none.
+    language: CodeLanguage | None = None
 
     @property
     def is_constructor(self) -> bool:
@@ -280,23 +290,32 @@ class Operation(InvariantHolder, OoadNode):
         self.raises_on_empty = span.raises_on_empty()
         self.exception_without_message = span.exception_without_message()
         self.generic_exception_message = span.generic_exception_message()
-        self.mutates_without_record = span.mutates_without_record()
+        # A constructor sets up the object it builds and cannot return a record, so it is not a state change to report.
+        self.mutates_without_record = not self.is_constructor and span.mutates_without_record()
         self.prose_comment = span.has_prose_comment()
         bullets = span.markdown_bullet_lines()
         self.bold_interaction_lines = bullets.get("bold_interaction_lines", [])
         self.bold_invariant_lines = bullets.get("bold_invariant_lines", [])
 
-    def load_brace_body_facts(self, body: str) -> None:
-        """Fill the facts the rules measure on a brace-language method body (inside its `{` … `}`)."""
+    def load_brace_body_facts(self, body: str, class_name: str) -> None:
+        """Fill the facts the rules measure on a brace-language method body (inside its `{` … `}`), declared by the
+        class named class_name (empty for a module function)."""
         measured = SourceText(body)
         parameter_names = frozenset(p.name for p in self.parameters if p.name)
         self.max_control_flow_depth = measured.control_flow_depth()
         self.has_bare_catch = measured.has_bare_catch()
         self.swallows_exceptions = measured.swallows_exceptions()
         self.unnamed_literal_numbers = measured.unnamed_numbers()
-        self.peer_private_access = measured.reaches_peer_private()
+        self.peer_private_access = measured.reaches_peer_private(class_name, self._parameters_typed_as(class_name))
         if self.is_constructor:
             self.constructed_types = measured.built_collaborators(parameter_names, self.line or 1)
+
+    def _parameters_typed_as(self, class_name: str) -> frozenset[str]:
+        """The parameters whose declared type names the class: ``other: Money``."""
+        if not class_name:
+            return frozenset()
+        typed = re.compile(rf"\b{re.escape(class_name)}\b")
+        return frozenset(parameter.name for parameter in self.parameters if parameter.name and typed.search(parameter.type_hint or ""))
 
     def _delegates_io_and_domain(self) -> bool:
         """A long operation that calls both I/O and domain calculations does two jobs, even when it only delegates."""

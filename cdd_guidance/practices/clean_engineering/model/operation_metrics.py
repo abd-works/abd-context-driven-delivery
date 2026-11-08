@@ -74,6 +74,10 @@ _ARGUMENT_NAME = re.compile(r"(?<![\w.$])([A-Za-z_$][\w$]*)\b(?!\s*\()")
 _DECLARED_LOCAL = re.compile(r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)")
 _SCRIPT_VALUES = frozenset({"true", "false", "null", "undefined", "typeof", "instanceof", "as", "void", "await", "new"})
 _WIRED_PEER_FIELDS = frozenset({"repository", "repo"})
+# The dunders Python calls with another object of the same class as the operand: comparison and arithmetic.
+_PEER_OPERAND_DUNDERS = frozenset(
+    {"__eq__", "__ne__", "__lt__", "__le__", "__gt__", "__ge__", "__add__", "__sub__", "__or__", "__and__"}
+)
 _CATCH_ALL_TYPES = frozenset({"Exception", "BaseException"})
 _IO_CALL = re.compile(
     r"\b(?:open|read|write|save|fetch|load|store|send|post|put|delete|upload|download|print)\w*\s*\(",
@@ -92,13 +96,13 @@ _EDGE_RAISE_BRACE = re.compile(
     re.MULTILINE | re.DOTALL,
 )
 # What a raise names: `UnknownPractice(key, known)` names the failure `UnknownPractice` and gives it what was asked for.
-_RAISED_WITH_CONTEXT = re.compile(r"^\s*(?:new\s+)?([A-Z]\w*)\s*\(\s*[^)\s]")
+_RAISED_CLASS = re.compile(r"^\s*(?:new\s+)?([A-Z]\w*)\b")
 # The failures a language gives every program; raising one on an empty value says nothing about the domain.
 _BUILTIN_FAILURES = frozenset(
     {name for name in dir(builtins) if isinstance(getattr(builtins, name), type) and issubclass(getattr(builtins, name), BaseException)}
     | {"Error", "RangeError", "ReferenceError", "IllegalArgumentException", "IllegalStateException", "RuntimeException"}
 )
-_EDGE_RAISE_MESSAGE = re.compile(r"raise\s+\w*(?:Error|Exception)\([^)]*(?:empty|not found|missing|none)", re.I)
+_EDGE_RAISE_MESSAGE = re.compile(r"raise\s+(\w*(?:Error|Exception))\([^)]*(?:empty|not found|missing|none)", re.I)
 _EDGE_GUARD = re.compile(r"if\s+(?:not\s+|len\s*\([^)]*\)\s*==\s*0)")
 _EMPTY_EXCEPTION = re.compile(r"raise\s+(\w+(?:Error|Exception))\s*\(\s*([\"']?)\s*\2\s*\)")
 _GENERIC_EXCEPTION = re.compile(r"raise\s+\w+(?:Error|Exception)\s*\(\s*f?[\"'](?:error|failed|invalid)[\"']\s*\)", re.I)
@@ -219,19 +223,29 @@ class SourceText:
         code = _REGEXP_LITERAL.sub('""', _STRING.sub('""', self._text))
         return [raw for raw in _NUMBER.findall(code) if float(raw) not in _SAFE_NUMBERS]
 
-    def reaches_peer_private(self) -> bool:
+    def reaches_peer_private(self, own_class: str = "", typed_own: frozenset[str] = frozenset()) -> bool:
         """True when the body reads a ``_`` member of another object: ``order._lines``, not ``this._lines``,
         ``cls._registry``, or a dunder such as ``other.__dict__``. Copying a field from a peer into the same field of
-        this object, and the repository a peer is wired to, are not reaches."""
+        this object, and the repository a peer is wired to, are not reaches. Neither is a member of another object of
+        the class the body belongs to (``own_class``), since privacy is per class: the class itself, the parameters
+        typed as it (``typed_own``), and a local the body builds with ``new`` of it."""
         code = _STRING.sub('""', self._text)
+        own = _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS | typed_own | self._built_of(own_class)
         for match in _PEER_PRIVATE_FIELD.finditer(code):
             receiver, member = match.group(1), match.group(2)
-            if receiver in _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS or _is_dunder(member) or member.lstrip("_") in _WIRED_PEER_FIELDS:
+            if receiver in own or _is_dunder(member) or member.lstrip("_") in _WIRED_PEER_FIELDS:
                 continue
             if self._copies_same_field(receiver, member.lstrip("_")):
                 continue
             return True
         return False
+
+    def _built_of(self, class_name: str) -> frozenset[str]:
+        """The class itself and each local the body declares as a new object of it: ``const copy = new Money()``."""
+        if not class_name:
+            return frozenset()
+        built = re.findall(rf"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*new\s+{re.escape(class_name)}\b", self._text)
+        return frozenset({class_name, *built})
 
     def built_collaborators(self, parameter_names: frozenset[str], start_line: int) -> list[tuple[str, int]]:
         """The classes this brace-language constructor body builds with `new` that a caller cannot hand it, each with
@@ -260,13 +274,16 @@ class SourceText:
         return bool(_IO_CALL.search(self._text) and _DOMAIN_CALL.search(self._text))
 
     def raises_on_empty(self) -> bool:
-        """True when the body raises on an empty or missing value. A raise of a failure the program declares, given
-        what was asked for, such as ``raise UnknownPractice(key, known)`` when no practice has the key, reports a broken
-        call rather than an ordinary empty case, so it is left out."""
+        """True when the body raises a builtin failure on an empty or missing value. A raise of a failure the program
+        declares, such as ``raise UnknownPractice(key, known)`` when no practice has the key or
+        ``raise CommitPathsRequiredError()`` when a required argument is missing, is a named refusal of a broken call
+        rather than an ordinary empty case, so it is left out; whether it carries enough context is
+        ``domain-exception-carries-context``'s question."""
         for pattern in (_EDGE_RAISE, _EDGE_RAISE_BRACE):
-            if any(not _names_broken_call(match.group(1)) for match in pattern.finditer(self._text)):
+            if any(not _names_declared_failure(match.group(1)) for match in pattern.finditer(self._text)):
                 return True
-        return bool(_EDGE_RAISE_MESSAGE.search(self._text) and _EDGE_GUARD.search(self._text))
+        message = _EDGE_RAISE_MESSAGE.search(self._text)
+        return bool(message and not _names_declared_failure(message.group(1)) and _EDGE_GUARD.search(self._text))
 
     def exception_without_message(self) -> str:
         found = _EMPTY_EXCEPTION.search(self._text)
@@ -366,10 +383,13 @@ class SourceText:
 
 
 class PythonFunctionBody:
-    """A Python function read from its syntax tree, and what the rules measure in it."""
+    """A Python function read from its syntax tree, and what the rules measure in it. A method keeps the class that
+    declares it, since what counts as reaching another object's private state depends on that class; a module function
+    has none."""
 
-    def __init__(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+    def __init__(self, node: ast.FunctionDef | ast.AsyncFunctionDef, owner: ast.ClassDef | None) -> None:
         self._node = node
+        self._owner = owner
 
     def control_flow_depth(self) -> int:
         return self._deepest_block(self._node.body, 0)
@@ -400,9 +420,10 @@ class PythonFunctionBody:
 
     def reaches_peer_private(self) -> bool:
         """True when the function reads a ``_`` member of another object, as ``SourceText.reaches_peer_private`` reads a
-        brace-language body: not of itself (``self``, or its class in a classmethod), not a dunder, not the repository
-        a peer is wired to, and not a field it copies into the same field of this object."""
-        own = _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS | self._own_class_parameter()
+        brace-language body: not of itself (``self``, or its class in a classmethod), not of another object of its own
+        class (privacy in Python is per class), not a dunder, not the repository a peer is wired to, and not a field it
+        copies into the same field of this object."""
+        own = _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS | self._own_class_parameter() | self._own_class_objects()
         for child in ast.walk(self._node):
             if not (isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name)):
                 continue
@@ -412,6 +433,27 @@ class PythonFunctionBody:
                 continue
             return True
         return False
+
+    def _own_class_objects(self) -> frozenset[str]:
+        """The names this method holds an object of its own class by: the class's own name, a parameter typed as the
+        class, the other operand of a comparison or arithmetic dunder such as ``__eq__``, a local it builds from the
+        class (``cls()``, ``Plan()``, ``cls.read(...)``, ``type(self)()``), and the loop name over a field the class
+        declares as holding objects of the class (``epics: list['Epic']``)."""
+        if self._owner is None:
+            return frozenset()
+        name = self._owner.name
+        arguments = self._node.args.posonlyargs + self._node.args.args + self._node.args.kwonlyargs
+        names = {name} | {argument.arg for argument in arguments if _names_class(argument.annotation, name)}
+        if self._node.name in _PEER_OPERAND_DUNDERS:
+            names.update(argument.arg for argument in arguments)
+        own_fields = _fields_holding_class(self._owner)
+        for child in ast.walk(self._node):
+            if isinstance(child, ast.Assign) and _builds_class(child.value, name):
+                names.update(target.id for target in child.targets if isinstance(target, ast.Name))
+            elif isinstance(child, (ast.For, ast.comprehension)) and _self_field(child.iter) in own_fields:
+                names.add(_name_of(child.target))
+        names.discard("")
+        return frozenset(names)
 
     def _own_class_parameter(self) -> frozenset[str]:
         """The first parameter of a classmethod, its own class whatever it is called."""
@@ -538,9 +580,10 @@ class PythonFunctionBody:
         )
 
 
-def _names_broken_call(raised: str) -> bool:
-    """A raise of a failure the program declares, given the value it could not use: `UnknownPractice(key, known)`."""
-    named = _RAISED_WITH_CONTEXT.match(raised)
+def _names_declared_failure(raised: str) -> bool:
+    """A raise of a failure the program declares rather than one its language gives every program:
+    `UnknownPractice(key, known)`, `CommitPathsRequiredError()`; not `ValueError("missing")`."""
+    named = _RAISED_CLASS.match(raised)
     return named is not None and named.group(1) not in _BUILTIN_FAILURES
 
 
@@ -577,6 +620,42 @@ def _built_from(construction: ast.Call, owned: set[str]) -> bool:
         for child in nodes
         if isinstance(child, ast.Name) and id(child) not in called
     )
+
+
+def _names_class(annotation: ast.expr | None, class_name: str) -> bool:
+    """True when a type annotation names the class: ``Plan``, ``'Plan'``, ``Plan | None``, ``list['Plan']``."""
+    return annotation is not None and re.search(rf"\b{re.escape(class_name)}\b", ast.unparse(annotation)) is not None
+
+
+def _builds_class(value: ast.expr, class_name: str) -> bool:
+    """True when a value is an object the class makes: a call of the class, of ``cls``, of ``type(self)``, or of a
+    factory on the class (``Plan.read(...)``, ``cls.read(...)``)."""
+    if not isinstance(value, ast.Call):
+        return False
+    called = value.func
+    if isinstance(called, ast.Attribute):
+        called = called.value
+    if isinstance(called, ast.Call):
+        return _name_of(called.func) == "type"
+    return _name_of(called) in {class_name, "cls"}
+
+
+def _fields_holding_class(owner: ast.ClassDef) -> set[str]:
+    """The fields a class declares as holding objects of the class itself, at class level or as ``self.x: T``."""
+    fields = {
+        _name_of(child.target) or _self_field(child.target)
+        for child in ast.walk(owner)
+        if isinstance(child, ast.AnnAssign) and _names_class(child.annotation, owner.name)
+    }
+    fields.discard("")
+    return fields
+
+
+def _self_field(expression: ast.expr) -> str:
+    """The field an expression reads off ``self`` (``self.epics``); empty for anything else."""
+    if isinstance(expression, ast.Attribute) and _name_of(expression.value) == "self":
+        return expression.attr
+    return ""
 
 
 def _is_dunder(member: str) -> bool:

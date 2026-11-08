@@ -16,6 +16,9 @@ if TYPE_CHECKING:
 # A body of fewer tokens is a guard or a delegation; two such bodies look alike without being a copy worth a function.
 # Tokens, not lines, measure it, because an operation's lines count its docstring.
 MIN_TOKENS = 24
+# An operation of fewer lines, its head included, is one expression; two that read alike are an idiom, not a copy worth a
+# function. The exact-copy check counts an operation's lines against the same floor.
+MIN_LINES = 3
 # The share of three-token runs two bodies must have in common to be one body written twice.
 MIN_SHARED = 0.7
 _RUN = 3
@@ -67,7 +70,9 @@ class NearCopies:
 def _runs_of(operation: "Node") -> frozenset[int]:
     """The hashes of the body's three-token runs, comments left out; none for a short body or one the node lacks."""
     text = str(getattr(getattr(operation, "body", None), "text", "") or "")
-    tokens = _TOKEN.findall(_COMMENT_LINE.sub("", text))
-    if len(tokens) < MIN_TOKENS:
+    code = _COMMENT_LINE.sub("", text)
+    tokens = _TOKEN.findall(code)
+    code_lines = sum(1 for line in code.splitlines() if line.strip())
+    if len(tokens) < MIN_TOKENS or code_lines + 1 < MIN_LINES:
         return frozenset()
     return frozenset(hash(tuple(tokens[start : start + _RUN])) for start in range(len(tokens) - _RUN + 1))

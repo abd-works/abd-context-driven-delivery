@@ -982,6 +982,7 @@ with description("Story name opening") as self:
         def _story(name, kind):
             node = Node(Graph().practice("stories"), "Story", f"stories:Story:{name}", name, Source(".", 1, 1))
             node.set_fact("opening_class", kind)
+            node.practice.in_graph.hold(node)
             return SchemaRuleRun(VerbNounFormat(), RuleCheckContext(node.practice, None)).node_hits(node)
 
         expect(_story("Carry Plan From Marketing Link", "unlisted")).to(equal([]))

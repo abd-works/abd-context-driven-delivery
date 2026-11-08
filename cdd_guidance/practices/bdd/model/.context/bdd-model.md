@@ -88,8 +88,9 @@ The spec, and the sketch format: an indented describe tree, with an observation'
 + written: WrittenBlock | None
 + patches_infrastructure: bool
 + signature_marker: bool
++ developed: bool
+	// no `it` still carries a signature marker and the spec asserts: a finished test, past behavior fidelity, which the behavior-only rules leave alone
 + top_level_describes: list[str]
-+ code_like_describe_lines: list[int]
 + private_probe: dict
 ----
 + parse(text: str): BddModel

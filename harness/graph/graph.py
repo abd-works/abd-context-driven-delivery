@@ -1029,11 +1029,12 @@ class PracticeNodes:
         labels.update(schema.rule_label(node.type, slug) for node in failing for slug in node.failed_rules)
         return labels
 
-    def check(self) -> None:
+    def check(self, only=None) -> None:
         """Run every graph rule the practice checks, over the whole practice, then node by node, and record each
         violation on the node it was found on. A practice names the rules it checks itself (``practice.checks()``),
-        with those the graph's pattern overlays add; which of them apply to one node, the node says (``node.rules``)."""
-        checks = list(self.practice.checks().values())
+        with those the graph's pattern overlays add; which of them apply to one node, the node says (``node.rules``).
+        Given ``only``, one of those rules, run that rule alone, the same way."""
+        checks = [check for check in self.practice.checks().values() if only is None or check.slug == only.slug]
         if not checks:
             return
         context = RuleCheckContext(self.practice, self._source_root)
@@ -1044,10 +1045,11 @@ class PracticeNodes:
                 node = self.graph.node(node_id)
                 if node is not None:
                     node.rules.record_violation(check.slug, message)
-        self._check_each_node(context)
+        self._check_each_node(context, {check.slug for check in checks})
 
-    def _check_each_node(self, context: RuleCheckContext) -> None:
-        """A node another practice's class covers skips that practice's checks, which already ran on the class."""
+    def _check_each_node(self, context: RuleCheckContext, slugs: set[str]) -> None:
+        """Run each of the checks named slugs on every node whose rules run it. A node another practice's class covers
+        skips that practice's checks, which already ran on the class."""
         covering = self._covering_classes()
         nodes = self.nodes()
         key = self.practice.key
@@ -1055,7 +1057,7 @@ class PracticeNodes:
             self.graph.report_progress(f"{key} · rules · {index}/{len(nodes)} · {node.type} {node.name}")
             skipped = {slug for slugs, spans in covering for slug in slugs if _inside(node, spans)}
             for rule in node.rules:
-                if not rule.runs or rule.slug in skipped:
+                if not rule.runs or rule.slug in skipped or rule.slug not in slugs:
                     continue
                 for message in rule.check(node, context):
                     node.rules.record_violation(rule.slug, message)

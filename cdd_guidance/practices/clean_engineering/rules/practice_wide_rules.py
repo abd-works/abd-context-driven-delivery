@@ -171,7 +171,8 @@ class ExtensionsLiveWithTheDomain(ProductionCodeRule):
     """A class that joins one of its own package's types with the class of another package it is named after extends
     that other package's domain, so it belongs beside the class it extends: kept in the base package, it makes the base
     package depend on every domain it is extended for. `GraphEpic(Epic, Node)` in the framework that declares `Node`
-    is the case; in the package that declares `Epic` it is where it belongs."""
+    is the case; in the package that declares `Epic`, or a package nested under it (`ddd/model/markdown` under
+    `ddd/model`), it is where it belongs."""
 
     slug = "extensions-live-with-the-domain"
     node_types = ("OoadClass",)
@@ -181,8 +182,13 @@ class ExtensionsLiveWithTheDomain(ProductionCodeRule):
         own_folder = _parent_folder(node.source.file or "")
         homes = {base: {_parent_folder(declared.source.file or "") for declared in classes.by_name.get(base, [])} for base in classes.bases_of(node)}
         own = [base for base, folders in homes.items() if own_folder in folders]
-        # The domain class an extension extends is the one it is named after: `GraphEpic` extends `Epic`.
-        extended = [base for base, folders in homes.items() if folders and own_folder not in folders and node.name.endswith(base)]
+        # The domain class an extension extends is the one it is named after: `GraphEpic` extends `Epic`. A package
+        # nested under that domain's package is still the domain's.
+        extended = [
+            base
+            for base, folders in homes.items()
+            if folders and not any(_is_under(own_folder, folder) for folder in folders) and node.name.endswith(base)
+        ]
         if not own or not extended:
             return []
         home = sorted(homes[extended[0]])[0]
