@@ -599,7 +599,8 @@ class Node:
         if self._populated:
             return
         self._populated = True
-        types = sorted(self.practice.in_graph.edge_types.values(), key=lambda edge_type: edge_type.order)
+        # A kind no one filters by, the belongsTo back-edge and scopes, is no part of the explorer tree.
+        types = sorted((edge_type for edge_type in self.practice.in_graph.edge_types.values() if edge_type.is_offered), key=lambda edge_type: edge_type.order)
         for edge_type in types:
             for edge in self._edges_in_source_order(edge_type.kind):
                 edge.child.populate(self if edge.display == "direct" else self._holder_for(edge.kind))

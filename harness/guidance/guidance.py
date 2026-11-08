@@ -82,6 +82,16 @@ class FidelityWithoutSessionError(ValueError):
         super().__init__(f"{slug} works in no session, so it has nowhere to save a validation report")
 
 
+@functools.lru_cache(maxsize=None)
+def _folder_of_class(guidance_class: type) -> Path:
+    """The folder a guidance class's file sits in, found once per class: where a class is defined never changes while
+    the process runs, and every practice made from the class, such as the five a graph makes for itself, asks it."""
+    try:
+        return Path(inspect.getfile(guidance_class)).resolve().parent
+    except (TypeError, OSError):
+        return Path(".")
+
+
 @agent_toolset
 class Guidance:
     default_format: str = ""
@@ -106,13 +116,10 @@ class Guidance:
     def install_folder(self) -> Path:
         return self.module_dir
 
-    @functools.cached_property
+    @property
     def module_dir(self) -> Path:
-        """The folder beside the guidance's class, found once: ``key`` and every markdown read ask it."""
-        try:
-            return Path(inspect.getfile(type(self))).resolve().parent
-        except (TypeError, OSError):
-            return Path(".")
+        """The folder beside the guidance's class: ``key`` and every markdown read ask it."""
+        return _folder_of_class(type(self))
 
     @property
     def markdown_scope(self) -> MarkdownScope:

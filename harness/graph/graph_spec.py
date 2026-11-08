@@ -247,8 +247,8 @@ with description("a graph"):
             with it("should include properties on AccountCredentials"):
                 expect(tree_names(self.account)).to(contain("properties"))
 
-            with it("should include belongsTo on AccountCredentials"):
-                expect(tree_names(self.account)).to(contain("belongsTo"))
+            with it("should leave the belongsTo back-edge out of AccountCredentials' tree"):
+                expect(tree_names(self.account)).not_to(contain("belongsTo"))
 
             with context("with a module, a class, an operation, a property, and a parameter"):
                 with before.all:
@@ -738,13 +738,9 @@ with description("a graph"):
                 expect(customer["node_id"]).to(equal("ddd:Aggregate:src/customer"))
                 expect({"Customer", "CustomerRepository", "Address", "Identity"} <= set(tree_names(customer))).to(equal(True))
 
-            with it("should leave a belongsTo copy of the customer aggregate without its members"):
-                copies = [
-                    item
-                    for item in walk_tree(self.ddd_tree)
-                    if item.get("node_id") == "ddd:Aggregate:src/customer" and not item.get("children")
-                ]
-                expect(len(copies)).to(be_above(0))
+            with it("should show the customer aggregate once, with its members"):
+                copies = [item for item in walk_tree(self.ddd_tree) if item.get("node_id") == "ddd:Aggregate:src/customer"]
+                expect(len(copies)).to(equal(1))
 
             with it("should include AccountCredentials"):
                 expect(tree_names(self.aggregate)).to(contain("AccountCredentials"))
