@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from pathlib import Path
+from typing import Dict, Optional
 
 from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
-from harness.annotations.name import Name
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError, example_names_of
 from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
 from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptEpic, TypeScriptStory, _story_test_text
 
@@ -18,7 +17,7 @@ _SKIP_NAMES = frozenset({"story-test.ts", "givens.ts"})
 
 class TypeScriptStoryModel(BraceStoryModel):
     LEAF_EXTENSION = ".ts"
-    story_test_suffix = "_story.test.ts"
+    story_file_suffixes = ("_story.test.ts", "_story.spec.ts", ".story.shared.ts")
     epic_type = TypeScriptEpic
     story_type = TypeScriptStory
     language = TYPESCRIPT
@@ -61,30 +60,14 @@ class TypeScriptStoryModel(BraceStoryModel):
         seed = {} if self.read_from_code() else {seed_path: _story_test_text(self.tests_root)}
         return self.write_epics(seed)
 
-    def parse(self, external: Dict[str, str], *, on_file=None) -> "TypeScriptStoryModel":
-        """A new map read from the story tests in external, path to text, with this model's folders; on_file hears
-        each file as it is read."""
-        return type(self)(tests_root=self.tests_root, story_test_folder=self._story_test_folder).load(external, on_file=on_file)
-
-    def copy_of(self, source: StoryModel) -> "TypeScriptStoryModel":
+    def copy_of(self, source: Optional[StoryModel]) -> "TypeScriptStoryModel":
         return type(self)(source, tests_root=self.tests_root, story_test_folder=self._story_test_folder)
 
     def file_name(self, epic: Epic) -> str:
         return f"{epic.snake()}_story.test.ts"
 
-    def file_header(self, epic: Epic, parent: str) -> List[str]:
-        names = example_names_of(list(epic.stories))
-        example_import = [f"import {{ {', '.join(names)} }} from \"./examples\";"] if names else []
-        return [
-            "/**",
-            f" * Epic: {epic.name}",
-            f" * Orders: {epic.order_path()}",
-            " */",
-            "",
-            f'import {{ scenario, story }} from "{self.story_test_import_path}";',
-            *example_import,
-            "",
-        ]
+    def story_test_import(self, parent: str) -> str:
+        return f'import {{ scenario, story }} from "{self.story_test_import_path}";'
 
     def folder_files(self, epic: Epic, folder: str, files: Dict[str, str]) -> None:
         """A new epic folder starts with example aggregates; a folder read from code already has its own."""
@@ -93,68 +76,11 @@ class TypeScriptStoryModel(BraceStoryModel):
         name, text = epic.examples_file()
         files.setdefault(f"{folder}/examples/{name}", text)
 
-    def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
-        return sorted(p for p in tree if self.is_story_file(p))
-
-    def is_story_file(self, path: str) -> bool:
-        """A story test file (not an examples file) that this model reads a story from."""
-        name = path.replace("\\", "/").rsplit("/", 1)[-1]
-        if name in _SKIP_NAMES or name.endswith("-helper.ts"):
+    @classmethod
+    def is_story_file(cls, path: "str | Path") -> bool:
+        """A story test file that this model reads a story from, not a step library, helper, or examples file."""
+        posix = str(path).replace("\\", "/")
+        name = posix.rsplit("/", 1)[-1]
+        if name in _SKIP_NAMES or name.endswith("-helper.ts") or "/examples/" in posix:
             return False
-        if "/examples/" in path.replace("\\", "/"):
-            return False
-        return (
-            name.endswith(self.story_test_suffix)
-            or name.endswith("_story.spec.ts")
-            or name.endswith(".story.shared.ts")
-        )
-
-    def _story_slug_from_filename(self, name: str) -> str | None:
-        suffix = self.story_test_suffix if name.endswith(self.story_test_suffix) else "_story.spec.ts"
-        if not name.endswith(suffix):
-            return None
-        return Name(name[: -len(suffix)]).title_slug
-
-    def load(self, external: Dict[str, str], *, on_file=None) -> "TypeScriptStoryModel":
-        if not isinstance(external, dict):
-            raise CodeStoryModelError("TypeScript story map parse expects a path->content dict")
-        self.epics.clear()
-        self.source_texts = dict(external)
-        seen: set[tuple[str, ...]] = set()
-        ordered = self._ordered_paths(external)
-        leaves = [path for path in ordered if self.is_story_file(path)]
-        total = len(leaves)
-        with self.batch_schema_sync():
-            self._read_leaves(external, leaves, seen, on_file, total)
-        return self
-
-    def _read_leaves(self, external, leaves, seen, on_file, total: int) -> None:
-        for index, path in enumerate(leaves, start=1):
-            if on_file is not None:
-                on_file(f"{index}/{total} · {path}")
-            content = external[path]
-            parts = path.strip("/").replace("\\", "/").split("/")
-            stripped = self.strip_tests_root_prefix(parts)
-            if stripped is None:
-                continue
-            parts = stripped
-            if self.take_sub_epic_file(parts, content, path):
-                continue
-            if len(parts) < 3:
-                continue
-            filename = parts[-1]
-            story_slug = self._story_slug_from_filename(filename)
-            if not story_slug:
-                continue
-            epic_slug, sub_slugs = parts[0], parts[1:-1]
-            if sub_slugs and sub_slugs[-1] == story_slug:
-                sub_slugs = sub_slugs[:-1]
-            if not sub_slugs:
-                continue
-            key = (epic_slug, *sub_slugs, story_slug)
-            if key in seen:
-                continue
-            seen.add(key)
-            epic = self.epic_for(epic_slug)
-            sub = self.sub_epic_for(epic, sub_slugs)
-            sub.append_story(self.story_type.load(content, story_slug))
+        return super().is_story_file(posix)

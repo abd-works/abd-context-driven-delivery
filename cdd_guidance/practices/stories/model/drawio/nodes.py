@@ -407,8 +407,7 @@ class DrawIOStoryModel(DiagramStoryModel):
         text = path.read_text(encoding="utf-8")
         loaded = cls().load(text)
         loaded.source_texts[file] = text
-        for epic in loaded.epics:
-            epic.place_in(file)
+        loaded.place_in(file)
         return loaded
 
     def load(self, text: str) -> "DrawIOStoryModel":
@@ -601,7 +600,6 @@ class DrawIOStoryModel(DiagramStoryModel):
         tree = root_el if root_el.tag == "mxGraphModel" else root_el.find(".//mxGraphModel")
         if tree is None:
             raise DrawIOParseError("No mxGraphModel found")
-        stories = {story.name: story for story in self.every_story()}
         lanes: Dict[str, List[Story]] = {}
         names: Dict[str, str] = {}
         # Cells are read in document order, so a lane's stories may come before its label.
@@ -614,9 +612,7 @@ class DrawIOStoryModel(DiagramStoryModel):
                 names[parts[1]] = cell.attrib.get("value", "").strip()
                 lanes.setdefault(parts[1], [])
             elif style.startswith("increment-story;") and len(parts) >= 3:
-                story = stories.get(cell.attrib.get("value", "").strip())
-                if story is not None:
-                    lanes.setdefault(parts[1], []).append(story)
+                lanes.setdefault(parts[1], []).extend(self.stories_named([cell.attrib.get("value", "").strip()]))
         self.increments = [
             DrawIOIncrement(names[slug], order, lanes[slug]) for order, slug in enumerate((slug for slug in lanes if slug in names), start=1)
         ]

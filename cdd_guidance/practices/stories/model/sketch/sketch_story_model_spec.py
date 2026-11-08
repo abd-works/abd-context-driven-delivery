@@ -15,7 +15,7 @@ from expects import contain, equal, expect
 from mamba import description, it
 
 from cdd_guidance.actions.render.render import Render
-from cdd_guidance.practices.stories.model.sketch.sketch_story_model import SketchStoryModel
+from cdd_guidance.practices.stories.model.sketch.sketch_story_model import SketchLines, SketchStoryModel
 
 _SKETCH = """# Single Client View - sketch
 
@@ -74,3 +74,13 @@ with description("SketchStoryModel"):
         expect(text).to(contain("(S) Call Center --> Resolve Client From Record In Hand"))
         expect(text).to(contain("## Scope boundary"))
         expect("## domain driven design:" in text).to(equal(False))
+
+
+with description("the lines of a sketch's stories section"):
+    with it("should open an entry at each line of the shallowest depth"):
+        lines = SketchLines.read(["Shop", "    --> Pay", "Returns", "    --> Refund"])
+        expect([entry.text for entry in lines.under()]).to(equal(["Shop", "Returns"]))
+
+    with it("should give each entry the deeper lines after it as the lines nested under it"):
+        lines = SketchLines.read(["Shop", "    --> Pay", "        happy path", "Returns"])
+        expect(lines.under()[0].nested.texts).to(equal(["--> Pay", "happy path"]))

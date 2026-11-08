@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import json
 from pathlib import Path
+from cdd_guidance.practices.ux.model.explorer_tree import ExplorerTree
 from cdd_guidance.practices.ux.model.json.nodes import JsonControl, JsonStoryDemoControl, JsonUxMap
 from cdd_guidance.practices.ux.model.nodes import Region, Screen, StoryStep
 from cdd_guidance.practices.ux.model.ux_map import UxMap
@@ -184,11 +185,7 @@ class HtmlUxMap(JsonUxMap):
         return {
             "@@TITLE@@": _text(self.scope or self.name),
             "@@SCREENS@@": screens or "<p>No screens yet.</p>",
-            "@@STORY_OUTLINE@@": _script_json(self.story_outline()),
-            "@@SCREEN_STORIES@@": _script_json([
-                {"name": screen.name, "stories": [{"name": story} for story in screen.story_keys]}
-                for screen in self.screens
-            ]),
+            "@@EXPLORER_TREE@@": _script_json(ExplorerTree(list(self.screens)).as_json()),
             "@@ENSURE_HINT@@": self._ensure_hint(),
             "@@STORY_IMPORTS@@": _module_imports(self.story_references, "data-ux-story-ref"),
             "@@OBJECT_IMPORTS@@": _module_imports(self.object_references, "data-ux-object-ref"),
@@ -215,7 +212,7 @@ class HtmlUxMap(JsonUxMap):
         stories_attr = ""
         if screen.story_keys:
             joined = _text(", ".join(screen.story_keys))
-            stories_attr = f' data-stories="{joined}" data-for-story="{joined}"'
+            stories_attr = f' data-for-story="{joined}"'
         layout_attr = f' data-layout="{_text(screen.layout)}"' if screen.layout else ""
         return (
             f'<article class="screen" data-slug="{_text(screen.slug)}"'

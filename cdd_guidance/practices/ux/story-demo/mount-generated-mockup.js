@@ -13,12 +13,7 @@
 import { StoryDemoControl } from "./control.js";
 import { StoryDemoFrame } from "./story-demo-frame.js";
 import { StoryDemoPage } from "./story-demo-page.js";
-import {
-  buildScreenNodes,
-  keysForCurrentScreen,
-  nestScreens,
-  renderScreenTree,
-} from "./screen-tree.js";
+import { readExplorerTree, renderScreenTree } from "./screen-tree.js";
 
 function readBound(snapshot, path) {
   if (!path || snapshot == null) return undefined;
@@ -106,14 +101,9 @@ function paintStoryMap(page, el, onPickStory) {
   });
 }
 
-function readStoryOutline(root) {
-  const el = root.querySelector("#story-outline");
-  if (!el?.textContent?.trim()) return [];
-  try {
-    return JSON.parse(el.textContent);
-  } catch (_err) {
-    return [];
-  }
+/** The runner's index of the story the explorer names: the loaded story function of that title. */
+function storyIndexNamed(catalog, name) {
+  return catalog.findIndex((entry) => entry.title === name || entry.story?.name === name);
 }
 
 function paintExplorer(page, el, root, handlers) {
@@ -123,10 +113,7 @@ function paintExplorer(page, el, root, handlers) {
       paintStoryMap(page, el, handlers.onPickStory);
     } else if (screenEls.length) {
     const frame = page.explorerFrame;
-    const nodes = nestScreens(
-      buildScreenNodes(screenEls, frame.catalog || []),
-      readStoryOutline(root),
-    );
+    const tree = readExplorerTree(root);
     const current = screenEls.find((screen) => screen.classList.contains("current"))
       || screenEls.find((screen) => !screen.hidden);
     const currentName = current?.getAttribute("data-slug")
@@ -135,11 +122,11 @@ function paintExplorer(page, el, root, handlers) {
     if (currentName && frame.openScreen !== currentName) {
       frame.openScreen = currentName;
       el.openScreen = currentName;
-      for (const key of keysForCurrentScreen(nodes, currentName)) frame.ensureExpanded(key);
+      for (const key of tree.screenKeys[currentName] || []) frame.ensureExpanded(key);
     }
     if (!frame.expandedNodes) frame.expandedNodes = new Set();
     renderScreenTree(el.tree, {
-      nodes,
+      nodes: tree.nodes,
       expanded: frame.expandedNodes,
       currentScreen: currentName,
       currentStory: page.story?.name ?? null,
@@ -158,12 +145,13 @@ function paintExplorer(page, el, root, handlers) {
         frame.scrollExplorerToScreen = true;
         handlers.repaint();
       },
-      onStory(storyIndex) {
+      onStory(storyName) {
+        const storyIndex = storyIndexNamed(frame.catalog || [], storyName);
         if (storyIndex >= 0) handlers.onPickStory?.(storyIndex);
       },
-      onScenario(storyIndex, scenarioIndex, key) {
+      onScenario(storyName, scenarioIndex, key) {
         frame.ensureExpanded(key);
-        handlers.onScenario?.(storyIndex, scenarioIndex, key);
+        handlers.onScenario?.(storyIndexNamed(frame.catalog || [], storyName), scenarioIndex, key);
       },
     });
     frame.scrollExplorerToScreen = false;

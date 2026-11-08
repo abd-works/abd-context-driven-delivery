@@ -5,20 +5,18 @@ Each story file is `story` / `background` / `scenario` / `given` / `when` / `the
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
-
 from pathlib import Path
+from typing import Dict
 
 from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError, example_names_of
 from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptEpic, JavaScriptStory
 from cdd_guidance.practices.stories.model.story_model import Epic
 
 
 class JavaScriptStoryModel(BraceStoryModel):
     LEAF_EXTENSION = "_story.test.js"
-    story_test_suffix = LEAF_EXTENSION
+    story_file_suffixes = (LEAF_EXTENSION,)
     epic_type = JavaScriptEpic
     story_type = JavaScriptStory
     language = JAVASCRIPT
@@ -31,53 +29,9 @@ class JavaScriptStoryModel(BraceStoryModel):
     def file_name(self, epic: Epic) -> str:
         return f"{epic.snake()}_story.test.js"
 
-    def file_header(self, epic: Epic, parent: str) -> List[str]:
+    def story_test_import(self, parent: str) -> str:
         relative = "../" * parent.count("/") + "story-test.js"
-        names = example_names_of(list(epic.stories))
-        example_import = [f"import {{ {', '.join(names)} }} from \"./examples\";"] if names else []
-        return [
-            "/**",
-            f" * Epic: {epic.name}",
-            f" * Orders: {epic.order_path()}",
-            " */",
-            "",
-            f'import {{ background, scenario, story }} from "{relative}";',
-            *example_import,
-            "",
-        ]
-
-    def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
-        return sorted(
-            p for p in tree if p.endswith(self.LEAF_EXTENSION) and "/story-test.js" not in p
-        )
-
-    def load(self, external: Dict[str, str]) -> "JavaScriptStoryModel":
-        if not isinstance(external, dict):
-            raise CodeStoryModelError("JavaScript story map parse expects a path->content dict")
-        self.epics.clear()
-        # Group *_story.js by epic / sub-epic / story folder
-        for path in self._ordered_paths(external):
-            content = external[path]
-            if not path.endswith(self.LEAF_EXTENSION):
-                continue
-            parts = path.strip("/").split("/")
-            if parts and parts[0] == self.tests_root:
-                parts = parts[1:]
-            if self.take_sub_epic_file(parts, content, path):
-                continue
-            # epic / ...subs... / story-folder / file
-            if len(parts) < 4:
-                continue
-            epic_slug = parts[0]
-            story_slug = parts[-2]
-            sub_slugs = parts[1:-2]
-            if not sub_slugs:
-                continue
-
-            epic = self.epic_for(epic_slug)
-            sub = self.sub_epic_for(epic, sub_slugs)
-            sub.append_story(self.story_type.load(content, story_slug))
-        return self
+        return f'import {{ background, scenario, story }} from "{relative}";'
 
 
 def _story_test_js() -> str:

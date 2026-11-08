@@ -137,14 +137,6 @@ class MiroEpic(DiagramEpic):
             return DiagramEpic.fill
         return f"#{max(red - darken, 0xa0):02x}{max(green - darken, 0xc0):02x}{max(blue - darken, 0xa0):02x}"
 
-    def leaves(self) -> List["MiroEpic"]:
-        if not self.epics:
-            return [self]
-        found: List[MiroEpic] = []
-        for child in self.epics:
-            found.extend(child.leaves())
-        return found
-
     def shapes(self, parent_id: str = "") -> List[dict]:
         if not isinstance(self.parent, Epic):
             return self._top_shapes()
@@ -215,7 +207,7 @@ class MiroStoryModel(DiagramStoryModel):
                     story_column[story.name] = column
                 column += 1
             for sub_epic in epic.epics:
-                leaves = sub_epic.leaves()
+                leaves = sub_epic.leaf_epics()
                 if not sub_epic.epics:
                     headers.append(f"{epic.name} / {sub_epic.name}")
                 else:
@@ -254,13 +246,11 @@ class MiroStoryModel(DiagramStoryModel):
             raise MiroParseError("No table foreignObject found in thin-slice SVG")
         body = next((element for element in foreign.iter() if _local_name(element) == "tbody"), None)
         rows = [] if body is None else [row for row in body if _local_name(row) == "tr"]
-        stories = {story.name: story for story in self.every_story()}
         increments: List[MiroIncrement] = []
         for row in rows:
             cells = [(cell.text or "").strip() for cell in row if _local_name(cell) == "td"]
             if cells and cells[0]:
-                delivered = [stories[name] for name in cells[1:] if name in stories]
-                increments.append(MiroIncrement(cells[0], len(increments) + 1, delivered))
+                increments.append(MiroIncrement(cells[0], len(increments) + 1, self.stories_named(cells[1:])))
         self.increments = increments
         return self
 

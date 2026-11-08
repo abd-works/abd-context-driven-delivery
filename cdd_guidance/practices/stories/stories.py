@@ -203,7 +203,7 @@ class Stories(PracticeGuidance):
         from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 
         adapters = (self._format_adapter(name) for name in self.formats)
-        return next((adapter for adapter in adapters if issubclass(adapter, CodeStoryModel) and adapter.reads_story_test(path)), None)
+        return next((adapter for adapter in adapters if issubclass(adapter, CodeStoryModel) and adapter.is_story_file(path)), None)
 
     def _story_map_file(self, path: Path, project: Path, on_file=None):
         """The story map in the file at path, read by the format that reads its extension."""

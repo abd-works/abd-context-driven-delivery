@@ -30,7 +30,7 @@ def _step(keyword: str, text: str, order: int) -> Step:
 
 
 def _scenario(steps: list[tuple[str, str]], *, examples: int = 0, outline: bool = False, evidence: tuple = ()) -> Scenario:
-    scenario = Scenario("Place the order", story_name="Submit Order")
+    scenario = Scenario("Place the order")
     scenario.steps = [_step(keyword, text, order) for order, (keyword, text) in enumerate(steps, start=1)]
     for number in range(examples):
         scenario.examples[f"order {number + 1}"] = f"order {number + 1}"

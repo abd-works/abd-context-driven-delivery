@@ -1,6 +1,6 @@
 """Where story maps and story files sit. This is the one place that knows a story map's file name, a story's own file
-name, the files scenarios are written in, and which folders are searched for them, so the practice, the markdown
-format, its links, and a story test's reader all find the same files."""
+name, the files scenarios and increments are written in, and which folders are searched for them, so the practice, the
+markdown format, its links, and a story test's reader all find the same files."""
 
 from __future__ import annotations
 
@@ -17,6 +17,8 @@ CONTEXT_FOLDER = ".context"
 _MARKDOWN = ".md"
 # A story's own markdown file: `submit_order_story.test.md`, `submit_order_story.spec.md`.
 STORY_FILE_SUFFIXES = ("_story.test.md", "_story.spec.md")
+# The markdown a map's increments are written in, in the order a folder is searched for them.
+THIN_SLICING_FILES = ("thin-slicing.md", "thin-slice.md", "thin-slices.md", "increments.md")
 
 
 def is_story_map_file(path) -> bool:
@@ -53,6 +55,20 @@ class StoryMapFiles:
     def story_files_below(self) -> List[Path]:
         """Each story's own markdown file in this folder and the folders below it."""
         return sorted(path for path in self._markdown_below() if path.name.endswith(STORY_FILE_SUFFIXES))
+
+    def thin_slicing(self) -> Optional[Path]:
+        """The markdown that slices the map into increments: `thin-slicing.md` (or `thin-slice.md`, `thin-slices.md`,
+        `increments.md`, in that order), in this folder, else the first in the folders below it; none when there is
+        none."""
+        below = list(self._markdown_below())
+        for name in THIN_SLICING_FILES:
+            beside = self.folder / name
+            if beside.is_file():
+                return beside.resolve()
+            found = next((path for path in below if path.name == name), None)
+            if found is not None:
+                return found
+        return None
 
     def scenario_files_below(self) -> List[Path]:
         """Each markdown file scenarios are written in, in this folder and the folders below it: in a `scenarios`, `md`

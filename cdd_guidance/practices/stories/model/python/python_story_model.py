@@ -4,12 +4,13 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Optional
+from typing import List
 
-from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, WrittenBlock
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError, example_names_of, flat_steps
+from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON
+from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel, example_names_of
 from cdd_guidance.practices.stories.model.python.nodes import PythonEpic, PythonStory, quote
-from cdd_guidance.practices.stories.model.python.story_reader import PythonStoryReader
+from cdd_guidance.practices.stories.model.python.story_file import PythonStoryFile
+from cdd_guidance.practices.stories.model.story_file import flat_steps
 from cdd_guidance.practices.stories.model.story_model import Background, Epic, Scenario, Step, Story
 
 _VERBS = {"Given": "given", "When": "when", "Then": "then", "But": "but_", "And": "and_"}
@@ -17,43 +18,15 @@ _VERBS = {"Given": "given", "When": "when", "Then": "then", "But": "but_", "And"
 
 class PythonStoryModel(CodeStoryModel):
     LEAF_EXTENSION = "_story.test.py"
-    story_test_suffix = LEAF_EXTENSION
+    story_file_suffixes = (LEAF_EXTENSION,)
     epic_type = PythonEpic
     story_type = PythonStory
     language = PYTHON
     scenario_indent = "        "
     scenario_gap: List[str] = []
 
-    def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
-        return sorted(p for p in tree if p.endswith(self.LEAF_EXTENSION))
-
-    def load(self, external: Dict[str, str]) -> "PythonStoryModel":
-        if not isinstance(external, dict):
-            raise CodeStoryModelError("Python story map parse expects a path->content dict")
-        self.epics.clear()
-        for path in self._ordered_paths(external):
-            content = external[path]
-            if not path.endswith(self.LEAF_EXTENSION):
-                continue
-            parts = path.strip("/").split("/")
-            if parts and parts[0] == self.tests_root:
-                parts = parts[1:]
-            if self.take_sub_epic_file(parts, content, path):
-                continue
-            if len(parts) < 4:
-                continue
-            epic_slug = parts[0]
-            story_slug = parts[-2]
-            sub_slugs = parts[1:-2]
-            if not sub_slugs:
-                continue
-            epic = self.epic_for(epic_slug)
-            sub = self.sub_epic_for(epic, sub_slugs)
-            sub.append_story(self.story_type.load(content, story_slug))
-        return self
-
-    def read_code(self, content: str, stories: List[Story], path: str) -> Optional[WrittenBlock]:
-        return PythonStoryReader(self.language, content).read(stories, path)
+    def story_file(self, content: str) -> PythonStoryFile:
+        return PythonStoryFile(self.language, content)
 
     def file_name(self, epic: Epic) -> str:
         return f"{epic.snake()}_story.test.py"

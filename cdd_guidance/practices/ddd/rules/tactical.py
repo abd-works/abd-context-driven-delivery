@@ -4,18 +4,14 @@ them out from the class it is; a saved graph keeps them)."""
 from __future__ import annotations
 
 import re
-from pathlib import PurePosixPath
 
 from cdd_guidance.practices.clean_engineering.model.operation import CONSTRUCTOR_NAMES
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
-from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS, marks_another_system
+from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS
 from harness.graph.practice_rule import PracticeGraphRule
 
 _TECHNICAL_SUFFIXES = frozenset({"result", "response", "dto", "request"})
 _AGENT_NOUNS = frozenset({"manager", "helper", "processor", "handler", "controller"})
 _CAMEL = re.compile(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])")
-# A React screen module, whose classes present the domain rather than belong to it.
-_SCREEN_MODULE = ".tsx"
 
 
 class PrivateMethodNaming(PracticeGraphRule):
@@ -50,8 +46,8 @@ class FlaccidDataObject(PracticeGraphRule):
 
 class EveryClassCarriesDddStereotype(PracticeGraphRule):
     """An aggregate's folder holds its domain classes. The graph makes a building block of each class whose stereotype
-    or name says which block it is, so a production class in the folder it makes none of carries neither. A class in a
-    React screen module, or one marked as another system's, is not a domain class."""
+    or name says which block it is, and keeps on the aggregate the production classes in its folder it made none of
+    (`bare_classes`): each carries neither."""
 
     slug = "every-class-carries-ddd-stereotype"
     node_types = ("Aggregate",)
@@ -60,31 +56,8 @@ class EveryClassCarriesDddStereotype(PracticeGraphRule):
         return [
             f"Class '{name}' in aggregate '{node.name}' lacks a DDD stereotype "
             f"(<<Entity>>, <<Repository>>, or code @entity / @repository on the class)."
-            for name in _bare_classes(node, context)
+            for name in node.get_fact("bare_classes", [])
         ]
-
-
-def _bare_classes(aggregate, context) -> list[str]:
-    """The production classes in the aggregate's folder, the one its building blocks sit in, that are none of them."""
-    clean = context.practice.extended
-    if clean is None:
-        return []
-    blocks = [block for kind in ("root", "owns") for block in context.targets(aggregate, kind)]
-    folders = {_folder_of(block.source.file) for block in blocks}
-    names = {block.name for block in blocks}
-    return [
-        oclass.name
-        for oclass in clean.in_graph.nodes("OoadClass")
-        if _folder_of(oclass.source.file) in folders
-        and oclass.name not in names
-        and not is_test_code(oclass.source.file)
-        and not oclass.source.file.lower().endswith(_SCREEN_MODULE)
-        and not marks_another_system(oclass.get_fact("stereotypes") or [])
-    ]
-
-
-def _folder_of(file: str) -> str:
-    return str(PurePosixPath(file.replace("\\", "/")).parent)
 
 
 class DomainConceptsNotTechnicalNames(PracticeGraphRule):

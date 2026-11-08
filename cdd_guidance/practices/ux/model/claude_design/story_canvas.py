@@ -27,7 +27,7 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramStory,
     DiagramStoryModel,
 )
-from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel
+from cdd_guidance.practices.stories.model.story_model import Story, StoryModel
 
 _EXPLORER_TEMPLATE = Path(__file__).with_name("explorer.dc.html")
 _SHOWN_ON = "shownOn"
@@ -40,21 +40,6 @@ class ClaudeDesignEpic(DiagramEpic):
     sub_bar_height = 70
     bar_gap = 20
 
-    def leaf_epics(self) -> List["ClaudeDesignEpic"]:
-        """The epics whose stories sit in columns: sub-epics, or this epic when it has none."""
-        if not self.epics:
-            return [self]
-        found: List[ClaudeDesignEpic] = []
-        for child in self.epics:
-            found.extend(child.leaf_epics())
-        return found
-
-    def top_epic(self) -> "ClaudeDesignEpic":
-        node = self
-        while isinstance(node.parent, Epic):
-            node = node.parent
-        return node
-
     def column_width(self) -> int:
         count = max(len(self.stories), 1)
         return count * ClaudeDesignStory.width_px + (count - 1) * ClaudeDesignStory.gap_px
@@ -62,7 +47,7 @@ class ClaudeDesignEpic(DiagramEpic):
     def header_parts(self, left: int) -> List[str]:
         """The sub-epic bar and each story's actor and card, from *left* on the story map. The epic bar spans its sub-epics; the map draws it."""
         width = self.column_width()
-        top = self.top_epic()
+        top = self.top_epic
         parts: List[str] = []
         if self is not top:
             parts.append(box(left, self.bar_height + self.bar_gap, width, self.sub_bar_height, LOOK["sub_epic"], self.name))
@@ -247,8 +232,8 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         thumbs_top = ClaudeDesignEpic.header_height() + self.thumbs_gap
         bottom = ClaudeDesignEpic.header_height()
         spans: Dict[int, list] = {}
-        for epic in self._leaf_epics():
-            top = epic.top_epic()
+        for epic in self.leaf_epics():
+            top = epic.top_epic
             span = spans.setdefault(id(top), [top.name, x, x])
             span[2] = x + epic.column_width()
             parts.extend(epic.header_parts(x))
@@ -265,12 +250,6 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         body = f'<div style="position: absolute; left: {self.margin}px; top: {self.margin}px">' + "\n".join(parts) + "</div>"
         return width, height, artboard("Story map", width, height, body, style=f"body{{margin:0;background:{BACKGROUND}}}",
                                        root_style=f"background: {BACKGROUND}", head=FONTS, zoomable=True)
-
-    def _leaf_epics(self) -> List[ClaudeDesignEpic]:
-        found: List[ClaudeDesignEpic] = []
-        for epic in self.epics:
-            found.extend(epic.leaf_epics())
-        return found
 
     def _thumbnails(self, story: ClaudeDesignStory, left: int, top: int, explorer_href: str) -> List[str]:
         """Under each story, its main screens, up to ``screens_per_story``, in the order the UX map lists them: the UX map

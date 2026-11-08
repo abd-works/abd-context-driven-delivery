@@ -114,20 +114,21 @@ class StoryRecording:
 
     def write(self) -> None:
         for epic in self.story_map.epics:
-            epic.record(self, self.practice.in_graph.root, True)
+            epic.record(self, self.practice.in_graph.root)
 
     def announce(self, story) -> None:
         self.story_at += 1
         if self.on_node is not None:
             self.on_node(f"{self.story_at}/{self.story_total} · {story.name}")
 
-    def add(self, node_id: str, name: str, semantic: str, file: str, span: tuple[int, int], story_object, facts=None) -> Node:
-        """The story object added as the graph node node_id, called name, of type semantic, at span in file, with the
-        facts it does not hold itself; the node already called node_id when two objects share it."""
+    def add(self, story_object, node_id: str, at: SourceLocation, facts=None) -> Node:
+        """story_object added as the graph node node_id, called by its recorded name and of its recorded type, at the
+        lines at names, with the facts it does not hold itself; the node already called node_id when two objects
+        share it."""
         if not self.practice.in_graph.holds(node_id):
-            story_object.name = name
-            story_object.type = semantic
-        node = self.practice.in_graph.add(story_object, node_id, file or ".", span[0], span[1])
+            story_object.name = story_object.recorded_name
+            story_object.type = story_object.recorded_type
+        node = self.practice.in_graph.add(story_object, node_id, at.file or ".", at.line, at.end_line or at.line)
         for key, value in (facts or {}).items():
             node.set_fact(key, value)
         return node
@@ -138,19 +139,19 @@ class StoryRecording:
     def facts_of(self, file: str) -> dict:
         return story_file_facts(self.text_of(file))
 
-    def name_span(self, file: str, name: str, folder: str) -> tuple[str, int, int]:
-        """The file and line that name name; the folder alone when no line of file does."""
+    def name_span(self, file: str, name: str, folder: str) -> SourceLocation:
+        """The line of file that names name; the folder alone when no line of file does."""
         line = next((index for index, text in enumerate(self.text_of(file).splitlines(), start=1) if name and name in text), None)
-        return (file, line, line) if line is not None else (folder or ".", 0, 0)
+        return SourceLocation(file, line, line) if line is not None else SourceLocation(folder or ".")
 
-    def span_of(self, node, file: str, fallback_text: str = "") -> tuple[int, int]:
-        """The lines node was read from, else the next line of file that holds its text."""
+    def span_of(self, node, file: str, fallback_text: str = "") -> SourceLocation:
+        """The lines of file node was read from, else the next line of file that holds its text."""
         source = getattr(node, "source", None)
         if source is not None and getattr(source, "line", None):
             start = int(source.line or 1)
-            return start, int(getattr(source, "end_line", None) or start)
+            return SourceLocation(file, start, int(getattr(source, "end_line", None) or start))
         line = self._next_line(file, fallback_text or getattr(node, "name", ""))
-        return line, line
+        return SourceLocation(file, line, line)
 
     def _next_line(self, file: str, text: str) -> int:
         lines = self.text_of(file).splitlines()
@@ -165,10 +166,10 @@ class StoryRecording:
                 return index + 1
         return 1
 
-    def place(self, node, file: str, span: tuple[int, int]) -> None:
-        """Name file and span on a node that names no file yet."""
+    def place(self, node, at: SourceLocation) -> None:
+        """Name the file and lines at gives on a node that names no file yet."""
         if not file_of(node):
-            node.source = SourceLocation(file or ".", span[0], span[1])
+            node.source = SourceLocation(at.file or ".", at.line, at.end_line)
 
 
 def file_of(node) -> str:

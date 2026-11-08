@@ -176,7 +176,7 @@ with description("a Scenario") as self:
         "that has been translated from another Scenario of the same semantic type"
     ):
         with before.each:
-            source = Scenario("Original name", 1, story_name="My Story")
+            source = Scenario("Original name", 1)
             source.steps = [
                 fixture.given("a funded Account DDA-001", 1),
                 fixture.when("the Treasurer submits a Transfer", 2),
@@ -194,11 +194,10 @@ with description("a Scenario") as self:
 
         with it(
             "should carry every field from the source "
-            "(name, sequentialOrder, storyName, steps, isOutline, examples, background, evidence)"
+            "(name, sequentialOrder, steps, isOutline, examples, background, evidence)"
         ):
             expect(self.target.name).to(equal("Original name"))
             expect(self.target.sequential_order).to(equal(1))
-            expect(self.target.story_name).to(equal("My Story"))
             expect(self.target.steps[0].text).to(equal("a funded Account DDA-001"))
             expect(self.target.steps[1].text).to(equal("the Treasurer submits a Transfer"))
             expect(self.target.steps[2].text).to(equal("a Confirmation Number is returned"))
@@ -987,3 +986,60 @@ with description("Story name opening") as self:
 
         expect(_story("Carry Plan From Marketing Link", "unlisted")).to(equal([]))
         expect(_story("Customer Login", "actor-noun")).to(have_len(1))
+
+
+def _nested_map() -> StoryModel:
+    """Shop > Checkout > Pay, with Pay By Card under Pay and Browse Catalog on Shop itself."""
+    story_map = StoryModel()
+    shop = Epic("Shop", 1)
+    checkout = Epic("Checkout", 1)
+    pay = Epic("Pay", 1)
+    pay.append_story(Story("Pay By Card", 1))
+    checkout.append_epic(pay)
+    shop.append_epic(checkout)
+    shop.append_story(Story("Browse Catalog", 1))
+    story_map.append_epic(shop)
+    return story_map
+
+
+with description("an epic tree") as self:
+    with before.each:
+        self.story_map = _nested_map()
+        self.shop = self.story_map.epics[0]
+        self.pay = self.shop.epics[0].epics[0]
+
+    with it("should give a story the epic of the map it sits under"):
+        expect(self.pay.stories[0].top_epic).to(be(self.shop))
+
+    with it("should give a sub-epic the epic of the map it sits under"):
+        expect(self.pay.top_epic).to(be(self.shop))
+
+    with it("should give an epic with sub-epics its innermost sub-epics as its leaf epics"):
+        expect(self.shop.leaf_epics()).to(equal([self.pay]))
+
+    with it("should give the map each epic's leaf epics"):
+        expect(self.story_map.leaf_epics()).to(equal([self.pay]))
+
+    with it("should give a story under no epic no top epic"):
+        expect(Story("Loose").top_epic).to(be(None))
+
+
+with description("a story map asked for the stories a thin slice names") as self:
+    with before.each:
+        self.story_map = _nested_map()
+
+    with it("should give its own stories in the order the names give them"):
+        named = self.story_map.stories_named(["Pay By Card", "Browse Catalog"])
+        expect([story.name for story in named]).to(equal(["Pay By Card", "Browse Catalog"]))
+
+    with it("should give its own story objects"):
+        pay_by_card = next(story for story in self.story_map.every_story() if story.name == "Pay By Card")
+        expect(self.story_map.stories_named(["Pay By Card"])[0]).to(be(pay_by_card))
+
+    with it("should leave out a name no story has"):
+        expect(self.story_map.stories_named(["Refund Order"])).to(equal([]))
+
+
+with description("a scenario that belongs to a story") as self:
+    with it("should keep no story name of its own, since its story is its parent"):
+        expect(hasattr(Scenario("Happy path"), "story_name")).to(be_false)

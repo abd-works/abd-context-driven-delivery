@@ -59,8 +59,6 @@ Every node of the map. Each child belongs to its owner on the graph: a screen, t
 + append_screen(screen: Screen): None
 + find_screen(name: str): Screen
 	// raises ScreenNotOnMap when the map has no screen of that name
-+ story_outline(): list[dict]
-	// the epics and sub-epics above the stories the screens show on the map's graph, for the story explorer
 
 ## ScreenNotOnMap : KeyError
 
@@ -83,6 +81,8 @@ Every node of the map. Each child belongs to its owner on the graph: a screen, t
 + shows_steps: list[Step]
 + story_keys: list[str]
 	// the stories it shows as the formats write them, by name
++ story_links: list[StoryLink]
+	// the stories it shows, in order: each link holds its Story once the screen's graph has it, else only its name
 + scenario_keys: list[str]
 	// as Story › Scenario
 + step_keys: list[str]
@@ -278,7 +278,30 @@ The `html` format: the mockup review page, product screens on the left and the s
 	-> JsonUxMap.parse
 + save(): str
 	// fills templates/html/mockup_shell.html; each HtmlControl writes its own markup and the data attributes the Story Demo runner reads
+	-> ExplorerTree(screens).as_json()
 	-> JsonUxMap.save
+
+## ExplorerTree
+
+The story explorer's tree of a map (`explorer_tree.py`), which the mockup page carries as `#story-explorer-tree` for
+`story-demo/screen-tree.js` to draw; the JavaScript decides nothing about where a screen sits. Each epic of the story
+map above the stories the screens show comes in the order the screens first show it; under it come its sub-epics at any
+depth that hold a shown story, then the screens under each by the stories they show there, ranked by the first of those
+in story-map order. A screen whose stories sit on the epic itself hangs on the epic, and a screen can sit under several
+epics. With no story map on the map's graph, the screens are listed flat. Each screen holds its stories, their
+scenarios, and their steps, read from the story map.
+
++ ExplorerTree(screens: list[Screen])
+------
++ screens: list[ExplorerScreen]
+	// each screen by the slug the page marks it with, holding the stories it shows
++ nodes: list[dict]
+	// epic → sub-epic → screen → story → scenario → step, each with its kind, name, and key
++ screen_keys: dict[str, list[str]]
+	// for each screen, the keys the explorer opens to show it: its epic's, its sub-epic's, and its own, where it first sits
+----
++ as_json(): dict
+	// `{nodes, screenKeys}`, as the page carries it
 
 ## HtmlControl : Control, HtmlStoryDemoControl : StoryDemoControl, HtmlControl
 

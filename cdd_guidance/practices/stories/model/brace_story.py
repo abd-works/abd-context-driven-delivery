@@ -4,10 +4,9 @@ from __future__ import annotations
 import re
 from typing import List, Optional
 
-from cdd_guidance.practices.clean_engineering.model.code_body import WrittenBlock
-from cdd_guidance.practices.stories.model.brace_story_reader import BraceStoryReader
-from cdd_guidance.practices.stories.model.code_story_model import CodeScenario, CodeStoryModel, StepClause, example_names_of
-from cdd_guidance.practices.stories.model.story_model import Background, Scenario, Step, Story
+from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
+from cdd_guidance.practices.stories.model.code_story_model import CodeScenario, CodeStory, CodeStoryModel, StepClause, example_names_of, unescaped
+from cdd_guidance.practices.stories.model.story_model import Background, Epic, Scenario, Step, Story
 
 
 class BraceScenario(CodeScenario):
@@ -42,7 +41,7 @@ class BraceScenario(CodeScenario):
 
     @classmethod
     def calls_in(cls, body: str) -> List[tuple]:
-        return [(match.group("kw").lstrip("."), unescape(match.group("text"))) for match in cls._CALL.finditer(body)]
+        return [(match.group("kw").lstrip("."), unescaped(match.group("text"))) for match in cls._CALL.finditer(body)]
 
     @classmethod
     def scenario_blocks(cls, content: str) -> List[tuple]:
@@ -87,26 +86,40 @@ class BraceScenario(CodeScenario):
                 return True
         return False
 
+
+class BraceStory(CodeStory):
+    """A story read from a brace-language story file: TypeScript and JavaScript read it the same way."""
+
+    scenario_type = BraceScenario
+    _STORY_START = re.compile(r"(?=/\*\*\s*\n \* Story:)")
+    _STORY_MARK = re.compile(r"\*\s*Story:")
+    _NAME = re.compile(r"\*\s*Story:\s*(?P<name>.+)")
+    _CALL_NAME = re.compile(r"(?i)(?:shareStory|story)\(\s*(['\"])(?P<name>(?:\\.|(?!\1).)*)\1")
+    _CALL = re.compile(r"(?i)story\(")
+    _CALL_LINE = re.compile(r"(?im)^[ \t]*(?:shareStory|story)\(")
+
     @classmethod
-    def example_names(cls, content: str) -> List[str]:
-        names: List[str] = []
-        for match in cls._IMPORT.finditer(content):
-            for part in match.group("names").split(","):
-                name = part.strip().split(" as ")[-1].strip()
-                if name and name not in names:
-                    names.append(name)
-        for match in re.finditer(r"examples:\s*(.+)", content):
-            for part in match.group(1).split(","):
-                name = part.strip()
-                if name and name not in names:
-                    names.append(name)
-        return names
+    def name_in(cls, content: str) -> Optional[str]:
+        """The name the story's comment gives, else the name its story call is made with."""
+        call = cls._CALL_NAME.search(content)
+        return super().name_in(content) or (call.group("name") if call else None)
 
-
-
-
-def unescape(value: str) -> str:
-    return value.replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
+    @classmethod
+    def load_all(cls, content: str) -> List["CodeStory"]:
+        """Every story in one file: split at each story comment, each piece with the file's example imports, when the
+        comments name every story the file calls; otherwise split at each story call, each after the file's preamble."""
+        pieces = cls._STORY_START.split(content)
+        named = [piece for piece in pieces if cls._STORY_MARK.search(piece)]
+        if named and len(cls._CALL.findall(content)) <= len(named):
+            imports = "\n".join(match.group(0) for match in cls.scenario_type._IMPORT.finditer(content))
+            stories = [cls.load(f"{imports}\n{piece}") for piece in pieces if "Story:" in piece or cls._CALL.search(piece)]
+            return stories or [cls.load(content)]
+        calls = list(cls._CALL_LINE.finditer(content))
+        if len(calls) <= 1:
+            return [cls.load(content)]
+        preamble = content[: calls[0].start()]
+        ends = [call.start() for call in calls[1:]] + [len(content)]
+        return [cls.load(preamble + content[call.start() : end]) for call, end in zip(calls, ends)]
 
 
 def quoted(value: str) -> str:
@@ -119,8 +132,26 @@ class BraceStoryModel(CodeStoryModel):
 
     statement_end = ";"
 
-    def read_code(self, content: str, stories: List[Story], path: str) -> Optional[WrittenBlock]:
-        return BraceStoryReader(self.language, content, unescape).read(stories, path)
+    def story_file(self, content: str) -> BraceStoryFile:
+        return BraceStoryFile(self.language, content)
+
+    def file_header(self, epic: Epic, parent: str) -> List[str]:
+        names = example_names_of(list(epic.stories))
+        example_import = [f"import {{ {', '.join(names)} }} from \"./examples\";"] if names else []
+        return [
+            "/**",
+            f" * Epic: {epic.name}",
+            f" * Orders: {epic.order_path()}",
+            " */",
+            "",
+            self.story_test_import(parent),
+            *example_import,
+            "",
+        ]
+
+    def story_test_import(self, parent: str) -> str:
+        """The line that imports the story-test helpers into a story file written under parent."""
+        raise NotImplementedError(f"{type(self).__name__} must import its story-test helpers")
 
     def clauses(self, steps: List[Step]) -> List[StepClause]:
         """A step repeating the previous step's phase continues that clause, so the

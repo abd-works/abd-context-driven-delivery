@@ -10,7 +10,14 @@ if str(_REPO) not in sys.path:
 from expects import equal, expect, have_len
 from mamba import context, description, it
 
-from cdd_guidance.practices.ddd.rules.rule_examples import assert_ddd_example_pair, ddd_rule_by_slug, violations_for_ddd_rule
+from cdd_guidance.practices.ddd.rules.rule_examples import assert_ddd_example_pair, ddd_fixture, ddd_rule_by_slug, violations_for_ddd_rule
+
+# A toolkit folder with no DDD model, shaped like the harness folders the scanner once misread: a class whose name ends
+# in a value object's word, and a class beside a peer named as its repository.
+_TOOLKIT = {
+    "markdown.py": "class Markdown:\n    def read(self):\n        return ''\n\n\nclass MarkdownRepository:\n    def find(self, name):\n        return name\n",
+    "agent_operation.py": "class AgentOperation:\n    def run(self):\n        return None\n\n\nclass Installer:\n    def install(self):\n        return None\n",
+}
 
 _ONBOARDING_ROOT = """
 /** <<Aggregate Root>> <<Entity>> */
@@ -29,6 +36,33 @@ with description("DDD tactical rules (python .examples)"):
             expect(violations_for_ddd_rule(ddd_rule_by_slug("every-class-carries-ddd-stereotype"), source)).to(equal(
                 ["Class 'Plan' in aggregate 'example' lacks a DDD stereotype (<<Entity>>, <<Repository>>, or code @entity / @repository on the class)."]
             ))
+
+        with it("should keep the bare class as a fact of its aggregate, which a saved graph keeps"):
+            fixture = ddd_fixture({"example.py": "# <<Aggregate Root>> <<Entity>>\nclass Subscription:\n    pass\n\n\nclass Plan:\n    pass\n"})
+            aggregate = next(node for node in fixture.context.nodes() if node.type == "Aggregate")
+            expect(aggregate.facts.get("bare_classes")).to(equal(["Plan"]))
+
+        with context("in a folder no bounded context marks and no class's DDD stereotype models"):
+            with it("should make no building block of a class whose name only ends like one"):
+                fixture = ddd_fixture(_TOOLKIT, in_bounded_context=False)
+                expect([node.name for node in fixture.context.nodes() if node.type != "BoundedContext"]).to(equal([]))
+
+            with it("should report no bare class"):
+                hits = violations_for_ddd_rule(
+                    ddd_rule_by_slug("every-class-carries-ddd-stereotype"), _TOOLKIT["markdown.py"],
+                    filename="markdown.py",
+                    beside={"agent_operation.py": _TOOLKIT["agent_operation.py"]},
+                    in_bounded_context=False,
+                )
+                expect(hits).to(equal([]))
+
+        with context("in a folder whose classes carry a DDD stereotype, with no bounded context marked"):
+            with it("should still make a building block of a class its name's convention names"):
+                files = {"subscription.py": "# <<Aggregate Root>> <<Entity>>\nclass Subscription:\n    pass\n", "plan_code.py": "class PlanCode:\n    pass\n"}
+                fixture = ddd_fixture(files, in_bounded_context=False)
+                expect(sorted((node.type, node.name) for node in fixture.context.nodes() if node.name in ("Subscription", "PlanCode"))).to(
+                    equal([("EntityRoot", "Subscription"), ("ValueObject", "PlanCode")])
+                )
 
         with it("should not require stereotypes on classes in tsx presentation modules"):
             source = """
