@@ -143,7 +143,7 @@ with description("a partition action"):
             expect(f"Index the corpus at README.md under {self.folder}/.context/" in self.reply).to(be_true)
 
         with it("should write the segments under that folder"):
-            expect(f"Verbatim source chunks written under {self.folder}/" in self.reply).to(be_true)
+            expect(f"Verbatim source chunks written as {self.folder}/" in self.reply).to(be_true)
 
     with context("that an agent calls on two practices"):
         with before.each:

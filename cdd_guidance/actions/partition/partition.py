@@ -115,7 +115,7 @@ class Partition(GuidanceAction):
         if self._session is not None:
             tools(self.graph.refresh)
         return (
-            f"Partition of {self._corpus(source)} finished (mode {mode}); "
+            f"Partition{f' of {source}' if source else ''} finished (mode {mode}); "
             f"docs under {self._folder(out_root).as_posix()}/.context/. "
             "Read those files locally. "
             "Hard fail if any new chunk fails named-entry completeness."
