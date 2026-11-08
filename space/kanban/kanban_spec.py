@@ -430,6 +430,19 @@ with description("a ticket") as self:
                 with it("should show the fidelity done"):
                     expect(story_map(ticket_with(self.lines)).is_done).to(be_true)
 
+            # (S) Person --> Send Action To Stage Practices: a stage head's bar shows the stage's work taken together.
+            with it("should show Validate in progress across Discovery while one of its fidelities is validated"):
+                ticket = ticket_with(self.lines)
+                expect(data_of(ticket.work_in(ticket.column).action_states)["validate"]).to(equal("in_progress"))
+
+            with it("should show Generate done across Discovery only once every fidelity is generated"):
+                ticket = ticket_with(self.lines)
+                expect(data_of(ticket.work_in(ticket.column).action_states)["generate"]).to(equal("in_progress"))
+
+            with it("should allow across Discovery only the actions every fidelity allows"):
+                ticket = ticket_with(self.lines)
+                expect(ticket.work_in(ticket.column).allowed_actions).not_to(contain("validate"))
+
         with context("that was reviewed before its validate passed"):
             with before.each:
                 self.lines += [REVIEW_STORY_MAP, VALIDATE_STORY_MAP]

@@ -268,6 +268,12 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// data field: the folder of its own worktree, where its chat works; empty while it has none
 	-> Ticket.branch
 	-> Board.worktrees
++ << association >> chat: Chat
+	// reference data field `working_chat`, sent by its id: the connected chat working in its worktree or a folder inside it, else one whose mod names no folder and that is titled by the ticket's name; none while no chat works on it
+	-> Board.chats
++ << composition >> stage_work: list[StageWork]
+	// data field: its work in each stage taken together, which a stage head's action bar shows and acts on
+	-> Ticket.work_in
 + last_activity: str
 	// the timestamp of its log's latest line
 	-> SessionLog.entries
@@ -292,6 +298,14 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> SessionLog.record
 + progress_of(slug: str): FidelityProgress
 	// raises `FidelityNotFoundError` for a fidelity the ticket does not have
++ work_in(stage: Stage): StageWork
+	// the progress of every fidelity stage requires whose practice its session works on
++ action_command(action: str, fidelities: list[FidelityGuidance]): str
+	// one command running action on fidelities, naming its session.json and no format; FidelityProgress.commands and StageWork.commands both ask it
++ format_choices(fidelities: list[str]): list[FormatChoice]
+	// `ticket.format_choices`: the chips of an action bar over those fidelities, each fidelity's files read once
+	-> FidelityProgress.files
+	-> FormatChoice.offered_by
 + activate(leaving: list[str], opening: list[str]): Ticket
 	// `ticket.activate`: the active ticket leaves its work as leaving says (handoff, commit, push, merge), this ticket opens what opening names (branch, worktree), and its session becomes current
 	-> Board.active
@@ -363,8 +377,11 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 	// data field: the ticket's session works on its practice
 + next_action: str
 	// data field: review while it has violations, else the first of its stage's actions not done
++ commands: dict[str, str]
+	// data field: the command for each action of its stage on this fidelity, naming its ticket's session.json and no format
+	-> Ticket.action_command
 + allowed_actions: list[str]
-	// data field: generate always; validate and review once an action is recorded or a declared file is there
+	// data field: every action of its stage; validate, review, and render only once an action is recorded or a declared file is there
 + state: str
 	// data field: done, violations, in_progress, or not_started
 + action_states: ActionStates
@@ -373,9 +390,10 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 	// data field: its latest validation report, as a path from the project
 + violation_count: int
 	// data field
++ has_violations: bool
+	// data field: its latest validate left violations
 + done_actions: list[str]
 + remaining_actions: list[str]
-+ has_violations: bool
 + is_done: bool
 + << composition >> latest_report: ReportFile
 	// its latest report in its ticket's session that has its result, else its latest; none when it has none; found once per reading of the progress
@@ -416,6 +434,56 @@ Where each of a stage's actions stands on one fidelity.
 + review: str
 	// data field
 ----
++ taken_together(every: list[ActionStates]): ActionStates
+	// each action done only once it is done on all, in progress once it is under way on any, else to do
+
+## StageWork
+
+A ticket's work in one stage taken together: the progress of each fidelity the stage requires whose practice the ticket's session works on.
+
++ StageWork(ticket: Ticket, stage: Stage, progress: list[FidelityProgress])
+------
++ << association >> stage: Stage
+	// reference data field
++ << association >> progress: list[FidelityProgress]
++ action_states: ActionStates
+	// data field `actions`
+	-> ActionStates.taken_together
++ has_violations: bool
+	// data field: any of its fidelities has violations
++ violation_count: int
+	// data field: its fidelities' violations together
++ commands: dict[str, str]
+	// data field: the command for each action of its stage, one command naming every one of its fidelities
+	-> Ticket.action_command
++ allowed_actions: list[str]
+	// data field: the actions every one of its fidelities allows
+----
+
+## FormatChoice
+
+`space/kanban/format_choice.py`. One chip of an action bar: a group of formats over the fidelities the bar acts on.
+
+------
++ label: str
+	// data field: the group, such as markdown, or a format in no group under its own name
++ formats: list[str]
+	// data field: the format each fidelity uses from the group, its default when the group holds it, else the first it offers
++ offered: int
+	// data field
++ made: int
+	// data field: how many of the fidelities have a file in the group already
++ starts_picked: bool
+	// data field: it holds a fidelity's default format and nothing is made in it
+----
++ offered_by(read: list[tuple[FidelityGuidance, dict[str, list[FileEntry]]]]): list[FormatChoice]
+	// a chip per group the fidelities offer, in the order of `Format.GROUPS`
+	-> Format.group
+
+## FormatGroup
+
+`space/kanban/format_choice.py`. One group a person picks formats by, with its formats; `Board.format_groups` sends every one, so the page sorts a fidelity's files by group.
+
 
 ## BacklogItem : Card
 
@@ -587,6 +655,10 @@ The classes below belong to other modules and are modelled in those modules' own
 ## Repo
 
 `space/repo/repo.py`. The board reads the main clone of the project's sessions' repository (`Sessions.of_project(project).repo.main_clone`), and from it `root`, `is_clone`, `worktrees` (the `Worktrees` of `space/repo/worktree.py`, each `Worktree` with its `path` and `branch`), `path_from_top(path)`, and `branch_named(name)`; a ticket calls `switch_branch`, `switch_worktree`, `push_commit`, and `close_branch`.
+
+## Chat
+
+`harness/chat/chat.py`. `Board.chats` lists the connected chats once per board read with `Chat.list`; a ticket reads each chat's `folder` and `name`.
 
 ## Branch
 

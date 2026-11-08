@@ -597,25 +597,27 @@ it should not tell it again
 
 ```
 it should give each fidelity its default format
--> tile-formats.defaultPicks(STAGE, [SLUG], NOTHING_MADE)
-  -> tile-formats.chipsOf()
+-> TileClient.open(spot(page), true)
+  -> Ticket.format_choices(['stories-story-map']) <- markdown starts picked
+  -> tile-formats.startingPicks()
 ```
 
 ```
 it should not pick a format already generated
--> tile-formats.defaultPicks(STAGE, [SLUG], MARKDOWN_MADE)
-  -> tile-formats.chipsOf()
+-> TileClient.open(spot(page), true)
+  -> Ticket.format_choices(['stories-story-map']) <- markdown made, not picked
+  -> tile-formats.startingPicks()
 ```
 
 ```
 it should let a chip stand for a group
--> tile-formats.chipsOf(STAGE, TWO_SLUGS)
+-> TileClient.open(spot(page, TWO_FIDELITIES, HEAD), true)
+  -> Ticket.format_choices(TWO_SLUGS) <- diagram, markdown
 ```
 
 ```
 it should give each fidelity its default format from a chip
--> tile-formats.chosenFormats(STAGE, TWO_SLUGS, ['markdown'])
-  -> tile-formats.chipsOf()
+-> tile-formats.chosenFormats(choices, ['markdown'])
 ```
 
 #### with a format generated on one fidelity of two
@@ -625,7 +627,7 @@ it should count how many fidelities it is generated on
 -> BoardPage.tiles
 -> TileActionsClient.barOf(ticket, STAGE, barAt)
   -> tile-actions-client.validateFaceOf()
-  -> tile-formats.chipsOf()
+  -> Ticket.format_choices(fidelities) <- FormatChoice[]
   -> tile-actions-client.chipFaceOf()
   -> tile-actions-client.reportSlugOf()
 ```
@@ -635,7 +637,7 @@ it should say so in its hint
 -> BoardPage.tiles
 -> TileActionsClient.barOf(ticket, STAGE, barAt)
   -> tile-actions-client.validateFaceOf()
-  -> tile-formats.chipsOf()
+  -> Ticket.format_choices(fidelities) <- FormatChoice[]
   -> tile-actions-client.chipFaceOf()
   -> tile-actions-client.reportSlugOf()
 ```
@@ -645,7 +647,7 @@ it should keep Run off until a format is chosen
 -> BoardPage.tiles
 -> TileActionsClient.barOf(ticket, STAGE, barAt)
   -> tile-actions-client.validateFaceOf()
-  -> tile-formats.chipsOf()
+  -> Ticket.format_choices(fidelities) <- FormatChoice[]
   -> tile-actions-client.chipFaceOf()
   -> tile-actions-client.reportSlugOf()
 ```
@@ -657,7 +659,7 @@ it should keep Run off on a render with nothing to render
   -> TileActionsClient.save()
 -> TileActionsClient.barOf(ticket, STAGE, barAt)
   -> tile-actions-client.validateFaceOf()
-  -> tile-formats.chipsOf()
+  -> Ticket.format_choices(fidelities) <- FormatChoice[]
   -> tile-actions-client.chipFaceOf()
   -> tile-actions-client.reportSlugOf()
 ```
@@ -666,7 +668,7 @@ it should keep Run off on a render with nothing to render
 it should keep Run off on a locked ticket
 -> TileActionsClient.barOf(ticketOn)
   -> tile-actions-client.validateFaceOf()
-  -> tile-formats.chipsOf()
+  -> Ticket.format_choices(fidelities) <- FormatChoice[]
   -> tile-actions-client.chipFaceOf()
   -> tile-actions-client.reportSlugOf()
 -> TileClient.openOn('move-me', PLACE)
@@ -680,7 +682,7 @@ it should keep Run off with no chat connected
 -> BoardPage.tiles
 -> TileActionsClient.barOf(ticket, STAGE, barAt)
   -> tile-actions-client.validateFaceOf()
-  -> tile-formats.chipsOf()
+  -> Ticket.format_choices(fidelities) <- FormatChoice[]
   -> tile-actions-client.chipFaceOf()
   -> tile-actions-client.reportSlugOf()
 ```
@@ -692,7 +694,7 @@ it should allow Validate on files already there, with nothing recorded yet
 -> BoardPage.tiles
 -> TileActionsClient.barOf(ticket, STAGE, barAt)
   -> tile-actions-client.validateFaceOf()
-  -> tile-formats.chipsOf()
+  -> Ticket.format_choices(fidelities) <- FormatChoice[]
   -> tile-actions-client.chipFaceOf()
   -> tile-actions-client.reportSlugOf()
 ```
@@ -702,7 +704,7 @@ it should keep Validate off with no files and nothing recorded
 -> BoardPage.tiles
 -> TileActionsClient.barOf(ticket, STAGE, barAt)
   -> tile-actions-client.validateFaceOf()
-  -> tile-formats.chipsOf()
+  -> Ticket.format_choices(fidelities) <- FormatChoice[]
   -> tile-actions-client.chipFaceOf()
   -> tile-actions-client.reportSlugOf()
 ```
@@ -712,7 +714,7 @@ it should link to the report of the fidelity left with violations
 -> BoardPage.tiles
 -> TileActionsClient.barOf(ticket, STAGE, barAt)
   -> tile-actions-client.validateFaceOf()
-  -> tile-formats.chipsOf()
+  -> Ticket.format_choices(fidelities) <- FormatChoice[]
   -> tile-actions-client.chipFaceOf()
   -> tile-actions-client.reportSlugOf()
 ```
@@ -761,7 +763,7 @@ it should stay off until the ticket allows it
 -> BoardPage.tiles
 -> TileActionsClient.barOf(ticket, STAGE, barAt)
   -> tile-actions-client.validateFaceOf()
-  -> tile-formats.chipsOf()
+  -> Ticket.format_choices(fidelities) <- FormatChoice[]
   -> tile-actions-client.chipFaceOf()
   -> tile-actions-client.reportSlugOf()
 ```
@@ -773,7 +775,7 @@ it should not allow Review until Validate is clean
 -> BoardPage.tiles
 -> TileActionsClient.barOf(ticket, STAGE, barAt)
   -> tile-actions-client.validateFaceOf()
-  -> tile-formats.chipsOf()
+  -> Ticket.format_choices(fidelities) <- FormatChoice[]
   -> tile-actions-client.chipFaceOf()
   -> tile-actions-client.reportSlugOf()
 ```

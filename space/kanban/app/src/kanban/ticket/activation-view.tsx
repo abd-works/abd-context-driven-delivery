@@ -28,39 +28,53 @@ function SessionFactsView({ session, branch }: { session: string; branch: string
   )
 }
 
-// A handoff is written for the session left whatever is checked out. Commit, push, and merge act on what is checked
-// out, so they act on the branch the work is on, its own or main, and on nothing when neither is checked out.
+// Python says which choices leaving offers; the dialog words them. Commit, push, and merge act on the branch the work
+// being left is on, its own or main, so they name it while it is checked out.
 function LeaveGroupView({ open }: { open: Activation }) {
   const { page } = useBoard()
-  const branch = open.leavingBranch?.is_checked_out ? open.leavingBranch.name : ''
-  const options = [
-    { key: 'commit', label: `Commit changes on ${branch || open.leavingTitle}` },
-    { key: 'push', label: `Push ${branch || open.leavingTitle} to origin` },
-    { key: 'merge', label: `Merge ${branch || open.leavingTitle} into main` },
-  ]
-  const hasBranch = branch !== ''
+  const branch = open.leavingBranch
+  const named = branch || open.leavingTitle
+  const labels: Record<string, string> = {
+    handoff: 'Create handoff',
+    commit: `Commit changes on ${named}`,
+    push: `Push ${named} to origin`,
+    merge: `Merge ${named} into main`,
+  }
   return (
     <div className="dialog-group">
       <div className="dialog-group-heading">{open.isClosing ? 'CLOSE' : 'LEAVE'}</div>
       <SessionFactsView session={open.leavingTitle} branch={branch || NONE_YET} />
-      <OptionView label="Create handoff" isChecked={open.leaving.includes('handoff')} isOff={false} onToggle={() => page.activation.toggleLeaving('handoff')} />
-      {options.map(option => (
-        <OptionView key={option.key} label={option.label} isChecked={hasBranch && open.leaving.includes(option.key)} isOff={!hasBranch} onToggle={() => page.activation.toggleLeaving(option.key)} />
-      ))}
+      {open.ticket.leaveChoices.map(choice => {
+        const isOffered = open.offeredLeaving.includes(choice)
+        return <OptionView key={choice} label={labels[choice] ?? choice} isChecked={isOffered && open.leaving.includes(choice)} isOff={!isOffered} onToggle={() => page.activation.toggleLeaving(choice)} />
+      })}
     </div>
   )
 }
 
 function OpenGroupView({ open }: { open: Activation }) {
   const { page } = useBoard()
-  const hasBranch = open.branch.exists
-  const hasWorktree = open.ticket.worktree !== ''
+  const { name } = open.ticket
+  const labels: Record<string, [offered: string, made: string]> = {
+    branch: [`Create branch ${name}`, `Branch ${name} already exists`],
+    worktree: [`Create worktree for ${name}`, 'Worktree already exists'],
+  }
   return (
     <div className="dialog-group">
       <div className="dialog-group-heading">OPEN</div>
-      <SessionFactsView session={open.ticket.title} branch={hasBranch ? open.ticket.name : NONE_YET} />
-      <OptionView label={hasBranch ? `Branch ${open.ticket.name} already exists` : `Create branch ${open.ticket.name}`} isChecked={!hasBranch && open.opening.includes('branch')} isOff={hasBranch} onToggle={() => page.activation.toggleOpening('branch')} />
-      <OptionView label={hasWorktree ? 'Worktree already exists' : `Create worktree for ${open.ticket.name}`} isChecked={!hasWorktree && open.opening.includes('worktree')} isOff={hasWorktree} onToggle={() => page.activation.toggleOpening('worktree')} />
+      <SessionFactsView session={open.ticket.title} branch={open.hasBranch ? name : NONE_YET} />
+      {open.ticket.openChoices.map(choice => {
+        const isOffered = open.offeredOpening.includes(choice)
+        return (
+          <OptionView
+            key={choice}
+            label={labels[choice]?.[isOffered ? 0 : 1] ?? choice}
+            isChecked={isOffered && open.opening.includes(choice)}
+            isOff={!isOffered}
+            onToggle={() => page.activation.toggleOpening(choice)}
+          />
+        )
+      })}
     </div>
   )
 }

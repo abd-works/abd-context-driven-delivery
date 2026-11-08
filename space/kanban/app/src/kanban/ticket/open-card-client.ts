@@ -43,11 +43,14 @@ export class OpenCardClient {
     if (this.store.state.tiles.some(tile => tile.ticket.name === moved.name)) await this.followBars(moved, stage)
   }
 
+  // The bar opens on the fidelity Python names as the ticket's next, in its own stage; a ticket done in its stage has
+  // none, so the bar opens on the stage's first fidelity.
   private async followBars(moved: TicketClient, stage: ColumnClient): Promise<void> {
     this.store.change(state => ({ tiles: withoutBarsOf(state.tiles, moved.name) }))
-    const progress = moved.progressIn(stage)
-    const fidelity = (progress.find(entry => entry.state !== 'done') ?? progress[0])?.fidelity
-    if (fidelity) await this.page.tiles.open({ ticket: moved, stage, place: cellPlace(stage.name, fidelity), fidelities: [fidelity] }, true)
+    const next = moved.nextProgress
+    const shown = (next && this.page.board.stageNamed(next.stage.name)) ?? stage
+    const fidelity = next?.fidelity ?? moved.progressIn(stage)[0]?.fidelity
+    if (fidelity) await this.page.tiles.open({ ticket: moved, stage: shown, place: cellPlace(shown.name, fidelity), fidelities: [fidelity] }, true)
   }
 
   releaseTicket(ticket: string): void {

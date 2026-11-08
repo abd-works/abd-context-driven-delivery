@@ -26,12 +26,6 @@ export const SCOPE_SIZES: Record<string, { width: number; height: number }> = {
   story: { width: 11, height: 28 },
 }
 
-export const FORMAT_GROUPS = [
-  { label: 'diagram', formats: ['drawio'] },
-  { label: 'markdown', formats: ['markdown'] },
-  { label: 'code', formats: ['python', 'typescript', 'javascript', 'java', 'html'] },
-]
-
 export const countOf = (count: number, noun: string): string => `${count} ${count === 1 ? noun : `${noun}s`}`
 
 const MINUTE = 60_000

@@ -22,7 +22,9 @@ from space.kanban.board import (
     NotAStageError,
     Stage,
 )
-from harness.guidance.stages import GENERATE, REVIEW, VALIDATE
+from harness.chat.chat import Chat
+from harness.guidance.stages import GENERATE, RENDER, REVIEW, VALIDATE
+from space.kanban.format_choice import FormatChoice
 from space.kanban.leaving_handoff import LeavingHandoff
 from space.kanban.report import Report, ReportFile
 from space.repo.repo import Branch
@@ -37,8 +39,8 @@ GRAPH_RULE_VIOLATION = "graph-rule"
 MOVED_INTO = "move"
 MARKED_DONE = "done"
 MARKED_IN_PROGRESS = "in-progress"
-ALWAYS_ALLOWED = (GENERATE,)
-ONCE_THERE_IS_OUTPUT = (VALIDATE, REVIEW)
+# The actions that check or convert a fidelity's output, so they wait until there is some.
+ONCE_THERE_IS_OUTPUT = (VALIDATE, REVIEW, RENDER)
 LEAVE_COMMIT = "commit"
 LEAVE_PUSH = "push"
 LEAVE_MERGE = "merge"
@@ -263,6 +265,42 @@ class Ticket(Card):
         """The folder of the ticket's own worktree, where its chat works; empty while it has none."""
         found = self._board.worktrees.get(self.branch())
         return str(found.path) if found else ""
+
+    @property
+    @data_field(key="working_chat", reference=True)
+    def chat(self) -> Chat | None:
+        """The connected chat working on the ticket, which every command the board sends for it goes to, sent by its id as
+        working_chat: the one working in its worktree or a folder inside it, else one whose mod names no folder and that
+        is titled by the ticket's name, as the board titles the chat it opens for it. None while no chat works on it."""
+        worktree = self.worktree
+        chats = self._board.chats
+        working = next((chat for chat in chats if worktree and chat.folder and Path(chat.folder).resolve().is_relative_to(Path(worktree).resolve())), None)
+        return working or next((chat for chat in chats if not chat.folder and chat.name == self.name), None)
+
+    @property
+    @data_field
+    def stage_work(self) -> list[StageWork]:
+        """Its work in each stage taken together, in stage order: what a stage head's action bar shows and acts on."""
+        return [self.work_in(stage) for stage in self._stages]
+
+    def work_in(self, stage: Stage) -> StageWork:
+        """Its work in stage: the progress of every fidelity stage requires whose practice its session works on."""
+        return StageWork(self, stage, [progress for progress in self._enabled_progress if progress.stage is stage])
+
+    def action_command(self, action: str, fidelities: list[FidelityGuidance]) -> str:
+        """The command that runs action on fidelities in this ticket's session, one command for them all so the chat
+        works on them in one turn. It names the session, because the chat that runs it can have another session open,
+        and no format, so the action works in the format each fidelity keeps in that session."""
+        named = " ".join(fidelity.slug for fidelity in fidelities)
+        return f"/actions-{action} {named} session={self._session.session_file_from_project}"
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def format_choices(self, fidelities: list[str]) -> list[FormatChoice]:
+        """Return the format chips of an action bar on ticket over fidelities, slugs such as stories-story-map: each group of formats they offer, the format each fidelity uses from it, how many offer it and have a file in it already, and whether the bar opens with it picked."""
+        read = [(progress.fidelity, progress.files()) for progress in (self.progress_of(slug) for slug in fidelities)]
+        return FormatChoice.offered_by(read)
 
     @mcp
     @agent_tool
@@ -530,22 +568,26 @@ class FidelityProgress:
         """The command that runs action on this fidelity in its ticket's session. It names the session, because the
         chat that runs it can have another session open, and no format, so the action works in the format the fidelity
         keeps in that session."""
-        return f"/actions-{action} {self._fidelity.slug} session={self._ticket.session.session_file_from_project}"
+        return self._ticket.action_command(action, [self._fidelity])
 
     @property
     @data_field
     def allowed_actions(self) -> list[str]:
-        """Generate always; Validate and Review once there is output to check: an action on the fidelity is recorded, or
-        a file it declares is already there, such as one a person wrote. A person can check the same output again as
-        often as they like."""
-        return [*ALWAYS_ALLOWED, *ONCE_THERE_IS_OUTPUT] if self._done_actions or self._has_files else list(ALWAYS_ALLOWED)
+        """Every action of its stage, in the stage's order; Validate, Review, and Render only once there is output to
+        check or convert: an action on the fidelity is recorded, or a file it declares is already there, such as one a
+        person wrote. A person can check the same output again as often as they like."""
+        has_output = bool(self._done_actions) or self._has_files
+        return [action for action in self._stage.actions if has_output or action not in ONCE_THERE_IS_OUTPUT]
 
-    @property
+    @cached_property
     def _has_files(self) -> bool:
+        """Read once per reading of the progress: the board and its stage's work both ask."""
         return self._fidelity.has_declared_output()
 
     @property
+    @data_field
     def has_violations(self) -> bool:
+        """Whether its latest validate left violations, so it is validated again once they are fixed."""
         return self._has_violations
 
     @property
@@ -588,6 +630,11 @@ class FidelityProgress:
     @data_field
     def violation_count(self) -> int:
         """How many violations its latest report names, graph hits and judged findings; none while it has no violations."""
+        return self._violation_count
+
+    @cached_property
+    def _violation_count(self) -> int:
+        """Counted once per reading of the progress: the board and its stage's work both ask."""
         return self.report().violation_count if self._has_violations else 0
 
     @mcp
@@ -660,6 +707,18 @@ class ActionStates:
     def __init__(self, states: dict[str, str]) -> None:
         self._states = dict(states)
 
+    @classmethod
+    def taken_together(cls, every: list[ActionStates]) -> ActionStates:
+        """Where each action stands across several fidelities: done only once it is done on all of them, in progress
+        once it is under way on any, else to do."""
+        return cls({action: cls._together([states._states[action] for states in every]) for action in (GENERATE, VALIDATE, REVIEW)})
+
+    @staticmethod
+    def _together(states: list[str]) -> str:
+        if states and all(state == "done" for state in states):
+            return "done"
+        return "in_progress" if any(state != "to_do" for state in states) else "to_do"
+
     @property
     @data_field
     def generate(self) -> str:
@@ -674,3 +733,58 @@ class ActionStates:
     @data_field
     def review(self) -> str:
         return self._states[REVIEW]
+
+
+class StageWork:
+    """*StageWork* is a ticket's work in one stage taken together: the progress of each fidelity the stage requires
+    whose practice the ticket's session works on. A stage head's action bar shows how far it has got and acts on all of
+    it at once."""
+
+    def __init__(self, ticket: Ticket, stage: Stage, progress: list[FidelityProgress]) -> None:
+        self._ticket = ticket
+        self._stage = stage
+        self._progress = list(progress)
+
+    @property
+    @data_field(reference=True)
+    def stage(self) -> Stage:
+        return self._stage
+
+    @property
+    def progress(self) -> list[FidelityProgress]:
+        """The progress of each fidelity it holds."""
+        return list(self._progress)
+
+    @property
+    @data_field(key="actions")
+    def action_states(self) -> ActionStates:
+        """Each action done only once it is done on every fidelity, in progress once it is under way on any."""
+        return ActionStates.taken_together([progress.action_states for progress in self._progress])
+
+    @property
+    @data_field
+    def has_violations(self) -> bool:
+        """Whether any of its fidelities' latest validate left violations."""
+        return any(progress.has_violations for progress in self._progress)
+
+    @property
+    @data_field
+    def violation_count(self) -> int:
+        """How many violations its fidelities' latest reports name together."""
+        return sum(progress.violation_count for progress in self._progress)
+
+    @property
+    @data_field
+    def commands(self) -> dict[str, str]:
+        """The command a chat runs for each action its stage offers, naming every one of its fidelities."""
+        fidelities = [progress.fidelity for progress in self._progress]
+        return {action: self._ticket.action_command(action, fidelities) for action in self._stage.actions}
+
+    @property
+    @data_field
+    def allowed_actions(self) -> list[str]:
+        """The actions every one of its fidelities allows, so one command can act on them all."""
+        if not self._progress:
+            return []
+        first, *others = self._progress
+        return [action for action in first.allowed_actions if all(action in other.allowed_actions for other in others)]

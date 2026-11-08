@@ -11,11 +11,13 @@ from typing import TYPE_CHECKING, ClassVar
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.chat.chat import Chat
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
+from space.kanban.format_choice import FormatGroup
 from space.repo.repo import Repo
 from space.session.session_log import LogTimestamp
 from space.session.session import MAIN_SESSION_NAME
@@ -161,6 +163,17 @@ class Board:
         return list(self._columns)
 
     @property
+    @data_field
+    def format_groups(self) -> list[FormatGroup]:
+        """The groups a person picks formats by, each with its formats, so the page sorts a fidelity's files by group."""
+        return FormatGroup.every()
+
+    @property
+    def chats(self) -> list[Chat]:
+        """The chats connected now, listed once per board read, so each ticket finds the one working on it."""
+        return self._reads.chats
+
+    @property
     def tickets(self) -> list[Ticket]:
         """Every session's ticket, made once per board read: each column, and each ticket's own reads, ask for them."""
         return self._reads.tickets
@@ -182,7 +195,7 @@ class Board:
         return self._backlog_item_kind.from_ticket(ticket)
 
     def reread(self) -> None:
-        """Forget the tickets, backlog items, and worktrees read so far, so the next read sees a change made since."""
+        """Forget the tickets, backlog items, worktrees, and chats read so far, so the next read sees a change made since."""
         self._reads = BoardReads(self)
 
     @property
@@ -263,8 +276,8 @@ class Board:
 
 
 class BoardReads:
-    """What one read of a board finds: its tickets, its backlog items, and its worktrees, each read once when first
-    asked for. The board replaces it whole when it reads again."""
+    """What one read of a board finds: its tickets, its backlog items, its worktrees, and the chats connected, each read
+    once when first asked for. The board replaces it whole when it reads again."""
 
     def __init__(self, board: Board) -> None:
         self._board = board
@@ -286,6 +299,10 @@ class BoardReads:
         kept = [entry / f"{entry.name}.md" for entry in folder.iterdir() if entry.is_dir() and not (folder / f"{entry.name}.md").exists()]
         found = sorted([*files, *(path for path in kept if path.is_file())], key=lambda path: path.stem)
         return [board._backlog_item_kind(path, board) for path in found]
+
+    @cached_property
+    def chats(self) -> list[Chat]:
+        return Chat.list()
 
     @cached_property
     def worktrees(self) -> dict[Branch, Worktree]:

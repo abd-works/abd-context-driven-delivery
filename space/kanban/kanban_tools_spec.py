@@ -16,6 +16,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
+from harness.chat.chat import Chat  # noqa: E402
 from harness.installation.destination import DataClass, data_of  # noqa: E402
 from space.kanban.backlog_item import BacklogItem  # noqa: E402
 from space.kanban.board import Stage  # noqa: E402
@@ -789,6 +790,10 @@ with description("the board tools") as self:
             with it("should give the item's path from the project"):
                 expect(self.moved["path"]).to(start_with(".sessions/"))
 
+            # The page says a ticket moved back by finding the item that holds it, never by matching titles.
+            with it("should name the ticket the item holds"):
+                expect(self.moved["ticket"]).to(equal("sign-up"))
+
             with it("should take the ticket off the board's stages"):
                 expect(self.project.tickets_in("Discovery")).to(equal([]))
 
@@ -804,8 +809,42 @@ with description("the board tools") as self:
         with it("should name generate as the next action"):
             expect(_next_action(self.project.ticket_json("sign-up"))).to(equal("generate"))
 
-        with it("should allow only Generate before anything is generated"):
-            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate"]))
+        with it("should allow only the actions that need no output before anything is generated"):
+            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "iterate", "sketch", "document"]))
+
+        # The board's Run sends render only once there is output to convert; Python says so, not the page.
+        with it("should not allow Render before anything is generated"):
+            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).not_to(contain("render"))
+
+        # (S) Person --> Choose Action And Formats
+        with context("with an action bar opened on its story map"):
+            with before.each:
+                self.chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-story-map"])
+
+            with it("should offer a chip for each group of formats the story map writes, diagram first"):
+                expect([chip["label"] for chip in self.chips]).to(equal(["diagram", "markdown"]))
+
+            with it("should open with the chip of its default format picked"):
+                expect([chip["label"] for chip in self.chips if chip["starts_picked"]]).to(equal(["markdown"]))
+
+        with context("with an action bar opened on its story map and its bounded context, the story map's markdown written"):
+            with before.each:
+                (self.project.root / ".context").mkdir(exist_ok=True)
+                (self.project.root / ".context" / "story-map.md").write_text("# Story Map\n", encoding="utf-8")
+                chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-story-map", "ddd-bounded-context"])
+                self.markdown = next(chip for chip in chips if chip["label"] == "markdown")
+
+            with it("should count the fidelities that offer the markdown chip"):
+                expect(self.markdown["offered"]).to(equal(2))
+
+            with it("should count the fidelities that have a file in it already"):
+                expect(self.markdown["made"]).to(equal(1))
+
+            with it("should open with a chip already made in left unpicked"):
+                expect(self.markdown["starts_picked"]).to(be_false)
+
+            with it("should send each fidelity's own format for the chip"):
+                expect(self.markdown["formats"]).to(equal(["markdown"]))
 
         # A person can write a fidelity's file by hand, and checking it should not wait for a generate.
         with context("whose story map is already written, with nothing recorded"):
@@ -813,8 +852,8 @@ with description("the board tools") as self:
                 (self.project.root / ".context").mkdir(exist_ok=True)
                 (self.project.root / ".context" / "story-map.md").write_text("# Story Map\n", encoding="utf-8")
 
-            with it("should allow Validate and Review on that file"):
-                expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "validate", "review"]))
+            with it("should allow Validate, Review, and Render on that file"):
+                expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "validate", "review", "iterate", "sketch", "render", "document"]))
 
             with it("should still name generate as the next action"):
                 expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["next_action"]).to(equal("generate"))
@@ -894,7 +933,7 @@ with description("the board tools") as self:
             expect(_next_action(self.project.ticket_json("sign-up"))).to(equal("review"))
 
         with it("should allow Validate and Review again on the same output"):
-            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "validate", "review"]))
+            expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["allowed_actions"]).to(equal(["generate", "validate", "review", "iterate", "sketch", "render", "document"]))
 
         with it("should name review as that fidelity's own next action"):
             expect(progress_in(self.project.ticket_json("sign-up"), "stories-story-map")["next_action"]).to(equal("review"))
@@ -1069,6 +1108,29 @@ with description("the board tools") as self:
                 branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=self.opened, check=True, capture_output=True, text=True)
                 expect(branch.stdout.strip()).to(equal("sign-up"))
 
+            # (S) Person --> Open Ticket Chat
+            with context("with chats connected"):
+                with before.each:
+                    self.chats = Path(tempfile.mkdtemp(prefix="kanban-chats-"))
+                    os.environ["CDD_CHATS_FOLDER"] = str(self.chats)
+
+                with after.each:
+                    os.environ.pop("CDD_CHATS_FOLDER", None)
+                    shutil.rmtree(self.chats, ignore_errors=True)
+
+                with it("should name the chat working in a folder inside the ticket's worktree as its chat"):
+                    Chat.load("elsewhere").check_in(name="other", folder=str(self.project.root))
+                    Chat.load("ticket-chat").check_in(name="first words", folder=str(self.opened / "src"))
+                    expect(self.project.ticket_json("sign-up")["working_chat"]).to(equal({"id": "ticket-chat"}))
+
+                with it("should name a chat that names no folder as its chat when it is titled by the ticket"):
+                    Chat.load("titled").check_in(name="sign-up")
+                    expect(self.project.ticket_json("sign-up")["working_chat"]).to(equal({"id": "titled"}))
+
+                with it("should name no chat while none works on the ticket"):
+                    Chat.load("elsewhere").check_in(name="other", folder=str(self.project.root))
+                    expect(self.project.ticket_json("sign-up")["working_chat"]).to(equal(None))
+
         with context("with the active ticket on no branch of its own"):
             with before.each:
                 Sessions(self.project.root).switch("pet-visits")
@@ -1151,7 +1213,7 @@ with description("the board tools") as self:
             names = set(self.project.server.tools)
             expect(names).to(equal({
                 "board.show", "board.help", "board.folders", "stage.set_wip_limit",
-                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
+                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.format_choices", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
                 "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
                 "session.choose_workpath", "session.folder_files", "session.read_file",

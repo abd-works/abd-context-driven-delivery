@@ -58,6 +58,7 @@ export function progressOf(ticket: string, slug: string, state = 'not_started', 
     next_action: nextAction,
     commands: Object.fromEntries(STAGE_ACTIONS.map(action => [action, `/actions-${action} ${slug} session=${sessionFileOf(ticket)}`])),
     allowed_actions: [],
+    has_violations: state === 'violations',
     state,
     actions,
     report_file: '',
@@ -101,6 +102,8 @@ export function checkoutFlow(seed: TicketSeed = {}): TicketData {
     first_leave_choices: ['handoff', 'commit', 'push'],
     open_choices: ['branch', 'worktree'],
     worktree: '',
+    working_chat: null,
+    stage_work: [],
   }
 }
 
@@ -153,7 +156,7 @@ const column = (name: string, tickets: TicketData[]): ColumnData => {
 export function boardOf(active: string | null, ...tickets: TicketData[]): BoardData {
   const activeTicket = tickets.some(ticket => ticket.name === active) ? { name: active! } : null
   const openTickets = STAGE_ORDER.filter(name => name in WORK_OF).flatMap(name => tickets.filter(ticket => ticket.column.name === name).map(ticket => ({ name: ticket.name })))
-  return { project: 'abd-context-driven-delivery', practices: PRACTICES.map(practiceData), open_tickets: openTickets, active: activeTicket, columns: [{ name: 'Backlog', kind: 'backlog', items: [] }, ...STAGE_ORDER.map(name => column(name, tickets))] }
+  return { project: 'abd-context-driven-delivery', practices: PRACTICES.map(practiceData), open_tickets: openTickets, active: activeTicket, columns: [{ name: 'Backlog', kind: 'backlog', items: [] }, ...STAGE_ORDER.map(name => column(name, tickets))], format_groups: [] }
 }
 
 // Interaction: the name a person types in the session list's field.

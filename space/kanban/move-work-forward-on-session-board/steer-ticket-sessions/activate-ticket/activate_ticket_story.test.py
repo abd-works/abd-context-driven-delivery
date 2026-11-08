@@ -22,7 +22,7 @@ with story("Activate Ticket"):
         with and_("billing-report has no branch in the [repository](../../../.context/kanban-model.md#repo)"):
             pass
         with when("the Person activates billing-report"):
-            # Person -> Ticket.branch()
+            # Person -> Ticket.open_choices(), Ticket.leave_choices()
             # Ticket <- Branch exists: false (billing-report); the leaving ticket's Branch is_checked_out: true
             pass
         with then("a dialog headed Switch from Checkout flow to Billing report offers commit and push, chosen, and merge, not chosen"):

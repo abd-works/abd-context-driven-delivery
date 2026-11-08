@@ -1,6 +1,6 @@
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
 import type { BoardData, FidelityGuidanceData, HelpData } from '@cdd/space/kanban/board'
-import type { BranchData } from '@cdd/space/kanban/ticket'
+import type { FormatChoiceData } from '@cdd/space/kanban/ticket'
 
 import type { ChatData, ChatMessageData } from '@cdd/harness/chat/chat'
 import type { FidelityProgressClient } from '../ticket/fidelity-progress-client'
@@ -15,19 +15,23 @@ export type BacklogDraft = { isOpen: boolean; title: string; text: string }
 // An open action bar: on a tile or on a stage head. One ticket and place hold at most one bar, and the bar holds its
 // ticket, whose tools its controls call, its stage, and the fidelities it acts on, whose progress is read from the
 // ticket as the board shows it now.
-export type Tile = { ticket: TicketClient; place: string; stage: ColumnClient; fidelities: FidelityGuidanceData[]; action: string; picked: string[]; isPinned: boolean; files: FilesByFidelity }
+export type Tile = { ticket: TicketClient; place: string; stage: ColumnClient; fidelities: FidelityGuidanceData[]; action: string; picked: string[]; isPinned: boolean; choices: FormatChoiceData[] }
 
 // A dialog or panel holds the ticket it is about, so its actions reach that ticket's tools without looking it up again.
 export type Activation = {
   ticket: TicketClient
   isClosing: boolean
   leavingTitle: string
+  // What a person has ticked, starting from what Python chooses at first.
   leaving: string[]
   opening: string[]
-  // The ticket's own branch, and the branch of the active ticket being left: commit, push, and merge act only on a
-  // branch that is checked out, and the dialog offers to create only what is missing.
-  branch: BranchData
-  leavingBranch: BranchData | null
+  // What the dialog offers: on leaving, what the ticket left can do with its work now; on opening, what the ticket does
+  // not have yet. The branch the work left is on, empty while nothing checked out is its own, and whether the ticket
+  // opened has its own branch.
+  offeredLeaving: string[]
+  offeredOpening: string[]
+  leavingBranch: string
+  hasBranch: boolean
 }
 
 // The roots dialog: the ticket's workpath on top and each practice's practice root under it. Starting a backlog item asks for its workpath
