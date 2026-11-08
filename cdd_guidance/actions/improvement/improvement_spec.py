@@ -56,6 +56,10 @@ with description("Improvement repair recipe"):
         with it("should require a proposed toolset change before any test"):
             expect("proposed toolset change" in self.response.instructions).to(be_true)
 
+        # The diagnosis is a tool the agent can call, not a Python import path it cannot.
+        with it("should list diagnose as a tool to call"):
+            expect(self.response.tools).to(contain("diagnose"))
+
         with it("should tell the agent not to list tactical diffs"):
             expect("tactical diffs" in self.response.instructions).to(be_true)
 

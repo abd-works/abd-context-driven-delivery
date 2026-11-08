@@ -311,7 +311,7 @@ with description("a guidance action"):
 
             generate = Generate().for_call(_call(f"stories-story-map {self.session_word}", self.project))
             listed = generate.listed()[0]
-            generate._rules()
+            generate.rules_to_follow()
             expect(generate.session.practices["stories"].guidance).to(be(listed))
 
         with it("should make an action started inside another work in that action's session"):

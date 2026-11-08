@@ -21,10 +21,12 @@ Narrative for maintainers of the sketch module itself. AI reading this file: thi
 
 ## How it runs
 
-1. `sketch(guidance)` begins the action on the listed guidance, adds each listed fidelity's rules and sketch template to the instructions, and runs `GrillContext.grill_with_context`.
+1. `sketch(guidance)` works on the listed guidance and, for the fidelity it works at on each one, adds its Scaffold section, its rules, and its practice's sketch template to the instructions (`each` hands the recipe that fidelity). It then names `GrillContext.grill_with_context`, so the grill's interview is pasted in.
 2. The agent writes the shell and calls `save_sketch` in the same turn; `review_sketch` asks the person whether it is correct before the next question.
 3. After three or four grill answers, the agent sketches that theme into the same file, saves it, and reviews it again.
-4. `GrillContext.generate_each` follows, so the agreed sketch can become the formal artifact.
+4. The instructions end with `Generate.generate` for the same guidance, so the agreed sketch can become the formal artifact.
+
+Sketch and grill answers go in `Session.context_folder(module)`, the one place a session says where its `.context` folder is.
 
 Template discovery is tiered: a template the caller passes in the session, then `{agent_dir}/templates/*-sketch.*`, then `templates/sketch-template.md`.
 
