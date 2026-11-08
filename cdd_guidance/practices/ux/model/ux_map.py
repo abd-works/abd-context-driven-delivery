@@ -185,25 +185,11 @@ class UxMap(UxNode):
         self.screens.append(screen)
         self._renumber(self.screens)
 
-    def remove_screen(self, screen_name: str) -> Screen:
-        removed = self.find_screen(screen_name)
-        self.screens.pop(self.screens.index(removed))
-        self._renumber(self.screens)
-        return removed
-
     def find_screen(self, name: str) -> Screen:
         for screen in self.screens:
             if screen.name == name:
                 return screen
         raise ScreenNotOnMap(name)
-
-    def all_story_names(self) -> List[str]:
-        names: List[str] = []
-        for screen in self.screens:
-            for story_name in screen.story_keys:
-                if story_name not in names:
-                    names.append(story_name)
-        return names
 
     def story_outline(self) -> List[dict]:
         """The story map above the stories this map's screens show, for the story explorer to place screens under:

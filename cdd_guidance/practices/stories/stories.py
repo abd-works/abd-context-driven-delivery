@@ -10,6 +10,10 @@ from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from harness.markdown.format import Format
 
+from cdd_guidance.practices.stories.model.sketch.sketch_story_model import SketchStoryModel
+from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, is_story_map_file
+from cdd_guidance.practices.stories.model.story_model import StoryNode
+
 
 class PracticeOutsideSession(Exception):
     """Raised when a practice is asked to read files by path but works in no session that names their project."""
@@ -19,7 +23,7 @@ class PracticeOutsideSession(Exception):
 class Stories(PracticeGuidance):
     """# Instructions"""
 
-    sketch_titles = ("stories:",)
+    sketch_titles = SketchStoryModel.lens.titles
     SHORT_NAME = "Stories"
     COLOUR = "#6BCB77"
 
@@ -145,22 +149,17 @@ class Stories(PracticeGuidance):
     ## reading story maps and story tests from files
 
     def read_folder(self, root: Path, *, on_file=None):
-        """The story map in the folder root: the nearest story-map.md at or above it, else its story-graph.json, else
-        the story-map.md files under it, with their scenarios and increments."""
+        """The story map in the folder root: the nearest story map at or above it, else its story-graph.json, else the
+        markdown story maps under it, with their scenarios and increments."""
         from cdd_guidance.practices.stories.model.story_model import StoryModel
 
-        root = Path(root).resolve()
-        folder = root.parent if root.is_file() else root
-        markdown = self._format_adapter("markdown")
-        for above in (folder, *folder.parents):
-            found = markdown.from_workspace(above / "story-map.md", on_file=on_file) if (above / "story-map.md").exists() else None
-            if found:
-                return found
-        underscored = folder / "story_map.md"
+        files = StoryMapFiles(root)
+        nearest = files.nearest()
+        if nearest is not None:
+            return self._story_map_file(nearest, nearest.parent, on_file)
         return (
-            self._format_adapter("json").from_workspace(folder)
-            or (markdown.from_workspace(underscored, on_file=on_file) if underscored.is_file() else None)
-            or markdown.from_workspace(folder, on_file=on_file)
+            self._format_adapter("json").from_workspace(files.folder)
+            or self._format_adapter("markdown").from_workspace(files.folder, on_file=on_file)
             or StoryModel()
         )
 
@@ -170,7 +169,7 @@ class Stories(PracticeGuidance):
         that Story sits under, so a story test's scenarios go on the map's Story of the same name, and a story test
         with no map listed reads the map in its own folder or the nearest one above it."""
         from cdd_guidance.practices.stories.model.source_location import path_from
-        from cdd_guidance.practices.stories.model.story_model import StoryModel, is_story_map_file
+        from cdd_guidance.practices.stories.model.story_model import StoryModel
 
         project = Path(project).resolve()
         paths = [Path(item).resolve() for item in files]
@@ -209,20 +208,8 @@ class Stories(PracticeGuidance):
     def _maps_beside(self, tests: list[Path]) -> list[Path]:
         """The story map each story test belongs to: in its own folder, or the nearest folder above it, since story
         tests sit in epic folders below their map."""
-        return list(dict.fromkeys(found for path in tests for found in [_nearest_map(path.parent)] if found))
+        return list(dict.fromkeys(found for path in tests for found in [StoryMapFiles(path.parent).nearest()] if found))
 
 
-def _nearest_map(folder: Path) -> Path | None:
-    """The story map in folder or the nearest folder above it, or in that folder's ``.context``, where documents go
-    while code sits straight in the folder: its markdown when it has one, since a drawio of the same map would add
-    every Story twice."""
-    from cdd_guidance.practices.stories.model.story_model import is_story_map_file
 
-    for candidate in (folder, *folder.parents):
-        context = candidate / ".context"
-        beside = list(context.iterdir()) if context.is_dir() else []
-        maps = sorted(path.resolve() for path in [*candidate.iterdir(), *beside] if is_story_map_file(path))
-        if maps:
-            markdown = [path for path in maps if path.suffix.lower() == ".md"]
-            return (markdown or maps)[0]
-    return None
+StoryNode.register_practice(Stories)

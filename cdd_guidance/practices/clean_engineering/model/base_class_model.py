@@ -127,12 +127,6 @@ class OoadNode(ModelNode):
         ("Invariant", "Property"),
     }
 
-    @classmethod
-    def practice_kind(cls) -> type:
-        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-
-        return CleanEngineering
-
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
 

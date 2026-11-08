@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from harness.graph.model_node import ModelChildren
+from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, OoadClass
@@ -19,16 +19,6 @@ from cdd_guidance.practices.clean_engineering.model.property import Property
 # The `# Title` line of a bounded context's `.context/bounded-context.md`: the context's name.
 _CONTEXT_TITLE = re.compile(r"^\s*#\s+(.+?)\s*$", re.M)
 
-_PATTERNS = (
-    "Shared Kernel",
-    "Customer/Supplier",
-    "Conformist",
-    "Anticorruption Layer",
-    "Open Host / Published Language",
-    "Separate Ways",
-)
-
-
 # `→ Context · Aggregate · Entity`: the segments of an integration's target.
 _TARGET_SEGMENT = re.compile(r"[·•]")
 _ARROWS = ("→", "->")
@@ -36,11 +26,9 @@ _ARROWS = ("→", "->")
 _HELD_BY = "(by"
 
 
-def _ddd_practice(cls) -> type:
-    """The DDD practice's class: every DDD node belongs to it, though most subclass a Clean Engineering node."""
-    from cdd_guidance.practices.ddd.ddd import Ddd
-
-    return Ddd
+class DomainNode(ModelNode):
+    """A node of the DDD model. Most also subclass a Clean Engineering node, and the DDD practice registers itself on
+    this class, so each is a node of the DDD practice's graph."""
 
 
 class Integration:
@@ -81,22 +69,20 @@ class Integration:
         return [f"- {self.target}"] + [f"  {key}: {getattr(self, key)}" for key in self.FIELDS if getattr(self, key)]
 
 
-class InvariantObject(Property):
+class InvariantObject(DomainNode, Property):
     """A property that changes with its entity. Stereotype is invariant."""
 
     _semantic_type_name = "InvariantObject"
-    practice_kind = classmethod(_ddd_practice)
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
         super().__init__(name, sequential_order, kwargs.get("type_hint", ""), kwargs.get("description", ""))
         self.stereotype = "invariant"
 
 
-class Entity(OoadClass):
+class Entity(DomainNode, OoadClass):
     """Identity that stays the same when its values change."""
 
     _semantic_type_name = "Entity"
-    practice_kind = classmethod(_ddd_practice)
     _belongs = {("InvariantObject", "Entity")}
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
@@ -122,51 +108,38 @@ class Entity(OoadClass):
         return self.invariant_object_type(sequential_order=len(self.invariant_objects))
 
 
-class ValueObject(OoadClass):
-    """No write operations and no setters. create, clone, and mix return a new instance."""
+class ValueObject(DomainNode, OoadClass):
+    """No write operations and no setters: a change makes a new value."""
 
     _semantic_type_name = "ValueObject"
-    practice_kind = classmethod(_ddd_practice)
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
-    def create(self) -> "ValueObject":
-        return type(self)(self.name, self.sequential_order, intent=self.intent)
 
-    def clone(self) -> "ValueObject":
-        return type(self)(self.name, self.sequential_order, intent=self.intent)
-
-    def mix(self, other: "ValueObject") -> "ValueObject":
-        return type(self)(self.name, self.sequential_order, intent=other.intent or self.intent)
-
-
-class Repository(OoadClass):
+class Repository(DomainNode, OoadClass):
     """A collection. Operations are any of create, read, update, delete, and search."""
 
     _semantic_type_name = "Repository"
-    practice_kind = classmethod(_ddd_practice)
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
         self.accesses = None
 
 
-class DomainService(OoadClass):
+class DomainService(DomainNode, OoadClass):
     """No state. An operation here is one no domain object can perform."""
 
     _semantic_type_name = "DomainService"
-    practice_kind = classmethod(_ddd_practice)
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
 
-class DomainEvent(Property):
+class DomainEvent(DomainNode, Property):
     """One producer aggregate, one or many consumers, and a subject property."""
 
     _semantic_type_name = "DomainEvent"
-    practice_kind = classmethod(_ddd_practice)
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
         super().__init__(name, sequential_order, kwargs.get("type_hint", ""), kwargs.get("description", ""))
@@ -175,27 +148,24 @@ class DomainEvent(Property):
         self.subject = Property("subject", 0, description="the state of the event")
 
 
-class Specification(OoadClass):
+class Specification(DomainNode, OoadClass):
     _semantic_type_name = "Specification"
-    practice_kind = classmethod(_ddd_practice)
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
 
-class Factory(OoadClass):
+class Factory(DomainNode, OoadClass):
     _semantic_type_name = "Factory"
-    practice_kind = classmethod(_ddd_practice)
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
 
-class Aggregate(Module):
+class Aggregate(DomainNode, Module):
     """Knows its root entity and its integrations. The entity loads invariant objects."""
 
     _semantic_type_name = "Aggregate"
-    practice_kind = classmethod(_ddd_practice)
     _belongs = {
         ("Entity", "Aggregate"),
         ("ValueObject", "Aggregate"),
@@ -238,11 +208,10 @@ class Aggregate(Module):
         return list(self.root.invariant_objects) if self.root is not None else []
 
 
-class BoundedContext(Module):
+class BoundedContext(DomainNode, Module):
     """A module of aggregates. A nested context is a context whose parent is a context."""
 
     _semantic_type_name = "BoundedContext"
-    practice_kind = classmethod(_ddd_practice)
     _belongs = {
         ("Aggregate", "BoundedContext"),
         ("BoundedContext", "BoundedContext"),
@@ -349,17 +318,8 @@ class BoundedContextMap:
         self._lines: list[str] = []
         self._index = 0
 
-    def load(self, path: str) -> "BoundedContextMap":
-        self.path = path
-        self.load_bounded_context_map_content()
-        self.load_bounded_contexts()
-        return self
-
     def save(self) -> str:
         return ""
-
-    def load_bounded_context_map_content(self) -> None:
-        return None
 
     def load_bounded_contexts(self) -> None:
         while self.has_more_bounded_context():

@@ -16,10 +16,12 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from cdd_guidance.actions.sketch.discovery_document import DiscoveryDocument
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType
 from cdd_guidance.practices.stories.model.story_model import Background, StepType, Scenario, Step
 from cdd_guidance.practices.stories.model.source_location import SourceLocation, path_from
+from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks, unlink
 from cdd_guidance.practices.stories.model.story_model import StoryModel
 from cdd_guidance.practices.stories.model.story_model import Increment
@@ -877,19 +879,14 @@ class MarkdownStoryModel(StoryModel):
 
     @classmethod
     def from_workspace(cls, root: "Path", *, on_file=None, project: Optional["Path"] = None) -> Optional["MarkdownStoryModel"]:
-        """Find story-map.md files under *root*, merge, and return; None if absent.
+        """The story map in the file *root*, or the markdown story maps *root* holds (``StoryMapFiles.markdown_below``),
+        merged; None if absent.
 
         Each node names its file as a path from *project*, so a rule hit points at the file a reader opens;
         without *project* the path is from *root*, or from the folder holding *root* when it is a file.
         """
         root = Path(root).resolve()
-        if root.is_file():
-            candidates = [root]
-        else:
-            candidates = (
-                [root / "story-map.md"] if (root / "story-map.md").exists()
-                else list(root.rglob("story-map.md"))
-            )
+        candidates = [root] if root.is_file() else StoryMapFiles(root).markdown_below()
         if not candidates:
             return None
         merged = cls()
@@ -987,49 +984,17 @@ class MarkdownStoryModel(StoryModel):
         return not any(story.scenarios or story.backgrounds for story in story_map.every_story())
 
     def _wrap_story_map_document(self, body: str, previous: Optional[str]) -> str:
-        title, sources = self._sketch_metadata(previous or "")
-        return "\n".join(
-            [
-                "---",
-                "fidelity: [discovery]",
-                "artifact: [story-map]",
-                "format: md",
-                "---",
-                "",
-                f"# Story Map — {title}",
-                "",
-                f"**Sources / context:** {sources}",
-                "",
-                "---",
-                "",
-                body.rstrip(),
-                "",
-                "---",
-                "",
-                "## Scope boundary",
-                "",
-                "**In scope:** see sketch increments and detailed themes",
-                "**Out of scope:** themes not yet moved to specification",
-                "",
-            ]
-        )
-
-    def _sketch_metadata(self, text: str) -> tuple[str, str]:
-        title = "Product / Feature Name"
-        sources = "see engagement sketch"
-        sketch_suffix = re.compile(r"\s+sketch\s*$", re.IGNORECASE)
-        trailing_separator = re.compile(r"[\s\-–—\u20ac\u201d]+$")
-        for line in text.splitlines():
-            stripped = line.strip()
-            if stripped.startswith("# "):
-                raw = stripped[2:].strip()
-                title = sketch_suffix.sub("", raw).strip()
-                title = trailing_separator.sub("", title).strip() or title
-            if stripped.lower().startswith("source:"):
-                sources = stripped.split(":", 1)[1].strip()
-            if stripped.lower().startswith("## stories:"):
-                break
-        return title, sources
+        document = DiscoveryDocument("story-map", "Story Map", previous or "")
+        scope = [
+            "---",
+            "",
+            "## Scope boundary",
+            "",
+            "**In scope:** see sketch increments and detailed themes",
+            "**Out of scope:** themes not yet moved to specification",
+            "",
+        ]
+        return "\n".join(document.lines(body) + scope)
 
     def parse(self, text: str) -> "MarkdownStoryModel":
         if not isinstance(text, str) or text.strip() == "":

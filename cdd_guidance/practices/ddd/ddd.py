@@ -5,16 +5,15 @@ from __future__ import annotations
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 
+from cdd_guidance.practices.ddd.model.nodes import DomainNode
+from cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model import SketchDddModel
+
 
 @agent_toolset
 class Ddd(PracticeGuidance):
-    """# Instructions
+    """# Instructions"""
 
-    Depends on CleanEngineering (lazy import to avoid circular imports at
-    module load time).
-    """
-
-    sketch_titles = ("ddd:", "domain driven design:")
+    sketch_titles = SketchDddModel.lens.titles
     SHORT_NAME = "DDD"
     COLOUR = "#6C5CE7"
 
@@ -98,3 +97,6 @@ class Ddd(PracticeGuidance):
         if isinstance(target, MarkdownBoundedContextMap) and isinstance(parsed, CleanEngineeringModel):
             return MarkdownBoundedContextMap().read_class_model(parsed)
         return parsed
+
+
+DomainNode.register_practice(Ddd)

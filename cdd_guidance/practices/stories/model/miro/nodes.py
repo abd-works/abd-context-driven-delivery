@@ -10,7 +10,6 @@ import html
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional
 
-from harness.annotations.name import Name
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
@@ -40,10 +39,6 @@ class MiroStory(DiagramStory):
     size = 60
     actor_height = size
     column_pad = 5
-
-    @property
-    def slug(self) -> str:
-        return Name(self.name).title_slug or "node"
 
     @property
     def x(self) -> int:
@@ -94,10 +89,6 @@ class MiroEpic(DiagramEpic):
     right edge, so the nesting reads as a bar under the epic that owns it."""
 
     tighten = 10
-
-    @property
-    def slug(self) -> str:
-        return Name(self.name).title_slug or "node"
 
     @property
     def width(self) -> int:

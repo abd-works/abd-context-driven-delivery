@@ -6,6 +6,7 @@ Each context reads and writes its own lines, and each aggregate and card its own
 from __future__ import annotations
 
 from cdd_guidance.actions.sketch.sketch_outline import SketchOutline
+from harness.guidance.sketch_lens import SketchLens
 from cdd_guidance.practices.ddd.model.markdown.nodes import (
     BUILD_ORDER,
     SKETCH_CONTEXT,
@@ -15,10 +16,11 @@ from cdd_guidance.practices.ddd.model.markdown.nodes import (
     fenced,
     sketch_level,
 )
-from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
 
 _SECTION = "## domain driven design:"
+# The headings that open the DDD section of a sketch; the DDD practice declares them from here.
+_LENS = SketchLens(("ddd:", "domain driven design:"))
 _EVENT_MAP = "event_map:"
 _EVENT_HEADINGS = {"event_map:", "event map:", "event_map", "event map"}
 _PROSE_HEADINGS = (
@@ -45,8 +47,8 @@ def _is_prose_heading(stripped: str) -> bool:
 
 
 class SketchDddModel(MarkdownBoundedContextMap):
-    lens = Ddd.sketch_lens
-    """The section of a sketch DDD writes, opened by the headings the DDD practice declares."""
+    lens = _LENS
+    """The section of a sketch DDD writes, opened by its `ddd:` or `domain driven design:` heading."""
 
     @property
     def holds_classes_only(self) -> bool:

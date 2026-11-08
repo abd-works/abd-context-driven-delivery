@@ -12,6 +12,7 @@ import re
 from typing import List, Optional
 
 from cdd_guidance.actions.sketch.sketch_outline import SketchOutline
+from harness.guidance.sketch_lens import SketchLens
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
     Epic,
@@ -23,9 +24,10 @@ from cdd_guidance.practices.stories.model.story_model import (
     StoryModel,
     StoryType,
 )
-from cdd_guidance.practices.stories.stories import Stories
 
 _NESTING_INDENT = 4
+# The headings that open the stories section of a sketch; the Stories practice declares them from here.
+_LENS = SketchLens(("stories:",))
 _STORY = re.compile(r"^(?:\(S(?::(?P<kind>\w+))?\)\s+)?(?P<actor>.*?)\s*-->\s+(?P<name>.+)$")
 _OUTLINE_EPIC = re.compile(r"^\(E\)\s+(.+)$")
 _ESTIMATE = re.compile(r"^\*\s+(\S.+)$")
@@ -78,8 +80,8 @@ class SketchEpic(Epic):
 class SketchStoryModel(StoryModel):
     epic_type = SketchEpic
     story_type = SketchStory
-    lens = Stories.sketch_lens
-    """The section of a sketch Stories writes, opened by the headings the Stories practice declares."""
+    lens = _LENS
+    """The section of a sketch Stories writes, opened by its `stories:` heading."""
 
     def parse(self, text: str) -> "SketchStoryModel":
         """Read the sketch's stories section into this map, and return it."""

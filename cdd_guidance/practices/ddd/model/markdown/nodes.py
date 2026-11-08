@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from cdd_guidance.actions.sketch.discovery_document import DiscoveryDocument
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -571,10 +572,6 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         self.bounded_context_type = MarkdownBoundedContext
         self.aggregate_type = MarkdownAggregate
 
-    def load_bounded_context_map_content(self) -> None:
-        self._lines = Path(self.path).read_text(encoding="utf-8").splitlines()
-        self._index = 0
-
     def has_more_bounded_context(self) -> bool:
         return self._next_context_at() is not None
 
@@ -690,40 +687,8 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         return holder
 
     def _wrap_bounded_context_document(self, body: str, sketch: str) -> str:
-        title, sources = self._sketch_metadata(sketch)
-        return "\n".join(
-            [
-                "---",
-                "fidelity: [discovery]",
-                "artifact: [bounded-context-map]",
-                "format: md",
-                "---",
-                "",
-                f"# Bounded Context Map — {title}",
-                "",
-                f"**Sources / context:** {sources}",
-                "",
-                "---",
-                "",
-                body.removeprefix("# Bounded Context Map\n\n").rstrip(),
-                "",
-            ]
-        )
-
-    def _sketch_metadata(self, text: str) -> tuple[str, str]:
-        title = "Product / Feature Name"
-        sources = "see engagement sketch"
-        sketch_suffix = re.compile(r"\s+sketch\s*$", re.IGNORECASE)
-        trailing_separator = re.compile(r"[\s\-–—€”]+$")
-        for line in text.splitlines():
-            stripped = line.strip()
-            if stripped.startswith("# "):
-                raw = stripped[2:].strip()
-                title = sketch_suffix.sub("", raw).strip()
-                title = trailing_separator.sub("", title).strip() or title
-            if stripped.lower().startswith("source:"):
-                sources = stripped.split(":", 1)[1].strip()
-        return title, sources
+        document = DiscoveryDocument("bounded-context-map", "Bounded Context Map", sketch)
+        return "\n".join(document.lines(body.removeprefix("# Bounded Context Map\n\n")))
 
     def _next_context_at(self) -> int | None:
         index = self._index

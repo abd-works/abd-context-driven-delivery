@@ -93,11 +93,11 @@ class StoryNode(ModelNode, ABC):
         re.IGNORECASE,
     )
 
-    @classmethod
-    def practice_kind(cls) -> type:
-        from cdd_guidance.practices.stories.stories import Stories
-
-        return Stories
+    @property
+    def slug(self) -> str:
+        """The node's name as a cell id or a folder spells it, `place-order`; `node` for a node whose name has no
+        letters."""
+        return Name(self.name).title_slug or "node"
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None):
         super().__init__(name, sequential_order, graph)
@@ -1102,15 +1102,3 @@ class _StoryCopies:
     def delivered_by(self, increment: Increment) -> List["Story"]:
         """The copies of the stories increment delivers."""
         return [self._copies[id(story)] for story in increment.stories if id(story) in self._copies]
-
-
-STORY_MAP_SUFFIXES = (".md", ".drawio")
-
-
-def is_story_map_file(path) -> bool:
-    """A story map is a markdown or drawio file named story-map (or story_map), alone or after a prefix."""
-    from pathlib import Path
-
-    path = Path(path)
-    stem = Name(path.stem).title_slug
-    return path.suffix.lower() in STORY_MAP_SUFFIXES and (stem == "story-map" or stem.endswith("-story-map"))
