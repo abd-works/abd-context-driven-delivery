@@ -14,7 +14,7 @@ from harness.annotations.annotation import hosted_only
 from harness.annotations.name import Name
 from harness.guidance.action_catalogue import FidelityActions
 from harness.guidance.declared_file import DeclaredFile
-from harness.guidance.documents import load_document
+from harness.guidance.documents import document_in
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.rule import Rule, RulesCollection
 from harness.guidance.schema import Schema
@@ -708,7 +708,7 @@ class PracticeGuidance(Guidance):
     def read_paths(self, paths: list[str] | str, source: str | None = None) -> Any:
         """What render converts from the files at paths: their text, one after another, read from the project of the
         session this practice works in."""
-        return self.session.document_named("", paths) if self.session is not None else load_document("", paths)
+        return document_in(self.session, "", paths)
 
     @agent_tool
     def render(self, format: str, content: Any = "", source: str | None = None, previous: str = "") -> dict:

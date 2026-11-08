@@ -535,7 +535,7 @@ with description("an MCP host tool ping") as self:
 
 def _user_level_installation(ide: str) -> McpInstallation:
     installation = McpInstallation(IdeLayout(ide), _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
-    installation._is_temp_path = lambda path: False
+    installation.is_temporary = False
     for tool in SampleMcpOps().tools.values():
         installation.record_operation(tool)
     return installation
@@ -611,7 +611,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
             with before.each:
                 self.written = self.config.read_text(encoding="utf-8")
                 again = McpInstallation(IdeLayout("Claude"), self.root / "other" / ".claude", repo=self.root / "other")
-                again._is_temp_path = lambda path: False
+                again.is_temporary = False
                 for tool in SampleMcpOps().tools.values():
                     again.record_operation(tool)
                 again.write_mcp_manifest()
@@ -625,7 +625,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
                 (self.project / ".claude").mkdir(parents=True)
                 self.project_config = self.project / ".mcp.json"
                 self.installation = McpInstallation(IdeLayout("Claude"), self.project / ".claude", repo=_REPO_ROOT)
-                self.installation._is_temp_path = lambda path: False
+                self.installation.is_temporary = False
                 for tool in SampleMcpOps().tools.values():
                     self.installation.record_operation(tool)
 

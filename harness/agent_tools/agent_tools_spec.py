@@ -1355,3 +1355,42 @@ with description("a domain class whose constructor takes collaborators"):
             with it("should hand it the project the call works on"):
                 pack = AgentToolSet.instantiate(Crate).tools["pack"]
                 expect(pack.invoke({"label": "crate-2"}, project=self.project)).to(equal(f"crate-2 packed in {self.project.name}"))
+
+
+with description("a toolset reference"):
+    with context("to a module in a hyphenated folder under a folder on the import path"):
+        with before.all:
+            import tempfile
+
+            self.root = Path(tempfile.mkdtemp(prefix="toolset-reference-spec-"))
+            folder = self.root / "hyphen-tools"
+            folder.mkdir()
+            (folder / "found_tool.py").write_text(
+                "from harness.agent_tools.agent_tools import agent_toolset\n\n\n"
+                "@agent_toolset\nclass FoundTool:\n    \"\"\"A toolset kept in a hyphenated folder.\"\"\"\n",
+                encoding="utf-8",
+            )
+            sys.path.insert(0, str(self.root))
+
+        with after.all:
+            sys.path.remove(str(self.root))
+            sys.modules.pop("hyphen_tools.found_tool", None)
+
+        with it("should load the toolset class its underscored module name names"):
+            from harness.agent_tools.agent_tools import ToolsetReference
+
+            expect(ToolsetReference("hyphen_tools.found_tool:FoundTool").toolset_class.__name__).to(equal("FoundTool"))
+
+    with context("made from a toolset class"):
+        with it("should name the class by its module and its own name"):
+            from harness.agent_tools.agent_tools import ToolsetReference
+
+            expect(str(ToolsetReference.of(CarStory))).to(equal(f"{CarStory.__module__}:CarStory"))
+
+
+with description("a tool's MCP invoke line"):
+    with it("should name the tool the installer reads back from it"):
+        from harness.agent_tools.agent_tools import AgentTool
+
+        tool = next(iter(AgentToolSet.instantiate(CarStory).tools.values()))
+        expect(AgentTool.invoked_names(tool.invoke_line())).to(equal([tool.mcp_name]))

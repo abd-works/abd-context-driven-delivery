@@ -287,12 +287,9 @@ class Installation:
         self.layout = layout
         self.path = Path(path)
         self.repo = Path(repo).resolve() if repo is not None else None
-        self._install_tracker: InstallTracker | None = None
-
-    @property
-    def is_temporary(self) -> bool:
+        self.is_temporary = is_temporary(self.path)
         """Whether this installation writes into a temporary folder, as a spec's install does."""
-        return is_temporary(self.path)
+        self._install_tracker: InstallTracker | None = None
 
     def track_writes_with(self, tracker: InstallTracker) -> None:
         self._install_tracker = tracker
