@@ -1030,7 +1030,7 @@ with description("a checkout's hook server"):
         with it("should keep the daemon's address outside every IDE folder"):
             from harness.hooks.hook_daemon import HookDaemon
 
-            expect(HookDaemon(self.root).state_path.parent.name).to(equal(".hook-server"))
+            expect(HookDaemon(self.root).address_file.path.parent.name).to(equal(".hook-server"))
 
     with context("with a toolset whose hooks are kept out of install"):
 

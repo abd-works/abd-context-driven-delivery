@@ -13,11 +13,13 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
-from expects import contain, equal, expect, have_key
-from mamba import description, it
+from expects import contain, equal, expect, have_key, raise_error
+from mamba import context, description, it
 
 from harness.diagnostics.guidance_probe import GuidanceProbe
 from harness.diagnostics.probe_outcome import ProbeOutcome
+from harness.agent_tools.tool_call import ToolCall
+from harness.diagnostics.call_diagnostics import DiagnosticsNeedACall
 from harness.diagnostics.guidance_diagnostics import GuidanceDiagnostics
 import space.session.session  # noqa: F401 - registers how a tool call opens its session, as the server does at start
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
@@ -103,3 +105,33 @@ with description("guidance diagnostics"):
         probe.arguments.cleanup()
         expect(text).to(equal("no sketches"))
         expect(ProbeOutcome.from_answer("sketch.list_sketches", text).color).to(equal("green"))
+
+with description("a diagnostics toolset"):
+    with context("made for a call"):
+        with it("should probe the install of the project the call names"):
+            project = Path(tempfile.mkdtemp())
+            diagnostics = GuidanceDiagnostics().for_call(ToolCall(project=project))
+            expect(diagnostics._installer.repo).to(equal(project.resolve()))
+
+    with context("made by an install, with no call"):
+        with it("should refuse to probe rather than probe the folder the server runs in"):
+            expect(lambda: GuidanceDiagnostics().guidance_diagnostics(["stories"])).to(raise_error(DiagnosticsNeedACall))
+
+
+with description("the guidance actions a probe calls"):
+    with it("should leave repair alone, reporting it skipped"):
+        tree = Path(tempfile.mkdtemp())
+        installer = _installer(
+            tree,
+            {
+                "installs": [
+                    {
+                        "mcp": {"items": ["improvement.repair"]},
+                        "toolset": {"items": ["cdd_guidance.actions.improvement.improvement:Improvement"]},
+                    }
+                ]
+            },
+        )
+        GuidanceProbe(installer, ["stories"]).actions()
+        items = json.loads((tree / "diagnostics.json").read_text(encoding="utf-8"))["guidance"]["actions"]["items"]
+        expect([(item["mcp"], item["color"]) for item in items]).to(equal([("improvement.repair", "yellow")]))

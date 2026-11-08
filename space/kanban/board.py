@@ -530,7 +530,7 @@ class Help:
     def href(self) -> str:
         """Its page on the forge, as the catalog generator names it: a fidelity's own page, or its practice's page for
         a fidelity the catalog has no page for."""
-        from harness.catalog_generator.catalog_generator import CatalogPractice
+        from harness.catalog_generator.catalog_practice import CatalogPractice
 
         catalogued = CatalogPractice(self._practice)
         has_page = self._fidelity is not None and self._fidelity in catalogued.fidelities

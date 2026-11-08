@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import signal
 import socket
 import subprocess
@@ -17,10 +16,9 @@ _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from harness.process.process import RunningProcess  # noqa: E402
+from harness.graph.graph_app import GraphAppPorts  # noqa: E402
+from harness.process.process import ListeningPorts, RunningProcess  # noqa: E402
 
-GRAPH_WEB_PORTS: tuple[int, ...] = (3000,)
-GRAPH_APP_PORTS: tuple[int, ...] = (5173, 5174, 5175, 5176)
 
 
 class Process(NamedTuple):
@@ -55,10 +53,7 @@ class RepoProcesses:
 
     def listening_ports(self) -> dict[int, list[int]]:
         if self._port_cache is None:
-            if sys.platform == "win32":
-                self._port_cache = self._windows_ports()
-            else:
-                self._port_cache = self._posix_ports()
+            self._port_cache = ListeningPorts().by_process()
         return self._port_cache
 
     def descendants(self, pid: int) -> list[int]:
@@ -132,10 +127,10 @@ class RepoProcesses:
                 if tagged != expect_service:
                     return None
             elif expect_service == "graph_web":
-                if port_text != str(GRAPH_WEB_PORTS[0]):
+                if port_text not in {str(item) for item in GraphAppPorts().web}:
                     return None
             elif expect_service == "graph_app":
-                if port_text not in {str(item) for item in GRAPH_APP_PORTS}:
+                if port_text not in {str(item) for item in GraphAppPorts().app}:
                     return None
             else:
                 return None
@@ -230,42 +225,6 @@ class RepoProcesses:
             found.append(Process(pid, parent, command))
         return found
 
-    def _windows_ports(self) -> dict[int, list[int]]:
-        completed = subprocess.run(
-            ["netstat", "-ano"],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-        ports: dict[int, set[int]] = {}
-        for line in (completed.stdout or "").splitlines():
-            parts = line.split()
-            if len(parts) < 5 or parts[3].upper() != "LISTENING":
-                continue
-            port_text = parts[1].rsplit(":", 1)[-1]
-            if not port_text.isdigit() or not parts[4].isdigit():
-                continue
-            ports.setdefault(int(parts[4]), set()).add(int(port_text))
-        return {pid: sorted(values) for pid, values in ports.items()}
-
-    def _posix_ports(self) -> dict[int, list[int]]:
-        completed = subprocess.run(
-            ["ss", "-ltnp"],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-        ports: dict[int, set[int]] = {}
-        for line in (completed.stdout or "").splitlines():
-            pid_match = re.search(r"pid=(\d+)", line)
-            port_match = re.search(r":(\d+)\s", line)
-            if pid_match is None or port_match is None:
-                continue
-            ports.setdefault(int(pid_match.group(1)), set()).add(int(port_match.group(1)))
-        return {pid: sorted(values) for pid, values in ports.items()}
-
 
 class PingReport:
     """Print one JSON ping result and return a process exit code."""
@@ -287,7 +246,8 @@ class HookPing:
 
         found = self._daemons()
         daemon = HookDaemon(self.processes.repo)
-        recorded = self._recorded_pid(daemon.state_path)
+        published = daemon.address_file.read()
+        recorded = published.pid if published is not None else None
         keeper, stopped = self.processes.collapse(found, recorded)
         address = daemon.live_address()
         ok = address is not None
@@ -310,15 +270,6 @@ class HookPing:
     def _is_daemon(self, command: str) -> bool:
         folded = command.casefold()
         return self.processes.in_repo(command) and "harness.hooks.hook_daemon" in folded
-
-    def _recorded_pid(self, path: Path) -> int | None:
-        if not path.is_file():
-            return None
-        try:
-            pid = json.loads(path.read_text(encoding="utf-8")).get("pid")
-        except json.JSONDecodeError:
-            return None
-        return int(pid) if isinstance(pid, int) and pid > 0 else None
 
 
 class HttpPing:

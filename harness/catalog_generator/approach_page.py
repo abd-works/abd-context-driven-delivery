@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from harness.catalog_generator.approach_copy import ApproachCopy, PrincipleCopy, StageCopy
+from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.catalog_generator.catalog_examples import (
     MONACO_LOADER_SCRIPTS,
     CatalogFidelity,
@@ -184,6 +185,8 @@ class ApproachGrids:
         self.stages = stages
         self.catalog_root = catalog_root
         self.project_examples = project_examples
+        # The practice whose artifacts are the approach's stage examples (Stories), among the practices shown.
+        self.stories = CatalogPractice.giving_stage_examples(self.practices)
 
     def html(self, kind: str) -> str:
         """The board a principle of ``kind`` draws: ``windows``, ``descriptions``, ``spec``, or ``tickets``."""
@@ -274,7 +277,7 @@ class ApproachGrids:
         return "".join(parts)
 
     def _stage_panel(self, stage: StageCopy) -> str:
-        example = StageExample(stage, self.project_examples)
+        example = StageExample(stage, self.stories, self.project_examples)
         source = example.file(self.catalog_root)
         if source is None or not source.is_file():
             return ""
@@ -284,7 +287,7 @@ class ApproachGrids:
         panels: dict[str, str] = {}
         openings: dict[str, str] = {}
         for shown in practice.board_fidelities:
-            relative = self.project_examples.file_for(practice.key, shown.stage) if self.project_examples else None
+            relative = self.project_examples.file_for(shown) if self.project_examples else None
             examples = "".join(
                 ExampleFile(path).panel_html(editor_id=self._editor_id(practice, path), catalog_href=relative)
                 for path in self._practice_files(shown, relative)
@@ -317,9 +320,9 @@ class ApproachGrids:
     def _stories_opening(self, stage_id: str) -> str:
         """The opening of the fidelity at ``stage_id`` of the practice whose card says the approach's stage examples
         are its artifacts (Stories), among the practices the grids show."""
-        stories = next((practice for practice in self.practices if practice.gives_stage_examples), None)
-        shown = next((each for each in stories.shown_fidelities if each.stage == stage_id), None) if stories else None
+        shown = self.stories.fidelity_at(stage_id) if self.stories is not None else None
         return shown.opening if shown is not None else ""
+
 
     def _monaco_scripts(self, panels: dict[str, str]) -> str:
         return MONACO_LOADER_SCRIPTS if any("catalog-monaco" in panel for panel in panels.values()) else ""
@@ -400,7 +403,7 @@ class ApproachPage:
         """Write each stage example's own page into ``examples/``, copying a practice example beside it."""
         folder = self.catalog_root / "examples"
         for stage in self.copy.stages:
-            example = StageExample(stage, self.project_examples)
+            example = StageExample(stage, self.grids.stories, self.project_examples)
             if not example.exists:
                 continue
             source = example.file(self.catalog_root)
@@ -474,7 +477,7 @@ class ApproachPage:
                 "detail_title": stage.title,
                 "items": list(stage.items),
                 "paras": list(stage.paras),
-                "example_href": StageExample(stage, self.project_examples).href(),
+                "example_href": StageExample(stage, self.grids.stories, self.project_examples).href(),
             }
             for stage in self.copy.stages
         ]

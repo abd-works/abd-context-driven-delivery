@@ -59,8 +59,8 @@ export function queryProgress(messages: string[]): QueryProgress {
     const plan = line.match(/Compiling query plan for\s+(.+)$/);
     if (plan) {
       const name = queryName(plan[1]);
-      const total = current?.total ?? 0;
-      const index = current ? current.index + (current.phase === 'Compiled' ? 1 : 0) : 1;
+      const total: number = current?.total ?? 0;
+      const index: number = current ? current.index + (current.phase === 'Compiled' ? 1 : 0) : 1;
       current = { index, total, name, phase: 'Compiling' };
       detail = total ? `Compiling ${index}/${total} ${name}` : `Compiling ${name}`;
       continue;

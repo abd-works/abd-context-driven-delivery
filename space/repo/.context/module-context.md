@@ -11,7 +11,7 @@ The MCP tools `repo.switch_branch`, `repo.close_branch`, `repo.switch_worktree`,
 
 - **Purpose:** Give every caller one object graph for the clone, its branches and worktrees, and its commits, so version control is never reimplemented with raw `git` output.
 - **Seam (terms):** Repo, Branch, Worktrees, Worktree, Commit, `repo.git`, `repo.main_clone`, `repo.work_state`, `repo.open_worktree`, `repo.current_branch`, `worktrees.at(folder)`, CommitPathsRequiredError, CommitMessageRequiredError, WorktreeNotRemovedError, `Repo.of_project`, `repo.switch_branch`, `repo.close_branch`, `repo.switch_worktree`, `repo.close_worktree`, `repo.push_commit`
-- **Dependencies (one-way):** `harness/agent_tools`, `harness/installation`, `harness/mcp`, `harness/process` (*Git* and its *RepoConnectError*, which every repository operation raises when git fails), `space/work_state` (*WorkState*, which saves the open branch by its name and the open worktree by its folder; the main clone's *Repo* holds it and turns them back into a *Branch* and a *Worktree*).
+- **Dependencies (one-way):** `harness/agent_tools`, `harness/hooks` (*HookDaemon*, which a closing worktree asks to stop its checkout's hook daemon), `harness/installation`, `harness/mcp`, `harness/process` (*Git* and its *RepoConnectError*, which every repository operation raises when git fails), `space/work_state` (*WorkState*, which saves the open branch by its name and the open worktree by its folder; the main clone's *Repo* holds it and turns them back into a *Branch* and a *Worktree*).
 
 ## Constraint
 

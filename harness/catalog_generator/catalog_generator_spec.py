@@ -3,10 +3,8 @@ single main-flow scenario. See catalog/cdd-catalog-sketch.md, epic
 "Assemble Catalog Page Data".
 """
 import ast
-import shutil
 import sys
 import types
-import tempfile
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -17,10 +15,11 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_false, be_none, be_true, contain, equal, expect
-from mamba import after, before, description, it
+from expects import be_false, be_true, contain, equal, expect
+from mamba import before, description, it
 
-from harness.catalog_generator.catalog_generator import CatalogPractice, LifecycleAction, SkillSlashName, Utility
+from harness.catalog_generator.catalog_generator import LifecycleAction, Utility
+from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.installation.destination import NoCatalog, noCatalog
 from harness.guidance.action_catalogue import Action
 from harness.agent_tools import agent_instructions, agent_toolset
@@ -186,33 +185,16 @@ with description("Resolve Lifecycle Actions From The Toolsets That Define Them")
                 expect(str(resolution.source_dir.parent.name)).to(equal("actions"))
 
 
-with description("Collect Skill Slash-Command Map From SKILL Frontmatter"):
-    with description("given a .claude/skills/{category}-{skill}/SKILL.md file per practice"):
-        with before.each:
-            self.skills_root = Path(tempfile.mkdtemp()) / ".claude" / "skills"
-            for folder in (
-                "practices-stories",
-                "practices-stories-stories-story-map",
-                "practices-clean-engineering",
-                "practices-ddd",
-                "practices-agent-bdd",
-            ):
-                skill_md = self.skills_root / folder / "SKILL.md"
-                skill_md.parent.mkdir(parents=True)
-                skill_md.write_text(f"---\nname: {folder}\n---\n", encoding="utf-8")
-            self.slash = SkillSlashName([self.skills_root])
+with description("a practice's slash command"):
+    with description("as the Claude Code skill install names the practice's skill"):
+        with before.all:
+            self.by_key = {practice.key: practice for practice in CatalogPractice.load_all()}
 
-        with after.each:
-            shutil.rmtree(self.skills_root.parents[1], ignore_errors=True)
+        with it("names stories practices-stories"):
+            expect(self.by_key["stories"].skill_name).to(equal("practices-stories"))
 
-        with it("resolves stories to its practices-stories skill name"):
-            expect(self.slash.resolve("stories")).to(equal("practices-stories"))
+        with it("names clean_engineering with hyphens, practices-clean-engineering"):
+            expect(self.by_key["clean_engineering"].skill_name).to(equal("practices-clean-engineering"))
 
-        with it("resolves clean_engineering to the hyphenated practices-clean-engineering skill name"):
-            expect(self.slash.resolve("clean_engineering")).to(equal("practices-clean-engineering"))
-
-        with it("resolves ddd to its practices-ddd skill name"):
-            expect(self.slash.resolve("ddd")).to(equal("practices-ddd"))
-
-        with it("resolves an unknown module dir to nothing rather than guessing"):
-            expect(self.slash.resolve("not_a_real_skill")).to(be_none)
+        with it("names ddd practices-ddd"):
+            expect(self.by_key["ddd"].skill_name).to(equal("practices-ddd"))

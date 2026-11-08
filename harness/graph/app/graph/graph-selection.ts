@@ -1,5 +1,16 @@
-import type { ExplorerEntryData, ViolationData } from '@cdd/harness/graph/graph';
+import type { ExplorerEntryData, GraphRuleData, GraphRulesCollectionData, ViolationData } from '@cdd/harness/graph/graph';
 import type { ViolationFocus } from '../source/violation-prompt';
+
+// One item of the explorer tree as Python sends it: a node's entry, the rules collection under it, or one rule.
+export type TreeItem = ExplorerEntryData | GraphRulesCollectionData | GraphRuleData;
+
+export function isRule(item: TreeItem): item is GraphRuleData {
+  return 'status' in item;
+}
+
+export function childrenOf(item: TreeItem): TreeItem[] {
+  return item.children;
+}
 
 export type GraphSelection = {
   nodeId: string;
@@ -17,7 +28,7 @@ export function ruleHits(node: { violation?: string; violations?: ViolationData[
   return [];
 }
 
-export function selectionForRule(ownerId: string, node: ExplorerEntryData): GraphSelection {
+export function selectionForRule(ownerId: string, node: GraphRuleData): GraphSelection {
   const hits = ruleHits(node);
   const first = hits[0];
   const violating = node.status === 'violating' && hits.length > 0;

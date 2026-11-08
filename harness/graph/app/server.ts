@@ -6,6 +6,7 @@ import express, { type Request, type Response } from 'express';
 import { CddConnection } from '@cdd/cdd-connection';
 import { CddRequestError, cddProgressRoutes, type CddRoute } from '@cdd/cdd-shared';
 import { graphRoutes } from '@cdd/harness/graph/graph';
+import ports from './ports.json';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const python = process.env.PYTHON || 'python';
@@ -58,8 +59,8 @@ app.post(`${API_ROOT}/explorer/choose-folder`, async (request, response) => {
   }
 });
 
-const explorerUi = process.env.EXPLORER_UI_URL || 'http://localhost:5173';
-const port = Number(process.env.PORT || 3000);
+const explorerUi = process.env.EXPLORER_UI_URL || `http://localhost:${ports.app[0]}`;
+const port = Number(process.env.PORT || ports.web[0]);
 
 app.get('/', (_request, response) => {
   response.redirect(302, explorerUi);

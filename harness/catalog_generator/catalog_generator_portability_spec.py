@@ -16,7 +16,8 @@ for _cat in ("cdd_guidance/practices", "tools"):
 from expects import be_true, contain, equal, expect
 from mamba import before, description, it
 
-from harness.catalog_generator.catalog_generator import Catalog, GitCitation
+from harness.catalog_generator.catalog_generator import Catalog
+from harness.catalog_generator.git_citation import GitCitation
 
 
 with description("Build Git-URL Source Citation For Every Reference"):
