@@ -132,6 +132,29 @@ class Annotation:
         return self.annotate(target)
 
 
+class NamesAnnotation(Annotation):
+    """An annotation that records a tuple of names on what it annotates, such as the fields that name one object of a
+    class or the arguments a tool takes from its call. Each kind names its flag; ``names_on`` reads the names back, and
+    nothing is recorded on what no such annotation decorates."""
+
+    copied = False
+
+    def __new__(cls, *names: str):
+        return object.__new__(cls)
+
+    def __init__(self, *names: str) -> None:
+        self.names = names
+
+    def annotate(self, target: Any) -> Any:
+        setattr(target, self.flag, self.names)
+        return target
+
+    @classmethod
+    def names_on(cls, target: Any) -> tuple[str, ...]:
+        """The names this kind of annotation recorded on target; none when it carries none."""
+        return tuple(getattr(target, cls.flag, ()) or ())
+
+
 class OmissionAnnotation(Annotation):
     """An annotation that leaves what it annotates out of something. A classmethod or bound method is annotated
     through the function it wraps, so the annotation is read there too. A kind that sets ``omits_install`` keeps what

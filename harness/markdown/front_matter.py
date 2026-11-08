@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 _YAML_FENCE = "---"
 _COMMENT_FENCES = ("# ---", "#---")
@@ -36,6 +37,12 @@ class FrontMatter:
     def __init__(self, text: str) -> None:
         self._text = text
         self._lines = text.splitlines()
+
+    @classmethod
+    def of_file(cls, path: Path) -> FrontMatter:
+        """The settings at the top of the file at path, and the content after them; an empty one for a file that is
+        not there."""
+        return cls(path.read_text(encoding="utf-8") if path.is_file() else "")
 
     @property
     def text(self) -> str:

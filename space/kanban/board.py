@@ -15,7 +15,6 @@ from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.chat.chat import Chat
 from harness.diagnostics.server_health import ServerHealth
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
-from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
@@ -112,7 +111,8 @@ class Board:
     def load(cls, project: Path | str) -> Board:
         """The board of project, with every practice chosen; a tool call is handed the project the call names. A chat
         in a ticket's worktree reads the board of the project's main checkout, where every ticket's session lives."""
-        return cls(Sessions.of_project(project).repo.main_clone, list(PracticeCatalogue.practices()))
+        sessions = Sessions.of_project(project)
+        return cls(sessions.repo.main_clone, sessions.board_practices)
 
     @property
     def repo(self) -> Repo:

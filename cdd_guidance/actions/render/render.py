@@ -34,8 +34,8 @@ class Render(GuidanceAction):
                 return item
             practice = self.practice_of(item)
             if paths:
-                return practice.render_files(format, paths, source)
-            return practice.render(format, content, source=source)
+                return practice.render_files(format, paths, source, fidelity=self.fidelity_of(item))
+            return practice.render_at(self.fidelity_of(item), format, content, source)
 
         converted = self.each(on)
         tools(self.act_quickly)

@@ -1,10 +1,10 @@
 """Integrated example - @toolset, @agent_tool, @resource, @markdown, @agent_instructions."""
 from __future__ import annotations
 
-import inspect
 from pathlib import Path
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
+from harness.annotations.class_folder import class_folder
 from harness.markdown import markdown
 
 
@@ -28,7 +28,7 @@ class Reporter:
 
     @property
     def module_dir(self) -> Path:
-        return Path(inspect.getfile(type(self))).resolve().parent
+        return class_folder(type(self))
 
     @property
     def beat(self) -> str:

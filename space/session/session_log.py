@@ -13,7 +13,7 @@ from harness.agent_tools.chat_pointer import NO_CHAT, ChatPointer
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
     from harness.guidance.rule import RulesCollection
-    from space.session.practice_session_output import PracticeSessionOutput
+    from space.session.practice_session_output import FidelitySessionOutput, PracticeSessionOutput
     from space.session.session import Session
 
 LOG_FILE = "session.log"
@@ -110,12 +110,6 @@ class LogEntry:
         """The stage a move or a mark names: the first word after its verb."""
         words = self.words
         return words[0] if words else ""
-
-    @property
-    def tool_called(self) -> str:
-        """The tool a ``tool …`` line records a call of, such as ``generate.generate``; empty for any other line."""
-        words = self.words
-        return words[0] if self.verb == _TOOL_VERB and words else ""
 
     @property
     def loop_number(self) -> int | None:
@@ -350,13 +344,13 @@ class ChatLog:
         self._log.record(f"{line} {self._chat}")
         self._log.injected_rules.clear()
 
-    def validation(self, practice: PracticeSessionOutput, violations: list[str]) -> None:
+    def validation(self, practice: PracticeSessionOutput | FidelitySessionOutput, violations: list[str]) -> None:
         """Log a validate of practice at its working fidelity, with each violation's synopsis; no violations is a
         validate that passed."""
         detail = " ".join(violations)
         self.line(f"validate {type(practice.guidance).__name__} {practice.working_fidelity} {detail}".rstrip())
 
-    def action(self, action: str, paths: list[Path], practices: list[PracticeSessionOutput] | None = None) -> None:
+    def action(self, action: str, paths: list[Path], practices: list[PracticeSessionOutput | FidelitySessionOutput] | None = None) -> None:
         """Log action with the paths it worked on and what each practice it worked on was working at."""
         if self._log.path is None:
             return
@@ -373,7 +367,7 @@ class ChatLog:
         self._log.record(" ".join(part for part in parts if part))
         self._log.injected_rules.clear()
 
-    def guidance_action(self, action: str, practices: list[PracticeSessionOutput]) -> None:
+    def guidance_action(self, action: str, practices: list[PracticeSessionOutput | FidelitySessionOutput]) -> None:
         """Log a guidance action on practices, with the session's workpath and each practice's folder as the paths it
         worked on."""
         workpath = self._log.session.workpath

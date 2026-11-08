@@ -116,13 +116,14 @@ class PracticeSessionOutput:
 
     @property
     def working_fidelity(self) -> str:
-        """The name of the fidelity this practice works at in the session, such as story_map; empty when it has none."""
+        """The name of the fidelity this practice was made at, such as story_map; empty when it has none. An action that
+        works at another fidelity logs that fidelity's FidelitySessionOutput instead."""
         current = self._current_fidelity
         return str(current.name) if current is not None else ""
 
     @property
     def working_format(self) -> str:
-        """The format this practice works in, such as drawio: its current fidelity's; empty when it has none."""
+        """The format this practice works in, such as drawio: the fidelity it was made at's; empty when it has none."""
         return self._guidance.format or ""
 
     @property
@@ -206,6 +207,35 @@ class FidelitySessionOutput:
     @property
     def _session(self) -> Session:
         return self._practice.session
+
+    # A line an action logs names what it worked on: a practice's name, its folder, and the fidelity and format it
+    # worked at. An action working at this fidelity hands the log this object, which answers as its practice's
+    # PracticeSessionOutput does, at this fidelity rather than at the one the practice was made at.
+
+    @property
+    def name(self) -> str:
+        """Its practice's name, such as stories, which a log line names."""
+        return self._practice.name
+
+    @property
+    def guidance(self) -> PracticeGuidance:
+        """Its practice: the session's one instance of it."""
+        return self._practice.guidance
+
+    @property
+    def folder(self) -> Path:
+        """The folder its practice writes its code under."""
+        return self._practice.folder
+
+    @property
+    def working_fidelity(self) -> str:
+        """This fidelity's name, such as scenarios."""
+        return self._fidelity.name
+
+    @property
+    def working_format(self) -> str:
+        """The format this fidelity works in, such as drawio."""
+        return self._fidelity.format or ""
 
     @property
     def is_enabled(self) -> bool:

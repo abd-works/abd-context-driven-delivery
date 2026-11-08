@@ -8,7 +8,6 @@ schema. Each page class below renders one of those objects; ``Catalog`` writes t
 from __future__ import annotations
 
 import html
-import inspect
 import logging
 import os
 import re
@@ -35,6 +34,7 @@ from harness.installation.files import skill
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.markdown.format import Format
 from harness.mcp.mcp_server import mcp
+from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -443,7 +443,7 @@ class UtilityPage(DetailPage):
     @property
     def body(self) -> str:
         toolset_class = self.utility.toolset_class
-        folder = Path(inspect.getfile(toolset_class)).resolve().parent
+        folder = class_folder(toolset_class)
         purpose = f"<p>{html.escape((toolset_class.__doc__ or '').strip())}</p>"
         overview = self._markdown_file(self._module_card(folder), purpose)
         guide = self._markdown_file(folder / f"{folder.name}.md", "<p>No dedicated guide.</p>")
