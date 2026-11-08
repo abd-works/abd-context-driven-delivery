@@ -98,6 +98,7 @@ The first count gave 163, because it also counted round 5's summary tables of co
 |---|---|---|---|---|---|---|---|
 | 5 | 63 | 30 | 57 | 150 | baseline | — | First cross-file round. Nine fix agents ran on it |
 | 6 | 56 | 18 | 36 | 110 | −27% | 1 (0.9%) | 133 findings, 12 high. Shadow models −40%, duplicated functions −37%, resource orientation only −11%. See [round6-report.md](round6-report.md) |
+| 7 | 16 | 3 | 20 | 39 | −65% | 0 | 54 findings, 4 high. Mostly the AI check only, since a DDD crash in the graph worker blocked graph checks. See [round7-report.md](round7-report.md) |
 
 **Code metrics beside the findings.** [code-metrics-trend.md](code-metrics-trend.md) measures each round's input revision with standard tools. From round 6 on, each round also records the metrics that track bad resource orientation: classes with CBO above 14 (43 at the tip), classes with LCOM4 above 1 (252), runtime import cycles (2), the top module fan-in (62), the WMC of the largest classes (`Graph`, `PracticeGuidance`), and duplicated lines (0.42%). Shadow models and semantic duplicates are mostly invisible to these metrics, so the AI findings stay the measure for those two classes.
 
@@ -115,3 +116,16 @@ The first count gave 163, because it also counted round 5's summary tables of co
 **What would mean the loop is cycling:** a round-7 total above 88, which is less than a 20% cut, or resource orientation not falling. Either would mean changing the approach. For resource orientation, the next step would be one agent per pattern across the whole repository, instead of one agent per area.
 
 **To reach the goal of under 30:** at a 27% cut per round, 110 needs about four more rounds (80, 59, 43, 31, then below 30). At the 40% rate of the two faster classes, it needs about three.
+
+## Round 7 analysis: close to the goal; the next risk is what the graph check has not yet seen
+
+- **The goal total fell from 110 to 39, a 65% cut.** That is far above the 20% bar, with no regressions.
+  - Shadow models are almost gone: 30, then 18, then 3.
+  - Resource orientation fell from 56 to 16. The round-6 rule "a spec on the effect first" worked: the validators found effect specs for the concern-5 fixes.
+  - Duplicated functions are now the largest class, at 20. Most are twins the fix agents missed.
+- **The count rests mostly on the AI check.** A DDD crash in the graph worker, introduced by the round-6 merge fix-up, blocked graph checks in most areas. So the ten Clean Engineering rules switched on in round 6 have not yet judged most code. When they do, expect a jump in **new scope**, which is counted apart from progress. The loop's stop test (under 30, no highs) is applied to findings in old scope.
+- **New failure pattern: specs that skip the live path.**
+  - Rule examples call `rule.check` directly, so rules the schema never applies still pass. There are 12 such rules across Stories, DDD and BDD.
+  - Graph specs build in-process, so they missed the worker-only crash.
+  - The round-7 fix brief makes both specs mandatory.
+- **To reach under 30:** one more fix round at even half of round 7's rate (−30%) brings 39 to about 27. Round 8 then confirms it, with a working graph check.
