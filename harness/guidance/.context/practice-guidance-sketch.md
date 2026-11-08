@@ -110,7 +110,7 @@ clean-engineering-model (Skill)
                  -> load_document content paths
                  -> each
                       -> listed
-                           -> AgentToolSet.instantiate_all
+                           -> AgentToolSet.instantiate
                                 -> CleanEngineering fidelity="model"
                       -> each Guidance
                            -> CleanEngineering.render_files format="drawio" paths

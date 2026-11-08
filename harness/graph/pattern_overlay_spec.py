@@ -12,6 +12,7 @@ from mamba import description, it
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.pattern_overlays import PatternOverlays
+import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's overlays
 
 
 def _sample_copy() -> Path:

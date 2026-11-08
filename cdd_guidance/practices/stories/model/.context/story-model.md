@@ -2,7 +2,7 @@
 
 *StoryModel* is one story map: epics, the sub-epics nested under them, the stories in each, and the increments that slice them, then each story's backgrounds and scenarios down to steps and examples. A nested epic is an epic whose parent is an epic. An increment is a thin slice: a name, an outcome, slicing notes, a decision, and the stories in that slice. Every node is a graph node (*ModelNode*), so a loaded model is also the stories practice's part of the knowledge graph.
 
-Each format is a *StoryModel* subclass with its own node subclasses, listed by `Stories` under `formats`: sketch, markdown, json, drawio, miro, python, typescript, java, javascript. `StoryModel(source)` copies any model into the subclass's node types; `parse` reads text in that format and `render(canonical, previous)` writes a model out. Markdown, JSON, and the code formats carry scenarios, steps, and examples; the diagram formats (drawio, miro) stop at stories and still read increments. The Claude Design story canvas, which shows the stories on their screens, is a *DiagramStoryModel* the UX practice draws (`practices/ux/model/claude_design/story_canvas.py`).
+Each format is a *StoryModel* subclass with its own node subclasses, listed by `Stories` under `formats`: sketch, markdown, json, drawio, miro, python, typescript, java, javascript. `StoryModel(source)` copies any model into the subclass's node types, and a format's `copy_of(canonical)` makes that copy with the format's own settings; each story, scenario, and background makes its parts through its format's `scenario_type`, `background_type`, and `step_type`. `parse` reads text in that format and `render(canonical, previous)` writes a model out. *StoryMapFiles* (`story_map_files.py`) is the one place that knows a story map's file name and finds the story map in or above a folder (`nearest`) or the markdown maps below it (`markdown_below`). The Stories practice registers itself on *StoryNode* (`StoryNode.register_practice(Stories)`), so the model never imports its practice. Markdown, JSON, and the code formats carry scenarios, steps, and examples; the diagram formats (drawio, miro) stop at stories and still read increments. The Claude Design story canvas, which shows the stories on their screens, is a *DiagramStoryModel* the UX practice draws (`practices/ux/model/claude_design/story_canvas.py`).
 
 ```
 story_map = Stories().read_folder(folder)       # story-map.md (or .json), increments, scenarios
@@ -240,7 +240,7 @@ Each format class below is a *StoryModel* subclass. Its node subclasses (`Markdo
 
 ## SketchStoryModel : StoryModel
 
-The `sketch` format: the stories section of an integrated sketch. Nodes: SketchEpic and SketchStory, which write their own sketch lines (`sketch_lines(depth)`).
+The `sketch` format: the stories section of an integrated sketch. Nodes: SketchEpic, SketchStory, SketchScenario, SketchBackground, and SketchStep, which write their own sketch lines (`sketch_lines`).
 
 ------
 + epic_type: SketchEpic
@@ -249,8 +249,8 @@ The `sketch` format: the stories section of an integrated sketch. Nodes: SketchE
 + parse(text: str): SketchStoryModel
 	// fills this map and returns it
 	-> SketchOutline.body_for
-+ render(story_map: StoryModel | None = None, previous: str | None = None): str
-	// copies the story map into a sketch map, which writes itself
++ render(canonical: StoryModel | None = None, previous: str | None = None): str
+	// copies canonical into a sketch map, which writes itself
 	-> save
 + save(): str
 	-> SketchEpic.sketch_lines
@@ -265,21 +265,21 @@ The `markdown` format: `story-map.md`, the scenario files beside it, and the inc
 ----
 + from_workspace(root: Path, project: Path | None = None): MarkdownStoryModel | None
 + parse(text: str): MarkdownStoryModel
-+ render(story_map: StoryModel, previous: str | None = None, links: StoryMapLinks | None = None, workspace: str | None = None): str
-	// with links, each story that has its own markdown file links to it
++ render(canonical: StoryModel, previous: str | None = None, workspace: str | None = None): str
+	// in a workspace folder, each story that has its own markdown file links to it
 + save(): str
 + attach_source_locations(text: str, rel_file: str): None
 
 ## JsonStoryModel : StoryModel
 
-The `json` format. Nodes: JsonEpic, JsonStory, JsonIncrement, JsonScenario; each reads its own record (`from_record`) and writes it (`as_record`).
+The `json` format. Nodes: JsonEpic, JsonStory, JsonIncrement, JsonScenario, JsonBackground, JsonStep; each reads its own record (`from_record`) and writes it (`as_record`).
 
 ----
 + from_workspace(root: Path): JsonStoryModel | None
 + parse(text: str): JsonStoryModel
 	// fills this map and returns it
-+ render(story_map: StoryModel, previous: str | None = None): str
-	// copies the story map into a JSON map, which writes itself
++ render(canonical: StoryModel, previous: str | None = None): str
+	// copies canonical into a JSON map, which writes itself
 	-> save
 + save(): str
 	// this map as story-graph.json text
@@ -318,8 +318,8 @@ The `drawio` format. Nodes: DrawIOEpic, DrawIOStory, DrawIOIncrement.
 	-> load(text)
 + load(text: str): DrawIOStoryModel
 	// reads cells by where they sit, not their order in the file
-+ render(canonical: StoryModel | None = None, previous: str | None = None, links: StoryMapLinks | None = None, workspace: str | None = None): str
-	// with links, each cell links to its story-map.md entry
++ render(canonical: StoryModel | None = None, previous: str | None = None, workspace: str | None = None): str
+	// in a workspace folder, each cell links to its story-map.md entry
 + save(): str
 
 ## MiroStoryModel : DiagramStoryModel

@@ -72,58 +72,64 @@ def _take_examples(examples: Examples, record: Dict[str, Any]) -> None:
         examples[label] = cells if set(cells) - {"example"} else label
 
 
-def _step_record(step: Step) -> Dict[str, Any]:
-    payload: Dict[str, Any] = {"keyword": step.keyword, "text": step.text}
-    if step.phase:
-        payload["stepType"] = step.phase
-    if step.ands:
-        payload["ands"] = [_step_record(extra) for extra in step.ands]
-    for key, value in (("concepts", step.concepts), ("values", step.values)):
-        if value:
-            payload[key] = list(value)
-    if step.actor:
-        payload["actor"] = step.actor
-    return payload
-
-
-def _step_from_record(record: Dict[str, Any], order: int) -> Step:
-    phase = record.get("stepType")
-    step = Step(
-        str(record.get("text", "")),
-        StepType(phase) if phase else None,
-        order,
-        keyword=str(record.get("keyword", "")),
-        concepts=list(record.get("concepts") or []),
-        values=list(record.get("values") or []),
-        actor=str(record.get("actor", "") or ""),
-    )
-    step.ands = [_step_from_record(extra, index) for index, extra in enumerate(record.get("ands") or [], start=1)]
-    return step
-
-
-def _steps_from(record: Dict[str, Any]) -> List[Step]:
-    return [_step_from_record(step, order) for order, step in enumerate(record.get("steps") or [], start=1)]
-
-
-def _background_record(background: Background) -> Dict[str, Any]:
-    payload: Dict[str, Any] = {
-        "name": background.name,
-        "steps": [_step_record(step) for step in background.steps],
-    }
-    records = _example_records(background.examples)
-    if records:
-        payload["examples"] = records
-    return payload
-
-
-def _background_from_record(record: Dict[str, Any], order: int) -> Background:
-    background = Background(record.get("name") or "background", order)
-    background.steps = _steps_from(record)
-    _take_examples(background.examples, record)
-    return background
-
-
 # -- Leaf node types: each reads and writes its own record ----------------------
+
+class JsonStep(Step):
+    """A step as ``{"keyword": "Given", "text": "...", "stepType": "given", "ands": [...]}``."""
+
+    def as_record(self) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"keyword": self.keyword, "text": self.text}
+        if self.phase:
+            payload["stepType"] = self.phase
+        if self.ands:
+            payload["ands"] = [extra.as_record() for extra in self.ands]
+        for key, value in (("concepts", self.concepts), ("values", self.values)):
+            if value:
+                payload[key] = list(value)
+        if self.actor:
+            payload["actor"] = self.actor
+        return payload
+
+    @classmethod
+    def from_record(cls, record: Dict[str, Any], order: int) -> "JsonStep":
+        phase = record.get("stepType")
+        step = cls(
+            str(record.get("text", "")),
+            StepType(phase) if phase else None,
+            order,
+            keyword=str(record.get("keyword", "")),
+            concepts=list(record.get("concepts") or []),
+            values=list(record.get("values") or []),
+            actor=str(record.get("actor", "") or ""),
+        )
+        step.ands = [cls.from_record(extra, index) for index, extra in enumerate(record.get("ands") or [], start=1)]
+        return step
+
+    @classmethod
+    def all_from(cls, record: Dict[str, Any]) -> List["JsonStep"]:
+        """The steps a scenario's or background's record lists, in order."""
+        return [cls.from_record(step, order) for order, step in enumerate(record.get("steps") or [], start=1)]
+
+
+class JsonBackground(Background):
+    """A background as ``{"name": "background", "steps": [...], "examples": [...]}``."""
+
+    step_type = JsonStep
+
+    def as_record(self) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"name": self.name, "steps": [step.as_record() for step in self.steps]}
+        records = _example_records(self.examples)
+        if records:
+            payload["examples"] = records
+        return payload
+
+    @classmethod
+    def from_record(cls, record: Dict[str, Any], order: int) -> "JsonBackground":
+        background = cls(record.get("name") or "background", order)
+        background.steps = JsonStep.all_from(record)
+        _take_examples(background.examples, record)
+        return background
+
 
 class JsonIncrement(Increment):
     def as_record(self) -> Dict[str, Any]:
@@ -157,11 +163,14 @@ class JsonIncrement(Increment):
 
 
 class JsonScenario(Scenario):
+    step_type = JsonStep
+    background_type = JsonBackground
+
     def as_record(self) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
             "name": self.name,
             "sequentialOrder": self.sequential_order,
-            "steps": [_step_record(step) for step in self.steps],
+            "steps": [step.as_record() for step in self.steps],
         }
         if self.is_outline:
             payload["isOutline"] = True
@@ -169,7 +178,7 @@ class JsonScenario(Scenario):
         if records:
             payload["examples"] = records
         if self.backgrounds:
-            payload["backgrounds"] = [_background_record(background) for background in self.backgrounds]
+            payload["backgrounds"] = [background.as_record() for background in self.backgrounds]
         return payload
 
     @classmethod
@@ -180,15 +189,16 @@ class JsonScenario(Scenario):
             story_name=story_name,
         )
         scenario.is_outline = bool(record.get("isOutline", False))
-        scenario.steps = _steps_from(record)
+        scenario.steps = JsonStep.all_from(record)
         _take_examples(scenario.examples, record)
         for background in record.get("backgrounds") or []:
-            scenario.backgrounds.append(_background_from_record(background, len(scenario.backgrounds) + 1))
+            scenario.backgrounds.append(JsonBackground.from_record(background, len(scenario.backgrounds) + 1))
         return scenario
 
 
 class JsonStory(Story):
     scenario_type = JsonScenario
+    background_type = JsonBackground
 
     def as_record(self) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
@@ -198,7 +208,7 @@ class JsonStory(Story):
             "scenarios": [scenario.as_record() for scenario in self.scenarios],
         }
         if self.backgrounds:
-            payload["backgrounds"] = [_background_record(background) for background in self.backgrounds]
+            payload["backgrounds"] = [background.as_record() for background in self.backgrounds]
         if self.actors:
             payload["actors"] = list(self.actors)
         if self.domain_terms:
@@ -224,7 +234,7 @@ class JsonStory(Story):
         if record.get("evidence"):
             story.evidence = list(record["evidence"])
         for background in record.get("backgrounds") or []:
-            story.backgrounds.append(_background_from_record(background, len(story.backgrounds) + 1))
+            story.backgrounds.append(JsonBackground.from_record(background, len(story.backgrounds) + 1))
         for scenario in record.get("scenarios", []):
             story.scenarios.append(JsonScenario.from_record(scenario, story.name))
         return story
@@ -271,9 +281,9 @@ class JsonStoryModel(StoryModel):
     story_type = JsonStory
     increment_type = JsonIncrement
 
-    def render(self, story_map: StoryModel, previous: Optional[str] = None) -> str:
-        """The story map as story-graph.json text: copied into a JSON map, which writes itself."""
-        return (story_map if isinstance(story_map, JsonStoryModel) else type(self)(story_map)).save()
+    def render(self, canonical: StoryModel, previous: Optional[str] = None) -> str:
+        """canonical as story-graph.json text: copied into a JSON map, which writes itself."""
+        return (canonical if isinstance(canonical, JsonStoryModel) else self.copy_of(canonical)).save()
 
     def save(self) -> str:
         payload: Dict[str, Any] = {"epics": [epic.as_record() for epic in self.epics]}

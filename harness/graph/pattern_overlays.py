@@ -3,14 +3,13 @@
 
 A pattern is a *PracticeGuidance* (LernDomainDriven, CddWebDomainAccess, CddClaudeMod) that owns a *GraphOverlay*: the
 nodes it adds on top of the practices and the rules it adds to each. The pattern makes its overlay once and keeps it as
-``graph_overlay``; the overlay holds its pattern. The graph is given the pattern objects the overlays it applies name,
-made once per process here, so the patterns depend on the graph and never the other way round.
+``graph_overlay``; the overlay holds its pattern. The package that defines the patterns registers their classes here
+when it is imported, and the graph is given the pattern objects the overlays it applies name, made once per process
+here, so the patterns depend on the graph and never the other way round.
 """
 
 from __future__ import annotations
 
-import importlib
-import inspect
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -18,9 +17,6 @@ from harness.guidance.guidance import rules_in
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
-
-_PATTERNS_ROOT = Path(__file__).resolve().parents[2] / "cdd_guidance" / "patterns"
-_PATTERNS_PACKAGE = "cdd_guidance.patterns"
 
 
 class GraphOverlay:
@@ -64,9 +60,16 @@ class GraphOverlay:
 
 class PatternOverlays:
     """The pattern overlays a graph applies. Each is a folder holding ``practices/``, named by its path or by the name of
-    a folder in ``cdd_guidance/patterns``; a pattern is that folder's name, and its guidance is made once per process."""
+    a registered pattern; a pattern is its folder's name, and its guidance is made once per process."""
 
+    _registered: ClassVar[dict[str, type]] = {}
     _made: ClassVar[dict[str, Any]] = {}
+
+    @classmethod
+    def register(cls, *pattern_classes: type) -> None:
+        """Hold pattern_classes as the patterns a graph can apply, each by its ``pattern`` name."""
+        PatternOverlays._registered = {pattern_class.pattern: pattern_class for pattern_class in pattern_classes}
+        PatternOverlays._made = {}
 
     def __init__(self, overlays: list[str] | tuple[str, ...] = ()) -> None:
         self.paths: list[str] = []
@@ -82,7 +85,7 @@ class PatternOverlays:
         found: list[Any] = []
         for path in self.paths:
             name = Path(path).name
-            if (_PATTERNS_ROOT / name / "practices").is_dir():
+            if name in self._registered and self._holds_practices(self._folder_of(name)):
                 pattern = self._pattern(name)
                 if pattern not in found:
                     found.append(pattern)
@@ -90,17 +93,13 @@ class PatternOverlays:
 
     @property
     def available(self) -> list[str]:
-        """Every pattern in ``cdd_guidance/patterns`` that holds at least one practice."""
-        if not _PATTERNS_ROOT.is_dir():
-            return []
-        return [entry.name for entry in sorted(_PATTERNS_ROOT.iterdir()) if self._holds_practices(entry)]
+        """Every registered pattern that holds at least one practice."""
+        return [name for name in sorted(self._registered) if self._holds_practices(self._folder_of(name))]
 
     @property
     def practice_schema_files(self) -> list[Path]:
         """The schema every pattern keeps for each practice it adds to, applied or not."""
-        if not _PATTERNS_ROOT.is_dir():
-            return []
-        return sorted(_PATTERNS_ROOT.glob("*/practices/*/model/schema.yaml"))
+        return sorted(path for folder in self.pattern_folders for path in folder.glob("practices/*/model/schema.yaml"))
 
     def root_of(self, overlay: str) -> Path:
         """The overlay root a path or pattern name names: the folder itself when it holds ``practices/``, else the
@@ -108,21 +107,23 @@ class PatternOverlays:
         candidate = Path(overlay)
         if candidate.is_dir() and (candidate / "practices").is_dir():
             return candidate.resolve()
-        named = _PATTERNS_ROOT / overlay
-        if named.is_dir() and (named / "practices").is_dir():
-            return named.resolve()
-        return candidate.resolve() if candidate.is_dir() else named.resolve()
+        if overlay in self._registered and (self._folder_of(overlay) / "practices").is_dir():
+            return self._folder_of(overlay)
+        return candidate.resolve()
+
+    @property
+    def pattern_folders(self) -> list[Path]:
+        """The folder of every registered pattern that holds at least one practice."""
+        return [self._folder_of(name) for name in self.available]
+
+    def _folder_of(self, name: str) -> Path:
+        """The folder the registered pattern name is defined in."""
+        return self._registered[name].class_folder()
 
     def _pattern(self, name: str) -> Any:
-        """The guidance the pattern folder ``name`` declares in its module of the same name, made the first time."""
+        """The guidance of the registered pattern name, made the first time."""
         if name not in self._made:
-            module = importlib.import_module(f"{_PATTERNS_PACKAGE}.{name}.{name}")
-            declared = next(
-                member
-                for member in vars(module).values()
-                if inspect.isclass(member) and member.__module__ == module.__name__ and getattr(member, "pattern", "") == name
-            )
-            self._made[name] = declared()
+            self._made[name] = self._registered[name]()
         return self._made[name]
 
     def _holds_practices(self, entry: Path) -> bool:

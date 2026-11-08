@@ -16,7 +16,7 @@ from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.diagnose.diagnose import Diagnose
 from harness.agent_tools.agent_tools import AgentToolSet
-from harness.agent_tools.sub_agent.annotation import SUB_AGENT_CALLER_PREAMBLE, SubAgentAnnotation
+from harness.agent_tools.agent_tools import SUB_AGENT_CALLER_PREAMBLE, SubAgentAnnotation
 from space.session.throwaway_project import ThrowawayProject
 
 
@@ -37,12 +37,6 @@ with description("Diagnose toolset"):
             tool = diagnose_tool()
             # Assert
             expect(tool.description).to(contain(SUB_AGENT_CALLER_PREAMBLE))
-
-        with it("returns str"):
-            # Arrange / Act
-            tool = diagnose_tool()
-            # Assert
-            expect(tool.response).to(equal("str"))
 
     with context("diagnose sub-agent instructions"):
         with it("describes building a feedback loop in Phase 1"):

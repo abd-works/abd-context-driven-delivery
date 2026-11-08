@@ -12,7 +12,7 @@ from pathlib import Path
 
 from harness.mcp.cdd_home import CddHome
 from harness.process.process import BackgroundStart
-from harness.process.stoppable_process import StoppableProcess
+from harness.process.process import StoppableProcess
 
 SERVER_PORT_ENV = "CDD_SERVER_PORT"
 DEFAULT_SERVER_PORT = 47800

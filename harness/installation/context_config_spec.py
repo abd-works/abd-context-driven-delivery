@@ -28,8 +28,8 @@ with description("a project's context configuration"):
             self.config.save({"guidelines": {"mern_domain_driven": "enabled"}, "practice_folders": {"bdd": "specs"}})
 
         with it("should keep its guidelines when practice folders are set"):
-            self.config.set_practice_folders({"stories": "docs"})
-            expect(self.config.guidelines()).to(equal({"mern_domain_driven": "enabled"}))
+            self.config.update(practice_folders={"stories": "docs"})
+            expect(self.config.guideline("mern-domain-driven")).to(equal("enabled"))
 
     with context("whose config.json is not valid JSON"):
         with before.each:
@@ -44,7 +44,7 @@ with description("a project's context configuration"):
 
         with it("should leave the file as it was when practice folders are set"):
             try:
-                self.config.set_practice_folders({"bdd": "specs"})
+                self.config.update(practice_folders={"bdd": "specs"})
             except MalformedContextConfigError:
                 pass
             expect(self.config.path.read_text(encoding="utf-8")).to(equal(self.broken))

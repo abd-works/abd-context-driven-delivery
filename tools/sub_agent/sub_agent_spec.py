@@ -9,7 +9,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import contain, equal, expect
 from tools.sub_agent.fixtures.annotated_examples import AnnotatedActionExample, AnnotatedToolExample
 from harness.agent_tools.agent_tools import AgentToolSet
-from harness.agent_tools.sub_agent.annotation import SUB_AGENT_CALLER_PREAMBLE, SubAgentAnnotation
+from harness.agent_tools.agent_tools import SUB_AGENT_CALLER_PREAMBLE, SubAgentAnnotation
 from tools.sub_agent.sub_agent import SubAgent
 from mamba import context, description, it
 

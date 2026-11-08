@@ -11,6 +11,7 @@ from mamba import after, before, context, description, it
 from harness.graph.graph import Graph
 from harness.installation.destination import data_of
 from harness.graph.saved_graph import SavedGraph, SavedGraphFile, SavedGraphOutdated
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 _CART = "export class Cart {\n  total() { return 1; }\n  place(a, b, c, d, e, f) { return a; }\n}\n"
 

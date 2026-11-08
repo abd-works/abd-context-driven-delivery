@@ -33,6 +33,8 @@ sys.path.insert(0, _root)
 
 from expects import be, contain, equal, expect, raise_error
 from mamba import before, context, description, it
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 
 def _project() -> Path:

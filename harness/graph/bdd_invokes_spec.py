@@ -13,6 +13,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from harness.graph.graph import Graph  # noqa: E402
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 _CART = """\
 export class Cart {

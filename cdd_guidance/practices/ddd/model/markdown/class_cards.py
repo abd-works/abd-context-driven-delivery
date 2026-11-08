@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
+from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, OoadClass
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -22,7 +22,7 @@ from cdd_guidance.practices.ddd.model.nodes import (
     Specification,
     ValueObject,
 )
-from cdd_guidance.practices.ddd.model.stereotypes import plain_class_name
+from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass, kind_named_by, plain_class_name
 
 CARD = "#### "
 _PROPERTIES = "------"
@@ -70,9 +70,7 @@ class ClassCard(MarkdownDomainNode):
     def named(name: str, stereotypes: list[str]) -> "ClassCard":
         """An empty card of the building block its stereotypes name; a plain class card for none."""
         marks = ordered_stereotypes(stereotypes)
-        lowered = {item.lower() for item in marks}
-        card_type = next((card for mark, card in _CARD_TYPES if mark in lowered), MarkdownClass)
-        card = card_type(name, 0)
+        card = _CARD_OF_KIND.get(kind_named_by(marks), MarkdownClass)(name, 0)
         card.stereotypes = marks
         return card
 
@@ -86,6 +84,17 @@ class ClassCard(MarkdownDomainNode):
         """The card a `####` section writes: its heading, then its members and invariants."""
         card = ClassCard.from_heading(section[0].strip()[len(CARD):])
         card.read_lines(section[1:])
+        return card
+
+    @staticmethod
+    def from_code(oclass: OoadClass, intent: str) -> "ClassCard":
+        """The card a class read from code or a class drawing is: the building block its DDD stereotypes, or its name,
+        make it, holding the class's own members, without its constructor, and intent."""
+        card = ClassCard.named(oclass.name, TacticalClass(oclass).building_block_stereotypes)
+        card.sequential_order = oclass.sequential_order
+        card.intent = intent
+        card.properties = list(oclass.properties)
+        card.operations = [item for item in oclass.operations if not item.is_constructor and item.name != oclass.name]
         return card
 
     @staticmethod
@@ -224,17 +233,19 @@ class ClassCard(MarkdownDomainNode):
         invariants = [f"{_INVARIANT} {item}" for item in self.invariants]
         return self.property_lines() + self.operation_lines() + invariants
 
-    def code_class(self, place: str, order: int) -> OoadClass:
-        """The class a code file writes for this card: its stereotypes, a copy of its members with the relationships
-        their types name, and its place as the first line of its intent. Code keeps its own copy, since a class belongs
-        to one model."""
-        oclass = OoadClass(self.name, order, intent=f"{place}\n{self.intent}" if self.intent else place)
-        oclass.stereotypes = list(self.stereotypes)
-        oclass.properties = [item.clone() for item in self.plain_properties]
-        oclass.operations = [item.clone() for item in self.operations]
-        for prop in oclass.properties:
+    def write_into(self, module: Module, intent: str) -> OoadClass:
+        """Add this card to module, a module of a Clean Engineering format, as that format's own class: its
+        stereotypes, its members, with the relationships their types name, and intent."""
+        written = module.load_class(self)
+        written.update_self(self)
+        written.sequential_order = len(module.classes) + 1
+        written.intent = intent
+        written.properties = [written.load_property(item) for item in self.plain_properties]
+        written.operations = [written.load_operation(item) for item in self.operations]
+        for prop in written.properties:
             prop.derive_relationship()
-        return oclass
+        module.classes.append(written)
+        return written
 
     def _add_operation(self, access: str, _kind: str, name: str, parameters: str, returned: str) -> Operation:
         found = Operation(
@@ -330,17 +341,17 @@ class MarkdownFactory(ClassCard, Factory):
     pass
 
 
-# Which building block a card's stereotypes make it, first match first; a card with none is a plain class.
-_CARD_TYPES: tuple[tuple[str, type[ClassCard]], ...] = (
-    ("specification", MarkdownSpecification),
-    ("value object", MarkdownValueObject),
-    ("repository", MarkdownRepository),
-    ("domain service", MarkdownDomainService),
-    ("service", MarkdownDomainService),
-    ("factory", MarkdownFactory),
-    ("entity", MarkdownEntity),
-    ("aggregate root", MarkdownEntity),
-)
+# The card class of each building block a card's stereotypes name (`stereotypes.KIND_OF_STEREOTYPE`); a card that names
+# none is a plain class.
+_CARD_OF_KIND: dict[str | None, type[ClassCard]] = {
+    "EntityRoot": MarkdownEntity,
+    "Entity": MarkdownEntity,
+    "ValueObject": MarkdownValueObject,
+    "Repository": MarkdownRepository,
+    "DomainService": MarkdownDomainService,
+    "Specification": MarkdownSpecification,
+    "Factory": MarkdownFactory,
+}
 _OPERATION = re.compile(r"^([+-])\s*(?:<<\s*(\w+)\s*>>\s*)?(\w+)\((.*?)\)\s*(?::\s*(.+))?$")
 _PROPERTY = re.compile(r"^([+-])\s*(?:<<\s*(\w+)\s*>>\s*)?(\w+)\s*(?::\s*(.+))?$")
 

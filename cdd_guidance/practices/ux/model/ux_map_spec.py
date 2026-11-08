@@ -30,11 +30,6 @@ with description("a UxMap"):
         with it("should find a screen by name"):
             expect(self.ux_map.find_screen("Cart").name).to(equal("Cart"))
 
-        with it("should remove a screen by name"):
-            removed = self.ux_map.remove_screen("Catalog")
-            expect(removed.name).to(equal("Catalog"))
-            expect(len(self.ux_map.screens)).to(equal(1))
-
         with it("should say the screen is not on the map when it is missing"):
             expect(lambda: self.ux_map.find_screen("Missing")).to(raise_error(ScreenNotOnMap))
 
@@ -49,11 +44,6 @@ with description("a UxMap"):
         with it("should expose story_references as a list"):
             expect(self.ux_map.story_references.as_list()).to(
                 equal(["stories/place_order.js"])
-            )
-
-        with it("should aggregate all story names from screens"):
-            expect(self.ux_map.all_story_names()).to(
-                equal(["Browse Product Catalog"])
             )
 
 

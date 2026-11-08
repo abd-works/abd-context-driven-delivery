@@ -220,8 +220,7 @@ class DddReading:
         self._blocks[tactical.oclass.name] = block
         self.graph.link("root" if kind == "EntityRoot" else "owns", aggregate, block)
         self.graph.link("belongsTo", block, aggregate, "relationship")
-        name = tactical.oclass.name
-        root = self._blocks.get(name[: -len("Repository")]) if kind == "Repository" and name.endswith("Repository") else None
+        root = self._blocks.get(tactical.kept_root_name) if kind == "Repository" else None
         if root is not None:
             self.graph.link("accesses", block, root, "relationship")
         return block

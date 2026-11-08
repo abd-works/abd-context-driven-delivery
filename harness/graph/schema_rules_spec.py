@@ -8,6 +8,7 @@ from harness.graph.graph_rules_collection import GraphRulesCollection
 from harness.graph.pattern_overlays import PatternOverlays
 from harness.graph.schema_rules import PracticeSchema
 from harness.guidance.practice_catalogue import PracticeCatalogue
+import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's overlays
 
 # The overlay the LERN pattern owns, as a graph applying that pattern holds it.
 _LERN = tuple(pattern.graph_overlay for pattern in PatternOverlays(["lern_domain_driven"]).patterns)

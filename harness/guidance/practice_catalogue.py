@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import importlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
+
+from harness.agent_tools.agent_tools import ToolsetReference
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import PracticeGuidance
@@ -17,49 +18,60 @@ class UnknownPractice(KeyError):
         self.key = key
 
 
+class PracticesNotRegistered(LookupError):
+    """The practices were asked for in a process where no module that defines them has registered them."""
+
+    def __init__(self) -> None:
+        super().__init__("no practices are registered with PracticeCatalogue in this process; import the package that defines them")
+
+
 class PracticeCatalogue:
     """Every practice CDD ships, in the order the approach walks them: Stories, DDD, UX, Clean Engineering, BDD.
 
-    Callers that only need the practice keys read ``keys()``, which imports no practice code, so the graph and schema
-    modules the practices themselves import can use it. Callers that need a practice's fidelities, rules, folder, or
-    schema read the catalogue's own instances from ``practices()`` or ``practice(key)``. A session makes a set of its own
-    with ``create_all()``, which its graph and its actions share, and a caller that works at a fidelity or format of its
-    own outside any session makes its own with ``create(key)``. A practice that extends another holds that practice:
-    one of the same set, or one made with it. The catalogue keeps its instances because a practice's fidelities and
-    rules are read from its markdown, which does not change while the process runs, and every hook and tool call reads
-    them; nothing that reads one sets it.
+    The framework names no practice. The package that defines the practices registers their classes here when it is
+    imported (``register``), as every process that loads the repository's toolsets imports it. Callers that need a
+    practice's fidelities, rules, folder, or schema read the catalogue's own instances from ``practices()`` or
+    ``practice(key)``. A session makes a set of its own with ``create_all()``, which its graph and its actions share, and
+    a caller that works at a fidelity or format of its own outside any session makes its own with ``create(key)``. A
+    practice that extends another holds that practice: one of the same set, or one made with it. The catalogue keeps its
+    instances because a practice's fidelities and rules are read from its markdown, which does not change while the
+    process runs, and every hook and tool call reads them; nothing that reads one sets it.
     """
 
-    _REFS = {
-        "stories": "cdd_guidance.practices.stories.stories:Stories",
-        "ddd": "cdd_guidance.practices.ddd.ddd:Ddd",
-        "ux": "cdd_guidance.practices.ux.ux:Ux",
-        "clean_engineering": "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering",
-        "bdd": "cdd_guidance.practices.bdd.bdd:Bdd",
-    }
-    _shared: dict[str, PracticeGuidance] = {}
+    _classes: ClassVar[dict[str, type[PracticeGuidance]]] = {}
+    _shared: ClassVar[dict[str, PracticeGuidance]] = {}
+
+    @classmethod
+    def register(cls, *practice_classes: type[PracticeGuidance]) -> None:
+        """Hold practice_classes as the practices CDD ships, in the order the approach walks them, each by its key."""
+        PracticeCatalogue._classes = {practice_class.class_key(): practice_class for practice_class in practice_classes}
+        PracticeCatalogue._shared = {}
 
     @classmethod
     def keys(cls) -> tuple[str, ...]:
-        """Each practice's key, its folder name under ``cdd_guidance/practices``, such as ``clean_engineering``."""
-        return tuple(cls._REFS)
+        """Each practice's key, its folder's name, such as ``clean_engineering``."""
+        return tuple(cls._registered())
 
     @classmethod
     def has(cls, key: str) -> bool:
-        return key in cls._REFS
+        return key in cls._classes
+
+    @classmethod
+    def holds(cls, practice_class: type) -> bool:
+        """Whether practice_class is one of the practices CDD ships, rather than a pattern or a practice of a project."""
+        return practice_class in cls._classes.values()
 
     @classmethod
     def practices(cls) -> tuple[PracticeGuidance, ...]:
         """The shared instance of every practice. Built once per process: building them takes about 30 ms."""
-        if len(cls._shared) < len(cls._REFS):
-            cls._shared = {practice.key: practice for practice in cls.create_all()}
+        if len(cls._shared) < len(cls._registered()):
+            PracticeCatalogue._shared = {practice.key: practice for practice in cls.create_all()}
         return tuple(cls._shared.values())
 
     @classmethod
     def practice(cls, key: str) -> PracticeGuidance:
         """The shared instance of the practice ``key``; read it, do not change its current fidelity or format."""
-        if key not in cls._REFS:
-            raise UnknownPractice(key, cls.keys())
+        cls.practice_class(key)
         cls.practices()
         return cls._shared[key]
 
@@ -76,32 +88,25 @@ class PracticeCatalogue:
     @classmethod
     def create_all(cls, **arguments: object) -> list[PracticeGuidance]:
         """A new instance of every practice, in catalogue order, made with arguments, such as ``fidelity=None``; each
-        practice that extends another holds that one of the same set. A session makes its practices this way, so its
-        graph and its actions work with the same objects."""
-        made = {key: cls.practice_class(key)(**arguments) for key in cls._REFS}
+        holds the others of the same set it works with, such as the practice it extends. A session makes its practices
+        this way, so its graph and its actions work with the same objects."""
+        made = {key: practice_class(**arguments) for key, practice_class in cls._registered().items()}
         for practice in made.values():
-            if practice.extends:
-                practice.extended = made[practice.extends]
+            practice.hold_set(made)
         return list(made.values())
 
     @classmethod
     def practice_class(cls, key: str) -> type[PracticeGuidance]:
-        ref = cls._REFS.get(key)
-        if ref is None:
+        practice_class = cls._registered().get(key)
+        if practice_class is None:
             raise UnknownPractice(key, cls.keys())
-        module, name = ref.split(":")
-        return getattr(importlib.import_module(module), name)
+        return practice_class
 
     @classmethod
     def key_of(cls, toolset_ref: str) -> str | None:
         """The key of the practice whose toolset ref is toolset_ref, such as ``stories`` for its ``module:Class``; none
         for a ref that is no practice CDD has."""
-        return next((key for key, ref in cls._REFS.items() if ref == toolset_ref), None)
-
-    @classmethod
-    def module_of(cls, key: str) -> str:
-        """The Python package that holds the practice ``key``, such as ``cdd_guidance.practices.stories``."""
-        return cls._REFS[key].split(":")[0].rsplit(".", 1)[0]
+        return next((key for key, ref in cls._refs().items() if ref == toolset_ref), None)
 
     @classmethod
     def practice_named(cls, slug: str) -> PracticeGuidance | None:
@@ -118,19 +123,30 @@ class PracticeCatalogue:
         as ``stories``; that ref with the fidelity's name for a fidelity's slug, such as ``stories-story-map``, or for a
         fidelity's bare name, such as ``story_map`` or ``story-map``. A bare name two practices share, such as
         ``model``, is the first practice's in catalogue order. None when no practice goes by slug."""
-        for key in cls._REFS:
-            practice = cls.practice(key)
+        refs = cls._refs()
+        for practice in cls.practices():
             if practice.slug == slug:
-                return cls._REFS[key]
+                return refs[practice.key]
             fidelity = next((fidelity for fidelity in practice.fidelities if fidelity.slug == slug), None)
             if fidelity is not None:
-                return {"toolset": cls._REFS[key], "fidelity": fidelity.name}
+                return {"toolset": refs[practice.key], "fidelity": fidelity.name}
         return cls._bare_fidelity_ref(slug)
 
     @classmethod
     def _bare_fidelity_ref(cls, name: str) -> dict[str, str] | None:
-        for key in cls._REFS:
-            for fidelity in cls.practice(key).fidelities:
+        refs = cls._refs()
+        for practice in cls.practices():
+            for fidelity in practice.fidelities:
                 if name in (fidelity.name, fidelity.name.replace("_", "-")):
-                    return {"toolset": cls._REFS[key], "fidelity": fidelity.name}
+                    return {"toolset": refs[practice.key], "fidelity": fidelity.name}
         return None
+
+    @classmethod
+    def _refs(cls) -> dict[str, str]:
+        return {key: str(ToolsetReference.of(practice_class)) for key, practice_class in cls._registered().items()}
+
+    @classmethod
+    def _registered(cls) -> dict[str, type[PracticeGuidance]]:
+        if not cls._classes:
+            raise PracticesNotRegistered()
+        return cls._classes

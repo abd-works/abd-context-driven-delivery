@@ -732,7 +732,6 @@ class PracticeNodes:
         self._edge_pairs: dict[str, tuple[tuple[int, int], set[tuple[int, int]]]] = {}
         self._edges_by_parent: dict[str, tuple[tuple[int, int], dict[int, list[Edge]]]] = {}
         self._direct_parents: tuple[tuple, dict[int, Node]] | None = None
-        self._schema = None
 
     ## where the practice is read from, and its root
 
@@ -954,12 +953,8 @@ class PracticeNodes:
 
     @property
     def schema(self):
-        """The practice's schema, with the graph's pattern overlays applied: made when first asked, and kept while the
-        graph applies the same overlays."""
-        overlays = tuple(self.graph.pattern_overlays)
-        if self._schema is None or self._schema.overlays != overlays:
-            self._schema = PracticeSchema(self.practice, overlays)
-        return self._schema
+        """The practice's schema, with the graph's pattern overlays applied, which the practice itself holds."""
+        return PracticeSchema.load(self.practice, tuple(self.graph.pattern_overlays))
 
     @property
     def overlay_checks(self) -> dict:

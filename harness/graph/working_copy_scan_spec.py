@@ -17,6 +17,7 @@ from harness.installation.destination import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
 from harness.graph.graph import Graph
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 # Five parameters, over the three limit-operation-parameters allows.
 _OVER_LIMIT = "export class {name} {{\n  place(a: string, b: string, c: string, d: string, e: string): void {{}}\n}}\n"

@@ -16,6 +16,8 @@ from mamba import after, before, context, description, it
 from harness.agent_tools.agent_tools import AgentToolSet
 from space.session import Session, Sessions
 from space.session.file_manager import FileManager, PathOutsideRootsError
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 ORDER = b"export class Order {}\n"
 

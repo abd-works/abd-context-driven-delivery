@@ -690,11 +690,6 @@ class CatalogNotGenerated(Exception):
 CATALOG_GENERATION_TIMEOUT_SECONDS = 600
 _CATALOG_GENERATOR_MODULE = "harness.catalog_generator.generate_cdd_catalog"
 _CATALOG_GENERATOR_FILE = Path("harness", "catalog_generator", "generate_cdd_catalog.py")
-# The folders a CDD checkout imports its guidance from, as its specs and its own catalog generator put them on the path.
-_CDD_IMPORT_FOLDERS = (
-    ".", "tools", "cdd_guidance", "cdd_guidance/practices", "cdd_guidance/actions",
-    "cdd_guidance/builders", "cdd_guidance/patterns",
-)
 
 
 class CatalogProject:
@@ -759,7 +754,7 @@ class CatalogProject:
         """Import path for the generator: only the project's folders, so no module is read from the checkout serving
         these tools. The generator regenerates the checkout it is imported from, so it needs no project named."""
         environment = dict(os.environ)
-        environment["PYTHONPATH"] = os.pathsep.join(str(self.root / folder) for folder in _CDD_IMPORT_FOLDERS)
+        environment["PYTHONPATH"] = RepositoryToolsets(self.root).pythonpath()
         environment["PYTHONIOENCODING"] = "utf-8"
         return environment
 

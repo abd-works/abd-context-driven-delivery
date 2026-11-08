@@ -36,9 +36,9 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    from harness.installation.bootstrap import ensure_import_path
+    from harness.installation.repository_toolsets import RepositoryToolsets
 
-    ensure_import_path(_REPO)
+    RepositoryToolsets(_REPO).ensure_import_path()
     work = Path(
         args.workpath
         or os.environ.get("CDD_PROJECT")
