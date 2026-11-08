@@ -6,6 +6,7 @@ from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
+from cdd_guidance.practices.ddd.model.graph_reading import DddReading
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap, DomainNode
 from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS
@@ -76,8 +77,6 @@ class Ddd(PracticeGuidance):
         """Bounded contexts come from the folders that hold ``.context/bounded-context.md``, aggregates from the folders
         that hold domain classes, and building blocks from the classes Clean Engineering read, each seen through the DDD
         stereotype its declaration or name gives it."""
-        from cdd_guidance.practices.ddd.model.graph_reading import DddReading
-
         DddReading(self).read()
 
     def _parse_content(self, source_format: str, content):

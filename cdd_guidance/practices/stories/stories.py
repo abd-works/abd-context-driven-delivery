@@ -10,6 +10,7 @@ from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from harness.markdown.format import Format
 
+from cdd_guidance.practices.stories.model.graph_reading import StoriesReading, StoryLinks, align_story_node
 from cdd_guidance.practices.stories.model.sketch.sketch_story_model import SketchStoryModel
 from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, is_story_map_file
 from cdd_guidance.practices.stories.model.story_model import StoryNode
@@ -104,22 +105,16 @@ class Stories(PracticeGuidance):
         return self.graph.loaded(Ddd) if self.graph is not None else None
 
     def align_node(self, node) -> None:
-        from cdd_guidance.practices.stories.model.graph_reading import align_story_node
-
         align_story_node(node)
 
     def read_working_copy(self) -> None:
         """Read the story tests, or the story maps when there are none, and write the story map onto its graph."""
-        from cdd_guidance.practices.stories.model.graph_reading import StoriesReading
-
         self.recorded_map = StoriesReading(self).story_map()
         self.graph.report_progress("stories · record")
         self.recorded_map.record(self, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
 
     def link_to_other_practices(self) -> None:
         """Link each step to the operations it calls and each example to the classes and properties it shows."""
-        from cdd_guidance.practices.stories.model.graph_reading import StoryLinks
-
         if self.object_model is not None and self.recorded_map is not None:
             StoryLinks(self, self.object_model).link()
 

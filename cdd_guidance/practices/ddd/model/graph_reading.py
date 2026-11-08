@@ -7,17 +7,14 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from harness.graph.graph import Node
+from harness.guidance.guidance import PracticeGuidance
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext
 from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
-
-if TYPE_CHECKING:
-    from cdd_guidance.practices.ddd.ddd import Ddd
 
 # A helper class in a test folder is never a domain aggregate, whatever its name suggests.
 _TEST_FOLDERS = ("tests/", "test-utils/")
@@ -144,7 +141,7 @@ class DddReading:
     the aggregates its folders hold, and a building block for each class the Clean Engineering practice it extends
     read."""
 
-    def __init__(self, practice: Ddd) -> None:
+    def __init__(self, practice: PracticeGuidance) -> None:
         self.practice = practice
         self.graph = practice.graph
         self.root = Path(practice.in_graph.source_root)

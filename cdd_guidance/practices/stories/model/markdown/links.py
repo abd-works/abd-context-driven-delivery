@@ -9,9 +9,11 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, List, Optional
 
 from harness.annotations.name import Name
+
+from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles
 
 _LINK = re.compile(r"\[([^\]\n]+)\]\(([^)\s]*)\)")
 _STORY_FILE_SUFFIXES = ("_story.test.md", "_story.spec.md")
@@ -42,14 +44,12 @@ def _relative(target: Path, base: Path) -> str:
         return target.as_posix()
 
 
-def _walk(root: Path, names: Iterable[str] = (), suffixes: Iterable[str] = ()) -> List[Path]:
-    names, suffixes = set(names), tuple(suffixes)
+def _story_files_below(root: Path) -> List[Path]:
+    """Each story's own markdown file under root: `*_story.test.md` or `*_story.spec.md`."""
     found: List[Path] = []
     for folder, dirs, files in os.walk(root):
         dirs[:] = sorted(d for d in dirs if d not in _SKIP_DIRS)
-        for file in sorted(files):
-            if file in names or (suffixes and file.endswith(suffixes)):
-                found.append(Path(folder) / file)
+        found.extend(Path(folder) / file for file in sorted(files) if file.endswith(_STORY_FILE_SUFFIXES))
     return found
 
 
@@ -87,16 +87,14 @@ class StoryMapLinks:
 
     @classmethod
     def from_workspace(cls, story_map, root: Path | str) -> "StoryMapLinks":
-        """The links of story_map placed in the folder root: its ``story-map.md`` and every ``*_story.test.md`` /
-        ``*_story.spec.md`` under root, written relative to the folder that holds ``story-map.md``, where the rendered
-        story map sits beside it."""
+        """The links of story_map placed in the folder root: the markdown story map *StoryMapFiles* finds there and
+        every ``*_story.test.md`` / ``*_story.spec.md`` under root, written relative to the folder that holds that
+        story map, where the rendered story map sits beside it."""
         root = Path(root).resolve()
-        map_file = root / "story-map.md"
-        if not map_file.is_file():
-            found = _walk(root, names=("story-map.md",))
-            map_file = found[0] if found else None
+        maps = StoryMapFiles(root).markdown_below()
+        map_file = maps[0] if maps else None
         story_files: Dict[str, Path] = {}
-        for path in _walk(root, suffixes=_STORY_FILE_SUFFIXES):
+        for path in _story_files_below(root):
             stem = path.name
             for suffix in _STORY_FILE_SUFFIXES:
                 stem = stem.removesuffix(suffix)
