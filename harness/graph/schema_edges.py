@@ -10,11 +10,9 @@ named for the field.
 from __future__ import annotations
 
 import re
-from functools import cached_property, lru_cache
+from functools import cached_property
 
 from harness.graph.edge import EdgeType
-from harness.graph.pattern_overlays import PatternOverlays
-from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.schema import Schema
 from harness.annotations.name import Name
 
@@ -109,16 +107,18 @@ class SchemaField:
 
 
 class SchemaFields:
-    """Every relationship field in every practice's schema and every pattern's practice schemas."""
+    """Every relationship field in the schema of each practice one graph holds, and in the schema every pattern keeps
+    for each of those practices, applied or not."""
 
     def __init__(self, fields: tuple[SchemaField, ...]) -> None:
         self.fields = fields
 
     @classmethod
-    @lru_cache(maxsize=1)
-    def load(cls) -> SchemaFields:
-        schemas = [practice.schema_types for practice in PracticeCatalogue.practices()]
-        schemas.extend(Schema.load(path) for path in PatternOverlays().practice_schema_files)
+    def of(cls, practices, overlays) -> SchemaFields:
+        """The fields of practices' schemas and of the schema each overlay keeps for one of them (``practice_file``)."""
+        schemas = [practice.schema_types for practice in practices]
+        pattern_files = (overlay.practice_file(practice.key, "schema.yaml") for overlay in overlays for practice in practices)
+        schemas.extend(Schema.load(path) for path in sorted(path for path in pattern_files if path.is_file()))
         return cls(tuple(field for schema in schemas for field in cls._fields_of(schema)))
 
     def inverses(self, owner_type: str, target_type: str, forward: str) -> list[str]:
@@ -193,31 +193,31 @@ class NodeEvidence:
 
 
 class SchemaEdges:
-    """The schema relationship edges between the model objects on one graph."""
+    """The schema relationship edges between the model objects on one graph, which the graph makes once and keeps. It
+    reads the schemas' relationship fields the first time it records an edge, and the model objects again on each
+    sync, since the graph holds other objects by then."""
 
     def __init__(self, graph) -> None:
         self.graph = graph
+        self.nodes: list = []
+        self._by_type: dict[str, list] = {}
 
     @cached_property
-    def nodes(self) -> list:
-        """The model objects on the graph: nodes that build their own edges."""
-        found = []
-        for practice in self.graph.practices.values():
-            found.extend(node for node in practice.in_graph.nodes() if hasattr(node, "semantic_type") and hasattr(node, "subtree"))
-        return found
-
-    @cached_property
-    def _by_type(self) -> dict[str, list]:
-        found: dict[str, list] = {}
-        for node in self.nodes:
-            found.setdefault(node.semantic_type(), []).append(node)
-        return found
+    def fields(self) -> SchemaFields:
+        """The relationship fields of the graph's practices and of every pattern's schemas for them."""
+        return SchemaFields.of(list(self.graph.every_practice.values()), self.graph.every_graph_overlay)
 
     def sync(self) -> None:
-        """Record every schema relationship edge between the model objects already on the graph."""
+        """Record every schema relationship edge between the model objects on the graph now."""
+        self.nodes = [
+            node for practice in self.graph.practices.values() for node in practice.in_graph.nodes() if hasattr(node, "semantic_type") and hasattr(node, "subtree")
+        ]
+        self._by_type = {}
+        for node in self.nodes:
+            self._by_type.setdefault(node.semantic_type(), []).append(node)
         if len(self.nodes) < 2:
             return
-        schema = SchemaFields.load()
+        schema = self.fields
         for owner in self.nodes:
             for field in (field for field in schema.fields if field.links_from(owner)):
                 for target in self._linked_targets(field, owner):

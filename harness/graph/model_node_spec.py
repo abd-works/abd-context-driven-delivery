@@ -7,17 +7,20 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from expects import be, be_none, equal, expect
+from expects import be, be_none, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from harness.graph import model_node
-from harness.graph.model_node import ModelReferences, schema_sync_paused
+from harness.graph.model_node import ModelDetached, ModelReferences, schema_sync_paused
 from harness.graph.graph import Graph
+from harness.graph.spec_support import GraphsMade
 
 from cdd_guidance.practices.stories.model.story_model import Epic, Increment, Story, StoryModel
 from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.ux.model.nodes import Region, Screen
 from cdd_guidance.practices.ux.ux import Ux
+
+
 
 
 with description("a model object built without a graph"):
@@ -39,13 +42,26 @@ with description("a model object built without a graph"):
         with it("should keep the source it already had"):
             expect(self.region.has_source_file).to(equal(False))
 
-    with context("that holds parts and is asked for its graph"):
+    with context("that is asked for its graph"):
+        with it("should refuse, naming the object no practice holds"):
+            expect(lambda: self.region.graph).to(raise_error(ModelDetached))
+
+        with it("should make no graph of its own"):
+            with GraphsMade() as graphs:
+                try:
+                    self.region.graph
+                except ModelDetached:
+                    pass
+            expect(graphs.made).to(equal(0))
+
+    with context("that holds parts and joins a practice"):
         with before.each:
+            self.graph = Graph()
             self.screen = Screen("Catalog", 0)
             self.screen.append_region(self.region)
-            self.graph = self.screen.graph
+            self.screen.join(self.graph.practice_of(Ux))
 
-        with it("should join one graph with its parts"):
+        with it("should join that practice's graph with its parts"):
             expect(self.region.graph).to(be(self.graph))
 
         with it("should record the edge to each part there"):
@@ -95,7 +111,8 @@ with description("an owner that refers to objects it does not own"):
         self.increment = Increment("First release")
         self.increment.stories.append(self.story)
         self.story_map.append_increment(self.increment)
-        self.graph = self.story_map.graph
+        self.graph = Graph()
+        self.story_map.join(self.graph.practice_of(Stories))
 
     with it("should keep a references list"):
         expect(isinstance(self.increment.stories, ModelReferences)).to(equal(True))
