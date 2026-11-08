@@ -131,6 +131,16 @@ class HookPayload(Mapping[str, Any]):
         and the next event follows a switch or a close made through MCP."""
         return self.call.session
 
+    # The IDE event and the tools that report a file the agent just edited: Cursor's file-edit event and its edit
+    # tools, and Claude Code's edit tools.
+    _EDIT_EVENTS = frozenset({"afterFileEdit"})
+    _EDIT_TOOLS = frozenset({"Write", "StrReplace", "EditNotebook", "Edit", "MultiEdit", "NotebookEdit"})
+
+    @property
+    def is_edit(self) -> bool:
+        """Whether the event reports a file the agent just edited, whichever IDE sent it."""
+        return self.hook_event_name in self._EDIT_EVENTS or self.tool_name in self._EDIT_TOOLS
+
     def edited_path(self) -> str:
         for key in ("file_path", "path", "uri"):
             value = self._fields.get(key)
@@ -283,9 +293,7 @@ class HookHandler:
         return self._pattern_enabled(pattern, payload)
 
     def _pattern_name(self) -> str:
-        toolset = self.tool.toolset
-        name = getattr(toolset, "pattern", None) or getattr(type(toolset), "pattern", None)
-        return str(name or "").strip()
+        return self.tool.toolset.pattern.strip()
 
     def _pattern_enabled(self, pattern: str, payload: HookPayload | None) -> bool:
         if payload is None:

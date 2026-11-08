@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from harness.installation.destination import data_of
+from harness.installation.data_class import data_of
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()

@@ -8,7 +8,7 @@ from typing import Any
 
 from harness.graph.saved_graph import SavedGraph
 from harness.graph.violation import Violation
-from harness.installation.destination import data_of
+from harness.installation.data_class import data_of
 
 from cdd_guidance.actions.validate.report_files import ReportFiles
 from cdd_guidance.actions.validate.graph_json_reader import violations_from_graph_json_files

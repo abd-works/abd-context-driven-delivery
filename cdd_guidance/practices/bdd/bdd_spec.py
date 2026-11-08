@@ -17,6 +17,7 @@ from mamba import context, description, it
 from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from harness.agent_tools.agent_tools import AgentInstructions
+from harness.guidance.practice_catalogue import PracticeCatalogue
 
 
 def _expanded(bdd, action_name):
@@ -27,7 +28,8 @@ def _expanded(bdd, action_name):
 
 
 def _bdd():
-    return Bdd(fidelity="development")
+    """Bdd at development fidelity, made with its set, so it holds the Clean Engineering companion of that set."""
+    return PracticeCatalogue.create("bdd", fidelity="development")
 
 
 with description("a Bdd toolset"):
@@ -47,12 +49,12 @@ with description("a Bdd toolset"):
     with context("that provides a CleanEngineering companion"):
         with context("with behavior fidelity"):
             with it("should treat the model fidelity as the companion"):
-                companion = Bdd(fidelity="behavior").fidelities.current.clean_engineering
+                companion = PracticeCatalogue.create("bdd", fidelity="behavior").fidelities.current.clean_engineering
                 expect(companion.name).to(equal("model"))
 
         with context("with development fidelity"):
             with it("should treat the code fidelity as the companion"):
-                companion = Bdd(fidelity="development").fidelities.current.clean_engineering
+                companion = PracticeCatalogue.create("bdd", fidelity="development").fidelities.current.clean_engineering
                 expect(companion.name).to(equal("code"))
 
     with context("whose guidance action is expanded"):

@@ -120,7 +120,7 @@ with description("a guidance action"):
 
         action = GuidanceAction()
         action._work_on("write the story map")
-        expect(action.guidance_text()).to(equal("write the story map"))
+        expect(action.each(lambda text: text)).to(equal(["write the story map"]))
 
     with it("should keep prose that contains a colon as guidance text"):
         from harness.guidance_actions import GuidanceAction
@@ -128,7 +128,7 @@ with description("a guidance action"):
         action = GuidanceAction()
         prose = "Three client perspectives: prospect onboarding, subscription, and active account."
         action._work_on(prose)
-        expect(action.guidance_text()).to(equal(prose))
+        expect(action.each(lambda text: text)).to(equal([prose]))
         expect(action.listed()).to(equal([]))
 
     with it("should treat a module class ref as a listed Guidance"):
@@ -249,6 +249,13 @@ with description("a guidance action"):
 
             action = GuidanceAction().for_call(_call(f"stories-story-map {self.session_word}", self.project))
             expect(action.listed()[0]).to(be(action.session.practices["stories"].guidance))
+
+        with it("should work at the session's own fidelity that the slug names"):
+            from harness.guidance_actions import GuidanceAction
+
+            action = GuidanceAction().for_call(_call(f"stories-story-map {self.session_word}", self.project))
+            own = action.session.practices["stories"].guidance.fidelities["story_map"]
+            expect(action.fidelity_of(action.listed()[0])).to(be(own))
 
         with it("should give the format it names to the fidelity it names, which keeps it"):
             from harness.guidance_actions import GuidanceAction

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 from harness.graph.violation import Violation
-from harness.installation.destination import data_of
+from harness.installation.data_class import data_of
 
 if TYPE_CHECKING:
     from harness.graph.edge import Edge

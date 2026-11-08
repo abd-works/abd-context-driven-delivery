@@ -6,7 +6,7 @@ Each context reads and writes its own lines, and each aggregate and card its own
 from __future__ import annotations
 
 from cdd_guidance.actions.sketch.sketch_outline import SketchOutline
-from harness.guidance.sketch_lens import SketchLens
+from harness.guidance.guidance import SketchLens
 from cdd_guidance.practices.ddd.model.markdown.nodes import (
     BUILD_ORDER,
     SKETCH_CONTEXT,

@@ -218,8 +218,8 @@ class Utility:
     def load_all(cls) -> list[Utility]:
         """Every toolset the installer finds in ``space`` and ``tools``, less those annotated ``@noCatalog``, in the order
         the installer finds them. A toolset that cannot be imported raises rather than leaving a silent gap."""
-        refs = [ref for ref in RepositoryToolsets(_REPO_ROOT).collect() if ref.startswith(_UTILITY_PACKAGES)]
-        classes = [getattr(importlib.import_module(module), name) for module, name in (ref.split(":") for ref in refs)]
+        references = RepositoryToolsets(_REPO_ROOT).references()
+        classes = [reference.toolset_class for reference in references if reference.module_name.startswith(_UTILITY_PACKAGES)]
         return [cls(toolset_class) for toolset_class in classes if not NoCatalog.annotates(toolset_class)]
 
     @property

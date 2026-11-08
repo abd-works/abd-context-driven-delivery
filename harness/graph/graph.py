@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Callable, ClassVar, Iterable, Iterator
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.progress import report_progress
 from harness.guidance.practice_catalogue import PracticeCatalogue, UnknownPractice
-from harness.installation.destination import data_field, language_adapter
+from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import long_call, mcp
 from harness.graph.edge import Display, Edge, EdgeType

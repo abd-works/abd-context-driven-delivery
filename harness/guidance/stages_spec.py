@@ -12,7 +12,7 @@ from mamba import description, it
 from harness.guidance.stages import REVIEW, STAGES
 from harness.guidance.action_catalogue import ActionCatalogue
 from harness.guidance.practice_catalogue import PracticeCatalogue
-from harness.installation.destination import data_of
+from harness.installation.data_class import data_of
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 

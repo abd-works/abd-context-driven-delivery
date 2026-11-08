@@ -2,7 +2,7 @@
 
 Markdown channel for the *AgentToolSet* primitive. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet* is the toolset the author marks with `@agent_toolset`; its members are *AgentTool* objects — *AgentOperation* for `@agent_tool` and *AgentInstructions* for `@agent_instructions`. Writing members out to MCP, skills, commands, rules, and hooks belongs to `harness/installation`, `harness/mcp`, and `harness/hooks`. *Mark*, *Destination*, and *Name* belong to `harness/annotations`, *Markdown* to `harness/markdown`, *Session* to `space/session`, *SubAgent* (the `sub-agent.sub_agent` operation) to `tools/sub_agent`, and *AgentToolsProbe* and *AgentToolsDiagnostics* to `harness/diagnostics`; they appear here only as names this module uses.
 
-**Out of scope:** guidance actions (`harness/guidance_actions`, Generate, Validate, …) keep their own model; *GuidanceAgentOperation* is listed only because this module defines it.
+**Out of scope:** guidance actions (`harness/guidance_actions`, Generate, Validate, …) keep their own model, including *GuidanceAgentOperation*.
 
 ---
 
@@ -16,7 +16,7 @@ Each *AgentTool* exposes `kind`, `description`, `parameters`, `response`, and `i
 - Inside an `@agent_instructions` body, `tools(...)` names operations the agent calls while following the recipe, and `instructions(...)` includes another recipe inline. A recipe that includes itself is rejected when the class is decorated.
 - *ExpansionMode* on the called toolset decides whether a nested recipe expands inline (`instructions`) or is listed as a tool to call (`tool`).
 - `@toolset_collection` on a class makes it a *ToolSetCollection*; on a property it annotates one of the toolset's collections, whose children are published as nested toolsets.
-- `@tool_subject` annotates the class method that loads the object a tool call acts on; a loader that takes `project` is handed the checkout the call names. `@noSessionLog` keeps a repeated read out of the session log.
+- `@tool_subject` annotates the class method that loads the object a tool call acts on; a loader that takes `project` is handed the checkout the call names, and one that takes `call` is handed the call itself, so the session it opens names the calling chat. `@noSessionLog` keeps a repeated read out of the session log.
 - `@subAgent` on a member puts the hand-off to a background sub-agent at the start of its description.
 - A toolset's `parameter_notes` are added after the description of every tool that takes that parameter.
 
@@ -52,7 +52,9 @@ mode: ExpansionMode
 	Invariant: value is "instructions" or "tool"
 	// classes whose tools run only through the practice or toolset that holds them; install and the hook server skip them
 parameter_notes: dict[str, str]
-	// parameter name -> note added after the description of each tool that takes it
+	// parameter name -> note added after the description of each tool that takes it; every toolset origin has one
+schema_guide(): str
+	// the schema its instructions conform to; empty unless the toolset has one, as a practice does
 is_part_of_practice: bool
 	// false; a fidelity its practice holds says true, so installs and MCP name it after its own slug in its practice's folder
 is_served_on_mcp: bool
@@ -194,16 +196,6 @@ from_claude_chat(chat_id: str): ChatPointer | None
 in_log_line(line: str): ChatPointer | None
 transcript_text(): list[str]
 
-## GuidanceAgentOperation : AgentOperation                        <!-- Md -->
-
-An `@agent_tool` on a guidance action; the call is logged as the action running in its own session.
-
-GuidanceAgentOperation(name: str, callable: Callable, toolset: AgentToolSet)
-------
-----
-log_session_invocation(call: ToolCall): None
-	-> toolset.log_running(name)
-
 ## AgentInstructions : AgentTool                                  <!-- Md -->
 
 AgentInstructions(name: str, callable: Callable, toolset: AgentToolSet)
@@ -264,6 +256,14 @@ RecipePlaceholders(arguments: dict, parameter_names: set[str], toolset: Any = No
 ----
 filled(template: str): str
 	// {{name}} from arguments, {{self.attribute}} from the toolset
+	// the arguments are the call's with each optional parameter's default (ParameterSchema.with_defaults), so a call
+	// that sends only the required arguments fills every placeholder
+
+## ExpandedRecipe (protocol)                                      <!-- Md -->
+
+What a *RecipeExpansion* asks of the operation it expands: its toolset, callable, recipe source, parameter schema,
+parent recipe, and the members and providers its lines name. *AgentInstructions* answers it, so recipe.py imports no
+toolset class.
 
 ## ToolsetMembers                                                 <!-- Md -->
 
@@ -303,10 +303,11 @@ validate(): None
 ToolSubjectLoader(toolset_class: type)
 ------
 loader: Callable | None
-	// the @tool_subject classmethod, found once, given the called project when it takes one
+	// the @tool_subject classmethod, found once, given the call's project or the call itself when it takes them
 ----
 on_subject(load, operation): Callable
-given_the_called_project(operation: Callable): Callable
+given_the_call(operation: Callable): Callable
+	// project and call left out of the signature; the tool hands them over from the ToolCall it serves (TakesFromCall)
 
 ## ExpansionMode                                                  <!-- Md -->
 

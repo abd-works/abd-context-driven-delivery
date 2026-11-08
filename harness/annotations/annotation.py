@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
+from harness.annotations.name import Name
+
 
 class AnnotationKinds:
     """Every kind of annotation defined in this process, and the channel each destination publishes to. A kind
@@ -64,6 +66,13 @@ class AnnotationKinds:
         kind = self.of_channel(channel)
         return kind.name_annotated_on(operation) if kind is not None else ""
 
+    @property
+    def installing_names(self) -> frozenset[str]:
+        """The name an author types for each kind that makes a member installable, such as ``skill``, ``mcp`` or
+        ``agent_tool``: install reads a repository's source without importing it, and finds a toolset by these names on
+        its members. A kind whose publisher this process never imported is not among them."""
+        return frozenset(kind.written_as() for kind in self._kinds if kind.installs_member())
+
     def enlisting(self, member: Any) -> bool:
         """True when a destination that enlists its members, such as a hook, annotates member."""
         return any(kind.enlists_member and kind.annotates(member) for kind in self._channels.values())
@@ -98,6 +107,17 @@ class Annotation:
     def annotates(cls, target: Any) -> bool:
         """True when this kind of annotation is on target."""
         return bool(getattr(target, cls.flag, False))
+
+    @classmethod
+    def written_as(cls) -> str:
+        """The name an author types for this kind, such as ``skill`` for *Skill*: its class name in snake case, unless
+        the kind names another, as ``agent_tool`` does for *AgentToolAnnotation*."""
+        return cls.__dict__.get("typed_name") or Name(cls.__name__).snake
+
+    @classmethod
+    def installs_member(cls) -> bool:
+        """Whether this kind on a member makes the member installable, so install counts its class as a toolset."""
+        return False
 
     @classmethod
     def companion_flags(cls) -> tuple[str, ...]:
@@ -160,6 +180,11 @@ class Destination(Annotation):
         if name is not None:
             setattr(target, f"{self.flag}_name", name)
         return target
+
+    @classmethod
+    def installs_member(cls) -> bool:
+        """A destination with a channel publishes the member it annotates there."""
+        return bool(cls.channel)
 
     @classmethod
     def name_annotated_on(cls, operation: Any) -> str:

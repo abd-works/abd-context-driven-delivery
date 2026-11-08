@@ -9,7 +9,7 @@ from expects import be_none, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.graph.graph import Graph
-from harness.installation.destination import data_of
+from harness.installation.data_class import data_of
 from harness.graph.saved_graph import SavedGraph, SavedGraphFile, SavedGraphOutdated
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 

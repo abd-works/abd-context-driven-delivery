@@ -123,7 +123,8 @@ class PromptNotify:
         from harness.agent_tools.agent_tools import AgentToolSet
         from harness.installation.repository_toolsets import RepositoryToolsets
 
-        return AgentToolSet.from_items(RepositoryToolsets.of_running_checkout().collect())
+        references = RepositoryToolsets.of_running_checkout().references()
+        return AgentToolSet.from_items([reference.toolset_class for reference in references])
 
     def show_toast(self, toast: str, workspace_roots: list[Path]) -> list[Path]:
         """Show toast in every workspace folder of the chat it is for, the toast files written. The hook server hands
