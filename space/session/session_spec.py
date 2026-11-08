@@ -20,6 +20,7 @@ import time
 from expects import be, be_a, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
+from harness.graph.graph import Graph
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HookPayload
@@ -1154,3 +1155,43 @@ with description("a session read for a board") as self:
 
         with it("should leave nothing where the file was"):
             expect(self.idea.exists()).to(equal(False))
+
+
+# One graph per session: two calls that first ask for it at once must not each make their own.
+with description("a session whose graph two calls first ask for at once"):
+    with before.each:
+        self.repo = Path(tempfile.mkdtemp())
+        session = Sessions(self.repo).current()
+        self.original = Graph.open_saved
+        self.made: list[object] = []
+        opened = self.original
+
+        def slow_open(graph, folder):
+            # A slow read of the saved graph, so both calls are inside their first ask together.
+            self.made.append(graph)
+            time.sleep(0.2)
+            return opened(graph, folder)
+
+        Graph.open_saved = slow_open
+        gate = threading.Barrier(2)
+        self.graphs: list[object] = []
+
+        def ask() -> None:
+            gate.wait()
+            self.graphs.append(session.graph)
+
+        callers = [threading.Thread(target=ask) for _ in range(2)]
+        for caller in callers:
+            caller.start()
+        for caller in callers:
+            caller.join()
+
+    with after.each:
+        Graph.open_saved = self.original
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    with it("should give both calls the one graph"):
+        expect(self.graphs[0]).to(be(self.graphs[1]))
+
+    with it("should make the graph once"):
+        expect(len(self.made)).to(equal(1))
