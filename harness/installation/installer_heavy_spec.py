@@ -897,7 +897,7 @@ with description("a practice guidance class") as self:
                 toolset = type(
                     "Practice",
                     (),
-                    {"install_folder": Path("cdd_guidance/practices/sample_tool"), "tools": tools},
+                    {"install_folder": Path("cdd_guidance/practices/sample_tool"), "tools": tools, "is_part_of_practice": False},
                 )()
                 expect(
                     writer.relative_path(toolset, "instructions").as_posix()
@@ -1041,6 +1041,7 @@ with description("a practice guidance class") as self:
                         "install_folder": Path("cdd_guidance/practices/sample_tool/sketch"),
                         "tools": tools,
                         "practice_guidance": practice,
+                        "is_part_of_practice": True,
                         "slug": "sample-tool-sketch",
                     },
                 )()
@@ -1061,6 +1062,7 @@ with description("a practice guidance class") as self:
                         "install_folder": Path("cdd_guidance/practices/sample_tool/spec"),
                         "tools": tools,
                         "practice_guidance": practice,
+                        "is_part_of_practice": True,
                         "slug": "sample-tool-spec",
                     },
                 )()

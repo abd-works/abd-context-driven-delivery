@@ -31,18 +31,23 @@ class Drawio:
     """
 
     def __init__(self, practice: CleanEngineering | None = None) -> None:
-        # The Clean Engineering practice whose formats read the source a diagram is drawn from. The installer makes
-        # this toolset on its own to list its tools, so it then reads through a Clean Engineering practice of its own.
-        if practice is None:
-            from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-
-            practice = CleanEngineering()
-        self.practice = practice
+        # The Clean Engineering practice whose formats read the source a diagram is drawn from: the practice that
+        # composes this toolset, or one made for it when the installer or the MCP host makes the toolset on its own.
+        self._practice = practice
         self.source_format = "markdown"
         # The one Draw.io model this toolset writes; its `previous` and `keep_positioning` are the layout policy.
         self.channel = DrawIOCleanEngineeringModel()
         self.scan_root = None
         self.rule = None
+
+    @property
+    def practice(self) -> CleanEngineering:
+        """The Clean Engineering practice this toolset reads sources through, made once when no practice composed it."""
+        if self._practice is None:
+            from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+
+            self._practice = CleanEngineering()
+        return self._practice
 
     @property
     def module_dir(self) -> Path:
