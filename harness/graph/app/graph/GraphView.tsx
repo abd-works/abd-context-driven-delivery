@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { KindMark } from '../kind-mark';
 import type { ExplorerEntryData } from '@cdd/harness/graph/graph';
-import { ruleHits, selectionForRule, type GraphSelection } from './graph-selection';
+import { childrenOf, isRule, ruleHits, selectionForRule, type GraphSelection, type TreeItem } from './graph-selection';
 import { queryProgress } from './query-progress';
 
 type GraphViewProps = {
@@ -102,22 +102,22 @@ function TreeNode({
   onSelect,
   ownerId,
 }: {
-  node: ExplorerEntryData;
+  node: TreeItem;
   selectedId: string;
   activeRule: string;
   onSelect: (selection: GraphSelection) => void;
   ownerId?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const children = node.children ?? [];
+  const children = childrenOf(node);
   const rule = node.type === 'Rule';
   const rulesHolder = node.type === 'rules';
   const selected = rule ? ownerId === selectedId && node.name === activeRule : node.node_id === selectedId;
-  const violating = (node.children ?? []).some(
-    (child) => child.name === 'rules' && (child.children ?? []).some((hit) => hit.status === 'violating'),
+  const violating = children.some(
+    (child) => child.name === 'rules' && childrenOf(child).some((hit) => isRule(hit) && hit.status === 'violating'),
   );
-  const hits = ruleHits(node);
-  const violationHint = rule && node.status === 'violating' && hits.length > 0 ? hits.map((hit) => hit.message).join('\n') : undefined;
+  const hits = isRule(node) ? ruleHits(node) : [];
+  const violationHint = isRule(node) && node.status === 'violating' && hits.length > 0 ? hits.map((hit) => hit.message).join('\n') : undefined;
   return (
     <li
       data-node-id={node.node_id}
@@ -142,12 +142,12 @@ function TreeNode({
         )}
         <button
           type="button"
-          className={[selected ? 'selected' : '', rule ? `rule-status ${node.status ?? ''}` : '', violating ? 'tree-violating' : '']
+          className={[selected ? 'selected' : '', isRule(node) ? `rule-status ${node.status}` : '', violating ? 'tree-violating' : '']
             .filter(Boolean)
             .join(' ')}
           title={violationHint}
           data-testid={rule ? (violationHint ? 'tree-violation-rule' : 'tree-rule') : undefined}
-          onClick={() => onSelect(rule ? selectionForRule(ownerId || node.node_id, node) : { nodeId: node.node_id })}
+          onClick={() => onSelect(rule && isRule(node) ? selectionForRule(ownerId || node.node_id, node) : { nodeId: node.node_id })}
         >
           <KindMark kind={rule ? 'Rule' : rulesHolder ? 'Rules' : node.type} isFile={false} />
           <span className="node-name">{node.name}</span>

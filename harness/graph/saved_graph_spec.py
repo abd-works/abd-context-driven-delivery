@@ -10,7 +10,7 @@ from mamba import after, before, context, description, it
 
 from harness.graph.graph import Graph
 from harness.graph.spec_support import GraphsMade
-from harness.installation.destination import data_of
+from harness.installation.data_class import data_of
 from harness.graph.saved_graph import SavedGraph, SavedGraphFile, SavedGraphOutdated
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's overlays

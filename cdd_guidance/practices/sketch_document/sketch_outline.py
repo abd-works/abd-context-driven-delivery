@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 
 from harness.guidance.practice_catalogue import PracticeCatalogue
-from harness.guidance.sketch_lens import SketchLens
+from harness.guidance.guidance import SketchLens
 
 
 _HORIZONTAL_RULES = {"---", "***", "___"}

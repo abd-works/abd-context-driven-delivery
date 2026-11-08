@@ -9,7 +9,8 @@ from typing import TYPE_CHECKING
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
-from harness.installation.destination import data_field, identity, language_adapter
+from harness.installation.data_class import data_field, identity, language_adapter
+from harness.markdown.format import Format
 from harness.mcp.mcp_server import mcp
 from space.kanban.board import (
     BACKLOG_COLUMN,
@@ -677,8 +678,9 @@ class FidelityProgress:
     @agent_tool
     @noSessionLog
     def files(self) -> dict[str, list[FileEntry]]:
-        """List the files this fidelity declares by format in its ticket's session, each with its path from the project and whether it exists. A pattern lists the files the ticket worked on, not every match in the repository."""
-        return self._fidelity.files()
+        """List the files this fidelity declares by format in its ticket's session, each with its path from the project and whether it exists, formats in the order files are shown (``Format.file_order``: markdown, code, diagrams). A pattern lists the files the ticket worked on, not every match in the repository."""
+        files = self._fidelity.files()
+        return dict(sorted(files.items(), key=lambda formats: Format(formats[0]).file_order))
 
     def with_violations(self) -> FidelityProgress:
         """This progress with its latest validate failed, so validate is to do again; a person's review stands."""

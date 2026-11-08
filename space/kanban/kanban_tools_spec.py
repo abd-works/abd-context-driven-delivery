@@ -17,7 +17,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from harness.chat.chat import Chat  # noqa: E402
-from harness.installation.destination import DataClass, data_of  # noqa: E402
+from harness.installation.data_class import DataClass, data_of  # noqa: E402
 from space.kanban.backlog_item import BacklogItem  # noqa: E402
 from space.kanban.board import Stage  # noqa: E402
 from harness.graph.violation import Violation  # noqa: E402

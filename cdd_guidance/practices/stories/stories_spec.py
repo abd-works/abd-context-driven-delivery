@@ -11,10 +11,11 @@ for _cat in ("cdd_guidance/practices", "tools"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_true, contain, equal, expect, raise_error
+from expects import be, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from cdd_guidance.practices.stories.stories import Stories
+from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.installation.ide_layout import IdeLayout
 
@@ -173,31 +174,30 @@ with description("Stories"):
             )
 
     with context("that provides a CleanEngineering companion"):
-        with it("should pass a code format through to the companion"):
-            stories = Stories(fidelity="acceptance_tests", format="typescript")
-            companion = stories.fidelities.current.clean_engineering
-            expect(companion.format).to(equal("typescript"))
+        with it("should hold the code fidelity of its own set's Clean Engineering as the companion"):
+            stories = PracticeCatalogue.create("stories", fidelity="acceptance_tests", format="typescript")
+            expect(stories.fidelities.current.clean_engineering).to(be(stories.companion.fidelities["code"]))
 
-        with it("should pass python through unchanged"):
-            stories = Stories(fidelity="acceptance_tests", format="python")
-            companion = stories.fidelities.current.clean_engineering
-            expect(companion.format).to(equal("python"))
+        with it("should join the companion's instructions to its own while it works in a code format"):
+            stories = PracticeCatalogue.create("stories", fidelity="acceptance_tests", format="typescript")
+            expect(stories.fidelities.current.companion_instructions).to(contain("Write working production code"))
 
-        with it("should follow the code format the practice changes to after the companion is made"):
-            stories = Stories(fidelity="acceptance_tests", format="python")
-            companion = stories.fidelities.current.clean_engineering
-            stories.format = "typescript"
-            expect(companion.format).to(equal("typescript"))
+        with it("should leave the companion in its own format while it writes TypeScript"):
+            stories = PracticeCatalogue.create("stories", fidelity="acceptance_tests", format="typescript")
+            expect(stories.fidelities.current.clean_engineering.format).to(equal("python"))
 
         with it("should leave the companion's own practice in its own format"):
-            stories = Stories(fidelity="acceptance_tests", format="typescript")
+            stories = PracticeCatalogue.create("stories", fidelity="acceptance_tests", format="typescript")
             companion = stories.fidelities.current.clean_engineering
             expect(companion.practice_guidance.format).not_to(equal("typescript"))
 
         with it("should fall back to CE's own default for a non-code format"):
-            stories = Stories(fidelity="acceptance_tests", format="markdown")
+            stories = PracticeCatalogue.create("stories", fidelity="acceptance_tests", format="markdown")
             companion = stories.fidelities.current.clean_engineering
             expect(companion.default_format).to(equal("python"))
+
+        with it("should have no companion when made apart from any set"):
+            expect(Stories(fidelity="acceptance_tests").fidelities.current.clean_engineering).to(equal(None))
 
     with context("that does not own kit lifecycle actions"):
         with it("should not expose generate, validate, satisfy, repair, grill, sketch, or iterate"):
@@ -230,7 +230,7 @@ with description("Stories"):
             expect("#### Scaffold" in Stories(fidelity="story_map").scoped_markdown()).to(be_true)
 
         with it("should include the Clean Engineering companion's instructions"):
-            prose = _expanded(Stories(fidelity="acceptance_tests"), "instructions")
+            prose = _expanded(PracticeCatalogue.create("stories", fidelity="acceptance_tests"), "instructions")
             expect("Write working production code" in prose).to(be_true)
 
         with it("should NOT inline CleanEngineering generate instructions"):

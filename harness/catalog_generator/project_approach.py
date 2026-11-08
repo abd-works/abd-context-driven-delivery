@@ -14,7 +14,8 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from harness.catalog_generator.catalog_examples import CatalogFidelity, ProjectExampleSources
-from harness.catalog_generator.catalog_generator import CatalogPractice, GitCitation
+from harness.catalog_generator.catalog_practice import CatalogPractice
+from harness.catalog_generator.git_citation import GitCitation
 from harness.process.git import RepoConnectError
 
 # Where a project keeps the examples it chose for its approach page.
@@ -106,14 +107,11 @@ class ProjectFiles:
             return ""
 
     def _fidelity_at(self, practice_key: str, stage: str) -> CatalogFidelity | None:
-        return next(
-            (
-                shown
-                for practice in self.practices if practice.key == practice_key
-                for shown in practice.board_fidelities if shown.stage == stage
-            ),
-            None,
-        )
+        """The board fidelity a saved or typed mapping names by its practice's key and its stage: the one place the
+        names a person wrote are turned back into the fidelity they mean."""
+        practice = next((practice for practice in self.practices if practice.key == practice_key), None)
+        shown = practice.fidelity_at(stage) if practice is not None else None
+        return shown if shown is not None and shown.column is not None else None
 
     def _may_be_example(self, path: Path) -> bool:
         if not path.is_file() or path.name.startswith(".") or path.suffix.lower() in _NOT_EXAMPLE_SUFFIXES:
@@ -182,17 +180,18 @@ class ProjectApproach:
     def staged_into(self, out_root: Path) -> ProjectExampleSources:
         """Copy each artifact into ``out_root/examples/{practice}`` under the board label of its fidelity, so every
         project's examples land under the same names."""
-        staged: dict[tuple[str, str], Path] = {}
+        staged: dict[CatalogFidelity, Path] = {}
         for shown, source in self.examples.items():
             if not Path(source).is_file():
                 continue
-            practice_key, stage = self._place_of(shown)
+            practice_key, _stage = self._place_of(shown)
             name = f"{shown.label}{Path(source).suffix.lower()}"
             folder = Path(out_root) / "examples" / practice_key
             folder.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, folder / name)
-            staged[(practice_key, stage)] = Path("examples") / practice_key / name
+            staged[shown] = Path("examples") / practice_key / name
         return ProjectExampleSources(staged=staged)
 
     def _place_of(self, shown: CatalogFidelity) -> tuple[str, str]:
+        """The practice key and stage the saved manifest and the staged folder name the fidelity by."""
         return shown.fidelity.practice_guidance.key, shown.stage

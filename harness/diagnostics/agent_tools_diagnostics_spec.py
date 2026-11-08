@@ -209,3 +209,16 @@ with description("mcp tools diagnostics"):
 
         with it("should report the probe red"):
             expect(self.report.split("\n")[0]).to(equal("!red"))
+
+with description("the agent tools diagnostics tool's description"):
+    with before.all:
+        self.description = AgentToolsDiagnostics().tools["agent_tools_diagnostics"].docstring
+
+    with it("should name every operation the light phase only pings"):
+        expect([name for name in agent_tools_probe._SKIP_INVOKE if name not in self.description]).to(equal([]))
+
+    with it("should name every tool prefix the light phase leaves alone"):
+        expect([prefix for prefix in agent_tools_probe._INVOKE_SKIP_PREFIXES if prefix not in self.description]).to(equal([]))
+
+    with it("should name no one IDE's folder as where the report is"):
+        expect(".cursor/diagnostics.json" in self.description).to(equal(False))

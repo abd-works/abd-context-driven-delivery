@@ -14,7 +14,7 @@ _REPO = Path(__file__).resolve().parents[2]
 RepositoryToolsets(_REPO).ensure_import_path()
 
 from harness.agent_tools.agent_tools import AgentToolSet  # noqa: E402
-from harness.installation.destination import (  # noqa: E402
+from harness.installation.data_class import (  # noqa: E402
     DataClass,
     Identity,
     ReferenceWithoutIdentityError,

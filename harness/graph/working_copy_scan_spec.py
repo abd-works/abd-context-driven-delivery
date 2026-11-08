@@ -13,7 +13,7 @@ for path in (_HERE, _REPO):
         sys.path.insert(0, str(path))
 
 from expects import be_above, contain, equal, expect
-from harness.installation.destination import data_of  # noqa: E402
+from harness.installation.data_class import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
 from harness.graph.graph import Graph

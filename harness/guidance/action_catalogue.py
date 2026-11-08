@@ -4,14 +4,19 @@ from __future__ import annotations
 
 import inspect
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Protocol
+from typing import Any, ClassVar, Iterator, Protocol
 
-from harness.agent_tools.agent_tools import InstallDestination, ToolsetReference
+from harness.agent_tools.agent_tools import InstallDestination
 from harness.installation.files import Skill  # noqa: F401 - defining Skill registers the skill channel this reads
 from harness.annotations.annotation import annotation_kinds
 
-if TYPE_CHECKING:
-    from harness.guidance.guidance import FidelityGuidance
+class WorkedFidelity(Protocol):
+    """The fidelity an action runs on, as this module names it: guidance.py's *WorkedFidelity* answers it. Naming only
+    what a fidelity is here keeps the catalogue from importing the guidance that holds it."""
+
+    @property
+    def slug(self) -> str: ...
+
 
 class ActionRunner(Protocol):
     """How an action runs on one fidelity. The framework names no action class: the module that defines how actions
@@ -20,7 +25,7 @@ class ActionRunner(Protocol):
     def works_on_fidelities(self, action: Action) -> bool:
         """Whether action works on the guidance a caller names, so it can run on a fidelity."""
 
-    def run(self, action: Action, fidelity: FidelityGuidance, arguments: dict[str, Any]) -> Any:
+    def run(self, action: Action, fidelity: WorkedFidelity, arguments: dict[str, Any]) -> Any:
         """Run action on fidelity, in the session its practice works in, with arguments."""
 
 
@@ -43,12 +48,6 @@ class Action:
         return self._toolset_class
 
     @property
-    def toolset_ref(self) -> str:
-        """The toolset as a toolset ref names it, by its module's full name, such as
-        ``cdd_guidance.actions.generate.generate:Generate``."""
-        return str(ToolsetReference.of(self._toolset_class))
-
-    @property
     def operation(self):
         return vars(self._toolset_class)[self._name]
 
@@ -57,7 +56,7 @@ class Action:
         """The toolset's own folder, which holds its guide and module context."""
         return Path(inspect.getfile(self._toolset_class)).resolve().parent
 
-    def run_on(self, fidelity: FidelityGuidance, **arguments: Any) -> Any:
+    def run_on(self, fidelity: WorkedFidelity, **arguments: Any) -> Any:
         """Run this action on fidelity with arguments, through the runner the actions registered."""
         return ActionCatalogue.runner().run(self, fidelity, arguments)
 
@@ -75,7 +74,7 @@ class ActionsNotRegistered(LookupError):
 class FidelityAction:
     """One action held for one fidelity, which a caller runs as ``fidelity.actions.generate(format="drawio")``."""
 
-    def __init__(self, action: Action, fidelity: FidelityGuidance) -> None:
+    def __init__(self, action: Action, fidelity: WorkedFidelity) -> None:
         self.action = action
         self.fidelity = fidelity
 
@@ -90,7 +89,7 @@ class FidelityAction:
 class FidelityActions:
     """The actions that work on one fidelity, each held for it and made once, by the action's name."""
 
-    def __init__(self, fidelity: FidelityGuidance) -> None:
+    def __init__(self, fidelity: WorkedFidelity) -> None:
         self._held = {action.name: FidelityAction(action, fidelity) for action in ActionCatalogue.fidelity_actions()}
 
     def __getattr__(self, name: str) -> FidelityAction:

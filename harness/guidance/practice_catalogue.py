@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from harness.agent_tools.agent_tools import ToolsetReference
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import PracticeGuidance
@@ -57,11 +56,6 @@ class PracticeCatalogue:
         return key in cls._classes
 
     @classmethod
-    def holds(cls, practice_class: type) -> bool:
-        """Whether practice_class is one of the practices CDD ships, rather than a pattern or a practice of a project."""
-        return practice_class in cls._classes.values()
-
-    @classmethod
     def practices(cls) -> tuple[PracticeGuidance, ...]:
         """The shared instance of every practice. Built once per process: building them takes about 30 ms."""
         if len(cls._shared) < len(cls._registered()):
@@ -78,11 +72,19 @@ class PracticeCatalogue:
     @classmethod
     def create(cls, key: str, **arguments: object) -> PracticeGuidance:
         """A new instance of the practice ``key``, for a caller that sets its fidelity, format, or workspace outside any
-        session; arguments go to the practice's constructor, such as ``fidelity=None`` for a practice at no fidelity. A
-        practice that extends another holds a new instance of that one, made with it."""
+        session; arguments go to the practice's constructor, such as ``fidelity=None`` for a practice at no fidelity. It
+        is made with the practices of its set it works with, at no fidelity: the one it extends and its Clean
+        Engineering companion, and theirs in turn, so it holds them as a practice of a whole set does."""
         practice = cls.practice_class(key)(**arguments)
-        if practice.extends:
-            practice.extended = cls.create(practice.extends, fidelity=None)
+        made = {key: practice}
+        wanted = list(practice.set_keys)
+        while wanted:
+            other = wanted.pop()
+            if other not in made and cls.has(other):
+                made[other] = cls.practice_class(other)(fidelity=None)
+                wanted.extend(made[other].set_keys)
+        for member in made.values():
+            member.hold_set(made)
         return practice
 
     @classmethod
@@ -103,47 +105,10 @@ class PracticeCatalogue:
         return practice_class
 
     @classmethod
-    def key_of(cls, toolset_ref: str) -> str | None:
-        """The key of the practice whose toolset ref is toolset_ref, such as ``stories`` for its ``module:Class``; none
-        for a ref that is no practice CDD has."""
-        return next((key for key, ref in cls._refs().items() if ref == toolset_ref), None)
-
-    @classmethod
     def practice_named(cls, slug: str) -> PracticeGuidance | None:
-        """The practice whose slug is ``slug``, such as ``clean-engineering``, or that has a fidelity whose slug is
-        ``slug``, such as ``stories-story-map``; none when no practice goes by it."""
-        for practice in cls.practices():
-            if practice.slug == slug or any(fidelity.slug == slug for fidelity in practice.fidelities):
-                return practice
-        return None
-
-    @classmethod
-    def toolset_ref(cls, slug: str) -> str | dict[str, str] | None:
-        """The toolset ref a guidance action lists for slug: the practice's ``module:Class`` for a practice's slug, such
-        as ``stories``; that ref with the fidelity's name for a fidelity's slug, such as ``stories-story-map``, or for a
-        fidelity's bare name, such as ``story_map`` or ``story-map``. A bare name two practices share, such as
-        ``model``, is the first practice's in catalogue order. None when no practice goes by slug."""
-        refs = cls._refs()
-        for practice in cls.practices():
-            if practice.slug == slug:
-                return refs[practice.key]
-            fidelity = next((fidelity for fidelity in practice.fidelities if fidelity.slug == slug), None)
-            if fidelity is not None:
-                return {"toolset": refs[practice.key], "fidelity": fidelity.name}
-        return cls._bare_fidelity_ref(slug)
-
-    @classmethod
-    def _bare_fidelity_ref(cls, name: str) -> dict[str, str] | None:
-        refs = cls._refs()
-        for practice in cls.practices():
-            for fidelity in practice.fidelities:
-                if name in (fidelity.name, fidelity.name.replace("_", "-")):
-                    return {"toolset": refs[practice.key], "fidelity": fidelity.name}
-        return None
-
-    @classmethod
-    def _refs(cls) -> dict[str, str]:
-        return {key: str(ToolsetReference.of(practice_class)) for key, practice_class in cls._registered().items()}
+        """The shared practice that slug names: by the practice's slug, such as ``clean-engineering``, or one of its
+        fidelities' slugs, such as ``stories-story-map``; none when no practice goes by it."""
+        return next((practice for practice in cls.practices() if practice.answers_to(slug) is not None), None)
 
     @classmethod
     def _registered(cls) -> dict[str, type[PracticeGuidance]]:

@@ -10,7 +10,6 @@ type FilterViewProps = {
   rules: string[];
   availableOverlays?: string[];
   overlayApplying?: boolean;
-  overlayHint?: string;
   onChange: (selection: FilterSelection) => void;
   onAddOverlay: () => void;
   onAddNamedOverlay?: (name: string) => void;
@@ -26,7 +25,6 @@ export function FilterView({
   rules,
   availableOverlays = [],
   overlayApplying = false,
-  overlayHint = '',
   onChange,
   onAddOverlay,
   onAddNamedOverlay,
@@ -69,7 +67,6 @@ export function FilterView({
           </div>
         ) : null}
         {overlayApplying ? <p className="overlay-status" data-testid="overlay-applying">Applying overlay…</p> : null}
-        {overlayHint ? <p className="overlay-hint" data-testid="overlay-hint">{overlayHint}</p> : null}
         <ul className="overlay-items" data-testid="overlay-list">
           {selection.overlays.length === 0 ? (
             <li className="overlay-empty">

@@ -13,7 +13,7 @@ from harness.graph.saved_graph import SavedGraph, SavedGraphOutdated
 from harness.graph.violation import UNKNOWN_LOCATION, Violation
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.rule import Rule
-from harness.installation.destination import data_field
+from harness.installation.data_class import data_field
 
 if TYPE_CHECKING:
     from space.repo.repo import Repo

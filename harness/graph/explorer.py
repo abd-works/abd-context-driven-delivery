@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated
 
-from harness.graph.graph_rules_collection import GraphRule
-from harness.installation.destination import SourceFile, data_field
+from harness.graph.graph_rules_collection import GraphRule, GraphRulesCollection
+from harness.installation.data_class import SourceFile, data_field
 
 if TYPE_CHECKING:
     from harness.graph.graph import Filter, Graph, Node
@@ -73,7 +73,7 @@ class ExplorerEntry(NodeAnswer):
 
     @property
     @data_field
-    def children(self) -> list:
+    def children(self) -> list[ExplorerEntry | GraphRulesCollection]:
         """The entries below this one, and last the node's rules when it has any to show."""
         return list(self._children)
 

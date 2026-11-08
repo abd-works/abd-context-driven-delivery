@@ -11,11 +11,11 @@ from typing import TYPE_CHECKING, ClassVar
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.catalog_generator.catalog_generator import CatalogPractice
+from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.chat.chat import Chat
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
-from harness.installation.destination import data_field, identity, language_adapter
+from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.kanban.format_choice import FormatGroup

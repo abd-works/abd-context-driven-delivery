@@ -12,7 +12,7 @@ import re
 from typing import List, Optional
 
 from cdd_guidance.practices.sketch_document.sketch_outline import SketchOutline
-from harness.guidance.sketch_lens import SketchLens
+from harness.guidance.guidance import SketchLens
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
     Epic,

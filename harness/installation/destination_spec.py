@@ -3,7 +3,9 @@
 from expects import be_false, be_true, equal, expect
 from mamba import before, context, description, it
 
-from harness.installation.destination import NoCatalog, NoDeploy, data_field, data_of, identity, noCatalog, noDeploy
+from harness.installation.destination import NoCatalog, NoDeploy, noCatalog, noDeploy
+
+from harness.installation.data_class import data_field, data_of, identity
 
 
 class _Shown:

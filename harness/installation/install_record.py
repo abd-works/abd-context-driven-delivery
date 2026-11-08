@@ -6,10 +6,13 @@ import os
 from pathlib import Path
 from typing import Any
 
+from harness.installation.ide_layout import IdeLayout
+from harness.installation.install_diagnostics import InstallDiagnostics
+
 # The folders a skill, rule, command, prompt, or agent file sits under; cleaning stops emptying parents at them.
 _CHANNEL_FOLDERS = ("skills", "rules", "commands", "prompts", "agents")
 # Files an install updates in place and keeps across a clean: the MCP config and the diagnostics history.
-_KEPT_FILES = frozenset({"mcp.json", "diagnostics.json"})
+_KEPT_FILES = frozenset({IdeLayout.MCP_CONFIG_NAME, InstallDiagnostics.NAME})
 
 
 class InstallRecordUnreadable(Exception):

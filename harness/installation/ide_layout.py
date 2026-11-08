@@ -15,6 +15,8 @@ class IdeLayout:
     # The open project as Cursor and VS Code spell it inside a user-level MCP server entry.
     PROJECT_FOLDER = "${workspaceFolder}"
     _FOLDERS = {"Cursor": ".cursor", "VS Code": ".github", "Kilo": ".kilo", "Claude": ".claude"}
+    # The file an IDE other than Claude Code reads its MCP servers from, in its settings folder or its install folder.
+    MCP_CONFIG_NAME = "mcp.json"
 
     def __init__(self, ide: str) -> None:
         self.ide = ide
@@ -73,7 +75,7 @@ class IdeLayout:
         if self.is_claude_code:
             return Path.home() / ".claude.json"
         folder = self.user_settings_folder
-        return folder / "mcp.json" if folder is not None else None
+        return folder / self.MCP_CONFIG_NAME if folder is not None else None
 
     @property
     def mcp_servers_key(self) -> str:

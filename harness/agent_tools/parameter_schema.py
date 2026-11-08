@@ -50,6 +50,16 @@ class ParameterSchema:
         """The name of each parameter a caller passes, in the order the callable declares them."""
         return tuple(self._parameters())
 
+    @functools.cached_property
+    def defaults(self) -> dict[str, object]:
+        """The default of each parameter a caller may leave out, by name, read once."""
+        return {name: param.default for name, param in self._parameters().items() if param.default is not inspect.Parameter.empty}
+
+    def with_defaults(self, arguments: Mapping[str, object]) -> dict[str, object]:
+        """arguments with each parameter the call left out given its default, as the callable itself would see them: an
+        MCP client sends only the arguments it was told are required."""
+        return {**self.defaults, **arguments}
+
     def coerced(self, arguments: Mapping[str, object]) -> dict[str, object]:
         """arguments with each text sent for a ``Path`` parameter made a ``Path``, because JSON carries paths as text."""
         hints = self._hints()

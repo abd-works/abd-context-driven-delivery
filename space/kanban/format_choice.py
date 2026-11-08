@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from harness.guidance.guidance import FidelityGuidance
-from harness.installation.destination import data_field
+from harness.installation.data_class import data_field
 from harness.markdown.format import Format
 
 if TYPE_CHECKING:

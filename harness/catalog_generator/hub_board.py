@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 
 from harness.catalog_generator.approach_copy import StageCopy
+from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.catalog_generator.catalog_examples import StageExample
 from harness.catalog_generator.stage_columns import STAGE_COLUMNS, BoardLabel, StageColumn
 
@@ -70,6 +71,8 @@ class HubBoard:
         self.actions = actions
         self.utilities = utilities
         self.stages = stages
+        # The practice whose artifacts are the stage examples each column title opens (Stories).
+        self.stories = CatalogPractice.giving_stage_examples(practices)
 
     def html(self, *, path_prefix: str = "", practice=None, fidelity=None) -> str:
         """The board on a page ``path_prefix`` away from the hub, highlighting ``practice`` and its ``fidelity``."""
@@ -131,7 +134,7 @@ class HubBoard:
     def _column(self, column: StageColumn, path_prefix: str, practice, fidelity) -> str:
         cells = "".join(self._cell(column, listed, path_prefix, fidelity) for listed in self.practices)
         active = " active" if self._highlighted_column(practice, fidelity) is column else ""
-        example_href = StageExample(self._stage(column)).href(path_prefix)
+        example_href = StageExample(self._stage(column), self.stories).href(path_prefix)
         label = html.escape(column.label)
         title = (
             f'<a class="kb-col-head-title__link" href="{html.escape(example_href)}">{label}</a>'

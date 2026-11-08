@@ -15,16 +15,44 @@ import inspect
 import re
 import textwrap
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable
+from typing import Any, Callable, Protocol
 
-if TYPE_CHECKING:
-    from harness.agent_tools.agent_tools import AgentInstructions
+from harness.agent_tools.parameter_schema import ParameterSchema
 
 _PARAMETER_PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
 _ATTRIBUTE_PLACEHOLDER = re.compile(r"\{\{self\.(\w+)\}\}")
 _NOT_A_LOCAL = object()
 # The names a recipe body reads that the expansion supplies, which a statement's own assignments never overwrite.
 _RESERVED_NAMES = frozenset({"__builtins__", "self", "tools", "instructions"})
+
+
+class RecipeMembers(Protocol):
+    """The members of a toolset a recipe names that are its tools, by kind."""
+
+    tool_names: set[str]
+    instruction_names: frozenset[str]
+
+
+class ExpandedRecipe(Protocol):
+    """What an expansion asks of the ``@agent_instructions`` operation it expands. The toolset module's
+    *AgentInstructions* answers it; the expansion names only this, so the recipe module depends on no toolset class."""
+
+    toolset: Any
+    callable: Callable[..., Any]
+
+    @property
+    def recipe_source(self) -> RecipeSource: ...
+
+    @property
+    def parameter_schema(self) -> ParameterSchema: ...
+
+    def parent_recipe(self, after_class: type | None = None) -> tuple[ExpandedRecipe, type] | None: ...
+
+    def members_of(self, target: Any) -> RecipeMembers: ...
+
+    def member_of(self, target: Any, member: str) -> ExpandedRecipe: ...
+
+    def provider_of(self, owner: Any, provider_name: str) -> Any: ...
 
 
 class RecipeLineFailed(Exception):
@@ -206,6 +234,13 @@ class RecipeSource:
             return part.value
         return self.text_of(part.value) if isinstance(part, ast.FormattedValue) else ""
 
+    @property
+    def docstring(self) -> str:
+        """The recipe's docstring as ``inspect.getdoc`` reads it, its lines dedented, so the text a reply opens with and
+        the docstring it is compared with are the same text; empty when the body has none."""
+        statements = self.function_def.body
+        return inspect.cleandoc(statements[0].value.value) if statements and self.is_docstring(statements[0]) else ""
+
     def is_docstring(self, statement: ast.stmt) -> bool:
         return isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Constant) and isinstance(statement.value.value, str)
 
@@ -239,7 +274,7 @@ class RecipeExpansion:
 
     def __init__(
         self,
-        instructions: AgentInstructions,
+        instructions: ExpandedRecipe,
         arguments: dict[str, Any] | None = None,
         *,
         expanding: frozenset[tuple[str, str]] = frozenset(),
@@ -255,7 +290,9 @@ class RecipeExpansion:
         self._prompt: list[str] = []
         self._tools: list[str] = []
         self._loop_item_modes: dict[int, str] = {}
-        self._locals = {**self._parameter_defaults(), **(arguments or {})}
+        # Every parameter is a name the body can read: one the call left out holds its default, or none when it has none.
+        schema = instructions.parameter_schema
+        self._locals = {**dict.fromkeys(schema.names), **schema.with_defaults(arguments or {})}
 
     @property
     def prompt(self) -> tuple[str, ...]:
@@ -272,7 +309,7 @@ class RecipeExpansion:
             return self
         statements = self._source.function_def.body
         if statements and self._source.is_docstring(statements[0]):
-            self._add_prompt(statements[0].value.value.strip())
+            self._add_prompt(self._source.docstring)
             statements = statements[1:]
         for statement in statements:
             self._walk_body_statement(statement)
@@ -284,17 +321,6 @@ class RecipeExpansion:
         if key in expanding:
             raise RecipeCallsItself(type(self._toolset).__name__, self._recipe.__name__)
         return expanding | {key}
-
-    def _parameter_defaults(self) -> dict[str, Any]:
-        try:
-            parameters = inspect.signature(self._recipe).parameters.values()
-        except (TypeError, ValueError):
-            return {}
-        skipped = (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
-        return {
-            parameter.name: None if parameter.default is inspect.Parameter.empty else parameter.default
-            for parameter in parameters if parameter.name not in {"self", "cls"} and parameter.kind not in skipped
-        }
 
     def _walk_body_statement(self, statement: ast.stmt) -> None:
         if isinstance(statement, ast.Return):
@@ -320,7 +346,7 @@ class RecipeExpansion:
         for part in other._prompt:
             self._add_prompt(part)
 
-    def _expand_nested(self, nested: AgentInstructions, defining_class: type | None = None) -> None:
+    def _expand_nested(self, nested: ExpandedRecipe, defining_class: type | None = None) -> None:
         self._merge(RecipeExpansion(nested, expanding=self._expanding, defining_class=defining_class).run())
 
     def _expand_parent(self) -> None:

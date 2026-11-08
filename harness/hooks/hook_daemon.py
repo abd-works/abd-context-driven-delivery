@@ -29,7 +29,14 @@ from harness.agent_tools.agent_tools import ToolsetReference
 from harness.hooks.hook_server import HookResult, HookServer
 from harness.hooks.hooks import InstalledHookHandlers
 from harness.installation.repository_toolsets import RepositoryToolsets
-from harness.process.process import BackgroundStart, ExclusivePort, ProcessNotStopped, PythonInterpreter, RunningProcess, StoppableProcess
+from harness.process.process import (
+    BackgroundStart,
+    ExclusivePort,
+    ProcessNotStopped,
+    PythonInterpreter,
+    RunningProcess,
+    StoppableProcess,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +44,9 @@ _PORT_RANGE_START = 20000
 _PORT_RANGE_SIZE = 10000
 # How long a daemon that loaded older hook code gets to exit before the replacement gives up on it.
 _STOP_SECONDS = 3
+# A stopped daemon's port can stay bound for a moment after its process ends; the replacement tries this many times.
+_CLAIM_TRIES = 20
+_CLAIM_POLL_SECONDS = 0.1
 # A hook command waits this long for a daemon it started; the first start imports every toolset in the checkout.
 _READY_WAIT_SECONDS = 90
 _READY_POLL_SECONDS = 0.2
@@ -61,23 +71,64 @@ class HookDaemonNotReady(Exception):
         self.repo = repo
 
 
-class HookDaemonAddress:
-    """Where a running hook daemon answers, as it publishes it: its host, port, process, and the stamp of the hook code
-    it loaded. A hook command sends its event here; a daemon on older code is stopped through its process."""
+class HookPortTaken(Exception):
+    """This checkout's hook port is held by a process that is not a hook daemon of this checkout, or by a daemon that
+    would not stop, so no hook daemon can serve the checkout until that process ends."""
 
-    def __init__(self, host: str, port: int, pid: int | None = None, stamp: str = "") -> None:
+    def __init__(self, repo: Path, port: int, holder: str) -> None:
+        super().__init__(f"the hook port {port} of {repo} is held by {holder}; end that process and run a hook again")
+        self.repo = repo
+        self.port = port
+
+
+class HookDaemonAddress:
+    """Where a running hook daemon answers, and who it is: its host and port, its process, the stamp of the hook code
+    it loaded, and its checkout. A daemon publishes this in its address file and answers it to a ping. A hook command
+    sends its event here; a daemon on older code is stopped through its process. A daemon started by the older layout
+    answers a ping with no process, stamp, or checkout."""
+
+    def __init__(self, host: str, port: int, pid: int | None = None, stamp: str = "", repo: str = "") -> None:
         self.host = host
         self.port = port
         self.pid = pid
         self.stamp = stamp
+        self.repo = repo
         self.process = StoppableProcess(pid or 0)
+
+    @classmethod
+    def from_fields(cls, fields: dict[str, Any], host: str) -> HookDaemonAddress | None:
+        """The address fields name; none when they name no port."""
+        if not isinstance(fields, dict) or not fields.get("port"):
+            return None
+        pid = fields.get("pid")
+        return cls(
+            str(fields.get("host") or host),
+            int(fields["port"]),
+            int(pid) if isinstance(pid, int) and pid > 0 else None,
+            str(fields.get("stamp") or ""),
+            str(fields.get("repo") or ""),
+        )
+
+    def as_fields(self) -> dict[str, Any]:
+        return {"host": self.host, "port": self.port, "pid": self.pid, "stamp": self.stamp, "repo": self.repo}
+
+    def serves(self, repo: Path) -> bool:
+        """Whether the daemon here says it serves repo; a daemon of the older layout says nothing."""
+        return bool(self.repo) and os.path.normcase(self.repo) == os.path.normcase(str(repo))
 
     def answers(self) -> bool:
         """Whether a daemon answers a ping at this address."""
+        return self.reported() is not None
+
+    def reported(self) -> HookDaemonAddress | None:
+        """The address as the daemon answering here reports itself; none when no daemon answers a ping."""
         try:
-            return bool(self._call({"method": "ping"}, _PING_TIMEOUT_SECONDS).get("ok"))
-        except OSError:
-            return False
+            reply = self._call({"method": "ping"}, _PING_TIMEOUT_SECONDS)
+        except (OSError, ValueError):
+            return None
+        if not reply.get("ok"):
+            return None
+        return HookDaemonAddress.from_fields({**reply, "host": self.host, "port": self.port}, self.host)
 
     def handle_stdin(self, raw: bytes) -> dict[str, Any]:
         """The fields the daemon's hook server answers for the event an IDE wrote on stdin."""
@@ -87,6 +138,37 @@ class HookDaemonAddress:
         with socket.create_connection((self.host, self.port), timeout=timeout) as conn:
             _Wire(conn).write(payload)
             return _Wire(conn).read()
+
+
+class HookDaemonAddressFile:
+    """The file a hook daemon publishes its address in. The daemon of this layout writes ``.hook-server/address.json``;
+    a daemon started by the older layout wrote ``.cursor/hook-server.json``, which a replacement reads once to find and
+    stop that daemon, then removes."""
+
+    def __init__(self, path: Path, host: str) -> None:
+        self.path = path
+        self._host = host
+
+    def read(self) -> HookDaemonAddress | None:
+        """The address last published here; none when there is none, or none readable."""
+        if not self.path.is_file():
+            return None
+        try:
+            fields = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            # A daemon writing its address, or one killed while writing it; the next start writes it again.
+            return None
+        return HookDaemonAddress.from_fields(fields, self._host)
+
+    def write(self, address: HookDaemonAddress) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(json.dumps(address.as_fields()), encoding="utf-8")
+
+    def remove(self) -> None:
+        try:
+            self.path.unlink(missing_ok=True)
+        except OSError as held:
+            logger.warning("could not remove the hook daemon address %s: %s", self.path, held)
 
 
 class _Wire:
@@ -152,11 +234,43 @@ class _SpawnLock:
             return 0
 
 
+class _Serving:
+    """What a serving daemon answers with: its own address, and the hook server it loads once it holds the port. A ping
+    answers at once with the address, so a starting daemon is found by the next hook command and by a second start; an
+    event waits until the hook server has loaded."""
+
+    def __init__(self, address: HookDaemonAddress) -> None:
+        self.address = address
+        self._server: HookServer | None = None
+        self._loaded = threading.Event()
+        self._dispatch = threading.Lock()
+
+    def load(self, server: HookServer) -> None:
+        self._server = server
+        self._loaded.set()
+
+    def handle(self, wire: _Wire) -> None:
+        message = wire.read()
+        method = message.get("method")
+        if method == "ping":
+            wire.write({"ok": True, **self.address.as_fields()})
+            return
+        if method != "handle_stdin":
+            wire.write({"error": f"unknown method {method}"})
+            return
+        self._loaded.wait(_CALL_TIMEOUT_SECONDS)
+        with self._dispatch:
+            result = self._server.handle_stdin((message.get("raw") or "").encode("utf-8"))
+        wire.write(result.as_dict())
+
+
 class HookDaemon:
     """The hook daemon of one checkout. It listens on the one port this checkout's daemon may hold, publishes its
     address in the checkout's ``.hook-server/`` folder, and serves every hook command for the checkout, whichever IDE
     sent it, with one loaded hook server. A hook command asks it for that address, starting the daemon first when none
-    answers. The folder belongs to no IDE, so a checkout that installs for VS Code or Kilo gets no ``.cursor`` folder."""
+    answers. A daemon that finds the port held by this checkout's daemon on older code, including one the older layout
+    started, stops it and takes the port. The folder belongs to no IDE, so a checkout that installs for VS Code or Kilo
+    gets no ``.cursor`` folder."""
 
     HOST = "127.0.0.1"
     FOLDER_NAME = ".hook-server"
@@ -167,17 +281,14 @@ class HookDaemon:
         self.repo = Path(repo).resolve()
         self.toolsets = RepositoryToolsets(self.repo)
         self._port = port
-        self._dispatch = threading.Lock()
+        self.address_file = HookDaemonAddressFile(self.folder / "address.json", self.HOST)
+        # Where a daemon started by the older layout published its address; read only to stop that daemon.
+        self._older_layout_file = HookDaemonAddressFile(self.repo / ".cursor" / "hook-server.json", self.HOST)
 
     @property
     def folder(self) -> Path:
         """The checkout's folder for the daemon's address, log, and start lock."""
         return self.repo / self.FOLDER_NAME
-
-    @property
-    def state_path(self) -> Path:
-        """The address file a running daemon publishes."""
-        return self.folder / "address.json"
 
     @property
     def log_path(self) -> Path:
@@ -195,7 +306,7 @@ class HookDaemon:
 
     def live_address(self) -> HookDaemonAddress | None:
         """The address of this checkout's daemon when one answers there; none when none does."""
-        address = self._published_address()
+        address = self.address_file.read()
         return address if address is not None and address.answers() else None
 
     def is_running(self) -> bool:
@@ -234,19 +345,30 @@ class HookDaemon:
 
     def replace_stale(self) -> None:
         """Stop a daemon that loaded older hook code. A Cursor reload does not restart it."""
-        published = self._published_address()
+        published = self.address_file.read()
         if published is None or published.stamp == self.source_stamp:
             return
         try:
-            published.process.stop(_STOP_SECONDS)
+            self._stop_process(published.process)
         except ProcessNotStopped as still_running:
             # Its address file stays, so hooks keep reaching the older daemon rather than none.
             logger.warning("the hook daemon on older code keeps running: %s", still_running)
             return
-        try:
-            self.state_path.unlink()
-        except OSError:
-            return
+        self.address_file.remove()
+
+    def stop(self) -> None:
+        """Stop this checkout's daemon, whichever layout started it, and remove its address files, so no daemon outlives
+        its checkout. Closing the checkout's worktree calls this. Only the daemon that answers on this checkout's port as
+        this checkout's, or as one of the older layout, is stopped; a daemon that will not stop is logged and left, so
+        the close goes on and reports the folder it could not remove."""
+        holder = HookDaemonAddress(self.HOST, self.port).reported()
+        if holder is not None and self._is_ours(holder):
+            try:
+                self._stop_process(self._process_of(holder, ExclusivePort(self.HOST, self.port)))
+            except (ProcessNotStopped, HookPortTaken) as still_running:
+                logger.warning("the hook daemon of %s keeps running after its checkout closed: %s", self.repo, still_running)
+        self.address_file.remove()
+        self._older_layout_file.remove()
 
     def spawn(self) -> None:
         """Start this checkout's daemon in the background, importing from the checkout, with its output in
@@ -269,17 +391,77 @@ class HookDaemon:
 
     def serve(self, server: HookServer | None = None) -> None:
         """Listen on this checkout's port and answer hook commands with server, until the process ends; with no
-        server, the hook server of every toolset the checkout defines. Return at once when another daemon holds the
-        port."""
-        listener = ExclusivePort(self.HOST, self.port).claim()
+        server, the hook server of every toolset the checkout defines. A daemon on older code that holds the port is
+        stopped and the port taken over. Return at once, saying so in the log, when this checkout's daemon on the
+        current code already holds it; raise *HookPortTaken* when anything else holds it."""
+        listener = self.claim_port()
         if listener is None:
             return
+        serving = _Serving(HookDaemonAddress(self.HOST, listener.getsockname()[1], os.getpid(), self.source_stamp, str(self.repo)))
+        acceptor = threading.Thread(target=self._accept_until_stopped, args=(listener, serving), daemon=True)
         try:
-            server = server if server is not None else HookServer.from_repository(self.toolsets)
-            self._publish_address(listener.getsockname()[1])
-            self._serve_until_stopped(listener, server)
+            acceptor.start()
+            serving.load(server if server is not None else HookServer.from_repository(self.toolsets))
+            self.address_file.write(serving.address)
+            acceptor.join()
         finally:
             listener.close()
+
+    def claim_port(self) -> socket.socket | None:
+        """A listening socket on this checkout's port, taken from the daemon holding it when that daemon is this
+        checkout's on older code; none when this checkout's daemon on the current code holds it. Raises *HookPortTaken*
+        when a process that is not this checkout's daemon holds it, or one that would not stop."""
+        port = ExclusivePort(self.HOST, self.port)
+        listener = port.claim()
+        if listener is not None:
+            return listener
+        holder = HookDaemonAddress(self.HOST, self.port).reported()
+        if holder is None:
+            raise HookPortTaken(self.repo, self.port, self._named(port.holder(), "a process that answers no hook ping"))
+        if not self._is_ours(holder):
+            raise HookPortTaken(self.repo, self.port, f"the hook daemon of {holder.repo}")
+        if holder.stamp == self.source_stamp:
+            logger.warning("the hook daemon of %s on this code already serves port %s (pid %s)", self.repo, self.port, holder.pid)
+            return None
+        older = self._process_of(holder, port)
+        try:
+            self._stop_process(older)
+        except ProcessNotStopped as still_running:
+            raise HookPortTaken(self.repo, self.port, f"process {older.pid}, which would not stop") from still_running
+        for _ in range(_CLAIM_TRIES):
+            listener = port.claim()
+            if listener is not None:
+                logger.warning("took hook port %s of %s over from the daemon on older code", self.port, self.repo)
+                return listener
+            time.sleep(_CLAIM_POLL_SECONDS)
+        raise HookPortTaken(self.repo, self.port, "a process that still holds it after it was stopped")
+
+    def _is_ours(self, holder: HookDaemonAddress) -> bool:
+        """Whether the daemon that answered as holder is this checkout's: it says so, or it is of the older layout,
+        which names no checkout and holds the port this checkout's daemon may hold."""
+        return not holder.repo or holder.serves(self.repo)
+
+    def _process_of(self, holder: HookDaemonAddress, port: ExclusivePort) -> StoppableProcess:
+        """The process of this checkout's daemon that answered as holder: the one it reports, or, for a daemon of the
+        older layout, which reports none, the one its address file names, else the port's holder."""
+        if holder.pid is not None:
+            return holder.process
+        published = self._older_layout_file.read()
+        if published is not None and published.port == self.port and published.pid is not None:
+            self._older_layout_file.remove()
+            return published.process
+        found = port.holder()
+        if found is None:
+            raise HookPortTaken(self.repo, self.port, "a hook daemon of the older layout whose process cannot be found")
+        return found
+
+    def _named(self, process: StoppableProcess | None, what: str) -> str:
+        return f"{what} (pid {process.pid})" if process is not None else what
+
+    def _stop_process(self, process: StoppableProcess) -> None:
+        """Stop a daemon process of this checkout; raises *ProcessNotStopped* when it keeps running."""
+        logger.warning("stopping hook daemon process %s of %s", process.pid, self.repo)
+        process.stop(_STOP_SECONDS)
 
     def _start_once(self) -> None:
         """Start the daemon unless another hook command is starting it; either way, it is starting when this returns."""
@@ -307,25 +489,7 @@ class HookDaemon:
             time.sleep(_READY_POLL_SECONDS)
         raise HookDaemonNotReady(self.repo, _READY_WAIT_SECONDS)
 
-    def _published_address(self) -> HookDaemonAddress | None:
-        """The address the daemon last published; none when there is none, or none readable."""
-        if not self.state_path.is_file():
-            return None
-        try:
-            state = json.loads(self.state_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            # A daemon writing its address, or one killed while writing it; the next start writes it again.
-            return None
-        if not isinstance(state, dict) or not state.get("port"):
-            return None
-        return HookDaemonAddress(state.get("host") or self.HOST, int(state["port"]), state.get("pid"), str(state.get("stamp") or ""))
-
-    def _publish_address(self, port: int) -> None:
-        self.folder.mkdir(parents=True, exist_ok=True)
-        payload = {"host": self.HOST, "port": port, "pid": os.getpid(), "stamp": self.source_stamp}
-        self.state_path.write_text(json.dumps(payload), encoding="utf-8")
-
-    def _serve_until_stopped(self, listener: socket.socket, server: HookServer) -> None:
+    def _accept_until_stopped(self, listener: socket.socket, serving: _Serving) -> None:
         """Answer every caller off the accept loop.
 
         A caller served inline holds the loop for the whole dispatch, so the backlog
@@ -333,27 +497,17 @@ class HookDaemon:
         wait instead of being answered.
         """
         while True:
-            conn, _ = listener.accept()
-            threading.Thread(target=self._answer, args=(conn, server), daemon=True).start()
+            try:
+                conn, _ = listener.accept()
+            except OSError:
+                return
+            threading.Thread(target=self._answer, args=(conn, serving), daemon=True).start()
 
-    def _answer(self, conn: socket.socket, server: HookServer) -> None:
+    def _answer(self, conn: socket.socket, serving: _Serving) -> None:
         try:
-            self._handle(_Wire(conn), server)
+            serving.handle(_Wire(conn))
         finally:
             conn.close()
-
-    def _handle(self, wire: _Wire, server: HookServer) -> None:
-        message = wire.read()
-        method = message.get("method")
-        if method == "ping":
-            wire.write({"ok": True})
-            return
-        if method != "handle_stdin":
-            wire.write({"error": f"unknown method {method}"})
-            return
-        with self._dispatch:
-            result = server.handle_stdin((message.get("raw") or "").encode("utf-8"))
-        wire.write(result.as_dict())
 
 
 def run_hook_command() -> None:
@@ -372,6 +526,7 @@ def run_hook_command() -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) > 2 and sys.argv[1] == "serve":
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
         HookDaemon(Path(sys.argv[2])).serve()
     else:
         run_hook_command()

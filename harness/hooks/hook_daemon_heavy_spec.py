@@ -32,7 +32,7 @@ with description("a hook daemon"):
 
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            marker = HookDaemon(repo).state_path
+            marker = HookDaemon(repo).address_file.path
             inner = HookServer(repo, HandlerCatalog([], repo))
             daemons = [
                 threading.Thread(target=HookDaemon(repo).serve, args=(inner,), daemon=True) for _ in range(4)
@@ -67,9 +67,9 @@ with description("a hook daemon"):
             try:
                 threading.Thread(target=daemon.serve, args=(blocking,), daemon=True).start()
                 deadline = time.time() + 5
-                while not daemon.state_path.is_file() and time.time() < deadline:
+                while not daemon.address_file.path.is_file() and time.time() < deadline:
                     time.sleep(0.05)
-                state = json.loads(daemon.state_path.read_text(encoding="utf-8"))
+                state = json.loads(daemon.address_file.path.read_text(encoding="utf-8"))
                 threading.Thread(
                     target=HookDaemonAddress(state["host"], state["port"]).handle_stdin,
                     args=(b'{"hook_event_name":"stop"}',),
@@ -101,3 +101,34 @@ with description("the IDE hook command, hook_daemon.py"):
         )
         expect(proc.returncode).to(equal(0))
         expect(json.loads(proc.stdout.decode("utf-8"))["permission"]).to(equal("allow"))
+
+with description("a checkout whose hook port the daemon of the older layout holds") as self:
+
+    with before.each:
+        from harness.hooks.fixtures.older_layout_daemon import OlderLayoutDaemon
+        from harness.hooks.hook_daemon import HookDaemon
+
+        self.repo = Path(tempfile.mkdtemp(prefix="older-hook-daemon-"))
+        self.daemon = HookDaemon(self.repo)
+        self.older = OlderLayoutDaemon(self.repo, self.daemon.port).start()
+        # The started daemon imports harness from this checkout, whatever folder it runs in.
+        self.pythonpath = os.environ.get("PYTHONPATH", "")
+        os.environ["PYTHONPATH"] = os.pathsep.join(part for part in (str(_REPO_ROOT), self.pythonpath) if part)
+
+    with after.each:
+        self.daemon.stop()
+        self.older.kill()
+        os.environ["PYTHONPATH"] = self.pythonpath
+
+    with it("should answer the next hook command from a daemon on the current code"):
+        address = self.daemon.ensure()
+        expect(address.stamp).to(equal(self.daemon.source_stamp))
+
+    with it("should stop the older daemon"):
+        self.daemon.ensure()
+        expect(self.older.ended()).to(equal(True))
+
+    with it("should stop the daemon when the checkout closes"):
+        address = self.daemon.ensure()
+        self.daemon.stop()
+        expect(address.answers()).to(equal(False))
