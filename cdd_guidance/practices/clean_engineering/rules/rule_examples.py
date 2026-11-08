@@ -51,7 +51,7 @@ def practice_from_class_text(name: str, text: str, relative: str) -> tuple[Pract
     oclass.take_lines(text.split("\n"))
     oclass.load_source_facts()
     practice, root = practice_from_files({relative: text})
-    practice.graph.add(practice, oclass, f"clean_engineering:OoadClass:{relative}:{name}", relative, 1, text.count("\n") + 1)
+    practice.in_graph.add(oclass, f"clean_engineering:OoadClass:{relative}:{name}", relative, 1, text.count("\n") + 1)
     return practice, root
 
 

@@ -43,7 +43,7 @@ def main() -> int:
     )
     args = parser.parse_args()
     # The MCP and hook installations register with the Installer when their modules are imported.
-    import harness.hooks.hooks  # noqa: F401
+    import harness.hooks.hook_installation  # noqa: F401
     from harness.installation.installer import Installer
     from harness.mcp.mcp_server import McpInstallation
 

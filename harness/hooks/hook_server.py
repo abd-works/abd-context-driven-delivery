@@ -1,27 +1,20 @@
 """Hook server — run the enabled hooks for one IDE event and return one merged result.
 
-An IDE runs this file as its hook command: ``python -u harness/hooks/hook_server.py`` with the event's fields on stdin.
-The command hands the event to the checkout's hook daemon, which keeps one *HookServer* loaded between events."""
+The checkout's hook daemon (``hook_daemon.py``) keeps one *HookServer* loaded between events and hands it each event
+the IDE's hook command receives."""
 from __future__ import annotations
-
-import sys
-from pathlib import Path
-
-if __name__ == "__main__":
-    # Run by path, this file's folder is on the import path and the checkout is not; put the checkout first so the
-    # imports below resolve. main() sets the rest of the checkout's import path through RepositoryToolsets.
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import json
 import logging
-import os
+import sys
 from collections.abc import Iterator, Mapping
+from pathlib import Path
 from typing import Any, Callable, ClassVar
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
 from harness.agent_tools.tool_call import ToolCall
 from harness.annotations.annotation import HostedOnly
-from harness.hooks.hooks import HookHandlersFile, Hooks
+from harness.hooks.hooks import HookHandlersFile, Hooks, InstalledHookHandlers
 from harness.installation.context_config import ContextConfig
 from harness.installation.repository_toolsets import RepositoryToolsets
 
@@ -346,7 +339,9 @@ class HookHandler:
 class HandlerCatalog:
     """The toolsets whose hook operations may run, and the handlers of each event they serve, made once when the
     toolsets load. Each toolset is named by its class, its instance, or, as ``hook-handlers.json`` lists it, its
-    ``module:Class`` reference; one that cannot be loaded is kept in ``failures`` and the rest still serve."""
+    ``module:Class`` reference; one that cannot be loaded is kept in ``failures`` and the rest still serve. A toolset
+    whose hooks ``@Hooks(deploy=False)`` keeps out of install is left out here too, so the hooks an install leaves out
+    never run, however the catalog was named."""
 
     def __init__(self, toolsets: list[Any], repo_root: Path | None = None) -> None:
         self.repo_root = repo_root
@@ -363,7 +358,7 @@ class HandlerCatalog:
                 self.failures.append((self.ref_label(item), error))
                 continue
             self.toolsets.extend(
-                instance for instance in loaded if not HostedOnly.annotates(instance)
+                instance for instance in loaded if not HostedOnly.annotates(instance) and Hooks.deploys(instance)
             )
 
     def ref_label(self, item: Any) -> str:
@@ -439,11 +434,11 @@ class HookServer:
 
     @classmethod
     def from_repository(cls, toolsets: RepositoryToolsets) -> HookServer:
-        """The hook server of a checkout: the toolsets its installed ``.cursor/hook-handlers.json`` lists, else every
-        toolset it defines. Every toolset module is imported either way, so the registrations those modules make,
-        such as how a call opens its session, hold in the hook process."""
+        """The hook server of a checkout: the toolsets the ``hook-handlers.json`` of its hook installs list, whichever
+        IDE each was for, else every toolset it defines whose hooks deploy. Every toolset module is imported either way,
+        so the registrations those modules make, such as how a call opens its session, hold in the hook process."""
         classes = toolsets.classes()
-        installed = HookHandlersFile(toolsets.root / ".cursor" / HookHandlersFile.NAME).refs
+        installed = InstalledHookHandlers(toolsets.root).refs
         server = cls(toolsets.root, HandlerCatalog(list(installed) or classes, toolsets.root))
         for unloadable in toolsets.unloadable:
             server.skip(unloadable.reference, unloadable.cause)
@@ -564,22 +559,3 @@ class HookServer:
         if session is not None:
             session.append_hook_log("dispatch.debug", message)
 
-
-def main() -> None:
-    """The hook command: hand the event on stdin to this checkout's hook daemon and print its answer for the IDE."""
-    from harness.hooks.hook_daemon import HookDaemon
-
-    checkout = Path(__file__).resolve().parents[2]
-    daemon = HookDaemon(checkout)
-    daemon.toolsets.use_for_this_process()
-    os.chdir(checkout)
-    raw = sys.stdin.buffer.read()
-    if not raw.strip():
-        print(json.dumps(HookResult().as_dict()))
-        return
-    answer = daemon.ensure().handle_stdin(raw)
-    print(json.dumps(HookResult.from_handler(answer).as_dict()))
-
-
-if __name__ == "__main__":
-    main()

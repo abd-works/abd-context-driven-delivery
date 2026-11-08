@@ -90,37 +90,37 @@ class PracticeInventory:
     @data_field
     def node_counts(self) -> dict[str, int]:
         """How many nodes of each type the practice holds."""
-        return {type: len(self._graph.nodes_of(self._practice, type)) for type in self._graph.node_types_of(self._practice)}
+        return {type: len(self._practice.in_graph.nodes(type)) for type in self._practice.in_graph.node_types}
 
     @property
     @data_field
     def edge_count(self) -> int:
-        return len(self._graph.edges_of(self._practice))
+        return len(self._practice.in_graph.edges())
 
     @property
     @data_field
     def node_types(self) -> list[str]:
         """The node types the practice holds, sorted by name."""
-        return sorted(self._graph.node_types_of(self._practice))
+        return sorted(self._practice.in_graph.node_types)
 
     @property
     @data_field
     def edge_types(self) -> list[str]:
         """The edge kinds the practice holds, in the order the explorer tree shows them."""
-        ordered = sorted(self._graph.edge_types_of(self._practice).values(), key=lambda edge_type: edge_type.order)
+        ordered = sorted(self._practice.in_graph.edge_types.values(), key=lambda edge_type: edge_type.order)
         return [edge_type.kind for edge_type in ordered]
 
     @property
     @data_field
     def rules(self) -> list[str]:
         """Each rule the practice runs, named ``practice.node.rule`` with the pattern that owns it in front."""
-        return self._graph.rule_labels_of(self._practice)
+        return self._practice.in_graph.rule_labels
 
     @property
     @data_field
     def tree(self) -> ExplorerEntry:
         """The explorer tree, from the practice's root."""
-        return self._graph.root_of(self._practice).serialize()
+        return self._practice.in_graph.root.serialize()
 
 
 class Overlay:

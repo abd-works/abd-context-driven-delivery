@@ -37,9 +37,9 @@ with description("a bdd spec on a graph"):
 
     with it("should record contexts, observations, and belongsTo"):
         practice = self.graph.practice("bdd")
-        contexts = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "contexts")]
-        observations = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "observations")]
-        belongs = [(edge.parent.name, edge.child.name) for edge in practice.graph.edges_of(practice, "belongsTo")]
+        contexts = [(edge.parent.name, edge.child.name) for edge in practice.in_graph.edges("contexts")]
+        observations = [(edge.parent.name, edge.child.name) for edge in practice.in_graph.edges("observations")]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.in_graph.edges("belongsTo")]
         expect(contexts).to(contain(("a cart", "that has a line")))
         expect(observations).to(contain(("that has a line", "should show the line")))
         expect(belongs).to(contain(("that has a line", "a cart"), ("should show the line", "that has a line")))

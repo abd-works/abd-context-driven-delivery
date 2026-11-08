@@ -167,12 +167,12 @@ class ModelNode(Node):
             self,
             practice,
             semantic,
-            graph.unused_node_id(practice, semantic, name),
+            practice.in_graph.unused_node_id(semantic, name),
             name,
             Source(NO_SOURCE_FILE, sequential_order or 1, sequential_order or 1),
         )
         self.sequential_order = sequential_order
-        graph.hold(self)
+        self.practice.in_graph.hold(self)
         self._ready = False
 
     @property
@@ -201,11 +201,8 @@ class ModelNode(Node):
     def _unlink(self, child, kind: str) -> None:
         if not isinstance(child, ModelNode):
             return
-        self.graph.drop_edges(
-            self.practice,
-            lambda edge: (edge.parent is self and edge.child is child and edge.kind == kind)
-            or (edge.parent is child and edge.child is self and edge.kind == "belongsTo"),
-        )
+        self.practice.in_graph.drop_edges(lambda edge: (edge.parent is self and edge.child is child and edge.kind == kind)
+            or (edge.parent is child and edge.child is self and edge.kind == "belongsTo"),)
 
     def _refer(self, target, kind: str) -> None:
         """Record a relationship edge of kind to target when both are on one graph; an owner that moves to another
@@ -216,9 +213,9 @@ class ModelNode(Node):
     def _adopt(self, child: "ModelNode") -> None:
         if child.practice is self.practice:
             return
-        subtree = child._subtree()
+        subtree = child.subtree()
         members = {id(node) for node in subtree}
-        carried = child.graph.drop_edges(child.practice, lambda edge: id(edge.parent) in members and id(edge.child) in members)
+        carried = child.practice.in_graph.drop_edges(lambda edge: id(edge.parent) in members and id(edge.child) in members)
         with schema_sync_paused():
             for node in subtree:
                 node._move_to(self.practice)
@@ -232,23 +229,23 @@ class ModelNode(Node):
         if self.practice is practice:
             return
         graph = practice.graph
-        node_id = graph.unused_node_id(practice, self.type, self.name) if graph.holds(practice, self.node_id) else self.node_id
+        node_id = practice.in_graph.unused_node_id(self.type, self.name) if practice.in_graph.holds(self.node_id) else self.node_id
         # add places a parsed node at its lines; a bound object keeps the source it already has, whatever its kind.
         source = self.source
-        graph.add(practice, self, node_id, NO_SOURCE_FILE, 1, 1)
+        practice.in_graph.add(self, node_id, NO_SOURCE_FILE, 1, 1)
         self.source = source
 
-    def _subtree(self) -> list["ModelNode"]:
+    def subtree(self) -> list["ModelNode"]:
         found: list[ModelNode] = [self]
         for children in list(self._child_lists):
             for child in list(children):
                 if isinstance(child, ModelNode):
-                    found.extend(child._subtree())
+                    found.extend(child.subtree())
         examples = getattr(self, "examples", None)
         if isinstance(examples, dict):
             for example in examples.values():
                 if isinstance(example, ModelNode):
-                    found.extend(example._subtree())
+                    found.extend(example.subtree())
         return found
 
     def __setattr__(self, name: str, value) -> None:

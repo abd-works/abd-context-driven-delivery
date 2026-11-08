@@ -186,7 +186,7 @@ export class AccountRepository {
                 lang="typescript",
                 filename="account.ts",
             )
-            repo = next(n for n in practice.graph.nodes_of(practice, "OoadClass") if n.name == "AccountRepository")
+            repo = next(n for n in practice.in_graph.nodes("OoadClass") if n.name == "AccountRepository")
             from harness.graph.rule_context import RuleCheckContext
 
             context = RuleCheckContext(practice, root)

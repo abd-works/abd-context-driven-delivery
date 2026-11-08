@@ -34,7 +34,7 @@ with description("rule categories"):
                 "limit-operation-parameters",
                 "Operation 'failure' takes 4 parameters (maximum 3, excluding self).",
             )
-            root = self.graph.root_of(self.practice)
+            root = self.practice.in_graph.root
             root.children = [self.failure, self.register, self.account]
             for node in (self.failure, self.register, self.account):
                 node.parent = root
@@ -78,8 +78,8 @@ with description("rule categories"):
                 expect("rules" in names).to(equal(False))
 
             with it("should attach that violation on the nodes the filter returns"):
-                self.graph.hold(self.failure)
-                self.graph.hold(self.register)
+                self.failure.practice.in_graph.hold(self.failure)
+                self.register.practice.in_graph.hold(self.register)
                 returned = data_of(self.graph.return_nodes())
                 failure = next(node for node in returned if node["name"] == "failure")
                 expect([rule["status"] for rule in failure["rules"]]).to(equal(["violating"]))

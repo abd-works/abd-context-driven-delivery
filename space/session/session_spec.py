@@ -744,7 +744,7 @@ with description("a practice"):
             expect(self.session.practice("ddd").guidance.extended).to(be(self.session.practice("clean_engineering").guidance))
 
         with it("should open its graph on its workpath"):
-            expect(self.session.graph.source_root_of(self.opened.guidance)).to(equal(str(self.work.resolve())))
+            expect(self.opened.guidance.in_graph.source_root).to(equal(str(self.work.resolve())))
 
         with it("should be the same graph on the next call in the session"):
             expect(Sessions(self.called).current().graph).to(be(self.session.graph))

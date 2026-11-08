@@ -32,7 +32,7 @@ def _step(practice, semantic: str, text: str, line: int) -> Node:
     step = Step(text, StepType(semantic.lower()), line, keyword=semantic)
     step.name = label
     step.type = semantic
-    return practice.graph.add(practice, step, f"stories:{semantic}:story.ts:{line}:{hash(label) & 0xFFFFFF}", "story.ts", line, line)
+    return practice.in_graph.add(step, f"stories:{semantic}:story.ts:{line}:{hash(label) & 0xFFFFFF}", "story.ts", line, line)
 
 
 def _record_steps(practice, scenario: Node, steps: list[Node]) -> None:

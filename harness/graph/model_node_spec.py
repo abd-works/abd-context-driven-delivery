@@ -33,7 +33,7 @@ with description("a model object built on its own graph"):
             expect(self.graph.node(self.region.node_id)).to(be(self.region))
 
         with it("should leave the practice it was built in"):
-            expect(self.own_practice.graph.holds(self.own_practice, self.region.node_id)).to(equal(False))
+            expect(self.own_practice.in_graph.holds(self.region.node_id)).to(equal(False))
 
         with it("should keep the source it already had"):
             expect(self.region.has_source_file).to(equal(False))

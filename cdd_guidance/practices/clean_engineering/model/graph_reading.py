@@ -34,7 +34,7 @@ class GraphReading:
 
     @property
     def _source_root(self) -> Path:
-        return Path(self.graph.source_root_of(self))
+        return Path(self.in_graph.source_root)
 
     def _read_code(self) -> None:
         self.graph.report_progress("clean_engineering · folders")
@@ -43,7 +43,7 @@ class GraphReading:
         modules = self._parsed_modules(files)
         self._class_names = {cls.name for module in modules.values() for cls in module.classes}
         self._class_names |= self._class_names_in(self._unparsed_declaring_files(files))
-        nodes = {rel: self.graph.add(self, module, f"clean_engineering:{module.type}:{rel}", rel, 1, 1) for rel, module in folders.items()}
+        nodes = {rel: self.in_graph.add(module, f"clean_engineering:{module.type}:{rel}", rel, 1, 1) for rel, module in folders.items()}
         imports: dict[str, list[str]] = {rel: [] for rel in folders}
         for file, module in modules.items():
             relative = file.relative_to(self._source_root).as_posix()
@@ -52,7 +52,7 @@ class GraphReading:
                 imports[owner].extend(module.dependencies)
                 self._record_imported_names(nodes[owner], relative, module)
             for cls in module.classes:
-                self._class(relative, nodes.get(owner) or self.graph.root_of(self), cls)
+                self._class(relative, nodes.get(owner) or self.in_graph.root, cls)
         self._record_unreadable(folders, nodes)
         self._link_folders(folders, nodes, imports)
 
@@ -114,16 +114,16 @@ class GraphReading:
         modules = {rel: module for rel, module in folders.items() if module.type == "Module"}
         for file, reason in self._unreadable.items():
             relative = file.relative_to(self._source_root).as_posix()
-            owner = nodes.get(_nearest(str(Path(relative).parent).replace("\\", "/"), modules)) or self.graph.root_of(self)
+            owner = nodes.get(_nearest(str(Path(relative).parent).replace("\\", "/"), modules)) or self.in_graph.root
             kept = owner.get_fact("unreadable_sources") or []
             owner.set_fact("unreadable_sources", list(dict.fromkeys([*kept, f"{relative}: {reason}"])))
 
     def _link_folders(self, folders: dict, nodes: dict, imports: dict[str, list[str]]) -> None:
         """Each folder is owned by the folder that encloses it, and depends on each folder its files import from."""
-        held = {node.source.file: node for kind in ("Module", "Package") for node in self.graph.nodes_of(self, kind)}
+        held = {node.source.file: node for kind in ("Module", "Package") for node in self.in_graph.nodes(kind)}
         held.update(nodes)
         for rel in sorted(folders, key=lambda item: (item.count("/"), item)):
-            parent = _enclosing(rel, folders, nodes) or self.graph.root_of(self)
+            parent = _enclosing(rel, folders, nodes) or self.in_graph.root
             folder = nodes[rel]
             for imported in _imported_folders(imports[rel], held, rel):
                 self.graph.link("dependsOn", folder, imported, "relationship")
@@ -134,7 +134,7 @@ class GraphReading:
     def _class(self, relative: str, folder: Node, cls) -> None:
         """Add the class, its properties, and its operations; each is the object the parser built."""
         cls.load_source_facts()
-        node = self.graph.add(self, cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", relative, cls.line, cls.end_line)
+        node = self.in_graph.add(cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", relative, cls.line, cls.end_line)
         self.graph.link("owns", folder, node)
         self.graph.link("belongsTo", node, folder, "relationship")
         for prop in _properties_of(cls):
@@ -148,10 +148,10 @@ class GraphReading:
         prop_id = f"clean_engineering:Property:{relative}:{prop.name}:{cls.name}"
         line = prop.line or 1
         if prop.type == "Property":
-            node = self.graph.add(self, prop, prop_id, relative, line, line)
+            node = self.in_graph.add(prop, prop_id, relative, line, line)
             hint = prop.type_hint or ""
         else:
-            node = self.graph.add_named(self, "Property", prop_id, prop.name, Source(relative, line, line, str(self._source_root)))
+            node = self.in_graph.add_named("Property", prop_id, prop.name, Source(relative, line, line, str(self._source_root)))
             hint = prop.name[:1].upper() + prop.name[1:]
             for fact in _GETTER_MEASURES:
                 node.set_fact(fact, getattr(prop, fact, None))
@@ -170,12 +170,12 @@ class GraphReading:
     def _operation(self, relative: str, cls: Node, operation) -> None:
         start, end = operation.source_lines
         operation.load_span_facts()
-        node = self.graph.add(self, operation, f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}", relative, start, end)
+        node = self.in_graph.add(operation, f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}", relative, start, end)
         node.set_fact("parameters", [[p.name, (p.type_hint or "").strip()] for p in operation.parameters])
         self.graph.link("owns", cls, node)
         for parameter in operation.parameters:
             param_id = f"clean_engineering:Parameter:{relative}:{parameter.name}:{cls.name}.{operation.name}"
-            self.graph.link("hasParameter", node, self.graph.add(self, parameter, param_id, relative, start, start), "relationship")
+            self.graph.link("hasParameter", node, self.in_graph.add(parameter, param_id, relative, start, start), "relationship")
         returned = operation.return_type or ""
         if _names_class(returned, self._class_names):
             for other in self._class_names:
@@ -184,7 +184,7 @@ class GraphReading:
                     self.graph.link("returns", node, other_node, "relationship")
 
     def _class_named(self, name: str) -> Node | None:
-        return next((node for node in self.graph.nodes_of(self, "OoadClass") if node.name == name), None)
+        return next((node for node in self.in_graph.nodes("OoadClass") if node.name == name), None)
 
     ## the model documents
 
@@ -199,7 +199,7 @@ class GraphReading:
             described.update(self.model_in("markdown", file.read_text(encoding="utf-8")).described_members(relative))
         if described:
             # A refresh reads only some model documents, so the members the others describe stay.
-            root = self.graph.root_of(self)
+            root = self.in_graph.root
             root.set_fact("model_members", {**(root.get_fact("model_members") or {}), **described})
 
     def _model_files(self) -> list[Path]:

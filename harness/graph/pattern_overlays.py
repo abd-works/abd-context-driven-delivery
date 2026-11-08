@@ -49,6 +49,11 @@ class GraphOverlay:
     def read(self, graph: Graph) -> None:
         """Add this pattern's nodes and edges to the practices ``graph`` holds."""
 
+    def practice_file(self, practice_key: str, name: str) -> Path:
+        """The file called name the pattern keeps beside its rules for the practice of practice_key, such as its
+        ``schema.yaml``; it may not exist."""
+        return Path(self.pattern.module_dir) / "practices" / practice_key / "model" / name
+
     def rules_for(self, practice: Any) -> dict[str, Any]:
         """The graph rules this pattern adds to practice, by slug, read once from the pattern's own folder."""
         if practice.key not in self._rules:
@@ -89,6 +94,13 @@ class PatternOverlays:
         if not _PATTERNS_ROOT.is_dir():
             return []
         return [entry.name for entry in sorted(_PATTERNS_ROOT.iterdir()) if self._holds_practices(entry)]
+
+    @property
+    def practice_schema_files(self) -> list[Path]:
+        """The schema every pattern keeps for each practice it adds to, applied or not."""
+        if not _PATTERNS_ROOT.is_dir():
+            return []
+        return sorted(_PATTERNS_ROOT.glob("*/practices/*/model/schema.yaml"))
 
     def root_of(self, overlay: str) -> Path:
         """The overlay root a path or pattern name names: the folder itself when it holds ``practices/``, else the

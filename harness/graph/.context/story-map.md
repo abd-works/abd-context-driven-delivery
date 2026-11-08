@@ -7,7 +7,7 @@ section: body
 
 # Story Map — Knowledge Graph
 
-**Sources / context:** `harness/graph/.context/module-context.md`, `harness/graph/.context/defects.md`; `graph.py`, `explorer.py`, `working_copy.py`, `rules.py`, `schema_rules.py`, `schema_edges.py`, `node_rules.py`, `graph_rules_collection.py`, `practice_rules_registry.py`, `guidance_prose_index.py`, `bound_node.py`, `skipped_folders.py`; the Graph app in `harness/graph/app/` (`App.tsx`, `filter/FilterView.tsx`, `graph/GraphView.tsx`, `graph/GraphClient.ts`, `graph/graph-api.ts`, `graph/query-progress.ts`, `source/SourceView.tsx`, `source/call-expansion.ts`, `source/violation-prompt.ts`, `overlay-labels.ts`, `server.ts`, `choose_folder.py`); the specs `app/app.test.tsx`, `app_smoke_spec.py`, `graph_spec.py`, `graph_json_spec.py`, `graph_view_spec.py`, `load_progress_spec.py`, `pattern_overlay_spec.py`, `rule_category_spec.py`, `schema_rules_spec.py`, `working_copy_scan_spec.py`, `bdd_invokes_spec.py`, `ce_rules_spec.py`, `ddd_rules_spec.py`, `stories_examples_spec.py`, `stories_rules_spec.py`, `story_scenario_count_spec.py`, `bdd_examples_spec.py`, `drawio_rules_spec.py`; callers `cdd_guidance/actions/validate/validate.py`, `validate_spec.py`, `graph_json_reader_spec.py`, `harness/kanban/report.py`, `space/session/session.py`, `cdd_guidance/practices/bdd/bdd.md`, `cdd_guidance/practices/stories/story-realizations/SKILL.md`, `harness/mcp/mcp_server.py`.
+**Sources / context:** `harness/graph/.context/module-context.md`, `harness/graph/.context/defects.md`; `graph.py`, `explorer.py`, `schema_rules.py`, `schema_edges.py`, `node_rules.py`, `graph_rules_collection.py`, `practice_rules_registry.py`, `guidance_prose_index.py`, `bound_node.py`, `skipped_folders.py`; the Graph app in `harness/graph/app/` (`App.tsx`, `filter/FilterView.tsx`, `graph/GraphView.tsx`, `graph/GraphClient.ts`, `graph/graph-api.ts`, `graph/query-progress.ts`, `source/SourceView.tsx`, `source/call-expansion.ts`, `source/violation-prompt.ts`, `overlay-labels.ts`, `server.ts`, `choose_folder.py`); the specs `app/app.test.tsx`, `app_smoke_spec.py`, `graph_spec.py`, `graph_json_spec.py`, `graph_view_spec.py`, `load_progress_spec.py`, `pattern_overlay_spec.py`, `rule_category_spec.py`, `schema_rules_spec.py`, `working_copy_scan_spec.py`, `bdd_invokes_spec.py`, `ce_rules_spec.py`, `ddd_rules_spec.py`, `stories_examples_spec.py`, `stories_rules_spec.py`, `story_scenario_count_spec.py`, `bdd_examples_spec.py`, `drawio_rules_spec.py`; callers `cdd_guidance/actions/validate/validate.py`, `validate_spec.py`, `graph_json_reader_spec.py`, `harness/kanban/report.py`, `space/session/session.py`, `cdd_guidance/practices/bdd/bdd.md`, `cdd_guidance/practices/stories/story-realizations/SKILL.md`, `harness/mcp/mcp_server.py`.
 
 **Evidence:** **Observed** means the code and specs do it today (name the file); **Inferred** means the code does it but no spec presses it; **Intended** means a source (such as defects.md) asks for it and the code does not do it yet (name the source).
 
@@ -41,7 +41,7 @@ Observed: a scan leaves out `node_modules`, `dist`, test-run output, caches and 
 
 ### (S) Knowledge Graph --> Report Load Progress
 
-Observed: a load names the saved-graph check, each source file it reads, and each rule as it runs, so whoever called it can watch (`graph.py` `report_progress`, `rules.py` `attach_rules`, `load_progress_spec.py`).
+Observed: a load names the saved-graph check, each source file it reads, and each rule as it runs, so whoever called it can watch (`graph.py` `report_progress`, `PracticeNodes.check`, `load_progress_spec.py`).
 
 ### (S) Agent --> Save Graph To Context Folder
 
@@ -54,27 +54,27 @@ Observed: saving merges into the existing `graph.json`, so practices already sav
 ## (E) Build Practice Trees From Source
 ### (S) Knowledge Graph --> Read Modules Classes And Operations
 
-Observed: Clean Engineering reads modules (folders with a module card), packages, classes, operations, properties and parameters, keeps each file's top-level functions in a `_module` class, and orders their groups under each node (`working_copy.py` `_record_clean`, `graph_spec.py` "with clean engineering", `working_copy_scan_spec.py` "over module cards").
+Observed: Clean Engineering reads modules (folders with a module card), packages, classes, operations, properties and parameters, keeps each file's top-level functions in a `_module` class, and orders their groups under each node (`graph.py` `_record_clean`, `graph_spec.py` "with clean engineering", `working_copy_scan_spec.py` "over module cards").
 
 ### (S) Knowledge Graph --> Read Clean Engineering Model Documents
 
-Inferred: the load reads each scoped folder's `.context/*-model.md` beside the code so members and interactions the model document names join the graph (`working_copy.py` `_record_clean_models`, described in `cdd_guidance/practices/bdd/bdd.md`).
+Inferred: the load reads each scoped folder's `.context/*-model.md` beside the code so members and interactions the model document names join the graph (`graph.py` `_record_clean_models`, described in `cdd_guidance/practices/bdd/bdd.md`).
 
 ### (S) Knowledge Graph --> Place DDD Building Blocks Under Aggregates
 
-Observed: DDD reads bounded contexts from folders holding `.context/bounded-context.md` and places aggregates, entity roots, value objects and repositories under them by stereotype (`working_copy.py` `_record_ddd`, `graph_spec.py` "with domain-driven design").
+Observed: DDD reads bounded contexts from folders holding `.context/bounded-context.md` and places aggregates, entity roots, value objects and repositories under them by stereotype (`graph.py` `_record_ddd`, `graph_spec.py` "with domain-driven design").
 
 ### (S) Knowledge Graph --> Read Story Maps And Story Tests
 
-Observed: Stories reads epics, sub-epics and stories from story map markdown and draw.io files, and scenarios, steps and examples from story tests, keeping each node's path and line (`working_copy.py` `_record_stories`, `graph_spec.py` "with stories", `working_copy_scan_spec.py` "limited to an edited story map markdown file", "limited to an edited Python story test").
+Observed: Stories reads epics, sub-epics and stories from story map markdown and draw.io files, and scenarios, steps and examples from story tests, keeping each node's path and line (`graph.py` `_record_stories`, `graph_spec.py` "with stories", `working_copy_scan_spec.py` "limited to an edited story map markdown file", "limited to an edited Python story test").
 
 ### (S) Knowledge Graph --> Read BDD Spec Trees
 
-Observed: BDD reads each spec file's describe tree into spec, description, context and observation nodes (`working_copy.py` `_record_bdd`, `graph_spec.py` "with behavior-driven development").
+Observed: BDD reads each spec file's describe tree into spec, description, context and observation nodes (`graph.py` `_record_bdd`, `graph_spec.py` "with behavior-driven development").
 
 ### (S) Knowledge Graph --> Link Steps And Observations To Operations
 
-Observed: a story step and a BDD observation each get an `invokes` edge to the operations their code calls, with `invokedBy` back on the operation and setup calls of the enclosing context first (`working_copy.py` `_record_story_edges`, `_record_bdd_edges`, `graph_spec.py` "with a step that invokes an operation", `bdd_invokes_spec.py`).
+Observed: a story step and a BDD observation each get an `invokes` edge to the operations their code calls, with `invokedBy` back on the operation and setup calls of the enclosing context first (`graph.py` `_record_story_edges`, `_record_bdd_edges`, `graph_spec.py` "with a step that invokes an operation", `bdd_invokes_spec.py`).
 
 ### (S) Knowledge Graph --> Link Examples To Classes And Steps
 

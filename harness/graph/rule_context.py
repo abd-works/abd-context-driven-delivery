@@ -31,11 +31,11 @@ class RuleCheckContext:
 
     def nodes(self, type: str | None = None) -> list:
         """The checked practice's nodes, or only those of type."""
-        return self.graph.nodes_of(self.practice, type)
+        return self.practice.in_graph.nodes(type)
 
     def edges(self, kind: str) -> list:
         """The checked practice's edges of kind."""
-        return self.graph.edges_of(self.practice, kind)
+        return self.practice.in_graph.edges(kind)
 
     def node(self, node_id: str):
         """The node called node_id in the graph; none when no practice holds one."""

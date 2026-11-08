@@ -32,6 +32,7 @@ from harness.hooks.hook_server import (
 )
 from harness.hooks.hooks import Hook, Hooks, hook
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.repository_toolsets import RepositoryToolsets
 from space.session.sessions import Sessions
 from space.work_state import WorkState
 
@@ -856,14 +857,14 @@ with description("a hook that gives a toast"):
 with description("hook process helpers"):
 
     with it("should use python.exe for the Cursor dispatch command so stdout is returned"):
-        from harness.hooks.hooks import HookInstallation
+        from harness.hooks.hook_installation import HookInstallation
         from harness.process.process import PythonInterpreter
 
         install = HookInstallation(IdeLayout("Cursor"), _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
         command = install.dispatch_command.replace("\\", "/")
         python = PythonInterpreter(sys.executable).console.replace("\\", "/")
         expect(command).to(contain(python))
-        expect(command).to(contain("harness/hooks/hook_server.py"))
+        expect(command).to(contain("harness/hooks/hook_daemon.py"))
         if sys.platform == "win32":
             expect(command).to(contain("python.exe"))
             expect(command).not_to(contain("pythonw.exe"))
@@ -950,7 +951,7 @@ with description("a hook server whose project registers no sessions"):
 with description("a hook install"):
 
     with before.each:
-        from harness.hooks.hooks import HookInstallation
+        from harness.hooks.hook_installation import HookInstallation
 
         @agent_toolset
         class _StopHook:
@@ -996,3 +997,56 @@ with description("a hook install"):
             except HooksFileUnreadable:
                 pass
             expect(self.manifest.read_text(encoding="utf-8")).to(contain("my-own-hook"))
+
+
+with description("a checkout's hook server"):
+
+    with before.each:
+        self.root = Path(tempfile.mkdtemp())
+
+    with after.each:
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    with context("with hooks installed for Kilo only"):
+
+        with before.each:
+            handlers = self.root / IdeLayout("Kilo").folder_name / "hook-handlers.json"
+            handlers.parent.mkdir()
+            handlers.write_text(
+                json.dumps(
+                    {
+                        "handlers": [
+                            {
+                                "event": "stop",
+                                "operation": "auto_turn",
+                                "ref": "harness.guidance.fixtures.agentic_ops.hook_ops:SampleHookOps",
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.server = HookServer.from_repository(RepositoryToolsets(self.root))
+
+        with it("should serve the events the Kilo install registered"):
+            expect(self.server.diagnose()["events"]).to(contain("stop"))
+
+        with it("should keep the daemon's address outside every IDE folder"):
+            from harness.hooks.hook_daemon import HookDaemon
+
+            expect(HookDaemon(self.root).state_path.parent.name).to(equal(".hook-server"))
+
+    with context("with a toolset whose hooks are kept out of install"):
+
+        with before.each:
+            @Hooks(deploy=False)
+            @agent_toolset
+            class _Undeployed:
+                @hook("stop")
+                def on_stop(self, payload: HookPayload) -> dict:
+                    return {"agent_message": "should not run"}
+
+            self.catalog = HandlerCatalog([_Undeployed], self.root)
+
+        with it("should serve none of its events"):
+            expect(self.catalog.event_names).to(equal([]))

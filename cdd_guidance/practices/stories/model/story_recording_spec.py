@@ -50,19 +50,19 @@ with description("a story map recorded on a graph"):
         self.practice = practice
 
     with it("should emit Given, When, and Then node types"):
-        expect(self.practice.graph.node_types_of(self.practice)).to(contain("Given", "When", "Then"))
+        expect(self.practice.in_graph.node_types).to(contain("Given", "When", "Then"))
 
     with it("should attach step payload with phase and concepts"):
-        when_nodes = self.practice.graph.nodes_of(self.practice, "When")
+        when_nodes = self.practice.in_graph.nodes("When")
         expect(len(when_nodes)).to(equal(1))
         expect(when_nodes[0].get_fact("phase")).to(equal("when"))
         expect(when_nodes[0].get_fact("concepts")).to(contain("Cart"))
 
     with it("should wire scenario steps edges"):
-        scenario = self.practice.graph.nodes_of(self.practice, "Scenario")[0]
+        scenario = self.practice.in_graph.nodes("Scenario")[0]
         steps = [
             edge.child
-            for edge in self.practice.graph.edges_of(self.practice, "steps")
+            for edge in self.practice.in_graph.edges("steps")
             if edge.parent is scenario
         ]
         expect(len(steps)).to(equal(3))
@@ -81,7 +81,7 @@ def _imports_of(root: Path, file: str, text: str) -> dict:
     graph.open(Path(str(root)))
     practice = graph.practice("stories")
     model.record(practice)
-    return practice.graph.nodes_of(practice, "Story")[0].get_fact("imported_modules")
+    return practice.in_graph.nodes("Story")[0].get_fact("imported_modules")
 
 
 with description("a story read from a story test that imports its examples"):

@@ -60,7 +60,7 @@ def _drawio_node(practice: PracticeGuidance, root: Path, xml: str) -> Node:
         Source("model.drawio", 1, 10),
     )
     practice.graph.open(root)
-    practice.graph.hold(node)
+    practice.in_graph.hold(node)
     return node
 
 
@@ -81,7 +81,7 @@ with description("class-title-no-markdown-bold drawio graph rule"):
     with context("a diagram the graph read two classes from"):
         with it("should scan the diagram once"):
             node = _drawio_node(self.practice, self.root, _FAULTY)
-            self.practice.graph.hold(Node(self.practice, "OoadClass", "clean_engineering:OoadClass:model.drawio:Other", "Other", Source("model.drawio", 11, 20)))
+            self.practice.in_graph.hold(Node(self.practice, "OoadClass", "clean_engineering:OoadClass:model.drawio:Other", "Other", Source("model.drawio", 11, 20)))
             hits = self.rule.check_practice(self.context)
             expect(len(hits)).to(equal(len(self.rule.scanner.scan_file(self.root, self.root / "model.drawio"))))
 

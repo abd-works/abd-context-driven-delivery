@@ -40,7 +40,7 @@ def _record_stories(practice: PracticeGuidance, names: list[str], relative: str,
     model.append_epic(epic)
     model.source_texts[relative] = source
     model.record(practice)
-    return practice.graph.nodes_of(practice, "Story")
+    return practice.in_graph.nodes("Story")
 
 
 def _story_nodes_from_ts(
@@ -53,7 +53,7 @@ def _story_nodes_from_ts(
     for index, name in enumerate(re.findall(r"""given\s*\(\s*['"]([^'"]+)['"]""", source)):
         step = Step(name, StepType.GIVEN, index + 1, keyword="Given")
         step.type = "Given"
-        nodes.append(practice.graph.add(practice, step, f"stories:Step:map.given.{index}", relative, 1, 1))
+        nodes.append(practice.in_graph.add(step, f"stories:Step:map.given.{index}", relative, 1, 1))
     return nodes
 
 
@@ -70,7 +70,7 @@ def violations_for_story_source(
     practice._temp_dir = temp  # type: ignore[attr-defined]
     _story_nodes_from_ts(practice, source, relative)
     if node_type:
-        for node in graph.nodes_of(practice):
+        for node in practice.in_graph.nodes():
             node.type = node_type
     context = RuleCheckContext(practice, root)
     messages: list[str] = []
@@ -134,7 +134,7 @@ def _practice_from_folder(folder: Path, *, relative_file: str) -> tuple[Practice
         Path(rel).stem,
         Source(rel, 1, max(1, text.count("\n"))),
     )
-    graph.hold(node)
+    node.practice.in_graph.hold(node)
     _load_file_facts(node, root, rel)
     return practice, root, node
 

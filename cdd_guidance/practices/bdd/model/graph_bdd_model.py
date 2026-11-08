@@ -43,7 +43,7 @@ class GraphBddModel(BddModel):
         """The describe-tree nodes of each spec file."""
         by_file: dict[str, List[Node]] = {}
         for node_type in _BEHAVIOR_TYPES:
-            for node in self._graph.nodes_of(self._bdd, node_type):
+            for node in self._bdd.in_graph.nodes(node_type):
                 by_file.setdefault(node.source.file, []).append(node)
         return by_file
 
@@ -104,12 +104,12 @@ class GraphBddModel(BddModel):
 
     def _described_members(self) -> dict:
         """The members the Clean Engineering model describes, by `Class.member`, as its practice's root records them."""
-        return self._graph.root_of(self._clean).get_fact("model_members", {}) or {}
+        return self._clean.in_graph.root.get_fact("model_members", {}) or {}
 
     def _code_facts(self, owner: str, name: str) -> Optional[dict]:
         """The facts on the code's member owner.name, when the graph loaded it."""
         for node_type in _MEMBER_TYPES:
-            for member in self._graph.nodes_of(self._clean, node_type):
+            for member in self._clean.in_graph.nodes(node_type):
                 if member.name == name and member.facts.get("owner") == owner:
                     return _member_facts(member)
         return None

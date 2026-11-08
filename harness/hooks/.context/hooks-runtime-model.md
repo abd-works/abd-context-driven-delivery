@@ -2,7 +2,7 @@
 
 Markdown channel for **`harness/hooks`**. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet*, *AgentTool*, *ToolCall*, and *InstallDestination* belong to `harness/agent_tools`, *Destination* to `harness/annotations`, *Installation*, *RepositoryToolsets*, and *ContextConfig* to `harness/installation`, *RunningProcess*, *StoppableProcess*, and *ProcessNotStopped* to `harness/process`, and *Session* and its *ChatInjections* to `space/session`; they appear here only as names this module uses. *PromptLog* (`tools/prompt_log`) is one toolset whose members are hooks; it keeps its own model.
 
-**Install** writes files. **Runtime** is the IDE running `hook_server.py` with the event's JSON on stdin; that script finds or starts one long-running *HookServer* per repository through *HookDaemon* and passes the event to it. `@Hook` and `@mcp` on the same operation remain two independent installs.
+**Install** writes files. **Runtime** is the IDE running `hook_daemon.py` (the hook command) with the event's JSON on stdin; that script finds or starts one long-running *HookServer* per repository through *HookDaemon* and passes the event to it. `@Hook` and `@mcp` on the same operation remain two independent installs.
 
 ## Language companion                                             <!-- L -->
 
@@ -62,7 +62,7 @@ Install-time writer for hook artifacts. Same walk as markdown and MCP; only the 
 + server: HookServer | None
 + diagnosis: dict | None
 + dispatch_command: str
-	// "{console python} -u {this folder}/hook_server.py"; the hook command sits beside hooks.py
+	// "{console python} -u {harness/hooks}/hook_daemon.py"; HookDaemon.COMMAND_SCRIPT
 + << composition >> handlers_file: HookHandlersFile
 + << composition >> manifest: HooksManifest
 + registered_events: list[str]
@@ -206,7 +206,7 @@ One annotated operation that may run for an event.
 The toolsets whose hooks the server runs.
 
 + HandlerCatalog(toolsets: list | None = None, repo_root: Path | None = None, handlers: Path | None = None)
-	// given handlers file, given toolsets, else .cursor/hook-handlers.json, else RepositoryToolsets.collect
+	// the toolsets named; a toolset whose @Hooks(deploy=False) keeps it out of install is left out
 	-> HookHandlersFile.refs
 ------
 + << composition >> toolsets: list[AgentToolSet]
@@ -243,7 +243,7 @@ The hooks of one checkout, loaded once in its hook daemon. It runs the enabled h
 + show_toasts_with(show: Callable[[str, list[Path]], Any]): None
 	// the notifier registers itself when it is loaded, so a hook names its toast and never the notifier
 + from_repository(toolsets: RepositoryToolsets): HookServer
-	// the toolsets the installed hook-handlers.json lists, else every class the repository defines; every module is imported either way
+	// the toolsets the hook-handlers.json of every hook-running IDE folder lists (InstalledHookHandlers), else every class the repository defines; every module is imported either way
 + from_handlers(handlers: Path, repo: Path): HookServer
 	-> notify_exceptions()
 + handle_stdin(raw: bytes): HookResult
@@ -276,7 +276,7 @@ The hooks of one checkout, loaded once in its hook daemon. It runs the enabled h
 
 ## HookDaemon                                                     <!-- Md -->
 
-The hook daemon of one checkout: it listens on the one port the checkout's daemon may hold, publishes its address, and serves every hook command with one loaded HookServer. `hook_server.py` runs `HookDaemon(checkout).ensure().handle_stdin(raw)`.
+The hook daemon of one checkout: it listens on the one port the checkout's daemon may hold, publishes its address, and serves every hook command with one loaded HookServer. The hook command (`run_hook_command` in `hook_daemon.py`) runs `HookDaemon(checkout).ensure().handle_stdin(raw)`.
 
 + HookDaemon(repo: Path, port: int | None = None)
 ------
@@ -284,7 +284,7 @@ The hook daemon of one checkout: it listens on the one port the checkout's daemo
 	// "127.0.0.1"
 + repo: Path
 + state_path: Path
-	// .cursor/hook-server.json, the running daemon's address
+	// .hook-server/address.json in the checkout, the running daemon's address; it belongs to no IDE folder
 + port: int
 	// the one port this checkout's daemon may listen on, from the checkout's path
 + source_stamp: str
@@ -324,9 +324,9 @@ Where a running hook daemon answers.
 
 ```
 {Installer.path}/                 typically .cursor/
-  hooks.json                      HooksManifest — event → hook_server.py command
+  hooks.json                      HooksManifest — event → hook_daemon.py command
   hook-handlers.json              HookHandlersFile
-  hook-server.json                HookDaemon.state_path — the running daemon's address
+.hook-server/                    HookDaemon.folder — address.json, server.log, spawn.lock
 .sessions/{name}/logs/            dispatch.debug, prompt-log.txt
 .sessions/{name}/chat-injections/ ChatInjections (space/session)
 ```

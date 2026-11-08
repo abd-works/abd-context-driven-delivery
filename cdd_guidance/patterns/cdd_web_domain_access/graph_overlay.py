@@ -14,7 +14,7 @@ class WebDomainAccessOverlay(GraphOverlay):
     def read(self, graph: Graph) -> None:
         from cdd_guidance.practices.ddd.ddd import Ddd
 
-        ddd = graph.loaded_practice(Ddd)
+        ddd = graph.loaded(Ddd)
         if not graph.folder or ddd is None:
             return
         root = Path(graph.folder)
@@ -26,7 +26,7 @@ class WebDomainAccessOverlay(GraphOverlay):
                 continue
             semantic, facts = tier
             relative = file.relative_to(root).as_posix()
-            node = graph.add_named(ddd, semantic, f"ddd:{semantic}:{relative}", file.name, Source.whole_file(relative, str(root)))
+            node = ddd.in_graph.add_named(semantic, f"ddd:{semantic}:{relative}", file.name, Source.whole_file(relative, str(root)))
             for key, value in facts.items():
                 node.set_fact(key, value)
 

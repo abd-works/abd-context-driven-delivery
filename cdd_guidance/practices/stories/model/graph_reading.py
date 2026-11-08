@@ -27,7 +27,7 @@ def align_story_node(node) -> None:
     elif node.type in {"Scenario", "Story", "Background"}:
         node.source.widen_to_call_close()
     elif node.type == "Example":
-        node.source.align_to_example_export(node.graph.source_root_of(node.practice), node.name)
+        node.source.align_to_example_export(node.practice.in_graph.source_root, node.name)
 
 
 class StoriesReading:
@@ -37,7 +37,7 @@ class StoriesReading:
     def __init__(self, practice: Stories) -> None:
         self.practice = practice
         self.graph = practice.graph
-        self.root = Path(self.graph.source_root_of(practice))
+        self.root = Path(practice.in_graph.source_root)
 
     def story_map(self):
         model = self._story_tests()
@@ -92,10 +92,10 @@ class StoryLinks:
 
     def link(self) -> None:
         operations: dict[str, list] = {}
-        for operation in self.graph.nodes_of(self.clean, "Operation"):
+        for operation in self.clean.in_graph.nodes("Operation"):
             operations.setdefault(operation.name, []).append(operation)
-        steps = [node for node in self.graph.nodes_of(self.stories) if node.type in {"Step", "Given", "When", "Then"}]
-        examples = self.graph.nodes_of(self.stories, "Example")
+        steps = [node for node in self.stories.in_graph.nodes() if node.type in {"Step", "Given", "When", "Then"}]
+        examples = self.stories.in_graph.nodes("Example")
         for index, step in enumerate(steps, start=1):
             self.graph.report_progress(f"stories · steps · {index}/{len(steps)} · {step.name}")
             self._link_step(step, operations, examples)
@@ -109,7 +109,7 @@ class StoryLinks:
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [operation for name in called for operation in operations.get(name, ())]
         epic = self._epic_for(step) if matched else None
-        modules = {node.name: node for node in self.graph.nodes_of(self.clean, "Module")}
+        modules = {node.name: node for node in self.clean.in_graph.nodes("Module")}
         for operation in matched:
             self.graph.link("invokes", step, operation, "relationship")
             self.graph.link("invokedBy", operation, step, "relationship")
@@ -123,12 +123,12 @@ class StoryLinks:
                     self.graph.link("observes", step, example, "relationship")
 
     def _link_example(self, example, text: str) -> None:
-        for class_node in self.graph.nodes_of(self.clean, "OoadClass"):
+        for class_node in self.clean.in_graph.nodes("OoadClass"):
             if re.search(rf"\b{re.escape(class_node.name)}\b", text):
                 self.graph.link("demonstrates", example, class_node, "grouped")
                 self.graph.link("demonstrates", class_node, example, "grouped")
                 self.graph.link("demonstratedThrough", class_node, example, "relationship")
-        for prop in self.graph.nodes_of(self.clean, "Property"):
+        for prop in self.clean.in_graph.nodes("Property"):
             if re.search(rf"\.{re.escape(prop.name)}\b", text):
                 self.graph.link("retrievedUsing", example, prop, "relationship")
                 self.graph.link("retrievedUsing", prop, example, "relationship")

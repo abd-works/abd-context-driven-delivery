@@ -1,4 +1,4 @@
-"""Hook daemons serving on real ports, and hook_server.py run as a subprocess. Heavy: starts servers and processes."""
+"""Hook daemons serving on real ports, and the hook command hook_daemon.py run as a subprocess. Heavy: starts servers and processes."""
 import json
 import os
 import subprocess
@@ -81,14 +81,14 @@ with description("a hook daemon"):
                 blocking.release.set()
 
 
-with description("the Cursor hook_server.py command"):
+with description("the IDE hook command, hook_daemon.py"):
 
     with it("should dispatch sessionStart over stdin without an import error"):
         proc = subprocess.run(
             [
                 sys.executable,
                 "-u",
-                str(_REPO_ROOT / "harness" / "hooks" / "hook_server.py"),
+                str(_REPO_ROOT / "harness" / "hooks" / "hook_daemon.py"),
             ],
             input=b'{"hook_event_name":"sessionStart"}',
             cwd=str(_REPO_ROOT),
