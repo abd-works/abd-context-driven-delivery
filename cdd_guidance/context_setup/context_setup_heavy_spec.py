@@ -304,15 +304,8 @@ with description("a ContextSetup"):
             with it("should mention partition delegation to context tools"):
                 expect("partition" in self.prose).to(be_true)
 
-            with it("should expand the partition action for the selected context tools"):
-                # Practices no longer carry partition; one Partition action takes them as guidance.
-                expect(self.prose).to(contain("Split the given context into an index plus verbatim segments"))
-
             with it("should tell the AI to set guidance to the selected practices"):
                 expect(self.prose).to(contain("guidance set to the selected practices"))
-
-            with it("should have the partition write under the session open in that project"):
-                expect(self.prose).to(contain(f"docs under {fixture.session_root.as_posix()}/.context/"))
 
             with it("should mention embed as the final step"):
                 expect("embed" in self.prose).to(be_true)
@@ -323,6 +316,10 @@ with description("a ContextSetup"):
 
             with it("should include embed from ContextIndex"):
                 expect("embed" in self.instructions.tools).to(be_true)
+
+            # Practices no longer carry partition; one Partition action takes the selected ones as guidance.
+            with it("should include partition"):
+                expect("partition" in self.instructions.tools).to(be_true)
 
     # ── AgentTool: capture_from_live_app (expansion tests) ──────────────────────
 

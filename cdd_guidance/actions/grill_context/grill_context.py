@@ -5,8 +5,9 @@ import json
 import os
 from pathlib import Path
 
+from cdd_guidance.actions.generate.generate import Generate
 from harness.guidance_actions import GuidanceArg, GuidanceAction
-from harness.agent_tools import agent_instructions, agent_toolset, tools
+from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
@@ -29,14 +30,8 @@ class GrillContext(GuidanceAction):
     @property
     def _grill_answers_path(self) -> Path:
         """The session's grill-answers.md, in the .context folder of the session's root, so the answers outlast the
-        session. A root inside a .context or .sessions folder writes to that project's .context instead."""
-        folder = self.session.root
-        for candidate in (folder, *folder.parents):
-            if candidate.name == ".context":
-                return candidate / "grill-answers.md"
-            if candidate.name == ".sessions":
-                return candidate.parent / ".context" / "grill-answers.md"
-        return folder / ".context" / "grill-answers.md"
+        session."""
+        return self.session.context_folder() / "grill-answers.md"
 
     def _appended_answers_content(self, existing: str | None, heading: str, body: str) -> str:
         """Compose the full grill-answers document after appending one entry (pure).
@@ -108,20 +103,16 @@ class GrillContext(GuidanceAction):
     @agent_instructions
     def grill(self, guidance: GuidanceArg) -> str:
         """Interview the plan against codebase context until questions are grounded in files you have read, then generate each listed guidance. Ask one framed question at a time and write each resolved insight to grill-answers.md."""
-        self.begin(guidance)
-        self.grill_with_context()
-        self.generate_each()
+        self._work_on(guidance)
+        instructions(self.grill_with_context)
+        "When the interview has agreed the plan, generate each listed guidance from it:"
+        instructions(self._generate().generate)
         return "Grill complete; generate instructions applied."
 
-    def generate_each(self) -> list:
-        """Generate each guidance this action lists, or its text guidance once, in this action's session: the step a
-        grill ends with, and the one sketch and iterate end with after their own grill."""
-        return self.each(self._generate)
-
-    def _generate(self, item) -> str:
-        from cdd_guidance.actions.generate.generate import Generate
-
-        return self._inside(Generate).generate(item if isinstance(item, str) else [item])
+    def _generate(self) -> Generate:
+        """The generate a grill ends with: started inside this grill, so it works on what the grill lists, at the
+        fidelity the grill works at."""
+        return self._inside(Generate)
 
     @agent_instructions
     def grill_with_context(self, plan: str = "", paths: list[str] | str | None = None) -> str:

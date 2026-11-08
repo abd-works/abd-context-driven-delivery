@@ -6,8 +6,6 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from cdd_guidance.actions.validate.graph_json_reader import save_checked_graph
-
 
 class ReportFiles:
     """The report files a validate call claims in its session, one for each listed guidance's fidelity.
@@ -29,14 +27,12 @@ class ReportFiles:
         with tempfile.NamedTemporaryFile(dir=folder, prefix="edited-graph-", suffix=".json", delete=False) as file:
             return Path(file.name)
 
-    def save(self, report: str, checked_graphs: list[Path]) -> None:
-        """Save the report into each claimed file, so the board can link to it, with the graph it checked beside each
-        under the same name."""
+    def save(self, report: str, graph: Any) -> None:
+        """Save the report into each claimed file, so the board can link to it, with the graph the call checked (its
+        *CheckedGraph*) kept beside each under the same name."""
         for path in self.paths:
             path.write_text(report, encoding="utf-8")
-            beside = path.with_suffix(".json")
-            if beside not in checked_graphs:
-                save_checked_graph(checked_graphs, beside)
+            graph.save_at(path.with_suffix(".json"))
 
     def where(self) -> str:
         """The saved reports, or the session's folder when the call claimed none."""

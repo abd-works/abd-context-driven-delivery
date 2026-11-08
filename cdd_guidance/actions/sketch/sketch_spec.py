@@ -205,17 +205,23 @@ with description("Sketch toolset") as self:
             expect(joined).to(contain("save_sketch"))
             expect(joined).to(contain("Conduct a relentless grilling interview"))
 
-        with it("inlines each listed practice's rules markdown_block"):
+    # Expanded from the call's arguments alone, as the MCP host expands it: nothing is run on the sketch first.
+    with context("sketch action expanded for a call naming a fidelity"):
+        with before.each:
             from cdd_guidance.practices.bdd.bdd import Bdd
 
-            sketcher = Sketch()
-            sketcher.begin([Bdd(fidelity="behavior")], action="sketch")
-            joined = "\n".join(
-                AgentInstructions.for_callable(Sketch.sketch, sketcher).prompt
-            )
-            expect(joined).to(contain("observable-behavior"))
-            expect(joined).to(contain("no-implementation"))
-            expect(joined).to(contain("not a graph query"))
+            arguments = {"guidance": [Bdd(fidelity="behavior")]}
+            sketcher = Sketch().for_call(ToolCall(arguments))
+            self.prose = AgentInstructions.for_callable(Sketch.sketch, sketcher).expand(arguments).instructions
+
+        with it("gives the practice's shared rules"):
+            expect(self.prose).to(contain("observable-behavior"))
+
+        with it("gives the fidelity's own rules"):
+            expect(self.prose).to(contain("no-implementation"))
+
+        with it("says the rules are an AI check on the sketch, not a graph query"):
+            expect(self.prose).to(contain("not a graph query"))
 
 
 with description("a sketch action"):

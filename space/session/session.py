@@ -180,6 +180,18 @@ class Session:
         file manager reads under it."""
         return Path(self.workpath or self.repo_path).resolve()
 
+    def context_folder(self, module: str = "") -> Path:
+        """The .context folder of the session's root, or of a module folder under it, where sketches and grill answers
+        go so they outlast the session. A module named as a .context folder is that folder, and a root inside a .context
+        or .sessions folder uses that project's .context, so nothing is written into a session's own folder."""
+        folder = self.root / module if module else self.root
+        for candidate in (folder, *folder.parents):
+            if candidate.name == ".context":
+                return candidate
+            if candidate.name == ".sessions":
+                return candidate.parent / ".context"
+        return folder / ".context"
+
     @property
     def graph(self) -> Graph:
         """The knowledge graph this session works with, opened on its root, holding the session's one instance of each

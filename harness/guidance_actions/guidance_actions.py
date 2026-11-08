@@ -387,6 +387,21 @@ class GuidanceAction:
             return [operation(text)]
         return [operation(self.at_fidelity(item)) for item in self.listed()]
 
+    def as_tool(self) -> GuidanceAction:
+        """This action as another action's recipe names it: a tool the agent calls, listed by name, rather than its own
+        recipe pasted into the other's instructions with none of the call's arguments."""
+        self.mode = "tool"
+        return self
+
+    def rules_to_follow(self) -> str:
+        """The rules each listed guidance holds the agent to, read from the fidelity this action works at on it: its
+        shared rules and that fidelity's, or the guidance text itself. It checks nothing, so it saves no report and logs
+        no validate line, which would tell the session board the work had been checked."""
+        return "\n\n".join(part for part in self.each(self._rules_of) if part)
+
+    def _rules_of(self, item: Any) -> str:
+        return item if isinstance(item, str) else item.checked_rules_text()
+
     def at_fidelity(self, item: Any) -> Any:
         """item, one of the Guidance this action lists, as the fidelity this action works at on it; item itself when it
         has none."""
