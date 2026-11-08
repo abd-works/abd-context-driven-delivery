@@ -378,42 +378,6 @@ class RulesCollection(MarkdownCollection):
             lines.append(f"- **{rule.slug}** — {rule.body}")
         return "\n".join(lines)
 
-    @property
-    @agent_instructions
-    def markdown_block(self) -> str:
-        """Original Rules markdown for the practice and the active fidelity.
-
-        Evaluate the sketch against this block as an AI check — not a graph query.
-        """
-        return self._original_rules_markdown()
-
-    def _original_rules_markdown(self) -> str:
-        chunks: list[str] = []
-        seen: set[str] = set()
-        practice = self._owner_practice()
-        if practice is not None:
-            self._append_original_markdown(
-                chunks, seen, getattr(getattr(practice, "rules", None), "markdown", "")
-            )
-            current = getattr(getattr(practice, "fidelities", None), "current", None)
-            if current is not None:
-                self._append_original_markdown(
-                    chunks,
-                    seen,
-                    getattr(getattr(current, "rules", None), "markdown", ""),
-                )
-        self._append_original_markdown(chunks, seen, self.markdown)
-        return "\n\n".join(chunks)
-
-    def _append_original_markdown(
-        self, chunks: list[str], seen: set[str], text: str | None
-    ) -> None:
-        block = (text or "").strip()
-        if not block or block in seen:
-            return
-        seen.add(block)
-        chunks.append(block)
-
     @collect
     def validate(self) -> str: ...
 

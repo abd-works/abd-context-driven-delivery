@@ -72,6 +72,12 @@ class RepositoryToolsets:
         self.root = Path(root).resolve()
         self.unloadable: list[ToolsetUnloadable] = []
 
+    @classmethod
+    def of_running_checkout(cls) -> RepositoryToolsets:
+        """The toolsets of the CDD checkout this code was imported from, the code a hook server or a probe runs, whichever
+        project its call came from. This is the one place that works the checkout out from where the framework sits."""
+        return cls(Path(__file__).resolve().parents[2])
+
     def import_path_entries(self) -> list[str]:
         """The repository root, then tools and the guidance packages under ``cdd_guidance``. Never ``harness/``, which
         would shadow the MCP SDK's ``mcp``; the collection walk still reads ``harness/``."""

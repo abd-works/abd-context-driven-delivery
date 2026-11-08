@@ -216,8 +216,6 @@ applies_to: AppliesTo
 	// which edited files the rules apply to: always, or the files its glob patterns match
 practice_key: str
 fidelity_name: str
-markdown_block: str
-	// the original Rules markdown of the practice and its active fidelity
 ----
 matches(path: str): bool
 from_markdown(text: str, fidelity: str | None, parent): RulesCollection

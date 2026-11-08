@@ -11,7 +11,6 @@ from typing import Any
 from harness.agent_tools.chat_pointer import ChatPointer
 
 _SESSION_PROBE_NAME = "guidance-probe"
-_CDD_REPO = Path(__file__).resolve().parents[2]
 # How many of the log's last lines the report shows, enough to see the lines the probe's actions wrote.
 _TAIL_LINES = 6
 
@@ -31,7 +30,7 @@ class SessionProbe:
         job is to report a failure, so one raised while probing is reported red with its trace, not raised."""
         from harness.installation.repository_toolsets import RepositoryToolsets
 
-        RepositoryToolsets(_CDD_REPO).ensure_import_path()
+        RepositoryToolsets.of_running_checkout().ensure_import_path()
         try:
             return self._report(*self._run_actions())
         except Exception as failure:
