@@ -16,14 +16,14 @@ from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import long_call, mcp
 from harness.graph.edge import Display, Edge, EdgeType
-from harness.graph.graph_build import BuildOrder, BuildStep, WorkerBuild
+from harness.graph.graph_build import BuildOrder, BuildStep, HeldAnswer, WorkerBuild
 from harness.graph.explorer import ExplorerEntry, FilteredNode, GraphLoaded, GraphSaved, NodeSource, Overlay, PracticeInventory
 from harness.graph.graph_rules_collection import GraphRulesCollection
 from harness.graph.pattern_overlays import GraphOverlay, PatternOverlays
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.schema_edges import SchemaEdges
 from harness.graph.schema_rules import PracticeSchema
-from harness.graph.saved_graph import SavedGraph, SavedGraphFile, SavedPractice
+from harness.graph.saved_graph import GraphChanges, PracticeChanges, SavedGraph, SavedGraphFile, SavedNode, SavedPractice
 from harness.graph.skipped_folders import SKIPPED_FOLDERS, scanned_files
 
 if TYPE_CHECKING:
@@ -499,6 +499,8 @@ class Node:
     def set_fact(self, key: str, value) -> None:
         """Record one fact on this node for rules to read; facts save with the graph."""
         self.data[key] = value
+        if self.practice is not None and self.practice.in_graph is not None:
+            self.practice.in_graph.changed()
 
     def get_fact(self, key: str, default=None):
         """This node's fact, else the nearest ancestor's: a fact a whole file owns lives once, on the file's top node. A
@@ -787,8 +789,13 @@ class PracticeNodes:
             raise GraphFailure("root", f"{self.practice.key} is not open in this graph")
         return self._root
 
+    def changed(self) -> None:
+        """Mark the graph changed: what it holds is no longer what a worker last answered."""
+        self.graph.changed()
+
     def open(self, root: Path | None) -> None:
         """Read the practice from root, starting from its root node alone."""
+        self.changed()
         if root is not None:
             self._source_root = Path(root)
         if self._root is None:
@@ -798,6 +805,7 @@ class PracticeNodes:
 
     def close(self) -> None:
         """Forget every node and edge, so a load reads them again from nothing."""
+        self.changed()
         self._root = None
         for store in (self._by_id, self._nodes, self._node_types, self._edges, self._edge_types):
             store.clear()
@@ -876,6 +884,7 @@ class PracticeNodes:
 
     def hold(self, node: Node) -> None:
         """Keep node, one of this practice's, by its type and its id."""
+        self.changed()
         self._node_types.add(node.type)
         self._nodes.setdefault(node.type, []).append(node)
         self._by_id[node.node_id] = node
@@ -884,6 +893,7 @@ class PracticeNodes:
         """Let go of node when the practice holds it, so another practice can take it."""
         if self._by_id.get(node.node_id) is not node:
             return
+        self.changed()
         del self._by_id[node.node_id]
         bucket = self._nodes.get(node.type, [])
         if node in bucket:
@@ -903,13 +913,26 @@ class PracticeNodes:
         """Drop every node read from one of files, each a path from the source root, so a refresh reads those files
         again from nothing; answer the ``id`` of each node dropped, whose edges every practice then drops."""
         dropped = {id(node) for node in self._by_id.values() if node is not self._root and node.source.file in files}
+        return self._forget(dropped)
+
+    def _forget(self, dropped: set[int]) -> set[int]:
+        """Drop the nodes whose ``id`` is in dropped; answer dropped."""
         if dropped:
+            self.changed()
             self._by_id = {node_id: node for node_id, node in self._by_id.items() if id(node) not in dropped}
             self._nodes = {kind: [node for node in group if id(node) not in dropped] for kind, group in self._nodes.items()}
         return dropped
 
+    def put_in_source_order(self) -> None:
+        """Hold the nodes of each type in the order their files and lines give them. A refresh holds the nodes it read
+        again after those it kept, so without this a rule that reports the first of two nodes, such as the original of
+        two duplicate bodies, would report another node after a refresh than after a fresh build."""
+        for kind, group in self._nodes.items():
+            self._nodes[kind] = sorted(group, key=_where_it_sits)
+
     def renew_rules(self) -> None:
         """Forget every node's rules, so each is made fresh when next read and the next check finds each violation again."""
+        self.changed()
         for node in self._by_id.values():
             node.forget_rules()
 
@@ -938,6 +961,7 @@ class PracticeNodes:
         pairs = self._pairs_of(kind, edges)
         if (id(parent), id(child)) in pairs:
             return
+        self.changed()
         self._edge_types.setdefault(kind, edge_type)
         edges.append(Edge(kind, edge_type.order, edge_type.display, parent, child))
         pairs.add((id(parent), id(child)))
@@ -945,6 +969,7 @@ class PracticeNodes:
 
     def drop_edges(self, dropped: Callable[[Edge], bool]) -> list[Edge]:
         """Drop each edge that dropped says to; answer the edges dropped."""
+        self.changed()
         removed: list[Edge] = []
         for kind, edges in list(self._edges.items()):
             self._edges[kind] = [edge for edge in edges if not dropped(edge)]
@@ -1077,6 +1102,41 @@ class PracticeNodes:
             found.append((frozenset(other.checks()), spans))
         return found
 
+    def take_nodes(self, changes: PracticeChanges) -> None:
+        """Drop the nodes changes says the practice no longer holds, and hold each node it names new or changed: a node
+        it holds already is changed in place, so the edges that join it stay."""
+        dropped = set(changes.dropped_nodes)
+        self._forget({id(node) for node_id, node in self._by_id.items() if node_id in dropped and node is not self._root})
+        for saved in changes.nodes:
+            node = self._by_id.get(saved.node_id)
+            if node is None:
+                self.hold(self._restored(saved))
+                continue
+            if node.type != saved.type:
+                self.release(node)
+                node.type = saved.type
+                self.hold(node)
+            node.name = saved.name
+            node.source = Source(saved.file, saved.line, saved.end_line, self.source_root)
+            node.stage = saved.stage
+            node.data = dict(saved.facts)
+            self.changed()
+        if changes.root_facts is not None:
+            self.root.data = dict(changes.root_facts)
+
+    def drop_edges_named(self, keys: list[tuple[str, str, str]]) -> None:
+        """Drop each edge kept on the practice whose kind and ends' ids are one of keys."""
+        if keys:
+            named = set(keys)
+            self.drop_edges(lambda edge: (edge.kind, edge.parent.node_id, edge.child.node_id) in named)
+
+    def _restored(self, kept: SavedNode) -> Node:
+        """A plain node holding what a saved graph kept for it, at the lines it was saved at."""
+        node = Node(self.practice, kept.type, kept.node_id, kept.name, Source(kept.file, kept.line, kept.end_line, self.source_root))
+        node.stage = kept.stage
+        node.data = dict(kept.facts)
+        return node
+
     def restore(self, saved: SavedPractice) -> None:
         """Read back the nodes a saved graph kept for the practice, as plain nodes holding their saved facts, at the
         lines they were saved at, and the facts its root kept about the practice as a whole."""
@@ -1084,12 +1144,13 @@ class PracticeNodes:
             self._source_root = Path(saved.source_root)
         self.root.data.update(saved.root_facts)
         for kept in saved.nodes:
-            if self.holds(kept.node_id):
-                continue
-            node = Node(self.practice, kept.type, kept.node_id, kept.name, Source(kept.file, kept.line, kept.end_line, self.source_root))
-            node.stage = kept.stage
-            node.data = dict(kept.facts)
-            self.hold(node)
+            if not self.holds(kept.node_id):
+                self.hold(self._restored(kept))
+
+
+def _where_it_sits(node: Node) -> tuple:
+    """Where node sits: its file, its lines, then its id, which tells apart two nodes on one line."""
+    return (node.source.file or "", node.source.start_line, node.source.end_line, node.node_id)
 
 
 def _inside(node: Node, spans: dict[str, list[tuple[int, int]]]) -> bool:
@@ -1144,6 +1205,9 @@ class Graph:
         self._syncing_schema = False
         # A load, a refresh, and a write each run alone: calls in one session can arrive at once.
         self._changing = threading.RLock()
+        # How many changes the graph has had, and the file of the worker's answer it holds while it holds what that says.
+        self._revision = 0
+        self._answer = HeldAnswer()
 
     def for_call(self, call: ToolCall) -> Graph:
         """The graph call works on: its session's, which the server holds between calls; this graph for a call that
@@ -1287,16 +1351,15 @@ class Graph:
 
     def _restore_links(self, saved: SavedPractice) -> None:
         """Read back the edges and violations a saved graph kept for a practice, once every practice's nodes are back.
-        An edge's parent and a violation's node are most often the practice's own, so it looks there first."""
+        An edge's parent and a violation's node are most often the practice's own, so it looks there first. Each edge
+        is recorded as it was saved and no other way: a practice that links its nodes to another's records the edge
+        back itself when it wants one, so the graph read back holds exactly the edges the build that saved it held."""
         own = self._held[saved.name].in_graph
         for kept in saved.edges:
             parent = own.node(kept.parent) or self.node(kept.parent)
             child = own.node(kept.child) or self.node(kept.child)
             if parent is not None and child is not None:
-                edge_type = EdgeType(kept.kind, kept.order, kept.display)
-                self.record(edge_type, parent, child)
-                if parent.practice is not child.practice:
-                    self.record(edge_type, child, parent)
+                self.record(EdgeType(kept.kind, kept.order, kept.display), parent, child)
         for violation in saved.violations:
             node = own.node(violation.node_id) or self.node(violation.node_id)
             if node is not None:
@@ -1307,6 +1370,38 @@ class Graph:
         edges between them, which may cross practices, and the violations on them."""
         self.overlays = list(saved.overlays)
         self._hold(saved)
+
+    def changed(self) -> None:
+        """Count a change to what the graph holds, so the file of a worker's answer stops standing for it."""
+        self._revision += 1
+
+    def _take(self, changes: GraphChanges) -> None:
+        """Change what the graph holds as a worker's changes say: every practice's nodes first, then the edges, which
+        may cross practices, and the violations; then each changed practice's tree. The graph then holds what the
+        worker's whole answer says, without reading it back."""
+        parts = {key: self._held[key].in_graph for key in changes.practices if key in self._held}
+        changed = {key: part for key, part in parts.items() if not changes.practices[key].is_empty}
+        for key, part in changed.items():
+            part.drop_edges_named(changes.practices[key].dropped_edges)
+        for key, part in changed.items():
+            part.take_nodes(changes.practices[key])
+        for key, part in changed.items():
+            for kept in changes.practices[key].edges:
+                parent = part.node(kept.parent) or self.node(kept.parent)
+                child = part.node(kept.child) or self.node(kept.child)
+                if parent is not None and child is not None:
+                    self.record(EdgeType(kept.kind, kept.order, kept.display), parent, child)
+        for key, part in changed.items():
+            for node_id, violations in changes.practices[key].violations.items():
+                node = part.node(node_id)
+                if node is not None:
+                    node.forget_rules()
+                    for violation in violations:
+                        node.rules.restore(violation)
+        for part in changed.values():
+            part.put_in_source_order()
+            part.rebuild_tree()
+        self.changed()
 
     def _hold(self, saved: SavedGraph) -> None:
         """Hold exactly the practices saved keeps, of those this graph holds, each on the source root it was saved
@@ -1455,7 +1550,9 @@ class Graph:
         server's interpreter it would keep the server from answering every other chat. The graph changes only once the
         worker answers, so a build that fails leaves it holding what it held. Any other call, or none, builds here."""
         if call is not None and call.answers_a_chat:
-            WorkerBuild(self.report_progress).carry_out(lambda: self._order(step, state, saves), self._hold)
+            answer = self._answer.next_file()
+            WorkerBuild(self.report_progress).carry_out(lambda: self._order(step, state, saves), answer, self._hold, self._take)
+            self._answer.keep(answer, self._revision)
             return
         if state is not None:
             self._hold(state)
@@ -1465,9 +1562,15 @@ class Graph:
             self.save_json()
 
     def _order(self, step: BuildStep, state: SavedGraph | None, saves: bool) -> BuildOrder:
-        """step as a worker carries it out: from state when one is given, else from what the graph holds now."""
-        before = state if state is not None else SavedGraph.from_graph(self)
-        return BuildOrder(step, self.folder, self._roots_as_text(), self.overlays, self._scope_as_text(), before, self._registering_modules(), saves)
+        """step as a worker carries it out: from state when one is given, else from what the graph holds now, which
+        is the file of the worker's last answer while the graph has not changed since it took it, so the server writes
+        no graph of its own."""
+        held = self._answer.file_at(self._revision) if state is None else None
+        before = None if held is not None else state if state is not None else SavedGraph.from_graph(self)
+        return BuildOrder(
+            step, self.folder, self._roots_as_text(), self.overlays, self._scope_as_text(), before, self._registering_modules(), saves,
+            state_file=str(held) if held is not None else "",
+        )
 
     def carry_out(self, order: BuildOrder) -> SavedGraph:
         """Carry order out on this graph, as a worker process does for a graph the cdd server holds, save it when the
@@ -1492,6 +1595,7 @@ class Graph:
         whole practice can change its finding on a node no file in scope holds. Both run every rule and rebuild each
         practice's tree. A working copy's edges are the ones its practices read; its parsed objects never add schema
         edges of their own. A check only runs the rules on what the graph holds."""
+        self.changed()
         if step is BuildStep.CHECK:
             for practice in self.practices.values():
                 practice.in_graph.check()
@@ -1533,6 +1637,8 @@ class Graph:
         for overlay in self.pattern_overlays:
             overlay.read(self)
         self._offer_overlay_types()
+        for practice in self.practices.values():
+            practice.in_graph.put_in_source_order()
         for practice in self.practices.values():
             practice.in_graph.check()
 

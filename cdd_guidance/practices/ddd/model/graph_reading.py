@@ -172,14 +172,14 @@ class DddReading:
             if not marker.is_file():
                 continue
             folder = Path(dirpath)
-            context = BoundedContext(sequential_order=1, graph=self.graph)
+            context = BoundedContext(sequential_order=1)
             context.load_context_folder(folder)
             found.append(("." if folder == self.root else folder.relative_to(self.root).as_posix(), context, marker.relative_to(self.root).as_posix()))
         return sorted(found, key=lambda item: item[0])
 
     def _unmarked_context(self) -> BoundedContext:
         """The one bounded context of a folder where no folder marks a context: the whole folder."""
-        context = BoundedContext("bounded context", 1, graph=self.graph)
+        context = BoundedContext("bounded context", 1)
         context.load_folder_facts(self.root)
         return context
 
@@ -213,20 +213,23 @@ class DddReading:
 
     def _bare_classes(self, folder: str) -> list[str]:
         """The production classes in folder that are no building block DDD holds there: the classes its aggregate's
-        rule reports. A class in a React screen module, or one marked as another system's, is not a domain class."""
+        rule reports, by name. A class in a React screen module, one marked as another system's, and a private one
+        (`_module`, which holds a file's functions, or a helper named with `_`) are not domain classes. The names are
+        sorted, so a refresh that restores some classes and reads others gives the fact a fresh build gives."""
         blocks = {block.name for block in self.practice.in_graph.nodes() if block.type in _BLOCK_KINDS and _folder_of(block.source.file) == folder}
-        return [
+        return sorted(
             cls.name
             for cls in self.practice.extended.in_graph.nodes("OoadClass")
             if _folder_of(cls.source.file) == folder
+            and not cls.name.startswith("_")
             and cls.name not in blocks
             and not is_test_code(cls.source.file)
             and not cls.source.file.lower().endswith(_SCREEN_MODULE)
             and not marks_another_system(cls.get_fact("stereotypes") or [])
-        ]
+        )
 
     def _aggregate(self, folder: str, members: list[tuple[TacticalClass, str]], context: Node) -> Node:
-        aggregate = Aggregate(Path(folder).name, 1, graph=self.graph)
+        aggregate = Aggregate(Path(folder).name, 1)
         aggregate.load_folder_facts(self.root / folder)
         node = self.practice.in_graph.add(aggregate, _aggregate_id(folder), folder, 1, 1)
         self.graph.link("owns", context, node)

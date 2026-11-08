@@ -17,8 +17,6 @@ if TYPE_CHECKING:
     from harness.graph.graph import Node
     from harness.graph.rule_context import RuleCheckContext
 
-# `self.column_name = ...` or `this.columnName: string = ...` in a constructor: a field the class holds.
-_ASSIGNED_FIELD = re.compile(r"(?:self|this)\.(\w+)\s*(?::\s*([^=\n]+?))?\s*=(?!=)")
 _IDENTIFIER = re.compile(r"[A-Za-z_]\w*")
 _HOLDER = "_module"
 # Standard value types: Python's paths, dates, and numbers, and the script values a constructor fills a field with.
@@ -95,17 +93,9 @@ class ClassGraph:
         return self._defining.get(operation_name, set())
 
     def fields(self, node: "Node") -> dict[str, str]:
-        """Field name to type hint: declared properties, then the fields its constructor assigns."""
-        found = {name: "" for name in node.get_fact("property_names", []) or []}
-        model = node
-        for prop in getattr(model, "properties", None) or []:
-            found[prop.name] = getattr(prop, "type_hint", "") or found.get(prop.name, "")
-        for operation in getattr(model, "operations", None) or []:
-            if not operation.is_constructor:
-                continue
-            for name, hint in _ASSIGNED_FIELD.findall(getattr(operation.body, "text", "") or ""):
-                found.setdefault(name, (hint or "").strip())
-        return found
+        """Field name to type hint: declared properties, then the fields its constructor assigns, as the class saves
+        them (``held_fields``), so a class read back from a saved graph answers what the class it was read from does."""
+        return dict(node.get_fact("held_fields") or {})
 
     def is_value(self, type_name: str) -> bool:
         """True for a value type: a standard one such as a path, a date, or a number; a failure, named as one or

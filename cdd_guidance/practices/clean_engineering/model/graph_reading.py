@@ -25,6 +25,8 @@ from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 
 _CLASS_NAMES = re.compile(r"\bclass\s+(\w+)")
+# A run of the characters a class name is spelled with: a type hint names a class when the class's name is one whole run.
+_HINT_WORD = re.compile(r"[A-Za-z0-9_]+")
 # The file an import names, after the path its import reads as: a Python module or package, or a script file.
 _IMPORTED_FILE_ENDINGS = (".py", "/__init__.py", "", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx", "/index.js")
 
@@ -100,6 +102,7 @@ class GraphReading:
                 self._record_sibling_imports(nodes[owner], relative, module.dependencies)
             for cls in module.classes:
                 self._class(relative, nodes.get(owner) or self.in_graph.root, cls)
+        self._link_types()
         self._record_unreadable(folders, nodes)
         self._link_folders(folders, nodes, imports)
 
@@ -149,15 +152,23 @@ class GraphReading:
         return Module(name=file.name, sequential_order=1)
 
     def _unparsed_declaring_files(self, files: list[Path]) -> list[Path]:
-        """The source files outside an edited-file scope, whose class names a type hint may still name.
+        """The source files outside an edited-file scope, whose class names a type hint may still name, in folders the
+        practice holds nothing read from.
 
         The scope's own files are parsed and their classes named by the parse. Names in the other files come from a
-        text match, so reading the files the scope leaves out stays cheap.
+        text match, so reading the files the scope leaves out stays cheap. A refresh holds every other folder as it was
+        read, its classes parsed and its imports on its module, so it reads none of them again: a text match would name
+        more than the parse did, and a refresh would then link and check what a fresh build does not.
         """
         if self.graph.edited_files() is None:
             return []
         parsed = set(files)
-        return [path for path in scanned_files(self._source_root, self.readable_suffixes) if path not in parsed]
+        held = {node.source.file for kind in ("Module", "Package") for node in self.in_graph.nodes(kind)}
+        return [
+            path
+            for path in scanned_files(self._source_root, self.readable_suffixes)
+            if path not in parsed and path.parent.relative_to(self._source_root).as_posix() not in held
+        ]
 
     def _read_unparsed(self, files: list[Path]) -> set[str]:
         """The class names the files outside the scope declare. The practice's root keeps the class names each of their
@@ -236,6 +247,8 @@ class GraphReading:
     def _class(self, relative: str, folder: Node, cls) -> None:
         """Add the class, its properties, and its operations; each is the object the parser built."""
         cls.load_source_facts()
+        for member in [*cls.public_properties, *cls.operations]:
+            member.keep_owner()
         node = self.in_graph.add(cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", relative, cls.line, cls.end_line)
         self.graph.link("owns", folder, node)
         self.graph.link("belongsTo", node, folder, "relationship")
@@ -247,21 +260,12 @@ class GraphReading:
 
     def _property(self, relative: str, cls: Node, prop: Operation | Property) -> None:
         """A field the class declares, or a getter: the operation that reads it, which is the property's node. Its type
-        is the field's declared type, or the type the getter returns."""
+        is the field's declared type, or the type the getter returns, which ``_link_types`` links once every class is
+        added."""
         prop_id = f"clean_engineering:Property:{relative}:{prop.name}:{cls.name}"
         line = prop.line or 1
-        hint = prop.value_type or ""
         node = self.in_graph.add(prop, prop_id, relative, line, line)
         self.graph.link("properties", cls, node, "grouped")
-        named = _classes_named_in(hint, self._class_names)
-        if not named:
-            return
-        self.graph.link("relative", cls, node)
-        for other in named:
-            other_node = self._class_named(other) if other != cls.name else None
-            if other_node is not None:
-                self.graph.link("hasType", node, other_node, "relationship")
-                self.graph.link("dependsOn", cls, other_node, "relationship")
 
     def _operation(self, relative: str, cls: Node, operation) -> None:
         start, end = operation.source_lines
@@ -271,10 +275,34 @@ class GraphReading:
         for parameter in operation.parameters:
             param_id = f"clean_engineering:Parameter:{relative}:{parameter.name}:{cls.name}.{operation.name}"
             self.graph.link("hasParameter", node, self.in_graph.add(parameter, param_id, relative, start, start), "relationship")
-        for other in _classes_named_in(operation.return_type or "", self._class_names):
-            other_node = self._class_named(other)
-            if other_node is not None:
-                self.graph.link("returns", node, other_node, "relationship")
+
+    def _link_types(self) -> None:
+        """Link each property to the classes its type names, and each operation to the classes it returns, once every
+        class is added, so a type in a file read later still links. Every property and operation the practice holds is
+        linked, those read now and those held from before, from the type each saves with the graph (``value_type``,
+        ``return_type``): a refresh drops the edges to the classes of the files it reads again, and this links the
+        members it did not read to the classes it read now."""
+        classes: dict[str, Node] = {}
+        for node in sorted(self.in_graph.nodes("OoadClass"), key=lambda found: found.node_id):
+            classes.setdefault(node.name, node)
+        names = self._class_names | set(classes)
+        owners = {id(edge.child): edge.parent for edge in self.in_graph.edges("properties")}
+        for prop in self.in_graph.nodes("Property"):
+            cls = owners.get(id(prop))
+            named = _classes_named_in(prop.get_fact("value_type") or "", names)
+            if cls is None or not named:
+                continue
+            self.graph.link("relative", cls, prop)
+            for other in named:
+                other_node = classes.get(other) if other != cls.name else None
+                if other_node is not None:
+                    self.graph.link("hasType", prop, other_node, "relationship")
+                    self.graph.link("dependsOn", cls, other_node, "relationship")
+        for operation in self.in_graph.nodes("Operation"):
+            for other in _classes_named_in(operation.get_fact("return_type") or "", names):
+                other_node = classes.get(other)
+                if other_node is not None:
+                    self.graph.link("returns", operation, other_node, "relationship")
 
     def _code_folders(self, scope: list[Path] | None) -> dict:
         """A module owns a module card (``.context/module-context.md``). Any other folder with source is a package.
@@ -309,9 +337,6 @@ class GraphReading:
         else:
             return None
         return module
-
-    def _class_named(self, name: str) -> Node | None:
-        return next((node for node in self.in_graph.nodes("OoadClass") if node.name == name), None)
 
     ## the model documents
 
@@ -398,4 +423,10 @@ def _classes_named_in(hint: str, class_names: set[str]) -> list[str]:
     names none."""
     if not hint or "[" in hint:
         return []
-    return sorted(name for name in class_names if re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", hint))
+    words = set(_HINT_WORD.findall(hint))
+    return sorted(
+        name
+        for name in class_names
+        if name in words
+        or (not _HINT_WORD.fullmatch(name) and re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", hint))
+    )

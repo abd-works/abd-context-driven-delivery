@@ -2,6 +2,7 @@
 interpreter keeps answering every other chat, and the graph then holds what a build in the server would have made. The
 call says where its build runs; a call made in process builds in its own process."""
 
+import json
 import shutil
 import tempfile
 from pathlib import Path
@@ -13,10 +14,24 @@ from harness.graph.graph import Graph
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.graph_build import GraphBuildFailed, WorkerBuild
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's overlays
 
 _CART = "export class Cart {\n  total() { return 1; }\n  place(a, b, c, d, e, f) { return a; }\n}\n"
 _WALLET = "export class Wallet {\n  pay(a, b, c, d, e) { return a; }\n}\n"
 _CART_REPOSITORY = "export class CartRepository {\n  find(id) { return id; }\n}\n"
+
+# A working copy every practice reads: code, a story test with its examples, and a server spec.
+_SAMPLE = Path(__file__).resolve().parent / "_examples" / "input"
+_EVERY_PRACTICE = ("stories", "ddd", "ux", "clean_engineering", "bdd")
+# One file each practice reads, which a refresh reads again: Clean Engineering's and DDD's classes, the story test's
+# steps, the examples its steps observe, and BDD's spec. UX reads no file of a working copy.
+_READ_BY_EACH_PRACTICE = (
+    "src/account-credentials/account-credentials.ts",
+    "src/customer/customer.ts",
+    "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
+    "tests/onboard-a-customer/authenticate-user/examples/account-credentials.examples.ts",
+    "tests/onboard-a-customer/authenticate-user/authenticate_user.story.server.spec.ts",
+)
 
 # A call the cdd server answers for a chat, and one a spec or a script makes in process.
 _FROM_A_CHAT = ToolCall(answers_a_chat=True)
@@ -57,6 +72,43 @@ def _ddd_edges(graph: Graph) -> list[tuple]:
 
 def _class_names(graph: Graph) -> list[str]:
     return sorted(node.name for node in graph.practice("clean_engineering").in_graph.nodes("OoadClass"))
+
+
+class _CountingTakes(Graph):
+    """A graph that counts the worker answers it took as changes, not as a whole graph read back."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.takes = 0
+
+    def _take(self, changes) -> None:
+        self.takes += 1
+        super()._take(changes)
+
+
+def _practice_state(graph: Graph, key: str) -> dict:
+    """One practice's nodes where they sit with their facts, its edges, and its violations, as a build leaves them."""
+    part = graph.practice(key).in_graph
+    found = part.nodes()
+    return {
+        "nodes": sorted((node.node_id, node.type, node.source.file, node.source.start_line, node.source.end_line, _facts(node)) for node in found),
+        "root": _facts(part.root),
+        "edges": sorted((edge.kind, edge.parent.node_id, edge.child.node_id) for edge in part.edges()),
+        "violations": sorted((violation.rule, violation.node_id, violation.message) for node in found for violation in node.rules.violations),
+    }
+
+
+def _facts(node) -> str:
+    """The node's facts as the saved graph writes them."""
+    return json.dumps(node.facts, sort_keys=True)
+
+
+def _states_after_each_refresh(refreshed: dict[str, Graph], key: str) -> dict[str, dict]:
+    return {file: _practice_state(graph, key) for file, graph in refreshed.items()}
+
+
+def _each_file(state: dict) -> dict[str, dict]:
+    return {file: state for file in _READ_BY_EACH_PRACTICE}
 
 
 with description("a graph built for a chat's call"):
@@ -176,6 +228,63 @@ with description("a graph built for a chat's call"):
 
             with it("should link DDD's blocks the same way in a graph opened again from its saved graph, in a worker"):
                 expect(_ddd_edges(self.domain_reopened)).to(equal(_ddd_edges(self.domain_here)))
+
+    # A worker refresh restores every node it does not read again as a plain node holding its saved facts. A reader
+    # that read a parsed object's attribute off one of them failed (Stories' step bodies) or quietly found less (Clean
+    # Engineering's class fields), so a validate's result hung on which practices other chats had loaded first.
+    with context("that holds every practice of a working copy, opened again from its saved graph"):
+        with before.all:
+            self.every = Path(tempfile.mkdtemp()) / "input"
+            shutil.copytree(_SAMPLE, self.every)
+            practices = {key: "." for key in _EVERY_PRACTICE}
+            fresh = Graph()
+            fresh.load_working_copy(str(self.every), practices, overlays=["lern_domain_driven"], force=True)
+            self.fresh = {key: _practice_state(fresh, key) for key in _EVERY_PRACTICE}
+            self.reopened = Graph()
+            self.reopened.open_saved(self.every)
+            self.refreshed = {}
+            for file in _READ_BY_EACH_PRACTICE:
+                held = Graph()
+                held.open_saved(self.every)
+                held.refresh([file], _FROM_A_CHAT)
+                self.refreshed[file] = held
+
+        with after.all:
+            shutil.rmtree(self.every.parent, ignore_errors=True)
+
+        with it("should hold every practice as the build that saved it held it"):
+            expect({key: _practice_state(self.reopened, key) for key in _EVERY_PRACTICE}).to(equal(self.fresh))
+
+        with context("that is refreshed in a worker with a file one practice reads"):
+            with it("should give Stories what a fresh build gives it, whichever practice's file it refreshed"):
+                expect(_states_after_each_refresh(self.refreshed, "stories")).to(equal(_each_file(self.fresh["stories"])))
+
+            with it("should give Clean Engineering what a fresh build gives it, whichever practice's file it refreshed"):
+                expect(_states_after_each_refresh(self.refreshed, "clean_engineering")).to(equal(_each_file(self.fresh["clean_engineering"])))
+
+            with it("should give DDD what a fresh build gives it, whichever practice's file it refreshed"):
+                expect(_states_after_each_refresh(self.refreshed, "ddd")).to(equal(_each_file(self.fresh["ddd"])))
+
+            with it("should give BDD what a fresh build gives it, whichever practice's file it refreshed"):
+                expect(_states_after_each_refresh(self.refreshed, "bdd")).to(equal(_each_file(self.fresh["bdd"])))
+
+            with it("should give UX what a fresh build gives it, whichever practice's file it refreshed"):
+                expect(_states_after_each_refresh(self.refreshed, "ux")).to(equal(_each_file(self.fresh["ux"])))
+
+        # Validators refresh one session graph one after another. Each order after the first names the worker's last
+        # answer instead of the server writing its graph out, and the server takes back only what the refresh changed.
+        with context("that is refreshed in a worker with each practice's file in turn"):
+            with before.all:
+                self.chained = _CountingTakes()
+                self.chained.open_saved(self.every)
+                for file in _READ_BY_EACH_PRACTICE:
+                    self.chained.refresh([file], _FROM_A_CHAT)
+
+            with it("should take each refresh after the first as the changes its worker answers"):
+                expect(self.chained.takes).to(equal(len(_READ_BY_EACH_PRACTICE) - 1))
+
+            with it("should hold every practice as a fresh build gives it"):
+                expect({key: _practice_state(self.chained, key) for key in _EVERY_PRACTICE}).to(equal(self.fresh))
 
     with context("whose worker reports its progress"):
         with before.all:

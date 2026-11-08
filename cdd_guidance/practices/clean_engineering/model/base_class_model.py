@@ -30,6 +30,8 @@ _PY_FROM_IMPORT = re.compile(r"^\s*from\s+[\w.]+\s+import\s+(\([^)]*\)|[^\n]+)",
 _JS_IMPORT = re.compile(r"\bimport\s+(?:type\s+)?([\w$]+)?\s*,?\s*(?:\{([^}]*)\})?\s*from\b")
 _QUALIFIED_CLASS = re.compile(r"\.([A-Z]\w*)\b")
 _IMPORT_ALIAS = re.compile(r"\s+as\s+\w+")
+# `self.column_name = ...` or `this.columnName: string = ...` in a constructor: a field the class holds.
+_ASSIGNED_FIELD = re.compile(r"(?:self|this)\.(\w+)\s*(?::\s*([^=\n]+?))?\s*=(?!=)")
 _INTERNAL_MARKDOWN = re.compile(r"^##\s+Internal\b", re.MULTILINE | re.IGNORECASE)
 # A class with one of these stereotypes owns the peers it builds, so building them is not a hidden dependency.
 _PEER_COMPOSING_STEREOTYPES = frozenset({"entity", "aggregate root"})
@@ -132,6 +134,7 @@ class OoadClass(OoadNode):
         "method_count",
         "operation_shapes",
         "property_names",
+        "held_fields",
         "constructs",
         "composes_peers",
         "peer_names",
@@ -208,6 +211,18 @@ class OoadClass(OoadNode):
         self.span = SourceText("\n".join(lines[start - 1 : self.end_line or start]))
         for operation in self.operations:
             operation.take_lines(lines)
+
+    @property
+    def held_fields(self) -> dict[str, str]:
+        """Each field the class holds, with its type hint: its declared properties, then the fields its constructor
+        assigns (``self.name = ...``, ``this.name: Type = ...``). It saves with the graph, so a rule that compares the
+        classes' fields reads them from a class read back from a saved graph too."""
+        found = {prop.name: prop.type_hint or "" for prop in self.properties}
+        for operation in self.operations:
+            if operation.is_constructor:
+                for name, hint in _ASSIGNED_FIELD.findall(operation.body.text):
+                    found.setdefault(name, (hint or "").strip())
+        return found
 
     def load_source_facts(self) -> None:
         """Fill the shape and source-span facts this class owns."""

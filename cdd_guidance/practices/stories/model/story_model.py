@@ -6,6 +6,7 @@ A nested epic is an epic whose parent is an epic. Each node type implements clon
 from __future__ import annotations
 
 import re
+import zlib
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
@@ -348,7 +349,7 @@ class Increment(StoryNode):
 
 class Step(StoryNode):
     _semantic_type_name = "Step"
-    graph_facts = ("keyword", "text", "phase", "concepts", "values", "actor", "continuation", "callees")
+    graph_facts = ("keyword", "text", "phase", "concepts", "values", "actor", "continuation", "callees", "body_text")
 
     def __init__(
         self,
@@ -390,6 +391,12 @@ class Step(StoryNode):
             self.take_code_from(origin)
             for extra in origin.ands:
                 self._ands.append(type(self)(extra))
+
+    @property
+    def body_text(self) -> str:
+        """The code its story test gives the step; it saves with the graph, so the step is linked to the operations it
+        calls whichever process holds the graph."""
+        return self.body.text
 
     @property
     def code_key(self) -> tuple:
@@ -461,7 +468,9 @@ class Step(StoryNode):
         (``ands``), then the steps chained onto it."""
         at = recording.span_of(self, file, fallback_text=self.text)
         continuations = list(self.ands)
-        node_id = f"stories:{self.recorded_type}:{file}:{at.line}:{hash(self.recorded_name) & 0xFFFFFF}"
+        # A checksum of the name, never ``hash``: Python salts ``hash`` per process, and a step must keep its id in the
+        # worker process that refreshes the graph and in the server that holds it.
+        node_id = f"stories:{self.recorded_type}:{file}:{at.line}:{zlib.crc32(self.recorded_name.encode('utf-8')) & 0xFFFFFF}"
         node = recording.add(self, node_id, at)
         recording.graph.link("ands" if isinstance(self.parent, Step) else "steps", parent, node)
         for continuation in continuations:
