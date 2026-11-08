@@ -8,6 +8,7 @@ from typing import Any, Optional, Protocol
 
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import agent_tool
+from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import skill
 from harness.markdown.front_matter import FrontMatter
 from harness.mcp.mcp_server import mcp
@@ -113,6 +114,14 @@ class SegmentIndex:
         entries = [dataclasses.asdict(segment) for segment in self.segments]
         (self.folder / self._ENTRIES).write_text(json.dumps(entries, indent=2), encoding="utf-8")
 
+class SegmentNotFound(FileNotFoundError):
+    """Raised when embed is named a segment file that is not there; embedding it as empty text would index nothing
+    under its name and leave the search silently wrong."""
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(f"no segment file at {path.as_posix()}; name it from the project's root, or absolute")
+        self.path = path
+
 # ── Embedding provider protocol (injectable for tests) ───────────────────────
 
 class EmbeddingProvider(Protocol):
@@ -143,10 +152,29 @@ class OpenAIEmbeddingProvider:
 
 @agent_toolset
 class ContextIndex:
-    """Embed partitioned segments into a FAISS index and answer questions with source citations."""
+    """Embed partitioned segments into a FAISS index and answer questions with source citations.
 
-    def __init__(self, embedding_provider: Optional[EmbeddingProvider] = None) -> None:
+    The cdd server makes one for each call, for the session that call works in, so every path a call names is read from
+    that session's project rather than the server's own folder."""
+
+    def __init__(self, embedding_provider: Optional[EmbeddingProvider] = None, session: Any = None) -> None:
         self._provider = embedding_provider  # None → lazy-init OpenAIEmbeddingProvider on first use
+        self._session = session
+
+    def for_call(self, call: ToolCall) -> ContextIndex:
+        """A ContextIndex made for call: it reads the paths call names from the project of the session call works in,
+        and embeds with this index's provider."""
+        return type(self)(self._provider, call.session)
+
+    def _path_named(self, named: str) -> Path:
+        """named as a path in this index's session's project; read as given when it works in no session, as an index
+        run in process does."""
+        return self._session.path_named(named) if self._session is not None else Path(named)
+
+    def _segment_text(self, file: Path) -> str:
+        if not file.is_file():
+            raise SegmentNotFound(file)
+        return file.read_text(encoding="utf-8")
 
     def _get_provider(self) -> EmbeddingProvider:
         if self._provider is None:
@@ -161,13 +189,13 @@ class ContextIndex:
     def embed(self, segments_paths: list[str], out_path: str) -> EmbedResult:
         """Read every segment markdown file listed in segments_paths, embed using the embedding provider,
         and write a FAISS index to out_path/index.faiss with a metadata sidecar at out_path/meta.json.
-        segments_paths — absolute paths to *-segment.md files produced by context tool partitions.
-        out_path — directory where index.faiss and meta.json are written (created if absent).
+        segments_paths — the *-segment.md files partition wrote, from the project's root or absolute. A path that is not there is refused.
+        out_path — directory where index.faiss and meta.json are written (created if absent), from the project's root or absolute.
         Returns EmbedResult with index_path, segment_count, and views_covered."""
-        out_dir = Path(out_path)
+        out_dir = self._path_named(out_path)
         out_dir.mkdir(parents=True, exist_ok=True)
-        files = [Path(segment_path) for segment_path in segments_paths]
-        texts = [file.read_text(encoding="utf-8") if file.exists() else "" for file in files]
+        files = [self._path_named(segment_path) for segment_path in segments_paths]
+        texts = [self._segment_text(file) for file in files]
         if not texts:
             return EmbedResult(index_path=str(out_dir), segment_count=0, views_covered=[])
         segments = [IndexedSegment.of_file(file, text) for file, text in zip(files, texts)]
@@ -180,10 +208,10 @@ class ContextIndex:
     def search(self, query: str, index_path: str, top_k: int = 5) -> SearchResult:
         """Embed query and search the FAISS index at index_path.
         query — natural-language question or search phrase.
-        index_path — directory containing index.faiss and meta.json written by embed().
+        index_path — directory containing index.faiss and meta.json written by embed(), from the project's root or absolute.
         top_k — maximum number of chunks to return (default 5).
         Returns SearchResult with chunks ordered from most to least relevant."""
-        index = SegmentIndex.opened(Path(index_path))
+        index = SegmentIndex.opened(self._path_named(index_path))
         return SearchResult(chunks=index.ranked(self._get_provider().embed_query(query), top_k))
 
     # ── @agent_instructions — AI reads recipe; owns judgment ──────────────────────────────
@@ -192,8 +220,8 @@ class ContextIndex:
     @skill
     @agent_instructions
     def ask(self, question: str, index_path: str) -> str:
-        """Answer question using the FAISS index at index_path, citing sources.
-        question={question}, index_path={index_path}."""
+        """Answer question using the FAISS index at index_path, citing sources."""
+        "Answer {{question}} from the index at {{index_path}}."
         """Step 1 — Derive a semantic query:
         Read question and formulate a concise search phrase that captures the core intent.
         No tool fires during this step."""

@@ -1,6 +1,5 @@
 """BDD spec for Improvement — /repair inlines the manual diagnose recipe."""
 
-import inspect
 import sys
 from pathlib import Path
 from typing import Any
@@ -63,13 +62,13 @@ with description("Improvement repair recipe"):
         with it("should tell the agent not to list tactical diffs"):
             expect("tactical diffs" in self.response.instructions).to(be_true)
 
-        with it("should keep the turn open until after fail-first"):
-            expect(
-                "leave the turn open" in self.response.instructions.lower()
-            ).to(be_true)
-            expect("finish_turn" in inspect.getsource(type(self.action).repair)).to(
-                equal(False)
-            )
+        with it("should keep the repair open until after fail-first"):
+            expect(self.response.instructions.lower()).to(contain("leave the repair open"))
+
+        # The recipe once named steps and classes that no longer exist; an agent told to call them stalls.
+        with it("should name no step that nothing defines"):
+            gone = ("finish_turn", "sketch_session", "open_turn", "WorkSession", "python -m harness manifest")
+            expect([name for name in gone if name in self.response.instructions]).to(equal([]))
 
 
 with description("an improvement action in a project being worked on"):
