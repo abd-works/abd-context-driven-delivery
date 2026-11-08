@@ -1,10 +1,9 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { CloseChoicesData, TicketData } from '@cdd/space/kanban/ticket'
+import type { LeaveChoicesData, OpenChoicesData } from '@cdd/space/kanban/ticket'
 
 import type { ChatBarViewJson } from '../../types'
-import type { ChatBarClient } from './chat-bar-client'
 
 // Which of the chat bar's boxes is open above the line: the session list, the pinned session card, the activation
 // dialog and the close dialog, with the choices the Python Ticket offers each dialog and what the person chose. These
@@ -47,18 +46,18 @@ export async function toggleCard($: EngineInterface): Promise<void> {
   await update($, chatBarView, view => ({ ...view, isCardOpen: !view.isCardOpen, isSessionListOpen: false }))
 }
 
-// Picking a ticket opens the activation dialog on it with the choices its Ticket offers: what leaving the active one
-// does, as the active Ticket offers it, and what opening this one creates. The session opens only once the person
-// confirms.
-export async function pickSession($: EngineInterface, chatBar: ChatBarClient, ticket: TicketData): Promise<void> {
+// The activation dialog on the ticket called name, with the choices the Python Tickets answer: what leaving the active
+// one can do now, none while no session is active, and what opening this one can create now, each with those chosen at
+// first. The session opens only once the person confirms.
+export async function showSwitch($: EngineInterface, name: string, leaving: LeaveChoicesData | null, opening: OpenChoicesData): Promise<void> {
   await update($, chatBarView, view => ({
     ...view,
     isSessionListOpen: false,
-    switchTo: ticket.name,
-    leaveChoices: chatBar.leaveChoices,
-    leaving: chatBar.firstLeaveChoices,
-    openChoices: ticket.open_choices,
-    opening: ticket.open_choices,
+    switchTo: name,
+    leaveChoices: leaving?.choices ?? [],
+    leaving: leaving?.chosen ?? [],
+    openChoices: opening.choices,
+    opening: opening.choices,
   }))
 }
 
@@ -66,10 +65,10 @@ export async function cancelSwitch($: EngineInterface): Promise<void> {
   await update($, chatBarView, view => ({ ...view, switchTo: null }))
 }
 
-// The close dialog offers what ticket.close_choices answers, each chosen at first, with the branch closing commits and
-// pushes, or none when nothing checked out is the session's.
-export async function showClose($: EngineInterface, choices: CloseChoicesData): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, closing: { branch: choices.branch || null }, leaveChoices: choices.choices, leaving: choices.choices }))
+// The close dialog offers what ticket.close_choices answers, with those chosen at first, and the branch closing commits
+// and pushes, or none when nothing checked out is the session's.
+export async function showClose($: EngineInterface, choices: LeaveChoicesData): Promise<void> {
+  await update($, chatBarView, view => ({ ...view, closing: { branch: choices.branch || null }, leaveChoices: choices.choices, leaving: choices.chosen }))
 }
 
 export async function cancelClose($: EngineInterface): Promise<void> {

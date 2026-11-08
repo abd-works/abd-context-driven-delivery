@@ -39,26 +39,20 @@ export class ActivationClient {
   async start(ticket: TicketClient, isClosing: boolean): Promise<void> {
     ticket.select()
     const left = isClosing ? ticket : this.page.board.activeTicket
-    // Python says what closing the ticket left can do with its work now, on the branch its work is on; leaving it for
-    // another can merge that branch too. A read that failed offers only what needs no branch, since the page has shown
+    // Python says what leaving the ticket left can do with its work now, closing it or switching away, and what opening
+    // this one can create now, with those chosen at first. A read that failed offers nothing, since the page has shown
     // the failure.
-    const [branch, closing] = await Promise.all([ticket.branch(), left ? left.closeChoices() : null])
-    const leavingBranch = closing?.branch ?? ''
-    const offeredLeaving = !left ? [] : isClosing ? (closing?.choices ?? []) : left.leaveChoices.filter(choice => closing?.choices.includes(choice) || (choice === 'merge' && leavingBranch !== ''))
-    const firstLeaving = isClosing ? offeredLeaving : (left?.firstLeaveChoices ?? [])
-    // Opening offers what the ticket does not have yet, each chosen at first, as Python sends its open choices.
-    const hasBranch = Boolean(branch?.exists)
-    const offeredOpening = ticket.openChoices.filter(choice => (choice === 'branch' ? !hasBranch : ticket.worktree === ''))
+    const [opening, leaving] = await Promise.all([ticket.openChoices(), left ? (isClosing ? left.closeChoices() : left.leaveChoices()) : null])
     this.show({
       ticket,
       isClosing,
       leavingTitle: left?.title ?? '',
-      leaving: firstLeaving.filter(choice => offeredLeaving.includes(choice)),
-      opening: offeredOpening,
-      offeredLeaving,
-      offeredOpening,
-      leavingBranch,
-      hasBranch,
+      leaving: leaving?.chosen ?? [],
+      opening: opening?.choices ?? [],
+      offeredLeaving: leaving?.choices ?? [],
+      offeredOpening: opening?.choices ?? [],
+      leavingBranch: leaving?.branch ?? '',
+      hasBranch: opening?.has_branch ?? false,
     })
   }
 

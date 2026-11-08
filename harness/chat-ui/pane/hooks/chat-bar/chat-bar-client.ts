@@ -36,15 +36,6 @@ export class ChatBarClient {
     return (this.board?.open_tickets ?? []).flatMap(named => this.ticketNamed(named.name) ?? [])
   }
 
-  // What leaving the active session can do with its work, in the order Ticket.leave does it, and those chosen at first.
-  get leaveChoices(): string[] {
-    return this.ticket?.leave_choices ?? []
-  }
-
-  get firstLeaveChoices(): string[] {
-    return this.ticket?.first_leave_choices ?? []
-  }
-
   get hasSession(): boolean {
     return this.ticket !== null
   }

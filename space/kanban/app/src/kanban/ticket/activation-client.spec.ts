@@ -49,6 +49,19 @@ describe('Activate Ticket', () => {
     expect([page.store.state.activation?.leavingBranch, page.store.state.activation?.leaving]).toEqual(['main', ['handoff', 'commit', 'push']])
   })
 
+  // Leaving never merges the default branch, so the dialog offers no merge there.
+  it('should offer no merge when the session being left works on main', async () => {
+    const { page } = await board.page()
+    await page.activation.start(ticketOn(page, CHOSEN), false)
+    expect(page.store.state.activation?.offeredLeaving).toEqual(['handoff', 'commit', 'push'])
+  })
+
+  it('should offer a merge when the session being left works on its own branch', async () => {
+    const { page, chosen } = await switchingPage()
+    await page.activation.start(chosen, false)
+    expect(page.store.state.activation?.offeredLeaving).toEqual(['handoff', 'commit', 'push', 'merge'])
+  })
+
   it('should leave only the handoff chosen once a person unchooses commit and push', async () => {
     const { page, chosen } = await switchingPage()
     await page.activation.start(chosen, false)

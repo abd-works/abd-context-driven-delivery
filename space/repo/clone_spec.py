@@ -34,3 +34,21 @@ with description("a project folder") as self:
 
         with it("should be a clone"):
             expect(Repo(self.root).is_clone).to(be_true)
+
+    # One process answers every chat, so every tool call and every session of a checkout works on one Repo, which holds
+    # the one WorkState of its .sessions/session.json.
+    with context("that two tool calls name"):
+        with before.each:
+            subprocess.run(["git", "init", "-q"], cwd=self.root, check=True)
+            (self.root / "docs").mkdir()
+
+        with it("should be one repository for both"):
+            expect(Repo.of_project(self.root) is Repo.of_project(self.root / "docs")).to(be_true)
+
+        with it("should be the repository the checkout's sessions work in"):
+            from space.session.sessions import Sessions
+
+            expect(Sessions.of_project(self.root).repo is Repo.of_project(self.root)).to(be_true)
+
+        with it("should be its own main clone"):
+            expect(Repo.of_project(self.root).main_clone is Repo.of_project(self.root)).to(be_true)

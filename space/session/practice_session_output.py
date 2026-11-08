@@ -51,8 +51,8 @@ class PracticeSessionOutput:
     @classmethod
     @tool_subject
     def load(cls, session: str, practice: str, *, call: ToolCall) -> PracticeSessionOutput:
-        """The practice named practice in the session whose session.json is session, a path from the call's project,
-        opened for the call it serves, so what it logs names that call's chat."""
+        """The practice named practice in the session whose session.json is session, a path from the project the call
+        names."""
         return call.session_named(session).practice(practice)
 
     @property
@@ -206,6 +206,11 @@ class FidelitySessionOutput:
     @property
     def _session(self) -> Session:
         return self._practice.session
+
+    @property
+    def is_enabled(self) -> bool:
+        """Whether the session works on this fidelity's practice."""
+        return self._practice.enabled
 
     @property
     def reports_folder(self) -> Path:

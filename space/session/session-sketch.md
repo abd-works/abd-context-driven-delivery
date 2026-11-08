@@ -131,21 +131,17 @@ Sessions, a session, and its log
 + reports_folder: Path
 	// `validation-reports/` in the session's folder
 + << composition >> practices: dict[str, PracticeSessionOutput]
-	// data field; every practice CDD has, opened or not
-	// the kept session's, made once with its graph
-	-> Sessions.kept
-+ opened_practices: list[PracticeSessionOutput]
-	// the practices this session asked for, which its log lines name
+	// data field; every practice CDD has, made once with its graph; one Session per folder, which its Sessions hold
 + handoffs: Handoffs
 + latest_handoff: str
 	// data field `handoff`
 + decision_records: DecisionRecords
 	// under the workpath's `.context/cdr/`
 ----
-+ from_file(session: str, project: Path): Session
-	// the `@tool_subject` of the `session.*` tools: the session a call names, through `ToolCall.session_named`
++ from_file(session: str, call: ToolCall): Session
+	// the `@tool_subject` of the `session.*` tools: the session a call names, through `call.session_named`
 + practice(name: str): PracticeSessionOutput
-	// opens the practice, so the log lines name it; refuses a practice CDD does not have with `UnknownPracticeError`
+	// the session's one instance of it; refuses a practice CDD does not have with `UnknownPracticeError`
 	-> PracticeCatalogue.has
 + reset(): None
 	// forget the opened practices
@@ -217,30 +213,39 @@ Sessions, a session, and its log
 ----
 + record(line: str): None
 	// appends line stamped with the time
-+ line(line: str): None
-	// appends line with the chat it points at
-+ action(action: str, paths: list[Path]): None
-	// names the paths and what the opened practices were working at, with the injected rules
-+ guidance_action(action: str): None
-	// GuidanceAction.run logs each action this way, with the workpath and each opened practice's folders as its paths
-+ tool(tool_name: str, tool_input: dict): None
-	// the MCP host logs each tool call this way
-+ note(message: str, paths: list[Path]): None
-+ failure(failure: BaseException, tool: str): None
-	// full trace to session.err, a line pointing at it to session.log; the failure still propagates from the caller
-+ note_chat(chat: ChatPointer): None
-	// the next line points at chat, once
++ by(chat: ChatPointer | None): ChatLog
+	// the lines one chat writes, each pointing at it; a session serves many chats at once, so it holds none
 + injected_rules: InjectedRules
 	// the rules a hook gave the agent since the last line, which the next line names
 + seed_first_loop(): None
-+ next_loop(): Loop
 + loop_at(number: int): Loop
-+ mark_loop(): int
 + read_loop(number: int | None): str
 	// the loop with each line's transcript lines put under it
-+ append_note(note: str, loop: int | None, paths: list[str]): str
++ loop_to_note(loop: int | None): int
 + instructions(): str
 	// how an agent keeps this log; sessions.switch returns it
+
+### **ChatLog**
+
++ ChatLog(log: SessionLog, chat: ChatPointer | None)
+------
++ chat: ChatPointer
+	// `no-chat` when none is known
+----
++ line(line: str): None
++ validation(practice: PracticeSessionOutput, violations: list[str]): None
++ action(action: str, paths: list[Path], practices: list[PracticeSessionOutput]): None
+	// names the paths and what the practices it worked on were working at, with the injected rules
++ guidance_action(action: str, practices: list[PracticeSessionOutput]): None
+	// GuidanceAction logs each action this way, with the workpath and each practice's folder as its paths
++ tool(tool_name: str, tool_input: dict): None
+	// the MCP host logs each tool call this way
++ note(message: str, paths: list[Path]): None
++ append_note(note: str, loop: int | None, paths: list[str]): str
++ failure(failure: BaseException, tool: str): None
+	// full trace to session.err, a line pointing at it to session.log; the failure still propagates from the caller
++ next_loop(): Loop
++ mark_loop(): int
 
 **Invariants**
 
@@ -431,8 +436,6 @@ it should keep the name, the workpath, and the repo path
   -> expect(session.work_root).to equal workpath
 it should write --- 1 as the first line of a new session.log
   -> expect(session.log.path).to start with "--- 1"
-it should leave practices empty until a practice is asked for
-  -> expect(session.opened_practices).to equal []
 it should record the name in repo sessions session.json
   -> expect(Sessions(project).open_name).to equal name
 ```
@@ -483,7 +486,7 @@ it should give each call its own copy, so one call's practices never reach anoth
 #### that logs an action
 
 ```
--> session.log.action(action, paths)
+-> session.log.by(chat).action(action, paths, practices)
 it should append a timestamped line that names the action and the path
   -> expect(session.log.path).to contain action and paths
 ```
@@ -507,7 +510,7 @@ it should omit a rule that was not injected
 #### that logs an error
 
 ```
--> session.log.failure(failure)
+-> session.log.by(chat).failure(failure)
 it should write the trace to session.err
   -> expect(session.log.error_path).to contain the trace
 it should point the session.log line at that session.err file
@@ -517,7 +520,7 @@ it should point the session.log line at that session.err file
 #### that records a loop correction note
 
 ```
--> session.append_log(note, loop, paths)
+-> session.append_log(call, note, loop, paths)
 it should append a note line with message paths and chat pointer
   -> expect(session.log.path).to contain note, paths, and the chat
 ```
@@ -527,7 +530,7 @@ it should append a note line with message paths and chat pointer
 #### that is opened
 
 ```
--> loop = session.log.next_loop()
+-> loop = session.log.by(chat).next_loop()
 it should take the next loop number
   -> expect(loop.number).to equal the previous number plus one
 it should append the loop marker to session.log
@@ -548,7 +551,7 @@ it should return the log lines for that loop number
 #### that calls validate
 
 ```
--> session.log.validation(session.practice(name), violations)
+-> session.log.by(chat).validation(session.practice(name), violations)
 it should log that practice and that fidelity
   -> expect(session.log.path).to contain the practice and the fidelity
 it should log the rule, the synopsis, and the correction

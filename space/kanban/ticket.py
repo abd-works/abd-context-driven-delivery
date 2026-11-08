@@ -48,11 +48,6 @@ LEAVE_MERGE = "merge"
 LEAVE_HANDOFF = "handoff"
 OPEN_BRANCH = "branch"
 OPEN_WORKTREE = "worktree"
-# What leaving a ticket can do with its work, in the order leave does it, and those a person starts with chosen: merge
-# waits for the person to choose it.
-LEAVE_CHOICES = (LEAVE_HANDOFF, LEAVE_COMMIT, LEAVE_PUSH, LEAVE_MERGE)
-FIRST_LEAVE_CHOICES = (LEAVE_HANDOFF, LEAVE_COMMIT, LEAVE_PUSH)
-OPEN_CHOICES = (OPEN_BRANCH, OPEN_WORKTREE)
 
 
 class TicketNotFoundError(LookupError):
@@ -77,6 +72,8 @@ class Ticket(Card):
     def __init__(self, session: Session, board: Board) -> None:
         super().__init__(board)
         self._session = session
+        # Its progress as last read from its session's log; none until asked for, and none again once a line is written.
+        self._progress_read: list[FidelityProgress] | None = None
 
     @classmethod
     @tool_subject
@@ -138,15 +135,17 @@ class Ticket(Card):
         per ticket read, with the latest report's judgment able to fail a validate the log shows passing."""
         return list(self._progress)
 
-    @cached_property
+    @property
     def _progress(self) -> list[FidelityProgress]:
-        entries = self._session.log.entries
-        return [FidelityProgress.from_log(fidelity, stage, entries, self) for stage in self._stages for fidelity in self._required_in(stage)]
+        if self._progress_read is None:
+            entries = self._session.log.entries
+            self._progress_read = [FidelityProgress.from_log(fidelity, stage, entries, self) for stage in self._stages for fidelity in self._required_in(stage)]
+        return self._progress_read
 
     def record(self, line: str) -> Ticket:
         """Write line to its session's log; its progress is read from the log again next time it is asked for."""
         self._session.log.record(line)
-        self.__dict__.pop("_progress", None)
+        self._progress_read = None
         return self
 
     def _required_in(self, stage: Stage) -> list[FidelityGuidance]:
@@ -236,26 +235,6 @@ class Ticket(Card):
         )
 
     @property
-    @data_field
-    def leave_choices(self) -> list[str]:
-        """What leaving this ticket for another can do with its work, in the order leave does it: handoff, commit, push,
-        merge."""
-        return list(LEAVE_CHOICES)
-
-    @property
-    @data_field
-    def first_leave_choices(self) -> list[str]:
-        """What leaving this ticket for another starts with chosen: a handoff, a commit, and a push. Merge waits for the
-        person to choose it."""
-        return list(FIRST_LEAVE_CHOICES)
-
-    @property
-    @data_field
-    def open_choices(self) -> list[str]:
-        """What opening this ticket can create for it, each chosen at first: its own branch and its own worktree."""
-        return list(OPEN_CHOICES)
-
-    @property
     def last_activity(self) -> str:
         entries = self._session.log.entries
         return entries[-1].time if entries else ""
@@ -306,10 +285,28 @@ class Ticket(Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def close_choices(self) -> CloseChoices:
+    def close_choices(self) -> LeaveChoices:
         """Return what closing ticket can do with its work, each chosen at first: a handoff always, and a commit and a push of the branch its work is on while that branch is checked out, which branch names. Closing never merges."""
+        return LeaveChoices(self._checked_out_work_branch(), merges=False)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def leave_choices(self) -> LeaveChoices:
+        """Return what leaving ticket for another can do with its work now, in the order leave does it: a handoff always; a commit and a push of the branch its work is on while that branch is checked out, which branch names; and a merge of that branch while it is the ticket's own, not the default branch. Each is chosen at first but the merge, which waits for the person."""
+        return LeaveChoices(self._checked_out_work_branch(), merges=True)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def open_choices(self) -> OpenChoices:
+        """Return what opening ticket can create for it now, each chosen at first: its own branch while the repository has none, and its own worktree while it has none."""
+        return OpenChoices(self.branch(), self.worktree)
+
+    def _checked_out_work_branch(self) -> Branch | None:
+        """The branch the ticket's work is on while it is checked out, which leaving acts on; none otherwise."""
         branch = self.work_branch()
-        return CloseChoices(branch if branch.is_checked_out else None)
+        return branch if branch.is_checked_out else None
 
     @mcp
     @agent_tool
@@ -486,16 +483,31 @@ class FidelityProgress:
         """Read the actions done on this fidelity from its session's log entries, finding it by name, never by position;
         the latest report's judgment can still fail a validate the log shows passing."""
         naming = [(index, entry.verb) for index, entry in enumerate(entries) if entry.names(fidelity)]
+        generated = cls._written_by_generate(entries)
         validations = [index for index, verb in naming if verb == VALIDATE]
         latest_validation = validations[-1] if validations else None
         has_violations = latest_validation is not None and GRAPH_RULE_VIOLATION in entries[latest_validation].words
         validated = latest_validation is not None and not has_violations
         reviewed = any(verb == REVIEW and (latest_validation is None or index > latest_validation) for index, verb in naming)
-        done_verbs = {verb for _, verb in naming if verb == GENERATE}
+        done_verbs = {verb for index, verb in naming if verb == GENERATE and index in generated}
         done_verbs |= {VALIDATE} if validated else set()
         done_verbs |= {REVIEW} if reviewed else set()
         read = cls(fidelity, stage, [action for action in stage.steps if action in done_verbs], has_violations, ticket)
         return read.with_violations() if read._is_judged_failing else read
+
+    @staticmethod
+    def _written_by_generate(entries: list[LogEntry]) -> set[int]:
+        """The generate lines the generate tool wrote: each but those written in the call of another tool, such as
+        Sketch, whose prompt expands a generate before the agent has written anything. A line belongs to the call of
+        the latest tool line before it; a line no tool call wrote, such as one an action run in process wrote, counts."""
+        written: set[int] = set()
+        calling = ""
+        for index, entry in enumerate(entries):
+            if entry.tool_called:
+                calling = entry.tool_called
+            elif entry.verb == GENERATE and (not calling or calling.split(".")[0] == GENERATE):
+                written.add(index)
+        return written
 
     @classmethod
     @tool_subject
@@ -533,8 +545,9 @@ class FidelityProgress:
     @property
     @data_field
     def is_enabled(self) -> bool:
-        """Whether the ticket's session works on this fidelity's practice."""
-        return self._ticket.session.practices[self._practice.key].enabled
+        """Whether the ticket's session works on this fidelity's practice, as the fidelity, which works in that session,
+        answers it."""
+        return self._fidelity.session_output.is_enabled
 
     @property
     def _practice(self) -> PracticeGuidance:
@@ -683,24 +696,57 @@ class FidelityProgress:
         return latest is not None and latest.is_judged_failing
 
 
-class CloseChoices:
-    """What closing a ticket can do with its work: a handoff always, and a commit and a push of the branch its work is
-    on while that branch is checked out, since those steps act on whatever is checked out. Closing never merges."""
+class LeaveChoices:
+    """What leaving a ticket can do with its work now, closing it or switching to another: a handoff always, a commit
+    and a push of the branch its work is on while that branch is checked out, since those steps act on whatever is
+    checked out, and, when switching, a merge of that branch while it is not the default branch, which has nothing to
+    merge into. Closing never merges. ``Ticket.leave`` does exactly these, so a dialog offers only what will be done."""
 
-    def __init__(self, branch: Branch | None) -> None:
+    def __init__(self, branch: Branch | None, *, merges: bool) -> None:
         self._branch = branch
+        self._merges = merges
 
     @property
     @data_field
     def branch(self) -> str:
-        """The branch closing commits and pushes; empty when nothing checked out is the ticket's."""
+        """The branch leaving commits, pushes, and merges; empty when nothing checked out is the ticket's."""
         return self._branch.name if self._branch is not None else ""
 
     @property
     @data_field
     def choices(self) -> list[str]:
-        """Each choice closing offers, in the order leave does them."""
-        return [LEAVE_HANDOFF, *((LEAVE_COMMIT, LEAVE_PUSH) if self._branch is not None else ())]
+        """Each choice leaving offers now, in the order leave does them."""
+        if self._branch is None:
+            return [LEAVE_HANDOFF]
+        merge = [LEAVE_MERGE] if self._merges and not self._branch.is_default else []
+        return [LEAVE_HANDOFF, LEAVE_COMMIT, LEAVE_PUSH, *merge]
+
+    @property
+    @data_field
+    def chosen(self) -> list[str]:
+        """The choices a person starts with chosen: every one offered but the merge, which waits for them."""
+        return [choice for choice in self.choices if choice != LEAVE_MERGE]
+
+
+class OpenChoices:
+    """What opening a ticket can create for it now: its own branch while the repository has none, and its own worktree
+    while it has none. ``Ticket.activate`` creates each one chosen."""
+
+    def __init__(self, branch: Branch, worktree: str) -> None:
+        self._branch = branch
+        self._worktree = worktree
+
+    @property
+    @data_field
+    def has_branch(self) -> bool:
+        """Whether the ticket's own branch is in the repository already."""
+        return self._branch.exists
+
+    @property
+    @data_field
+    def choices(self) -> list[str]:
+        """Each choice opening offers now, all chosen at first."""
+        return [*([] if self.has_branch else [OPEN_BRANCH]), *([] if self._worktree else [OPEN_WORKTREE])]
 
 
 class ActionStates:

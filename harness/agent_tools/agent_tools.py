@@ -768,20 +768,29 @@ class ToolSubjectLoader:
 
     def on_subject(self, load: Callable[..., Any], operation: Callable[..., Any]) -> Callable[..., Any]:
         """A tool over ``operation`` that first loads the object the call names: it takes the loader's
-        arguments and the operation's own, so every reader of its signature sees what a caller passes."""
+        arguments and the operation's own, so every reader of its signature sees what a caller passes. The loader is
+        handed what it takes from the call, and an operation that takes ``call`` is handed the call too, so a line it
+        logs points at the call's chat."""
         identity = list(inspect.signature(load).parameters.values())
-        own = [param for param in inspect.signature(operation).parameters.values() if param.name != "self"]
-        identity_names = [*(param.name for param in identity), *TakesFromCall.names_on(load)]
+        operation_takes_call = SERVED_CALL in inspect.signature(operation).parameters
+        own = [param for param in inspect.signature(operation).parameters.values() if param.name not in ("self", SERVED_CALL)]
+        loaded_from_call = TakesFromCall.names_on(load)
+        identity_names = [*(param.name for param in identity), *loaded_from_call]
+        taken = tuple(dict.fromkeys([*loaded_from_call, *([SERVED_CALL] if operation_takes_call else [])]))
 
         @functools.wraps(operation)
         def on_subject(**arguments: Any) -> Any:
+            call = arguments.get(SERVED_CALL)
             found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
-            return operation(found, **arguments)
+            arguments.pop(SERVED_CALL, None)
+            return operation(found, **arguments, **({SERVED_CALL: call} if operation_takes_call else {}))
 
         on_subject.__signature__ = inspect.Signature(identity + own, return_annotation=inspect.signature(operation).return_annotation)
-        on_subject.__annotations__ = {**load.__annotations__, **operation.__annotations__}
-        if TakesFromCall.names_on(load):
-            TakesFromCall(TakesFromCall.names_on(load)).annotate(on_subject)
+        on_subject.__annotations__ = {
+            name: hint for name, hint in {**load.__annotations__, **operation.__annotations__}.items() if name != SERVED_CALL
+        }
+        if taken:
+            TakesFromCall(taken).annotate(on_subject)
         return OnSubject(on_subject)
 
     def given_the_call(self, operation: Any) -> Any:
@@ -961,7 +970,7 @@ class AgentTool(AgentToolDestination):
             for key, value in call.arguments.items()
             if isinstance(value, (str, int, float, bool, list))
         }
-        session.log.tool(self.mcp_name, logged_args)
+        session.log.by(call.chat).tool(self.mcp_name, logged_args)
 
     @property
     def kind(self) -> str:
@@ -1298,7 +1307,8 @@ class OnSubject(Annotation):
 class TakesFromCall(Annotation):
     """Set on a tool's callable that takes the project its call works on, or the call itself, which its signature
     leaves out because no caller passes them: the tool hands them over from the ``ToolCall`` it serves. A loader that
-    takes the call opens the call's sessions, so what the tool logs names the chat the call came from."""
+    takes the call opens the session the call names, and an operation that takes it points what it logs at the chat the
+    call came from."""
 
     flag = "_takes_from_call"
     copied = False

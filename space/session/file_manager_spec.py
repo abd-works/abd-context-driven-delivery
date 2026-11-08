@@ -14,6 +14,7 @@ from expects import be, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.tool_call import ToolCall
 from space.session import Session, Sessions
 from harness.agent_tools.tool_call import ToolCall
 from space.session.file_manager import FileManager, PathOutsideRootsError

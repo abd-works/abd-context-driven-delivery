@@ -88,7 +88,9 @@ class BacklogItem(Card):
         return self._path.stem.replace("-", " ").replace("_", " ").capitalize()
 
     @property
+    @data_field(reference=True)
     def column(self) -> Column:
+        """The Backlog, sent by its name, which with the item's title is where the board shows it."""
         return self._board.column(BACKLOG_COLUMN)
 
     @property

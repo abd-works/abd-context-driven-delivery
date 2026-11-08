@@ -2163,7 +2163,7 @@ it should show the board of the whole checkout, where sessions keep their folder
 ```
 it should have no active ticket, since main is not on the board
 -> Board.active
-  -> Sessions.saved
+  -> Sessions.of_project(project).current()
   <- Session
 <- Ticket
 ```
@@ -2172,7 +2172,7 @@ it should have no active ticket, since main is not on the board
 
 ```
 it should show every work session as a ticket
--> Session.load(session_path: Path, repo_path: Path)
+-> Sessions.of_project(project).load(folder: Path)
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
@@ -2184,7 +2184,7 @@ it should show every work session as a ticket
 
 ```
 it should leave main off the board
--> Session.load(session_path: Path, repo_path: Path)
+-> Sessions.of_project(project).load(folder: Path)
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
@@ -2196,7 +2196,7 @@ it should leave main off the board
 
 ```
 it should show each backlog item in the Backlog column
--> Session.load(session_path: Path, repo_path: Path)
+-> Sessions.of_project(project).load(folder: Path)
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
@@ -2214,7 +2214,7 @@ it should show each backlog item in the Backlog column
 
 ```
 it should leave archived sessions off the board
--> Session.load(session_path: Path, repo_path: Path)
+-> Sessions.of_project(project).load(folder: Path)
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
@@ -2226,7 +2226,7 @@ it should leave archived sessions off the board
 
 ```
 it should show closed sessions in Complete
--> Session.load(session_path: Path, repo_path: Path)
+-> Sessions.of_project(project).load(folder: Path)
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
@@ -2244,21 +2244,21 @@ it should show closed sessions in Complete
 
 ```
 it should name the ticket of the current session as active
--> Session.load(session_path: Path, repo_path: Path)
+-> Sessions.of_project(project).load(folder: Path)
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
 -> Board.load(project).ticket("pet-visits")
 <- Board
 -> Board.active
-  -> Sessions.saved
+  -> Sessions.of_project(project).current()
   <- Session
 <- Ticket
 ```
 
 ```
 it should show tickets and backlog items alike as the board's cards
--> Session.load(session_path: Path, repo_path: Path)
+-> Sessions.of_project(project).load(folder: Path)
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
@@ -2270,7 +2270,7 @@ it should show tickets and backlog items alike as the board's cards
 
 ```
 it should count both a ticket and a backlog item as a card
--> Session.load(session_path: Path, repo_path: Path)
+-> Sessions.of_project(project).load(folder: Path)
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
@@ -2282,7 +2282,7 @@ it should count both a ticket and a backlog item as a card
 
 ```
 it should give each card one column
--> Session.load(session_path: Path, repo_path: Path)
+-> Sessions.of_project(project).load(folder: Path)
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
@@ -2296,7 +2296,7 @@ it should give each card one column
 
 ```
 it should list every column with its tickets or items
--> Session.load(session_path: Path, repo_path: Path)
+-> Sessions.of_project(project).load(folder: Path)
 <- Session
 -> Board.backlog_item("returns-and-refunds.md", "Returns and refunds")
 <- BacklogItem
@@ -2421,7 +2421,7 @@ it should keep its file in the ticket's session folder
 
 ```
 it should be in the Backlog
--> Session.load(session_path: Path, repo_path: Path)
+-> Sessions.of_project(project).load(folder: Path)
 <- Session
 -> Board.ticket("pet-visits")
 <- Ticket
@@ -2431,7 +2431,7 @@ it should be in the Backlog
 
 ```
 it should keep the ticket's whole folder, its history included
--> Session.load(session_path: Path, repo_path: Path)
+-> Sessions.of_project(project).load(folder: Path)
 <- Session
 -> Board.ticket("pet-visits")
 <- Ticket
@@ -2439,7 +2439,7 @@ it should keep the ticket's whole folder, its history included
 
 ```
 it should show the ticket's own idea file as its text
--> Session.load(session_path: Path, repo_path: Path)
+-> Sessions.of_project(project).load(folder: Path)
 <- Session
 -> Board.ticket("pet-visits")
 <- Ticket
@@ -2449,7 +2449,7 @@ it should show the ticket's own idea file as its text
 
 ```
 it should be off the stages
--> Session.load(session_path: Path, repo_path: Path)
+-> Sessions.of_project(project).load(folder: Path)
 <- Session
 -> Board.ticket("pet-visits")
 <- Ticket
