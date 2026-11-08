@@ -1,7 +1,6 @@
 """ClaudePlugins - installs the cdd and cdd-board plugins into Claude Code through its own command line."""
 from __future__ import annotations
 
-import json
 import os
 import re
 import shutil
@@ -10,6 +9,7 @@ import sys
 from pathlib import Path
 
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.mcp.cdd_home import BOARD_PLUGIN, CLAUDE_MARKETPLACE, CLAUDE_PLUGIN, CddHome
 
 # Each claude plugin command clones or reads a marketplace; a slow disk or network can take this long.
@@ -65,20 +65,20 @@ class ClaudePlugins:
     @property
     def installed(self) -> dict[str, str]:
         """Each plugin Claude Code has installed, with its version, from its own record of them."""
-        record = self._claude.user_settings_folder / "plugins" / "installed_plugins.json"
+        record = JsonFile(self._claude.user_settings_folder / "plugins" / "installed_plugins.json")
         try:
-            plugins = json.loads(record.read_text(encoding="utf-8")).get("plugins", {})
-        except (OSError, ValueError, AttributeError):
-            # No record yet, or one Claude Code is writing: nothing reads as installed, and the install runs again.
+            plugins = record.read().get("plugins", {})
+        except JsonFileUnreadable:
+            # A record Claude Code is writing: nothing reads as installed, and the install runs again.
             return {}
         return {name: str((entries or [{}])[0].get("version", "")) for name, entries in plugins.items()}
 
     @property
     def published_board_version(self) -> str:
-        manifest = self._home.claude_plugins / BOARD_PLUGIN / ".claude-plugin" / "plugin.json"
+        manifest = JsonFile(self._home.claude_plugins / BOARD_PLUGIN / ".claude-plugin" / "plugin.json")
         try:
-            return str(json.loads(manifest.read_text(encoding="utf-8")).get("version", ""))
-        except (OSError, ValueError):
+            return str(manifest.read().get("version", ""))
+        except JsonFileUnreadable:
             return ""
 
     @property

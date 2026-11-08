@@ -36,15 +36,6 @@ class ServerDidNotStart(Exception):
         self.url = url
 
 
-class ServerStateUnreadable(Exception):
-    """The file where the cdd server publishes its address and pid exists but is not readable JSON."""
-
-    def __init__(self, path: Path, cause: BaseException) -> None:
-        super().__init__(f"{path} is not readable JSON ({cause}); remove it and the server writes it again when it starts")
-        self.path = path
-        self.cause = cause
-
-
 class RunningServer:
     """The cdd server answering on the port, as its ping describes it: its process, the checkout it serves code from,
     and the projects its chats have worked on."""
@@ -145,9 +136,7 @@ class McpDaemon:
 
     def publish(self, source: Path) -> None:
         """Write the address and pid for tools that look for the server without calling it."""
-        state = {"url": self.url, "port": self.port, "pid": os.getpid(), "source": str(source)}
-        self.home.folder.mkdir(parents=True, exist_ok=True)
-        self.home.state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+        self.home.state_file.write({"url": self.url, "port": self.port, "pid": os.getpid(), "source": str(source)})
 
     def withdraw(self) -> None:
         if self.runs_this_process():
@@ -155,13 +144,7 @@ class McpDaemon:
 
     def runs_this_process(self) -> bool:
         """True when the server this home publishes is this process, as it is for code a tool call runs inside it."""
-        try:
-            state = json.loads(self.home.state_path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
-            return False
-        except (OSError, json.JSONDecodeError) as unreadable:
-            raise ServerStateUnreadable(self.home.state_path, unreadable) from unreadable
-        return isinstance(state, dict) and state.get("pid") == os.getpid()
+        return self.home.state_file.read().get("pid") == os.getpid()
 
     def _wait_for_ping(self) -> RunningServer:
         deadline = time.time() + _START_SECONDS

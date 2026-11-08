@@ -18,7 +18,7 @@ class Document(GuidanceAction):
     @skill
     @agent_instructions
     def document(self, guidance: GuidanceArg, paths: list[str]) -> str:
-        """Record what already exists for the listed guidance without correcting it. Read contexts and templates, and write the observed state under the session path so violations are flagged, not fixed.
+        """Record what already exists for the listed guidance without correcting it. Read contexts and templates, and write the observed state under the session's root so violations are flagged, not fixed.
         paths: the files and folders to scan."""
         self._work_on(guidance)
         def on(item) -> str:

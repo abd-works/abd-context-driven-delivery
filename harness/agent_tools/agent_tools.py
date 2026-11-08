@@ -1065,18 +1065,9 @@ class AgentInstructions(AgentTool):
         """What this operation's recipe says, read once from the callable it holds."""
         return RecipeSource(self.callable)
 
-    @property
-    def result_template(self) -> str:
-        source = self.recipe_source
-        result_template = source.result_template
-        if not result_template and source.only_defers_to_parent:
-            parent = self.parent_recipe()
-            result_template = parent[0].recipe_source.result_template if parent is not None else ""
-        return result_template or f"Instructions for {self.callable.__name__}"
-
     def expand(self, arguments: dict[str, Any]) -> ExpansionResult:
-        """The recipe expanded for one call's arguments: its instructions, the tools it names, and its result line,
-        with every placeholder filled."""
+        """The recipe expanded for one call's arguments: its instructions, the tools it names, and its result line, what
+        the recipe returned for those arguments, with every placeholder filled."""
         expansion = RecipeExpansion(self, arguments).run()
         values = self.parameter_schema.with_defaults(arguments)
         placeholders = RecipePlaceholders(values, set(self.parameter_schema.names), self.toolset)
@@ -1085,7 +1076,7 @@ class AgentInstructions(AgentTool):
         return ExpansionResult(
             instructions=self._with_sub_agent_preamble(instructions),
             tools=expansion.tools,
-            result=placeholders.filled(self.result_template),
+            result=placeholders.filled(expansion.result or f"Instructions for {self.callable.__name__}"),
         )
 
     def members_of(self, target: Any) -> ToolsetMembers:

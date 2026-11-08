@@ -3,13 +3,13 @@ from __future__ import annotations
 
 import functools
 import hashlib
-import json
 import os
 import shutil
 import sys
 from pathlib import Path
 
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.process.git import Git, RepoConnectError
 from harness.process.process import PythonInterpreter
@@ -44,14 +44,19 @@ class PinFailed(Exception):
         self.checkout = checkout
 
 
-class RuntimeRecordUnreadable(Exception):
+class RuntimeRecordUnreadable(JsonFileUnreadable):
     """``~/.cdd/runtime.json`` exists but is not readable JSON, so which checkout the server runs is unknown. cdd stops
     rather than read it as not installed, which would pin a new runtime over it."""
 
-    def __init__(self, path: Path, cause: BaseException) -> None:
-        super().__init__(f"{path} is not readable JSON ({cause}); fix or remove it, then install again")
-        self.path = path
-        self.cause = cause
+    def message(self, path: Path, cause: Exception) -> str:
+        return f"{path} is not readable JSON ({cause}); fix or remove it, then install again"
+
+
+class ServerStateUnreadable(JsonFileUnreadable):
+    """The file where the cdd server publishes its address and pid exists but is not readable JSON."""
+
+    def message(self, path: Path, cause: Exception) -> str:
+        return f"{path} is not readable JSON ({cause}); remove it and the server writes it again when it starts"
 
 
 class CddHome:
@@ -69,11 +74,15 @@ class CddHome:
         named = folder or os.environ.get(CDD_HOME_ENV) or Path.home() / ".cdd"
         self.folder = Path(named).resolve()
         self._pinned = Git(self.pinned_checkout)
+        # Which checkout the server runs, in which mode, on which Python.
+        self._runtime_file = JsonFile(self.folder / "runtime.json", RuntimeRecordUnreadable)
+        # Where the running server publishes its address and pid, for tools that look for it without calling it.
+        self.state_file = JsonFile(self.folder / "server.json", ServerStateUnreadable)
 
     @property
     def state_path(self) -> Path:
         """Where the running server publishes its address and pid."""
-        return self.folder / "server.json"
+        return self.state_file.path
 
     @property
     def log_path(self) -> Path:
@@ -98,7 +107,7 @@ class CddHome:
             plugin / ".mcp.json": {_CLAUDE_CODE.mcp_servers_key: {"cdd": server}},
         }
         for path, content in files.items():
-            self._write_json(path, content)
+            JsonFile(path).write(content)
         if self.is_installed:
             self.write_board_plugin()
         return [self._write_marketplace(), *files]
@@ -114,11 +123,11 @@ class CddHome:
         for part in BOARD_MOD_PARTS:
             if (source / part).is_dir():
                 shutil.copytree(source / part, target / part, ignore=shutil.ignore_patterns("*.test.*"))
-        self._write_json(target / self.INSTALL_COMMAND, {"command": self.install_command})
-        manifest_path = target / ".claude-plugin" / "plugin.json"
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        JsonFile(target / self.INSTALL_COMMAND).write({"command": self.install_command})
+        manifest_file = JsonFile(target / ".claude-plugin" / "plugin.json")
+        manifest = manifest_file.read()
         manifest["version"] = f"{manifest.get('version', '0.0.0')}-{self._content_hash(target)}"
-        self._write_json(manifest_path, manifest)
+        manifest_file.write(manifest)
         self._write_marketplace()
 
     def _content_hash(self, folder: Path) -> str:
@@ -132,22 +141,17 @@ class CddHome:
         """List every plugin published here; a marketplace naming a missing folder fails to load."""
         plugins = []
         for name in (CLAUDE_PLUGIN, BOARD_PLUGIN):
-            manifest = self.claude_plugins / name / ".claude-plugin" / "plugin.json"
-            if manifest.is_file():
-                description = json.loads(manifest.read_text(encoding="utf-8")).get("description", "")
+            manifest = JsonFile(self.claude_plugins / name / ".claude-plugin" / "plugin.json")
+            if manifest.exists():
+                description = manifest.read().get("description", "")
                 plugins.append({"name": name, "source": f"./{name}", "description": description})
-        path = self.claude_plugins / ".claude-plugin" / "marketplace.json"
-        self._write_json(path, {"name": CLAUDE_MARKETPLACE, "owner": {"name": "cdd"}, "plugins": plugins})
-        return path
-
-    def _write_json(self, path: Path, content: dict) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(content, indent=2) + "\n", encoding="utf-8")
+        marketplace = JsonFile(self.claude_plugins / ".claude-plugin" / "marketplace.json")
+        return marketplace.write({"name": CLAUDE_MARKETPLACE, "owner": {"name": "cdd"}, "plugins": plugins})
 
     @property
     def runtime_record(self) -> Path:
         """Which checkout the server runs, in which mode, on which Python."""
-        return self.folder / "runtime.json"
+        return self._runtime_file.path
 
     @property
     def pinned_checkout(self) -> Path:
@@ -242,14 +246,7 @@ class CddHome:
         runtime = {"source": str(source), "mode": mode, "python": str(self.interpreter.executable)}
         if commit:
             runtime["commit"] = commit
-        self._write_json(self.runtime_record, runtime)
+        self._runtime_file.write(runtime)
 
     def _runtime(self) -> dict[str, str]:
-        path = self.runtime_record
-        if not path.is_file():
-            return {}
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as unreadable:
-            raise RuntimeRecordUnreadable(path, unreadable) from unreadable
-        return {str(key): str(value) for key, value in data.items()} if isinstance(data, dict) else {}
+        return {str(key): str(value) for key, value in self._runtime_file.read().items()}

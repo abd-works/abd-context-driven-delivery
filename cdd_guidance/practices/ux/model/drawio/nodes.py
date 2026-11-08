@@ -10,7 +10,6 @@ layouts, story names, and controls stay in the JSON and HTML formats.
 from __future__ import annotations
 
 import html
-import json
 import re
 import subprocess
 import tempfile
@@ -18,6 +17,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from harness.installation.json_file import JsonFile
 from cdd_guidance.practices.ux.model.nodes import Region, Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
@@ -221,8 +221,7 @@ class DrawioUxMap(UxMap):
             raise DrawioCliMissing(f"drawio-ux CLI missing: {_CLI}")
         with tempfile.TemporaryDirectory(prefix="ux-drawio-") as folder:
             out_path = Path(folder) / "information-architecture.drawio"
-            state_path = Path(folder) / "state.json"
-            state_path.write_text(json.dumps(self.cli_state(str(out_path)), indent=2), encoding="utf-8")
+            state_path = JsonFile(Path(folder) / "state.json").write(self.cli_state(str(out_path)))
             self._run_cli(["node", str(_CLI), "write", str(out_path), str(state_path)])
             if not out_path.is_file():
                 raise DrawioCliFailed(f"drawio-ux write produced no diagram at {out_path}")

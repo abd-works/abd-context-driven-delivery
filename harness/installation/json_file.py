@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import os
+import threading
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -45,7 +47,10 @@ class JsonFile:
         return data
 
     def write(self, data: Mapping[str, Any]) -> Path:
-        """Write data as the whole file, making its folder when there is none."""
+        """Write data as the whole file, making its folder when there is none. The text is written beside the file and
+        renamed over it, so a reader, or another chat's call writing the same file at once, never meets half of it."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(dict(data), indent=2) + "\n", encoding="utf-8")
+        staged = self.path.with_name(f"{self.path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+        staged.write_text(json.dumps(dict(data), indent=2) + "\n", encoding="utf-8")
+        os.replace(staged, self.path)
         return self.path

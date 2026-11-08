@@ -28,6 +28,7 @@ import harness.process.process as process_module
 from harness.agent_tools.agent_tools import ToolsetReference
 from harness.hooks.hook_server import HookResult, HookServer
 from harness.hooks.hooks import InstalledHookHandlers
+from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.process.process import (
     BackgroundStart,
@@ -148,21 +149,21 @@ class HookDaemonAddressFile:
     def __init__(self, path: Path, host: str) -> None:
         self.path = path
         self._host = host
+        self._file = JsonFile(path)
 
     def read(self) -> HookDaemonAddress | None:
         """The address last published here; none when there is none, or none readable."""
-        if not self.path.is_file():
+        if not self._file.exists():
             return None
         try:
-            fields = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+            fields = self._file.read()
+        except JsonFileUnreadable:
             # A daemon writing its address, or one killed while writing it; the next start writes it again.
             return None
         return HookDaemonAddress.from_fields(fields, self._host)
 
     def write(self, address: HookDaemonAddress) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(address.as_fields()), encoding="utf-8")
+        self._file.write(address.as_fields())
 
     def remove(self) -> None:
         try:
