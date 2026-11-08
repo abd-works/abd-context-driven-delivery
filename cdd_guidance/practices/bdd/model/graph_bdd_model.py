@@ -34,7 +34,7 @@ class GraphBddModel(BddModel):
     def parse(self, text: str) -> "GraphBddModel":
         graph = SavedGraph.from_text(text).restored_graph()
         self._graph = graph
-        bdd = graph.practice_of(self.practice_class)
+        bdd = graph.practice_of(self.practice_kind())
         self._clean = bdd.clean_engineering_practice
         for spec in sorted(graph.nodes_of(bdd, "Spec"), key=lambda node: node.source.file):
             for saved in self._in_file_order(graph.edges_from("descriptions", spec)):

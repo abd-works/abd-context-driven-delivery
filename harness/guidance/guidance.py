@@ -287,17 +287,10 @@ class PracticeGuidance(Guidance):
     """Whether scoped markdown shows every fidelity's block even when one is current, as DDD's does; otherwise it shows
     only the current fidelity's."""
 
-    model_classes: tuple[type, ...] = ()
-    """The model object classes (harness/graph's *ModelNode* subclasses) whose objects are this practice's graph nodes:
-    its model's base classes, and any subclass that belongs to this practice though its base belongs to another. Making
-    the practice class registers it on each, so a model object finds its practice without importing it."""
-
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         if cls.sketch_lens.titles != cls.sketch_titles:
             cls.sketch_lens = SketchLens(cls.sketch_titles)
-        for model_class in cls.__dict__.get("model_classes", ()):
-            model_class.practice_class = cls
 
     def __init__(
         self,

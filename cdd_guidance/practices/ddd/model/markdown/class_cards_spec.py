@@ -86,7 +86,7 @@ with description("Model fidelity class cards"):
             model = SketchDddModel().parse(_SKETCH)
             aggregate = _aggregate(model, "Revenue", "billing")
             expect(aggregate.root.name).to(equal("BillingAccount"))
-            expect([item.name for item in aggregate.cards]).to(
+            expect([item.name for item in aggregate.classes]).to(
                 equal(["BillingAccount", "BillingAccountRepository", "CreditAdjustment"])
             )
             expect([item.name for item in aggregate.repository.operations]).to(

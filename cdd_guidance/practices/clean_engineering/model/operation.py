@@ -31,6 +31,10 @@ from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_l
 _SIGNATURE = re.compile(r"^(_?\w+)\s*\((.*)\)\s*(?::\s*(.+))?$")
 
 
+# The names a constructor goes by: Python's and the C-family languages'.
+CONSTRUCTOR_NAMES = frozenset({"__init__", "constructor"})
+
+
 class Parameter(OoadNode):
     _semantic_type_name = "Parameter"
     graph_facts = ("type_hint", "operation_name", "property_setter")
@@ -77,6 +81,11 @@ class Parameter(OoadNode):
 
 class Operation(InvariantHolder, OoadNode):
     _semantic_type_name = "Operation"
+
+    @property
+    def is_constructor(self) -> bool:
+        """True for the operation that builds its class: `__init__` or `constructor`."""
+        return self.name in CONSTRUCTOR_NAMES
     graph_facts = (
         "line_count",
         "max_control_flow_depth",

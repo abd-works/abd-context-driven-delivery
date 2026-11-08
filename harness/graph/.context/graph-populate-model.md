@@ -198,8 +198,10 @@ A parsed object a practice reader added, or a plain node read back from `graph.j
 
 Extends `Node`. A model object that is its own node in the graph it was made on (`model_node.py`). Appending a child to one of its `ModelChildren` lists records the edge.
 
-+ practice_class: type | None
-	// class attribute: the practice whose model_classes list this class sets it, so a model never imports its practice; a class no practice registered raises ModelWithoutPractice when it joins a graph
++ register_practice(practice_class: type): None
+	// class operation: a practice's module registers itself on its model's base class when it is imported (`StoryNode.register_practice(Stories)`), so the model never imports its practice
++ practice_kind(): type
+	// class operation: the practice class registered for this class or its nearest base; the graph holds that practice (Graph.practice_of). A model class with none registered raises ModelWithoutPractice
 + _semantic_type_name: str
 + _belongs: set[tuple[str, str]]
 	// (child type, parent type) pairs that also record a belongsTo edge back

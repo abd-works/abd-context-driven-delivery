@@ -123,12 +123,13 @@ class ModelWithoutPractice(TypeError):
     """A model object class no practice registered, so the graph cannot tell which practice graph it belongs to."""
 
     def __init__(self, model_class: type) -> None:
-        super().__init__(f"{model_class.__name__} belongs to no practice: list it or a base class in a practice's model_classes.")
+        super().__init__(f"{model_class.__name__} names no practice: its practice's module registers itself with register_practice on it or a base class.")
         self.model_class = model_class
 
 
 class ModelNode(Node):
-    """Base model object for one practice. Its practice registers it, and subclasses name the belongsTo pairs.
+    """Base model object for one practice. Its practice registers it (``register_practice``), and subclasses name the
+    belongsTo pairs.
 
     An object made without a graph is detached: it belongs to no practice yet and records no edge. It joins a graph,
     with its whole tree, when a part of a graph adopts it or when something asks for its graph; only then are the edges
@@ -138,9 +139,6 @@ class ModelNode(Node):
     _belongs: set[tuple[str, str]] = set()
     _schema_edge_fields: frozenset[str] = frozenset({"source", "collaborators", "dependencies", "type_hint", "return_type", "callees"})
     """Attributes whose new value can add or remove a schema edge; assigning one rebuilds the graph's schema edges."""
-    practice_class: type | None = None
-    """The class of the practice this object's graph node belongs to, such as ``Stories``. The practice sets it on the
-    classes its ``model_classes`` lists, so the model never imports its practice."""
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -156,6 +154,24 @@ class ModelNode(Node):
         wrapped._schema_wrapped = True
         cls.__init__ = wrapped
 
+    _practice_class: type | None = None
+    """The practice class registered for this model class and its subclasses; see ``register_practice``."""
+
+    @classmethod
+    def register_practice(cls, practice_class: type) -> None:
+        """Make practice_class the practice of this model class and of every subclass that registers none of its own.
+        A practice's module calls it on its model's base class when it is imported, so the model never imports its
+        practice and the dependency runs one way, from the practice to its model."""
+        cls._practice_class = practice_class
+
+    @classmethod
+    def practice_kind(cls) -> type:
+        """The class of the practice this object's graph node belongs to, such as ``Stories``: the one registered for
+        this class or the nearest base class that has one."""
+        if cls._practice_class is None:
+            raise ModelWithoutPractice(cls)
+        return cls._practice_class
+
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         self._child_lists: list[ModelChildren] = []
         self._reference_lists: list[ModelReferences] = []
@@ -170,23 +186,17 @@ class ModelNode(Node):
         self.sequential_order = sequential_order
         self._ready = False
         if graph is not None:
-            self._join(graph.practice_of(self._registered_practice()))
+            self._join(graph.practice_of(type(self).practice_kind()))
 
-    def _registered_practice(self) -> type:
-        """The practice class that registered this object's class; ModelWithoutPractice when none did."""
-        practice_class = type(self).practice_class
-        if practice_class is None:
-            raise ModelWithoutPractice(type(self))
-        return practice_class
 
     @property
     def graph(self) -> Graph:
         """The graph that holds this object. A detached object's tree joins a graph of its own the first time it is
-        asked; the catalogue's practices that graph makes register every model class."""
+        asked; the catalogue's practices that graph makes register every model class (``register_practice``)."""
         if self.practice is None:
             root = self._detached_root()
             graph = Graph()
-            root._join(graph.practice_of(root._registered_practice()))
+            root._join(graph.practice_of(type(root).practice_kind()))
         return self.practice.graph
 
     def _detached_root(self) -> "ModelNode":

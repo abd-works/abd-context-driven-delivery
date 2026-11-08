@@ -24,7 +24,6 @@ class Ux(PracticeGuidance):
     """# Instructions"""
 
     sketch_titles = ("ux:", "user experience:")
-    model_classes = (UxNode,)
     SHORT_NAME = "UX"
     COLOUR = "#E84393"
 
@@ -88,3 +87,6 @@ class Ux(PracticeGuidance):
         if "javascript" not in practice.formats:
             raise NoJavascriptPractice(f"Practice {key!r} writes no JavaScript; Stories and Clean Engineering do.")
         return practice
+
+
+UxNode.register_practice(Ux)

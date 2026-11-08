@@ -18,23 +18,105 @@ from cdd_guidance.practices.ux.model.nodes import (
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 
+class JsonControl(Control):
+    """A control as the JSON document writes it: its fields, its states, and each interaction, a link to a screen
+    written as that screen's name."""
+
+    def as_record(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "control_type": self.control_type,
+            "label": self.label,
+            "bound_field": self.bound_field,
+            "states": list(self.states),
+            "interactions": [
+                {"name": interaction.name, "trigger": interaction.trigger, "effect": interaction.effect,
+                 "destination": _name_of(interaction.destination)}
+                for interaction in self.interactions
+            ],
+        }
+
+
+class JsonStoryDemoControl(StoryDemoControl, JsonControl):
+    """A Story Demo control as the JSON document writes it: a control's record, marked with its kind, with the steps
+    it runs and the input it fills."""
+
+    def as_record(self) -> dict[str, Any]:
+        demo: dict[str, Any] = {
+            "kind": "StoryDemoControl",
+            "story_steps": [step.as_dict() for step in self.story_steps],
+            "set_input": self.set_input,
+            "item_story_steps": [step.as_dict() for step in self.item_story_steps],
+            "item_value": self.item_value,
+            "item_label": self.item_label,
+        }
+        return {**super().as_record(), **{key: value for key, value in demo.items() if value or key in ("kind", "story_steps")}}
+
+
+class JsonRegion(Region):
+    """A region as the JSON document writes it: its name, its area, and each control's record."""
+
+    def as_record(self) -> dict[str, Any]:
+        return {"name": self.name, "area": self.area, "controls": [control.as_record() for control in self.controls]}
+
+
+class JsonScreen(Screen):
+    """A screen as the JSON document writes it: its fields, what it shows, and each region's record."""
+
+    def as_record(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "slug": self.slug,
+            "layout": self.layout,
+            "description": self.description,
+            "chrome_of": _name_of(self.chrome_of),
+            "inactive_tabs": list(self.inactive_tabs),
+            "story_names": self.story_keys,
+            "scenario_names": self.scenario_keys,
+            "step_names": self.step_keys,
+            "domain_terms": list(self.domain_terms),
+            "domain_concepts": list(self.domain_concepts),
+            "image": self.image,
+            "prototype": self.prototype,
+            "regions": [region.as_record() for region in self.regions],
+        }
+
+
+class JsonTransition(Transition):
+    """A transition as the JSON document writes it, each screen it joins written as that screen's name."""
+
+    def as_record(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "from_screen": _name_of(self.from_screen),
+            "to_screen": _name_of(self.to_screen),
+            "trigger": self.trigger,
+            "nav_type": self.nav_type,
+        }
+
+
 class JsonUxMap(UxMap):
     workspace_files = ("ux-map.json", "**/ux-map.json", "ux.json", "**/ux.json")
+    screen_type = JsonScreen
+    region_type = JsonRegion
+    control_type = JsonControl
+    story_demo_control_type = JsonStoryDemoControl
+    transition_type = JsonTransition
 
     def parse(self, content: str | dict) -> UxMap:
         data = json.loads(content) if isinstance(content, str) else content
         ux_map = type(self).create(name=data.get("name", "UxMap"))
         return JsonUxMapReader(ux_map, data).read()
 
-    def render(self, ux_map: UxMap) -> str:
-        """ux_map in this format: copied into a map of this format, which writes itself."""
-        return type(self).copy_of(ux_map).save()
+    def render(self, canonical: UxMap) -> str:
+        """canonical in this format: copied into a map of this format, which writes itself."""
+        return type(self).copy_of(canonical).save()
 
     def save(self) -> str:
         return json.dumps(self.map_record(), indent=2) + "\n"
 
     def map_record(self) -> dict[str, Any]:
-        """This map as the JSON document JsonUxMapReader reads. A link to a screen is written as that screen's name."""
+        """This map as the JSON document JsonUxMapReader reads: each screen and transition writes its own record."""
         return {
             "name": self.name,
             "scope": self.scope,
@@ -42,8 +124,8 @@ class JsonUxMap(UxMap):
             "object_references": self.object_references.as_list(),
             "notes": list(self.context.notes),
             "invariants": list(self.context.invariants),
-            "screens": [self._screen_record(screen) for screen in self.screens],
-            "transitions": [self._transition_record(transition) for transition in self.transitions],
+            "screens": [screen.as_record() for screen in self.screens],
+            "transitions": [transition.as_record() for transition in self.transitions],
             "content_types": [
                 {"name": content_type.name, "hierarchy": content_type.hierarchy,
                  "key_actions": list(content_type.key_actions)}
@@ -54,65 +136,6 @@ class JsonUxMap(UxMap):
                  "destinations": [screen.name for screen in nav.destinations]}
                 for nav in self.nav_components
             ],
-        }
-
-    def _screen_record(self, screen: Screen) -> dict[str, Any]:
-        return {
-            "name": screen.name,
-            "slug": screen.slug,
-            "layout": screen.layout,
-            "description": screen.description,
-            "chrome_of": _name_of(screen.chrome_of),
-            "inactive_tabs": list(screen.inactive_tabs),
-            "story_names": screen.story_keys,
-            "scenario_names": screen.scenario_keys,
-            "step_names": screen.step_keys,
-            "domain_terms": list(screen.domain_terms),
-            "domain_concepts": list(screen.domain_concepts),
-            "image": screen.image,
-            "prototype": screen.prototype,
-            "regions": [
-                {"name": region.name, "area": region.area,
-                 "controls": [self._control_record(control) for control in region.controls]}
-                for region in screen.regions
-            ],
-        }
-
-    def _control_record(self, control: Control) -> dict[str, Any]:
-        record: dict[str, Any] = {
-            "name": control.name,
-            "control_type": control.control_type,
-            "label": control.label,
-            "bound_field": control.bound_field,
-            "states": list(control.states),
-            "interactions": [
-                {"name": interaction.name, "trigger": interaction.trigger, "effect": interaction.effect,
-                 "destination": _name_of(interaction.destination)}
-                for interaction in control.interactions
-            ],
-        }
-        if isinstance(control, StoryDemoControl):
-            record.update(self._story_demo_record(control))
-        return record
-
-    def _story_demo_record(self, control: StoryDemoControl) -> dict[str, Any]:
-        record: dict[str, Any] = {
-            "kind": "StoryDemoControl",
-            "story_steps": [step.as_dict() for step in control.story_steps],
-            "set_input": control.set_input,
-            "item_story_steps": [step.as_dict() for step in control.item_story_steps],
-            "item_value": control.item_value,
-            "item_label": control.item_label,
-        }
-        return {key: value for key, value in record.items() if value or key in ("kind", "story_steps")}
-
-    def _transition_record(self, transition: Transition) -> dict[str, Any]:
-        return {
-            "name": transition.name,
-            "from_screen": _name_of(transition.from_screen),
-            "to_screen": _name_of(transition.to_screen),
-            "trigger": transition.trigger,
-            "nav_type": transition.nav_type,
         }
 
 
@@ -208,7 +231,7 @@ class JsonUxMapReader:
     def _read_components(self) -> None:
         graph = self.ux_map.graph
         for index, transition_data in enumerate(self.data.get("transitions", [])):
-            self.ux_map.transitions.append(Transition(
+            self.ux_map.transitions.append(self.ux_map.transition_type(
                 transition_data.get("name", f"Transition {index}"),
                 index,
                 self._screen_named(transition_data.get("from_screen", "")),

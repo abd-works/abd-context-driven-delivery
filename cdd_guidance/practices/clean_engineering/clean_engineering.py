@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio import Drawio
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
@@ -24,7 +25,6 @@ class CleanEngineering(GraphReading, PracticeGuidance):
     # Its section of a sketch is the one its sketch format reads, held as that one lens.
     sketch_lens = SketchCleanEngineeringModel.lens
     sketch_titles = sketch_lens.titles
-    model_classes = (OoadNode,)
     SHORT_NAME = "CE"
     COLOUR = "#4FC3F7"
 
@@ -97,3 +97,6 @@ class CleanEngineering(GraphReading, PracticeGuidance):
             tools(self.drawio.render())
         return "Artifact written under {session.path}/."
     
+
+
+OoadNode.register_practice(CleanEngineering)

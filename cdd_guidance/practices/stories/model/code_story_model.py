@@ -79,10 +79,7 @@ def joined(lines: List[str], child: List[str], raw: bool, gap: List[str]) -> Lis
 
 
 class CodeStoryNode:
-    """Name forms shared by every code node. slug is the kebab folder name."""
-
-    def slug(self) -> str:
-        return Name(self.name).title_slug or "unnamed"
+    """Name forms shared by every code node; the kebab folder name is the story node's own slug."""
 
     def snake(self) -> str:
         return Name(self.name).title_snake or "unnamed"
@@ -375,12 +372,12 @@ class CodeStoryModel(StoryModel):
         no code for in this language takes that tree's code for the same epic, story, scenario, and step."""
         if isinstance(previous, str) and previous:
             raise CodeStoryModelError("previous must be the path-to-content map of the story tree already on disk")
-        model = self._copy_of(canonical)
+        model = self.copy_of(canonical)
         if previous:
             model._adopt_code(self.parse(previous))
         return model.save()
 
-    def _copy_of(self, canonical: StoryModel) -> "CodeStoryModel":
+    def copy_of(self, canonical: StoryModel) -> "CodeStoryModel":
         """canonical in this language, with this model's settings."""
         return type(self)(canonical, tests_root=self._tests_root)
 
@@ -399,7 +396,7 @@ class CodeStoryModel(StoryModel):
             if epic.epics:
                 self._write_epic(epic, self.tests_root, files)
             else:
-                self._write_stories(epic, f"{self.tests_root}/{epic.slug()}", files)
+                self._write_stories(epic, f"{self.tests_root}/{epic.slug}", files)
         return files
 
     def read_from_code(self) -> bool:
@@ -547,7 +544,7 @@ class CodeStoryModel(StoryModel):
         if not epic.epics:
             self._write_stories(epic, parent, files)
             return
-        folder = f"{parent}/{epic.slug()}"
+        folder = f"{parent}/{epic.slug}"
         self.folder_files(epic, folder, files)
         for child in epic.epics:
             self._write_epic(child, folder, files)
@@ -644,7 +641,7 @@ class CodeStoryModel(StoryModel):
 
     def epic_for(self, slug: str) -> Epic:
         for epic in self.epics:
-            if epic.slug() == slug:
+            if epic.slug == slug:
                 return epic
         epic = self.epic_type(self.epic_type.name_from_slug(slug), len(self.epics) + 1)
         self.append_epic(epic)
@@ -720,7 +717,7 @@ class CodeStoryModel(StoryModel):
         parent = epic
         current: Optional[Epic] = None
         for slug in slugs:
-            found = next((item for item in parent.epics if item.slug() == slug), None)
+            found = next((item for item in parent.epics if item.slug == slug), None)
             if found is None:
                 found = self.epic_type(self.epic_type.name_from_slug(slug), len(parent.epics) + 1)
                 parent.append_epic(found)

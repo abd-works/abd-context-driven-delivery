@@ -66,7 +66,7 @@ class TypeScriptStoryModel(BraceStoryModel):
         each file as it is read."""
         return type(self)(tests_root=self.tests_root, story_test_folder=self._story_test_folder).load(external, on_file=on_file)
 
-    def _copy_of(self, canonical: StoryModel) -> "TypeScriptStoryModel":
+    def copy_of(self, canonical: StoryModel) -> "TypeScriptStoryModel":
         return type(self)(canonical, tests_root=self.tests_root, story_test_folder=self._story_test_folder)
 
     def file_name(self, epic: Epic) -> str:

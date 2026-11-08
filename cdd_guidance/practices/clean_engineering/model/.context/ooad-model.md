@@ -29,7 +29,7 @@ A source file its language cannot read, such as Python that does not parse. Read
 
 ## OoadNode : ModelNode
 
-`model/ooad_node.py`, beside the members and the classes that build on it, so `base_class_model` imports `property` and `operation` and neither imports it back. The practice registers it (`CleanEngineering.model_classes`), so a node finds its practice without importing it.
+`model/ooad_node.py`, beside the members and the classes that build on it, so `base_class_model` imports `property` and `operation` and neither imports it back. The practice's module registers itself on it (`OoadNode.register_practice(CleanEngineering)`), so a node finds its practice without importing it.
 
 
 + OoadNode(name: str, sequential_order: int, graph: Graph | None = None)

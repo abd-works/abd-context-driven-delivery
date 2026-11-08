@@ -118,9 +118,9 @@ class DrawioUxMap(UxMap):
             raise UnreadableDrawio(f"draw.io content is not valid XML: {error}") from error
         return DrawioUxMapReader(type(self).create(), root_element).read()
 
-    def render(self, ux_map: UxMap) -> str:
-        """ux_map as Detailed IA + Site Map: copied into a draw.io map with this map's timeout, which draws itself."""
-        drawn = type(self).copy_of(ux_map)
+    def render(self, canonical: UxMap) -> str:
+        """canonical as Detailed IA + Site Map: copied into a draw.io map with this map's timeout, which draws itself."""
+        drawn = type(self).copy_of(canonical)
         drawn.cli_timeout_seconds = self.cli_timeout_seconds
         return drawn.save()
 
