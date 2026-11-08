@@ -63,7 +63,6 @@ export function kindLabel(kind: string, isFile: boolean): string {
 }
 
 const KNOWN_MARKS = new Set([
-  'PracticeGraph',
   'File',
   'Module',
   'Package',
@@ -125,19 +124,6 @@ export function KindMark({ kind, isFile }: { kind: string; isFile: boolean }) {
       role="img"
     >
       <title>{label}</title>
-      {label === 'PracticeGraph' && (
-        <g
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-        >
-          <circle cx="8" cy="3.5" r="1.75" />
-          <circle cx="3.5" cy="12" r="1.75" />
-          <circle cx="12.5" cy="12" r="1.75" />
-          <path d="M8 5.3v2.2L4.8 10.6M8 7.5l3.2 3.1" />
-        </g>
-      )}
       {label === 'File' && (
         <g
           fill="none"

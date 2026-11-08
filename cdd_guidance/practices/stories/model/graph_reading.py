@@ -26,7 +26,7 @@ def align_story_node(node) -> None:
     elif node.type in {"Scenario", "Story", "Background"}:
         node.source.widen_to_call_close()
     elif node.type == "Example":
-        node.source.align_to_example_export(node.graph.source_root_of(node.practice), node.name)
+        node.source.align_to_example_export(node.practice.in_graph.source_root, node.name)
 
 
 class StoriesReading:
@@ -36,7 +36,7 @@ class StoriesReading:
     def __init__(self, practice: Stories) -> None:
         self.practice = practice
         self.graph = practice.graph
-        self.root = Path(self.graph.source_root_of(practice))
+        self.root = Path(practice.in_graph.source_root)
 
     def story_map(self):
         model = self._story_tests()
@@ -93,22 +93,22 @@ class StoryLinks:
     def operations(self) -> dict[str, list]:
         """Clean Engineering's operations by name, read from the graph once."""
         found: dict[str, list] = {}
-        for operation in self.graph.nodes_of(self.clean, "Operation"):
+        for operation in self.clean.in_graph.nodes("Operation"):
             found.setdefault(operation.name, []).append(operation)
         return found
 
     @cached_property
     def modules(self) -> set:
         """Clean Engineering's modules, read from the graph once."""
-        return set(self.graph.nodes_of(self.clean, "Module"))
+        return set(self.clean.in_graph.nodes("Module"))
 
     @cached_property
     def examples(self) -> list:
         """The examples on the Stories graph, read once."""
-        return self.graph.nodes_of(self.stories, "Example")
+        return self.stories.in_graph.nodes("Example")
 
     def link(self) -> None:
-        steps = [node for node in self.graph.nodes_of(self.stories) if node.type in {"Step", "Given", "When", "Then"}]
+        steps = [node for node in self.stories.in_graph.nodes() if node.type in {"Step", "Given", "When", "Then"}]
         for index, step in enumerate(steps, start=1):
             self.graph.report_progress(f"stories · steps · {index}/{len(steps)} · {step.name}")
             self._link_step(step)
@@ -135,12 +135,12 @@ class StoryLinks:
                     self.graph.link("observes", step, example, "relationship")
 
     def _link_example(self, example, text: str) -> None:
-        for class_node in self.graph.nodes_of(self.clean, "OoadClass"):
+        for class_node in self.clean.in_graph.nodes("OoadClass"):
             if re.search(rf"\b{re.escape(class_node.name)}\b", text):
                 self.graph.link("demonstrates", example, class_node, "grouped")
                 self.graph.link("demonstrates", class_node, example, "grouped")
                 self.graph.link("demonstratedThrough", class_node, example, "relationship")
-        for prop in self.graph.nodes_of(self.clean, "Property"):
+        for prop in self.clean.in_graph.nodes("Property"):
             if re.search(rf"\.{re.escape(prop.name)}\b", text):
                 self.graph.link("retrievedUsing", example, prop, "relationship")
                 self.graph.link("retrievedUsing", prop, example, "relationship")

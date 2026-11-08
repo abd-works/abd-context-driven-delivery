@@ -34,7 +34,7 @@ def _violations(files):
     graph.load_working_copy(str(root), roots, database=str(root), overlays=["cdd_web_domain_access", "lern_domain_driven"], force=True)
     found = {}
     for practice in ("ddd", "bdd"):
-        for node in graph.nodes_of(graph.practice(practice)):
+        for node in graph.practice(practice).in_graph.nodes():
             for violation in node.rules.violations:
                 found.setdefault(violation.rule, []).append(violation.message)
     return found

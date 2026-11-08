@@ -197,7 +197,7 @@ def _owned_parts(context: RuleCheckContext) -> dict[str, str]:
     if ddd is None:
         return {}
     owned: dict[str, str] = {}
-    for aggregate in graph.nodes_of(ddd, "Aggregate"):
+    for aggregate in ddd.in_graph.nodes("Aggregate"):
         roots = [edge.child.name for edge in graph.edges_from("root", aggregate)]
         if not roots:
             continue

@@ -332,7 +332,7 @@ class ToolsetReference:
             return self._module_from_hyphenated_folders()
 
     def _module_from_hyphenated_folders(self) -> types.ModuleType:
-        module_file = self._module_file()
+        module_file = self.module_file()
         spec = importlib.util.spec_from_file_location(self._module_name, module_file)
         if spec is None or spec.loader is None:
             raise ModuleNotFoundError(f"Cannot create spec for {module_file}")
@@ -341,7 +341,8 @@ class ToolsetReference:
         spec.loader.exec_module(module)
         return module
 
-    def _module_file(self) -> Path:
+    def module_file(self) -> Path:
+        """The source file of the referenced class's module, found on the import path without importing it."""
         roots = [Path(entry or ".") for entry in sys.path]
         for root in roots:
             located = self._file_under(root, self._module_name.split("."))

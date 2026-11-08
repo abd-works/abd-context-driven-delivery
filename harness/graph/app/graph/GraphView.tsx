@@ -109,9 +109,7 @@ function TreeNode({
   ownerId?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const children = (node.children ?? []).filter(
-    (child) => child.name !== 'belongsTo' && child.type !== 'belongsTo' && child.name !== 'scopes' && child.type !== 'scopes',
-  );
+  const children = node.children ?? [];
   const rule = node.type === 'Rule';
   const rulesHolder = node.type === 'rules';
   const selected = rule ? ownerId === selectedId && node.name === activeRule : node.node_id === selectedId;

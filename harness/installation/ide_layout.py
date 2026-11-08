@@ -19,6 +19,11 @@ class IdeLayout:
     def __init__(self, ide: str) -> None:
         self.ide = ide
 
+    @classmethod
+    def every(cls) -> list[IdeLayout]:
+        """The layout of each IDE CDD installs into."""
+        return [cls(ide) for ide in cls._FOLDERS]
+
     @property
     def folder_name(self) -> str:
         """The folder in a project the IDE reads, such as ``.cursor``."""

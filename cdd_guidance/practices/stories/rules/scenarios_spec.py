@@ -18,7 +18,8 @@ from cdd_guidance.practices.stories.rules.scenarios import (  # noqa: E402
     GivenNamesComplexStateRootFirst,
     OutlineRequiresManyPermutations,
 )
-from harness.graph.graph import EdgeType, Graph, Node, Source  # noqa: E402
+from harness.graph.edge import EdgeType  # noqa: E402
+from harness.graph.graph import Graph, Node, Source  # noqa: E402
 from harness.graph.saved_graph import SavedGraph  # noqa: E402
 from harness.graph.rule_context import RuleCheckContext  # noqa: E402
 
@@ -83,7 +84,7 @@ def _order_aggregate(graph: Graph) -> None:
 
     def add(kind: str, name: str) -> Node:
         node = Node(ddd, kind, f"ddd:{kind}:order:{name}", name, Source("order", 1, 1))
-        graph.hold(node)
+        node.practice.in_graph.hold(node)
         return node
 
     aggregate = add("Aggregate", "order")

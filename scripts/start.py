@@ -84,7 +84,7 @@ class ServiceStart:
                 "port": port,
                 "pid": pid,
                 "stopped": stopped,
-                "log": "" if ok else str(self.repo / ".cursor" / "hook-server.log"),
+                "log": "" if ok else str(daemon.log_path),
             }
         )
 

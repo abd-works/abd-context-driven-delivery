@@ -12,9 +12,12 @@ from __future__ import annotations
 import re
 from functools import cached_property, lru_cache
 
-from harness.graph.graph import EdgeType
+from harness.graph.edge import EdgeType
+from harness.graph.pattern_overlays import PatternOverlays
+from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.schema import Schema
 from harness.annotations.name import Name
+
 
 # Child-list edges. A model object's child list records these itself.
 _CHILD_LISTS = frozenset(
@@ -114,12 +117,8 @@ class SchemaFields:
     @classmethod
     @lru_cache(maxsize=1)
     def load(cls) -> SchemaFields:
-        from harness.graph.pattern_overlays import PatternOverlays
-        from harness.guidance.practice_catalogue import PracticeCatalogue
-
         schemas = [practice.schema_types for practice in PracticeCatalogue.practices()]
-        for folder in PatternOverlays().pattern_folders:
-            schemas.extend(Schema.load(path) for path in sorted(folder.glob("practices/*/model/schema.yaml")))
+        schemas.extend(Schema.load(path) for path in PatternOverlays().practice_schema_files)
         return cls(tuple(field for schema in schemas for field in cls._fields_of(schema)))
 
     def inverses(self, owner_type: str, target_type: str, forward: str) -> list[str]:
@@ -188,9 +187,9 @@ class NodeEvidence:
         return None
 
     def _steps_under(self) -> list:
-        if not hasattr(self.node, "_subtree"):
+        if not hasattr(self.node, "subtree"):
             return []
-        return [node for node in self.node._subtree() if node is not self.node and node.semantic_type() == "Step"]
+        return [node for node in self.node.subtree() if node is not self.node and node.semantic_type() == "Step"]
 
 
 class SchemaEdges:
@@ -204,7 +203,7 @@ class SchemaEdges:
         """The model objects on the graph: nodes that build their own edges."""
         found = []
         for practice in self.graph.practices.values():
-            found.extend(node for node in self.graph.nodes_of(practice) if hasattr(node, "semantic_type") and hasattr(node, "_subtree"))
+            found.extend(node for node in practice.in_graph.nodes() if hasattr(node, "semantic_type") and hasattr(node, "subtree"))
         return found
 
     @cached_property
@@ -271,7 +270,7 @@ class SchemaEdges:
         members = [node for node in self.nodes if NodeEvidence(node).module is module]
         classes = [node for node in members if node.semantic_type() == "OoadClass"]
         operations = [node for node in members if node.semantic_type() in {"Operation", "Property"}]
-        for node in epic._subtree():
+        for node in epic.subtree():
             evidence = NodeEvidence(node)
             if node.semantic_type() == "Example" and any(evidence.mentions(found.name) for found in classes):
                 return True

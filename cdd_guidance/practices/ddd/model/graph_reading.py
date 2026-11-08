@@ -141,7 +141,7 @@ class DddReading:
     def __init__(self, practice: Ddd) -> None:
         self.practice = practice
         self.graph = practice.graph
-        self.root = Path(self.graph.source_root_of(practice))
+        self.root = Path(practice.in_graph.source_root)
         self._blocks: dict[str, BuildingBlock] = {}
 
     def read(self) -> None:
@@ -152,16 +152,16 @@ class DddReading:
             self.graph.report_progress("ddd · bounded contexts")
             contexts = self._contexts()
             for folder, members in sorted(self._members_by_folder().items()):
-                self._aggregate(folder, members, _context_for(folder, contexts) or self.graph.root_of(self.practice))
+                self._aggregate(folder, members, _context_for(folder, contexts) or self.practice.in_graph.root)
 
     def _contexts(self) -> dict[str, Node]:
         """Each bounded context by its folder, under the context of the folder around it."""
         found = self._bounded_contexts() or [(".", self._unmarked_context(), ".")]
         contexts: dict[str, Node] = {}
         for rel, context, markdown in found:
-            node = self.graph.add(self.practice, context, f"ddd:BoundedContext:{rel}:{context.name}", markdown, 1, context.context_file_lines)
+            node = self.practice.in_graph.add(context, f"ddd:BoundedContext:{rel}:{context.name}", markdown, 1, context.context_file_lines)
             parent = _context_for(str(Path(rel).parent).replace("\\", "/"), contexts) if rel != "." else None
-            self.graph.link("owns", parent or self.graph.root_of(self.practice), node)
+            self.graph.link("owns", parent or self.practice.in_graph.root, node)
             if parent is not None:
                 self.graph.link("belongsTo", node, parent, "relationship")
             contexts[rel] = node
@@ -192,7 +192,7 @@ class DddReading:
         """The classes the Clean Engineering practice read that DDD names a building block, by folder, each with its
         kind."""
         clean = self.practice.extended
-        classes = self.graph.nodes_of(clean, "OoadClass") if clean is not None else []
+        classes = clean.in_graph.nodes("OoadClass") if clean is not None else []
         names = {cls.name for cls in classes}
         members: dict[str, list[tuple[TacticalClass, str]]] = {}
         for cls in classes:
@@ -206,7 +206,7 @@ class DddReading:
     def _aggregate(self, folder: str, members: list[tuple[TacticalClass, str]], context: Node) -> None:
         aggregate = Aggregate(Path(folder).name, 1, graph=self.graph)
         aggregate.load_folder_facts(self.root / folder)
-        node = self.graph.add(self.practice, aggregate, f"ddd:Aggregate:{folder}", folder, 1, 1)
+        node = self.practice.in_graph.add(aggregate, f"ddd:Aggregate:{folder}", folder, 1, 1)
         self.graph.link("owns", context, node)
         self.graph.link("belongsTo", node, context, "relationship")
         blocks = [(self._block(node, tactical, kind), kind) for tactical, kind in members]
@@ -216,7 +216,7 @@ class DddReading:
 
     def _block(self, aggregate: Node, tactical: TacticalClass, kind: str) -> Node:
         source = tactical.oclass.source
-        block = self.graph.add(self.practice, BuildingBlock(self.practice, tactical, kind), f"ddd:{kind}:{source.file}:{tactical.oclass.name}", source.file, source.start_line, source.end_line)
+        block = self.practice.in_graph.add(BuildingBlock(self.practice, tactical, kind), f"ddd:{kind}:{source.file}:{tactical.oclass.name}", source.file, source.start_line, source.end_line)
         self._blocks[tactical.oclass.name] = block
         self.graph.link("root" if kind == "EntityRoot" else "owns", aggregate, block)
         self.graph.link("belongsTo", block, aggregate, "relationship")

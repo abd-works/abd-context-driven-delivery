@@ -25,7 +25,7 @@ class BddGraphReading:
     def read_working_copy(self) -> None:
         """Each spec file's language model reads its describe tree, whose spec, descriptions, contexts, and observations
         are added to its graph as they are."""
-        root = Path(self.graph.source_root_of(self))
+        root = Path(self.in_graph.source_root)
         specs = [file for file in self.graph.source_files(root, self.readable_suffixes) if is_spec_file(file)]
         with schema_sync_paused():
             for index, file in enumerate(specs, start=1):
@@ -60,12 +60,12 @@ class BddGraphReading:
         parents = {id(node): node.parent for node in behavior}
         spec.name = file.stem
         graph = self.graph
-        added = {id(spec): graph.add(self, spec, f"bdd:Spec:{relative}", relative, 1, max(1, len(lines)))}
-        graph.link("owns", graph.root_of(self), added[id(spec)])
+        added = {id(spec): self.in_graph.add(spec, f"bdd:Spec:{relative}", relative, 1, max(1, len(lines)))}
+        graph.link("owns", self.in_graph.root, added[id(spec)])
         for node in behavior:
             node.load_span_facts("\n".join(lines[node.line - 1 : node.end_line]))
             node_id = f"bdd:{node.type}:{relative}:{node.line}:{node.name}"
-            added[id(node)] = graph.add(self, node, node_id, relative, node.line, node.end_line)
+            added[id(node)] = self.in_graph.add(node, node_id, relative, node.line, node.end_line)
             parent = added.get(id(parents[id(node)]), added[id(spec)])
             graph.link(_BEHAVIOR_EDGES[node.type], parent, added[id(node)])
 
@@ -86,13 +86,13 @@ class ObservationLinks:
         self.clean = clean
         self.graph = bdd.graph
         self.members: dict[tuple[bool, str], list] = {}
-        for node in [*self.graph.nodes_of(clean, "Operation"), *self.graph.nodes_of(clean, "Property")]:
+        for node in [*clean.in_graph.nodes("Operation"), *clean.in_graph.nodes("Property")]:
             if node.source.file and not _is_test_support(node.source.file):
                 self.members.setdefault((_is_python(node), node.name), []).append(node)
 
     def link(self) -> None:
         by_file: dict[str, list] = {}
-        for node in self.graph.nodes_of(self.bdd):
+        for node in self.bdd.in_graph.nodes():
             if node.type in _BEHAVIOR_EDGES and node.source.file:
                 by_file.setdefault(node.source.file, []).append(node)
         for nodes in by_file.values():

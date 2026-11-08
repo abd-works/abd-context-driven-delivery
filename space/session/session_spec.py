@@ -736,7 +736,7 @@ with description("a practice"):
             expect(self.session.practice("ddd").guidance.extended).to(be(self.session.practice("clean_engineering").guidance))
 
         with it("should open its graph on its workpath"):
-            expect(self.session.graph.source_root_of(self.opened.guidance)).to(equal(str(self.work.resolve())))
+            expect(self.opened.guidance.in_graph.source_root).to(equal(str(self.work.resolve())))
 
         with it("should be the same graph on the next call in the session"):
             expect(Sessions.of_project(self.called).current().graph).to(be(self.session.graph))
@@ -753,7 +753,7 @@ with description("a practice"):
             with it("should hold the saved nodes when another process first opens the session"):
                 reopened = Sessions(self.repo).current().graph
                 practice = reopened.every_practice["clean_engineering"]
-                expect([node.name for node in reopened.nodes_of(practice)]).to(contain("Order"))
+                expect([node.name for node in practice.in_graph.nodes()]).to(contain("Order"))
 
         with it("should return that same practice on the next ask"):
             expect(self.session.practice("bdd") is self.opened).to(equal(True))

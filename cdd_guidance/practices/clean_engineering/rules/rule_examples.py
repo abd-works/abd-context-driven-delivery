@@ -37,7 +37,7 @@ def practice_from_class_text(name: str, text: str, relative: str) -> RuleFixture
     oclass.take_lines(text.split("\n"))
     oclass.load_source_facts()
     fixture = practice_from_files({relative: text})
-    fixture.practice.graph.add(fixture.practice, oclass, f"clean_engineering:OoadClass:{relative}:{name}", relative, 1, text.count("\n") + 1)
+    fixture.practice.in_graph.add(oclass, f"clean_engineering:OoadClass:{relative}:{name}", relative, 1, text.count("\n") + 1)
     return fixture
 
 

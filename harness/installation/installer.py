@@ -47,7 +47,7 @@ class ServersNotRegistered(LookupError):
     def __init__(self) -> None:
         super().__init__(
             "no server installation is registered with the Installer in this process: import harness.mcp.mcp_server "
-            "and harness.hooks.hooks before installing"
+            "and harness.hooks before installing"
         )
 
 

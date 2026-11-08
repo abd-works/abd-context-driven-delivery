@@ -116,7 +116,7 @@ class StoryRecording:
 
     def write(self) -> None:
         for epic in self.story_map.epics:
-            epic.record(self, self.graph.root_of(self.practice), True)
+            epic.record(self, self.practice.in_graph.root, True)
 
     def announce(self, story) -> None:
         self.story_at += 1
@@ -126,10 +126,10 @@ class StoryRecording:
     def add(self, node_id: str, name: str, semantic: str, file: str, span: tuple[int, int], story_object, facts=None) -> Node:
         """The story object added as the graph node node_id, called name, of type semantic, at span in file, with the
         facts it does not hold itself; the node already called node_id when two objects share it."""
-        if not self.graph.holds(self.practice, node_id):
+        if not self.practice.in_graph.holds(node_id):
             story_object.name = name
             story_object.type = semantic
-        node = self.graph.add(self.practice, story_object, node_id, file or ".", span[0], span[1])
+        node = self.practice.in_graph.add(story_object, node_id, file or ".", span[0], span[1])
         for key, value in (facts or {}).items():
             node.set_fact(key, value)
         return node

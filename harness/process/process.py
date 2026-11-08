@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -19,6 +20,28 @@ _PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 _STILL_ACTIVE = 259
 # How long a stop waits between looks at whether the process has ended.
 _POLL_SECONDS = 0.05
+
+
+class ExclusivePort:
+    """The one port a long-running server of this computer may listen on, claimed by binding it exclusively: two
+    servers cannot both hold one port, and no lock file can promise that once its holder is killed without cleanup."""
+
+    def __init__(self, host: str, port: int) -> None:
+        self.host = host
+        self.port = port
+
+    def claim(self) -> socket.socket | None:
+        """A listening socket on the port; none when another server already holds it, so the loser exits."""
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if sys.platform == "win32":
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        try:
+            listener.bind((self.host, self.port))
+        except OSError:
+            listener.close()
+            return None
+        listener.listen(socket.SOMAXCONN)
+        return listener
 
 
 class PythonInterpreter:
