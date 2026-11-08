@@ -759,28 +759,14 @@ class PracticeGuidance(Guidance):
     def render(self, format: str, content: Any = "", source: str | None = None, previous: str = "") -> dict:
         """Turn content into the practice object model, then render the target format. Content is in source, the
         format this practice works in when none is named; with no content, the practice renders its own model.
-        previous is the target file as it is now. It renders at the fidelity the practice was made at."""
-        return self.render_at(self.fidelities.current, format, content, source, previous)
+        previous is the target file as it is now. It renders at the fidelity the practice was made at; a call that works
+        at another fidelity asks that fidelity to render (``FidelityGuidance.render``)."""
+        return self.rendered(RenderRequest(Format(format), content, Format(source), previous, fidelity=self.fidelities.current))
 
-    def render_at(
-        self, fidelity: FidelityGuidance | None, format: str, content: Any = "", source: str | None = None, previous: str = ""
-    ) -> dict:
-        """Render content into format at fidelity, the one of this practice's that a call works at: content is in
-        source, else in the format that fidelity works in; with no content, the practice renders its own model."""
-        content = self if content in ("", None) else content
-        return self._render(RenderRequest(Format(format), content, Format(source), previous, fidelity=fidelity))
-
-    def render_files(
-        self, format: str, paths: list[str] | str, source: str | None = None, fidelity: FidelityGuidance | None = None
-    ) -> dict:
-        """Render the files at paths into format, at fidelity, the one of this practice's that a call works at, else the
-        one the practice was made at. A renderer that links to other files, such as a story map linking to each story's
-        file, finds them in the folder the first path is, or sits in."""
-        content = self.read_paths(paths, source)
-        worked_at = fidelity if fidelity is not None else self.fidelities.current
-        request = RenderRequest(
-            Format(format), self if content in ("", None) else content, Format(source), "", _folder_of(paths), worked_at
-        )
+    def rendered(self, request: RenderRequest) -> dict:
+        """What request renders to; a request with no content renders this practice's own model."""
+        if request.content in ("", None):
+            request = replace(request, content=self)
         return self._render(request)
 
     def _render(self, request: RenderRequest) -> dict:
@@ -1229,6 +1215,21 @@ class FidelityGuidance(Guidance):
         recipe, expanded, so a practice that renders a format itself, such as Clean Engineering's draw.io, says so."""
         practice = self.practice_guidance
         return practice.instruction("generate_output").expand({}).instructions if practice is not None else ""
+
+    def render(self, format: str, content: Any = "", source: str | None = None, previous: str = "") -> dict:
+        """Render content into format at this fidelity, through its practice's formats: content is in source, else in
+        the format this fidelity works in; with no content, its practice renders its own model. The practice is shared
+        by every call in a session, so a call working at this fidelity asks this fidelity, never the practice."""
+        request = RenderRequest(Format(format), content, Format(source), previous, fidelity=self)
+        return self.practice_guidance.rendered(request)
+
+    def render_files(self, format: str, paths: list[str] | str, source: str | None = None) -> dict:
+        """Render the files at paths into format at this fidelity, read from the project of the session its practice
+        works in. A renderer that links to other files, such as a story map linking to each story's file, finds them in
+        the folder the first path is, or sits in."""
+        practice = self.practice_guidance
+        content = practice.read_paths(paths, source)
+        return practice.rendered(RenderRequest(Format(format), content, Format(source), "", _folder_of(paths), self))
 
     def guidance_parts(self) -> list[str]:
         """Its own guidance, then its Clean Engineering companion's instructions: what a practice working at this

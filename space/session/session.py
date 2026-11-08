@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import threading
 import shutil
 from pathlib import Path
@@ -16,6 +15,7 @@ from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.documents import load_document
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.files import command, skill
+from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_server import mcp
 from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
 from space.repo.repo import Repo
@@ -242,14 +242,12 @@ class Session:
     @property
     def fields(self) -> dict:
         """What ``session.json`` in this session's folder holds, read each time; nothing before it has a folder."""
-        path = self.session_path / SESSION_FILE if self.session_path else None
-        return json.loads(path.read_text(encoding="utf-8")) if path is not None and path.is_file() else {}
+        return JsonFile(self.session_file).read() if self.session_path else {}
 
     def save_fields(self, **values: object) -> None:
         """Merge ``values`` into ``session.json``, keeping what others store there, and make the session's folder when
         it has none yet, as a project's main session has none until something is saved in it."""
-        self.session_path.mkdir(parents=True, exist_ok=True)
-        self.session_file.write_text(json.dumps({**self.fields, **values}), encoding="utf-8")
+        JsonFile(self.session_file).write({**self.fields, **values})
 
     def save(self) -> None:
         """Save this session's name, workpath, and repository in its ``session.json``, creating its folder, and keep

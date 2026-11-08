@@ -11,4 +11,4 @@
 
 ## Constraint
 
-Partition through the practices before embedding; the index holds practice segments, not raw documents. Ask and search against an index built by `context-index.embed`, passing its folder as `index_path`. Context Setup is a plain toolset of pipeline steps, not a practice: it has no fidelities to generate or validate (decision `.context/cdr/0001-plain-toolset-not-context-domain.md`).
+Partition documents through the practices before embedding, so their index holds practice segments, not raw documents. A live-app capture embeds its extraction overview as it is, since the overview already holds one section per captured page, into a `rag` folder beside it. Ask and search against an index built by `context-index.embed`, passing its folder as `index_path`. Context Setup is a plain toolset of pipeline steps, not a practice: it has no fidelities to generate or validate (decision `.context/cdr/0001-plain-toolset-not-context-domain.md`).

@@ -9,7 +9,6 @@ Off when the class is annotated ``@Hooks(disabled=True)``.
 
 from __future__ import annotations
 
-import json
 import re
 import shutil
 import sys
@@ -22,6 +21,7 @@ from typing import ClassVar
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.annotations.name import Name
 from harness.installation.destination import noCatalog
+from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.annotations.annotation import Toast
 from harness.hooks.hook_server import TOAST_ARROW, HookPayload, HookServer, rules_toast
 from harness.hooks.hooks import hook
@@ -309,13 +309,11 @@ class ToastFile:
 
     def __init__(self, folder: Path) -> None:
         self.path = Path(folder) / TOAST_NOTICE
+        self._file = JsonFile(self.path)
 
     def show(self, message: str, now: datetime) -> Path:
         """Write message as this folder's toast, joined with the toast already there when it is from the same burst."""
-        notice = {"message": self._joined_with_previous(message, now), "at": str(LogTimestamp(now))}
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(notice, ensure_ascii=False) + "\n", encoding="utf-8")
-        return self.path
+        return self._file.write({"message": self._joined_with_previous(message, now), "at": str(LogTimestamp(now))})
 
     def _joined_with_previous(self, message: str, now: datetime) -> str:
         previous = self._previous()
@@ -328,14 +326,11 @@ class ToastFile:
         return self._join_arrow_toasts(earlier, message)
 
     def _previous(self) -> dict:
-        """The toast shown here last; none when there is none or it was torn by a write still in progress."""
-        if not self.path.is_file():
-            return {}
+        """The toast shown here last; none when there is none, or none readable."""
         try:
-            previous = json.loads(self.path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
+            return self._file.read()
+        except JsonFileUnreadable:
             return {}
-        return previous if isinstance(previous, dict) else {}
 
     def _time_of(self, stamp: str) -> datetime | None:
         try:

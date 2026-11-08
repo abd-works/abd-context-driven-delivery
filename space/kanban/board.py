@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
@@ -17,6 +16,7 @@ from harness.chat.chat import Chat
 from harness.diagnostics.server_health import ServerHealth
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.installation.data_class import data_field, identity, language_adapter
+from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_server import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.kanban.board_app import BoardAppPorts
@@ -135,13 +135,12 @@ class Board:
         """Keep stage's limit in the board's file beside the other stages' limits and whatever else the sessions share there."""
         shared = self._shared
         shared["wip_limits"] = {**shared.get("wip_limits", {}), stage.name: limit}
-        self.file.write_text(json.dumps(shared), encoding="utf-8")
+        JsonFile(self.file).write(shared)
 
     @cached_property
     def _shared(self) -> dict:
         """Everything the board's file holds, read once per board read; the board is its one reader and writer."""
-        path = self.file
-        return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        return JsonFile(self.file).read()
 
     @property
     @data_field

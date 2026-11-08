@@ -187,9 +187,9 @@ class ContextIndex:
     @skill
     @agent_tool
     def embed(self, segments_paths: list[str], out_path: str) -> EmbedResult:
-        """Read every segment markdown file listed in segments_paths, embed using the embedding provider,
+        """Read every markdown file listed in segments_paths, embed each as one segment using the embedding provider,
         and write a FAISS index to out_path/index.faiss with a metadata sidecar at out_path/meta.json.
-        segments_paths — the *-segment.md files partition wrote, from the project's root or absolute. A path that is not there is refused.
+        segments_paths — the markdown files to index, from the project's root or absolute: the *-segment.md files partition wrote, or a live-app capture's extraction-overview.md. A path that is not there is refused.
         out_path — directory where index.faiss and meta.json are written (created if absent), from the project's root or absolute.
         Returns EmbedResult with index_path, segment_count, and views_covered."""
         out_dir = self._path_named(out_path)
