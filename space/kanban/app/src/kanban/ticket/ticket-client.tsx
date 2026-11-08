@@ -20,7 +20,8 @@ const CLOSE_SESSION_COMMAND = '/space:session:close-session'
 // fidelities reads them side by side.
 export type FilesByFidelity = Record<string, NonNullable<Awaited<ReturnType<FidelityProgressClientGenerated['files']>>>>
 
-const isBacklogItem = (moved: TicketData | BacklogItemData): moved is BacklogItemData => !('column' in moved)
+// A ticket sends its fidelities' progress; a backlog item, which also names its column now, sends none.
+const isBacklogItem = (moved: TicketData | BacklogItemData): moved is BacklogItemData => !('progress' in moved)
 
 // How far some of a ticket's work has got, as Python answers it for one fidelity's progress or for a stage's work taken
 // together: what an action bar shows and allows.
