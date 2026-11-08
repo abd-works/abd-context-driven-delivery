@@ -27,15 +27,11 @@ _ITEM_FAMILIES = ("sdd", "uxd", "arc")
 _ITERATE_AND_LEARN = "iterate-and-learn"
 _PRODUCT_ENGINEERING = "product-engineering"
 _EMPHASIS = re.compile(r"\*([^*]+)\*")
-# The approach's stage examples are this practice's artifacts.
-_STAGE_EXAMPLES_PRACTICE = "stories"
 _APPROACH_SCRIPT = '<script src="commons/catalog-approach.js?v=cdd-1"></script>'
 _LIBRARY_HEAD = (
     '<a class="approach-grid__label approach-grid__label--cdd" href="cdd-approach.html">'
     "context-driven-delivery</a>"
 )
-# The rail label of each practice's Product Engineering board, where its key does not read as one.
-_PRODUCT_ENGINEERING_LABELS = {"ddd": "Domain-driven design"}
 # The windows Iterate and Learn narrows through, from the whole solution to one story: (shape, name, reach, pace,
 # what the work decides).
 _WINDOWS = (
@@ -245,7 +241,7 @@ class ApproachGrids:
         boards: list[str] = []
         all_panels: dict[str, str] = {}
         for practice in self.practices:
-            label = _PRODUCT_ENGINEERING_LABELS.get(practice.key, Name(practice.key).kebab)
+            label = practice.product_engineering_label
             panels, openings = self._practice_panels(practice)
             all_panels.update({f"{practice.key}-{stage}": panel for stage, panel in panels.items()})
             boards.append(
@@ -319,9 +315,9 @@ class ApproachGrids:
         )
 
     def _stories_opening(self, stage_id: str) -> str:
-        """The opening of the Stories fidelity at ``stage_id``, among the practices the grids show: the approach's
-        stage examples are Stories'."""
-        stories = next((practice for practice in self.practices if practice.key == _STAGE_EXAMPLES_PRACTICE), None)
+        """The opening of the fidelity at ``stage_id`` of the practice whose card says the approach's stage examples
+        are its artifacts (Stories), among the practices the grids show."""
+        stories = next((practice for practice in self.practices if practice.gives_stage_examples), None)
         shown = next((each for each in stories.shown_fidelities if each.stage == stage_id), None) if stories else None
         return shown.opening if shown is not None else ""
 

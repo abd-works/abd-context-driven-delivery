@@ -8,7 +8,8 @@ from expects import equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import description, it
 
-from harness.graph.graph import EdgeType, Graph, Node, Source
+from harness.graph.edge import EdgeType
+from harness.graph.graph import Graph, Node, Source
 from harness.graph.pattern_overlays import PatternOverlays
 
 

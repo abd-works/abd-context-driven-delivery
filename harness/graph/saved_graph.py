@@ -15,7 +15,8 @@ from harness.graph.violation import Violation
 from harness.installation.destination import data_of
 
 if TYPE_CHECKING:
-    from harness.graph.graph import Edge, Graph, Node
+    from harness.graph.edge import Edge
+    from harness.graph.graph import Graph, Node
     from harness.guidance.guidance import PracticeGuidance
 
 GRAPH_FILE_NAME = "graph.json"

@@ -49,32 +49,32 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 	// type Practice, id {practice}:Practice:.:{practice}. Facts about the practice as a whole live here
 + PracticeNodes.source_root: str
 + PracticeNodes.nodes(type=None): list[Node]
-+ node_types_of(practice): set[str]
-+ edges_of(practice, kind=None): list[Edge]
-+ edge_types_of(practice): dict[str, EdgeType]
++ PracticeNodes.node_types: set[str]
++ PracticeNodes.edges(kind=None): list[Edge]
++ PracticeNodes.edge_types: dict[str, EdgeType]
 + node(node_id): Node | None
-+ holds(practice, node_id): bool
-+ schema_of(practice): PracticeSchema
++ PracticeNodes.holds(node_id): bool
++ PracticeNodes.schema: PracticeSchema
 	// the practice's schema with the graph's overlays applied
-+ overlay_checks_of(practice): dict
++ PracticeNodes.overlay_checks: dict
 	// each applied overlay's rules_for(practice.key)
-+ rule_labels_of(practice): list[str]
++ PracticeNodes.rule_labels: list[str]
 	// practice.NodeType.slug, with the owning pattern in front
 + PracticeNodes.add(node, node_id, file, start_line, end_line): Node
 	// the node practice already calls node_id when there is one; else release it from the throwaway graph its parser built it in, place it, hold it
-+ add_named(practice, type, node_id, name, source): Node
-+ hold(node): None
++ PracticeNodes.add_named(type, node_id, name, source): Node
++ PracticeNodes.hold(node): None
 	// keep the node among its practice's nodes, by type and id
 + link(kind, parent, child, display="direct"): None
 	// -> record(EdgeType.from_kind(kind, display), parent, child)
 + record(edge_type, parent, child): None
 	// on the parent's practice
-+ drop_edges(practice, dropped): list[Edge]
-+ unused_node_id(practice, type, name): str
++ PracticeNodes.drop_edges(dropped): list[Edge]
++ PracticeNodes.unused_node_id(type, name): str
 	// practice:type:name, numbered from 2 when taken
 + edges_from(kind, parent): list[Edge]
 + direct_parent(child): Node | None
-+ rebuild_tree(practice): None
++ PracticeNodes.rebuild_tree(): None
 	// clear every node's children, then the practice's root populates
 + restored_from(saved: SavedGraph): None
 	// the saved nodes back as plain Nodes at their saved lines, then the edges and violations
@@ -144,7 +144,7 @@ One loaded practice as the explorer's inventory shows it, read from the graph th
 + edge_types: list[str]
 	// in EDGE_ORDER
 + rules: list[str]
-	// -> graph.rule_labels_of(practice)
+	// -> practice.in_graph.rule_labels
 + tree: ExplorerEntry
 	// -> practice.in_graph.root.serialize()
 
@@ -333,7 +333,7 @@ What one practice gives the graph is declared on its own `PracticeGuidance` clas
 	// -> rules_in(f"{package}.rules"): the module's BY_SLUG, else its RULES
 + language_checks(language): dict[str, PracticeGraphRule]
 
-`PracticeGuidance.checks()` adds each active overlay's `rules_for(practice)` (through `graph.overlay_checks_of`) to the practice's own; `node.rules` keeps those whose `node_types` hold the node's type, its file language's, or the Clean Engineering type a pattern's schema anchors it to.
+`PracticeGuidance.checks()` adds each active overlay's `rules_for(practice)` (through `practice.in_graph.overlay_checks`) to the practice's own; `node.rules` keeps those whose `node_types` hold the node's type, its file language's, or the Clean Engineering type a pattern's schema anchors it to.
 
 ## GraphOverlay
 

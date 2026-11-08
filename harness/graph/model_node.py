@@ -9,7 +9,8 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import Callable, Iterable, Iterator, Optional
 
-from harness.graph.graph import EdgeType, Graph, Node, Source
+from harness.graph.edge import EdgeType
+from harness.graph.graph import Graph, Node, Source
 
 # The file a new model object names until a loader tells it which file it came from.
 NO_SOURCE_FILE = "."
@@ -228,7 +229,6 @@ class ModelNode(Node):
     def _move_to(self, practice) -> None:
         if self.practice is practice:
             return
-        graph = practice.graph
         node_id = practice.in_graph.unused_node_id(self.type, self.name) if practice.in_graph.holds(self.node_id) else self.node_id
         # add places a parsed node at its lines; a bound object keeps the source it already has, whatever its kind.
         source = self.source

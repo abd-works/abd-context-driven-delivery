@@ -73,6 +73,7 @@ class CatalogPractice:
         "order": 100,
         "blurb": "",
         "spec_blurb": "",
+        "stage_examples": False,
     }
 
     def __init__(self, practice: PracticeGuidance, skills: SkillSlashName | None = None, position: int = 0) -> None:
@@ -110,6 +111,16 @@ class CatalogPractice:
     def label(self) -> str:
         """The practice's kebab-case name on the board's practice rail and approach grids."""
         return self._card["label"]
+
+    @property
+    def product_engineering_label(self) -> str:
+        """The rail label of the practice's Product Engineering board: its card's, else its key in kebab case."""
+        return self._card.get("product_engineering_label") or Name(self.key).kebab
+
+    @property
+    def gives_stage_examples(self) -> bool:
+        """Whether the approach's stage examples are this practice's artifacts, as its card says."""
+        return bool(self._card["stage_examples"])
 
     @property
     def family(self) -> str:

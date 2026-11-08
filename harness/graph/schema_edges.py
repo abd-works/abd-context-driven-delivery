@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 from functools import cached_property, lru_cache
 
-from harness.graph.graph import EdgeType
+from harness.graph.edge import EdgeType
 from harness.graph.pattern_overlays import PatternOverlays
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.schema import Schema

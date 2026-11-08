@@ -18,7 +18,8 @@ from cdd_guidance.practices.stories.rules.scenarios import (  # noqa: E402
     GivenNamesComplexStateRootFirst,
     OutlineRequiresManyPermutations,
 )
-from harness.graph.graph import EdgeType, Graph, Node, Source  # noqa: E402
+from harness.graph.edge import EdgeType  # noqa: E402
+from harness.graph.graph import Graph, Node, Source  # noqa: E402
 from harness.graph.saved_graph import SavedGraph  # noqa: E402
 from harness.graph.rule_context import RuleCheckContext  # noqa: E402
 

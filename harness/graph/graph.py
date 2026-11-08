@@ -15,10 +15,13 @@ from harness.guidance.practice_catalogue import PracticeCatalogue, UnknownPracti
 from harness.installation.destination import data_field, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import long_call, mcp
+from harness.graph.edge import Display, Edge, EdgeType
 from harness.graph.explorer import ExplorerEntry, FilteredNode, GraphLoaded, GraphSaved, NodeSource, Overlay, PracticeInventory
 from harness.graph.graph_rules_collection import GraphRulesCollection
 from harness.graph.pattern_overlays import GraphOverlay, PatternOverlays
 from harness.graph.rule_context import RuleCheckContext
+from harness.graph.schema_edges import SchemaEdges
+from harness.graph.schema_rules import PracticeSchema
 from harness.graph.saved_graph import SavedGraph, SavedGraphFile, SavedPractice
 from harness.graph.skipped_folders import SKIPPED_FOLDERS, scanned_files
 
@@ -26,7 +29,6 @@ if TYPE_CHECKING:
     from harness.agent_tools.tool_call import ToolCall
     from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 
-Display = str
 # File endings and the channel a file with that ending is written in; any other file is read as part of the graph.
 # Languages a node's file can be in whose rules every practice already checks; any other names a channel.
 _CODE_LANGUAGES = frozenset({"graph", "python", "typescript", "javascript"})
@@ -40,84 +42,6 @@ class GraphFailure(Exception):
         super().__init__(f"{query}\n{detail}")
         self.query = query
         self.detail = detail
-
-
-# Where each edge kind's group sits under a node in the explorer tree, lowest first. A practice orders its groups
-# by these numbers, and graph.json saves them on each edge, so every loader and model reads them through EdgeType.
-EDGE_ORDER: dict[str, int] = {
-    "decomposedInto": 1,
-    "relative": 1,
-    "root": 1,
-    "descriptions": 1,
-    "participants": 1,
-    "screens": 1,
-    "owns": 2,
-    "background": 2,
-    "contexts": 2,
-    "parameters": 2,
-    "aggregates": 2,
-    "given": 2,
-    "scenarios": 3,
-    "properties": 3,
-    "observations": 3,
-    "steps": 4,
-    "demonstrates": 4,
-    "shownOn": 4,
-    "specifiedBy": 4,
-    "specifies": 4,
-    "examples": 5,
-    "belongsTo": 5,
-    "hasParameter": 6,
-    "increments": 6,
-    "accesses": 6,
-    "hasType": 7,
-    "returnType": 7,
-    "stories": 7,
-    "associates": 7,
-    "observes": 8,
-    "demonstratedThrough": 8,
-    "ands": 9,
-    "uses": 9,
-    "invokedBy": 9,
-    "returns": 10,
-    "retrievedUsing": 11,
-    "invokes": 12,
-    "dependsOn": 13,
-    "usedBy": 14,
-}
-# A kind only a pattern overlay's schema names: a child sits with the owned children, a relationship after them.
-_DIRECT_KIND_ORDER = 2
-_RELATIONSHIP_KIND_ORDER = 7
-
-
-class EdgeType:
-    """One kind of edge: its name, where its group sits under a node in the explorer tree, and whether its nodes are
-    shown as children (``direct``) or under a child named for the kind (``grouped``, ``relationship``)."""
-
-    def __init__(self, kind: str, order: int, display: Display) -> None:
-        self.kind = kind
-        self.order = order
-        self.display = display
-
-    @classmethod
-    def from_kind(cls, kind: str, display: Display = "direct") -> EdgeType:
-        """The edge type of kind, at the place ``EDGE_ORDER`` gives it, or after its display's other kinds."""
-        default = _DIRECT_KIND_ORDER if display == "direct" else _RELATIONSHIP_KIND_ORDER
-        return cls(kind, EDGE_ORDER.get(kind, default), display)
-
-
-class Edge:
-    def __init__(self, kind: str, order: int, display: Display, parent: Node, child: Node) -> None:
-        self.kind = kind
-        self.order = order
-        self.display = display
-        self.parent = parent
-        self.child = child
-
-    @property
-    def stage(self) -> str:
-        """The child node's stage. An edge does not store one of its own."""
-        return self.child.stage
 
 
 class Call:
@@ -1031,8 +955,6 @@ class PracticeNodes:
     def schema(self):
         """The practice's schema, with the graph's pattern overlays applied: made when first asked, and kept while the
         graph applies the same overlays."""
-        from harness.graph.schema_rules import PracticeSchema
-
         overlays = tuple(self.graph.pattern_overlays)
         if self._schema is None or self._schema.overlays != overlays:
             self._schema = PracticeSchema(self.practice, overlays)
@@ -1164,6 +1086,8 @@ class Graph:
         self.practices: dict[str, PracticeGuidance] = {}
         # The practices a load call names, each read from the source root its part keeps.
         self._chosen: list[PracticeGuidance] = []
+        # The saved graph file of the folder last loaded, with that folder.
+        self._saved_graph_file: tuple[Path, SavedGraphFile] | None = None
         self.filter = Filter(self)
         self._overlay_paths: list[str] = []
         self._pattern_overlays: list[GraphOverlay] = []
@@ -1564,7 +1488,12 @@ class Graph:
         return GraphSaved(str(saved_file.write(SavedGraph.from_graph(self).merged_over(saved_file.read()))))
 
     def _saved_file(self) -> SavedGraphFile:
-        return SavedGraphFile(self._folder or Path(), self.report_progress)
+        """The saved graph file of the loaded folder, made once for each folder the graph loads."""
+        folder = self._folder or Path()
+        held = self._saved_graph_file
+        if held is None or held[0] != folder:
+            held = self._saved_graph_file = (folder, SavedGraphFile(folder, self.report_progress))
+        return held[1]
 
     def _build_working_copy(self) -> None:
         self._open_chosen_roots()
@@ -1610,8 +1539,6 @@ class Graph:
         it (its practices record their own edges) or a batch of links is still being made."""
         if not self.syncs_schema_edges or self._schema_sync_holds or self._syncing_schema:
             return
-        from harness.graph.schema_edges import SchemaEdges
-
         self._syncing_schema = True
         try:
             SchemaEdges(self).sync()
