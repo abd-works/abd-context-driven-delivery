@@ -1,3 +1,3 @@
-class Order:
-    def total(self) -> int:
-        return 1
+class Checkout:
+    def total(self, line_prices):
+        return sum(line_prices)
