@@ -115,4 +115,4 @@ with description("a graph"):
 
         with it("should parent the class on the package"):
             package = next(child for child in self.tree["children"][0]["children"] if child["name"] == "customer")
-            expect([child["name"] for child in package["children"]]).to(equal(["Customer"]))
+            expect([child["name"] for child in package["children"] if child["type"] != "rules"]).to(equal(["Customer"]))

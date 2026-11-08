@@ -30,13 +30,13 @@ _LIFECYCLE_WITH_VALIDATION = frozenset(
 _ROUTE_REGISTRAR = re.compile(r"^register\w+Routes?$")
 
 
-class KeepOperationsSingleResponsibility(PracticeGraphRule):
+class KeepOperationsSingleResponsibility(ProductionCodeRule):
     """Flag operations that mix I/O-style calls with domain calculation in one body."""
 
     slug = "keep-operations-single-responsibility"
     node_types = ("Operation",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if node.name.endswith("Routes") and node.name.startswith("create"):
             return []
         if _ROUTE_REGISTRAR.match(node.name) or node.name in _LIFECYCLE_WITH_VALIDATION:
@@ -51,8 +51,9 @@ class KeepOperationsSingleResponsibility(PracticeGraphRule):
 
 
 class ErrorsOutOfExistence(ProductionCodeRule):
-    """Ordinary empty/absent cases should not raise. A spec helper raises on a missing value to fail its example, so
-    only production code is judged."""
+    """Ordinary empty/absent cases should not raise. A raise of a failure the program declares, given what was asked
+    for (``raise UnknownPractice(key, known)``), reports a broken call and passes. A spec helper raises on a missing
+    value to fail its example, so only production code is judged."""
 
     slug = "errors-out-of-existence"
     node_types = ("Operation",)
@@ -63,23 +64,23 @@ class ErrorsOutOfExistence(ProductionCodeRule):
         return [f"Operation '{node.name}' raises on an empty or missing value; return a quiet result instead."]
 
 
-class StateChangeReturnsRecordOrNamedFailure(PracticeGraphRule):
+class StateChangeReturnsRecordOrNamedFailure(ProductionCodeRule):
     """Mutating operations should return the record or an explicit outcome."""
 
     slug = "state-change-returns-record-or-named-failure"
     node_types = ("Operation",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if not node.get_fact("mutates_without_record"):
             return []
         return [f"Operation '{node.name}' mutates state but does not return the record or a named failure."]
 
 
-class DomainExceptionCarriesContext(PracticeGraphRule):
+class DomainExceptionCarriesContext(ProductionCodeRule):
     slug = "domain-exception-carries-context"
     node_types = ("Operation",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         exception = node.get_fact("exception_without_message", "")
         if exception:
             return [f"Operation '{node.name}' raises {exception} without context; name the rejected rule."]

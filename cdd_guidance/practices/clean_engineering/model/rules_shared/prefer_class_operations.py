@@ -4,18 +4,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from harness.graph.practice_rule import PracticeGraphRule
+from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
     from harness.graph.rule_context import RuleCheckContext
 
 
-class PreferClassOperations(PracticeGraphRule):
+class PreferClassOperations(ProductionCodeRule):
     slug = "prefer-class-operations"
     node_types = ("OoadClass",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         return [
             f"Module function '{function}' (line {line}) is only used from '{node.name}'. "
             f"Move it onto '{node.name}' as a method."

@@ -134,7 +134,7 @@ with description("modules across the graph"):
             tree["cart/pricing/pricing.py"] = "class Price:\n    pass\n\n\nclass Tax:\n    pass\n"
             tree.update(_module("shop", {"checkout.py": "from cart.pricing.pricing import Price, Tax\n"}))
             expect(_hits("deep-module", tree)).to(
-                equal(["Module 'cart' exposes 2 of 3 classes (67%, max 40%) to other modules: Price, Tax. Keep most classes behind a few public ones."])
+                equal(["Module 'cart' exposes 2 of 3 classes to other modules, more than the 1 that 40% allows: Price, Tax. Keep most classes behind a few public ones."])
             )
 
         with it("should not count imports from tests"):
@@ -147,14 +147,22 @@ with description("modules across the graph"):
             tree["cart/fixtures.py"] = "".join(f"class Fake{name}:\n    pass\n\n\n" for name in ("Cart", "Line", "Price", "Tax"))
             tree.update(_module("shop", {"checkout.py": "from cart.cart import Cart, Line\n"}))
             expect(_hits("deep-module", tree)).to(
-                equal(["Module 'cart' exposes 2 of 3 classes (67%, max 40%) to other modules: Cart, Line. Keep most classes behind a few public ones."])
+                equal(["Module 'cart' exposes 2 of 3 classes to other modules, more than the 1 that 40% allows: Cart, Line. Keep most classes behind a few public ones."])
+            )
+
+        with it("should name the allowed count when the share is just over 40%, which rounds to 40"):
+            names = [f"Part{index}" for index in range(109)]
+            tree = _module("cart", {"cart.py": "".join(f"class {name}:\n    pass\n\n\n" for name in names)})
+            tree.update(_module("shop", {"checkout.py": f"from cart.cart import {', '.join(names[:44])}\n"}))
+            expect(_hits("deep-module", tree)[0].split(":")[0]).to(
+                equal("Module 'cart' exposes 44 of 109 classes to other modules, more than the 43 that 40% allows")
             )
 
         with it("should count a caller outside the validated scope"):
             fixture = practice_from_files(_shop_importing("Cart", "Line", "Price"))
             fixture.read_only(["cart"])
             expect(fixture.hits(ce_rule_by_slug("deep-module"))).to(
-                equal(["Module 'cart' exposes 3 of 5 classes (60%, max 40%) to other modules: Cart, Line, Price. Keep most classes behind a few public ones."])
+                equal(["Module 'cart' exposes 3 of 5 classes to other modules, more than the 2 that 40% allows: Cart, Line, Price. Keep most classes behind a few public ones."])
             )
 
     with context("source-parses"):

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, TYPESCRIPT
 
@@ -11,14 +10,6 @@ from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, TYP
 SIGNATURE = "BDD: SIGNATURE"
 _CODE_LIKE_NAME = re.compile(r"\b[A-Z][a-z]+(?:[A-Z][a-z]+)+\b")
 _BLOCK_CALL = re.compile(r"\b(?:describe|description|context|it)\(")
-_SPEC_NAME_PARTS = ("_spec.", ".test.", ".spec.", ".e2e.")
-_JAVA_TEST_ENDINGS = ("test.java", "tests.java")
-
-
-def is_spec_file(path: Path) -> bool:
-    """A file named as a spec or a test. Which extensions are read at all is the practice's formats' to say."""
-    name = path.name.lower()
-    return any(part in name for part in _SPEC_NAME_PARTS) or name.endswith(_JAVA_TEST_ENDINGS)
 
 
 def has_signature_marker(text: str) -> bool:

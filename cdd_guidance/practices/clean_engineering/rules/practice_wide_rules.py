@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule, is_test_code
 from cdd_guidance.practices.clean_engineering.model.rules_shared.class_graph import ClassGraph
 
 if TYPE_CHECKING:
@@ -26,7 +26,8 @@ class OneWayDeps(PracticeGraphRule):
 
     A cycle between files in different folders is also a cycle between those folders, so the folder report already
     names it. The imports read are production code's, wherever a file makes them: at the top, inside a function, or
-    through ``importlib``. A spec may import the module above the one it tests, so its imports are left out.
+    through ``importlib``. An import under ``if TYPE_CHECKING:`` never runs, so it is no dependency. Specs are not
+    judged: a spec may import the module above the one it tests, so its imports are left out.
     """
 
     slug = "one-way-deps"
@@ -75,11 +76,11 @@ class OneWayDeps(PracticeGraphRule):
         return hits
 
 
-class LowCoupling(PracticeGraphRule):
+class LowCoupling(ProductionCodeRule):
     slug = "low-coupling"
     node_types = ("Module",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         siblings = _sibling_modules(node, context)
         if not siblings:
             return []
@@ -126,17 +127,22 @@ class DeepModule(PracticeGraphRule):
             public = sorted(
                 name for name in set(names) if not name.startswith("_") and importers.get(name, set()) - {module.source.file}
             )
-            if len(names) < _MIN_MEASURED_CLASSES or len(public) <= _MAX_PUBLIC_SHARE * len(names):
+            if len(names) < _MIN_MEASURED_CLASSES or len(public) <= _allowed_public(len(names)):
                 continue
             hits.append(
                 (
                     module.node_id,
-                    f"Module '{module.name}' exposes {len(public)} of {len(names)} classes "
-                    f"({round(100 * len(public) / len(names))}%, max {round(100 * _MAX_PUBLIC_SHARE)}%) to other "
-                    f"modules: {', '.join(public)}. Keep most classes behind a few public ones.",
+                    f"Module '{module.name}' exposes {len(public)} of {len(names)} classes to other modules, more "
+                    f"than the {_allowed_public(len(names))} that {round(100 * _MAX_PUBLIC_SHARE)}% allows: "
+                    f"{', '.join(public)}. Keep most classes behind a few public ones.",
                 )
             )
         return hits
+
+
+def _allowed_public(classes: int) -> int:
+    """How many of a module's classes may be public: 40% of them, rounded down, since a count over it fails."""
+    return int(round(_MAX_PUBLIC_SHARE * classes, 9))
 
 
 def _owning_module(file: str | None, modules: list["Node"]) -> "Node | None":
@@ -160,7 +166,7 @@ def _importers_by_name(context: "RuleCheckContext", modules: list["Node"]) -> di
     return importers
 
 
-class ExtensionsLiveWithTheDomain(PracticeGraphRule):
+class ExtensionsLiveWithTheDomain(ProductionCodeRule):
     """A class that joins one of its own package's types with the class of another package it is named after extends
     that other package's domain, so it belongs beside the class it extends: kept in the base package, it makes the base
     package depend on every domain it is extended for. `GraphEpic(Epic, Node)` in the framework that declares `Node`
@@ -169,12 +175,10 @@ class ExtensionsLiveWithTheDomain(PracticeGraphRule):
     slug = "extensions-live-with-the-domain"
     node_types = ("OoadClass",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
-        if is_test_code(node.source.file or ""):
-            return []
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         classes = context.index(ClassGraph)
         own_folder = _parent_folder(node.source.file or "")
-        homes = {base: {_parent_folder(declared.source.file or "") for declared in classes.by_name.get(base, [])} for base in _base_names(node)}
+        homes = {base: {_parent_folder(declared.source.file or "") for declared in classes.by_name.get(base, [])} for base in classes.bases_of(node)}
         own = [base for base, folders in homes.items() if own_folder in folders]
         # The domain class an extension extends is the one it is named after: `GraphEpic` extends `Epic`.
         extended = [base for base, folders in homes.items() if folders and own_folder not in folders and node.name.endswith(base)]
@@ -188,7 +192,8 @@ class ExtensionsLiveWithTheDomain(PracticeGraphRule):
 
 
 class SourceParses(PracticeGraphRule):
-    """A source file its language cannot parse is read into no class, so every other rule passes it without a look."""
+    """A source file its language cannot parse is read into no class, so every other rule passes it without a look.
+    Specs are judged too: a spec that does not parse cannot run, and nothing else reports it."""
 
     slug = "source-parses"
     node_types = ("Module",)
@@ -218,11 +223,6 @@ def _sibling_modules(node: "Node", context: "RuleCheckContext") -> list[str]:
         for other in context.nodes("Module")
         if other is not node and other.source.file and _parent_folder(other.source.file) == parent
     ]
-
-
-def _base_names(node: "Node") -> list[str]:
-    """The classes a class names as its bases, each by its own name: `pkg.Epic` is `Epic`."""
-    return [str(base).rsplit(".", 1)[-1] for base in node.get_fact("bases", []) or []]
 
 
 def _parent_folder(path: str) -> str:

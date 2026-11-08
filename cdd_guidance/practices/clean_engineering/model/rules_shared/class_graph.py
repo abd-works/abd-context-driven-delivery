@@ -44,8 +44,25 @@ _STANDARD_VALUES = frozenset(
 )
 # A failure is a value the class raises or keeps, not a collaborator it calls.
 _FAILURE_SUFFIXES = ("Error", "Exception")
-# Bases that make a class a value: a named tuple or an enumeration.
-_VALUE_BASES = frozenset({"NamedTuple", "Enum", "IntEnum", "StrEnum", "Flag"})
+# Bases that make a class a value: a named tuple, an enumeration, a failure, or a collection the owner fills.
+_VALUE_BASES = frozenset(
+    {
+        "NamedTuple",
+        "Enum",
+        "IntEnum",
+        "StrEnum",
+        "Flag",
+        "Exception",
+        "BaseException",
+        "Error",
+        "list",
+        "dict",
+        "set",
+        "frozenset",
+        "tuple",
+        "Array",
+    }
+)
 
 
 class ClassGraph:
@@ -91,12 +108,26 @@ class ClassGraph:
         return found
 
     def is_value(self, type_name: str) -> bool:
-        """True for a value type: a standard one such as a path, a date, or a number, a failure being raised, or a
-        class of the graph its stereotype or base marks as a value object. A class makes values from what it holds;
-        only a collaborator it builds is a dependency the caller cannot see."""
-        if type_name in _STANDARD_VALUES or type_name.endswith(_FAILURE_SUFFIXES):
+        """True for a value type: a standard one such as a path, a date, or a number; a failure, named as one or
+        derived from one, such as ``ToolCallStopped(Exception)``; a collection, such as ``CallGraph(list)``; or a class
+        of the graph its stereotype or base marks as a value object, directly or through the classes it derives from.
+        A class makes values from what it holds; only a collaborator it builds is a dependency the caller cannot see."""
+        return self._derives_value(type_name, frozenset())
+
+    def bases_of(self, node: "Node") -> list[str]:
+        """The names of the classes it derives from, each by its own name: ``Epic`` for ``pkg.Epic``, ``list`` for
+        ``list[Entry]``."""
+        return [str(base).rsplit(".", 1)[-1].split("[", 1)[0] for base in node.get_fact("bases", []) or []]
+
+    def _derives_value(self, type_name: str, seen: frozenset[str]) -> bool:
+        if type_name in _STANDARD_VALUES or type_name in _VALUE_BASES or type_name.endswith(_FAILURE_SUFFIXES):
             return True
-        return any(_declares_value(node) for node in self.by_name.get(type_name, []))
+        if type_name in seen:
+            return False
+        return any(
+            _declares_value(node) or any(self._derives_value(base, seen | {type_name}) for base in self.bases_of(node))
+            for node in self.by_name.get(type_name, [])
+        )
 
     def has_behavior(self, node: "Node") -> bool:
         """A class with any operation beyond construction and property access."""
@@ -108,8 +139,7 @@ class ClassGraph:
 
 def _declares_value(node: "Node") -> bool:
     stereotypes = {str(item).lower() for item in node.get_fact("stereotypes", []) or []}
-    bases = {str(base).rsplit(".", 1)[-1] for base in node.get_fact("bases", []) or []}
-    return "value object" in stereotypes or bool(bases & _VALUE_BASES)
+    return "value object" in stereotypes
 
 
 def names_in(type_hint: str) -> set[str]:

@@ -5,8 +5,6 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from harness.graph.practice_rule import PracticeGraphRule
-
 from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -36,11 +34,11 @@ class UseTypedSignatures(ProductionCodeRule):
         return []
 
 
-class LimitComments(PracticeGraphRule):
+class LimitComments(ProductionCodeRule):
     slug = "limit-comments"
     node_types = ("Operation", "OoadClass")
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if not node.get_fact("prose_comment"):
             return []
         if node.type == "OoadClass":
