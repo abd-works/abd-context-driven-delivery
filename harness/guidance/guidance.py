@@ -278,11 +278,10 @@ class GuidanceCollection(MarkdownCollection, Guidance):
 @hosted_only
 @identity("key")
 class PracticeGuidance(Guidance):
-    sketch_titles: tuple[str, ...] = ()
-    """The headings that open this practice's section of a sketch, lower case, such as `stories:`."""
     sketch_lens: ClassVar[SketchLens] = SketchLens(())
-    """This practice's section of a sketch, made once from its ``sketch_titles`` when the practice class is made, so its
-    sketch format and a sketch's reader hold it rather than naming the practice."""
+    """This practice's section of a sketch: the headings that open it, lower case, such as `stories:`. A practice holds
+    the one lens its sketch format reads with, so its sketch format and a sketch's reader hold it rather than naming the
+    practice."""
     SHORT_NAME: str = ""
     """The practice's name where there is little room, such as `CE` on a session board's chip."""
     COLOUR: str = ""
@@ -290,11 +289,6 @@ class PracticeGuidance(Guidance):
     shows_every_fidelity: bool = False
     """Whether scoped markdown shows every fidelity's block even when one is current, as DDD's does; otherwise it shows
     only the current fidelity's."""
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        super().__init_subclass__(**kwargs)
-        if cls.sketch_lens.titles != cls.sketch_titles:
-            cls.sketch_lens = SketchLens(cls.sketch_titles)
 
     def __init__(
         self,

@@ -154,6 +154,8 @@ class BraceCall:
 
     def __init__(self, text: str, start: int, open_paren: int, name: str) -> None:
         source = SourceText(text)
+        # The text of the file the call was read from, which its body is part of.
+        self.text = text
         self.start = start
         self.name = name
         self.close = source.closing_bracket(open_paren, "(", ")")
@@ -170,8 +172,10 @@ class BraceCall:
     def is_whole(self) -> bool:
         return self.close is not None and self.brace >= 0 and self.inner_end is not None
 
-    def body(self, text: str) -> str:
-        return text[self.brace + 1 : self.inner_end] if self.is_whole else ""
+    @property
+    def body(self) -> str:
+        """The text inside its callback's braces; empty for a call that does not close."""
+        return self.text[self.brace + 1 : self.inner_end] if self.is_whole else ""
 
 
 class WrittenBlock:
@@ -320,6 +324,5 @@ JAVA = CodeLanguage(
     suffixes=(".java",),
 )
 
-# Every programming language the code channels read, and every extension their source is written with.
+# Every programming language the code channels read.
 CODE_LANGUAGES = (PYTHON, TYPESCRIPT, JAVASCRIPT, JAVA)
-SOURCE_SUFFIXES = frozenset(suffix for language in CODE_LANGUAGES for suffix in language.suffixes)

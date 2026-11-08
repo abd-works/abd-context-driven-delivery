@@ -7,9 +7,10 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from cdd_guidance.practices.clean_engineering.model.rules_shared.class_graph import ClassGraph
-from cdd_guidance.practices.clean_engineering.model.rules_shared.near_copies import NearCopies
-from cdd_guidance.practices.clean_engineering.model.rules_shared.operation_semantics import SEMANTIC_RULES
+from cdd_guidance.practices.clean_engineering.model.graph_reading import parameters_of
+from cdd_guidance.practices.clean_engineering.rules.class_graph import ClassGraph
+from cdd_guidance.practices.clean_engineering.rules.near_copies import NearCopies
+from cdd_guidance.practices.clean_engineering.rules.operation_semantics import SEMANTIC_RULES
 from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule, is_test_code
 
 if TYPE_CHECKING:
@@ -68,7 +69,7 @@ def _makes_its_own_class(operation: "Node") -> bool:
     """A factory: a class-level operation that makes its own class from what it is given, such as `for_project(root)
     -> ProjectApproach`, `every(folder) -> list[Practice]`, or `-> Self`; no instance exists yet to call it on. One
     that takes nothing, such as `current() -> Board`, hands out a global instance, which a caller should hold instead."""
-    if not operation.get_fact("parameters", []):
+    if not parameters_of(operation):
         return False
     spelled = set(_TYPE_NAME.findall(str(getattr(operation, "return_type", "") or "")))
     return bool(spelled & {operation.get_fact("owner", ""), "Self"})
@@ -95,7 +96,7 @@ GENERIC_NAMES = {
 
 
 def _parameter_names(node: "Node") -> list[str]:
-    return [name for name, _hint in node.get_fact("parameters", [])]
+    return [parameter.name for parameter in parameters_of(node)]
 
 
 def _setter_parameter(name: str, property_setter: bool) -> bool:
@@ -104,7 +105,7 @@ def _setter_parameter(name: str, property_setter: bool) -> bool:
 
 
 def _operation_is_setter(node: "Node") -> bool:
-    if len(node.get_fact("parameters", [])) != 1:
+    if len(parameters_of(node)) != 1:
         return False
     return bool(node.get_fact("is_setter")) or bool(node.get_fact("is_property"))
 
@@ -303,7 +304,7 @@ class UsePropertyNotAccessor(PracticeGraphRule):
     _PREFIXES = ("calculate_", "compute_", "get_")
 
     def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
-        if node.get_fact("is_property") or not node.has_fact("parameters"):
+        if node.get_fact("is_property"):
             return []
         if not any(node.name.startswith(prefix) for prefix in self._PREFIXES):
             return []

@@ -166,7 +166,7 @@ Layout audit for an existing mxfile. It reads cells; it does not render them. Ea
 
 ## DrawioPage
 
-One page of a draw.io file (`drawio/drawio_page.py`): its cells, the class boxes on it, and the edges between them. It is the one reader of draw.io cells: *DrawIOCleanEngineeringModel* parses a diagram and keeps the positions and routes of the one it replaces through it, and every scanner checks one.
+One page of a draw.io file (`drawio/page/drawio_page.py`, a package the class model and the scanners both read, so the scanners depend on it one way): its cells, the class boxes on it, and the edges between them. It is the one reader of draw.io cells: *DrawIOCleanEngineeringModel* parses a diagram and keeps the positions and routes of the one it replaces through it, and every scanner checks one.
 
 + DrawioPage(file_path: Path | None, name: str, root: Element)
 ------

@@ -7,6 +7,8 @@ reads its own function from the tree.
 from __future__ import annotations
 
 import ast
+import io
+import tokenize
 from pathlib import Path
 from typing import List, Optional
 
@@ -172,6 +174,20 @@ class PythonModule(CodeModule):
             for oclass in self.classes:
                 if oclass.name == owner:
                     oclass.module_helpers.append([function, helpers[function]])
+
+    @property
+    def documentation(self) -> str:
+        """The doc strings of the file, its classes, and its functions, read from the syntax tree it keeps, then its
+        comments."""
+        if self.tree is None:
+            return ""
+        documented = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+        docstrings = [ast.get_docstring(node, clean=False) or "" for node in ast.walk(self.tree) if isinstance(node, documented)]
+        try:
+            tokens = list(tokenize.generate_tokens(io.StringIO(self.source_text).readline))
+        except (tokenize.TokenError, SyntaxError):
+            tokens = []
+        return "\n".join(docstrings + [token.string for token in tokens if token.type == tokenize.COMMENT])
 
     def import_targets(self, file: Path, root: Path) -> list[str]:
         """Root-relative paths each `import` / `from … import` names, absolute or relative, wherever it sits in the

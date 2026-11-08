@@ -138,7 +138,7 @@ class Operation(InvariantHolder, OoadNode):
         # The source this operation spans in its file, kept once its parser reads the file.
         self.span = SourceText("")
         self.constructed_types: list[tuple[str, int]] = []
-        self.is_property = False
+        self._is_property = False
         # A property's setter, such as Python's `@total.setter`; a getter is `is_property`.
         self.is_setter = False
         self.is_static = False
@@ -179,6 +179,22 @@ class Operation(InvariantHolder, OoadNode):
             name, _, hint = part.partition(":")
             operation.parameters.append(Parameter(name.strip(), order, hint.split("=")[0].strip()))
         return operation
+
+    @property
+    def is_property(self) -> bool:
+        """True for a getter, such as Python's `@property` or TypeScript's `get total()`: the operation its class's
+        instances show as a property. A getter's graph node is that property, so its kind reads `Property`."""
+        return self._is_property
+
+    @is_property.setter
+    def is_property(self, value: bool) -> None:
+        self._is_property = bool(value)
+        self.type = "Property" if self._is_property else self._semantic_type_name
+
+    @property
+    def value_type(self) -> str:
+        """The type a reader of this operation gets back: its return type, which is a getter's property type."""
+        return self.return_type
 
     def _link(self, child, kind: str) -> None:
         """A parameter it takes keeps it as the operation that declares it."""

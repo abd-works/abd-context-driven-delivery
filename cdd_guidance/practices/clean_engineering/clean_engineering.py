@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio import Drawio
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
@@ -24,7 +23,6 @@ class CleanEngineering(GraphReading, PracticeGuidance):
 
     # Its section of a sketch is the one its sketch format reads, held as that one lens.
     sketch_lens = SketchCleanEngineeringModel.lens
-    sketch_titles = sketch_lens.titles
     SHORT_NAME = "CE"
     COLOUR = "#4FC3F7"
 
@@ -39,6 +37,10 @@ class CleanEngineering(GraphReading, PracticeGuidance):
         "spec_blurb": "Deep modules with explicit, narrow seams defined using code-level, type-safe contracts",
     }
 
+    # The format its model documents (`.context/*-model.md`) are written in: it reads each into the class model the
+    # document describes, which the graph reading keeps.
+    model_document_format = MarkdownCleanEngineeringModel
+
     def __init__(
         self,
         fidelity: str = "modules",
@@ -49,7 +51,7 @@ class CleanEngineering(GraphReading, PracticeGuidance):
             fidelity=fidelity,
             default_workspace_folder="src",
             formats={
-                "markdown": MarkdownCleanEngineeringModel,
+                "markdown": self.model_document_format,
                 "json": JsonCleanEngineeringModel,
                 "python": PythonCleanEngineeringModel,
                 "typescript": TypeScriptCleanEngineeringModel,
@@ -77,9 +79,10 @@ class CleanEngineering(GraphReading, PracticeGuidance):
 
     @property
     def drawio(self) -> Drawio:
-        """The Draw.io toolset this practice renders its diagrams with, reading sources with its markdown format."""
+        """The Draw.io toolset this practice renders its diagrams with, made once; it reads the sources it draws with a
+        markdown model of its own, so a diagram never changes the model this practice renders markdown with."""
         if self._drawio is None:
-            self._drawio = Drawio(self._live_adapter("markdown"))
+            self._drawio = Drawio()
             self._drawio.mode = "tool"
         return self._drawio
 

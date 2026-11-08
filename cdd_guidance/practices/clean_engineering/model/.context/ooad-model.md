@@ -8,7 +8,7 @@ One format's model becomes another's through `translate_from(source)`: each node
 
 Callers use the base nodes. The practice picks a format by name from `CleanEngineering(...).formats`. A class's bases and stereotypes are part of what it says itself, so every format writes and reads them and `update_self`, `clone`, and `as_record` copy them. Text a format cannot read raises *UnreadableSource*; the graph read records each such file on its folder, where the `source-parses` rule reports it.
 
-*CleanEngineering* (`practices/clean_engineering/clean_engineering.py`) says what the graph reads from the practice, and its readers are in `practices/clean_engineering/model/graph_reading.py`. When `Graph.load_working_copy`, `Graph.load_files`, or `Graph.refresh` reads files, `Graph._read_working_copy` in `harness/graph/working_copy.py` asks each practice the graph holds to read, in dependency order. *CleanEngineering* reads each source file with the class model of its language, which it finds among its own formats by the file's extension (`format_for`, which every practice has), and adds each folder as a *Module* that holds its *ModuleContext* (`load_folder_facts`), and each class, property, operation, and parameter the parser built, as nodes. The parser keeps the file's text on its module and the lines each class and operation spans on that class and operation (`take_lines`), so `load_source_facts` and `load_span_facts` read no file again. Each folder owns the folders under it and depends (`dependsOn` edges) on the folders its files import from; it keeps the class names its files import (`imported_names`). It then reads every `.context/*-model.md` in scope with its markdown format and keeps the class model each one describes on the practice, which answers `described_member(owner, name)`: the operation or property a model document describes, so a realization follows the model's interactions without a second copy of any member in the graph. A graph read back from `graph.json` reads the documents under its source root the first time it is asked. DDD reads after Clean Engineering and sees its classes as building blocks.
+*CleanEngineering* (`practices/clean_engineering/clean_engineering.py`) says what the graph reads from the practice, and its readers are in `practices/clean_engineering/model/graph_reading.py`. When `Graph.load_working_copy`, `Graph.load_files`, or `Graph.refresh` reads files, `Graph._read_working_copy` in `harness/graph/working_copy.py` asks each practice the graph holds to read, in dependency order. *CleanEngineering* reads each source file with the class model of its language, which it finds among its own formats by the file's extension (`format_for`, which every practice has), and adds each folder as a *Module* that holds its *ModuleContext* (`load_folder_facts`), and each class, property, operation, and parameter the parser built, as nodes. The parser keeps the file's text on its module and the lines each class and operation spans on that class and operation (`take_lines`), so `load_source_facts` and `load_span_facts` read no file again. Each folder owns the folders under it and depends (`dependsOn` edges) on the folders its files import from; it keeps the class names its files import (`imported_names`). A getter is the operation its class shows as a property, so its node is that property (`Operation.is_property` makes its kind `Property`), typed by the type it returns (`value_type`); an operation's parameters are the *Parameter* nodes its `hasParameter` edges lead to (`parameters_of`), which every rule and BDD read. The practice's operations and properties are indexed once by name after each read (`members_named`), so every practice that links to the code asks one index. It then reads every `.context/*-model.md` in scope with the format the practice names for its model documents (`model_document_format`, its markdown format) and keeps the class model each one describes on the practice, which answers `described_member(owner, name)`: the operation or property a model document describes, so a realization follows the model's interactions without a second copy of any member in the graph. A graph read back from `graph.json` reads the documents under its source root the first time it is asked. DDD reads after Clean Engineering and sees its classes as building blocks.
 
 ```
 model = CleanEngineering().formats["markdown"]().parse(text)
@@ -108,8 +108,6 @@ Raised when `translate_from` is given a node of another semantic type.
 	// the text of the file this module was read from, kept by its parser
 + imported_names: list[str]
 	// the class names its code imports or reaches as module.Class
-+ module_context: ModuleContext
-	// a folder's module card, made once by load_folder_facts
 + take_lines(text: str): None
 	// keeps the file's text, and gives each class the lines it spans
 	-> OoadClass.take_lines
@@ -119,8 +117,15 @@ Raised when `translate_from` is given a node of another semantic type.
 + import_targets(file: Path, root: Path): list[str]
 	// root-relative paths of the relative script imports
 + load_folder_facts(folder: Path): None
-	// the graph facts a code folder gives: its module card, whether it holds .context/bounded-context.md, and its source files
+	// the graph facts a code folder's context files give: what its module card says, read once, and whether it holds .context/bounded-context.md
 	-> ModuleContext.model_blocks
++ holds_public_source(file_name: str): bool
+	// production code whose name does not start with _
++ take_public_sources(sources: list[Module]): None
+	// how many public source files the folder holds, and whether their documentation carries internal design notes
+	-> Module.documentation
++ documentation: str
+	// the doc strings and comments of the file it was read from; only a Python module's is read, from the syntax tree it keeps
 + clone(): Module
 + as_record(): dict
 
@@ -221,6 +226,9 @@ Raised when `translate_from` is given a node of another semantic type.
 + owner: str
 	// the name of the class that holds this operation
 + is_property: bool
+	// a getter: the operation its class shows as a property, so its kind is `Property`
++ value_type: str
+	// the type a reader gets back: its return type
 + is_static: bool
 + is_classmethod: bool
 + line: int | None
@@ -344,7 +352,12 @@ The module card, `.context/module-context.md`, of one code folder.
 + exists(): bool
 + read(): str
 	// empty when the folder has no card
+	// the card's text is read once, the first time it is asked, and every question below is answered from it
 + has_modules_heading(): bool
++ names_seam(): bool
++ names_constraint(): bool
++ says_is_a_type_of(): bool
++ writes_child_parent_headings(): bool
 + model_blocks(): list[str]
 	// model-fidelity detail written into the card: a ------ member list, a Sources / context list, a Live instance list
 

@@ -11,12 +11,7 @@ from typing import Any, Mapping, Sequence
 
 from expects import be_true, equal, expect
 
-from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
-    TOOL_RUN_TIMEOUT_SECONDS,
-    RunResponse,
-    ToolsetInvoke,
-    invoke_run_request,
-)
+from cdd_guidance.practices.agent_bdd.agent_bdd_common import RunResponse, ToolsetInvoke
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -139,40 +134,6 @@ def invoke_toolset(
     ).response()
 
 
-def command_path(repo_root: Path, command: str | Path) -> Path:
-    """Resolve a deployed slash/skill path under ``.cursor/``."""
-    path = Path(command)
-    if path.is_file():
-        return path.resolve()
-    resolved = (repo_root / path).resolve()
-    if resolved.is_file():
-        return resolved
-    legacy = (repo_root / ".cursor" / "commands" / f"{path.name}").resolve()
-    if legacy.is_file():
-        return legacy
-    raise FileNotFoundError(f"Deployed command not found: {resolved}")
-
-
-def run_skill(
-    command: str | Path,
-    *,
-    repo_root: Path,
-    context: Mapping[str, Any] | None = None,
-    arguments: Mapping[str, Any] | None = None,
-    timeout_seconds: int = TOOL_RUN_TIMEOUT_SECONDS,
-) -> RunResponse:
-    """Invoke a deployed skill path using its fixture run-request mapping, on repo_root."""
-    request = invoke_request_for_path(command, repo_root=repo_root)
-    merged = dict(request)
-    if context:
-        merged_context = dict(merged.get("context") or {})
-        merged_context.update(dict(context))
-        merged["context"] = merged_context
-    if arguments:
-        merged["arguments"] = dict(arguments)
-    return invoke_run_request(merged, repo_root, timeout_seconds)
-
-
 # ---------------------------------------------------------------------------
 # Response assertions
 # ---------------------------------------------------------------------------
@@ -191,24 +152,11 @@ def expect_ok_action(
         expect(response.instructions is not None).to(be_true)
 
 
-def expect_ok_tool(response: RunResponse, tool: str) -> None:
-    """Assert ``ok`` and matching ``tool`` name."""
-    expect(response.ok).to(be_true)
-    expect(response.tool).to(equal(tool))
-
-
 def expect_tools_include(response: RunResponse, names: Sequence[str]) -> None:
     """Assert every name appears on ``response.tools``."""
     tools = response.tools or []
     for name in names:
         expect(name in tools).to(be_true)
-
-
-def expect_tools_exclude(response: RunResponse, names: Sequence[str]) -> None:
-    """Assert none of the names appear on ``response.tools``."""
-    tools = response.tools or []
-    for name in names:
-        expect(name in tools).not_to(be_true)
 
 
 def expect_instructions_contain(
@@ -222,20 +170,6 @@ def expect_instructions_contain(
     for needle in needles:
         probe = needle.lower() if case_insensitive else needle
         expect(probe in haystack).to(be_true)
-
-
-def expect_instructions_contain_any(
-    response: RunResponse,
-    *needles: str,
-    case_insensitive: bool = True,
-) -> None:
-    """Assert at least one needle appears in ``response.instructions``."""
-    text = str(response.instructions or "")
-    haystack = text.lower() if case_insensitive else text
-    matched = any(
-        (n.lower() if case_insensitive else n) in haystack for n in needles
-    )
-    expect(matched).to(be_true)
 
 
 def generate_similar_prompt(pass_path: str | Path) -> str:

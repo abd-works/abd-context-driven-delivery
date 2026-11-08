@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from typing import List
 
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
+
 
 def is_primitive_type(type_name: str) -> bool:
     if not type_name:
@@ -31,25 +33,11 @@ def is_primitive_type(type_name: str) -> bool:
     return type_name[0].islower()
 
 
-_OPENING_BRACKETS = "<([{"
-_CLOSING_BRACKETS = ">)]}"
-
-
 def split_top_level(text: str) -> List[str]:
     """The comma-separated parts of a parameter list, keeping commas inside brackets or generics; blanks dropped."""
-    parts: List[str] = []
-    depth = 0
-    start = 0
-    for index, char in enumerate(text):
-        if char in _OPENING_BRACKETS:
-            depth += 1
-        elif char in _CLOSING_BRACKETS:
-            depth = max(0, depth - 1)
-        elif char == "," and depth == 0:
-            parts.append(text[start:index])
-            start = index + 1
-    parts.append(text[start:])
-    return [part.strip() for part in parts if part.strip()]
+    starts = [0] + [index + 1 for index in SourceText(text).top_level_indexes(",")]
+    ends = [index - 1 for index in starts[1:]] + [len(text)]
+    return [text[start:end].strip() for start, end in zip(starts, ends) if text[start:end].strip()]
 
 
 def parse_parameter(name_and_type: str) -> tuple[str, str]:

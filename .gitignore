@@ -124,3 +124,7 @@ sandbox/
 
 # The hook daemon of this checkout: its address, log, and start lock (harness/hooks/hook_daemon.py)
 .hook-server/
+
+# Agent BDD runs write their session files and request logs beside each spec; they are run output, not sources
+**/.agent_bdd_sessions/
+**/log-action-requests.txt

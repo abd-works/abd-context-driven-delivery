@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
-import ast
-import io
 import re
-import tokenize
 from pathlib import Path
 from typing import Iterable, List, Optional
 
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.clean_engineering.model.code_body import SOURCE_SUFFIXES, CodeBody
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
@@ -29,8 +26,6 @@ _PY_FROM_IMPORT = re.compile(r"^\s*from\s+[\w.]+\s+import\s+(\([^)]*\)|[^\n]+)",
 _JS_IMPORT = re.compile(r"\bimport\s+(?:type\s+)?([\w$]+)?\s*,?\s*(?:\{([^}]*)\})?\s*from\b")
 _QUALIFIED_CLASS = re.compile(r"\.([A-Z]\w*)\b")
 _IMPORT_ALIAS = re.compile(r"\s+as\s+\w+")
-_IS_A = re.compile(r"\*is a type of\*", re.I)
-_CHILD_PARENT = re.compile(r"^\s*#{1,6}\s+\S.+\s+:\s+\S", re.MULTILINE)
 _INTERNAL_MARKDOWN = re.compile(r"^##\s+Internal\b", re.MULTILINE | re.IGNORECASE)
 # A class with one of these stereotypes owns the peers it builds, so building them is not a hidden dependency.
 _PEER_COMPOSING_STEREOTYPES = frozenset({"entity", "aggregate root"})
@@ -39,31 +34,6 @@ _PEER_COMPOSING_STEREOTYPES = frozenset({"entity", "aggregate root"})
 class UnreadableSource(ValueError):
     """A source file its language cannot read, such as Python that does not parse. Reading it as an empty or partial
     model would drop its classes from every check without saying so."""
-
-
-def _internal_design_in(paths: List[Path]) -> str:
-    """'heading' for an internal-design section heading in the files' documentation, 'mixed' for internal notes inline
-    in it, else ''. Only docstrings and comments document a file; a string the code holds, such as the marker this
-    function looks for, is not documentation."""
-    text = "\n".join(_documentation_in(path) for path in sorted(paths))
-    if _INTERNAL_MARKDOWN.search(text):
-        return "heading"
-    if "## Internal" in text or "_ holds " in text:
-        return "mixed"
-    return ""
-
-
-def _documentation_in(path: Path) -> str:
-    """The docstrings and comments of a Python file; empty when it cannot be read or does not parse."""
-    try:
-        text = path.read_text(encoding="utf-8")
-        tree = ast.parse(text)
-        comments = [token.string for token in tokenize.generate_tokens(io.StringIO(text).readline) if token.type == tokenize.COMMENT]
-    except (OSError, UnicodeDecodeError, SyntaxError, tokenize.TokenError):
-        return ""
-    documented = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
-    docstrings = [ast.get_docstring(node, clean=False) or "" for node in ast.walk(tree) if isinstance(node, documented)]
-    return "\n".join(docstrings + comments)
 
 
 def class_names_imported_by(source_text: str) -> set:
@@ -138,6 +108,9 @@ def companion_interface_name(class_name: str, known_names: Iterable[str]) -> str
 
 class OoadClass(OoadNode):
     _semantic_type_name = "OoadClass"
+    # The kinds of member this class holds; a format's class names its own, which spell their lines in that format.
+    property_type: type = Property
+    operation_type: type = Operation
     graph_facts = (
         "bases",
         "stereotypes",
@@ -288,14 +261,14 @@ class OoadClass(OoadNode):
         return loaded
 
     def load_property(self, source: Property) -> Property:
-        """A new property for this class's channel, filled from source."""
-        loaded = Property(source.name, source.sequential_order)
+        """A new property of this class's own kind, filled from source."""
+        loaded = self.property_type(source.name, source.sequential_order)
         loaded.update_self(source)
         return loaded
 
     def load_operation(self, source: Operation) -> Operation:
-        """A new operation for this class's channel, filled from source."""
-        loaded = Operation(source.name, source.sequential_order)
+        """A new operation of this class's own kind, filled from source."""
+        loaded = self.operation_type(source.name, source.sequential_order)
         loaded.update_self(source)
         return loaded
 
@@ -499,22 +472,39 @@ class Module(OoadNode):
         return targets
 
     def load_folder_facts(self, folder: Path) -> None:
-        """Fill the facts a code folder owns: its context files and its own source files."""
-        self.module_context = module_context = ModuleContext(folder)
-        content = module_context.read()
-        sources = [path for path in folder.iterdir() if path.is_file() and path.suffix.lower() in SOURCE_SUFFIXES]
-        self.has_module_context = module_context.exists()
+        """Fill the facts a code folder's context files give: what its module card says, read once."""
+        card = ModuleContext(folder)
+        self.has_module_context = card.exists()
         self.has_bounded_context = (folder / ".context" / "bounded-context.md").is_file()
-        self.modules_heading = module_context.has_modules_heading()
-        self.names_seam = module_context.names_seam()
-        self.names_constraint = module_context.names_constraint()
-        self.model_blocks = module_context.model_blocks()
-        self.is_a_in_context = bool(_IS_A.search(content))
-        self.child_parent_in_context = bool(_CHILD_PARENT.search(content))
-        self.public_source_internal = _internal_design_in(
-            [path for path in sources if path.suffix == ".py" and not path.name.startswith("_") and not is_test_code(path.name)]
-        )
-        self.public_source_files = len([path for path in sources if not path.name.startswith("_") and not is_test_code(path.name)])
+        self.modules_heading = card.has_modules_heading()
+        self.names_seam = card.names_seam()
+        self.names_constraint = card.names_constraint()
+        self.model_blocks = card.model_blocks()
+        self.is_a_in_context = card.says_is_a_type_of()
+        self.child_parent_in_context = card.writes_child_parent_headings()
+
+    def holds_public_source(self, file_name: str) -> bool:
+        """True for a file of this folder other modules may read: production code whose name does not start with `_`."""
+        return not file_name.startswith("_") and not is_test_code(file_name)
+
+    def take_public_sources(self, sources: List["Module"]) -> None:
+        """Fill the facts this folder's public source files give, each read into its module: how many there are, and
+        whether their documentation carries internal design notes: 'heading' for an internal-design section heading,
+        'mixed' for internal notes inline, else ''."""
+        self.public_source_files = len(sources)
+        text = "\n".join(source.documentation for source in sources)
+        if _INTERNAL_MARKDOWN.search(text):
+            self.public_source_internal = "heading"
+        elif "## Internal" in text or "_ holds " in text:
+            self.public_source_internal = "mixed"
+        else:
+            self.public_source_internal = ""
+
+    @property
+    def documentation(self) -> str:
+        """The documentation the file this module was read from writes: its doc strings and comments. Only Python's
+        is read; a string the code holds, such as a marker a rule looks for, is not documentation."""
+        return ""
 
     def reconcile_children(self, source: "OoadNode") -> None:
         assert isinstance(source, Module)

@@ -78,7 +78,7 @@ class BraceStoryReader(StoryReader[BraceCall]):
         calls = [link for chain in chains for link in chain]
         for step, link in zip(flat_steps(owner.steps), calls):
             if step.text == link.name:
-                step.body = CodeBody(link.body(self._text), self._language)
+                step.body = CodeBody(link.body, self._language)
         return [(chain[0].start, chain[-1].end) for chain in chains]
 
     def _chains(self, begin: int, end: int, skip: List[BraceCall]) -> List[List[BraceCall]]:

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from harness.graph.practice_rule import PracticeGraphRule
 
 from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule
+from cdd_guidance.practices.clean_engineering.model.graph_reading import parameters_of
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -29,8 +30,8 @@ class UseTypedSignatures(ProductionCodeRule):
             if not node.has_fact("type_hint"):
                 return []
             return _param_violation(node.name, node.get_fact("type_hint"))
-        for name, hint in node.get_fact("parameters", []):
-            hit = _param_violation(name, hint)
+        for parameter in parameters_of(node):
+            hit = _param_violation(parameter.name, parameter.get_fact("type_hint", ""))
             if hit:
                 return [f"In '{node.name}': {hit[0]}"]
         return []

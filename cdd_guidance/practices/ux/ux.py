@@ -6,6 +6,7 @@ from typing import Any
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.sketch_lens import SketchLens
 
 from cdd_guidance.practices.ux.model.ux_node import UxNode
 
@@ -23,7 +24,7 @@ class UxOutsideSession(ValueError):
 class Ux(PracticeGuidance):
     """# Instructions"""
 
-    sketch_titles = ("ux:", "user experience:")
+    sketch_lens = SketchLens(("ux:", "user experience:"))
     SHORT_NAME = "UX"
     COLOUR = "#E84393"
 

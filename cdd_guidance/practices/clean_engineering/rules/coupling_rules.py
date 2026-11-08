@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING
 from harness.graph.practice_rule import PracticeGraphRule
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import is_interface_name
-from cdd_guidance.practices.clean_engineering.model.rules_shared.class_graph import ClassGraph, names_in
+from cdd_guidance.practices.clean_engineering.model.graph_reading import parameters_of
+from cdd_guidance.practices.clean_engineering.rules.class_graph import ClassGraph, names_in
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -63,8 +64,8 @@ class ShapeClassesAroundResources(PracticeGraphRule):
                 {
                     name
                     for operation in classes.operations(service)
-                    for _parameter, hint in operation.get_fact("parameters", []) or []
-                    for name in names_in(hint) & bags
+                    for parameter in parameters_of(operation)
+                    for name in names_in(parameter.get_fact("type_hint", "")) & bags
                     if name != service.name
                 }
             )
@@ -221,7 +222,7 @@ def _sole_forward(operation: "Node") -> str:
     if len(callees) != 1 or len(statements) != 1:
         return ""
     callee = next(iter(callees))
-    parameters = [re.escape(name) for name, _hint in operation.get_fact("parameters", []) or []]
+    parameters = [re.escape(parameter.name) for parameter in parameters_of(operation)]
     receivers = [r"(?:self|this)\.\w+"] + [rf"\b{name}" for name in parameters]
     forwards = re.search(rf"(?:{'|'.join(receivers)})\.{re.escape(callee)}\s*\(", statements[0])
     return callee if forwards else ""
