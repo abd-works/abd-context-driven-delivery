@@ -4,28 +4,25 @@ context map both write one, so its header is written in one place."""
 
 from __future__ import annotations
 
-import re
 from typing import List
 
-_TITLE = "# "
-_SECTION = "## "
-_SOURCE = "source:"
-_SKETCH_SUFFIX = re.compile(r"\s+sketch\s*$", re.IGNORECASE)
-_TRAILING_SEPARATOR = re.compile(r"[\s\-–—€”]+$")
+from cdd_guidance.practices.sketch_document.sketch_outline import SketchOutline
+
 _UNTITLED = "Product / Feature Name"
 _NO_SOURCES = "see engagement sketch"
 
 
 class DiscoveryDocument:
-    """A discovery document written from a sketch, read once: its artifact (`story-map`), its heading (`Story Map`),
-    and the title and sources the sketch's header gives, which is the lines above its first practice section."""
+    """A discovery document written from a sketch: its artifact (`story-map`), its heading (`Story Map`), and the title
+    and sources the sketch's header gives, read by the sketch's *SketchOutline*, so the header is where its practice
+    sections say it is."""
 
     def __init__(self, artifact: str, heading: str, sketch: str) -> None:
+        outline = SketchOutline(sketch)
         self.artifact = artifact
         self.heading = heading
-        self.title = _UNTITLED
-        self.sources = _NO_SOURCES
-        self._read_header(sketch)
+        self.title = outline.title or _UNTITLED
+        self.sources = outline.sources or _NO_SOURCES
 
     def lines(self, body: str) -> List[str]:
         """The document: front matter, the `# {heading} — {title}` line, the sources, a rule, then body."""
@@ -45,14 +42,3 @@ class DiscoveryDocument:
             body.rstrip(),
             "",
         ]
-
-    def _read_header(self, sketch: str) -> None:
-        for line in sketch.splitlines():
-            stripped = line.strip()
-            if stripped.startswith(_SECTION):
-                return
-            if stripped.startswith(_TITLE):
-                titled = _SKETCH_SUFFIX.sub("", stripped[len(_TITLE):].strip()).strip()
-                self.title = _TRAILING_SEPARATOR.sub("", titled).strip() or titled
-            elif stripped.lower().startswith(_SOURCE):
-                self.sources = stripped.split(":", 1)[1].strip()

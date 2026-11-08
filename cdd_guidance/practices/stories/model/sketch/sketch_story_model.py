@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from typing import List, Optional
 
-from cdd_guidance.actions.sketch.sketch_outline import SketchOutline
+from cdd_guidance.practices.sketch_document.sketch_outline import SketchOutline
 from harness.guidance.guidance import SketchLens
 from cdd_guidance.practices.stories.model.story_model import (
     Background,

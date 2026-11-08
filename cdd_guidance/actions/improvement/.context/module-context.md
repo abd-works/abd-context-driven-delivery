@@ -7,4 +7,4 @@
 
 ## Constraint
 
-Pass the file under repair and the violation (a rule name or a report path) by path; never paste the artifact's body. State the proposed change to the guidance before writing a failing test at that seam, and do not list one-off fixes to the artifact as the repair. `repair` leaves the session turn open for the fix; it does not finish it.
+Pass the file under repair and the violation (a rule name or a report path) by path; never paste the artifact's body. State the proposed change to the guidance before writing a failing test at that seam, and do not list one-off fixes to the artifact as the repair. `repair` gives the instructions and stops; the diagnosis, the failing test, and the fix follow in the same chat.

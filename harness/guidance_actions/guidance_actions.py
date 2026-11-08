@@ -196,8 +196,9 @@ class GuidanceAction:
     in, and the practices it lists belong to that action alone: calls running at once never see each other's, and no
     call changes the session another call reads. A board command names its ticket's session in a ``session=`` word,
     because it runs in whichever chat it is sent to; any other call works in the session open in its project. An action
-    started inside another (``_inside``) is made for that action's session and works on the same practices. An action
-    made for no session, such as one listed for install, logs nothing and keeps no format.
+    started inside another (``_inside``) is made for that action's session and works on the same practices, and logs
+    nothing: only the action the call asked for has run. An action made for no session, such as one listed for install,
+    logs nothing and keeps no format.
     """
 
     parameter_notes = {"guidance": GUIDANCE_PARAMETER}
@@ -215,6 +216,8 @@ class GuidanceAction:
         self._listed_items: list | None = None
         self._logged_session_action: str | None = None
         self._practices: list[PracticeGuidance] | None = None
+        # The action this one was started inside; none for the action a call asked for.
+        self._outer: GuidanceAction | None = None
         # The fidelity this action works at on each listed practice, by the practice's id: the one its guidance named,
         # read once when listed, so a later call on another fidelity of the same practice does not change this one's.
         self._worked_at: dict[int, Any] = {}
@@ -408,8 +411,11 @@ class GuidanceAction:
     def _inside(self, action_type: type[GuidanceAction], guidance: str | list | None = None) -> GuidanceAction:
         """An action of action_type started inside this one: made for this action's session and working on guidance,
         this action's text or some of its listed Guidance, or on everything this action works on when guidance is
-        none. It works on the same objects, so the session's practices stay the ones this action listed."""
+        none. It works on the same objects, so the session's practices stay the ones this action listed, and it logs
+        nothing, since building this action's instructions runs its recipe without the agent doing its work."""
         inner = action_type(session=self._session)
+        inner._outer = self
+        inner._practices = self._practices
         inner._worked_at = dict(self._worked_at)
         inner._work_on_listed(
             guidance if guidance is not None else self._guidance_text if self._guidance_text is not None else self.listed()
@@ -459,14 +465,22 @@ class GuidanceAction:
             raise
 
     def log_running(self, action: str) -> None:
-        """Log that this action runs action, once, in the session it works in; an action such as Validate that logs
-        differently overrides it."""
-        if not action or self._session is None or self._logged_session_action == action:
+        """Log that this action runs action, once, in the session it works in. An action started inside another logs
+        nothing: the session board counts a generate line as generate done, so the generate a sketch's instructions end
+        with must not say it ran while the agent has written nothing."""
+        if not action or self._session is None or self._outer is not None or self._logged_session_action == action:
             return
         self._logged_session_action = action
+        self._log(action)
+
+    def _log(self, action: str) -> None:
+        """Write the line saying this action runs action; an action such as Validate that logs differently overrides
+        it."""
         self.listed()
         self._session.log.guidance_action(action)
 
+    # No recipe runs begin: every guidance action inherits it, and the prompt-notify hook reads its Toast, so a call to any
+    # of an action's tools toasts as that action without the action annotating anything.
     @Toast
     @agent_instructions
     def begin(self, guidance: GuidanceArg | None = None, action: str = "") -> str:
