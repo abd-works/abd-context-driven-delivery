@@ -274,6 +274,15 @@ with description("the Clean Engineering graph rules"):
             source = "export class Board {\n  constructor() {\n    this.repo = new Repo();\n  }\n}\n"
             expect(_hits("use-explicit-dependencies", source, "board.ts")).to(have_len(1))
 
+    with context("hide-inner-details"):
+        with it("should accept an operation that reads its own private fields"):
+            source = "class Cart:\n    def total(self) -> int:\n        return sum(self._lines) + len(type(self).__name__)\n"
+            expect(_hits("hide-inner-details", source)).to(equal([]))
+
+        with it("should flag an operation that reads another object's private field"):
+            source = "class Cart:\n    def total(self, order) -> int:\n        return sum(order._lines)\n"
+            expect(_hits("hide-inner-details", source)).to(have_len(1))
+
     with context("use-explicit-dependencies on its values"):
         with it("should accept a constructor that builds a Path"):
             source = "from pathlib import Path\n\n\nclass Store:\n    def __init__(self, root):\n        self.file = Path(root) / 'store.json'\n"

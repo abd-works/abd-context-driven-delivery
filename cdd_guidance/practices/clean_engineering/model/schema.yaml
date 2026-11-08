@@ -144,10 +144,8 @@ operation:
     - limit-comments
     - provide-meaningful-context
     - no-legacy-api-after-refactor
-    - use-typed-signatures
     - hide-inner-details
     - put-logic-on-the-owning-resource
-    - use-intention-revealing-names
     - use-property-not-accessor
     - eliminate-duplication
 

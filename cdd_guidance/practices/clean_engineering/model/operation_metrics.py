@@ -104,7 +104,7 @@ _COORDINATED_MUTATION = re.compile(r"\b(?:self|this)(?:\.\w+)+\s*=")
 _RETURN = re.compile(r"\breturn\b")
 _VOID_RETURN = re.compile(r"->\s*None\b|: void\b")
 _THROWS = re.compile(r"\b(?:throw|raise)\b")
-_PRIVATE_REACH = re.compile(r"(?<![\w.])\w+\._\w+")
+_PRIVATE_REACH = re.compile(r"(?<![\w.])(\w+)\.(_\w+)")
 _PROTOTYPE_SWAP = re.compile(r"\bObject\.setPrototypeOf\s*\(|\.__proto__\s*=(?!=)|\.__class__\s*=(?!=)")
 _BOLD_INTERACTION = re.compile(r"\*\*Interaction:\*\*", re.I)
 _BOLD_INVARIANT_BULLET = re.compile(r"^\s*[-*]\s+\*\*Invariant:\*\*", re.I | re.M)
@@ -258,7 +258,12 @@ class SourceText:
         return not (_RETURN.search(text) or _VOID_RETURN.search(text) or _THROWS.search(text))
 
     def private_reach(self) -> bool:
-        return bool(_PRIVATE_REACH.search(self._text))
+        """True when the body reads a ``_`` member of something other than itself: ``order._lines``, not
+        ``self._lines``, ``cls._registry``, or a dunder such as ``type(x).__name__``."""
+        return any(
+            match.group(1) not in _OWN_RECEIVERS | {"cls"} and not match.group(2).endswith("__")
+            for match in _PRIVATE_REACH.finditer(_STRING.sub('""', self._text))
+        )
 
     def has_prose_comment(self, hash_only: bool = False) -> bool:
         for line in self._text.splitlines():

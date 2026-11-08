@@ -105,12 +105,6 @@ def _setter_parameter(name: str, property_setter: bool) -> bool:
     return name == "value" and property_setter
 
 
-def _operation_is_setter(node: "Node") -> bool:
-    if len(node.get_fact("parameters", [])) != 1:
-        return False
-    return bool(node.get_fact("is_setter")) or bool(node.get_fact("is_property"))
-
-
 class UseExplicitDependencies(ProductionCodeRule):
     """A collaborator a constructor builds that its caller cannot hand it. The parser leaves out what a caller can
     replace or what the class owns: a failure it raises, a parameter's default, a part built from its own state. This
@@ -234,20 +228,13 @@ _CONVENTIONAL_PARAMETER_NAMES = frozenset({"$"})
 
 
 class UseIntentionRevealingNames(ProductionCodeRule):
+    """Judged on each parameter, which the graph reads for every operation's signature, so a name is reported once,
+    where it is written."""
+
     slug = "use-intention-revealing-names"
-    node_types = ("Parameter", "Operation")
+    node_types = ("Parameter",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
-        if node.type == "Parameter":
-            return self._parameter_hits(node)
-        for name in _parameter_names(node):
-            if _setter_parameter(name, _operation_is_setter(node)) or name in _CONVENTIONAL_PARAMETER_NAMES:
-                continue
-            if len(name) < 3 or name.lower() in GENERIC_NAMES:
-                return [f"Parameter '{name}' in '{node.name}' does not reveal intent."]
-        return []
-
-    def _parameter_hits(self, node: "Node") -> list[str]:
         if not re.match(r"^[\w$]+$", node.name) or node.name in _CONVENTIONAL_PARAMETER_NAMES:
             return []
         operation = node.get_fact("operation_name", "")
