@@ -110,7 +110,15 @@ The first count gave 163, because it also counted round 5's summary tables of co
 | 7 | 16 | 3 | 20 | 39 | −65% | 0 | 54 findings, 4 high. Mostly the AI check only, since a DDD crash in the graph worker blocked graph checks. See [round7-report.md](round7-report.md) |
 | 8 | 12 | 4 | 15 | 31 (21 old scope) | −21% (old scope −46%) | 1 | 43 findings, 4 high. The graph check ran in three areas; 10 findings are new scope. A Stories crash on a restored graph blocked the rest. See [round8-report.md](round8-report.md) |
 
-**Code metrics beside the findings.** [code-metrics-trend.md](code-metrics-trend.md) measures each round's input revision with standard tools. From round 6 on, each round also records the metrics that track bad resource orientation: classes with CBO above 14 (43 at the tip), classes with LCOM4 above 1 (252), runtime import cycles (2), the top module fan-in (62), the WMC of the largest classes (`Graph`, `PracticeGuidance`), and duplicated lines (0.42%). Shadow models and semantic duplicates are mostly invisible to these metrics, so the AI findings stay the measure for those two classes.
+**Code metrics beside the findings.** [code-metrics-trend.md](code-metrics-trend.md) measures the code at each round with standard tools, and marks every number better, worse or about the same. The numbers that track bad resource orientation are:
+- classes that depend on more than 14 other classes (43 now)
+- the share of classes doing several unrelated jobs (about half)
+- modules that import each other in a loop (none since round 7)
+- the most modules importing one single module (60)
+- the total complexity of the biggest classes, `Graph` and `PracticeGuidance`
+- the share of copied lines (0.43%)
+
+Second copies of a model, and functions that do the same job but are written differently, are mostly invisible to these numbers, so the AI findings remain the measure for those two goal classes.
 
 ## Round 6 analysis: on track, with one class lagging
 
