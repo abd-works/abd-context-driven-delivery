@@ -9,6 +9,7 @@ import shutil
 import sys
 from pathlib import Path
 
+from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.process.git import Git, RepoConnectError
 from harness.process.process import PythonInterpreter
 
@@ -22,14 +23,6 @@ BOARD_MOD_FOLDER = Path("harness") / "chat-ui" / "pane"
 BOARD_MOD_PARTS = (".claude-plugin", "hooks", "types")
 # A commit without the server cannot serve chats, so pinning one would leave every chat without cdd.
 SERVER_MODULE = "harness/mcp/mcp_daemon.py"
-# The folders under a checkout that hold importable packages, beside the checkout root itself.
-IMPORT_FOLDERS = (
-    "tools",
-    "cdd_guidance/practices",
-    "cdd_guidance/actions",
-    "cdd_guidance/patterns",
-    "cdd_guidance/builders",
-)
 
 
 class RuntimeNotInstalled(Exception):
@@ -178,10 +171,8 @@ class CddHome:
     @property
     def server_environment(self) -> dict[str, str]:
         """What the server process needs to import the source checkout's packages and keep bytecode out of it."""
-        root = self.source
-        entries = [str(root), *(str(root / name) for name in IMPORT_FOLDERS if (root / name).is_dir())]
         return {
-            "PYTHONPATH": os.pathsep.join(entries),
+            "PYTHONPATH": RepositoryToolsets(self.source).pythonpath(),
             "PYTHONPYCACHEPREFIX": str(self.folder / ".pycache"),
             "PYTHONIOENCODING": "utf-8",
             CDD_HOME_ENV: str(self.folder),

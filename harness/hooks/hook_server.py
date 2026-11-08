@@ -18,7 +18,7 @@ import os
 from collections.abc import Iterator, Mapping
 from typing import Any, Callable, ClassVar
 
-from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 from harness.annotations.annotation import HostedOnly
 from harness.hooks.hooks import HookHandlersFile, Hooks
@@ -374,8 +374,7 @@ class HandlerCatalog:
         registration = getattr(item, "registration_name", None)
         if isinstance(registration, str) and registration:
             return registration
-        typ = item if isinstance(item, type) else type(item)
-        return f"{typ.__module__}:{typ.__name__}"
+        return str(ToolsetReference.of(item if isinstance(item, type) else type(item)))
 
     @property
     def event_names(self) -> list[str]:

@@ -10,6 +10,8 @@ from expects import equal, expect
 from mamba import context, description, it
 
 from harness.guidance.practice_catalogue import PracticeCatalogue
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 
 with description("a practice's schema"):

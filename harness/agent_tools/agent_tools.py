@@ -59,8 +59,63 @@ class AgentToolValidationError(Exception):
         self.lineno = lineno
 
 
-class ToolSetCollection:
-    """Named child toolsets, iterated in entry order. The collection itself may have tools."""
+class AgentToolSetOrigin:
+    """Where a toolset lives and what it is called."""
+
+    domain_slug: str | None = None
+
+    @property
+    def name(self) -> str:
+        stored = getattr(self, "_name", None)
+        if isinstance(stored, str) and stored:
+            return stored
+        return Name(type(self).__name__).snake
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._name = value
+
+    @property
+    def slug(self) -> str:
+        return Name(self.domain_slug or type(self).__name__).kebab
+
+    @property
+    def install_folder(self) -> Path:
+        try:
+            return Path(inspect.getfile(type(self))).resolve().parent
+        except (TypeError, OSError):
+            return Path(self.slug)
+
+    @property
+    def registration_name(self) -> str:
+        """The ``module:Class`` reference configuration and the installer name this toolset by."""
+        return str(ToolsetReference.of(type(self)))
+
+    @property
+    def description(self) -> str:
+        return (self.__class__.__doc__ or "").strip()
+
+    @property
+    def overview(self) -> str:
+        """What this toolset is for, which its ``instructions`` tool is described by when its docstring says nothing;
+        none unless the toolset says."""
+        return ""
+
+    @property
+    def session_context(self) -> str:
+        """What an agent following one of this toolset's instructions needs to know about the session it works in,
+        added after the instructions; none for a toolset that works in no session."""
+        return ""
+
+    @functools.cached_property
+    def class_markdown(self) -> Markdown:
+        """The markdown beside this toolset's class, which expands a tool's one-word description into its section."""
+        return Markdown.from_label(self, "")
+
+
+class ToolSetCollection(AgentToolSetOrigin):
+    """Named child toolsets, iterated in entry order. The collection itself may have tools, and it is named and found
+    the way a toolset is."""
 
     def __init__(self, entries: dict[str, Any] | None = None, parent: Any = None) -> None:
         self.entries: dict[str, Any] = dict(entries or {})
@@ -74,19 +129,6 @@ class ToolSetCollection:
 
     def __bool__(self) -> bool:
         return bool(self.entries)
-
-    @property
-    def name(self) -> str:
-        return Name(type(self).__name__).snake
-
-    @property
-    def slug(self) -> str:
-        return Name(self.name).kebab
-
-    @property
-    def registration_name(self) -> str:
-        typ = type(self)
-        return f"{typ.__module__}:{typ.__name__}"
 
     def attach(self, instance: Any, name: str | None = None) -> None:
         MarkdownCollection.attach(self, instance, name)
@@ -252,15 +294,28 @@ class ToolsetMembers:
 
 class ToolsetReference:
     """A toolset named the way configuration and the installer name it: ``<module>:<Class>``. A module whose folder
-    names use hyphens on disk, such as ``agent-bdd``, is found by its underscored name too."""
-
-    _SEARCH_FOLDERS = ("harness", "tools", "cdd_guidance/practices", "cdd_guidance/actions", "cdd_guidance/builders")
+    names use hyphens on disk, such as ``agent-bdd``, is found by its underscored name too, under each folder on the
+    import path: the repository's toolsets put their checkout's import folders there, so this reference searches the
+    same folders the installer and the servers load from."""
 
     def __init__(self, reference: str) -> None:
         self._module_name, _, self._class_name = reference.partition(":")
         if not self._class_name:
             raise ValueError(f"expected <module>:<Class>, got {reference!r}")
         self._reference = reference
+
+    @classmethod
+    def of(cls, toolset_class: type) -> ToolsetReference:
+        """The reference that names toolset_class: its module's full name and its own."""
+        return cls.in_module(toolset_class.__module__, toolset_class.__name__)
+
+    @classmethod
+    def in_module(cls, module: str, class_name: str) -> ToolsetReference:
+        """The reference to the class class_name defined in module, named the one way references are written."""
+        return cls(f"{module}:{class_name}")
+
+    def __str__(self) -> str:
+        return self._reference
 
     @property
     def toolset_class(self) -> type:
@@ -288,8 +343,7 @@ class ToolsetReference:
         return module
 
     def _module_file(self) -> Path:
-        repository = Path(__file__).resolve().parents[2]
-        roots = [repository, *(repository / folder for folder in self._SEARCH_FOLDERS)]
+        roots = [Path(entry or ".") for entry in sys.path]
         for root in roots:
             located = self._file_under(root, self._module_name.split("."))
             if located is not None:
@@ -415,48 +469,6 @@ class _RecipeLinesValidator(ast.NodeVisitor):
 
     def _fail(self, message: str) -> None:
         raise AgentToolValidationError(message, class_name=self._class_name, action_name=self._action_name)
-
-
-class AgentToolSetOrigin:
-    """Where a toolset lives and what it is called."""
-
-    domain_slug: str | None = None
-
-    @property
-    def name(self) -> str:
-        stored = getattr(self, "_name", None)
-        if isinstance(stored, str) and stored:
-            return stored
-        return Name(type(self).__name__).snake
-
-    @name.setter
-    def name(self, value: str) -> None:
-        self._name = value
-
-    @property
-    def slug(self) -> str:
-        return Name(self.domain_slug or type(self).__name__).kebab
-
-    @property
-    def install_folder(self) -> Path:
-        try:
-            return Path(inspect.getfile(type(self))).resolve().parent
-        except (TypeError, OSError):
-            return Path(self.slug)
-
-    @property
-    def registration_name(self) -> str:
-        typ = type(self)
-        return f"{typ.__module__}:{typ.__name__}"
-
-    @property
-    def description(self) -> str:
-        return (self.__class__.__doc__ or "").strip()
-
-    @functools.cached_property
-    def class_markdown(self) -> Markdown:
-        """The markdown beside this toolset's class, which expands a tool's one-word description into its section."""
-        return Markdown.from_label(self, "")
 
 
 class AgentToolSet(AgentToolSetOrigin):
@@ -935,12 +947,8 @@ class AgentTool(AgentToolDestination):
         expanded = self.toolset.class_markdown.expand_docstring(self.docstring)
         if expanded:
             return expanded
-        if self.name == "instructions":
-            overview = getattr(self.toolset, "overview", None)
-            if callable(overview):
-                overview = overview()
-            if isinstance(overview, str) and overview.strip():
-                return overview.strip()
+        if self.name == "instructions" and (self.toolset.overview or "").strip():
+            return self.toolset.overview.strip()
         return self.docstring or self.callable.__name__
 
     @property
@@ -1065,7 +1073,7 @@ class AgentInstructions(AgentTool):
             body = f"{doc}\n\n{body}".strip() if body else doc
         reply = body or self.description or doc
         # An action that works in a session says which one, so the agent knows its folders without looking for them.
-        session = getattr(toolset, "session_context", "")
+        session = toolset.session_context
         return f"{reply}\n\n{session}" if session else reply
 
     @functools.cached_property

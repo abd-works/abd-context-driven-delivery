@@ -21,6 +21,8 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 from harness.guidance.fixtures.split_tool.split_tool import SplitPracticeGuidance
 from harness.markdown import HTML, Markdown
 from harness.hooks.hook_server import HookPayload
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 _READS_PER_FIDELITY = 10
 

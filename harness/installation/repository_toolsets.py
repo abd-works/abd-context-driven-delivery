@@ -50,8 +50,10 @@ class RepositoryToolsets:
             ".retired",
         }
     )
-    # The packages under these folders import by their own names (``from validate.validate import ...``).
-    _CATALOG_DIRS = (
+    # The packages under these folders import by their own names (``from validate.validate import ...``). This is the one
+    # list of a checkout's import folders: the installer, the hook server, the cdd server's environment (CddHome), and
+    # the catalog generator all read it through ``pythonpath``; ``pyproject.toml`` repeats it, since it cannot read code.
+    IMPORT_FOLDERS = (
         "tools",
         "cdd_guidance/practices",
         "cdd_guidance/actions",
@@ -74,7 +76,7 @@ class RepositoryToolsets:
         """The repository root, then tools and the guidance packages under ``cdd_guidance``. Never ``harness/``, which
         would shadow the MCP SDK's ``mcp``; the collection walk still reads ``harness/``."""
         entries = [str(self.root)]
-        for name in self._CATALOG_DIRS:
+        for name in self.IMPORT_FOLDERS:
             folder = self.root / name
             if folder.is_dir():
                 entries.append(str(folder))
@@ -136,7 +138,7 @@ class RepositoryToolsets:
         if not module:
             return []
         return [
-            f"{module}:{node.name}"
+            str(ToolsetReference.in_module(module, node.name))
             for node in tree.body
             if isinstance(node, ast.ClassDef)
             and not self._is_hosted_only(node)

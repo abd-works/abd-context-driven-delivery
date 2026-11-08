@@ -433,7 +433,7 @@ class GuidanceAction:
         project = session.repo_path.as_posix()
         practices = [(item, self._session_practice(item)) for item in self.listed() if not isinstance(item, str)]
         writes = [f"- {item.slug}: {practice.folder.as_posix()}" for item, practice in practices if practice is not None]
-        stored = session_json.read_text(encoding="utf-8").strip() if session_json.is_file() else "{}"
+        stored = json.dumps(session.fields, indent=2)
         return "\n".join([
             "## Session",
             "",

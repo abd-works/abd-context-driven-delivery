@@ -46,6 +46,9 @@ from harness.markdown.format import Format
 
 # Report names end with the time they were made, written so names sort by time.
 REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
+# The practice whose fidelities accompany other practices' fidelities, by its key: a fidelity's ``clean_engineering:``
+# setting names the fidelity of this practice whose instructions join its own.
+COMPANION_PRACTICE = "clean_engineering"
 
 
 @dataclass(frozen=True)
@@ -88,11 +91,6 @@ class Guidance:
     name: str | None = None
     domain_slug: str | None = None
 
-    @property
-    def registration_name(self) -> str:
-        typ = type(self)
-        return f"{typ.__module__}:{typ.__name__}"
-
     @functools.cached_property
     def _own_name(self) -> Name:
         """The guidance's name, made once from its declared slug or its class."""
@@ -108,8 +106,13 @@ class Guidance:
 
     @property
     def module_dir(self) -> Path:
+        return type(self).class_folder()
+
+    @classmethod
+    def class_folder(cls) -> Path:
+        """The folder the guidance's class is defined in, which holds its markdown, templates, and examples."""
         try:
-            return Path(inspect.getfile(type(self))).resolve().parent
+            return Path(inspect.getfile(cls)).resolve().parent
         except (TypeError, OSError):
             return Path(".")
 
@@ -405,7 +408,29 @@ class PracticeGuidance(Guidance):
     def package(self) -> str:
         """The Python package that holds this practice, such as ``cdd_guidance.practices.stories``; empty for a practice
         the catalogue does not hold."""
-        return PracticeCatalogue.module_of(self.key) if PracticeCatalogue.has(self.key) else ""
+        return type(self).__module__.rsplit(".", 1)[0] if PracticeCatalogue.holds(type(self)) else ""
+
+    @classmethod
+    def class_key(cls) -> str:
+        """The key of the practice this class makes: the name of the folder it is defined in."""
+        return cls.class_folder().name
+
+    def hold_set(self, practices: dict[str, PracticeGuidance]) -> None:
+        """Hold the practices of the set this one was made with, by key: the one it extends, and the Clean Engineering
+        practice whose fidelities accompany its own, so it works with the same objects as the rest of its set."""
+        if self.extends:
+            self.extended = practices[self.extends]
+        self._companion_practice = practices.get(COMPANION_PRACTICE)
+
+    def companion_practice(self) -> PracticeGuidance:
+        """The Clean Engineering practice whose fidelities accompany this practice's: the one of its own set, which the
+        catalogue hands it, so a companion works in the same session; else one made for it the first time it is asked
+        for, for a practice made apart from any set. An operation rather than a property, so walking a practice's
+        properties for the toolsets it holds never makes one."""
+        held = vars(self).get("_companion_practice")
+        if held is None:
+            held = self._companion_practice = PracticeCatalogue.create(COMPANION_PRACTICE)
+        return held
 
     def align_node(self, node: Any) -> None:
         """Move node's source onto the lines that declare it, when this practice's reader found it by a nearby line."""
@@ -891,8 +916,8 @@ class FidelityGuidance(Guidance):
             self.default_format = str(settings["default_format"] or "")
         if "outputs" in settings:
             self.outputs = settings["outputs"] if isinstance(settings["outputs"], dict) else {}
-        if "clean_engineering" in settings:
-            self.clean_engineering = str(settings["clean_engineering"] or "")
+        if COMPANION_PRACTICE in settings:
+            self.clean_engineering = str(settings[COMPANION_PRACTICE] or "")
         if "judged_on" in settings:
             self.judged_on = str(settings["judged_on"] or "artifacts")
 
@@ -1044,16 +1069,29 @@ class FidelityGuidance(Guidance):
     @property
     def clean_engineering(self) -> FidelityGuidance | None:
         """The Clean Engineering fidelity this fidelity's `clean_engineering:` field names, whose instructions join
-        this fidelity's. It knows this fidelity as the one it is the companion of and reads the code format from it."""
+        this fidelity's: that fidelity of its practice's companion practice, the Clean Engineering of the same set, as
+        the companion of this one. It reads the code format from this fidelity."""
         stored = getattr(self, "_clean_engineering", None)
         if isinstance(stored, FidelityGuidance):
             return stored
-        if not isinstance(stored, str) or not stored:
+        practice = self.practice_guidance
+        if not isinstance(stored, str) or not stored or practice is None:
             return None
-        # A companion of its own, since it knows this fidelity as the one it accompanies.
-        companion = PracticeCatalogue.create("clean_engineering").fidelities[stored]
-        companion.companion_of = self
+        companion = practice.companion_practice().fidelities[stored].accompanying(self)
         self._clean_engineering = companion
+        return companion
+
+    def accompanying(self, fidelity: FidelityGuidance) -> FidelityGuidance:
+        """This fidelity as the Clean Engineering companion of fidelity: still one of its own practice's fidelities,
+        working in that practice's session and writing its outputs there, but working in the code format fidelity
+        works in. A fidelity that names this one as its companion holds the one made for it, so two fidelities
+        working in different code formats each keep their own."""
+        companion = FidelityGuidance(name=self.name, stage=self.stage, default_format=self.default_format)
+        companion.outputs = self.outputs
+        companion.judged_on = self.judged_on
+        companion.parent = self.parent
+        companion.session_output = self.session_output
+        companion.companion_of = fidelity
         return companion
 
     @clean_engineering.setter

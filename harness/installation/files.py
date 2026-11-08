@@ -227,8 +227,7 @@ class FileInstallation(Installation):
         script = self.repo / "scripts" / f"{tool.deploy_name}.py" if self.repo is not None else None
         if script is not None and script.is_file():
             return f'python "{script.resolve()}"'
-        cls = type(tool.toolset)
-        call = f'AgentToolSet.instantiate("{cls.__module__}:{cls.__name__}").{tool.name}()'
+        call = f'AgentToolSet.instantiate("{tool.registration_name}").{tool.name}()'
         code = f"from harness.agent_tools.agent_tools import AgentToolSet; print({call})"
         escaped = code.replace("\\", "\\\\").replace('"', '\\"')
         return f'python -c "{escaped}"'

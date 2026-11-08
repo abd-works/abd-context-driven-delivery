@@ -21,7 +21,7 @@ import mcp.types as types
 from mcp.server import NotificationOptions, Server
 from mcp.server.models import InitializationOptions
 
-from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import ServerInstallation, data_of
 from harness.installation.ide_layout import IdeLayout
@@ -445,7 +445,7 @@ class McpServer:
     def _references(self) -> list[str]:
         """Each toolset by its ``module:Class`` reference, the one name that finds its class again once its module is
         imported anew."""
-        return [item if isinstance(item, str) else f"{item.__module__}:{item.__name__}" for item in self._toolsets]
+        return [item if isinstance(item, str) else str(ToolsetReference.of(item)) for item in self._toolsets]
 
     def _forget_checkout_modules(self) -> None:
         for name, module in list(sys.modules.items()):
