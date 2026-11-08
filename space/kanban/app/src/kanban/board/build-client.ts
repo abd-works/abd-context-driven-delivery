@@ -1,5 +1,5 @@
 import type { BoardApi } from './board-api'
-import type { BoardStore } from './board-store'
+import type { BoardStore } from '../shared/board-store'
 
 const BUILD_PATH = '/build'
 

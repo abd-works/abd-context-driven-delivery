@@ -17,7 +17,7 @@ import type { Send } from './board-api'
 import { BoardClient } from './board-client'
 import { BoardLayoutClient } from './board-layout-client'
 import { BoardReader } from './board-reader'
-import { BoardStore } from './board-store'
+import { BoardStore } from '../shared/board-store'
 import { BuildClient } from './build-client'
 import { SidePanelClient } from './side-panel-client'
 

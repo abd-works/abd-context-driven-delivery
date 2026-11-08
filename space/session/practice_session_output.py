@@ -111,20 +111,11 @@ class PracticeSessionOutput:
         return self
 
     @property
-    def _current_fidelity(self) -> FidelityGuidance | None:
-        return self._guidance.fidelities.current
-
-    @property
-    def working_fidelity(self) -> str:
-        """The name of the fidelity this practice was made at, such as story_map; empty when it has none. An action that
-        works at another fidelity logs that fidelity's FidelitySessionOutput instead."""
-        current = self._current_fidelity
-        return str(current.name) if current is not None else ""
-
-    @property
-    def working_format(self) -> str:
-        """The format this practice works in, such as drawio: the fidelity it was made at's; empty when it has none."""
-        return self._guidance.format or ""
+    def working(self) -> FidelitySessionOutput | None:
+        """What the fidelity this practice was made at has in this session, the one that fidelity holds, which a log
+        line about work on the practice names; none for a practice made at no fidelity."""
+        current = self._guidance.fidelities.current
+        return current.session_output if current is not None else None
 
     @property
     def chosen_outputs(self) -> dict:
@@ -208,34 +199,18 @@ class FidelitySessionOutput:
     def _session(self) -> Session:
         return self._practice.session
 
-    # A line an action logs names what it worked on: a practice's name, its folder, and the fidelity and format it
-    # worked at. An action working at this fidelity hands the log this object, which answers as its practice's
-    # PracticeSessionOutput does, at this fidelity rather than at the one the practice was made at.
+    # A line an action logs names what it worked on: the practice's name and folder, which the practice answers, and
+    # the fidelity and the format it worked at, which the fidelity answers. An action hands the log this object.
 
     @property
-    def name(self) -> str:
-        """Its practice's name, such as stories, which a log line names."""
-        return self._practice.name
+    def practice(self) -> PracticeSessionOutput:
+        """What its practice has in the session."""
+        return self._practice
 
     @property
-    def guidance(self) -> PracticeGuidance:
-        """Its practice: the session's one instance of it."""
-        return self._practice.guidance
-
-    @property
-    def folder(self) -> Path:
-        """The folder its practice writes its code under."""
-        return self._practice.folder
-
-    @property
-    def working_fidelity(self) -> str:
-        """This fidelity's name, such as scenarios."""
-        return self._fidelity.name
-
-    @property
-    def working_format(self) -> str:
-        """The format this fidelity works in, such as drawio."""
-        return self._fidelity.format or ""
+    def fidelity(self) -> FidelityGuidance:
+        """The fidelity, which holds its name and the format it works in."""
+        return self._fidelity
 
     @property
     def is_enabled(self) -> bool:

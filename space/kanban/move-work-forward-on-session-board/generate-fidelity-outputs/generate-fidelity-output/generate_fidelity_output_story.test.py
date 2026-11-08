@@ -50,7 +50,7 @@ with story("Generate Fidelity Output"):
             pass
         with when("Claude Code finishes generating the story map"):
             # Generate -> GuidanceAction.run(...)
-            # GuidanceAction -> SessionLog.guidance_action('generate')
+            # GuidanceAction -> ChatLog.guidance_action('generate')
             pass
         with then("the session log ends with a generate line naming stories story_map markdown"):
             pass

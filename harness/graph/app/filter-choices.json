@@ -1,0 +1,256 @@
+{
+  "practices": {
+    "clean_engineering": {
+      "node_types": [
+        "Module",
+        "OoadClass",
+        "Operation"
+      ],
+      "edge_types": [
+        "contains",
+        "owns",
+        "invokes"
+      ],
+      "rules": [
+        "clean_engineering.Module.module-rule",
+        "clean_engineering.OoadClass.class-rule",
+        "clean_engineering.Operation.limit-operation-parameters"
+      ]
+    },
+    "ddd": {
+      "node_types": [
+        "BoundedContext",
+        "Aggregate",
+        "EntityRoot",
+        "Repository",
+        "ValueObject"
+      ],
+      "edge_types": [
+        "owns",
+        "associates"
+      ],
+      "rules": []
+    },
+    "stories": {
+      "node_types": [
+        "Epic"
+      ],
+      "edge_types": [
+        "tells"
+      ],
+      "rules": [
+        "stories.Epic.verb-noun"
+      ]
+    }
+  },
+  "edges_of_type": {
+    "Module": [
+      "contains"
+    ],
+    "OoadClass": [
+      "owns"
+    ],
+    "Operation": [
+      "invokes"
+    ],
+    "Epic": [
+      "tells"
+    ],
+    "Aggregate": [
+      "owns"
+    ],
+    "EntityRoot": [
+      "owns",
+      "associates"
+    ],
+    "ValueObject": [
+      "associates"
+    ]
+  },
+  "answers": [
+    {
+      "request": {
+        "practices": [],
+        "node_types": [],
+        "practices_before": null
+      },
+      "answer": {
+        "node_types": [],
+        "offered_node_types": [
+          "Module",
+          "OoadClass",
+          "Operation",
+          "BoundedContext",
+          "Aggregate",
+          "EntityRoot",
+          "Repository",
+          "ValueObject",
+          "Epic"
+        ],
+        "relationships": [
+          "contains",
+          "owns",
+          "invokes",
+          "associates",
+          "tells"
+        ],
+        "rules": [
+          "clean_engineering.Module.module-rule",
+          "clean_engineering.OoadClass.class-rule",
+          "clean_engineering.Operation.limit-operation-parameters",
+          "stories.Epic.verb-noun"
+        ]
+      }
+    },
+    {
+      "request": {
+        "practices": [],
+        "node_types": [
+          "Operation"
+        ],
+        "practices_before": null
+      },
+      "answer": {
+        "node_types": [
+          "Operation"
+        ],
+        "offered_node_types": [
+          "Module",
+          "OoadClass",
+          "Operation",
+          "BoundedContext",
+          "Aggregate",
+          "EntityRoot",
+          "Repository",
+          "ValueObject",
+          "Epic"
+        ],
+        "relationships": [
+          "invokes"
+        ],
+        "rules": [
+          "clean_engineering.Operation.limit-operation-parameters"
+        ]
+      }
+    },
+    {
+      "request": {
+        "practices": [
+          "clean_engineering"
+        ],
+        "node_types": [],
+        "practices_before": []
+      },
+      "answer": {
+        "node_types": [
+          "Module",
+          "OoadClass",
+          "Operation"
+        ],
+        "offered_node_types": [
+          "Module",
+          "OoadClass",
+          "Operation"
+        ],
+        "relationships": [
+          "contains",
+          "owns",
+          "invokes"
+        ],
+        "rules": [
+          "clean_engineering.Module.module-rule",
+          "clean_engineering.OoadClass.class-rule",
+          "clean_engineering.Operation.limit-operation-parameters"
+        ]
+      }
+    },
+    {
+      "request": {
+        "practices": [
+          "clean_engineering"
+        ],
+        "node_types": [
+          "Module"
+        ],
+        "practices_before": null
+      },
+      "answer": {
+        "node_types": [
+          "Module"
+        ],
+        "offered_node_types": [
+          "Module",
+          "OoadClass",
+          "Operation"
+        ],
+        "relationships": [
+          "contains"
+        ],
+        "rules": [
+          "clean_engineering.Module.module-rule"
+        ]
+      }
+    },
+    {
+      "request": {
+        "practices": [
+          "clean_engineering"
+        ],
+        "node_types": [
+          "OoadClass"
+        ],
+        "practices_before": null
+      },
+      "answer": {
+        "node_types": [
+          "OoadClass"
+        ],
+        "offered_node_types": [
+          "Module",
+          "OoadClass",
+          "Operation"
+        ],
+        "relationships": [
+          "owns"
+        ],
+        "rules": [
+          "clean_engineering.OoadClass.class-rule"
+        ]
+      }
+    },
+    {
+      "request": {
+        "practices": [
+          "stories",
+          "clean_engineering"
+        ],
+        "node_types": [
+          "Module"
+        ],
+        "practices_before": [
+          "clean_engineering"
+        ]
+      },
+      "answer": {
+        "node_types": [
+          "Epic",
+          "Module"
+        ],
+        "offered_node_types": [
+          "Epic",
+          "Module",
+          "OoadClass",
+          "Operation"
+        ],
+        "relationships": [
+          "tells",
+          "contains"
+        ],
+        "rules": [
+          "clean_engineering.Module.module-rule",
+          "stories.Epic.verb-noun"
+        ]
+      }
+    }
+  ]
+}

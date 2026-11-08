@@ -1,7 +1,7 @@
 import type { DragEvent, FormEvent } from 'react'
 
-import { ageOf } from '../board/board-brand'
-import { useBoard } from '../board/board-context'
+import { ageOf } from '../shared/board-brand'
+import { useBoard } from '../shared/board-context'
 import type { BacklogItemClient } from './backlog-item-client'
 
 export function ComposerView() {

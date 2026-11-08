@@ -1,7 +1,7 @@
 import { ChatMessagesView } from '../chat/chat-messages-view'
 import { ChatPickerView } from '../chat/chat-picker-view'
-import { useBoard } from './board-context'
-import { BrandMark, ExpandIcon } from './icons'
+import { useBoard } from '../shared/board-context'
+import { BrandMark, ExpandIcon } from '../shared/icons'
 
 function HeaderActionsView() {
   const { page, state } = useBoard()

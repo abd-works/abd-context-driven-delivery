@@ -1,7 +1,7 @@
 """The two Python tiers the Session Board's shared scenarios replay on.
 
-The domain tier hands a scenario's steps the domain classes themselves: `Board`, `Ticket`, `BacklogItem`, `Sessions`,
-and the `Validate` and `Generate` actions, on a throwaway project.
+The domain tier hands a scenario's steps the domain classes themselves: `Board`, `Ticket`, `BacklogItem`, the project's
+`Sessions` as this process holds them, and the `Validate` and `Generate` actions, on a throwaway project.
 
 The server tier hands them the same operations reached through the cdd server, the way an agent or the board app
 reaches them: every call goes to `McpServer.invoke_tool` or `invoke_prompt` by its published name, with JSON in and
@@ -54,12 +54,13 @@ class DomainTier:
     def open(self) -> World:
         project = SessionsProject(SURFACE_FIXTURE_PROJECT)
         on_project = {name: OnProject(domain_class, project.root) for name, domain_class in (("Board", Board), ("Stage", Stage), ("Ticket", Ticket), ("BacklogItem", BacklogItem))}
-        # The cdd server makes each action for the session open in the call's project; so does this tier.
-        sessions = Sessions(project.root)
+        # The cdd server makes each action for the session open in the call's project, among the sessions this process
+        # holds for the project, which the board reads too; so does this tier.
+        sessions = Sessions.of_project(project.root)
         return World(
             project=project,
             **on_project,
-            Sessions=Sessions,
+            sessions=sessions,
             Validate=lambda: Validate(sessions.current()),
             Generate=lambda: Generate(sessions.current()),
             data_of=data_of,

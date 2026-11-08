@@ -6,6 +6,7 @@ import { App } from './App';
 import { GraphView } from './graph/GraphView';
 import { SourceView } from './source/SourceView';
 import { buildViolationCorrectPrompt } from './source/violation-prompt';
+import filterChoices from './filter-choices.json';
 
 const foldMarks = vi.hoisted(() => ({
   names: [] as string[],
@@ -284,35 +285,12 @@ const storiesTree = {
   ],
 };
 
+// Each fixture practice's node types, relationships, and rules are the ones Python's filter answers were recorded for.
+const held = filterChoices.practices;
 const inventory = {
-  clean_engineering: {
-    node_counts: { Module: 1, OoadClass: 2, Operation: 3 },
-    edge_count: 3,
-    node_types: ['Module', 'OoadClass', 'Operation'],
-    edge_types: ['contains', 'owns', 'invokes'],
-    rules: [
-      'clean_engineering.Module.module-rule',
-      'clean_engineering.OoadClass.class-rule',
-      'clean_engineering.Operation.limit-operation-parameters',
-    ],
-    tree: engineeringTree,
-  },
-  ddd: {
-    node_counts: { Aggregate: 2, EntityRoot: 2, Repository: 1, ValueObject: 2 },
-    edge_count: 4,
-    node_types: ['BoundedContext', 'Aggregate', 'EntityRoot', 'Repository', 'ValueObject'],
-    edge_types: ['owns', 'associates'],
-    rules: [],
-    tree: domainTree,
-  },
-  stories: {
-    node_counts: { Epic: 1 },
-    edge_count: 1,
-    node_types: ['Epic'],
-    edge_types: ['tells'],
-    rules: ['stories.Epic.verb-noun'],
-    tree: storiesTree,
-  },
+  clean_engineering: { node_counts: { Module: 1, OoadClass: 2, Operation: 3 }, edge_count: 3, ...held.clean_engineering, tree: engineeringTree },
+  ddd: { node_counts: { Aggregate: 2, EntityRoot: 2, Repository: 1, ValueObject: 2 }, edge_count: 4, ...held.ddd, tree: domainTree },
+  stories: { node_counts: { Epic: 1 }, edge_count: 1, ...held.stories, tree: storiesTree },
 };
 
 const calls: { operation: string; body: Record<string, unknown> }[] = [];
@@ -1001,38 +979,16 @@ function staleMaster() {
   return report;
 }
 
-// The relationships each fixture node type sits on, as the graph's edges hold them.
-const edgesOfType: Record<string, string[]> = {
-  Module: ['contains'],
-  OoadClass: ['owns'],
-  Operation: ['invokes'],
-  Epic: ['tells'],
-  Aggregate: ['owns'],
-  EntityRoot: ['owns', 'associates'],
-  ValueObject: ['associates'],
-};
-
-// Graph.filter_choices as Python answers it: the node types the practices offer, those chosen (on a change of practice,
-// the chosen ones the new practices still hold and every one of each practice added), and the relationships and rules
-// of the chosen node types, or of every offered one when none is chosen.
+// Graph.filter_choices as Python answers it, for the fixture graph's practices: filter_choices_record.py records
+// Python's answer to each request in filter-choices.json, so these tests hold no copy of the rule. A request with no
+// recorded answer fails, naming itself, until it is added there and recorded.
 function choicesFor(practices: string[], nodeTypes: string[], before: string[] | null) {
-  const loaded = inventory as Record<string, { node_types: string[]; edge_types: string[]; rules: string[] }>;
-  const scope = practices.length ? practices : Object.keys(loaded);
-  const typesOf = (name: string) => loaded[name]?.node_types ?? [];
-  const offered = [...new Set(scope.flatMap(typesOf))];
-  let chosen = nodeTypes;
-  if (before !== null) {
-    const added = practices.filter((name) => !before.includes(name)).flatMap(typesOf);
-    chosen = before.length === 0 || practices.length === 0 ? offered : offered.filter((type) => nodeTypes.includes(type) || added.includes(type));
+  const request = { practices, node_types: nodeTypes, practices_before: before };
+  const found = filterChoices.answers.find((entry) => JSON.stringify(entry.request) === JSON.stringify(request));
+  if (!found) {
+    throw new Error(`no answer Python recorded for graph.filter_choices ${JSON.stringify(request)}: add it to filter-choices.json and run filter_choices_record.py`);
   }
-  const types = chosen.length ? chosen : offered;
-  const relationships = [
-    ...new Set(scope.flatMap((name) => (loaded[name]?.edge_types ?? []).filter((kind) => types.some((type) => (edgesOfType[type] ?? []).includes(kind))))),
-  ];
-  const rules = scope
-    .flatMap((name) => (loaded[name]?.rules ?? []).filter((rule) => types.some((type) => rule.startsWith(`${name}.${type}.`))))
-    .sort();
-  return { node_types: chosen, offered_node_types: offered, relationships, rules };
+  return found.answer;
 }
 
 function violationTree(node: Entry): Entry | null {

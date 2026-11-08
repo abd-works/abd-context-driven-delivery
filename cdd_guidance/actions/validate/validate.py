@@ -128,8 +128,8 @@ class Validate(GuidanceAction):
         ]
         if len(violations) > _LOGGED_VIOLATIONS:
             synopsis.append(f"graph-rule … and {len(violations) - _LOGGED_VIOLATIONS} more")
-        for practice in self._listed_practices():
-            self.log.validation(practice, synopsis)
+        for worked in self._worked_fidelities():
+            self.log.validation(worked, synopsis)
         # This line is the call's validate line; the session board reads the latest one, so no clean line may follow.
         self._logged_session_action = "validate"
 
@@ -143,8 +143,8 @@ class Validate(GuidanceAction):
     def _log_validation_to_session(self) -> None:
         if self._guidance_text is not None:
             return
-        for practice in self._listed_practices():
-            self.log.validation(practice, [])
+        for worked in self._worked_fidelities():
+            self.log.validation(worked, [])
 
     @noDeploy
     @mcp

@@ -3,7 +3,7 @@ import { BoardClientGenerated } from '@cdd/space/kanban/board'
 import type { FidelityProgressClient } from '../ticket/fidelity-progress-client'
 import type { TicketClient } from '../ticket/ticket-client'
 import type { BoardApi } from './board-api'
-import type { BoardStore, ReportPanel, SidePanel } from './board-store'
+import type { BoardStore, ReportPanel, SidePanel } from '../shared/board-store'
 import type { PracticeClient } from './practice-client'
 
 const DEFAULT_WIDTH = 640

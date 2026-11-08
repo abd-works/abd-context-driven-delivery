@@ -37,44 +37,32 @@ class WorktreeNotRemovedError(RuntimeError):
 
 
 class Worktree:
-    """One checkout of the repository, as the *Worktrees* that listed it found it: its folder and the branch checked out
-    there. Its repository is the checkout's own *Repo*, made once when first asked for; the main clone's is the
-    repository that listed it."""
+    """One checkout of the repository, as the *Worktrees* that listed it found it: its folder, its own *Repo*, and the
+    branch checked out there, each made once when it is listed. Its repository is the one this process holds for its
+    folder; the main clone's is the repository that listed it."""
 
-    __slots__ = ("path", "_branch_name", "_branch", "_worktrees", "_repository", "sync_failure")
+    __slots__ = ("path", "repository", "branch", "_worktrees", "sync_failure")
 
     def __init__(self, worktrees: Worktrees, path: Path | str, branch_name: str) -> None:
         self._worktrees = worktrees
         self.path = Path(path).resolve()
-        self._branch_name = (branch_name or "").strip()
-        self._branch: Branch | None = None
-        self._repository: Repo | None = None
+        self.repository: Repo = worktrees.repository_at(self.path)
+        name = (branch_name or "").strip()
+        # The branch checked out here, acting in this checkout; none for a checkout on no branch.
+        self.branch: Branch | None = self.repository.branch_named(name) if name else None
         # Why the last fetch or pull from origin failed; empty while this checkout is up to date with origin.
         self.sync_failure = ""
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Worktree):
             return NotImplemented
-        return self.path == other.path and self._branch_name == other._branch_name
+        return self.path == other.path and self.branch == other.branch
 
     def __hash__(self) -> int:
-        return hash((self.path, self._branch_name))
+        return hash((self.path, self.branch))
 
     def __repr__(self) -> str:
-        return f"Worktree(path={self.path!r}, branch={self._branch_name!r})"
-
-    @property
-    def repository(self) -> Repo:
-        if self._repository is None:
-            self._repository = self._worktrees.repository_at(self.path)
-        return self._repository
-
-    @property
-    def branch(self) -> Branch | None:
-        """The branch checked out here, acting in this checkout; none for a checkout on no branch."""
-        if self._branch is None and self._branch_name:
-            self._branch = self.repository.branch_named(self._branch_name)
-        return self._branch
+        return f"Worktree(path={self.path!r}, branch={self.branch!r})"
 
     def fetch_pull(self) -> None:
         """Bring this checkout up to date with origin. A checkout that cannot reach origin, or whose branch has moved

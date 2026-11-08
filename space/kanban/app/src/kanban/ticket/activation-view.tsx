@@ -1,7 +1,7 @@
 import type { FormEvent, KeyboardEvent } from 'react'
 
-import { useBoard } from '../board/board-context'
-import type { Activation } from '../board/board-store'
+import { useBoard } from '../shared/board-context'
+import type { Activation } from '../shared/board-store'
 import { activationHeading } from './activation-client'
 
 const NONE_YET = 'none yet'

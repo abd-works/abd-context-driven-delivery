@@ -278,6 +278,13 @@ with description("a validate action on practice guidance") as self:
             with it("should name its violations on that line"):
                 expect(self.validate_lines[-1]).to(contain(" graph-rule "))
 
+        # The line names the fidelity worked at, which the log reads from that fidelity's own session output.
+        with context("that has been validated at a fidelity after the first"):
+            with it("should name that fidelity on its validate line"):
+                self.action.validate(guidance=["stories-scenarios"], paths=["board/.context/story-map.md"])
+                lines = [line for line in (self.session / "session.log").read_text(encoding="utf-8").splitlines() if " validate " in line]
+                expect(lines[-1]).to(contain(" validate Stories scenarios"))
+
         # A board command names its ticket's session, which need not be the session open in the chat that runs it.
         with context("in a session the command names that is not the open one"):
             with before.each:

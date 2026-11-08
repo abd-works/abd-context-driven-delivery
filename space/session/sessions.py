@@ -9,7 +9,7 @@ from pathlib import Path
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
 from harness.agent_tools.tool_call import ToolCall
-from harness.guidance.guidance import PracticeGuidance
+from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
@@ -62,11 +62,13 @@ class Sessions:
         return SERVED_SESSIONS.of_project(project)
 
     @cached_property
-    def board_practices(self) -> list[PracticeGuidance]:
-        """Every practice CDD has, made once for this checkout's board: what the board shows of a practice, its name,
-        colour, and fidelities, is the same for every session, so no single session's instances stand for it, and no
-        other reader changes these."""
-        return PracticeCatalogue.create_all()
+    def board_practices(self) -> list[CatalogPractice]:
+        """Every practice CDD has, as the catalog shows it, made once for this checkout's board with the one skill
+        install their slash commands are named by: what the board shows of a practice, its name, colour, fidelities,
+        pages, and skills, is the same for every session, so no single session's instances stand for it, and no other
+        reader changes these. The board is made again for every call, so it is held here, where the process keeps the
+        checkout's sessions."""
+        return CatalogPractice.of_practices(PracticeCatalogue.create_all())
 
     @cached_property
     def file_manager(self) -> FileManager:

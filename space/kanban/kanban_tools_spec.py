@@ -8,14 +8,16 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
-from expects import be_false, be_true, contain, equal, expect, match, raise_error, start_with
+from expects import be_false, be_true, contain, equal, expect, have_key, match, raise_error, start_with
 from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
+from harness.catalog_generator.catalog_practice import CatalogPractice  # noqa: E402
 from harness.chat.chat import Chat  # noqa: E402
 from harness.installation.data_class import DataClass, data_of  # noqa: E402
 from space.kanban.backlog_item import BacklogItem  # noqa: E402
@@ -652,9 +654,14 @@ with description("the board tools") as self:
             stories = self.project.call("board.show")["practices"][0]
             expect((stories["key"], stories["short_name"], stories["colour"])).to(equal(("stories", "Stories", "#6BCB77")))
 
-        with it("should list each practice's fidelities by their slugs"):
+        # The board sends each fidelity once: in its own list, with its practice, which a tile finds it by.
+        with it("should name each fidelity's practice beside the fidelity"):
+            shown = next(entry for entry in self.project.call("board.show")["fidelities"] if entry["fidelity"]["slug"] == "stories-story-map")
+            expect(shown["practice"]).to(equal({"key": "stories"}))
+
+        with it("should send no second list of a practice's fidelities"):
             stories = self.project.call("board.show")["practices"][0]
-            expect(stories["fidelities"]).to(contain("stories-story-map"))
+            expect(stories).not_to(have_key("fidelities"))
 
         # (S) Person --> Open Help
         with context("that opens help on a fidelity"):
@@ -682,6 +689,22 @@ with description("the board tools") as self:
 
             with it("should name no fidelity on a practice's help"):
                 expect((self.help["fidelity"], self.help["stage"])).to(equal((None, None)))
+
+        # The catalog's view of the board's practices names their pages and skills; the process makes it once for the
+        # checkout, though every call makes a new board.
+        with context("that is asked for its help and shown several times"):
+            with before.each:
+                with patch.object(CatalogPractice, "skill_install", wraps=CatalogPractice.skill_install) as made:
+                    self.helps = [self.project.call("board.help", practice="stories"), self.project.call("board.help", practice="ux")]
+                    self.project.call("board.show")
+                    self.project.call("fidelity-progress.help", ticket="pet-visits", fidelity="stories-story-map")
+                self.made = made.call_count
+
+            with it("should make the skill install its catalog pages are named with once"):
+                expect(self.made).to(equal(1))
+
+            with it("should still link each practice's own page"):
+                expect([help["href"].rsplit("/", 1)[-1] for help in self.helps]).to(equal(["stories.html", "ux.html"]))
 
         with context("that opens help on a practice the board does not have"):
             with it("should refuse it, naming the practice"):

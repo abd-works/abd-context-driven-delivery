@@ -9,7 +9,7 @@ import { TicketAdapter } from '@cdd/space/kanban/ticket'
 import { BoardOnProject, RunningBoard, ticketOn } from 'test-utils/board-page-support'
 
 import type { Send } from './board-api'
-import { ageOf } from './board-brand'
+import { ageOf } from '../shared/board-brand'
 
 const LATER_STAMP = '2026-11-02T10:00:00Z'
 const WAIT_MILLISECONDS = 10
@@ -79,7 +79,9 @@ describe('Display Board', () => {
       })
 
       it('should show a toast', async () => {
-        expect(toastsOf(await failed())).toEqual(['cdd board.show failed: JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)'])
+        // The session names its unreadable session.json, whose folder is the throwaway project's own.
+        const [toast, ...others] = toastsOf(await failed())
+        expect([toast, others]).toEqual([expect.stringMatching(/^cdd board\.show failed: JsonFileUnreadable: .*[\\/]\.sessions[\\/]broken[\\/]session\.json is not a readable JSON object \(Expecting property name/), []])
       })
     })
 

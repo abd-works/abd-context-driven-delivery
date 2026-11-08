@@ -1,6 +1,6 @@
 import { ItemBarView } from '../backlog-item/backlog-item-view'
-import { useBoard } from '../board/board-context'
-import { ExpandIcon } from '../board/icons'
+import { useBoard } from '../shared/board-context'
+import { ExpandIcon } from '../shared/icons'
 import { PracticeGridView } from './practice-grid-view'
 import type { TicketClient } from './ticket-client'
 import { slugsOf } from './tile-client'

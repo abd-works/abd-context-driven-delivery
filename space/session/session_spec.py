@@ -469,7 +469,7 @@ with description("a session"):
 
         with context("with the practice it worked on"):
             with it("should name the practice graph root"):
-                self.chat_log.action("sketch", [self.edited], [self.session.practice("bdd")])
+                self.chat_log.action("sketch", [self.edited], [self.session.practice("bdd").working])
                 log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
                 expect("bdd" in log).to(equal(True))
 
@@ -603,7 +603,7 @@ with description("an action"):
     # (S) Session --> Record Validation Run
     with context("that calls validate"):
         with before.each:
-            self.practice = self.session.practice("bdd")
+            self.practice = self.session.practice("bdd").working
 
         with context("with a practice and a fidelity"):
             with it("should log that practice and that fidelity"):

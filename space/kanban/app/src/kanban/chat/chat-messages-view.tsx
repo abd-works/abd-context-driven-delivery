@@ -1,6 +1,6 @@
 import type { ChatMessageData } from '@cdd/harness/chat/chat'
 
-import { useBoard } from '../board/board-context'
+import { useBoard } from '../shared/board-context'
 
 const MILLISECONDS_PER_SECOND = 1000
 

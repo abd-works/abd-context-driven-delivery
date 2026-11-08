@@ -1,7 +1,7 @@
 import type { MouseEvent } from 'react'
 
-import { useBoard } from '../board/board-context'
-import { FileViewIcon } from '../board/icons'
+import { useBoard } from '../shared/board-context'
+import { FileViewIcon } from '../shared/icons'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 import type { TicketClient } from './ticket-client'
 

@@ -1,6 +1,6 @@
-import { useBoard } from '../board/board-context'
+import { useBoard } from '../shared/board-context'
 import type { ColumnClient } from '../board/column-client'
-import { CheckIcon } from '../board/icons'
+import { CheckIcon } from '../shared/icons'
 import { ActionBarView } from './action-bar-view'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 import type { TicketClient } from './ticket-client'

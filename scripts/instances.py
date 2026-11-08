@@ -16,7 +16,7 @@ _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from harness.graph.graph_app import GraphAppPorts  # noqa: E402
+from harness.graph.graph_app import GRAPH_APP_PORTS  # noqa: E402
 from harness.process.process import ListeningPorts, RunningProcess  # noqa: E402
 
 
@@ -127,10 +127,10 @@ class RepoProcesses:
                 if tagged != expect_service:
                     return None
             elif expect_service == "graph_web":
-                if port_text not in {str(item) for item in GraphAppPorts().web}:
+                if port_text not in {str(item) for item in GRAPH_APP_PORTS.of("web")}:
                     return None
             elif expect_service == "graph_app":
-                if port_text not in {str(item) for item in GraphAppPorts().app}:
+                if port_text not in {str(item) for item in GRAPH_APP_PORTS.of("app")}:
                     return None
             else:
                 return None

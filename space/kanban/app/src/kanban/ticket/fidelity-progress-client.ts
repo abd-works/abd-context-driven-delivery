@@ -1,6 +1,6 @@
 import { FidelityProgressClientGenerated, type FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 
-import { STATES, WORK_LIGHT } from '../board/board-brand'
+import { STATES, WORK_LIGHT } from '../shared/board-brand'
 import type { TicketClient } from './ticket-client'
 
 export type ProgressLook = { label: string; color: string; key: string }

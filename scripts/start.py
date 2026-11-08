@@ -14,7 +14,7 @@ for _entry in (str(_REPO), str(_SCRIPTS)):
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
 
-from harness.graph.graph_app import GraphAppPorts
+from harness.graph.graph_app import GRAPH_APP_PORTS
 from instances import (
     PingReport,
     RepoProcesses,
@@ -39,7 +39,7 @@ class ServiceStart:
             self.app,
             self.logs / "graph-app.log",
             os.environ.copy(),
-            preferred_ports=GraphAppPorts().app,
+            preferred_ports=GRAPH_APP_PORTS.of("app"),
             expect_service="graph_app",
         )
 
@@ -56,7 +56,7 @@ class ServiceStart:
             self.app,
             self.logs / "graph-web.log",
             env,
-            preferred_ports=GraphAppPorts().web,
+            preferred_ports=GRAPH_APP_PORTS.of("web"),
             expect_service="graph_web",
         )
 

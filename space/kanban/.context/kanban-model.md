@@ -73,7 +73,7 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 
 ## Board
 
-+ Board(repo: Repo, practices: list[PracticeGuidance])
++ Board(repo: Repo, practices: list[CatalogPractice])
 ------
 + << association >> repo: Repo
 	// the repository the sessions folder sits in
@@ -85,12 +85,11 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 + project: str
 	// data field: the repository folder's name
 + << aggregation >> practices: list[PracticeGuidance]
-	// data field: the practices every ticket works through, each with its key, slug, short name, colour, and fidelities' slugs
-+ << composition >> catalogued: list[CatalogPractice]
-	// the catalog's view of each practice, made once per board with one skill install they share; `catalogued(practice)` answers the one for a practice's class, the board's own instance or a ticket's session's, and every `Help` is handed it
-	-> CatalogPractice.skill_install
+	// data field: the practices every ticket works through, each with its key, slug, short name, and colour: the practice each held catalog view is of
++ << aggregation >> catalogued: list[CatalogPractice]
+	// the catalog's view of each practice, held for the checkout by `Sessions.board_practices`, so the process makes it and its one skill install once however many boards the calls make; `catalogued(practice)` answers the one for a practice's class, the board's own instance or a ticket's session's, and every `Help` is handed it
 + << composition >> fidelities: list[BoardFidelity]
-	// data field: every fidelity of its practices with its label and its skill's slash command, as the catalog names them, so a tile shows both and works out neither
+	// data field: every fidelity of its practices with its practice, its label, and its skill's slash command, as the catalog names them, so a tile shows them and works out none; the board sends each fidelity once, here
 	-> CatalogPractice.shown_fidelities
 + << composition >> columns: list[Column]
 	// data field; always Backlog, then one Stage for each `ApproachStage` in `STAGES` (`harness/guidance/stages.py`), then Complete
@@ -134,6 +133,11 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 + ticket_of(session: Session): Ticket
 	// the ticket of a session just opened, moved between folders, closed, or reopened; the board forgets the cards it has read
 	-> Board.reread
+	-> Board.make_ticket
++ make_ticket(session: Session): Ticket
+	// the ticket the board places for session, as it reads it now; the board is the one reader of the card classes the kanban package hands it, and its reads make their cards through it
++ make_backlog_item(path: Path): BacklogItem
+	// the backlog item the board places for the idea kept in path
 + reread()
 	// forgets the tickets, backlog items, and worktrees read so far, so the next read sees a change made since
 + wip_limit(stage: Stage): int
@@ -565,6 +569,8 @@ A fidelity as a board tile names it. The page shows its label and its skill's sl
 ------
 + << association >> fidelity: FidelityGuidance
 	// reference data field: the fidelity, sent by its slug
++ << association >> practice: PracticeGuidance
+	// reference data field: the practice it belongs to, sent by its key, so a tile finds a fidelity's practice without a second list of each practice's fidelities
 + label: str
 	// data field: its name on a tile, such as `story-map`, or `information-architecture` for UX's `ia`
 	-> CatalogFidelity.label
@@ -694,7 +700,7 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## PracticeGuidance
 
-`harness/guidance/guidance.py`, the board's own set, which the checkout's `Sessions` makes once with `PracticeCatalogue.create_all()` (`board_practices`). `key`, `slug`, `short_name`, `colour`, and its fidelities' slugs are data fields; the board reads `fidelities`, `rules`, `overview`, and `guidance`.
+`harness/guidance/guidance.py`, the board's own set, which the checkout's `Sessions` makes once with `PracticeCatalogue.create_all()` and holds as the catalog shows them (`board_practices`, `CatalogPractice.of_practices`). `key`, `slug`, `short_name`, and `colour` are data fields; the board reads `fidelities`, `rules`, `overview`, and `guidance`.
 
 ## FidelityGuidance
 

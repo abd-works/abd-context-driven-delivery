@@ -1,4 +1,4 @@
-import type { BoardStore, FilesPanel, SidePanel } from '../board/board-store'
+import type { BoardStore, FilesPanel, SidePanel } from '../shared/board-store'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 import type { FilesByFidelity, TicketClient } from './ticket-client'
 

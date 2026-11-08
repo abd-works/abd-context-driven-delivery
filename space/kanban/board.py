@@ -19,7 +19,7 @@ from harness.installation.data_class import data_field, identity, language_adapt
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_server import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
-from space.kanban.board_app import BoardAppPorts
+from space.kanban.board_app import BOARD_APP_PORTS
 from space.repo.repo import Repo
 from space.session.session_log import LogTimestamp
 from space.session.session import MAIN_SESSION_NAME
@@ -92,11 +92,13 @@ class Board:
     _ticket_kind: ClassVar[type[Ticket]]
     _backlog_item_kind: ClassVar[type[BacklogItem]]
 
-    def __init__(self, repo: Repo, practices: list[PracticeGuidance]) -> None:
+    def __init__(self, repo: Repo, practices: list[CatalogPractice]) -> None:
         self._repo = repo
         # The sessions of the board's repository, as this process holds them: each one a ticket, and which is open.
         self._sessions = Sessions.of_project(repo.root)
-        self._practices = list(practices)
+        # The catalog's view of each practice the board works through, which names its pages and its fidelities' skills,
+        # held for the checkout by its sessions, since a board is made for every call.
+        self._catalogued = list(practices)
         self._columns = self._build_columns()
         self._reads = BoardReads(self)
 
@@ -157,7 +159,7 @@ class Board:
     @data_field
     def practices(self) -> list[PracticeGuidance]:
         """The practices every ticket works through, in the order the board shows them, each with its name and colour."""
-        return list(self._practices)
+        return [catalogued.practice for catalogued in self._catalogued]
 
     @property
     @data_field
@@ -167,8 +169,9 @@ class Board:
     @property
     @data_field
     def fidelities(self) -> list[BoardFidelity]:
-        """Every fidelity of the board's practices with its label and its skill's slash command, as the catalog names
-        them, so a tile shows both without taking the fidelity's slug apart."""
+        """Every fidelity of the board's practices with its practice, its label, and its skill's slash command, as the
+        catalog names them, so a tile shows them without taking the fidelity's slug apart. The board sends each
+        fidelity once, here."""
         return [BoardFidelity(catalogued, shown) for catalogued in self._catalogued for shown in catalogued.shown_fidelities]
 
     def catalogued(self, practice: PracticeGuidance) -> CatalogPractice:
@@ -178,12 +181,6 @@ class Board:
         if found is None:
             raise PracticeNotFoundError(practice.key, "the board")
         return found
-
-    @cached_property
-    def _catalogued(self) -> list[CatalogPractice]:
-        """The catalog's view of each of the board's practices, made once per board with one skill install they share."""
-        skills = CatalogPractice.skill_install()
-        return [CatalogPractice(practice, skills) for practice in self._practices]
 
     @property
     def chats(self) -> list[Chat]:
@@ -203,7 +200,15 @@ class Board:
         """The ticket of session, which was just opened, moved between folders, closed, or reopened: the board forgets
         the cards it has read, so its next read sees the change."""
         self.reread()
+        return self.make_ticket(session)
+
+    def make_ticket(self, session: Session) -> Ticket:
+        """The ticket this board places for session, as it reads it now."""
         return self._ticket_kind(session, self)
+
+    def make_backlog_item(self, path: Path) -> BacklogItem:
+        """The backlog item this board places for the idea kept in path, a file in the Backlog folder."""
+        return self._backlog_item_kind(path, self)
 
     def backlog_item_of(self, ticket: Ticket) -> BacklogItem:
         """The item ticket becomes in the Backlog once its session's folder has moved there: the board forgets the cards
@@ -243,7 +248,7 @@ class Board:
         """The ticket called name, open before closed, read from its own session folder: a tool names one ticket, so
         the board reads no other session to find it. The main session works on the whole repository and is no ticket."""
         session = self.sessions.named(name) if name != MAIN_SESSION_NAME else None
-        return self._ticket_kind(session, self) if session is not None else None
+        return self.make_ticket(session) if session is not None else None
 
     def backlog_item(self, title: str) -> BacklogItem | None:
         return next((item for item in self.backlog_items if item.title == title), None)
@@ -280,11 +285,11 @@ class Board:
     def works_through(self, practice: PracticeGuidance) -> bool:
         """Whether practice, the board's own or a ticket's session's instance of it, is one the board's tickets work
         through."""
-        return any(type(chosen) is type(practice) for chosen in self._practices)
+        return any(type(chosen.practice) is type(practice) for chosen in self._catalogued)
 
     def practice(self, key: str) -> PracticeGuidance:
         """The board's practice whose folder name is key, such as clean_engineering."""
-        found = next((entry for entry in self._practices if entry.key == key), None)
+        found = next((entry for entry in self.practices if entry.key == key), None)
         if found is None:
             raise PracticeNotFoundError(key, "the board")
         return found
@@ -303,7 +308,7 @@ class BoardReads:
     @cached_property
     def tickets(self) -> list[Ticket]:
         board = self._board
-        return [board._ticket_kind(session, board) for session in board.sessions.all()]
+        return [board.make_ticket(session) for session in board.sessions.all()]
 
     @cached_property
     def backlog_items(self) -> list[BacklogItem]:
@@ -316,7 +321,7 @@ class BoardReads:
         files = list(folder.glob("*.md"))
         kept = [entry / f"{entry.name}.md" for entry in folder.iterdir() if entry.is_dir() and not (folder / f"{entry.name}.md").exists()]
         found = sorted([*files, *(path for path in kept if path.is_file())], key=lambda path: path.stem)
-        return [board._backlog_item_kind(path, board) for path in found]
+        return [board.make_backlog_item(path) for path in found]
 
     @cached_property
     def chats(self) -> list[Chat]:
@@ -578,6 +583,12 @@ class BoardFidelity:
         return self._shown.fidelity
 
     @property
+    @data_field(reference=True)
+    def practice(self) -> PracticeGuidance:
+        """The practice it belongs to, sent by its key, so a reader holding the fidelity finds its practice."""
+        return self._catalogued.practice
+
+    @property
     @data_field
     def label(self) -> str:
         """Its name on a tile, such as story-map, or information-architecture for UX's ia."""
@@ -591,4 +602,4 @@ class BoardFidelity:
 
 
 # Server health probes the board where its server listens, so a chat finds the board without naming its port.
-ServerHealth.reports_kanban_app_on(BoardAppPorts().board)
+ServerHealth.reports_kanban_app_on(BOARD_APP_PORTS.of("board"))

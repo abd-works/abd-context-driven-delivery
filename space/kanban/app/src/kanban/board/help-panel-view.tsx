@@ -6,8 +6,8 @@ import type { FidelityGuidanceData, HelpData, PracticeGuidanceData } from '@cdd/
 // guidance, and rules.
 const subjectOf = (help: HelpData): PracticeGuidanceData | FidelityGuidanceData => help.fidelity ?? help.practice
 
-import { useBoard } from './board-context'
-import type { HelpPanel } from './board-store'
+import { useBoard } from '../shared/board-context'
+import type { HelpPanel } from '../shared/board-store'
 import { helpBlocksOf } from './help-text'
 import type { HelpBlock, TextRun } from './help-text'
 

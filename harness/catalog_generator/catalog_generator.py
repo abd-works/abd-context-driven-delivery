@@ -32,7 +32,6 @@ from harness.guidance.action_catalogue import Action, ActionCatalogue
 from harness.installation.destination import NoCatalog
 from harness.installation.files import skill
 from harness.installation.repository_toolsets import RepositoryToolsets
-from harness.markdown.format import Format
 from harness.mcp.mcp_server import mcp
 from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
@@ -142,6 +141,8 @@ class FidelityTemplate:
 
     def __init__(self, shown: CatalogFidelity) -> None:
         self.fidelity = shown.fidelity
+        # The catalog's view of its practice, which names the language a file of the practice's is shown in.
+        self._practice = shown.practice
         self.module_dir = Path(self.fidelity.practice_guidance.module_dir).resolve()
 
     @property
@@ -168,10 +169,9 @@ class FidelityTemplate:
 
     @property
     def language(self) -> str:
-        """The code-fence language the template's text is shown in: the format its extension names, read past a
-        ``.tpl`` ending, so ``model.py.tpl`` is ``python``; ``text`` when it names none."""
-        name = self.path.name.removesuffix(_TEMPLATE_ENDING)
-        return Format.from_extension(Path(name).suffix).name or "text"
+        """The code-fence language the template's text is shown in, as its practice in the catalog names a file's
+        language, read past a ``.tpl`` ending, so ``model.py.tpl`` is ``python``; ``text`` when it names none."""
+        return self._practice.language_of(Path(self.path.name.removesuffix(_TEMPLATE_ENDING))) or "text"
 
     @property
     def fence_html(self) -> str:

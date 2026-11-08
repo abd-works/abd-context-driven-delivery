@@ -1,9 +1,12 @@
-import type { PracticeGuidanceData } from '@cdd/space/kanban/board'
+import type { BoardFidelityData, PracticeGuidanceData } from '@cdd/space/kanban/board'
 
-// A practice as the board shows it. Python sends every practice with its name, its colour, and its fidelities' slugs,
-// so the page looks a fidelity's practice up rather than taking the slug apart.
+// A practice as the board shows it: its name and colour, and its fidelities, which Python sends each with its practice,
+// so the page finds a fidelity's practice without taking the slug apart.
 export class PracticeClient {
-  constructor(private readonly data: PracticeGuidanceData) {}
+  constructor(
+    private readonly data: PracticeGuidanceData,
+    private readonly fidelities: BoardFidelityData[],
+  ) {}
 
   get key(): string {
     return this.data.key
@@ -22,6 +25,6 @@ export class PracticeClient {
   }
 
   has(slug: string): boolean {
-    return this.data.fidelities.includes(slug)
+    return this.fidelities.some(shown => shown.fidelity.slug === slug)
   }
 }

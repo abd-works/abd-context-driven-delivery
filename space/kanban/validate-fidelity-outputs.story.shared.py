@@ -4,7 +4,7 @@ Scenarios: move-work-forward-on-session-board/validate-fidelity-outputs/*/*_stor
 Map: .context/story-map.md#e-validate-fidelity-outputs. Model: .context/kanban-model.md.
 
 Steps reach the board, the session, and the Validate action only through the World a tier hands them
-(`world.Ticket`, `world.Validate`, `world.Sessions`), so the domain spec and the cdd tools spec replay the same steps.
+(`world.Ticket`, `world.Validate`, `world.sessions`), so the domain spec and the cdd tools spec replay the same steps.
 
 Covered by the board app's TypeScript client specs in space/kanban/app, not here, because they have no Python
 operation: Display Violations Band (both: board-page-view.tsx draws the band); Fix Report Violations (all four: the
@@ -63,8 +63,8 @@ def _(s):
     @s.given("pet-visits' story map is generated")
     def _(world):
         world.project.seed_session(PET_VISITS.with_log(generated("stories", "story_map")))
-        world.session = world.Sessions(world.project.root).load(world.project.sessions / PET_VISITS.name)
-        world.stories = world.session.practice("stories")
+        world.session = world.sessions.load(world.project.sessions / PET_VISITS.name)
+        world.stories = world.session.practice("stories").working
         world.ticket = world.Ticket.load(PET_VISITS.name)
 
     @s.when("Claude Code validates the story map and finds no graph-rule violation")

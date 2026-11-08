@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 
-import { useBoard } from '../board/board-context'
-import type { FilesPanel } from '../board/board-store'
+import { useBoard } from '../shared/board-context'
+import type { FilesPanel } from '../shared/board-store'
 import { folderGroupsOf, generatedPaths } from './files-panel-client'
 
 const FILE_MODES = ['folder', 'files']
