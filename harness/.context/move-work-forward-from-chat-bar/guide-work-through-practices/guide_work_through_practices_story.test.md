@@ -65,3 +65,24 @@ section: body
 *When* the Chat Bar draws checkout-flow  
 *Then* the button still shows, offering the stage's first action, generate stories-scenarios  
   *And* its ▾ still opens the action list
+
+## Story: Read Validation Report From Chat Bar (round 2)
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `.sessions/chat-ui-defects/e2e/e2e-report.md` §4 | the chat bar's report tab showed no out-of-date notice; "Open in draw.io" submitted a prompt to the chat as the user |
+
+#### Scenario: Say a report's saved graph is out of date in its tab
+
+*Given* checkout-flow's clean-engineering-model has 7 violations in a report whose saved graph is out of date  
+*When* the Person presses the count 7  
+*Then* the report's tab says its saved graph is out of date  
+  *And* Validate again puts clean-engineering-model's validate command in the prompt
+
+#### Scenario: Open a diagram in the draw.io editor
+
+*Given* the tab pane/.context/chat-bar-model.drawio is open  
+*When* the Person opens the diagram in draw.io  
+*Then* the draw.io viewer opens on pane/.context/chat-bar-model.drawio, and nothing is sent to the chat

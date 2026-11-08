@@ -48,3 +48,11 @@
 *And* billing-report's story_map bar has the markdown chip picked
 *When* the session board draws billing-report's story_map bar
 *Then* Run is off
+
+#### Scenario: Write each fidelity in its own default format from a stage Run
+
+*Given* checkout-flow's story map has its markdown written
+*And* its bounded context has none
+*When* the session board opens the Discovery stage bar
+*Then* the markdown chip is picked, since the bounded context has not made its default format
+*And* Run sends `format=markdown,python`, of which each fidelity takes the first it writes

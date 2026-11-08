@@ -73,3 +73,24 @@ section: body
 *Then* the dialog first offered Create handoff, commit and push chosen, merge not, and a branch and worktree chosen  
   *And* each press changed its own choice  
   *And* ticket.activate was asked for those choices
+
+## Story: Close Active Session (round 2)
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `.sessions/chat-ui-defects/e2e/e2e-report.md` §6 B3, B4 | the close dialog said "branch none yet" for a branch open in its worktree; closing left the session folder's move uncommitted and the closed branch checked out |
+
+#### Scenario: Commit the closed session's folder and return to main
+
+*Given* checkout-flow is the active ticket, on its own branch, with its session folder tracked  
+*When* the Person closes checkout-flow, committing and pushing  
+*Then* nothing is left uncommitted  
+  *And* the checkout is back on main
+
+#### Scenario: Offer to commit a branch open in its worktree
+
+*Given* checkout-flow is the active ticket, its branch open in its own worktree  
+*When* the Person closes checkout-flow  
+*Then* the close dialog offers a handoff, and to commit and push checkout-flow

@@ -47,3 +47,17 @@
 *And* every other practice stays on its default root
 *When* the Person puts Stories back on its default root
 *Then* the Stories root is the default again
+
+#### Scenario: A press on a card only selects it
+
+*Given* checkout-flow has no worktree and no chat
+*When* the Person presses checkout-flow's card
+*Then* checkout-flow is selected
+*But* no worktree is created and no chat is opened; its card's chat button opens them
+
+#### Scenario: Ask for a chat rather than send to an unrelated one
+
+*Given* no chat works on checkout-flow and none is picked
+*When* the Person writes checkout-flow's handoff from its card
+*Then* nothing is sent
+*And* a toast asks to open checkout-flow's chat or pick one in the chat list
