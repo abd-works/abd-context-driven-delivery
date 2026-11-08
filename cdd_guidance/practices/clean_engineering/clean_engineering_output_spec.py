@@ -31,3 +31,13 @@ with description("a clean engineering practice writing its artifact"):
 
         with it("should render with its own draw.io toolset"):
             expect(isinstance(self.practice.drawio, Drawio)).to(equal(True))
+
+        with it("should keep the same draw.io toolset for every render"):
+            expect(self.practice.drawio is self.practice.drawio).to(equal(True))
+
+    with context("that draws a diagram"):
+        with before.each:
+            self.practice = CleanEngineering(fidelity="model", format="markdown")
+
+        with it("should read the diagram's source with a markdown model of the toolset's own, not the one the practice renders markdown with"):
+            expect(self.practice.drawio.source is self.practice._live_adapter("markdown")).to(equal(False))

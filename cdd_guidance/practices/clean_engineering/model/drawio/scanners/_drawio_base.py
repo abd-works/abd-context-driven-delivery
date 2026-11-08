@@ -12,7 +12,7 @@ from xml.etree import ElementTree as ET
 from harness.graph.violation import Violation
 from harness.installation.data_class import data_of
 
-from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import DrawioPage
+from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import DrawioPage
 
 DRAWIO_EXTENSIONS = frozenset({'.drawio', '.xml'})
 SKIP_DIR_NAMES = frozenset({'node_modules', '.git', 'dist', 'build', 'coverage', '__pycache__', '.venv', 'venv', 'examples'})

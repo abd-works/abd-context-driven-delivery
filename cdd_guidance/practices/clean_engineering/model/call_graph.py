@@ -50,11 +50,6 @@ class CallGraph(list):
             graph.append(CallGraphEntry(depth=depth, kind=kind, text=payload))
         return graph
 
-    @classmethod
-    def of_callees(cls, callees: Iterable[str]) -> "CallGraph":
-        """Flat ``->`` callees from a model operation, each one level deeper than the one before."""
-        return cls(CallGraphEntry(depth=index + 1, kind="out", text=text) for index, text in enumerate(callees))
-
     def block(self) -> str:
         """This call graph as an indented text block, without fences."""
         lines: List[str] = []

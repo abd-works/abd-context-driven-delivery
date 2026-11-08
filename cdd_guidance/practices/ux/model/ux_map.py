@@ -51,6 +51,8 @@ class UxMap(UxNode):
     control_type: type[Control] = Control
     story_demo_control_type: type[StoryDemoControl] = StoryDemoControl
     transition_type: type[Transition] = Transition
+    content_type_type: type[ContentType] = ContentType
+    nav_component_type: type[NavComponent] = NavComponent
     """The node types this format's map is made of; a format that writes a node its own way names its subclass here,
     and every reader and copy of the map makes its nodes through them."""
 
@@ -144,11 +146,11 @@ class UxMap(UxNode):
                 screens.get(id(transition.to_screen)), transition.trigger, transition.nav_type, self.graph,
             ))
         for content_type in source.content_types:
-            copy = ContentType(content_type.name, content_type.sequential_order, content_type.hierarchy, self.graph)
+            copy = self.content_type_type(content_type.name, content_type.sequential_order, content_type.hierarchy, self.graph)
             copy.key_actions = list(content_type.key_actions)
             self.content_types.append(copy)
         for nav in source.nav_components:
-            copy = NavComponent(nav.name, nav.sequential_order, nav.ux_type, self.graph)
+            copy = self.nav_component_type(nav.name, nav.sequential_order, nav.ux_type, self.graph)
             copy.destinations = [screens[id(screen)] for screen in nav.destinations if id(screen) in screens]
             self.nav_components.append(copy)
 

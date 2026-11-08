@@ -1,0 +1,97 @@
+"""Operation rules about responsibilities, errors, and state-change contracts."""
+
+from __future__ import annotations
+
+import re
+from typing import TYPE_CHECKING
+
+from harness.graph.practice_rule import PracticeGraphRule
+
+from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule
+
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
+
+_LIFECYCLE_WITH_VALIDATION = frozenset(
+    {
+        "load",
+        "hydrate",
+        "update",
+        "loadState",
+        "postOnboarding",
+        "refresh",
+        "importStoredPortabilities",
+        "exportStoredPortabilities",
+    }
+)
+
+# A route registrar wires one route or a group of routes (`registerChoosePlanRoute`, `registerSelfCareRoutes`).
+_ROUTE_REGISTRAR = re.compile(r"^register\w+Routes?$")
+
+
+class KeepOperationsSingleResponsibility(ProductionCodeRule):
+    """Flag operations that mix I/O-style calls with domain calculation in one body."""
+
+    slug = "keep-operations-single-responsibility"
+    node_types = ("Operation",)
+
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+        if node.name.endswith("Routes") and node.name.startswith("create"):
+            return []
+        if _ROUTE_REGISTRAR.match(node.name) or node.name in _LIFECYCLE_WITH_VALIDATION:
+            return []
+        if node.get_fact("io_and_domain"):
+            return [
+                f"Operation '{node.name}' mixes I/O-style calls with domain calculation; split responsibilities."
+            ]
+        if node.get_fact("io_and_domain_callees"):
+            return [f"Operation '{node.name}' delegates to both I/O and domain helpers; give it one job."]
+        return []
+
+
+class ErrorsOutOfExistence(ProductionCodeRule):
+    """Ordinary empty/absent cases should not raise. A raise of a failure the program declares, given what was asked
+    for (``raise UnknownPractice(key, known)``), reports a broken call and passes. A spec helper raises on a missing
+    value to fail its example, so only production code is judged."""
+
+    slug = "errors-out-of-existence"
+    node_types = ("Operation",)
+
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+        if not node.get_fact("raises_on_empty"):
+            return []
+        return [f"Operation '{node.name}' raises on an empty or missing value; return a quiet result instead."]
+
+
+class StateChangeReturnsRecordOrNamedFailure(ProductionCodeRule):
+    """Mutating operations should return the record or an explicit outcome."""
+
+    slug = "state-change-returns-record-or-named-failure"
+    node_types = ("Operation",)
+
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+        if not node.get_fact("mutates_without_record"):
+            return []
+        return [f"Operation '{node.name}' mutates state but does not return the record or a named failure."]
+
+
+class DomainExceptionCarriesContext(ProductionCodeRule):
+    slug = "domain-exception-carries-context"
+    node_types = ("Operation",)
+
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+        exception = node.get_fact("exception_without_message", "")
+        if exception:
+            return [f"Operation '{node.name}' raises {exception} without context; name the rejected rule."]
+        if node.get_fact("generic_exception_message"):
+            return [f"Operation '{node.name}' raises a generic message; carry domain context."]
+        return []
+
+
+SEMANTIC_RULES: tuple[PracticeGraphRule, ...] = (
+    KeepOperationsSingleResponsibility(),
+    ErrorsOutOfExistence(),
+    StateChangeReturnsRecordOrNamedFailure(),
+    DomainExceptionCarriesContext(),
+)

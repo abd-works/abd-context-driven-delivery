@@ -184,11 +184,17 @@ class CodeBddModel(BddModel):
     def _read_spec(self, lines: List[str], children: List[ChildBlock]) -> None:
         """The whole file as one block: the preamble above the first description, then the descriptions,
         then whatever follows the last one. An it outside every describe stays text."""
-        self._roots = []
+        self.descriptions = []
         self.written = WrittenBlock(self.language, _SPEC, [], [])
         self.written.closing = self._read_block(self, (0, len(lines)), children)
         self.preamble, self.setup = self.setup, CodeBody()
-        self.descriptions = list(self._roots)
+
+    def _add_block(self, kind: str, parent: ParentBlock, name: str, order: int) -> BehaviorBlock:
+        """A block read from the file, added where it stands: an outermost describe is one of this spec's descriptions,
+        and any other block is a context or an observation of the block that holds it."""
+        if parent is None:
+            return self.add_description(name, order)
+        return parent.add_child(kind, name, order)
 
 
 class PythonBddModel(CodeBddModel):
@@ -254,9 +260,8 @@ class PythonBddModel(CodeBddModel):
     def _node(self, item: ast.With, parent: ParentBlock, lead: List[str], order: int) -> BehaviorBlock:
         """One `with <block>("name"):` statement as a Description, Context, or Observation."""
         name = item.items[0].context_expr.args[0].value
-        node = _behavior_node(self._block_kind(item), parent, name, order, item.lineno, item.end_lineno)
-        if parent is None:
-            self._roots.append(node)
+        node = self._add_block(self._block_kind(item), parent, name, order)
+        node.line, node.end_line = item.lineno, item.end_lineno
         if item.body[0].lineno == item.lineno:
             source = "\n".join(self._lines)
             inline = "\n".join(ast.get_source_segment(source, statement) or "" for statement in item.body)
@@ -287,11 +292,8 @@ class TypeScriptBddModel(CodeBddModel):
     suffixes = language.suffixes + JAVASCRIPT.suffixes
 
     def parse_code(self, text: str) -> "TypeScriptBddModel":
-        self._text = text
         self._lines = text.split("\n")
-        blocks = [block for block in (self._block(match) for match in _SCRIPT_BLOCK.finditer(text)) if block]
-        descriptions = [block for block in self._tree(blocks) if block.kind == "describe"]
-        self._read_spec(self._lines, self._child_blocks(descriptions, None))
+        self._read_spec(self._lines, self._child_blocks(DescribeCalls(text).describes, None))
         return self
 
     def default_imports(self) -> List[str]:
@@ -304,77 +306,130 @@ class TypeScriptBddModel(CodeBddModel):
     def block_close(self) -> List[str]:
         return ["});"]
 
-    def _block(self, match: re.Match) -> Optional["DescribeCall"]:
-        """One describe/it/test call, when its parentheses and its callback's braces both close."""
-        call = DescribeCall(self._text, match)
-        return call if call.is_whole else None
+    def _child_blocks(self, calls: List["DescribeCall"], parent: ParentBlock) -> List[ChildBlock]:
+        return [(call.first_line, call.last_line, self._reader(call, parent)) for call in calls]
 
-    def _tree(self, blocks: List["DescribeCall"]) -> List["DescribeCall"]:
-        """Each block under the innermost enclosing describe; a call inside an it body stays part of that body."""
-        roots: List[DescribeCall] = []
-        open_blocks: List[DescribeCall] = []
-        inside_it_until = -1
-        for block in blocks:
-            if block.start < inside_it_until:
-                continue
-            while open_blocks and open_blocks[-1].inner_end < block.start:
-                open_blocks.pop()
-            (open_blocks[-1].children if open_blocks else roots).append(block)
-            if block.kind in {"it", "test"}:
-                inside_it_until = block.end
-            else:
-                open_blocks.append(block)
-        return roots
+    def _reader(self, call: "DescribeCall", parent: ParentBlock) -> Callable[[List[str], int], object]:
+        return lambda lead, order: self._node(call, parent, lead, order)
 
-    def _child_blocks(self, blocks: List["DescribeCall"], parent: ParentBlock) -> List[ChildBlock]:
-        return [(block.lines[0], block.lines[3], self._reader(block, parent)) for block in blocks]
-
-    def _reader(self, block: "DescribeCall", parent: ParentBlock) -> Callable[[List[str], int], object]:
-        return lambda lead, order: self._node(block, parent, lead, order)
-
-    def _node(self, block: "DescribeCall", parent: ParentBlock, lead: List[str], order: int) -> BehaviorBlock:
-        kind = block.kind
-        mapped = "it" if kind in {"it", "test"} else ("description" if kind == "describe" and parent is None else "context")
-        start, brace, inner_end, end = block.lines
-        node = _behavior_node(mapped, parent, block.name, order, start + 1, end + 1)
-        if parent is None:
-            self._roots.append(node)
-        if brace == inner_end:
-            return self._inline(node, lead, self._lines[start : end + 1], block.body(self._text))
-        node.written = WrittenBlock(self.language, block.name, lead, self._lines[start : brace + 1])
-        node.written.close = self._lines[inner_end : end + 1]
+    def _node(self, call: "DescribeCall", parent: ParentBlock, lead: List[str], order: int) -> BehaviorBlock:
+        node = self._add_block(call.behavior_kind, parent, call.name, order)
+        node.line, node.end_line = call.first_line + 1, call.last_line + 1
+        if call.is_inline:
+            return self._inline(node, lead, call.whole_lines, call.body)
+        node.written = WrittenBlock(self.language, call.name, lead, call.heading_lines)
+        node.written.close = call.close_lines
         if isinstance(node, Observation):
-            node.written.inside = self._lines[brace + 1 : inner_end]
+            node.written.inside = call.inside_lines
             node.body = self._body("\n".join(node.written.inside))
             return node
-        children = self._child_blocks(block.children, node)
-        node.written.closing = self._read_block(node, (brace + 1, inner_end), children)
+        node.written.closing = self._read_block(node, call.inside, self._child_blocks(call.children, node))
         return node
 
 
 class DescribeCall(BraceCall):
-    """A `describe`, `context`, `it`, or `test` call read from a script spec: the call with its kind, the line of its
-    start, its opening brace, its closing brace and its end, and the calls nested in its callback."""
+    """A `describe`, `context`, `it`, or `test` call read from a script spec: the call with its kind, the lines of the
+    file it spans, from its start through its opening brace, its body, and its closing brace to its end, and the calls
+    nested in its callback, which it adopts."""
 
-    def __init__(self, text: str, match: re.Match) -> None:
+    def __init__(self, text: str, match: re.Match, file_lines: List[str]) -> None:
         super().__init__(text, match.start(), text.index("(", match.start()), match.group(3))
         self.kind = match.group(1)
         self.children: List[DescribeCall] = []
+        self._file_lines = file_lines
         points = (self.start, self.brace, self.inner_end or 0, self.end - 1)
-        self.lines = tuple(text.count("\n", 0, index) for index in points)
+        self._start_line, self._brace_line, self._inner_end_line, self._end_line = (text.count("\n", 0, index) for index in points)
+
+    @property
+    def is_observation(self) -> bool:
+        """True for an `it` or a `test`, whose callback is a test body."""
+        return self.kind in {"it", "test"}
+
+    @property
+    def is_describe(self) -> bool:
+        return self.kind == "describe"
+
+    @property
+    def behavior_kind(self) -> str:
+        """The describe-tree block this call is inside another block: an observation for an `it` or a `test`, else a
+        context."""
+        return "it" if self.is_observation else "context"
+
+    @property
+    def first_line(self) -> int:
+        """The index of the file line the call starts on."""
+        return self._start_line
+
+    @property
+    def last_line(self) -> int:
+        """The index of the file line the call ends on."""
+        return self._end_line
+
+    @property
+    def is_inline(self) -> bool:
+        """True when its callback opens and closes on one line."""
+        return self._brace_line == self._inner_end_line
+
+    @property
+    def inside(self) -> Tuple[int, int]:
+        """The indexes of the first line inside its callback and of the line its callback closes on."""
+        return self._brace_line + 1, self._inner_end_line
+
+    @property
+    def whole_lines(self) -> List[str]:
+        return self._file_lines[self._start_line : self._end_line + 1]
+
+    @property
+    def heading_lines(self) -> List[str]:
+        """The lines from its start through its callback's opening brace."""
+        return self._file_lines[self._start_line : self._brace_line + 1]
+
+    @property
+    def inside_lines(self) -> List[str]:
+        return self._file_lines[slice(*self.inside)]
+
+    @property
+    def close_lines(self) -> List[str]:
+        """The lines from its callback's closing brace to its end."""
+        return self._file_lines[self._inner_end_line : self._end_line + 1]
+
+    def encloses(self, other: "DescribeCall") -> bool:
+        """True when other starts inside this call's callback."""
+        return self.inner_end is not None and other.start <= self.inner_end
+
+    def adopt(self, child: "DescribeCall") -> None:
+        """Hold child as a call nested straight inside its callback."""
+        self.children.append(child)
 
 
-def _behavior_node(kind: str, parent: ParentBlock, name: str, order: int, line: int, end_line: int):
-    if kind == "description" and parent is None:
-        node = Description(name, order)
-    elif kind == "it":
-        node = Observation(name, order)
-    else:
-        node = Context(name, order)
-    node.line, node.end_line = line, end_line
-    if parent is not None:
-        (parent.observations if isinstance(node, Observation) else parent.contexts).append(node)
-    return node
+class DescribeCalls:
+    """Every describe, context, it, and test call of a script spec whose parentheses and callback both close, each
+    adopted by the innermost describe or context around it. A call inside a test body stays part of that body."""
+
+    def __init__(self, text: str) -> None:
+        lines = text.split("\n")
+        found = (DescribeCall(text, match, lines) for match in _SCRIPT_BLOCK.finditer(text))
+        self.roots: List[DescribeCall] = []
+        open_calls: List[DescribeCall] = []
+        inside_test_until = -1
+        for call in (call for call in found if call.is_whole):
+            if call.start < inside_test_until:
+                continue
+            while open_calls and not open_calls[-1].encloses(call):
+                open_calls.pop()
+            if open_calls:
+                open_calls[-1].adopt(call)
+            else:
+                self.roots.append(call)
+            if call.is_observation:
+                inside_test_until = call.end
+            else:
+                open_calls.append(call)
+
+    @property
+    def describes(self) -> List[DescribeCall]:
+        """The outermost describe calls: the spec's descriptions."""
+        return [call for call in self.roots if call.is_describe]
 
 
 

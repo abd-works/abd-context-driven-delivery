@@ -43,22 +43,48 @@ _PROSE = re.compile(
 )
 
 
+class SketchProperty(Property):
+    """A property in the sketch notation: its name, then its notes."""
+
+    def sketch_lines(self) -> List[str]:
+        """Its name, then a `//` line for its relationship's stereotype, its origin, cardinality, and invariants."""
+        stereotype = [f"<<{self.stereotype}>>"] if self.stereotype in _RELATIONSHIP_KINDS else []
+        return [self.name, *(f"{_MEMBER_INDENT}// {note}" for note in stereotype + self.notes())]
+
+
+class SketchOperation(Operation):
+    """An operation in the sketch notation: `returnType name param param`, then its interactions and invariants."""
+
+    def sketch_lines(self) -> List[str]:
+        """Its line, then a `->` line for each interaction and a `//` line for each invariant."""
+        return [
+            self._signature_line(),
+            *(f"{_MEMBER_INDENT}-> {callee}" for callee in self.callees),
+            *(f"{_MEMBER_INDENT}// {note}" for note in self.invariant_lines()),
+        ]
+
+    def _signature_line(self) -> str:
+        """`returnType name param param`; a bare name gets `()` so it is not read back as a property."""
+        words = [self.return_type] if self.return_type and _is_return_type(self.return_type) else []
+        words.append(self.name)
+        words.extend(parameter.name for parameter in self.parameters)
+        if len(words) == 1 and not self.callees:
+            return f"{self.name}()"
+        return " ".join(words)
+
+
 class SketchOoadClass(OoadClass):
     """A class in the sketch notation: its heading, then a fence of its members. It reads its own member lines and
-    writes them back."""
+    writes them back; each member spells its own lines."""
+
+    property_type = SketchProperty
+    operation_type = SketchOperation
 
     def sketch_lines(self, depth: int) -> List[str]:
         marks = "".join(f" <<{item}>>" for item in self.stereotypes)
         bases = f" : {', '.join(self.bases)}" if self.bases else ""
         lines = [f"{'#' * depth} {self.name}{marks}{bases}", ""]
-        members: List[str] = []
-        for prop in self.properties:
-            members.append(prop.name)
-            members.extend(f"{_MEMBER_INDENT}// {note}" for note in _property_notes(prop))
-        for operation in self.operations:
-            members.append(_operation_line(operation))
-            members.extend(f"{_MEMBER_INDENT}-> {callee}" for callee in operation.callees)
-            members.extend(f"{_MEMBER_INDENT}// {note}" for note in operation.invariant_lines())
+        members = [line for member in [*self.properties, *self.operations] for line in member.sketch_lines()]
         if members:
             lines.extend([_FENCE, *members, _FENCE, ""])
         return lines
@@ -97,7 +123,7 @@ class SketchOoadClass(OoadClass):
                 operation.add_invariant(note)
             self.operations.append(operation)
             return nested.end
-        prop = Property(name=tokens[0])
+        prop = self.property_type(name=tokens[0])
         for note in nested.notes:
             prop.take_note(note)
         self.properties.append(prop)
@@ -148,7 +174,7 @@ class SketchOoadClass(OoadClass):
             return_type, name, rest = tokens[0], tokens[1], tokens[2:]
         else:
             name, rest, return_type = tokens[0], tokens[1:], ""
-        operation = Operation(name=name, return_type=return_type)
+        operation = self.operation_type(name=name, return_type=return_type)
         for order, token in enumerate(rest, start=1):
             if _IDENT.match(token):
                 operation.parameters.append(Parameter(name=token, sequential_order=order))
@@ -303,21 +329,6 @@ class SketchCleanEngineeringModel(CleanEngineeringModel):
         return ([loose] if loose.classes else []) + top
 
 
-def _property_notes(prop: Property) -> List[str]:
-    stereotype = [f"<<{prop.stereotype}>>"] if prop.stereotype in _RELATIONSHIP_KINDS else []
-    return stereotype + prop.notes()
-
-
-def _operation_line(operation: Operation) -> str:
-    """`returnType name param param`; a bare name gets `()` so it is not read back as a property."""
-    words = [operation.return_type] if operation.return_type and _is_return_type(operation.return_type) else []
-    words.append(operation.name)
-    words.extend(parameter.name for parameter in operation.parameters)
-    if len(words) == 1 and not operation.callees:
-        return f"{operation.name}()"
-    return " ".join(words)
-
-
 def _with_section_replaced(previous: str, section: List[str]) -> str:
     """previous with its clean engineering section swapped for section, or with section added at the end."""
     lines = previous.splitlines()
@@ -357,7 +368,7 @@ def _uml_member(line: str) -> Operation | Property | None:
     if not line.startswith(("+", "-")):
         return None
     signature = line[1:].strip()
-    return Operation.from_signature(signature) or Property.from_signature(signature)
+    return SketchOperation.from_signature(signature) or SketchProperty.from_signature(signature)
 
 
 class _Nest:

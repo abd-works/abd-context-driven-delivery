@@ -53,8 +53,6 @@ from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_l
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 _CARD_HEADING = re.compile(r"^(#{2,6})\s+\*\*([^*]+)\*\*(.*?)\s*$")
 _FENCE = re.compile(r"^\s*(```|~~~)")
-# A dependency line: `---<<reads sections with>>--> MarkdownText`.
-_DEPENDENCY = re.compile(r"^\s*-{3}<<\s*(?P<label>.+?)\s*>>-{2}>\s*(?P<target>[A-Za-z_][\w.]*)\s*$")
 
 
 def _split_bases(text: str) -> List[str]:
@@ -138,7 +136,7 @@ class MarkdownOoadClass(OoadClass):
                 continue
             lines.append(self._public_line(operation.render()))
             lines.extend(self._notes_under(operation.callees, operation.invariant_lines()))
-        lines.extend(f"---<<{item.label}>>--> {item.target}" for item in self.dependencies)
+        lines.extend(item.line() for item in self.dependencies)
         return lines
 
     def _constructor_line(self, constructors: List[Operation]) -> str:
@@ -211,11 +209,8 @@ class MarkdownOoadClass(OoadClass):
     def read_body(self, body: str) -> None:
         """Read this class's card body: its intent, its constructor, its properties and operations, and the
         dependencies it names."""
-        dependencies = [
-            Relationship(target=found.group("target"), kind="dependency", label=found.group("label"))
-            for found in (_DEPENDENCY.match(line) for line in body.splitlines()) if found
-        ]
-        body = "\n".join(line for line in body.splitlines() if not _DEPENDENCY.match(line))
+        dependencies = [found for found in map(Relationship.read_line, body.splitlines()) if found is not None]
+        body = "\n".join(line for line in body.splitlines() if Relationship.read_line(line) is None)
         parts6 = re.split(r"(?m)^-{6}\s*$", body, maxsplit=1)
         pre6 = parts6[0] if parts6 else ""
         post6 = parts6[1] if len(parts6) > 1 else ""

@@ -74,10 +74,8 @@ extended: PracticeGuidance | None
 formats: dict[str, Any]
 	Invariant: keys are format names; values are adapters in {practice}/model/{format}/
 supported_formats: frozenset
-sketch_titles: tuple[str, ...]
-	// the headings that open this practice's section of a sketch, such as "stories:"
 sketch_lens: SketchLens
-	// made once from sketch_titles; the practice's sketch format reads its section of a sketch with it
+	// the headings that open this practice's section of a sketch, such as "stories:"; the practice holds the one lens its sketch format reads its section with
 SHORT_NAME: str
 	// the practice's name where there is little room, such as "CE" on a session board chip
 COLOUR: str

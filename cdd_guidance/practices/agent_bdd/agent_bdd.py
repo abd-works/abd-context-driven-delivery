@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from cdd_guidance.practices.bdd.bdd import Bdd
-from harness.agent_tools.agent_tools import agent_instructions, agent_toolset  # noqa: F401
+from harness.agent_tools.agent_tools import agent_instructions, agent_toolset, instructions
 from harness.guidance.guidance import PracticeGuidance
 
 
@@ -16,10 +16,9 @@ class AgentBdd(PracticeGuidance):
 
     @agent_instructions
     def generate_output(self) -> str:
-        """"""
-        from cdd_guidance.actions.generate.generate import Generate
-
-        Generate(self.session).generate(guidance=[self.bdd])
+        """Write the agent specs the way vanilla BDD writes its specs at the fidelity the session works in."""
+        instructions(self.bdd.instructions)
+        instructions(self.bdd.generate_output)
         return ""
 
     @property

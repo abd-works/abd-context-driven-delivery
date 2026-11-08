@@ -377,9 +377,9 @@ class CodeStoryModel(StoryModel):
             model._adopt_code(self.parse(previous))
         return model.save()
 
-    def copy_of(self, canonical: StoryModel) -> "CodeStoryModel":
-        """canonical in this language, with this model's settings."""
-        return type(self)(canonical, tests_root=self._tests_root)
+    def copy_of(self, source: StoryModel) -> "CodeStoryModel":
+        """source in this language, with this model's settings."""
+        return type(self)(source, tests_root=self._tests_root)
 
     # -- The one story render. A language model overrides only the spelling operations further down.
 

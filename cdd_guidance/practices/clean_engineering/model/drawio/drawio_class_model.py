@@ -49,7 +49,7 @@ from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import 
     module_tab_label,
 )
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry, MODULE_CELL_MIN_HEIGHT, MODULE_CELL_WIDTH
-from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import DrawioPage, class_name_in
+from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import DrawioPage, class_name_in
 from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
     DrawIOClass,
     DrawIOModule,
@@ -87,6 +87,10 @@ Relationships = List[Tuple[str, str, str]]
 
 
 class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
+
+    module_cell_types: Tuple[type, ...] = (DrawIOModule,)
+    """The cell types a modules view reads its cells back as, each picked by the kind its cell's style names; a model
+    that draws modules of its own kinds names their cell types first."""
 
     def __init__(self, name: str='', sequential_order: int=1) -> None:
         super().__init__(name, sequential_order)
@@ -158,7 +162,8 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
                 continue
             if not _is_module_style(style):
                 continue
-            module = DrawIOModule.from_cell(cell.get('value', ''), order)
+            cell_type = next((kind for kind in self.module_cell_types if kind.draws(style)), DrawIOModule)
+            module = cell_type.from_cell(cell.get('value', ''), order)
             if module is None:
                 continue
             cell_id = cell.get('id', '')

@@ -12,7 +12,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     is_interface_name,
 )
 from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
-from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marked_intent
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import DocumentedIntent
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -64,16 +64,6 @@ class CodeClass(OoadClass):
     property_type: type = CodeProperty
     operation_type: type = CodeOperation
 
-    def load_property(self, source: Property) -> CodeProperty:
-        loaded = self.property_type(source.name, source.sequential_order)
-        loaded.update_self(source)
-        return loaded
-
-    def load_operation(self, source: Operation) -> CodeOperation:
-        loaded = self.operation_type(source.name, source.sequential_order)
-        loaded.update_self(source)
-        return loaded
-
     @property
     def is_contract(self) -> bool:
         return is_interface_name(self.name)
@@ -90,7 +80,7 @@ class CodeClass(OoadClass):
         interface, or a class with the bases it declares. An interface takes no decorators, so its stereotypes are
         marked in its doc comment."""
         if self.is_contract:
-            return [""] + self.doc(marked_intent(self.stereotypes, self.intent)) + self.interface_declaration()
+            return [""] + self.doc(DocumentedIntent.of(self, marked=True).text()) + self.interface_declaration()
         lines = [""] + self.doc(self.doc_intent()) + self.stereotype_decorators()
         return lines + self.class_declaration(self.declared_bases(known_names))
 
@@ -99,7 +89,7 @@ class CodeClass(OoadClass):
 
     def doc_intent(self) -> str:
         """What the class's doc comment says. A language with no decorators marks the stereotypes there."""
-        return marked_intent(self.stereotypes, self.intent)
+        return DocumentedIntent.of(self, marked=True).text()
 
     def stereotype_decorators(self) -> List[str]:
         """The decorator lines that carry the class's stereotypes; none for a language that marks them in the doc."""

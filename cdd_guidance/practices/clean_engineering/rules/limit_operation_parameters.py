@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import re
 
-from cdd_guidance.practices.clean_engineering.model.rules_shared.operation_checks import (
+from cdd_guidance.practices.clean_engineering.model.graph_reading import parameters_of
+from cdd_guidance.practices.clean_engineering.rules.operation_checks import (
     OperationMeasureRule,
     operation_label,
 )
@@ -41,7 +42,7 @@ class LimitOperationParameters(OperationMeasureRule):
     def measure(self, operation) -> list[str]:
         if _parameter_count_exempt(operation.name):
             return []
-        names = [name for name, _hint in operation.get_fact("parameters", None) or []]
+        names = [parameter.name for parameter in parameters_of(operation)]
         packed = operation.get_fact("packed_parameters", None) or {}
         count = counted_parameters(names, packed)
         if count <= MAX_DOMAIN_PARAMETERS:

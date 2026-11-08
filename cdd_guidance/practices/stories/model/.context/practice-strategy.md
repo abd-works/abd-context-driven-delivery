@@ -18,7 +18,7 @@
 
 - **Formats that share a file shape share a base.** Diagram story formats extend `DiagramStoryModel` and the diagram node (`place`, `add`, `stretch`, `role`); draw.io and Miro add only how a node is written and matched. Code languages extend `CodeStoryModel` and override only the spelling their language writes differently; TypeScript and JavaScript share `BraceStoryModel`.
 
-- **A format reads a whole file in `parse`.** Clean Engineering, Stories, and UX each read a file's text in `parse`, with the node that owns the lines reading them (a sketch module reads its class cards, a class its members) or a reader class beside the format (`JsonUxMapReader`, `StoryReader`) when the reading takes several steps.
+- **A format reads a whole file in `parse`.** Clean Engineering, Stories, and UX each read a file's text in `parse`, with the node that owns the lines reading them (a sketch module reads its class cards, a class its members) or a reader class beside the format (`StoryReader`) when the reading takes several steps; the UX JSON nodes each read their own record (`from_record`).
 
 ## How to write the model context
 

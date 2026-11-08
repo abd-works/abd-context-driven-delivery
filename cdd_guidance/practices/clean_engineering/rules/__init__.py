@@ -1,16 +1,16 @@
 """Clean Engineering graph rules — schema slugs with executable checks."""
 
-from cdd_guidance.practices.clean_engineering.model.rules_shared.class_rules import KeepClassesSingleResponsibility
-from cdd_guidance.practices.clean_engineering.model.rules_shared.coupling_rules import (
+from cdd_guidance.practices.clean_engineering.rules.class_rules import KeepClassesSingleResponsibility
+from cdd_guidance.practices.clean_engineering.rules.coupling_rules import (
     DoNotInventParallelObjectModels,
     HideInnerDetails,
     LayerSeparation,
     PutLogicOnOwningResource,
     ShapeClassesAroundResources,
 )
-from cdd_guidance.practices.clean_engineering.model.rules_shared.operation_checks import CODE_RULES
-from cdd_guidance.practices.clean_engineering.model.rules_shared.prefer_class_operations import PreferClassOperations
-from cdd_guidance.practices.clean_engineering.model.rules_shared.typed_and_comments import LimitComments, UseTypedSignatures
+from cdd_guidance.practices.clean_engineering.rules.operation_checks import CODE_RULES
+from cdd_guidance.practices.clean_engineering.rules.prefer_class_operations import PreferClassOperations
+from cdd_guidance.practices.clean_engineering.rules.typed_and_comments import LimitComments, UseTypedSignatures
 from cdd_guidance.practices.clean_engineering.rules.limit_operation_parameters import LimitOperationParameters
 from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import (
     LanguageModulesOneSection,

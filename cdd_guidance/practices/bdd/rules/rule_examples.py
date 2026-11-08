@@ -21,9 +21,5 @@ def spec_fixture(source: str, *, filename: str = "widget_spec.py") -> RuleFixtur
     return RuleFixture(Bdd, {filename: source.strip() + "\n"})
 
 
-def violations_for_spec_source(rule, source: str, *, filename: str = "widget_spec.py") -> list[str]:
-    return spec_fixture(source, filename=filename).hits(rule)
-
-
 def assert_bdd_source_pair(slug: str, fault: str, clean: str, *, filename: str = "widget_spec.py") -> None:
     RulePair(bdd_rule_by_slug(slug), spec_fixture(fault, filename=filename), spec_fixture(clean, filename=filename)).check()

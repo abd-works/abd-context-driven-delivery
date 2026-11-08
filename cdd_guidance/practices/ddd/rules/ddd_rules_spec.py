@@ -19,6 +19,7 @@ with description("DDD tactical rules (python .examples)"):
                 "every-class-carries-ddd-stereotype",
                 "Plan",
                 clean_class="PlanEntity",
+                node_type="Entity",
             )
 
         with it("should not require stereotypes on classes in tsx presentation modules"):
@@ -87,6 +88,7 @@ export class PaymentMethod {
                 "domain-concepts-not-technical-names",
                 "CartManager",
                 clean_class="Cart",
+                node_type="Entity",
             )
 
     with context("flaccid-data-object-no-behavior"):
@@ -95,6 +97,7 @@ export class PaymentMethod {
                 "flaccid-data-object-no-behavior",
                 "Cart",
                 clean_class="Product",
+                node_type="Entity",
             )
 
         with it("should not apply to value objects that carry data only"):
@@ -147,6 +150,7 @@ export class Sim {
                 "private-method-naming",
                 "Other",
                 clean_class="Cart",
+                node_type="Entity",
             )
 
     with context("service-is-homeless"):
@@ -187,7 +191,7 @@ export class DeviceWalletMerchantCredentialRepository {
 
     with context("no-orphaned-objects"):
         with it("should flag LonelyType and accept related Cart"):
-            assert_ddd_example_pair("no-orphaned-objects", "LonelyType", clean_class="Cart")
+            assert_ddd_example_pair("no-orphaned-objects", "LonelyType", clean_class="Cart", node_type="Entity")
 
     with context("screen-interface-not-a-domain-object"):
         with it("should flag SelectSim and accept Checkout"):
@@ -195,6 +199,7 @@ export class DeviceWalletMerchantCredentialRepository {
                 "screen-interface-not-a-domain-object",
                 "SelectSim",
                 clean_class="Checkout",
+                node_type="Entity",
             )
 
     with context("private-method-naming on TypeScript aggregates"):
