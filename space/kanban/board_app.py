@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from harness.process.process import AppPorts
+from harness.installation.app_ports import AppPorts
 
 # The session board's ports, as ``app/packages/session-board/ports.json`` gives them: ``board``, the ports its server
 # listens on, the first unless ``BOARD_PORT`` names another. The board's server reads this file and the board registers

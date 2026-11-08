@@ -56,7 +56,7 @@ Whenever you name screens, attach stories, or import domain terms on the UX surf
 - **`screen-story-budget`** — ~4 user stories per screen; more signals missed decomposition.
 - **`screen-names-use-domain-terms`** — Screen labels trace to domain language when it exists.
 - **`ia-named-regions-only`** — At IA, regions are named areas; no control detail yet.
-- **`story-domain-js-imported`** — At mockup+, when practices/stories/domain exist, JS modules are present (transform if needed) and imported by the html surface.
+- **`story-domain-js-imported`** — At mockup+, when practices/stories/domain exist, JS modules are present (transform if needed) and imported by the html surface; import the real modules rather than inventing a UX-only adapter shape.
 
 ---
 
@@ -170,7 +170,6 @@ Whenever you place controls and wire story steps on a greybox, or change shippin
 If this change will not stay here, follow `practices/ux/ux-ia.mdc`.
 
 - **`controls-match-interaction-decisions`** — Exact control types; no invented affordances.
-- **`story-domain-js-imported`** — Import real modules; do not invent a UX-only adapter shape.
 - **`key-interactions-wired`** — Nav/tabs via `data-goto` / interactions; story tracing via Story Demo mount (not bespoke product stubs).
 - **`story-demo-control-for-gwt`** — GWT-bound controls are `StoryDemoControl` in the model so HTML gets `data-story-steps`.
 - **`shell-from-template`** — Use `mockup_shell.html` / render channel; do not drop the explorer when generating screens.

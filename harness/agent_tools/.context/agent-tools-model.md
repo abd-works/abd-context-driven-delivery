@@ -206,7 +206,6 @@ tools: list[str]
 	// deferred operation names from tools(...), merged with those of every nested instructions(...); read-only
 << composition >> recipe_source: RecipeSource
 	// parsed once from callable; every expansion of this recipe reads it
-result_template: str
 ----
 for_callable(callable: Callable, toolset: AgentToolSet): AgentInstructions
 	-> toolset.instruction(callable name)
@@ -231,6 +230,8 @@ RecipeExpansion(instructions: AgentInstructions, arguments: dict | None, expandi
 ------
 prompt: tuple[str, ...]
 tools: list[str]
+result: str
+	// what the recipe's return gave for this call; a recipe that only defers to its parent gives its own return, else its parent's
 ----
 run(): RecipeExpansion
 	// raises RecipeLineFailed for a line that raises, RecipeCallsItself for a recipe that expands back into itself
@@ -243,7 +244,8 @@ module: ast.Module
 	// parsed once
 function_def: ast.FunctionDef
 only_defers_to_parent: bool
-result_template: str
+returned: ast.Return | None
+	// the first return, which an expansion evaluates for the call's result line
 ----
 member_on_self(node): str | None
 provider_member(node, roots): tuple[str, str] | None

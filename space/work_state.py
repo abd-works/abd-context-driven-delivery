@@ -1,10 +1,9 @@
 """Repo ``.sessions/session.json`` — the branch, worktree, and session in use."""
 from __future__ import annotations
 
-import json
-import os
-import threading
 from pathlib import Path
+
+from harness.installation.json_file import JsonFile
 
 SESSIONS_FOLDER = ".sessions"
 STATE_NAME = "session.json"
@@ -18,6 +17,7 @@ class WorkState:
 
     def __init__(self, repo_root: Path | str) -> None:
         self.root = Path(repo_root).resolve()
+        self._file = JsonFile(self.path)
 
     @property
     def sessions_folder(self) -> Path:
@@ -55,20 +55,14 @@ class WorkState:
         self._store("session", name)
 
     def load(self) -> dict[str, str]:
-        if not self.path.is_file():
-            return {}
-        data = json.loads(self.path.read_text(encoding="utf-8"))
-        if not isinstance(data, dict):
-            return {}
-        return {str(key): str(value) for key, value in data.items() if str(value).strip()}
+        return {str(key): str(value) for key, value in self._file.read().items() if str(value).strip()}
 
     def _value(self, key: str) -> str:
         return self.load().get(key, "").strip()
 
     def _store(self, key: str, value: str) -> None:
-        # WHY: calls from several chats save the session at once. An unchanged value is not written, and a
-        # changed one is swapped in whole from a file of its own thread, so writers neither collide on the file
-        # nor read it half written.
+        # WHY: calls from several chats save the session at once. An unchanged value is not written, and a changed one
+        # is swapped in whole (JsonFile.write), so writers neither collide on the file nor read it half written.
         data = self.load()
         cleaned = str(value or "").strip()
         if data.get(key, "") == cleaned:
@@ -77,7 +71,4 @@ class WorkState:
             data[key] = cleaned
         else:
             data.pop(key, None)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        staged = self.path.with_name(f"{self.path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
-        staged.write_text(json.dumps(data), encoding="utf-8")
-        os.replace(staged, self.path)
+        self._file.write(data)

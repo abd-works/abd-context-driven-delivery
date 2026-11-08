@@ -133,4 +133,5 @@ class GrillContext(GuidanceAction):
         """Step 4 - If a question can be answered by exploring the codebase, explore first instead of asking."""
         """Step 5 - After each resolved insight, call write_grill_answer(heading=..., body=...) immediately. Do not batch writes. Keep entries concise; reference code paths rather than repeating logic."""
         tools(self.write_grill_answer)
-        return f"Grilling session for: {self.source_label(plan, paths)}"
+        source = self.source_label(plan, paths)
+        return f"Grilling session for: {source}" if source else "Grilling session started; the plan is the one the user describes."

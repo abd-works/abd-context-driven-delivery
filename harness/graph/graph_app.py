@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from harness.process.process import AppPorts
+from harness.installation.app_ports import AppPorts
 
 # The graph explorer app's ports, as ``app/ports.json`` gives them: ``app``, the ports its Vite server tries in turn, and
 # ``web``, the port of its web server. The Vite config, the web server, the server health report, and the instance

@@ -14,6 +14,7 @@ from typing import Any, Callable, Generic, Mapping, TypeVar
 
 from cdd_guidance.practices.agent_bdd.cursor_cli import CursorCli
 from harness.agent_tools.tool_call import ToolCall
+from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from cdd_guidance.practices.agent_bdd.yaml_fence import YamlFence
 
 # Reads and writes the fenced YAML a run answers with; it holds nothing but the fence's language.
@@ -300,21 +301,14 @@ class AgentSession:
 
     @classmethod
     def load(cls, session_file: Path) -> AgentSession | None:
-        if not session_file.is_file():
-            return None
         try:
-            data = json.loads(session_file.read_text(encoding="utf-8"))
-            chat_id = str(data.get("chat_id", "")).strip()
-        except (OSError, json.JSONDecodeError):
+            chat_id = str(JsonFile(session_file).read().get("chat_id", "")).strip()
+        except JsonFileUnreadable:
             return None
         return cls(chat_id=chat_id, session_file=session_file) if chat_id else None
 
     def save(self) -> None:
-        self.session_file.parent.mkdir(parents=True, exist_ok=True)
-        self.session_file.write_text(
-            json.dumps({"chat_id": self.chat_id}, indent=2),
-            encoding="utf-8",
-        )
+        JsonFile(self.session_file).write({"chat_id": self.chat_id})
 
     @classmethod
     def from_workspace(

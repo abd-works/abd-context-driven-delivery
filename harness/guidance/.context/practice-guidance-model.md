@@ -8,7 +8,7 @@ Markdown channel for `harness/guidance`. The module's purpose, seam, and depende
 
 ## Language companion
 
-A *PracticeGuidance* reads its *FidelityGuidance* children from the Fidelities section of `{practice}/{practice}.md`; each fidelity's `stage` (held as its *ApproachStage*), `default_format`, `outputs`, `judged_on`, and optional `clean_engineering` companion come from the YAML fields in its block, which the fidelity applies itself (`apply_settings`). The practice holds its document (`document`, read once), and each fidelity reads its block, its instructions, rules, templates, template file, and declared files from itself, so an action holding a fidelity reads only that fidelity's text whatever fidelity is current. Each guidance hands its *Markdown* a *MarkdownScope*: its folder, slug, fidelity, and format. The practice keeps its current fidelity on `fidelities.current` (`work_at` makes one current), and each fidelity keeps the format it last used, so the practice's `format` is its current fidelity's. Callers convert artifacts through *Render*, which asks *PracticeGuidance.render*. A practice that owns an artifact keeps one adapter per format under `{practice}/model/{format}/` and passes them as `formats`; every practice CDD ships passes formats today; a practice with none renders through its current fidelity's Clean Engineering companion.
+A *PracticeGuidance* reads its *FidelityGuidance* children from the Fidelities section of `{practice}/{practice}.md`; each fidelity's `stage` (held as its *ApproachStage*), `default_format`, `outputs`, `judged_on`, and optional `clean_engineering` companion come from the YAML fields in its block, which the fidelity applies itself (`apply_settings`). The practice holds its document (`document`, read once), and each fidelity reads its block, its instructions, rules, templates, template file, and declared files from itself, so an action holding a fidelity reads only that fidelity's text whatever fidelity is current. Each guidance hands its *Markdown* a *MarkdownScope*: its folder, slug, fidelity, and format. The practice's current fidelity, `fidelities.current`, is fixed at construction: a session's practices are shared by every call in it, so an action holds the fidelity it works at and never moves the practice's. Each fidelity keeps the format it last used, so the practice's `format` is its current fidelity's. Callers convert artifacts through *Render*, which asks the fidelity the action works at (*FidelityGuidance.render* or *render_files*); that fidelity hands its practice a *RenderRequest* that carries it. A practice that owns an artifact keeps one adapter per format under `{practice}/model/{format}/` and passes them as `formats`; every practice CDD ships passes formats today; a practice with none renders through the Clean Engineering companion of the fidelity the request works at (`RenderRequest.companion`, which is `FidelityGuidance.clean_engineering`).
 
 ---
 
@@ -114,11 +114,13 @@ scoped_markdown(): str
 generate_output(): str
 	// instruction-only by default; a practice that owns generation overrides it
 render(format: str, content: Any, source: str | None, previous: str): dict
-	// at the fidelity the practice was made at; render_at(fidelity, ...) and render_files(..., fidelity) render at the fidelity a call works at
-	// the formats are made into Format objects once, in the RenderRequest the call carries
+	// at the fidelity the practice was made at; FidelityGuidance.render and render_files render at the fidelity a call works at
+	-> rendered
+rendered(request: RenderRequest): dict
+	// the formats are made into Format objects once, in the RenderRequest the call carries; no content renders the practice's own model
 	Interaction:
-		# formats empty: hand the call to the companion's practice
-		-> request.fidelity.clean_engineering.practice_guidance._render
+		# formats empty: hand the request to the companion's practice
+		-> request.companion.practice_guidance._render
 		# otherwise: parse content into the object model, then render the target format
 		-> formats[source or request.fidelity.format].parse
 		-> formats[format].render
@@ -126,10 +128,6 @@ format_for(file: Path): Any
 	// a new model of the file's format: the format whose adapter's suffixes hold the file's extension; ValueError when none does
 read_paths(paths: list[str] | str, source: str | None): Any
 	-> load_document
-render_files(format: str, paths: list[str] | str, source: str | None): dict
-	// a renderer that links to other files finds them in the folder of the first path
-	-> read_paths
-	-> render
 
 ## FidelityGuidance : Guidance
 
@@ -180,6 +178,13 @@ every_rule(): list[Rule]
 	-> practice_guidance.every_rule
 generate_output(): str
 	// the practice's generate_output recipe, expanded
+render(format: str, content: Any, source: str | None, previous: str): dict
+	// at this fidelity: content is in source, else in this fidelity's format
+	-> practice_guidance.rendered RenderRequest(fidelity=self)
+render_files(format: str, paths: list[str] | str, source: str | None): dict
+	// a renderer that links to other files finds them in the folder of the first path
+	-> practice_guidance.read_paths
+	-> practice_guidance.rendered RenderRequest(fidelity=self)
 declares(path: str, format: str = ""): bool
 	// a file one of its outputs names, in format when one is named; DeclaredFile matches the end of the path
 work_in(session_output: FidelitySessionOutput): None
@@ -256,9 +261,7 @@ register(*practice_classes: type[PracticeGuidance])
 keys(): tuple[str, ...]
 	// PracticesNotRegistered when no package registered the practices in this process
 has(key: str): bool
-practices(): tuple[PracticeGuidance, ...]
-	// the shared instances
-practice(key: str): PracticeGuidance
+	// the catalogue holds classes only: every reader makes its own practices and holds them
 create(key: str): PracticeGuidance
 	Invariant: outside a session, a caller that changes a practice's fidelity or format makes its own instance here; a session makes its set once with create_all
 	// made with the practices of its set it works with (set_keys), each holding the others (hold_set)

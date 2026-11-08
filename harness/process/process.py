@@ -3,7 +3,6 @@ no console window on Windows or with a Python whose console output a caller read
 its process id still runs, or stop it."""
 from __future__ import annotations
 
-import json
 import os
 import re
 import signal
@@ -71,21 +70,6 @@ class ListeningPorts:
         except (OSError, subprocess.TimeoutExpired):
             return ""
         return completed.stdout or ""
-
-
-class AppPorts:
-    """The ports an app's servers answer on, as the one ``ports.json`` beside them gives them: each server's ports, in
-    the order it tries them. The app's own servers read that file too, so a port is written once. Read when made; the
-    module that names the app makes it once and keeps it."""
-
-    def __init__(self, file: Path) -> None:
-        self.file = Path(file)
-        listed = json.loads(self.file.read_text(encoding="utf-8"))
-        self._ports = {server: tuple(int(port) for port in ports) for server, ports in listed.items()}
-
-    def of(self, server: str) -> tuple[int, ...]:
-        """The ports of the app's server called server in its ports file, such as ``web``, in the order it tries them."""
-        return self._ports[server]
 
 
 class ExclusivePort:

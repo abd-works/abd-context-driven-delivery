@@ -251,6 +251,16 @@ class _SplitRecipe:
         return f"Split {paths} in {mode}"
 
 
+@agent_toolset
+class _ConditionalResultRecipe:
+    """A recipe whose result names its source only when the call sends one, as Partition's does."""
+
+    @agent_instructions
+    def split(self, source: str = "") -> str:
+        """Split the source into segments."""
+        return f"Split{f' {source}' if source else ''} finished"
+
+
 with description("an action"):
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
@@ -296,6 +306,16 @@ with description("an action"):
         with it("should fill the prompt's placeholder of an optional parameter with its default"):
             expansion = _SplitRecipe().instructions["split"].expand({"paths": "notes.md"})
             expect(expansion.instructions).to(contain("Write segments for notes.md in one_go"))
+
+    # The result line is what the recipe returns for the call, so a clause the recipe adds only for some calls reads right.
+    with context("whose result names a clause only some calls fill"):
+        with it("should give the clause when the call fills it"):
+            expansion = _ConditionalResultRecipe().instructions["split"].expand({"source": "notes.md"})
+            expect(expansion.result).to(equal("Split notes.md finished"))
+
+        with it("should leave the clause out when the call does not"):
+            expansion = _ConditionalResultRecipe().instructions["split"].expand({})
+            expect(expansion.result).to(equal("Split finished"))
 
     with context("whose recipe has a docstring of several lines"):
         with it("should send the docstring once"):
@@ -356,16 +376,16 @@ with description("empty-body auto-super in action bodies"):
             body = AgentInstructions.for_callable(EmptySuperChild.generate, child)
             expect("do_work" in body.tools).to(be_true)
 
-        with it("should inherit the parent's result template"):
+        with it("should answer with the parent's result"):
             child = EmptySuperChild()
             body = AgentInstructions.for_callable(EmptySuperChild.generate, child)
-            expect(body.result_template).to(equal("generate done"))
+            expect(body.expand({}).result).to(equal("generate done"))
 
     with context("a child with Ellipsis plus a custom return"):
-        with it("should use the child's result template"):
+        with it("should answer with the child's result"):
             child = EmptyWithReturn()
             body = AgentInstructions.for_callable(EmptyWithReturn.generate, child)
-            expect(body.result_template).to(equal("child result only"))
+            expect(body.expand({}).result).to(equal("child result only"))
 
         with it("should still inline parent tool steps"):
             child = EmptyWithReturn()

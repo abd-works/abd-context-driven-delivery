@@ -33,6 +33,16 @@ with description("a JSON file"):
         with it("should be indented with a closing newline, for a person to read"):
             expect(self.path.read_text(encoding="utf-8")).to(equal('{\n  "name": "alpha"\n}\n'))
 
+        # Several chats' calls write some files at once; each write is swapped in whole, so no reader sees half of one.
+        with it("should leave nothing but the file in its folder"):
+            expect([path.name for path in self.path.parent.iterdir()]).to(equal(["settings.json"]))
+
+    with context("that its owner wrote over"):
+        with it("should hold only the last object written"):
+            self.file.write({"name": "alpha", "kept": True})
+            self.file.write({"name": "beta"})
+            expect(self.file.read()).to(equal({"name": "beta"}))
+
     with context("that holds something other than an object"):
         with before.each:
             self.path.parent.mkdir(parents=True)

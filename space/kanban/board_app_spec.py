@@ -1,5 +1,4 @@
 """The session board's ports: written once beside its server, and the ones server health probes for it."""
-import json
 import tempfile
 from pathlib import Path
 
@@ -14,7 +13,7 @@ import space.kanban.board  # noqa: F401 - registers the board's ports with Serve
 
 with description("the session board's ports"):
     with it("should be the ports its server reads"):
-        written = json.loads(BOARD_APP_PORTS.file.read_text(encoding="utf-8"))["board"]
+        written = BOARD_APP_PORTS.file.read()["board"]
         expect(list(BOARD_APP_PORTS.of("board"))).to(equal(written))
 
     # A chat checks in with the board at the address server health gives, so harness names no port of the board's.
