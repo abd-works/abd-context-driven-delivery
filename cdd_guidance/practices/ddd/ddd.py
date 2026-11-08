@@ -85,7 +85,7 @@ class Ddd(PracticeGuidance):
         practice of this practice's set, the one it extends, through that practice's own adapter."""
         parsed = super()._parse_content(source_format, content)
         if isinstance(parsed, BoundedContextMap) and parsed.holds_classes_only:
-            return self.companion_practice()._parse_content(source_format, content)
+            return self.extended._parse_content(source_format, content)
         return parsed
 
     def _model_for(self, target, parsed):

@@ -50,7 +50,7 @@ class Generate(GuidanceAction):
 
     def _earlier_render(self, practice: PracticeGuidance) -> str:
         current = self.fidelity_of(practice)
-        wanted = Format(current.format if current is not None else practice.format).name
+        wanted = (current.format if current is not None else practice.format).name
         earlier = self._fidelity_before(practice, current) if current is not None else None
         if earlier is None or not wanted or wanted not in {Format(label).name for label in earlier.outputs}:
             return ""

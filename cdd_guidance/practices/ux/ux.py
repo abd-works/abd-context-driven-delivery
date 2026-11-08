@@ -6,7 +6,7 @@ from typing import Any
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
-from harness.guidance.sketch_lens import SketchLens
+from harness.guidance.guidance import SketchLens
 
 from cdd_guidance.practices.ux.model.ux_node import UxNode
 
