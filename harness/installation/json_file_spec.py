@@ -37,6 +37,11 @@ with description("a JSON file"):
         with it("should leave nothing but the file in its folder"):
             expect([path.name for path in self.path.parent.iterdir()]).to(equal(["settings.json"]))
 
+    with context("that its owner writes compact"):
+        with it("should be written on one line, for programs to read"):
+            JsonFile(self.path, compact=True).write({"name": "alpha", "tags": [1, 2]})
+            expect(self.path.read_text(encoding="utf-8")).to(equal('{"name":"alpha","tags":[1,2]}\n'))
+
     with context("that its owner wrote over"):
         with it("should hold only the last object written"):
             self.file.write({"name": "alpha", "kept": True})

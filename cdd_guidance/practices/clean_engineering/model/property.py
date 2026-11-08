@@ -62,7 +62,7 @@ _STEREOTYPE_NOTE = re.compile(r"^<<\s*(composition|aggregation|association)\s*>>
 
 class Property(InvariantHolder, OoadNode):
     _semantic_type_name = "Property"
-    graph_facts = ("owner",)
+    graph_facts = ("owner", "value_type")
 
     def __init__(
         self,
@@ -76,6 +76,8 @@ class Property(InvariantHolder, OoadNode):
         self.type_hint = type_hint
         self.description = description
         self.access = "both"
+        # The class that declares it, once kept (keep_owner).
+        self._declared_by = ""
         self.stereotype = ""
         self.cardinality = ""
         self.origin = ""
@@ -103,7 +105,12 @@ class Property(InvariantHolder, OoadNode):
     def owner(self) -> str:
         """The name of the class that declares this property; empty before a class holds it."""
         parent = self.parent
-        return parent.name if isinstance(parent, OoadNode) and parent.declares(self) else ""
+        return parent.name if isinstance(parent, OoadNode) and parent.declares(self) else self._declared_by
+
+    def keep_owner(self) -> None:
+        """Keep the class that declares this property as its owner from now on: a graph's tree may hang it under a group
+        of its class's members, and its owner, which saves with the graph, stays the class."""
+        self._declared_by = self.owner
 
     def clone(self) -> "Property":
         cloned = type(self)(self.name, self.sequential_order, self.type_hint, self.description)

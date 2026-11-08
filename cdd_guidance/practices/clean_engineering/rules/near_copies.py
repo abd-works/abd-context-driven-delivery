@@ -8,6 +8,7 @@ in the buckets of its few smallest run hashes, and only bodies that share a buck
 from __future__ import annotations
 
 import re
+import zlib
 from typing import TYPE_CHECKING, Iterator
 
 if TYPE_CHECKING:
@@ -65,9 +66,12 @@ class NearCopies:
 
 
 def _runs_of(operation: "Node") -> frozenset[int]:
-    """The hashes of the body's three-token runs, comments left out; none for a short body or one the node lacks."""
-    text = str(getattr(getattr(operation, "body", None), "text", "") or "")
+    """The checksums of the body's three-token runs, comments left out; none for a short body. The body is the text
+    the operation saves with the graph, and a checksum, never ``hash``, which Python salts per process, places each body
+    in the same buckets in every process that checks the graph."""
+    text = str(operation.get_fact("body_text") or "")
     tokens = _TOKEN.findall(_COMMENT_LINE.sub("", text))
     if len(tokens) < MIN_TOKENS:
         return frozenset()
-    return frozenset(hash(tuple(tokens[start : start + _RUN])) for start in range(len(tokens) - _RUN + 1))
+    runs = (" ".join(tokens[start : start + _RUN]) for start in range(len(tokens) - _RUN + 1))
+    return frozenset(zlib.crc32(run.encode("utf-8")) for run in runs)

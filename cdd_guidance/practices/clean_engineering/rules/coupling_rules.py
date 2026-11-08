@@ -212,7 +212,7 @@ def _sole_forward(operation: "Node") -> str:
     """The callee of an operation whose body is one statement making one call on a collaborator: a parameter
     (``cart.subtotal()``) or a field (``self._cart.subtotal()``)."""
     callees = {callee for callee in operation.get_fact("callees", []) or [] if callee}
-    body = getattr(getattr(operation, "body", None), "text", "") or ""
+    body = operation.get_fact("body_text") or ""
     statements = [line for line in body.splitlines() if line.strip() and not line.strip().startswith(("#", "//"))]
     if len(callees) != 1 or len(statements) != 1:
         return ""
