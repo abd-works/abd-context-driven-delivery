@@ -10,6 +10,7 @@ keeps; nothing is read from disk again.
 from __future__ import annotations
 
 import re
+from functools import cached_property
 from typing import TYPE_CHECKING, Callable, Optional
 
 from harness.graph.graph import Node
@@ -68,6 +69,10 @@ def _java_imports(text: str) -> list[tuple[str, str]]:
         found.append((parts[-1], "/".join(file_parts)))
     return found
 
+
+_FUNCTION_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b")
+_IDENTIFIER = re.compile(r"\w+")
+_MEMBER_READ = re.compile(r"\.(\w+)")
 
 _EVIDENCE_LINE = re.compile(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)")
 
@@ -134,6 +139,25 @@ class StoryRecording:
 
     def text_of(self, file: str) -> str:
         return self.story_map.source_texts.get(file, "") if file else ""
+
+    def example_facts(self, name: str) -> dict:
+        """The names the source of the example called name holds: the text of the first TypeScript file the map was read
+        from that declares ``function name``. ``source_names`` is every identifier in it and ``source_reads`` every name
+        it reads as a member (``.name``). They save with the graph, so an example is linked to the classes it shows and
+        the properties it reads whichever process holds the graph."""
+        text = self._function_sources.get(name, "")
+        return {"source_names": sorted(set(_IDENTIFIER.findall(text))), "source_reads": sorted(set(_MEMBER_READ.findall(text)))}
+
+    @cached_property
+    def _function_sources(self) -> dict[str, str]:
+        """Each declared ``function name`` in the TypeScript the story map was read from, mapped to the first file's
+        text that declares it."""
+        sources: dict[str, str] = {}
+        for file, text in sorted(self.story_map.source_texts.items()):
+            if file.endswith(".ts"):
+                for name in _FUNCTION_DECLARATION.findall(text):
+                    sources.setdefault(name, text)
+        return sources
 
     def facts_of(self, file: str) -> dict:
         return story_file_facts(self.text_of(file))

@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 GRAPH_FILE_NAME = "graph.json"
 # The shape this code writes. A saved graph of any other shape is read as no saved graph, so the next load replaces it.
-SAVED_SHAPE_VERSION = 2
+SAVED_SHAPE_VERSION = 3
 
 
 class SavedGraphOutdated(Exception):

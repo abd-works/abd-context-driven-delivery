@@ -6,6 +6,7 @@ A nested epic is an epic whose parent is an epic. Each node type implements clon
 from __future__ import annotations
 
 import re
+import zlib
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
@@ -219,7 +220,7 @@ class Example(StoryNode):
     def record(self, recording: StoryRecording, file: str, parent, span: tuple[int, int]) -> None:
         """Add this example to the graph under the scenario that uses it, at that scenario's lines in file; an example
         two scenarios of one file share is one node."""
-        node = recording.add(f"stories:Example:{file}:{self.name}", self.name, "Example", file, span, self)
+        node = recording.add(f"stories:Example:{file}:{self.name}", self.name, "Example", file, span, self, recording.example_facts(self.name))
         recording.graph.link("examples", parent, node)
 
     def clone(self) -> "Example":
@@ -337,7 +338,7 @@ class Increment(StoryNode):
 
 class Step(StoryNode):
     _semantic_type_name = "Step"
-    graph_facts = ("keyword", "text", "phase", "concepts", "values", "actor", "continuation", "callees")
+    graph_facts = ("keyword", "text", "phase", "concepts", "values", "actor", "continuation", "callees", "body_text")
 
     def __init__(
         self,
@@ -379,6 +380,12 @@ class Step(StoryNode):
             self.take_code_from(origin)
             for extra in origin.ands:
                 self._ands.append(type(self)(extra))
+
+    @property
+    def body_text(self) -> str:
+        """The code its story test gives the step; it saves with the graph, so the step is linked to the operations it
+        calls whichever process holds the graph."""
+        return self.body.text
 
     @property
     def code_key(self) -> tuple:
@@ -435,7 +442,9 @@ class Step(StoryNode):
         label = f"{self.keyword.lower()} {self.text}".strip()
         span = recording.span_of(self, file, fallback_text=self.text)
         continuations = list(self.ands)
-        node_id = f"stories:{semantic}:{file}:{span[0]}:{hash(label) & 0xFFFFFF}"
+        # A checksum of the label, never ``hash``: Python salts ``hash`` per process, and a step must keep its id in the
+        # worker process that refreshes the graph and in the server that holds it.
+        node_id = f"stories:{semantic}:{file}:{span[0]}:{zlib.crc32(label.encode('utf-8')) & 0xFFFFFF}"
         node = recording.add(node_id, label, semantic, file, span, self)
         recording.graph.link(edge_kind, parent, node)
         for continuation in continuations:

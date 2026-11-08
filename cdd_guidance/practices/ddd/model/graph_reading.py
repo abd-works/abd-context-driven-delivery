@@ -164,14 +164,14 @@ class DddReading:
             if not marker.is_file():
                 continue
             folder = Path(dirpath)
-            context = BoundedContext(sequential_order=1, graph=self.graph)
+            context = BoundedContext(sequential_order=1)
             context.load_context_folder(folder)
             found.append(("." if folder == self.root else folder.relative_to(self.root).as_posix(), context, marker.relative_to(self.root).as_posix()))
         return sorted(found, key=lambda item: item[0])
 
     def _unmarked_context(self) -> BoundedContext:
         """The one bounded context of a folder where no folder marks a context: the whole folder."""
-        context = BoundedContext("bounded context", 1, graph=self.graph)
+        context = BoundedContext("bounded context", 1)
         context.load_folder_facts(self.root)
         return context
 
@@ -195,7 +195,7 @@ class DddReading:
         return members
 
     def _aggregate(self, folder: str, members: list[tuple[TacticalClass, str]], context: Node) -> None:
-        aggregate = Aggregate(Path(folder).name, 1, graph=self.graph)
+        aggregate = Aggregate(Path(folder).name, 1)
         aggregate.load_folder_facts(self.root / folder)
         node = self.practice.in_graph.add(aggregate, f"ddd:Aggregate:{folder}", folder, 1, 1)
         self.graph.link("owns", context, node)

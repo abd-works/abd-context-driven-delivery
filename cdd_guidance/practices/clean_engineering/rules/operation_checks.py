@@ -74,7 +74,7 @@ def _makes_its_own_class(operation: "Node") -> bool:
     that takes nothing, such as `current() -> Board`, hands out a global instance, which a caller should hold instead."""
     if not parameters_of(operation):
         return False
-    spelled = set(_TYPE_NAME.findall(str(getattr(operation, "return_type", "") or "")))
+    spelled = set(_TYPE_NAME.findall(str(operation.get_fact("return_type") or "")))
     return bool(spelled & {operation.get_fact("owner", ""), "Self"})
 
 

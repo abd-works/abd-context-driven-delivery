@@ -908,6 +908,13 @@ class PracticeNodes:
             self._nodes = {kind: [node for node in group if id(node) not in dropped] for kind, group in self._nodes.items()}
         return dropped
 
+    def put_in_source_order(self) -> None:
+        """Hold the nodes of each type in the order their files and lines give them. A refresh holds the nodes it read
+        again after those it kept, so without this a rule that reports the first of two nodes, such as the original of
+        two duplicate bodies, would report another node after a refresh than after a fresh build."""
+        for kind, group in self._nodes.items():
+            self._nodes[kind] = sorted(group, key=_where_it_sits)
+
     def renew_rules(self) -> None:
         """Forget every node's rules, so each is made fresh when next read and the next check finds each violation again."""
         for node in self._by_id.values():
@@ -1088,6 +1095,11 @@ class PracticeNodes:
             node.stage = kept.stage
             node.data = dict(kept.facts)
             self.hold(node)
+
+
+def _where_it_sits(node: Node) -> tuple:
+    """Where node sits: its file, its lines, then its id, which tells apart two nodes on one line."""
+    return (node.source.file or "", node.source.start_line, node.source.end_line, node.node_id)
 
 
 def _inside(node: Node, spans: dict[str, list[tuple[int, int]]]) -> bool:
@@ -1285,16 +1297,15 @@ class Graph:
 
     def _restore_links(self, saved: SavedPractice) -> None:
         """Read back the edges and violations a saved graph kept for a practice, once every practice's nodes are back.
-        An edge's parent and a violation's node are most often the practice's own, so it looks there first."""
+        An edge's parent and a violation's node are most often the practice's own, so it looks there first. Each edge
+        is recorded as it was saved and no other way: a practice that links its nodes to another's records the edge
+        back itself when it wants one, so the graph read back holds exactly the edges the build that saved it held."""
         own = self._held[saved.name].in_graph
         for kept in saved.edges:
             parent = own.node(kept.parent) or self.node(kept.parent)
             child = own.node(kept.child) or self.node(kept.child)
             if parent is not None and child is not None:
-                edge_type = EdgeType(kept.kind, kept.order, kept.display)
-                self.record(edge_type, parent, child)
-                if parent.practice is not child.practice:
-                    self.record(edge_type, child, parent)
+                self.record(EdgeType(kept.kind, kept.order, kept.display), parent, child)
         for violation in saved.violations:
             node = own.node(violation.node_id) or self.node(violation.node_id)
             if node is not None:
@@ -1531,6 +1542,8 @@ class Graph:
         for overlay in self.pattern_overlays:
             overlay.read(self)
         self._offer_overlay_types()
+        for practice in self.practices.values():
+            practice.in_graph.put_in_source_order()
         for practice in self.practices.values():
             practice.in_graph.check()
 

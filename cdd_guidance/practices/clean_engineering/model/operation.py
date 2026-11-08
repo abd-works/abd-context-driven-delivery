@@ -86,6 +86,12 @@ class Operation(InvariantHolder, OoadNode):
     def is_constructor(self) -> bool:
         """True for the operation that builds its class: `__init__` or `constructor`."""
         return self.name in CONSTRUCTOR_NAMES
+
+    @property
+    def body_text(self) -> str:
+        """The statements of its body. They save with the graph, so a rule that compares bodies reads the same text from
+        an operation read now and from one read back from a saved graph."""
+        return self.body.text
     graph_facts = (
         "line_count",
         "max_control_flow_depth",
@@ -110,6 +116,9 @@ class Operation(InvariantHolder, OoadNode):
         "bold_invariant_lines",
         "owner",
         "packed_parameters",
+        "return_type",
+        "value_type",
+        "body_text",
     )
 
     def __init__(
@@ -138,6 +147,8 @@ class Operation(InvariantHolder, OoadNode):
         self.span = SourceText("")
         self.constructed_types: list[tuple[str, int]] = []
         self._is_property = False
+        # The class that declares it, once kept (keep_owner).
+        self._declared_by = ""
         # A property's setter, such as Python's `@total.setter`; a getter is `is_property`.
         self.is_setter = False
         self.is_static = False
@@ -204,7 +215,12 @@ class Operation(InvariantHolder, OoadNode):
     def owner(self) -> str:
         """The name of the class that declares this operation; ``_module`` for a module function; empty before a class holds it."""
         parent = self.parent
-        return parent.name if isinstance(parent, OoadNode) and parent.declares(self) else ""
+        return parent.name if isinstance(parent, OoadNode) and parent.declares(self) else self._declared_by
+
+    def keep_owner(self) -> None:
+        """Keep the class that declares this operation as its owner from now on: a graph's tree may hang it under a group
+        of its class's members, and its owner, which saves with the graph, stays the class."""
+        self._declared_by = self.owner
 
     @property
     def parameters(self) -> List[Parameter]:

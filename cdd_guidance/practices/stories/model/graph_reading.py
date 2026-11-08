@@ -12,7 +12,7 @@ from harness.graph.skipped_folders import scanned_files
 from harness.guidance.guidance import PracticeGuidance
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
-_FUNCTION_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b")
+_STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
 
 
 def align_story_node(node) -> None:
@@ -78,13 +78,14 @@ class StoriesReading:
 class StoryLinks:
     """The edges between the Stories practice and Clean Engineering: a step invokes the operations it calls, an epic
     uses the modules those operations sit in, and an example demonstrates the classes it names and retrieves the
-    properties it reads. Each is read from the text of the files the story map Stories recorded was read from."""
+    properties it reads. Each is read from the facts every step and example saves with the graph (its body's text, the
+    names its source holds) and from the graph's own edges, never from the parsed object behind a node: a refresh in a
+    worker process holds the steps and examples it did not read again as plain nodes, and links them the same way."""
 
     def __init__(self, stories: PracticeGuidance, clean: PracticeGuidance) -> None:
         self.stories = stories
         self.clean = clean
         self.graph = stories.graph
-        self.texts: dict[str, str] = stories.recorded_map.source_texts
 
     @cached_property
     def operations(self) -> dict[str, list]:
@@ -105,14 +106,13 @@ class StoryLinks:
         return self.stories.in_graph.nodes("Example")
 
     def link(self) -> None:
-        steps = [node for node in self.stories.in_graph.nodes() if node.type in {"Step", "Given", "When", "Then"}]
+        steps = [node for node in self.stories.in_graph.nodes() if node.type in _STEP_TYPES]
         for index, step in enumerate(steps, start=1):
             self.graph.report_progress(f"stories · steps · {index}/{len(steps)} · {step.name}")
             self._link_step(step)
-        sources = self._function_sources()
         for index, example in enumerate(self.examples, start=1):
             self.graph.report_progress(f"stories · examples · {index}/{len(self.examples)} · {example.name}")
-            self._link_example(example, sources.get(example.name, ""))
+            self._link_example(example)
 
     def _link_step(self, step) -> None:
         body = self._step_body(step)
@@ -131,20 +131,22 @@ class StoryLinks:
                 if re.search(rf"\b{re.escape(example.name)}\b", body):
                     self.graph.link("observes", step, example, "relationship")
 
-    def _link_example(self, example, text: str) -> None:
+    def _link_example(self, example) -> None:
+        names = set(example.get_fact("source_names") or [])
+        reads = set(example.get_fact("source_reads") or [])
         for class_node in self.clean.in_graph.nodes("OoadClass"):
-            if re.search(rf"\b{re.escape(class_node.name)}\b", text):
+            if class_node.name in names:
                 self.graph.link("demonstrates", example, class_node, "grouped")
                 self.graph.link("demonstrates", class_node, example, "grouped")
                 self.graph.link("demonstratedThrough", class_node, example, "relationship")
         for prop in self.clean.in_graph.nodes("Property"):
-            if re.search(rf"\.{re.escape(prop.name)}\b", text):
+            if prop.name in reads:
                 self.graph.link("retrievedUsing", example, prop, "relationship")
                 self.graph.link("retrievedUsing", prop, example, "relationship")
 
     def _step_body(self, step) -> str:
         """The step's own text and the body its story test gives it."""
-        return f"{step.name}\n{step.body.text}"
+        return f"{step.name}\n{step.get_fact('body_text') or ''}"
 
     def _module_of(self, operation):
         """The Clean Engineering module that holds the operation: the nearest module above it in the graph."""
@@ -153,23 +155,9 @@ class StoryLinks:
             owner = self.graph.direct_parent(owner)
         return owner
 
-    def _function_sources(self) -> dict[str, str]:
-        """Each declared ``function name`` in the TypeScript the story map was read from, mapped to the first file's
-        text that declares it."""
-        sources: dict[str, str] = {}
-        for file, text in sorted(self.texts.items()):
-            if not file.endswith(".ts"):
-                continue
-            for name in _FUNCTION_DECLARATION.findall(text):
-                sources.setdefault(name, text)
-        return sources
-
     def _epic_for(self, step):
-        """The top-level epic whose tree holds the step; None for a step on no epic."""
-        from cdd_guidance.practices.stories.model.story_model import Epic
-
-        node = step.parent
-        while node is not None and not (isinstance(node, Epic) and not isinstance(node.parent, Epic)):
-            node = node.parent
+        """The top-level epic whose tree holds the step, found up the graph's own edges; None for a step on no epic."""
+        node = self.graph.direct_parent(step)
+        while node is not None and node.type != "Epic":
+            node = self.graph.direct_parent(node)
         return node
-
