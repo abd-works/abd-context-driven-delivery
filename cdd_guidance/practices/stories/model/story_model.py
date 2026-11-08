@@ -93,11 +93,11 @@ class StoryNode(ModelNode, ABC):
         re.IGNORECASE,
     )
 
-    @classmethod
-    def practice_kind(cls) -> type:
-        from cdd_guidance.practices.stories.stories import Stories
-
-        return Stories
+    @property
+    def slug(self) -> str:
+        """The node's name as a cell id or a folder spells it, `place-order`; `node` for a node whose name has no
+        letters."""
+        return Name(self.name).title_slug or "node"
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None):
         super().__init__(name, sequential_order, graph)
@@ -465,6 +465,8 @@ def _steps_key(steps: List["Step"]) -> tuple:
 
 class Background(StoryNode):
     _semantic_type_name = "Background"
+    step_type = Step
+    """The step type this format's backgrounds are made of; a copy of a background makes its steps through it."""
 
     def __init__(self, name: "str | Background" = "background", sequential_order: int = 1) -> None:
         source = name if isinstance(name, Background) else None
@@ -477,7 +479,7 @@ class Background(StoryNode):
         if source is not None:
             self.take_code_from(source)
             for step in source.steps:
-                self._steps.append(Step(step))
+                self._steps.append(type(self).step_type(step))
 
     @property
     def steps(self) -> List["Step"]:
@@ -525,6 +527,10 @@ class Scenario(StoryNode):
     """
 
     _semantic_type_name = "Scenario"
+    step_type = Step
+    background_type = Background
+    """The step and background types this format's scenarios are made of; a copy of a scenario makes its parts
+    through them."""
 
     def __init__(
         self,
@@ -547,9 +553,9 @@ class Scenario(StoryNode):
         if source is not None:
             self.take_code_from(source)
             for background in source.backgrounds:
-                self.backgrounds.append(Background(background))
+                self.backgrounds.append(type(self).background_type(background))
             for step in source.steps:
-                self.steps.append(Step(step))
+                self.steps.append(type(self).step_type(step))
 
     @property
     def backgrounds(self) -> List[Background]:
@@ -876,6 +882,7 @@ class Epic(StoryNode):
 class Story(StoryNode):
     _semantic_type_name = "Story"
     scenario_type = Scenario
+    background_type = Background
 
     def __init__(
         self,
@@ -898,7 +905,7 @@ class Story(StoryNode):
             return
         self.take_code_from(source)
         for background in source.backgrounds:
-            self.backgrounds.append(Background(background))
+            self.backgrounds.append(type(self).background_type(background))
         for scenario in source.scenarios:
             self.scenarios.append(type(self).scenario_type(scenario))
 
@@ -1004,6 +1011,10 @@ class StoryModel(StoryNode):
         if isinstance(source, StoryModel):
             self._copy_map(source)
 
+    def copy_of(self, canonical: "StoryModel") -> "StoryModel":
+        """canonical copied into this format's node types, so this format's nodes write it."""
+        return type(self)(canonical)
+
     @property
     def epics(self) -> List[Epic]:
         return self._epics
@@ -1102,15 +1113,3 @@ class _StoryCopies:
     def delivered_by(self, increment: Increment) -> List["Story"]:
         """The copies of the stories increment delivers."""
         return [self._copies[id(story)] for story in increment.stories if id(story) in self._copies]
-
-
-STORY_MAP_SUFFIXES = (".md", ".drawio")
-
-
-def is_story_map_file(path) -> bool:
-    """A story map is a markdown or drawio file named story-map (or story_map), alone or after a prefix."""
-    from pathlib import Path
-
-    path = Path(path)
-    stem = Name(path.stem).title_slug
-    return path.suffix.lower() in STORY_MAP_SUFFIXES and (stem == "story-map" or stem.endswith("-story-map"))

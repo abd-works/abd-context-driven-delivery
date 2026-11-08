@@ -18,9 +18,6 @@ from functools import cached_property
 from pathlib import Path
 from typing import ClassVar
 
-# The CDD checkout this hook runs from: its installed toolsets are the code the hook server runs, so their @Toast annotations
-# are read from here whichever project the event came from.
-_CDD_CHECKOUT = Path(__file__).resolve().parents[2]
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.annotations.name import Name
@@ -119,13 +116,14 @@ class PromptNotify:
 
     @cached_property
     def echo_toolsets(self) -> list:
-        """The toolsets the CDD checkout defines, whose @Toast annotations say which tool calls toast; loaded once by the
+        """The toolsets the CDD checkout this hook runs from defines, the code the hook server runs, whose @Toast
+        annotations say which tool calls toast whichever project the event came from; loaded once by the
         hook server's one notifier. A toolset that fails to load raises, so a broken toolset is seen rather than silently
         not toasting."""
         from harness.agent_tools.agent_tools import AgentToolSet
         from harness.installation.repository_toolsets import RepositoryToolsets
 
-        return AgentToolSet.from_items(RepositoryToolsets(_CDD_CHECKOUT).collect())
+        return AgentToolSet.from_items(RepositoryToolsets.of_running_checkout().collect())
 
     def show_toast(self, toast: str, workspace_roots: list[Path]) -> list[Path]:
         """Show toast in every workspace folder of the chat it is for, the toast files written. The hook server hands

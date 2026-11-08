@@ -15,7 +15,6 @@ class Format:
     _SHORT_NAMES = {"markdown": "md", "python": "py", "typescript": "ts", "javascript": "js"}
     _NAMES_BY_SHORT_NAME = {short: name for name, short in _SHORT_NAMES.items()}
     CODE = frozenset({"python", "typescript", "java", "javascript"})
-    KNOWN = frozenset({"markdown", *CODE, "drawio", "miro", "html", "json"})
     TEMPLATED = frozenset({"markdown", *CODE})
     # The groups a person picks formats by, in the order an action bar offers them: a diagram, the markdown, or the
     # code. Any other format is a group of its own, under its own name.
@@ -48,11 +47,6 @@ class Format:
     def extension(self) -> str:
         """The extension a file in this format ends with, `.md` for `markdown`; empty when no format was given."""
         return f".{self.short}" if self._name else ""
-
-    @property
-    def is_known(self) -> bool:
-        """Whether CDD writes artifacts in this format; a folder or extension that is not one is not a format."""
-        return self._name in self.KNOWN
 
     @property
     def is_code(self) -> bool:

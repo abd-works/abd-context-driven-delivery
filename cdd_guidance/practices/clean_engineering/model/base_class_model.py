@@ -127,17 +127,13 @@ class OoadNode(ModelNode):
         ("Invariant", "Property"),
     }
 
-    @classmethod
-    def practice_kind(cls) -> type:
-        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-
-        return CleanEngineering
-
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
 
     def translate_from(self, source: "OoadNode") -> None:
-        if self.semantic_type() != source.semantic_type():
+        """Become source, which is this node's kind or a kind built on it, such as a DDD entity for a class."""
+        kinds = {getattr(kind, "_semantic_type_name", None) for kind in type(source).__mro__}
+        if self.semantic_type() not in kinds:
             raise TranslationError(
                 f"Cannot translate from {source.semantic_type()} into {self.semantic_type()}"
             )

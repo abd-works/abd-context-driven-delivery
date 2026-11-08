@@ -29,6 +29,8 @@ import harness.guidance.guidance as guidance_module
 from cdd_guidance.actions.validate.graph_json_reader import violations_from_graph_json_files
 from cdd_guidance.actions.validate.checked_graph import CheckedGraph, PathsNotFoundError
 from cdd_guidance.actions.validate.validate import Validate
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 
 _SAMPLE = _REPO_ROOT / "harness" / "graph" / "_examples" / "input"

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio import Drawio
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
@@ -103,3 +104,6 @@ class CleanEngineering(GraphReading, PracticeGuidance):
             tools(self.drawio.render())
         return "Artifact written under {session.path}/."
     
+
+
+OoadNode.register_practice(CleanEngineering)

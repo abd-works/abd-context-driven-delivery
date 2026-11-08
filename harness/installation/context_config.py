@@ -63,26 +63,12 @@ class ContextConfig:
         self.save(configuration)
         return configuration
 
-    def guidelines(self) -> dict[str, str]:
-        return self._names_to_values("guidelines")
-
-    def practice_folders(self) -> dict[str, str]:
-        return self._names_to_values("practice_folders")
-
     def guideline(self, pattern: str) -> str:
         """Whether the guideline named pattern is ``enabled`` or ``disabled``; empty when the project names none."""
         return (self._value_named("guidelines", pattern) or "").casefold()
 
     def practice_folder(self, practice: str) -> str | None:
         return self._value_named("practice_folders", practice)
-
-    def set_guidelines(self, guidelines: Mapping[str, str] | str) -> dict[str, Any]:
-        """Set guidelines, given as a mapping or as ``name: value`` lines."""
-        return self.update(guidelines=self._as_names_to_values(guidelines))
-
-    def set_practice_folders(self, folders: Mapping[str, str] | str) -> dict[str, Any]:
-        """Set practice folders, given as a mapping or as ``name: folder`` lines."""
-        return self.update(practice_folders=self._as_names_to_values(folders))
 
     def _value_named(self, section: str, name: str) -> str | None:
         wanted = self._match_key(name)
@@ -93,9 +79,7 @@ class ContextConfig:
 
     def _names_to_values(self, section: str) -> dict[str, str]:
         value = self.load().get(section)
-        return self._as_names_to_values(value) if isinstance(value, Mapping) else {}
-
-    def _as_names_to_values(self, given: Mapping[str, Any] | str) -> dict[str, str]:
-        pairs = (line.split("#", 1)[0].split(":", 1) for line in given.splitlines()) if isinstance(given, str) else given.items()
-        found = ((str(pair[0]).strip(), str(pair[1]).strip()) for pair in pairs if len(pair) == 2)
-        return {name: value for name, value in found if name and value}
+        if not isinstance(value, Mapping):
+            return {}
+        found = ((str(name).strip(), str(given).strip()) for name, given in value.items())
+        return {name: given for name, given in found if name and given}

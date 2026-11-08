@@ -151,7 +151,6 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         the file viewer" request for it."""
         super().__init__(source, graph)
         self.screen_map = self._screen_map(ux_map)
-        self.screens = list(self.screen_map.screens)
         self.sources = dict(sources or {})
         self.canvas = DesignCanvas(self.name if self.name and self.name != "StoryModel" else "Story Map",
                                    Path(workspace) / "project" if workspace else None)
@@ -207,7 +206,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
     def _stories_shown_on(self, name: str) -> List[str]:
         """The stories whose screen is this artboard: the story-level edges of the screens that prototype it."""
         found: List[str] = []
-        for screen in self.screens:
+        for screen in self.screen_map.screens:
             if screen.prototype and Path(screen.prototype).name == Path(name).name:
                 found += [story for story in screen.story_keys if story not in found]
         return found
@@ -276,8 +275,8 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
     def _thumbnails(self, story: ClaudeDesignStory, left: int, top: int, explorer_href: str) -> List[str]:
         """Under each story, its main screens, up to ``screens_per_story``, in the order the UX map lists them: the UX map
         names each story's main page first. Each opens the story explorer at the step it was captured on."""
-        shown = story.shown_screens(self.screens)
-        listed = {id(screen): index for index, screen in enumerate(self.screens)}
+        shown = story.shown_screens(self.screen_map.screens)
+        listed = {id(screen): index for index, screen in enumerate(self.screen_map.screens)}
         shown.sort(key=lambda found: listed.get(id(found[2]), len(listed)))
         cells = []
         for row, (scenario, step, screen) in enumerate(shown[: self.screens_per_story]):
@@ -316,7 +315,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
             for step in _steps_of(scenario):
                 indent = "    " if step.keyword in ("And", "But") else ""
                 waiting.append(f"{indent}{step.keyword} {step.text}")
-                shown = [screen for screen in shown_on(step, self.screens) if not self._blank(screen)]
+                shown = [screen for screen in shown_on(step, self.screen_map.screens) if not self._blank(screen)]
                 prototype = prototype or next((stem(s.prototype) for s in shown if s.prototype), "")
                 if shown:
                     groups.append({"x": "\n".join(waiting), "i": [f"../{s.image}" for s in shown if s.image]})
@@ -337,7 +336,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
     def _screen_of(self, scenario, story: ClaudeDesignStory) -> tuple:
         """A scenario whose steps show no screen shows its own ``shownOn`` screen, else its story's:
         that screen's prototype, else its screenshot."""
-        own = shown_on(scenario, self.screens) or shown_on(story, self.screens)
+        own = shown_on(scenario, self.screen_map.screens) or shown_on(story, self.screen_map.screens)
         prototype = next((stem(screen.prototype) for screen in own if screen.prototype), "")
         image = next((screen.image for screen in own if screen.image and not self._blank(screen)), "")
         return prototype, image

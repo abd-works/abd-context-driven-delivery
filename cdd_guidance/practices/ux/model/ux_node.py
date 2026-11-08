@@ -25,12 +25,6 @@ class UxNode(ModelNode):
         ("Interaction", "StoryDemoControl"),
     }
 
-    @classmethod
-    def practice_kind(cls) -> type:
-        from cdd_guidance.practices.ux.ux import Ux
-
-        return Ux
-
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
 

@@ -11,16 +11,12 @@ from __future__ import annotations
 
 from functools import cached_property
 from pathlib import Path
-from typing import ClassVar
 
 from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.schema_edges import SchemaKey
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.schema import Schema
 
-_ROOT = Path(__file__).resolve().parents[2]
-_PRACTICES_ROOT = _ROOT / "cdd_guidance" / "practices"
-_PATTERNS_ROOT = _ROOT / "cdd_guidance" / "patterns"
 # Fields every schema type may carry that describe the type itself, not a relationship.
 _TYPE_FIELDS = frozenset({"is", "fidelity", "name", "path"})
 
@@ -29,8 +25,9 @@ class PracticeSchema:
     """One practice's schema with the applied patterns' schemas on top: which rules each node type carries, which type
     of the extended practice it is, and the fidelities that create it."""
 
-    # One schema per practice class and overlays: a practice's schema is the same whichever graph holds it.
-    _loaded: ClassVar[dict[tuple[type, tuple[GraphOverlay, ...]], PracticeSchema]] = {}
+    # Each practice holds its own schemas, one per set of overlays, so a schema reads only the practice it was made for,
+    # never another session's practice of the same class.
+    _HELD_AS = "_practice_schemas"
 
     def __init__(self, practice: PracticeGuidance, overlays: tuple[GraphOverlay, ...] = ()) -> None:
         self.guidance = practice
@@ -40,11 +37,12 @@ class PracticeSchema:
 
     @classmethod
     def load(cls, practice: PracticeGuidance, overlays: tuple[GraphOverlay, ...] = ()) -> PracticeSchema:
-        """The schema of practice with the patterns' overlays applied; each is read once per process."""
-        key = (type(practice), tuple(overlays))
-        if key not in cls._loaded:
-            cls._loaded[key] = cls(practice, tuple(overlays))
-        return cls._loaded[key]
+        """The schema of practice with the patterns' overlays applied, made once and held by practice itself."""
+        held: dict[tuple[GraphOverlay, ...], PracticeSchema] = vars(practice).setdefault(cls._HELD_AS, {})
+        key = tuple(overlays)
+        if key not in held:
+            held[key] = cls(practice, key)
+        return held[key]
 
     @cached_property
     def types(self) -> frozenset[str]:
@@ -132,7 +130,7 @@ class PracticeSchema:
 
     @cached_property
     def _base(self) -> Schema:
-        return Schema.load(_PRACTICES_ROOT / self.practice / "model" / "schema.yaml")
+        return self.guidance.schema_types
 
     @cached_property
     def _overlay_schemas(self) -> list[Schema]:
@@ -143,7 +141,7 @@ class PracticeSchema:
         return [Schema.load(path) for path in self._overlay_files("rules.yaml")]
 
     def _overlay_files(self, name: str) -> list[Path]:
-        found = (_PATTERNS_ROOT / overlay.name / "practices" / self.practice / "model" / name for overlay in self.overlays)
+        found = (overlay.pattern.module_dir / "practices" / self.practice / "model" / name for overlay in self.overlays)
         return sorted(path for path in found if path.is_file())
 
     @cached_property

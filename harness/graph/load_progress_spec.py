@@ -7,6 +7,7 @@ from mamba import before, context, description, it
 
 from harness.agent_tools.progress import reporting_to
 from harness.graph.graph import Graph
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 _SAMPLE = Path(__file__).resolve().parent / "_examples" / "input"
 _PRACTICES = ["clean_engineering", "stories", "ddd", "bdd", "ux"]

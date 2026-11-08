@@ -88,7 +88,7 @@ def _aggregate(aggregate):
         [item.name for item in aggregate.root.operations],
         _integrations(aggregate),
         [(event.name, [item.name for item in event.consumers]) for event in aggregate.events],
-        [_card(card) for card in aggregate.cards],
+        [_card(card) for card in aggregate.classes],
     )
 
 
@@ -115,7 +115,7 @@ def _drawn_map(model):
 
 def _drawn_model(model):
     return [
-        (item.name, [(a.name, a.root.name, [_drawn_card(card) for card in a.cards]) for a in item.aggregates])
+        (item.name, [(a.name, a.root.name, [_drawn_card(card) for card in a.classes]) for a in item.aggregates])
         for item in model.contexts
     ]
 

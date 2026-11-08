@@ -42,10 +42,7 @@ with description("a format") as self:
         with it("should be picked in the diagram group, which comes first"):
             expect((Format("drawio").group, Format("drawio").group_order)).to(equal(("diagram", 0)))
 
-    with description("that CDD does not write"):
-        with it("should not be known"):
-            expect(Format("sub").is_known).to(equal(False))
-
+    with description("that is in no group"):
         with it("should be a group of its own, after the others"):
             expect((Format("sub").group, Format("sub").group_order)).to(equal(("sub", 3)))
 

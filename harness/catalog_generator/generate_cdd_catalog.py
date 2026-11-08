@@ -18,10 +18,10 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
-    _p = str(_REPO_ROOT / _cat)
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+
+from harness.installation.repository_toolsets import RepositoryToolsets  # noqa: E402
+
+RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
 from harness.catalog_generator.catalog_generator import Catalog, GitCitation
 
@@ -51,6 +51,9 @@ def main(argv: list[str] | None = None) -> None:
         help="overlay a named brand onto an existing catalog without regenerating",
     )
     args = parser.parse_args(argv)
+    # Loading the checkout's toolsets imports the packages that register its practices and actions, as the cdd server
+    # does, so the catalog shows them.
+    RepositoryToolsets(_REPO_ROOT).classes()
 
     citation = GitCitation.from_checkout(_REPO_ROOT)
     repo_url = args.repo_url or citation.repo_url
