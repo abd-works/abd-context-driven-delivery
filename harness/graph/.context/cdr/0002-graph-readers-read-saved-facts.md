@@ -8,6 +8,9 @@ A worker refresh (CDR 0001) starts from the graph the server holds, which is a *
 - UX's `StoryLink` asked a Stories node for `semantic_type()` and `text`, which a node read back from a saved graph has not.
 - Step ids and the near-copy rule used `hash`, which Python salts per process, so the worker and the server named one step two ways.
 - Reading a saved graph back recorded every edge between two practices a second time, reversed, so a graph read back held edges no build made.
+- A Clean Engineering property's `owner` was worked out from its parent, which the explorer tree changes to the group it hangs the property under, so the graph saved it as empty and BDD linked observations to members a fresh build had ruled out as shared by several classes.
+- A refresh held the nodes it read again after those it kept, so a rule that reports the first of two nodes (the original of two duplicate bodies) reported the other one.
+- A refresh named classes by a text match over every file it did not read again, and kept the imports of those files on the practice's root, which a fresh build never does.
 
 Whether a validate failed depended on which practices other chats had loaded into the shared session graph first.
 
@@ -23,7 +26,7 @@ Anything a reader needs from the parsed object is a saved fact: the model class 
 
 A practice that builds its own nodes from another practice's parsed objects, as DDD builds a building block from each Clean Engineering class, builds them only from `practice.in_graph.nodes_read_now(type)` and keeps the nodes it built before (CDR 0001); that is the one reader of parsed objects, and it reads only objects the load in progress parsed.
 
-Any id or checksum that a saved graph keeps or that decides a finding is computed with `zlib.crc32`, never `hash`. A saved graph is read back exactly: each edge as it was saved, no other way. The saved shape is now 3, so a graph saved without the new facts is read from the folder again.
+Any id or checksum that a saved graph keeps or that decides a finding is computed with `zlib.crc32`, never `hash`. A saved graph is read back exactly: each edge as it was saved, no other way. Every build puts each practice's nodes in source order before the rules run (`put_in_source_order`). A member keeps the class that declares it as its owner (`keep_owner`) before the tree regroups it. Clean Engineering links property types and return types in one pass after every class is added, over every member it holds, and a refresh reads no file of a folder the practice already holds. The saved shape is now 3, so a graph saved without the new facts is read from the folder again.
 
 ## Considered options
 

@@ -16,7 +16,7 @@ So a build that a chat's call asks for runs in a worker process. The graph write
 - A full load's worker saves `graph.json` itself (`BuildOrder.saves`), so the server never serialises the graph it built a second time. Opening a session reads its saved graph back with the violations it was saved with and runs no build; its rules run again on the next load or refresh.
 - A practice that builds its own nodes from another practice's takes them from `practice.in_graph.nodes_read_now(type)`, the nodes the build in progress read. In a worker, or in a graph opened from its saved graph, every other node is a plain restored node, so DDD builds its building blocks from the classes Clean Engineering read now and keeps the blocks it built before for every other file.
 - `Graph._builds`, the process-wide one-build-at-a-time semaphore, is deleted: builds of several sessions run in separate worker processes at once.
-- A refresh sends the graph it holds to the worker and gets the whole graph back, so a small refresh costs the worker's start (a few seconds) on top of the rules it runs again.
+- A small refresh costs the worker's start (a few seconds) on top of the rules it runs again. What the server itself does for a refresh is settled in CDR 0003: the order names the worker's last answer, and the worker answers only what the refresh changed.
 
 ## Kept as they are, and why
 

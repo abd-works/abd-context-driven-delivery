@@ -152,34 +152,38 @@ class GraphReading:
         return Module(name=file.name, sequential_order=1)
 
     def _unparsed_declaring_files(self, files: list[Path]) -> list[Path]:
-        """The source files outside an edited-file scope, whose class names a type hint may still name.
+        """The source files outside an edited-file scope, whose class names a type hint may still name, in folders the
+        practice holds nothing read from.
 
         The scope's own files are parsed and their classes named by the parse. Names in the other files come from a
-        text match, so reading the files the scope leaves out stays cheap.
+        text match, so reading the files the scope leaves out stays cheap. A refresh holds every other folder as it was
+        read, its classes parsed and its imports on its module, so it reads none of them again: a text match would name
+        more than the parse did, and a refresh would then link and check what a fresh build does not.
         """
         if self.graph.edited_files() is None:
             return []
         parsed = set(files)
-        return [path for path in scanned_files(self._source_root, self.readable_suffixes) if path not in parsed]
+        held = {node.source.file for kind in ("Module", "Package") for node in self.in_graph.nodes(kind)}
+        return [
+            path
+            for path in scanned_files(self._source_root, self.readable_suffixes)
+            if path not in parsed and path.parent.relative_to(self._source_root).as_posix() not in held
+        ]
 
     def _read_unparsed(self, files: list[Path]) -> set[str]:
-        """The class names the files outside the scope declare, of the files whose classes the practice does not hold
-        already: a refresh holds the classes it does not read again, parsed when they were read, and a text match would
-        name more than the parse did. The practice's root keeps the class names each of their production files imports,
-        by the module that holds the file, so the deep-module rule sees the callers that make a class public even when
-        the scope leaves them out."""
+        """The class names the files outside the scope declare. The practice's root keeps the class names each of their
+        production files imports, by the module that holds the file, so the deep-module rule sees the callers that make
+        a class public even when the scope leaves them out."""
         names: set[str] = set()
         importers: dict[str, set[str]] = {}
         owners: dict[Path, str] = {}
-        held = {node.source.file for node in self.in_graph.nodes("OoadClass")}
         for index, file in enumerate(files, start=1):
             self.graph.report_progress(f"clean_engineering · class names · {index}/{len(files)} · {file.name}")
             try:
                 text = file.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError):
                 continue
-            if file.relative_to(self._source_root).as_posix() not in held:
-                names.update(_CLASS_NAMES.findall(text))
+            names.update(_CLASS_NAMES.findall(text))
             if is_test_code(file.relative_to(self._source_root).as_posix()):
                 continue
             if file.parent not in owners:

@@ -2,6 +2,7 @@
 interpreter keeps answering every other chat, and the graph then holds what a build in the server would have made. The
 call says where its build runs; a call made in process builds in its own process."""
 
+import json
 import shutil
 import tempfile
 from pathlib import Path
@@ -73,15 +74,33 @@ def _class_names(graph: Graph) -> list[str]:
     return sorted(node.name for node in graph.practice("clean_engineering").in_graph.nodes("OoadClass"))
 
 
+class _CountingTakes(Graph):
+    """A graph that counts the worker answers it took as changes, not as a whole graph read back."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.takes = 0
+
+    def _take(self, changes) -> None:
+        self.takes += 1
+        super()._take(changes)
+
+
 def _practice_state(graph: Graph, key: str) -> dict:
-    """One practice's nodes where they sit, its edges, and its violations, as a build leaves them."""
+    """One practice's nodes where they sit with their facts, its edges, and its violations, as a build leaves them."""
     part = graph.practice(key).in_graph
     found = part.nodes()
     return {
-        "nodes": sorted((node.node_id, node.type, node.source.file, node.source.start_line, node.source.end_line) for node in found),
+        "nodes": sorted((node.node_id, node.type, node.source.file, node.source.start_line, node.source.end_line, _facts(node)) for node in found),
+        "root": _facts(part.root),
         "edges": sorted((edge.kind, edge.parent.node_id, edge.child.node_id) for edge in part.edges()),
         "violations": sorted((violation.rule, violation.node_id, violation.message) for node in found for violation in node.rules.violations),
     }
+
+
+def _facts(node) -> str:
+    """The node's facts as the saved graph writes them."""
+    return json.dumps(node.facts, sort_keys=True)
 
 
 def _states_after_each_refresh(refreshed: dict[str, Graph], key: str) -> dict[str, dict]:
@@ -248,6 +267,21 @@ with description("a graph built for a chat's call"):
 
             with it("should give UX what a fresh build gives it, whichever practice's file it refreshed"):
                 expect(_states_after_each_refresh(self.refreshed, "ux")).to(equal(_each_file(self.fresh["ux"])))
+
+        # Validators refresh one session graph one after another. Each order after the first names the worker's last
+        # answer instead of the server writing its graph out, and the server takes back only what the refresh changed.
+        with context("that is refreshed in a worker with each practice's file in turn"):
+            with before.all:
+                self.chained = _CountingTakes()
+                self.chained.open_saved(self.every)
+                for file in _READ_BY_EACH_PRACTICE:
+                    self.chained.refresh([file], _FROM_A_CHAT)
+
+            with it("should take each refresh after the first as the changes its worker answers"):
+                expect(self.chained.takes).to(equal(len(_READ_BY_EACH_PRACTICE) - 1))
+
+            with it("should hold every practice as a fresh build gives it"):
+                expect({key: _practice_state(self.chained, key) for key in _EVERY_PRACTICE}).to(equal(self.fresh))
 
     with context("whose worker reports its progress"):
         with before.all:

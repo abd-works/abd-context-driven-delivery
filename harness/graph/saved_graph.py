@@ -294,6 +294,118 @@ class SavedGraphFile:
         return saved
 
 
+class PracticeChanges:
+    """How one practice of a graph changed in a build, by saved records: the nodes it no longer holds, the nodes it
+    holds new or changed, the edges kept on it that went or changed, the edges new or changed, each node whose
+    violations changed with the violations it has now, and the facts about the practice as a whole when they changed."""
+
+    def __init__(
+        self,
+        dropped_nodes: list[str],
+        nodes: list[SavedNode],
+        dropped_edges: list[tuple[str, str, str]],
+        edges: list[SavedEdge],
+        violations: dict[str, list[Violation]],
+        root_facts: dict | None,
+    ) -> None:
+        self.dropped_nodes = dropped_nodes
+        self.nodes = nodes
+        self.dropped_edges = dropped_edges
+        self.edges = edges
+        self.violations = violations
+        self.root_facts = root_facts
+
+    @classmethod
+    def between(cls, before: SavedPractice, after: SavedPractice) -> PracticeChanges:
+        old_nodes = {node.node_id: node.record for node in before.nodes}
+        new_nodes = {node.node_id: node for node in after.nodes}
+        old_edges = {_edge_key(edge): edge.record for edge in before.edges}
+        new_edges = {_edge_key(edge): edge for edge in after.edges}
+        changed = [node for node_id, node in new_nodes.items() if old_nodes.get(node_id) != node.record]
+        old_hits = _violations_by_node(before.violations)
+        new_hits = _violations_by_node(after.violations)
+        # A node changed in place is given its violations again, since a node of another type carries other rules.
+        hit_nodes = {node.node_id for node in changed} | {
+            node_id for node_id in set(old_hits) | set(new_hits) if _records(old_hits.get(node_id)) != _records(new_hits.get(node_id))
+        }
+        return cls(
+            [node_id for node_id in old_nodes if node_id not in new_nodes],
+            changed,
+            [key for key, record in old_edges.items() if key not in new_edges or new_edges[key].record != record],
+            [edge for key, edge in new_edges.items() if old_edges.get(key) != edge.record],
+            {node_id: new_hits.get(node_id, []) for node_id in sorted(hit_nodes) if node_id in new_nodes},
+            after.root_facts if after.root_facts != before.root_facts else None,
+        )
+
+    @classmethod
+    def from_record(cls, record: dict) -> PracticeChanges:
+        return cls(
+            [str(node_id) for node_id in record.get("dropped_nodes") or []],
+            [SavedNode.from_record(item) for item in record.get("nodes") or []],
+            [(str(kind), str(parent), str(child)) for kind, parent, child in record.get("dropped_edges") or []],
+            [SavedEdge.from_record(item) for item in record.get("edges") or []],
+            {node_id: [Violation.from_data(item) for item in hits] for node_id, hits in (record.get("violations") or {}).items()},
+            record.get("root_facts"),
+        )
+
+    @property
+    def record(self) -> dict:
+        return {
+            "dropped_nodes": self.dropped_nodes,
+            "nodes": [node.record for node in self.nodes],
+            "dropped_edges": [list(key) for key in self.dropped_edges],
+            "edges": [edge.record for edge in self.edges],
+            "violations": {node_id: [data_of(hit) for hit in hits] for node_id, hits in self.violations.items()},
+            "root_facts": self.root_facts,
+        }
+
+    @property
+    def is_empty(self) -> bool:
+        return not (self.dropped_nodes or self.nodes or self.dropped_edges or self.edges or self.violations or self.root_facts is not None)
+
+
+class GraphChanges:
+    """How a build changed the graph it was given, practice by practice: what a worker answers for a refresh, so the
+    server changes the graph it holds by what the refresh changed instead of reading back the whole graph. A build
+    that changed which practices the graph holds, their roots, or its overlays has no changes to answer (``between``
+    answers none), and its whole graph is read back."""
+
+    def __init__(self, practices: dict[str, PracticeChanges]) -> None:
+        self.practices = practices
+
+    @classmethod
+    def between(cls, before: SavedGraph, after: SavedGraph) -> GraphChanges | None:
+        if set(before.practices) != set(after.practices) or before.overlays != after.overlays:
+            return None
+        if any(before.practices[key].source_root != practice.source_root for key, practice in after.practices.items()):
+            return None
+        return cls({key: PracticeChanges.between(before.practices[key], practice) for key, practice in after.practices.items()})
+
+    @classmethod
+    def from_text(cls, text: str) -> GraphChanges:
+        document = json.loads(text)
+        return cls({key: PracticeChanges.from_record(record) for key, record in (document.get("practices") or {}).items()})
+
+    @property
+    def text(self) -> str:
+        return json.dumps({"practices": {key: changes.record for key, changes in self.practices.items()}}, separators=(",", ":"))
+
+
+def _edge_key(edge: SavedEdge) -> tuple[str, str, str]:
+    return (edge.kind, edge.parent, edge.child)
+
+
+def _violations_by_node(violations: list[Violation]) -> dict[str, list[Violation]]:
+    found: dict[str, list[Violation]] = {}
+    for violation in violations:
+        found.setdefault(violation.node_id, []).append(violation)
+    return found
+
+
+def _records(violations: list[Violation] | None) -> list[dict]:
+    return [data_of(violation) for violation in violations or []]
+
+
 def _read_from(node: Node, files: list[str] | None) -> bool:
     """Whether node was read from one of files, each a file or folder from its practice's source root; every node is
     when no files are named."""

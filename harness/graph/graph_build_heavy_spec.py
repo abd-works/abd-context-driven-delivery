@@ -43,11 +43,11 @@ _CROWD = 20
 _ANSWER_WITHIN_SECONDS = 2
 _BUILD_SECONDS = 900
 _LOADED = '{"message": "Loaded the working copies."}'
-# The files each of the six validators refreshes in the shared graph, from the practices folder: code, specs, a story
-# map, and a module card, so every practice reads a file again.
+# The files each of the six validators refreshes in the shared graph, from the practices folder: code and specs, so
+# every practice that reads the practices folder reads a file again.
 _VALIDATED = (
     ("clean_engineering/model/operation.py", "clean_engineering/rules/class_graph.py"),
-    ("stories/model/story_model.py", "stories/catalog-examples/story_map.md"),
+    ("stories/model/story_model.py", "stories/stories.py"),
     ("ddd/model/nodes.py", "ddd/model/graph_reading.py"),
     ("bdd/model/graph_bdd_model_spec.py", "bdd/model/graph_reading.py"),
     ("ux/model/story_link.py", "ux/model/nodes.py"),
@@ -55,6 +55,8 @@ _VALIDATED = (
 )
 # How many times each validator refreshes its files.
 _ROUNDS = 2
+# What the server answers a call that outlives the seconds it waits for it.
+_STILL_RUNNING = "is still running after"
 
 
 class Pinging:
@@ -164,9 +166,18 @@ class RefreshesWhilePinging:
         async with self.server.chat(self.project, _BUILD_SECONDS) as validator:
             for _round in range(_ROUNDS):
                 started = time.monotonic()
-                result = await validator.call_tool("graph.refresh", arguments={"paths": list(files)})
+                answer = await self._refreshed(validator, files)
                 self.refresh_seconds.append(time.monotonic() - started)
-                self.refresh_results.append(result.content[0].text)
+                self.refresh_results.append(answer)
+
+    async def _refreshed(self, validator, files: tuple[str, ...]) -> str:
+        """The refresh's answer: a call that outlives the seconds the server waits is called again, which waits for the
+        run already going, as an agent does."""
+        while True:
+            result = await validator.call_tool("graph.refresh", arguments={"paths": list(files)})
+            answer = result.content[0].text
+            if _STILL_RUNNING not in answer:
+                return f"{' '.join(files)}: {answer}"
 
 
 def _project(role: str) -> Path:
@@ -233,7 +244,7 @@ with description("the cdd server while several chats refresh the one graph their
         expect(self.probe.loaded).to(equal(_LOADED))
 
     with it("should finish every refresh"):
-        expected = [f'{{"message": "Refreshed {len(files)} files."}}' for files in _VALIDATED for _round in range(_ROUNDS)]
+        expected = [f'{" ".join(files)}: {{"message": "Refreshed {len(files)} files."}}' for files in _VALIDATED for _round in range(_ROUNDS)]
         expect(sorted(self.probe.refresh_results)).to(equal(sorted(expected)))
 
     with it("should be asked while the refreshes run"):
