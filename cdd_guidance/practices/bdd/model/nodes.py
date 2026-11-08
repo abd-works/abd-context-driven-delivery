@@ -17,6 +17,8 @@ _DIRECT_PRIVATE = re.compile(r"(?:result|output|instance|obj|subject|sut|actual|
 _PRIVATE_METHOD_CALL = re.compile(r"(?:result|output|instance|obj|subject|sut|entity)\s*\.\s*_\w+\s*\(")
 _EXPECT = re.compile(r"\bexpect\s*\(")
 _IMPLEMENTATION = re.compile(r"\b(mock|import|require)\b")
+# Shared setup a describe or context runs before its observations: `with before.each:`, `beforeEach(`.
+_SETUP_HOOK = re.compile(r"\bbefore(?:\.each|\.all|Each|All)\b")
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 # A member read that is not a call: `ticketOn(page, OTHER).isLocked`, `stage.actions`.
 _MEMBER_READ = re.compile(r"\.([\w$]+)\b(?!\s*\()")
@@ -73,13 +75,21 @@ class BehaviorNode(ModelNode):
         self.setup = CodeBody()
 
     def load_span_facts(self, span: str) -> None:
-        """Fill the facts this node's own source lines carry, and what its setup reaches: its lines after its own
-        opening line, up to its first child."""
-        self.expect_count = len(_EXPECT.findall(span))
-        self.has_implementation = bool(_EXPECT.search(span) or _IMPLEMENTATION.search(span))
-        self.private_probe = private_probe_in_text(span, self.line or 1)
+        """Fill the facts this node's own lines carry, and what its setup reaches: its lines after its own opening
+        line, up to its first child. A line a child holds is the child's fact, so each hit is found on one node."""
+        own, first_line = self.own_lines(span)
+        self.expect_count = len(_EXPECT.findall(own))
+        self.has_implementation = bool(_EXPECT.search(own) or _IMPLEMENTATION.search(own) or _SETUP_HOOK.search(own))
+        self.private_probe = private_probe_in_text(own, first_line)
+        self.setup_reach = reach_of(self._setup(span))
+
+    def own_lines(self, span: str) -> tuple[str, int]:
+        """The lines this block holds itself, with the number of the first: a describe's or context's setup."""
+        return self._setup(span), (self.line or 1) + 1
+
+    def _setup(self, span: str) -> str:
         first_child = min((child.line for child in self.children_blocks()), default=self.end_line + 1)
-        self.setup_reach = reach_of("\n".join(span.splitlines()[1 : first_child - self.line]))
+        return "\n".join(span.splitlines()[1 : first_child - self.line])
 
     def children_blocks(self) -> list:
         """The contexts and observations nested straight under this block."""
@@ -131,3 +141,7 @@ class Observation(BehaviorNode):
         """An observation also keeps what its whole span reaches, which its realization starts from."""
         super().load_span_facts(span)
         self.reach = reach_of(span)
+
+    def own_lines(self, span: str) -> tuple[str, int]:
+        """An observation holds every line of its span: it has no child."""
+        return span, self.line or 1

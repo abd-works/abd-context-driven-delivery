@@ -317,7 +317,7 @@ class OoadClass(OoadNode):
         if (relationship.kind or "").lower() == "inheritance":
             return
         if (relationship.kind or "").lower() == "dependency":
-            self.depend_on(relationship.target, relationship.label)
+            self._keep_dependency(relationship)
             return
         for prop in self.properties:
             if relationship.target not in domain_type_names(getattr(prop, "type_hint", "") or ""):
@@ -326,9 +326,13 @@ class OoadClass(OoadNode):
 
     def depend_on(self, target: str, label: str) -> None:
         """Record that this class acts on target at run time, labelled by the interaction; the same pair and label once."""
-        if any(item.target == target and item.label == label for item in self.dependencies):
+        self._keep_dependency(Relationship(target=target, kind="dependency", label=label))
+
+    def _keep_dependency(self, dependency: Relationship) -> None:
+        """Keep the dependency as read, with its details; the same target and label once."""
+        if any(item.target == dependency.target and item.label == dependency.label for item in self.dependencies):
             return
-        self.dependencies.append(Relationship(target=target, kind="dependency", label=label))
+        self.dependencies.append(dependency)
 
 
 class Module(OoadNode):

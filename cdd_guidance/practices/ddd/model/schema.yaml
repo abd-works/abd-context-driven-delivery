@@ -85,9 +85,13 @@ aggregate:
       - path: "{aggregate}"
 
 # Tactical DDD rules (CE rules still inherited via is: above).
-entityRoot:
+# An aggregate is named for its folder and holds that folder's domain classes.
+aggregate:
   rules:
     - every-class-carries-ddd-stereotype
+    - domain-concepts-not-technical-names
+entityRoot:
+  rules:
     - domain-concepts-not-technical-names
     - private-method-naming
     - flaccid-data-object-no-behavior
@@ -95,7 +99,6 @@ entityRoot:
     - screen-interface-not-a-domain-object
 entity:
   rules:
-    - every-class-carries-ddd-stereotype
     - domain-concepts-not-technical-names
     - private-method-naming
     - flaccid-data-object-no-behavior
@@ -103,31 +106,27 @@ entity:
     - screen-interface-not-a-domain-object
 valueObject:
   rules:
-    - every-class-carries-ddd-stereotype
     - domain-concepts-not-technical-names
     - private-method-naming
     - no-orphaned-objects
     - screen-interface-not-a-domain-object
 repository:
   rules:
-    - every-class-carries-ddd-stereotype
     - domain-concepts-not-technical-names
     - private-method-naming
     - repository-is-collection-lifecycle
     - load-with-identity-in-hand
 domainService:
   rules:
-    - every-class-carries-ddd-stereotype
     - domain-concepts-not-technical-names
     - private-method-naming
     - service-is-homeless
+    - screen-interface-not-a-domain-object
 factory:
   rules:
-    - every-class-carries-ddd-stereotype
     - domain-concepts-not-technical-names
     - private-method-naming
 specification:
   rules:
-    - every-class-carries-ddd-stereotype
     - domain-concepts-not-technical-names
     - private-method-naming

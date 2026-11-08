@@ -1,3 +1,4 @@
+# <<Entity>>
 class Cart:
     id: str
     bundle: str

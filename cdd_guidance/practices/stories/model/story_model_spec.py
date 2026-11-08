@@ -976,18 +976,14 @@ with description("Story name opening") as self:
     with it("should pass verb-noun-format on an unlisted opening and flag a known non-verb"):
         from cdd_guidance.practices.stories.rules.story_map import VerbNounFormat
 
-        class _Node:
-            type = "Story"
+        from harness.graph.graph import Graph, Node, Source
+        from harness.graph.rule_context import RuleCheckContext
+        from harness.graph.rule_fixture import SchemaRuleRun
 
-            def __init__(self, name, kind):
-                self.name, self._kind = name, kind
+        def _story(name, kind):
+            node = Node(Graph().practice("stories"), "Story", f"stories:Story:{name}", name, Source(".", 1, 1))
+            node.set_fact("opening_class", kind)
+            return SchemaRuleRun(VerbNounFormat(), RuleCheckContext(node.practice, None)).node_hits(node)
 
-            def has_fact(self, key):
-                return key == "opening_class"
-
-            def get_fact(self, key, default=None):
-                return self._kind
-
-        rule = VerbNounFormat()
-        expect(rule.check(_Node("Carry Plan From Marketing Link", "unlisted"), None)).to(equal([]))
-        expect(rule.check(_Node("Customer Login", "actor-noun"), None)).to(have_len(1))
+        expect(_story("Carry Plan From Marketing Link", "unlisted")).to(equal([]))
+        expect(_story("Customer Login", "actor-noun")).to(have_len(1))

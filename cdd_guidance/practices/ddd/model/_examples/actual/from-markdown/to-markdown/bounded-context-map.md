@@ -9,7 +9,7 @@ ShoppingCart
   Discount
 
 Integrations:
-  - Product
+  - Product (by ProductId)
     pattern: Customer/Supplier
     direction: downstream
     crosses: unit price

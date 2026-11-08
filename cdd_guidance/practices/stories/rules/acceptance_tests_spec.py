@@ -13,6 +13,7 @@ from mamba import context, description, it  # noqa: E402
 from cdd_guidance.practices.stories.rules.acceptance_tests import DomainFixtureExampleFiles  # noqa: E402
 from harness.graph.graph import Graph, Node, Source  # noqa: E402
 from harness.graph.rule_context import RuleCheckContext  # noqa: E402
+from harness.graph.rule_fixture import SchemaRuleRun  # noqa: E402
 
 
 def _hits(file: str, *, imported_from: str | None = None) -> list[str]:
@@ -21,7 +22,7 @@ def _hits(file: str, *, imported_from: str | None = None) -> list[str]:
     node = Node(practice, "Example", f"stories:Example:{file}:validCustomer", "validCustomer", Source(file, 1, 1))
     if imported_from is not None:
         node.set_fact("imported_modules", {"validCustomer": imported_from})
-    return DomainFixtureExampleFiles().check(node, RuleCheckContext(practice, None))
+    return SchemaRuleRun(DomainFixtureExampleFiles(), RuleCheckContext(practice, None)).node_hits(node)
 
 
 with description("an example fixture in an acceptance test"):

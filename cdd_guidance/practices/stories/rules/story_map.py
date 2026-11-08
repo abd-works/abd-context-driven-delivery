@@ -63,8 +63,10 @@ class StoryScenariosAtMostSeven(PracticeGraphRule):
 
 
 class KebabCasePaths(PracticeGraphRule):
+    """A story judges the file it was read from: its story test, or the story map that lists it."""
+
     slug = "kebab-case-paths"
-    node_types = ("Story", "Scenario", "Epic", "SubEpic")
+    node_types = ("Story",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if not node.get_fact("camel_case_path"):
@@ -98,8 +100,10 @@ class RightSizeStoryNodes(PracticeGraphRule):
 
 
 class BranchOnMechanicalUniqueness(PracticeGraphRule):
+    """An epic or sub-epic judges the stories under it, which share a verb when one mechanic was split into many."""
+
     slug = "branch-on-mechanical-uniqueness"
-    node_types = ("Epic", "SubEpic", "Story")
+    node_types = ("Epic", "SubEpic")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         verb = node.get_fact("shared_verb") or ""

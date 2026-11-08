@@ -117,6 +117,12 @@ with description("Ddd.render at model fidelity"):
                 equal([("CustomerProfile", "Customer/Supplier", "downstream")])
             )
 
+        with it("should keep the arc's target as its context, aggregate, and entity, each its own detail"):
+            arc = next(item for item in _written_class("Subscription").dependencies if item.details)
+            expect({key: arc.details.get(key) for key in ("context", "aggregate", "entity")}).to(
+                equal({"context": "Customer", "aggregate": "Customer Profile", "entity": "CustomerProfile"})
+            )
+
         with it("should leave the root's intent free of its integrations"):
             expect("Integrations" in _written_class("Subscription").intent).to(equal(False))
 

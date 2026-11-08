@@ -21,6 +21,11 @@ _PRACTICE = Path(__file__).resolve().parents[1]
 _SUFFIX = {language.name: language.suffixes[0] for language in CODE_LANGUAGES}
 
 
+def source_suffix(language: str) -> str:
+    """The extension a fixture written in language takes, such as ``.py`` for python."""
+    return _SUFFIX[language]
+
+
 def ce_rule_by_slug(slug: str):
     return BY_SLUG[slug]
 
@@ -42,7 +47,7 @@ def practice_from_class_text(name: str, text: str, relative: str) -> RuleFixture
 
 
 def practice_from_source(source: str, *, lang: str = "python", filename: str | None = None) -> RuleFixture:
-    name = filename or f"example{_SUFFIX[lang]}"
+    name = filename or f"example{source_suffix(lang)}"
     return practice_from_files({f"{FIXTURE_FOLDER}/{name}": source.strip() + "\n"})
 
 
@@ -56,7 +61,7 @@ def assert_files_rule_pair(slug: str, fault_files: dict[str, str], clean_files: 
 
 def example_asset_paths(slug: str, *, channel: str = "python") -> tuple[Path, Path]:
     root = _PRACTICE / "model" / channel / "_examples" / slug
-    suffix = _SUFFIX[channel]
+    suffix = source_suffix(channel)
     return root / "faulty" / f"faultyAsset{suffix}", root / "repaired" / f"repairedAsset{suffix}"
 
 

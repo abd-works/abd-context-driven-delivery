@@ -22,7 +22,8 @@ _EMPTY_CATCH_BINDING = re.compile(r"\bcatch\s*\(\s*\)")
 _BARE_EXCEPT = re.compile(r"\bexcept\s*:")
 _PASS_LINE = re.compile(r"^\s*pass\b", re.M)
 _IGNORED_CATCH_BODIES = frozenset({";", "pass", "// ignore", "/* ignore */"})
-_PEER_PRIVATE_FIELD = re.compile(r"(\w+)\._(\w+)")
+# A `_` member read off a name: `order._lines`, `self.repo._cache` (receiver `repo`).
+_PEER_PRIVATE_FIELD = re.compile(r"(\w+)\.(_\w+)")
 _SAFE_NUMBERS = {
     0,
     1,
@@ -61,6 +62,8 @@ _THROW = re.compile(r"\bthrow\b")
 # The catch ends by handing back a stand-in value, so the caller never learns the call failed.
 _FALLBACK_RETURN = re.compile(r"\breturn\s*(?:null|undefined|false|true|\[\s*\]|\{\s*\}|''|\"\"|-?\d+)?\s*;?\s*$")
 _OWN_RECEIVERS = frozenset({"this", "self", "super"})
+# The names an operation reads its own class by: `cls` in a Python classmethod.
+_OWN_CLASS_RECEIVERS = frozenset({"cls"})
 # `new Repo(` in a brace-language body, and what makes the construction a failure thrown or a parameter's default:
 # `throw new`, `?? new`, `|| new`, right before it.
 _NEW_CLASS = re.compile(r"\bnew\s+([A-Z][\w$]*)\s*\(")
@@ -104,7 +107,6 @@ _COORDINATED_MUTATION = re.compile(r"\b(?:self|this)(?:\.\w+)+\s*=")
 _RETURN = re.compile(r"\breturn\b")
 _VOID_RETURN = re.compile(r"->\s*None\b|: void\b")
 _THROWS = re.compile(r"\b(?:throw|raise)\b")
-_PRIVATE_REACH = re.compile(r"(?<![\w.])(\w+)\.(_\w+)")
 _PROTOTYPE_SWAP = re.compile(r"\bObject\.setPrototypeOf\s*\(|\.__proto__\s*=(?!=)|\.__class__\s*=(?!=)")
 _BOLD_INTERACTION = re.compile(r"\*\*Interaction:\*\*", re.I)
 _BOLD_INVARIANT_BULLET = re.compile(r"^\s*[-*]\s+\*\*Invariant:\*\*", re.I | re.M)
@@ -217,14 +219,16 @@ class SourceText:
         code = _REGEXP_LITERAL.sub('""', _STRING.sub('""', self._text))
         return [raw for raw in _NUMBER.findall(code) if float(raw) not in _SAFE_NUMBERS]
 
-    def reaches_peer_private(self, parameter_names: frozenset[str] = frozenset()) -> bool:
-        """True when the body reads another object's ``._`` field (not ``this._`` / ``self._``). Copying a field from a
-        parameter of the same type into the same field of this object is not a reach."""
-        for match in _PEER_PRIVATE_FIELD.finditer(self._text):
-            receiver, field = match.group(1), match.group(2)
-            if receiver in _OWN_RECEIVERS or field in _WIRED_PEER_FIELDS:
+    def reaches_peer_private(self) -> bool:
+        """True when the body reads a ``_`` member of another object: ``order._lines``, not ``this._lines``,
+        ``cls._registry``, or a dunder such as ``other.__dict__``. Copying a field from a peer into the same field of
+        this object, and the repository a peer is wired to, are not reaches."""
+        code = _STRING.sub('""', self._text)
+        for match in _PEER_PRIVATE_FIELD.finditer(code):
+            receiver, member = match.group(1), match.group(2)
+            if receiver in _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS or _is_dunder(member) or member.lstrip("_") in _WIRED_PEER_FIELDS:
                 continue
-            if receiver in parameter_names and self._copies_same_field(receiver, field):
+            if self._copies_same_field(receiver, member.lstrip("_")):
                 continue
             return True
         return False
@@ -276,14 +280,6 @@ class SourceText:
         if len(text.strip()) < MIN_MUTATION_BODY or len(_COORDINATED_MUTATION.findall(text)) <= 1:
             return False
         return not (_RETURN.search(text) or _VOID_RETURN.search(text) or _THROWS.search(text))
-
-    def private_reach(self) -> bool:
-        """True when the body reads a ``_`` member of something other than itself: ``order._lines``, not
-        ``self._lines``, ``cls._registry``, or a dunder such as ``type(x).__name__``."""
-        return any(
-            match.group(1) not in _OWN_RECEIVERS | {"cls"} and not match.group(2).endswith("__")
-            for match in _PRIVATE_REACH.finditer(_STRING.sub('""', self._text))
-        )
 
     def has_prose_comment(self, hash_only: bool = False) -> bool:
         for line in self._text.splitlines():
@@ -403,19 +399,25 @@ class PythonFunctionBody:
         ]
 
     def reaches_peer_private(self) -> bool:
-        """True when the function reads a ``_`` field of one of its parameters, other than copying that field into the
-        same field of this object."""
-        params = {a.arg for a in self._node.args.args if a.arg != "self"}
-        params.update(a.arg for a in self._node.args.kwonlyargs)
+        """True when the function reads a ``_`` member of another object, as ``SourceText.reaches_peer_private`` reads a
+        brace-language body: not of itself (``self``, or its class in a classmethod), not a dunder, not the repository
+        a peer is wired to, and not a field it copies into the same field of this object."""
+        own = _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS | self._own_class_parameter()
         for child in ast.walk(self._node):
             if not (isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name)):
                 continue
-            if child.value.id not in params or not child.attr.startswith("_"):
+            if child.value.id in own or not child.attr.startswith("_") or _is_dunder(child.attr):
                 continue
             if child.attr.lstrip("_") in _WIRED_PEER_FIELDS or self._copies_same_field(child.value.id, child.attr):
                 continue
             return True
         return False
+
+    def _own_class_parameter(self) -> frozenset[str]:
+        """The first parameter of a classmethod, its own class whatever it is called."""
+        decorators = {decorator.id for decorator in self._node.decorator_list if isinstance(decorator, ast.Name)}
+        arguments = self._node.args.args
+        return frozenset({arguments[0].arg}) if "classmethod" in decorators and arguments else frozenset()
 
     def built_collaborators(self) -> list[tuple[str, int]]:
         """The classes this constructor builds that a caller cannot hand it, each with its line.
@@ -575,3 +577,8 @@ def _built_from(construction: ast.Call, owned: set[str]) -> bool:
         for child in nodes
         if isinstance(child, ast.Name) and id(child) not in called
     )
+
+
+def _is_dunder(member: str) -> bool:
+    """A Python special member such as ``__dict__``, which every object answers and none hides."""
+    return member.startswith("__") and member.endswith("__")

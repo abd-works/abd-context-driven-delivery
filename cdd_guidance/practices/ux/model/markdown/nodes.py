@@ -23,13 +23,34 @@ class MarkdownUxMap(UxMap):
     workspace_files = (".context/ux-context.md", "ux-context.md", ".context/context.md", "context.md")
 
     def parse(self, content: str) -> UxMap:
+        """A new map of this format, read from a markdown context file."""
         ux_map = type(self).create()
-        MarkdownContextReader(ux_map).read(content)
+        ux_map.read_text(content)
         return ux_map
+
+    def read_text(self, content: str) -> None:
+        """Read the file line by line into this map's scope and context: a bullet goes in the list of the heading it
+        is under, and any other line is a note."""
+        under: Optional[List[str]] = None
+        for line in content.splitlines():
+            text = line.strip()
+            if not text or text == _TITLE:
+                continue
+            if text.startswith(_SCOPE) and not self.scope:
+                self.scope = text[len(_SCOPE):]
+            elif text.startswith(_SECTION):
+                under = self._list_under(text[len(_SECTION):].strip())
+            elif text.startswith(_ITEM) and under is not None:
+                under.append(text[len(_ITEM):])
+            else:
+                self.context.notes.append(text)
+
+    def _list_under(self, heading: str) -> List[str]:
+        return self.context.invariants if heading == _INVARIANTS else self.context.notes
 
     def render(self, canonical: UxMap) -> str:
         """canonical's context: copied into a markdown map, which writes itself."""
-        return type(self).copy_of(canonical).save()
+        return self.copy_of(canonical).save()
 
     def save(self) -> str:
         lines = [_TITLE, ""]
@@ -43,33 +64,3 @@ class MarkdownUxMap(UxMap):
         if not items:
             return []
         return [f"{_SECTION}{heading}", *(f"{_ITEM}{item}" for item in items), ""]
-
-
-class MarkdownContextReader:
-    """Reads one markdown file line by line into a map's scope and context, remembering the heading it is under."""
-
-    def __init__(self, ux_map: UxMap) -> None:
-        self.ux_map = ux_map
-        self._under: Optional[List[str]] = None
-
-    def read(self, content: str) -> None:
-        for line in content.splitlines():
-            self._read_line(line.strip())
-
-    def _read_line(self, text: str) -> None:
-        if not text or text == _TITLE:
-            return
-        if text.startswith(_SCOPE) and not self.ux_map.scope:
-            self.ux_map.scope = text[len(_SCOPE):]
-            return
-        if text.startswith(_SECTION):
-            self._under = self._list_under(text[len(_SECTION):].strip())
-            return
-        if text.startswith(_ITEM) and self._under is not None:
-            self._under.append(text[len(_ITEM):])
-            return
-        self.ux_map.context.notes.append(text)
-
-    def _list_under(self, heading: str) -> List[str]:
-        context = self.ux_map.context
-        return context.invariants if heading == _INVARIANTS else context.notes

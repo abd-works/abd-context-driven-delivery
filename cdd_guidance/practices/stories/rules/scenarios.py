@@ -304,7 +304,7 @@ class PlainEnglishGwtSteps(PracticeGraphRule):
     node_types = ("Step", "Given", "When", "Then")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        text = (node.name or "").strip()
+        text = _text(node).strip()
         if not text:
             return []
         if " " not in text and _CAMEL_STEP.match(text):
@@ -320,7 +320,7 @@ class GwtStepsTraceToDomainOperations(PracticeGraphRule):
     node_types = ("Step", "Given", "When", "Then")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        name = (node.name or "").strip()
+        name = _text(node).strip()
         classes = node.get_fact("domain_class_names", [])
         if name.isidentifier() or (name.replace("_", "").isalnum() and " " not in name):
             return [f"Step {name!r} does not trace to a domain operation; use the domain type in the step phrase."]
@@ -331,12 +331,3 @@ class GwtStepsTraceToDomainOperations(PracticeGraphRule):
         return [
             f"Step {name!r} does not name a domain concept ({', '.join(classes)}); tie GWT to domain operations."
         ]
-
-class DomainOperationInTheStep(PracticeGraphRule):
-    slug = "domain-operation-in-the-step"
-    node_types = ("Story", "Step", "Given", "When", "Then")
-
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        if node.get_fact("exports_orchestration"):
-            return ["Story shared file exports orchestration instead of calling domain methods in GWT steps."]
-        return []

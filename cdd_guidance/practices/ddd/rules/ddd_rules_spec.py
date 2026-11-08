@@ -1,4 +1,4 @@
-"""DDD tactical graph rules — python .examples pairs."""
+"""DDD tactical graph rules — python .examples pairs and sources read by the graph, each rule run as validate runs it."""
 
 import sys
 from pathlib import Path
@@ -7,20 +7,28 @@ _REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from expects import equal, expect
+from expects import equal, expect, have_len
 from mamba import context, description, it
 
 from cdd_guidance.practices.ddd.rules.rule_examples import assert_ddd_example_pair, ddd_rule_by_slug, violations_for_ddd_rule
 
+_ONBOARDING_ROOT = """
+/** <<Aggregate Root>> <<Entity>> */
+export class Onboarding {
+  start(): void {}
+}
+"""
+
 with description("DDD tactical rules (python .examples)"):
     with context("every-class-carries-ddd-stereotype"):
-        with it("should flag Plan without stereotype and accept PlanEntity"):
-            assert_ddd_example_pair(
-                "every-class-carries-ddd-stereotype",
-                "Plan",
-                clean_class="PlanEntity",
-                node_type="Entity",
-            )
+        with it("should flag a bare Plan beside its aggregate root and accept Plan as a value object"):
+            assert_ddd_example_pair("every-class-carries-ddd-stereotype")
+
+        with it("should name the bare class on its aggregate"):
+            source = "# <<Aggregate Root>> <<Entity>>\nclass Subscription:\n    pass\n\n\nclass Plan:\n    pass\n"
+            expect(violations_for_ddd_rule(ddd_rule_by_slug("every-class-carries-ddd-stereotype"), source)).to(equal(
+                ["Class 'Plan' in aggregate 'example' lacks a DDD stereotype (<<Entity>>, <<Repository>>, or code @entity / @repository on the class)."]
+            ))
 
         with it("should not require stereotypes on classes in tsx presentation modules"):
             source = """
@@ -29,14 +37,11 @@ export class OnboardingStepScreen {
   constructor(readonly View: ComponentType) {}
 }
 """
-            rule = ddd_rule_by_slug("every-class-carries-ddd-stereotype")
             hits = violations_for_ddd_rule(
-                rule,
+                ddd_rule_by_slug("every-class-carries-ddd-stereotype"),
                 source,
-                class_name="OnboardingStepScreen",
-                node_type="Entity",
-                lang="typescript",
                 filename="onboarding-step-screen.tsx",
+                beside={"onboarding.ts": _ONBOARDING_ROOT},
             )
             expect(hits).to(equal([]))
 
@@ -50,14 +55,8 @@ export class CardAuthorization {
   ) {}
 }
 """
-            rule = ddd_rule_by_slug("every-class-carries-ddd-stereotype")
             hits = violations_for_ddd_rule(
-                rule,
-                source,
-                class_name="CardAuthorization",
-                node_type="ValueObject",
-                lang="typescript",
-                filename="payment.ts",
+                ddd_rule_by_slug("every-class-carries-ddd-stereotype"), source, lang="typescript", filename="payment.ts", beside={"onboarding.ts": _ONBOARDING_ROOT}
             )
             expect(hits).to(equal([]))
 
@@ -71,49 +70,37 @@ export class PaymentMethod {
   ) {}
 }
 """
-            rule = ddd_rule_by_slug("every-class-carries-ddd-stereotype")
             hits = violations_for_ddd_rule(
-                rule,
-                source,
-                class_name="PaymentMethod",
-                node_type="Entity",
-                lang="typescript",
-                filename="billing.ts",
+                ddd_rule_by_slug("every-class-carries-ddd-stereotype"), source, lang="typescript", filename="billing.ts", beside={"onboarding.ts": _ONBOARDING_ROOT}
             )
             expect(hits).to(equal([]))
 
     with context("domain-concepts-not-technical-names"):
         with it("should flag CartManager and accept Cart"):
-            assert_ddd_example_pair(
-                "domain-concepts-not-technical-names",
-                "CartManager",
-                clean_class="Cart",
-                node_type="Entity",
+            assert_ddd_example_pair("domain-concepts-not-technical-names", "CartManager", clean_class="Cart")
+
+        with it("should flag an aggregate whose folder is named for a manager"):
+            hits = violations_for_ddd_rule(
+                ddd_rule_by_slug("domain-concepts-not-technical-names"),
+                "# <<Entity>>\nclass Cart:\n    pass\n",
+                class_name="cart_manager",
+                filename="cart_manager/cart.py",
             )
+            expect(hits).to(have_len(1))
 
     with context("flaccid-data-object-no-behavior"):
         with it("should flag field-only Cart and accept Product with behavior"):
-            assert_ddd_example_pair(
-                "flaccid-data-object-no-behavior",
-                "Cart",
-                clean_class="Product",
-                node_type="Entity",
-            )
+            assert_ddd_example_pair("flaccid-data-object-no-behavior", "Cart", clean_class="Product")
 
         with it("should not apply to value objects that carry data only"):
             source = """
+/** <<Value Object>> */
 export class Identity {
   constructor(public email: string, public name = '') {}
 }
 """
-            rule = ddd_rule_by_slug("flaccid-data-object-no-behavior")
             hits = violations_for_ddd_rule(
-                rule,
-                source,
-                class_name="Identity",
-                node_type="ValueObject",
-                lang="typescript",
-                filename="identity.ts",
+                ddd_rule_by_slug("flaccid-data-object-no-behavior"), source, class_name="Identity", lang="typescript", filename="identity.ts"
             )
             expect(hits).to(equal([]))
 
@@ -133,42 +120,25 @@ export class Sim {
   }
 }
 """
-            rule = ddd_rule_by_slug("flaccid-data-object-no-behavior")
-            hits = violations_for_ddd_rule(
-                rule,
-                source,
-                class_name="Sim",
-                node_type="ValueObject",
-                lang="typescript",
-                filename="sim.ts",
-            )
+            hits = violations_for_ddd_rule(ddd_rule_by_slug("flaccid-data-object-no-behavior"), source, class_name="Sim", lang="typescript", filename="sim.ts")
             expect(hits).to(equal([]))
 
     with context("private-method-naming"):
         with it("should flag cross-type private access on Other"):
-            assert_ddd_example_pair(
-                "private-method-naming",
-                "Other",
-                clean_class="Cart",
-                node_type="Entity",
-            )
+            assert_ddd_example_pair("private-method-naming", "Other", clean_class="Cart")
 
     with context("service-is-homeless"):
-        with it("should flag CheckoutService and accept behavior on Cart"):
-            assert_ddd_example_pair(
-                "service-is-homeless",
-                "CheckoutService",
-                clean_class="Cart",
-                node_type="DomainService",
-            )
+        with it("should flag CheckoutService and accept a PricingService that does its own work"):
+            assert_ddd_example_pair("service-is-homeless", "CheckoutService", clean_class="PricingService")
 
     with context("repository-is-collection-lifecycle"):
         with it("should flag persist-only NoteRepository"):
-            assert_ddd_example_pair("repository-is-collection-lifecycle", "NoteRepository", node_type="Repository")
+            assert_ddd_example_pair("repository-is-collection-lifecycle", "NoteRepository")
 
     with context("load-with-identity-in-hand"):
         with it("should flag load without identity parameter"):
-            assert_ddd_example_pair("load-with-identity-in-hand", "CustomerRepository", node_type="Repository")
+            assert_ddd_example_pair("load-with-identity-in-hand", "CustomerRepository")
+
         with it("should accept a repository that loads the one record it holds"):
             source = """
 export class DeviceWalletMerchantCredentialRepository {
@@ -183,7 +153,6 @@ export class DeviceWalletMerchantCredentialRepository {
                 ddd_rule_by_slug("load-with-identity-in-hand"),
                 source,
                 class_name="DeviceWalletMerchantCredentialRepository",
-                node_type="Repository",
                 lang="typescript",
                 filename="payment.ts",
             )
@@ -191,16 +160,16 @@ export class DeviceWalletMerchantCredentialRepository {
 
     with context("no-orphaned-objects"):
         with it("should flag LonelyType and accept related Cart"):
-            assert_ddd_example_pair("no-orphaned-objects", "LonelyType", clean_class="Cart", node_type="Entity")
+            assert_ddd_example_pair("no-orphaned-objects", "LonelyType", clean_class="Cart")
 
     with context("screen-interface-not-a-domain-object"):
         with it("should flag SelectSim and accept Checkout"):
-            assert_ddd_example_pair(
-                "screen-interface-not-a-domain-object",
-                "SelectSim",
-                clean_class="Checkout",
-                node_type="Entity",
-            )
+            assert_ddd_example_pair("screen-interface-not-a-domain-object", "SelectSim", clean_class="Checkout")
+
+        with it("should flag a domain service that opens and shows like a screen"):
+            source = "# <<Domain Service>>\nclass SimPickerService:\n    def open(self):\n        return None\n\n    def isShowing(self):\n        return True\n"
+            hits = violations_for_ddd_rule(ddd_rule_by_slug("screen-interface-not-a-domain-object"), source, class_name="SimPickerService")
+            expect(hits).to(have_len(1))
 
     with context("private-method-naming on TypeScript aggregates"):
         with it("should not flag constructor wiring own _fields and validation state"):
@@ -209,6 +178,7 @@ export class AccountValidation {
   validationCode = '';
   verified = false;
 }
+/** <<Aggregate Root>> <<Entity>> */
 export class AccountCredentials {
   readonly validation = new AccountValidation();
   protected _email = '';
@@ -220,14 +190,8 @@ export class AccountCredentials {
   register() {}
 }
 """
-            rule = ddd_rule_by_slug("private-method-naming")
             hits = violations_for_ddd_rule(
-                rule,
-                source,
-                class_name="AccountCredentials",
-                node_type="EntityRoot",
-                lang="typescript",
-                filename="account.ts",
+                ddd_rule_by_slug("private-method-naming"), source, class_name="AccountCredentials", lang="typescript", filename="account.ts"
             )
             expect([message for message in hits if "constructor" in message]).to(equal([]))
 
@@ -262,19 +226,14 @@ export class AccountRepository {
   hydrate(stored) { return AccountCredentials.fromStored(stored, this); }
 }
 """
-            rule = ddd_rule_by_slug("private-method-naming")
             hits = violations_for_ddd_rule(
-                rule,
-                source,
-                class_name="AccountRepository",
-                node_type="Repository",
-                lang="typescript",
-                filename="account.ts",
+                ddd_rule_by_slug("private-method-naming"), source, class_name="AccountRepository", lang="typescript", filename="account.ts"
             )
             expect(hits).to(equal([]))
 
         with it("should not flag copyFieldsFrom that mirrors peer fields onto this"):
             source = """
+/** <<Aggregate Root>> <<Entity>> */
 export class Subscription {
   private _plan = null;
   simType = null;
@@ -284,14 +243,8 @@ export class Subscription {
   }
 }
 """
-            rule = ddd_rule_by_slug("private-method-naming")
             hits = violations_for_ddd_rule(
-                rule,
-                source,
-                class_name="Subscription",
-                node_type="EntityRoot",
-                lang="typescript",
-                filename="subscription.ts",
+                ddd_rule_by_slug("private-method-naming"), source, class_name="Subscription", lang="typescript", filename="subscription.ts"
             )
             expect(hits).to(equal([]))
 
@@ -307,13 +260,7 @@ export class CustomerProfileRepository {
   }
 }
 """
-            rule = ddd_rule_by_slug("private-method-naming")
             hits = violations_for_ddd_rule(
-                rule,
-                source,
-                class_name="CustomerProfileRepository",
-                node_type="Repository",
-                lang="typescript",
-                filename="customer-profile.ts",
+                ddd_rule_by_slug("private-method-naming"), source, class_name="CustomerProfileRepository", lang="typescript", filename="customer-profile.ts"
             )
             expect(hits).to(equal([]))

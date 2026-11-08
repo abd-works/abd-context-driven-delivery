@@ -1,3 +1,4 @@
+# <<Entity>>
 class SelectSim:
     def open(self):
         return None

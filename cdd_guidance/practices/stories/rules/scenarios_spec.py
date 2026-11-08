@@ -22,6 +22,7 @@ from harness.graph.edge import EdgeType  # noqa: E402
 from harness.graph.graph import Graph, Node, Source  # noqa: E402
 from harness.graph.saved_graph import SavedGraph  # noqa: E402
 from harness.graph.rule_context import RuleCheckContext  # noqa: E402
+from harness.graph.rule_fixture import SchemaRuleRun  # noqa: E402
 
 
 def _step(keyword: str, text: str, order: int) -> Step:
@@ -71,12 +72,12 @@ def _read_back(context: RuleCheckContext) -> RuleCheckContext:
 
 
 def _scenario_hits(rule, context: RuleCheckContext) -> list[str]:
-    return [hit for node in context.nodes("Scenario") for hit in rule.check(node, context)]
+    """What the rule reports on the story graph where validate runs it."""
+    return SchemaRuleRun(rule, context).hits()
 
 
 def _given_hits(context: RuleCheckContext) -> list[str]:
-    rule = GivenNamesComplexStateRootFirst()
-    return [hit for node in context.nodes("Given") for hit in rule.check(node, context)]
+    return SchemaRuleRun(GivenNamesComplexStateRootFirst(), context).hits()
 
 
 def _order_aggregate(graph: Graph) -> None:

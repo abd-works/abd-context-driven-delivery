@@ -118,6 +118,14 @@ with description("a toolset run request") as self:
             )
             expect(invoke.toolset.session.name).to(equal("checkout-flow"))
 
+    with context("that names neither a tool nor an action"):
+        with it("should be refused"):
+            expect(lambda: ToolsetInvoke.for_toolset("pkg:Tool", self.project.root)).to(raise_error(ValueError))
+
+    with context("that names both a tool and an action"):
+        with it("should be refused"):
+            expect(lambda: ToolsetInvoke.for_toolset("pkg:Tool", self.project.root, tool="scan", action="generate")).to(raise_error(ValueError))
+
     with context("that names a session the project does not have"):
         with it("should fail naming that session"):
             request = {"toolset": "cdd_guidance.actions.sketch.sketch:Sketch", "action": "sketch", "session": "billing"}

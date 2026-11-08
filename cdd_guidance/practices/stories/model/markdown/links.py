@@ -13,11 +13,9 @@ from typing import Dict, List, Optional
 
 from harness.annotations.name import Name
 
-from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles
+from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, StoryMapFiles
 
 _LINK = re.compile(r"\[([^\]\n]+)\]\(([^)\s]*)\)")
-_STORY_FILE_SUFFIXES = ("_story.test.md", "_story.spec.md")
-_SKIP_DIRS = {".git", "node_modules", ".venv", "__pycache__", ".pycache"}
 
 
 
@@ -42,15 +40,6 @@ def _relative(target: Path, base: Path) -> str:
         return Path(os.path.relpath(target, base)).as_posix()
     except ValueError:  # another drive on Windows
         return target.as_posix()
-
-
-def _story_files_below(root: Path) -> List[Path]:
-    """Each story's own markdown file under root: `*_story.test.md` or `*_story.spec.md`."""
-    found: List[Path] = []
-    for folder, dirs, files in os.walk(root):
-        dirs[:] = sorted(d for d in dirs if d not in _SKIP_DIRS)
-        found.extend(Path(folder) / file for file in sorted(files) if file.endswith(_STORY_FILE_SUFFIXES))
-    return found
 
 
 class _Anchors:
@@ -94,9 +83,9 @@ class StoryMapLinks:
         maps = StoryMapFiles(root).markdown_below()
         map_file = maps[0] if maps else None
         story_files: Dict[str, Path] = {}
-        for path in _story_files_below(root):
+        for path in StoryMapFiles(root).story_files_below():
             stem = path.name
-            for suffix in _STORY_FILE_SUFFIXES:
+            for suffix in STORY_FILE_SUFFIXES:
                 stem = stem.removesuffix(suffix)
             story_files.setdefault(_slug(stem), path)
         return cls(story_map, map_file.parent if map_file is not None else root, map_file, story_files)

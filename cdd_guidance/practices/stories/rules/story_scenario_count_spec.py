@@ -13,6 +13,8 @@ from mamba import context, description, it
 from cdd_guidance.practices.stories.model.story_model import Scenario, Story
 from cdd_guidance.practices.stories.rules.story_map import FourToNineChildren, StoryScenariosAtMostSeven
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.rule_context import RuleCheckContext
+from harness.graph.rule_fixture import SchemaRuleRun
 from harness.graph.schema_rules import PracticeSchema
 from harness.guidance.practice_catalogue import PracticeCatalogue
 
@@ -23,6 +25,11 @@ def _Node(name: str, node_type: str, facts: dict) -> Node:
     for key, value in facts.items():
         node.set_fact(key, value)
     return node
+
+
+def _hits(rule, node: Node) -> list[str]:
+    """What the rule reports on node where validate runs it: only when the schema gives node's type the rule."""
+    return SchemaRuleRun(rule, RuleCheckContext(node.practice, None)).node_hits(node)
 
 
 def _story_node(name: str, scenario_count: int, *, band: str = "") -> Node:
@@ -42,15 +49,15 @@ with description("story scenario count"):
     with context("four-to-nine-children"):
         with it("should leave a story with two scenarios alone"):
             node = _story_node("Enter Validation Code", 2, band="error")
-            expect(FourToNineChildren().check(node, None)).to(equal([]))
+            expect(_hits(FourToNineChildren(), node)).to(equal([]))
 
         with it("should leave a scenario's step count alone"):
             node = _Node("Enter validation code", "Scenario", {"child_count": 2, "child_label": "steps", "child_band": "error"})
-            expect(FourToNineChildren().check(node, None)).to(equal([]))
+            expect(_hits(FourToNineChildren(), node)).to(equal([]))
 
         with it("should still flag an epic outside 4-9 children"):
             node = _Node("Onboard A Customer", "Epic", {"child_count": 1, "child_label": "children", "child_band": "error"})
-            expect(FourToNineChildren().check(node, None)).to(
+            expect(_hits(FourToNineChildren(), node)).to(
                 equal(["epic 'Onboard A Customer': 1 children (target 4-9)"])
             )
 
@@ -58,14 +65,14 @@ with description("story scenario count"):
         with it("should accept one to seven scenarios"):
             rule = StoryScenariosAtMostSeven()
             for count in (1, 4, 7):
-                expect(rule.check(_story_node("Enter Validation Code", count), None)).to(equal([]))
+                expect(_hits(rule, _story_node("Enter Validation Code", count))).to(equal([]))
 
         with it("should call a story with more than seven scenarios huge"):
-            hits = StoryScenariosAtMostSeven().check(_story_node("Pick Number", 8), None)
+            hits = _hits(StoryScenariosAtMostSeven(), _story_node("Pick Number", 8))
             expect(hits).to(equal(["story 'Pick Number': 8 scenarios — story is huge (target 1-7)"]))
 
         with it("should accept a story with no scenarios, whose scenarios are not written yet"):
-            expect(StoryScenariosAtMostSeven().check(_story_node("Enter Validation Code", 0), None)).to(equal([]))
+            expect(_hits(StoryScenariosAtMostSeven(), _story_node("Enter Validation Code", 0))).to(equal([]))
 
     with context("a story that records its scenario count"):
         with it("should not mark two scenarios as a 4-9 child-band error"):

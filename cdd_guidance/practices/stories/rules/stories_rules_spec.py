@@ -13,6 +13,7 @@ from mamba import before, context, description, it
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.rule_context import RuleCheckContext
+from harness.graph.rule_fixture import SchemaRuleRun
 from cdd_guidance.practices.stories.model.story_model import Step, StepType
 from cdd_guidance.practices.stories.rules.scenarios import AndChaining, ScenariosShape
 
@@ -53,7 +54,7 @@ with description("ScenariosShape"):
             self.context = RuleCheckContext(self.practice, None)
 
         with it("should not require Given"):
-            expect(ScenariosShape().check(self.scenario, self.context)).to(equal([]))
+            expect(SchemaRuleRun(ScenariosShape(), self.context).node_hits(self.scenario)).to(equal([]))
 
     with context("with a second When before Then"):
         with before.each:
@@ -68,7 +69,7 @@ with description("ScenariosShape"):
             self.context = RuleCheckContext(self.practice, None)
 
         with it("should flag and-chaining"):
-            hits = AndChaining().check(self.scenario, self.context)
+            hits = SchemaRuleRun(AndChaining(), self.context).node_hits(self.scenario)
             expect(len(hits)).to(equal(1))
 
     with context("with When then When then"):
@@ -85,7 +86,7 @@ with description("ScenariosShape"):
             self.context = RuleCheckContext(self.practice, None)
 
         with it("should allow a second interaction after Then"):
-            expect(AndChaining().check(self.scenario, self.context)).to(equal([]))
+            expect(SchemaRuleRun(AndChaining(), self.context).node_hits(self.scenario)).to(equal([]))
 
 
 with description("ExamplesTraceDomainModel concepts"):

@@ -220,7 +220,8 @@ class Screen(UxNode):
         """Show the stories, scenarios, and steps other shows: each Stories node other finds on its own graph, else
         the key other holds for it."""
         for link in other._story_links:
-            self._show(link.kind, link.resolved_on(other.graph) or link.key)
+            resolved = link.resolved_on(other.graph) if other.practice is not None else None
+            self._show(link.kind, resolved or link.key)
 
     def attach_domain_term(self, term: str) -> None:
         if term and term not in self.domain_terms:
@@ -234,10 +235,12 @@ class Screen(UxNode):
         self._sync_schema_edges()
 
     def _shown_nodes(self, kind: str) -> List[Node]:
-        """The Stories nodes this screen's links of kind name on its graph; none while no practice holds the screen."""
+        """The Stories nodes this screen's links of kind name on its graph. While no practice holds the screen, the
+        nodes its links already hold, as a copy of a screen keeps the nodes its source found."""
+        links = [link for link in self._story_links if link.kind == kind]
         if self.practice is None:
-            return []
-        found = (link.resolved_on(self.graph) for link in self._story_links if link.kind == kind)
+            return [link.node for link in links if link.node is not None]
+        found = (link.resolved_on(self.graph) for link in links)
         return [node for node in found if node is not None]
 
     def _keys(self, kind: str) -> List[str]:

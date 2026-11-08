@@ -5,7 +5,8 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule, is_test_code
+from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node

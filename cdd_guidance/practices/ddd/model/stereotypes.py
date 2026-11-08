@@ -48,7 +48,6 @@ _NAME_ENDINGS = {
     "EntityRoot": ("Root",),
 }
 _SPECIFICATION = "Specification"
-_TAGGED_KINDS = frozenset({"Entity", "EntityRoot", "ValueObject", "Repository", "DomainService", "Specification"})
 
 
 def plain_class_name(name: str) -> str:
@@ -68,9 +67,14 @@ def root_kept_by(class_name: str) -> Optional[str]:
 def kind_named_by(stereotypes: Iterable[str]) -> Optional[str]:
     """The building block a list of stereotypes names; None for none, or for a class marked as another system's."""
     lowered = {item.lower() for item in stereotypes}
-    if _SYSTEM in lowered:
+    if marks_another_system(lowered):
         return None
     return next((kind for stereotype, kind in KIND_OF_STEREOTYPE if stereotype in lowered), None)
+
+
+def marks_another_system(stereotypes: Iterable[str]) -> bool:
+    """Whether the stereotypes mark a class as another system's, which is none of this domain's building blocks."""
+    return _SYSTEM in {item.lower() for item in stereotypes}
 
 
 class TacticalClass:
@@ -120,14 +124,6 @@ class TacticalClass:
     def repository_name(self) -> str:
         """The name of the repository that would keep this class: `CartRepository` for `Cart`."""
         return f"{self.name}{_REPOSITORY}"
-
-    def declares_stereotype(self, graph_kind: str) -> bool:
-        """True when the class carries a DDD stereotype, or its name itself says the building block it is, among the
-        classes its file declares."""
-        if self.stereotypes:
-            return True
-        kind = self.inferred_kind(self.oclass.peer_names) or graph_kind
-        return self.name_says(kind if kind in _TAGGED_KINDS else graph_kind)
 
     def name_says(self, kind: str) -> bool:
         """True when the class's name follows the naming convention of the building block kind: a root is also named

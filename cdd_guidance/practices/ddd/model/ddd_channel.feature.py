@@ -49,7 +49,7 @@ def _check_cart(cart: Aggregate) -> None:
 
     expect(len(cart.integrations)).to(equal(1))
     integration = cart.integrations[0]
-    expect(integration.target).to(equal("Product"))
+    expect((integration.entity, integration.held_by)).to(equal(("Product", "ProductId")))
     expect(integration.pattern).to(equal("Customer/Supplier"))
     expect(integration.direction).to(equal("downstream"))
     expect(integration.crosses).to(equal("unit price"))

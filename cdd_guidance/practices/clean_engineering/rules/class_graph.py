@@ -114,6 +114,18 @@ class ClassGraph:
         A class makes values from what it holds; only a collaborator it builds is a dependency the caller cannot see."""
         return self._derives_value(type_name, frozenset())
 
+    def is_failure(self, type_name: str) -> bool:
+        """True for a failure: a class named as one, such as ``AgentToolValidationError``, or derived from one. A
+        failure keeps the name of what it failed on for its message, not as a copy of that object."""
+        return self._derives_failure(type_name, frozenset())
+
+    def _derives_failure(self, type_name: str, seen: frozenset[str]) -> bool:
+        if type_name.endswith(_FAILURE_SUFFIXES):
+            return True
+        if type_name in seen:
+            return False
+        return any(self._derives_failure(base, seen | {type_name}) for node in self.by_name.get(type_name, []) for base in self.bases_of(node))
+
     def bases_of(self, node: "Node") -> list[str]:
         """The names of the classes it derives from, each by its own name: ``Epic`` for ``pkg.Epic``, ``list`` for
         ``list[Entry]``."""

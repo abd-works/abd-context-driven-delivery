@@ -11,7 +11,8 @@ from cdd_guidance.practices.clean_engineering.model.graph_reading import paramet
 from cdd_guidance.practices.clean_engineering.rules.class_graph import ClassGraph
 from cdd_guidance.practices.clean_engineering.rules.near_copies import NearCopies
 from cdd_guidance.practices.clean_engineering.rules.operation_semantics import SEMANTIC_RULES
-from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule, is_test_code
+from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node

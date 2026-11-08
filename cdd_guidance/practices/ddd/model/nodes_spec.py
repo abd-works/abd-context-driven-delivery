@@ -54,7 +54,7 @@ with description("a class as DDD reads it"):
 
     with it("should say a name follows the value object convention it infers a value object from"):
         tactical = _class("PlanRequirement", [])
-        expect((tactical.inferred_kind(set()), tactical.declares_stereotype("ValueObject"))).to(equal(("ValueObject", True)))
+        expect((tactical.inferred_kind(set()), tactical.name_says("ValueObject"))).to(equal(("ValueObject", True)))
 
 
 with description("a bounded context on a graph"):

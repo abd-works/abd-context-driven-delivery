@@ -119,8 +119,9 @@ with description("a UxMap copied into a format"):
         from cdd_guidance.practices.ux.model.drawio.nodes import DrawioRegion, DrawioScreen, DrawioUxMap
         from cdd_guidance.practices.ux.model.ux_map_spec_fixture import OrderingMap, outline
 
-        self.source = OrderingMap().build(UxMap.create())
-        self.copy = DrawioUxMap.copy_of(self.source)
+        self.graph = Graph()
+        self.source = OrderingMap().build(UxMap.create(self.graph))
+        self.copy = DrawioUxMap.create().copy_of(self.source)
         self.outline = outline
         self.screen_type = DrawioScreen
         self.region_type = DrawioRegion
@@ -135,5 +136,11 @@ with description("a UxMap copied into a format"):
         regions = [region for screen in self.copy.screens for region in screen.regions]
         expect(all(isinstance(region, self.region_type) for region in regions)).to(equal(True))
 
-    with it("should keep its nodes on a graph of its own"):
-        expect(self.copy.graph).not_to(be(self.source.graph))
+    with it("should be detached, as a render writes it, with no graph made for it"):
+        expect(self.copy.practice).to(equal(None))
+
+    with it("should leave the source's graph holding the source's map alone"):
+        expect(len(self.graph.practice("ux").in_graph.nodes("UxMap"))).to(equal(1))
+
+    with it("should keep the stories each screen shows by key"):
+        expect([screen.story_keys for screen in self.copy.screens]).to(equal([screen.story_keys for screen in self.source.screens]))

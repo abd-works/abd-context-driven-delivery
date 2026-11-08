@@ -12,8 +12,9 @@ from harness.graph.rule_context import RuleCheckContext
 
 class RuleFixture:
     """Fixture files written to a folder of their own and read by one practice, the way a live load reads a working
-    copy: its language model parses each file and every node loads its own facts. The fixture keeps the folder, which
-    goes when the fixture does."""
+    copy: its language model parses each file and every node loads its own facts. A practice that extends another,
+    such as DDD reading Clean Engineering's classes, is read with that practice, as a live load reads them. The fixture
+    keeps the folder, which goes when the fixture does."""
 
     def __init__(self, practice_class: type, files: dict[str, str]) -> None:
         self._folder = tempfile.TemporaryDirectory()
@@ -24,7 +25,8 @@ class RuleFixture:
             path.write_text(text, encoding="utf-8")
         graph = Graph()
         practice = graph.practice_of(practice_class)
-        graph.load_working_copy(str(self.root), {practice.key: str(self.root)}, force=True)
+        read = [practice, *([practice.extended] if practice.extended is not None else [])]
+        graph.load_working_copy(str(self.root), {each.key: str(self.root) for each in read}, force=True)
         self.practice = practice
 
     def read_only(self, paths: list[str]) -> None:
@@ -37,13 +39,37 @@ class RuleFixture:
         return RuleCheckContext(self.practice, self.root)
 
     def hits(self, rule) -> list[str]:
-        """Each message the rule reports: over the whole practice, then on each node of the types it checks."""
-        context = self.context
-        messages = [message for _node_id, message in rule.check_practice(context)]
-        for node_type in rule.node_types:
-            for node in context.nodes(node_type):
-                messages.extend(rule.check(node, context))
+        """Each message the rule reports where validate keeps it."""
+        return SchemaRuleRun(rule, self.context).hits()
+
+
+class SchemaRuleRun:
+    """One rule run over one practice's nodes the way the graph runs it in validate: the practice's schema says which
+    node types carry the rule, so a hit on a node whose type does not list the rule is dropped, and a check runs only
+    on the nodes whose rules say it runs there. A rule the schema never applies finds nothing, so its spec fails."""
+
+    def __init__(self, rule, context: RuleCheckContext) -> None:
+        self.rule = rule
+        self.context = context
+
+    def hits(self) -> list[str]:
+        """Each message the rule reports over the whole practice on a node that carries it, then on each node whose
+        rules run it."""
+        slug, context = self.rule.slug, self.context
+        messages = [message for node_id, message in self.rule.check_practice(context) if self._carries(context.node(node_id))]
+        for node in context.nodes():
+            entry = node.rules.entries.get(slug)
+            if entry is not None and entry.runs:
+                messages.extend(self.rule.check(node, context))
         return messages
+
+    def node_hits(self, node) -> list[str]:
+        """The messages the rule reports on node alone, when node's rules run it."""
+        entry = node.rules.entries.get(self.rule.slug)
+        return list(self.rule.check(node, self.context)) if entry is not None and entry.runs else []
+
+    def _carries(self, node) -> bool:
+        return node is not None and self.rule.slug in node.rules.slugs
 
 
 class RulePair:

@@ -5,7 +5,6 @@ from cdd_guidance.practices.clean_engineering.rules.coupling_rules import (
     DoNotInventParallelObjectModels,
     HideInnerDetails,
     LayerSeparation,
-    PutLogicOnOwningResource,
     ShapeClassesAroundResources,
 )
 from cdd_guidance.practices.clean_engineering.rules.operation_checks import CODE_RULES
@@ -42,7 +41,6 @@ RULES: tuple = (
     UseTypedSignatures(),
     LimitComments(),
     HideInnerDetails(),
-    PutLogicOnOwningResource(),
     ShapeClassesAroundResources(),
     DoNotInventParallelObjectModels(),
     LayerSeparation(),

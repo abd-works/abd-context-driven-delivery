@@ -1,0 +1,45 @@
+"""Where story maps and story files sit: one locator walks a folder for both, entering the folders documents are kept
+in and none a scan never enters, so the map search and the story-file search find the same files."""
+
+import tempfile
+from pathlib import Path
+
+from expects import equal, expect
+from mamba import after, before, description, it
+
+from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles
+
+_MAP = "# Story Map\n"
+_STORY = "# Submit Order\n"
+
+
+def _write(root: Path, relative: str, text: str) -> None:
+    path = root / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _named(root: Path, paths: list) -> list:
+    return [path.relative_to(root.resolve()).as_posix() for path in paths]
+
+
+with description("the story files of a folder"):
+    with before.each:
+        self.folder = tempfile.TemporaryDirectory()
+        self.root = Path(self.folder.name)
+        _write(self.root, "shop/.context/story-map.md", _MAP)
+        _write(self.root, "node_modules/kit/story-map.md", _MAP)
+        _write(self.root, ".venv/lib/story-map.md", _MAP)
+        _write(self.root, "shop/tests/place-order/submit_order_story.test.md", _STORY)
+        _write(self.root, "node_modules/kit/tests/vendored_story.test.md", _STORY)
+
+    with after.each:
+        self.folder.cleanup()
+
+    with it("should find a story map kept in a folder's .context"):
+        expect(_named(self.root, StoryMapFiles(self.root).markdown_below())).to(equal(["shop/.context/story-map.md"]))
+
+    with it("should find each story's own file, outside the folders a scan never enters"):
+        expect(_named(self.root, StoryMapFiles(self.root).story_files_below())).to(
+            equal(["shop/tests/place-order/submit_order_story.test.md"])
+        )

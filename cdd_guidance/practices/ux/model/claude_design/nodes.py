@@ -28,7 +28,7 @@ class ClaudeDesignUxMap(UxMap):
 
     def render(self, canonical: UxMap) -> str:
         """canonical's screens placed on the canvas: copied into a Claude Design map, which places its own."""
-        return type(self).copy_of(canonical).save()
+        return self.copy_of(canonical).save()
 
     def save(self) -> str:
         return json.dumps(self.boards(), indent=1, ensure_ascii=False)

@@ -1,6 +1,6 @@
 # `Stories.read_paths` reads the format the call names
 
-**Status:** decided, round 6 (finding M13).
+**Status:** done, round 7 (finding M13). Decided in round 6; renumbered from 0001, which `0001-runnable-story-files-over-pure-data.md` already held.
 
 ## Decision
 
@@ -14,3 +14,7 @@
 ## Consequences
 
 When harness/guidance holds the practice's format as a *Format*, this line becomes `Format(source).is_code if source else self.format.is_code` with no other change.
+
+## Done
+
+`PracticeGuidance.format` now returns the *Format* the practice works in, so `read_paths` asks it directly and reads only the call's `source` into a *Format*.

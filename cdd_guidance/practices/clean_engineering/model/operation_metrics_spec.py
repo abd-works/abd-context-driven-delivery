@@ -27,11 +27,11 @@ with description("peer private access in operation bodies"):
 
     with it("should ignore same-type field copy from a method parameter"):
         body = "this._plan = source._plan;\nthis.simType = source.simType;"
-        expect(SourceText(body).reaches_peer_private(frozenset({"source"}))).to(equal(False))
+        expect(SourceText(body).reaches_peer_private()).to(equal(False))
 
     with it("should still flag reading a parameter private field without copying to this"):
         body = "return source._plan;"
-        expect(SourceText(body).reaches_peer_private(frozenset({"source"}))).to(equal(True))
+        expect(SourceText(body).reaches_peer_private()).to(equal(True))
 
     with it("should set peer_private_access on parsed operations"):
         own = Operation("constructor", 1)

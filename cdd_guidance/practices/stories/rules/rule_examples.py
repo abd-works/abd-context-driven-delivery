@@ -1,169 +1,105 @@
-"""Spec support: evaluate story rules against TypeScript .examples stubs, one source or a folder of files."""
+"""Spec support: run Stories graph rules on example sources the way validate runs them.
+
+An example's story file is written onto a graph of its own through the story model, as a live load writes a story map,
+so every node carries the type and facts a live build gives it. Each rule then runs through the practice's schema, so a
+rule the schema never applies to a node type finds nothing there and its example fails.
+"""
 
 from __future__ import annotations
 
 import re
-import shutil
 import tempfile
 from pathlib import Path
 
-from harness.graph.graph import Graph, Node, Source
-from harness.guidance.guidance import PracticeGuidance
+from harness.graph.graph import Graph
 from harness.graph.rule_context import RuleCheckContext
+from harness.graph.rule_fixture import RulePair, SchemaRuleRun
+
+from cdd_guidance.practices.stories.model.source_location import SourceLocation
+from cdd_guidance.practices.stories.model.story_model import Epic, Example, Scenario, Step, StepType, Story, StoryModel
+from cdd_guidance.practices.stories.rules import BY_SLUG
+from cdd_guidance.practices.stories.stories import Stories
 
 _EXAMPLES = Path(__file__).resolve().parents[1] / "model" / "typescript" / "_examples"
+_STORY_CALL = re.compile(r"""story\s*\(\s*['"]([^'"]+)['"]""")
+_GIVEN_CALL = re.compile(r"""given\s*\(\s*['"]([^'"]+)['"]""")
+# The story a story file that names none holds.
+_FIXTURE_STORY = "Submit Fixture Story"
 
 
 def stories_rule_by_slug(slug: str):
-    from cdd_guidance.practices.stories.rules import BY_SLUG
-
-    rule = BY_SLUG[slug]
-    if rule is None:
-        raise KeyError(slug)
-    return rule
+    return BY_SLUG[slug]
 
 
-def _record_stories(practice: PracticeGuidance, names: list[str], relative: str, source: str) -> list[Node]:
-    """Record the stories through the story model, read from source at relative, so each Story node carries the facts
-    a live build loads."""
-    from cdd_guidance.practices.stories.model.source_location import SourceLocation
-    from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel
+class StoryFixture:
+    """Example files in a folder of their own, with the story file among them written onto a graph through the story
+    model: an epic holding a story for each ``story(...)`` call the file makes (one story when it makes none), whose
+    scenario holds a Given for each ``given(...)`` call and each example named. The fixture keeps the folder, which goes
+    when the fixture does."""
 
-    if not names:
-        return []
-    model = StoryModel()
-    epic = Epic("Submit Fixture Stories", 1)
-    for index, name in enumerate(names, start=1):
-        story = Story(name, index)
-        story.source = SourceLocation(relative, 1, 1)
-        epic.append_story(story)
-    model.append_epic(epic)
-    model.source_texts[relative] = source
-    model.record(practice)
-    return practice.in_graph.nodes("Story")
+    def __init__(self, files: dict[str, str], story_file: str, examples: tuple[str, ...] = ()) -> None:
+        self._folder = tempfile.TemporaryDirectory()
+        self.root = Path(self._folder.name)
+        for relative, text in files.items():
+            path = self.root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        graph = Graph()
+        graph.open(self.root)
+        self.practice = graph.practice_of(Stories)
+        self._story_map(files[story_file], story_file, examples).record(self.practice)
 
+    @classmethod
+    def from_folder(cls, folder: Path, story_file: str, examples: tuple[str, ...] = ()) -> StoryFixture:
+        """The files under folder, named from it."""
+        files = {path.relative_to(folder).as_posix(): path.read_text(encoding="utf-8") for path in folder.rglob("*") if path.is_file()}
+        return cls(files, story_file, examples)
 
-def _story_nodes_from_ts(
-    practice: PracticeGuidance, source: str, relative: str, *, node_type: str | None = None
-) -> list[Node]:
-    from cdd_guidance.practices.stories.model.story_model import Step, StepType
+    def hits(self, rule) -> list[str]:
+        """Each message the rule reports where validate keeps it."""
+        return SchemaRuleRun(rule, RuleCheckContext(self.practice, self.root)).hits()
 
-    names = re.findall(r"""story\s*\(\s*['"]([^'"]+)['"]""", source)
-    nodes: list[Node] = _record_stories(practice, names, relative, source)
-    for index, name in enumerate(re.findall(r"""given\s*\(\s*['"]([^'"]+)['"]""", source)):
-        step = Step(name, StepType.GIVEN, index + 1, keyword="Given")
-        step.type = "Given"
-        nodes.append(practice.in_graph.add(step, f"stories:Step:map.given.{index}", relative, 1, 1))
-    return nodes
-
-
-def violations_for_story_source(
-    rule, source: str, *, relative: str = "faultyAsset.ts", node_type: str | None = None
-) -> list[str]:
-    temp = tempfile.TemporaryDirectory()
-    root = Path(temp.name)
-    path = root / relative
-    path.write_text(source.strip() + "\n", encoding="utf-8")
-    graph = Graph()
-    graph.open(root)
-    practice = graph.practice("stories")
-    practice._temp_dir = temp  # type: ignore[attr-defined]
-    _story_nodes_from_ts(practice, source, relative)
-    if node_type:
-        for node in practice.in_graph.nodes():
-            node.type = node_type
-    context = RuleCheckContext(practice, root)
-    messages: list[str] = []
-    for _node_id, message in rule.check_practice(context):
-        messages.append(message)
-    for nt in rule.node_types:
-        for node in context.nodes(nt):
-            messages.extend(rule.check(node, context))
-    # Story rules often register as Step; match Given/When/Then nodes too.
-    if "Step" in rule.node_types:
-        for phase in ("Given", "When", "Then"):
-            for node in context.nodes(phase):
-                messages.extend(rule.check(node, context))
-    return messages
+    def _story_map(self, text: str, story_file: str, examples: tuple[str, ...]) -> StoryModel:
+        epic = Epic("Submit Fixture Stories", 1)
+        stories = [Story(name, order) for order, name in enumerate(_STORY_CALL.findall(text) or [_FIXTURE_STORY], start=1)]
+        for story in stories:
+            story.source = SourceLocation(story_file, 1, 1)
+            epic.append_story(story)
+        scenario = Scenario("Submit the fixture", 1)
+        scenario.steps = [Step(given, StepType.GIVEN, order, keyword="Given") for order, given in enumerate(_GIVEN_CALL.findall(text), start=1)]
+        for name in examples:
+            scenario.examples[name] = Example(name)
+        stories[0].scenarios = [scenario]
+        story_map = StoryModel()
+        story_map.append_epic(epic)
+        story_map.source_texts[story_file] = text
+        return story_map
 
 
-def assert_stories_ts_pair(
-    slug: str,
-    fault_source: str,
-    clean_source: str,
-    *,
-    relative: str = "faultyAsset.ts",
-    clean_relative: str | None = None,
-) -> None:
-    rule = stories_rule_by_slug(slug)
-    fault_hits = violations_for_story_source(rule, fault_source, relative=relative)
-    clean_hits = violations_for_story_source(
-        rule, clean_source, relative=clean_relative or relative
-    )
-    if not fault_hits:
-        raise AssertionError(f"{slug}: expected fault violations, got none")
-    if clean_hits:
-        raise AssertionError(f"{slug}: expected clean, got {clean_hits!r}")
+def assert_stories_ts_pair(slug: str, fault_source: str, clean_source: str, *, relative: str = "faultyAsset.ts", clean_relative: str | None = None) -> None:
+    """The rule flags the story file fault_source and passes clean_source."""
+    clean_relative = clean_relative or relative
+    faulty = StoryFixture({relative: fault_source.strip() + "\n"}, relative)
+    repaired = StoryFixture({clean_relative: clean_source.strip() + "\n"}, clean_relative)
+    RulePair(stories_rule_by_slug(slug), faulty, repaired).check()
 
 
 def assert_stories_example_pair(slug: str) -> None:
+    """The rule flags its example's faulty asset and passes its repaired one."""
     root = _EXAMPLES / slug
-    fault = (root / "faulty" / "faultyAsset.ts").read_text(encoding="utf-8")
-    clean = (root / "repaired" / "repairedAsset.ts").read_text(encoding="utf-8")
-    assert_stories_ts_pair(slug, fault, clean)
-
-
-def _practice_from_folder(folder: Path, *, relative_file: str) -> tuple[PracticeGuidance, Path, Node]:
-    temp = tempfile.TemporaryDirectory()
-    root = Path(temp.name)
-    for item in folder.rglob("*"):
-        if item.is_file():
-            target = root / item.relative_to(folder)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(item, target)
-    graph = Graph()
-    graph.open(root)
-    practice = graph.practice("stories")
-    practice._temp_dir = temp  # type: ignore[attr-defined]
-    rel = relative_file.replace("\\", "/")
-    text = (root / rel).read_text(encoding="utf-8") if (root / rel).is_file() else ""
-    node = Node(
-        practice,
-        "Example",
-        f"stories:Example:{rel}:fixture",
-        Path(rel).stem,
-        Source(rel, 1, max(1, text.count("\n"))),
+    assert_stories_ts_pair(
+        slug,
+        (root / "faulty" / "faultyAsset.ts").read_text(encoding="utf-8"),
+        (root / "repaired" / "repairedAsset.ts").read_text(encoding="utf-8"),
+        relative="faultyAsset.ts",
+        clean_relative="repairedAsset.ts",
     )
-    node.practice.in_graph.hold(node)
-    _load_file_facts(node, root, rel)
-    return practice, root, node
 
 
-def _load_file_facts(node: Node, root: Path, relative: str) -> None:
-    """The facts the story model loads for a story file, set on the fixture node as a live build sets them."""
-    from cdd_guidance.practices.stories.model.story_recording import story_file_facts
-
-    path = root / relative
-    for name, value in story_file_facts(path.read_text(encoding="utf-8") if path.is_file() else "").items():
-        node.set_fact(name, value)
-
-
-def assert_stories_folder_pair(
-    slug: str,
-    example_slug: str,
-    relative_file: str,
-    *,
-    node_type: str = "Example",
-) -> None:
-    base = _EXAMPLES / example_slug
-    rule = stories_rule_by_slug(slug)
-    for kind, expect_fault in (("faulty", True), ("repaired", False)):
-        folder = base / kind
-        practice, root, node = _practice_from_folder(folder, relative_file=relative_file)
-        node.type = node_type
-        context = RuleCheckContext(practice, root)
-        hits = list(rule.check(node, context))
-        if expect_fault and not hits:
-            raise AssertionError(f"{slug}/{kind}: expected violations on {relative_file}")
-        if not expect_fault and hits:
-            raise AssertionError(f"{slug}/{kind}: expected clean, got {hits!r}")
+def assert_stories_folder_pair(slug: str, story_file: str, examples: tuple[str, ...]) -> None:
+    """The rule flags its example's faulty folder and passes its repaired one, each read with story_file as the story
+    file whose scenario uses examples."""
+    root = _EXAMPLES / slug
+    faulty = StoryFixture.from_folder(root / "faulty", story_file, examples)
+    repaired = StoryFixture.from_folder(root / "repaired", story_file, examples)
+    RulePair(stories_rule_by_slug(slug), faulty, repaired).check()

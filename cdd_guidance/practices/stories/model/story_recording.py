@@ -21,7 +21,6 @@ if TYPE_CHECKING:
 
 _EXPORT_CONST = re.compile(r"export const (\w+)")
 _DOMAIN_CLASS = re.compile(r"\bclass\s+([A-Z]\w*)\b")
-_ORCHESTRATION_EXPORT = re.compile(r"export function (?:activate|handle|process)\w*\s*\(")
 _NAMED_IMPORT = re.compile(r"import\s*(?:type\s*)?\{(?P<names>[^}]+)\}\s*from\s*['\"](?P<module>[^'\"]+)['\"]")
 # Python `from .examples.customers_examples import valid_customer, (a as b)`.
 _PYTHON_FROM_IMPORT = re.compile(r"^\s*from\s+(?P<module>\.*[\w.]*)\s+import\s+(?P<names>\([^)]*\)|[^#\r\n]+)", re.M)
@@ -89,7 +88,6 @@ def story_file_facts(text: str) -> dict:
     return {
         "export_names": _EXPORT_CONST.findall(text),
         "domain_class_names": _DOMAIN_CLASS.findall(text),
-        "exports_orchestration": bool(_ORCHESTRATION_EXPORT.search(text)),
         "imported_modules": _imported_modules(text),
     }
 
