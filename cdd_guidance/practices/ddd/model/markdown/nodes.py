@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 from cdd_guidance.actions.sketch.discovery_document import DiscoveryDocument
-from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
+from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, OoadClass
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
-from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.ddd.model.markdown.class_cards import (
     CARD,
     ClassCard,
@@ -20,11 +18,10 @@ from cdd_guidance.practices.ddd.model.nodes import (
     BoundedContext,
     BoundedContextMap,
     DomainEvent,
-    DomainService,
     Integration,
 )
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in, without_marks
-from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass, plain_class_name
+from cdd_guidance.practices.ddd.model.stereotypes import plain_class_name
 
 _EVENT_MAP = "event map"
 _CONTEXT = "## "
@@ -40,14 +37,6 @@ _FIELD_NAMES = {"integrate": "integration", "context": "context", "aggregate": "
 }
 # Lines that end a card's section and return to the aggregate's own lines: its arcs, its events, the next aggregate.
 _LEAVES_CARD = ("integrations:", "emits events:", "consumes events:", "### ")
-# Where a class lives rides in its intent's first line when it is written as code: `Customer | custom · Customer Profile`.
-_PLACE = " · "
-_DEFAULT_CONTEXT = "Domain"
-# A module's path: the labels of the contexts that hold it, then its own name, as Clean Engineering nests modules.
-_PATH = "/"
-# The most members an aggregate lists on the map; the rest stay in the model.
-_DRAWN_MEMBERS = 10
-_CONSTRUCTORS = ("constructor", "__init__")
 # The `domain driven design:` section of a sketch, flattened to indentation: a context is `### Name | owner`, the
 # heading that holds aggregates `#### group` or `#### module/`, and an entity `##### Name`, each with a fence below.
 SKETCH_INDENT = 2
@@ -137,7 +126,6 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         super().__init__(name, sequential_order, **kwargs)
         # The lines under the aggregate's heading; `load_root` reads the root, its cards, and its arcs from them.
         self.source_lines: list[str] = []
-        self.cards: list[ClassCard] = []
         # The sketch heading this aggregate was listed under, so the map keeps the sketch's grouping.
         self.group: str | None = None
         # The entity fences a sketch lists under this aggregate: each card's heading and the lines of its fence.
@@ -151,7 +139,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
 
     def load_sketch(self) -> None:
         """Read the sketch's fences into cards, then the root from this aggregate's lines and its root card."""
-        self.cards = [card for heading, lines in self.sketch_fences for card in ClassCard.from_sketch(heading, lines)]
+        self.classes = [card for heading, lines in self.sketch_fences for card in ClassCard.from_sketch(heading, lines)]
         self.load_root()
 
     @property
@@ -163,7 +151,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
 
     def sketch_lines(self) -> list[str]:
         """The aggregate in a sketch: its entity and fence, or each card's heading and fence, its arcs on the root."""
-        if not self.cards:
+        if not self.classes:
             members = [item.name for item in self.root.operations] + [item.name for item in self.root.invariant_objects] if self.root is not None else []
             return [f"{_SKETCH_ENTITY}{self.name}", ""] + fenced(members + self.integration_lines())
         written: list[str] = []
@@ -174,50 +162,40 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
 
     def load_root(self) -> None:
         sections, map_lines = self._split_cards()
-        self.cards.extend(ClassCard.read(section) for section in sections)
+        self.classes.extend(ClassCard.read(section) for section in sections)
         self._read_map_lines(map_lines)
         self.take_root_card()
         super().load_root()
 
     @property
     def root_card(self) -> ClassCard | None:
-        return next((card for card in self.cards if card.is_root), None)
+        return next((card for card in self.classes if card.is_root), None)
 
     @property
     def repository(self) -> ClassCard | None:
-        return next((card for card in self.cards if card.is_repository), None)
+        return next((card for card in self.classes if card.is_repository), None)
 
     @property
     def member_cards(self) -> list[ClassCard]:
         """The entities and values the root composes."""
-        return [card for card in self.cards if not card.is_root and not card.is_repository]
+        return [card for card in self.classes if not card.is_root and not card.is_repository]
 
     @property
     def ordered_cards(self) -> list[ClassCard]:
         """Root, then its repository, then members — the same order in every aggregate."""
-        roots = [card for card in self.cards if card.is_root]
-        repositories = [card for card in self.cards if card.is_repository]
+        roots = [card for card in self.classes if card.is_root]
+        repositories = [card for card in self.classes if card.is_repository]
         return roots + repositories + self.member_cards
 
     @property
     def members(self) -> list:
         """What the root holds: the member cards at model fidelity, else the invariant objects its lines name."""
-        return self.member_cards if self.cards else super().members
-
-    @property
-    def code_place(self) -> str:
-        """Where the aggregate lives, as code keeps it: each enclosing context's label, then its own name."""
-        return _PLACE.join([context.label for context in self.parent.enclosing_contexts] + [self.name])
-
-    @property
-    def module_path(self) -> str:
-        """The aggregate as a module nested in its context's module: `Sales | custom/ShoppingCart`."""
-        return f"{self.parent.module_path}{_PATH}{self.name}"
+        return self.member_cards if self.classes else super().members
 
     @property
     def drawn_members(self) -> list[str]:
-        """The members the map lists under the aggregate: up to ten of what the root holds, without the root itself,
-        prose, or operations."""
+        """The members the map lists under the aggregate: what the root holds, without the root itself, prose, or
+        operations."""
         if self.root is None:
             return []
         names = [item.name.split("//", 1)[0].split(" - ", 1)[0].strip() for item in self.members]
@@ -227,7 +205,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
             if name and name.lower() not in seen and not _looks_like_prose(name) and not looks_like_operation(name):
                 seen.add(name.lower())
                 drawn.append(name)
-        return drawn[:_DRAWN_MEMBERS]
+        return drawn
 
     def take_drawn_root(self, members: list[str]) -> None:
         """The root a map drawing shows: the aggregate's own entity, holding the members listed under it."""
@@ -242,30 +220,41 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         events = self.events
         self.take_root(root)
         self.root.properties.extend(event for event in events if event not in self.root.properties)
-        for card in self.cards:
+        for card in self.classes:
             if card.is_repository:
                 card.accesses = self.root
 
-    def class_module(self, order: int) -> Module:
-        """The aggregate as a code file holds it: a module named by its place, each card a class whose doc comment
-        starts with that place, and the aggregate's arcs after the first class's intent."""
-        module = Module(self.code_place, order)
+    def take_class(self, oclass: OoadClass, intent: str) -> None:
+        """Hold a class read from a class model as the card of the building block it is."""
+        self.classes.append(ClassCard.from_code(oclass, intent))
+
+    def take_root_from_classes(self) -> None:
+        """Once its cards are read from a class model: the relationships their types name, the arcs the first card's
+        intent kept, and the root card, else a root named after the aggregate."""
+        self.infer_relationships()
+        self.take_code_integrations()
+        self.take_root_card()
+        if self.root is None:
+            self.root = MarkdownEntity(self.name, 1)
+
+    def write_classes_into(self, module: Module) -> None:
+        """Write the aggregate into module as code holds it: each card a class whose intent starts with the
+        aggregate's place, the aggregate's arcs after the first class's intent, and the root alone when it has no
+        cards."""
+        place = self.code_place
         for card in self.ordered_cards:
-            module.classes.append(card.code_class(self.code_place, len(module.classes) + 1))
+            card.write_into(module, f"{place}\n{card.intent}" if card.intent else place)
         if module.classes and self.integrations:
             arcs = [line.strip() for item in self.integrations for line in item.lines()]
             module.classes[0].intent += "\n" + "\n".join([_INTEGRATIONS] + arcs)
         if not module.classes and self.root is not None:
-            root = OoadClass(self.root.name, 1, intent=self.code_place)
-            root.operations = [item.clone() for item in self.root.operations]
-            module.classes.append(root)
+            self.root.write_into(module, place)
         self._depend_across(module)
-        return module
 
     def _depend_across(self, module: Module) -> None:
         """Each class depends on the class of another aggregate its operations call, named by the calling operation,
         and the root on each class an integration reaches, named by the integration's pattern."""
-        local = {card.name for card in self.cards} | {self.name}
+        local = {card.name for card in self.classes} | {self.name}
         for oclass in module.classes:
             for operation in oclass.operations:
                 for callee in operation.callees:
@@ -279,7 +268,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
 
     def take_code_integrations(self) -> None:
         """Read back the arcs a code file kept after a class's intent, and leave the intent as it was."""
-        for card in self.cards:
+        for card in self.classes:
             kept, found, arcs = (card.intent or "").partition(_INTEGRATIONS)
             if found:
                 card.intent = kept.strip()
@@ -289,8 +278,8 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         """Code holds `identity: Identity`, not `<< composition >>`: a member the aggregate holds is composed, and a
         repository's collection of the root is an aggregation."""
         members = {card.name for card in self.member_cards}
-        roots = {card.name for card in self.cards if card.is_root}
-        for card in self.cards:
+        roots = {card.name for card in self.classes if card.is_root}
+        for card in self.classes:
             for prop in card.plain_properties:
                 if prop.stereotype:
                     continue
@@ -369,7 +358,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
 
     def lines(self) -> list[str]:
         written = [f"{_AGGREGATE}{self.name}", ""]
-        if self.cards:
+        if self.classes:
             for card in self.ordered_cards:
                 written.extend(card.lines())
         elif self.root is not None:
@@ -511,19 +500,6 @@ class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
         self.append_aggregate(aggregate)
         return aggregate
 
-    @property
-    def module_path(self) -> str:
-        """The context as a module nested in the contexts around it: each enclosing context's label, joined by `/`."""
-        return _PATH.join(context.label for context in self.enclosing_contexts)
-
-    def aggregate_named(self, name: str) -> "MarkdownAggregate":
-        """This context's aggregate called name, opened the first time a class names it."""
-        found = next((item for item in self.aggregates if item.name == name), None)
-        if found is None:
-            found = MarkdownAggregate(name, len(self.aggregates) + 1)
-            self.append_aggregate(found)
-        return found
-
     def lines(self) -> list[str]:
         written = [f"{_CONTEXT}{self.name} | {self.owner or ''}", ""]
         written.extend(_quoted(self.notes))
@@ -567,10 +543,16 @@ def _quoted(notes: list[str]) -> list[str]:
 
 
 class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
+    """The `markdown` format: `## Context | owner` headings, `### Aggregate` sections under them, then the event map."""
+
+    bounded_context_type = MarkdownBoundedContext
+    aggregate_type = MarkdownAggregate
+
     def __init__(self) -> None:
         super().__init__()
-        self.bounded_context_type = MarkdownBoundedContext
-        self.aggregate_type = MarkdownAggregate
+        # The lines of the text being parsed, and the line the next context is looked for from.
+        self._lines: list[str] = []
+        self._index = 0
 
     def has_more_bounded_context(self) -> bool:
         return self._next_context_at() is not None
@@ -601,22 +583,23 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         return not self.every_aggregate
 
     def render(self, canonical: BoundedContextMap | None = None, previous: str | None = None) -> str:
-        body = (canonical or self).save()
+        """canonical (this map when none is given) as markdown; under the header of the sketch it came from when the
+        previous text is a sketch."""
+        body = self._text(canonical or self)
         if previous and "## domain driven design:" in previous.lower():
             return self._wrap_bounded_context_document(body, previous)
         return body
 
-    @property
-    def has_class_cards(self) -> bool:
-        """Whether the map is a domain model, whose aggregates hold class cards, rather than a bounded context map."""
-        return any(isinstance(item, MarkdownAggregate) and item.cards for item in self.every_aggregate)
-
     def save(self) -> str:
-        lines = ["# Domain Model" if self.has_class_cards else "# Bounded Context Map", ""]
-        for context in self.contexts:
+        return self._text(self)
+
+    def _text(self, source: BoundedContextMap) -> str:
+        """source as markdown: each context's own lines, then the event map."""
+        lines = ["# Domain Model" if source.has_class_cards else "# Bounded Context Map", ""]
+        for context in source.contexts:
             if isinstance(context, MarkdownBoundedContext):
                 lines.extend(context.lines())
-        events = [event for aggregate in self.every_aggregate for event in aggregate.events]
+        events = [event for aggregate in source.every_aggregate for event in aggregate.events]
         if events:
             lines.append(f"{_CONTEXT}{_EVENT_MAP}")
             lines.append("")
@@ -626,65 +609,6 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
                 lines.append(f"- {event.name}: emitted by {producer}; consumed by {consumers}")
             lines.append("")
         return "\n".join(lines)
-
-    def class_model(self) -> CleanEngineeringModel:
-        """The map as code holds it: one module per aggregate, each card a class that keeps its stereotypes and has
-        its place first in its intent."""
-        model = CleanEngineeringModel("model", 1)
-        for aggregate in self.every_aggregate:
-            model.modules.append(aggregate.class_module(len(model.modules) + 1))
-        return model
-
-    def read_class_model(self, model: CleanEngineeringModel) -> "MarkdownBoundedContextMap":
-        """Read a class model written as code into this map, and return it: each class's place names its context
-        and aggregate; classes with no place gather around the roots that hold them."""
-        self.contexts = []
-        unplaced: list[tuple[str, ClassCard]] = []
-        for module in model.modules:
-            for oclass in module.classes:
-                if oclass.name.startswith("_"):
-                    continue
-                first, _, rest = (oclass.intent or "").partition("\n")
-                place = _place_in(first)
-                if len(place) < 2:
-                    # A diagram keeps the place as the class's module, not in its intent.
-                    place, rest = _place_in(module.name), oclass.intent or ""
-                if len(place) < 2:
-                    place = []
-                card = _code_card(oclass, rest.strip())
-                if place:
-                    self._context_at(place[:-1]).aggregate_named(place[-1]).cards.append(card)
-                else:
-                    unplaced.append((module.name or _DEFAULT_CONTEXT, card))
-        for context_name, aggregate_name, card in _grouped(unplaced):
-            self._context_at([context_name]).aggregate_named(aggregate_name).cards.append(card)
-        for aggregate in self.every_aggregate:
-            aggregate.infer_relationships()
-            aggregate.take_code_integrations()
-            aggregate.take_root_card()
-            if aggregate.root is None:
-                aggregate.root = MarkdownEntity(aggregate.name, 1)
-        return self
-
-    def wire_events(self, entries: list[str]) -> None:
-        """Read each `Event: emitted by Producer; consumed by A, B` entry of an event map onto its producer's root."""
-        aggregates = {item.name: item for item in self.every_aggregate}
-        services: dict[str, DomainService] = {}
-        for entry in entries:
-            _wire_event(entry, aggregates, services)
-
-    def _context_at(self, labels: list[str]) -> MarkdownBoundedContext:
-        """The context a place's labels name, opened the first time: a nested context sits in the one before it."""
-        holder: MarkdownBoundedContextMap | MarkdownBoundedContext = self
-        for label in labels:
-            name, _, owner = label.partition("|")
-            context = next((item for item in holder.contexts if item.label == label.strip()), None)
-            if context is None:
-                context = MarkdownBoundedContext(name.strip(), len(holder.contexts) + 1)
-                context.owner = owner.strip()
-                holder.append_context(context)
-            holder = context
-        return holder
 
     def _wrap_bounded_context_document(self, body: str, sketch: str) -> str:
         document = DiscoveryDocument("bounded-context-map", "Bounded Context Map", sketch)
@@ -726,80 +650,9 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         return entries
 
 
-def _place_in(text: str) -> list[str]:
-    """The context labels and the aggregate name a place names: `Customer | custom · Customer Profile`."""
-    return [part.strip() for part in text.split(_PLACE.strip()) if part.strip()]
-
-
 def _looks_like_prose(line: str) -> bool:
     """A note or a sentence, not a member's name."""
     text = line.strip()
     if not text or text.lower().startswith("note:"):
         return True
     return ". " in text or text.endswith(".") or text[0].islower()
-
-
-def _code_card(oclass: OoadClass, intent: str) -> ClassCard:
-    """The card a class written as code is: the DDD stereotypes it carries, else a repository by its name; its
-    members as the code has them, without its constructor."""
-    marks = TacticalClass(oclass).stereotypes
-    by_name = ["Repository"] if oclass.name.endswith("Repository") and oclass.name != "Repository" else []
-    card = ClassCard.named(oclass.name, marks or by_name)
-    card.sequential_order = oclass.sequential_order
-    card.intent = intent
-    card.properties = [item.clone() for item in oclass.properties]
-    card.operations = [item.clone() for item in oclass.operations if item.name not in (oclass.name, *_CONSTRUCTORS)]
-    return card
-
-
-def _grouped(unplaced: list[tuple[str, ClassCard]]):
-    """Classes with no place: each root, or each class nobody composes, opens an aggregate; the rest join it."""
-    names = {card.name: (context, card) for context, card in unplaced}
-    owner: dict[str, str] = {}
-    for context, card in unplaced:
-        for prop in card.properties:
-            for target in re.split(r"[\[\]<>|,\s]+", prop.type_hint or ""):
-                if target in names and target != card.name and not names[target][1].is_root:
-                    owner.setdefault(target, card.name)
-        if card.is_repository:
-            root = card.name[: -len("Repository")]
-            if root in names:
-                owner.setdefault(card.name, root)
-                if not names[root][1].stereotypes:
-                    # A class the business keeps in its own repository is an aggregate root.
-                    names[root][1].stereotypes = ["Aggregate Root", "Entity"]
-    for context, card in unplaced:
-        top = card.name
-        seen = set()
-        while top in owner and top not in seen:
-            seen.add(top)
-            top = owner[top]
-        yield context, top, card
-
-
-def _wire_event(text: str, aggregates: dict[str, Aggregate], services: dict[str, DomainService]) -> None:
-    # CartCheckedOut: emitted by ShoppingCart; consumed by Inventory, Receipt
-    name, _, rest = text.partition(":")
-    emitted, _, consumed = rest.partition("consumed by")
-    producer = aggregates.get(emitted.replace("emitted by", "").strip(" ;"))
-    if producer is None or producer.root is None:
-        return
-    event = next((item for item in producer.events if item.name == name.strip()), None)
-    if event is None:
-        event = DomainEvent(name.strip(), len(producer.root.properties))
-        producer.root.properties.append(event)
-    event.producer = producer
-    event.subject = Property("subject", 0, description="the state of the event")
-    for part in consumed.split(","):
-        consumer_name = part.strip()
-        if consumer_name:
-            event.consumers.append(_consumer(consumer_name, aggregates, services, len(event.consumers) + 1))
-
-
-def _consumer(name: str, aggregates: dict[str, Aggregate], services: dict[str, DomainService], order: int):
-    """The aggregate a consumer names, else the domain service it names, made once per map."""
-    if name in aggregates:
-        return aggregates[name]
-    if name not in services:
-        services[name] = DomainService(name, order)
-    return services[name]
