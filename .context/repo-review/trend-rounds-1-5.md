@@ -77,12 +77,14 @@ From round 5 on, each round runs validate, writes a report, has agents fix it, a
 
 | Goal class | Concerns | Round 5 |
 |---|---|---|
-| Bad resource orientation | 5, 9 | 68 (62 + 6) |
-| Shadow models | 2 | 33 |
-| Duplicated functions | 1, 12 | 62 (50 + 12) |
-| **Goal total** | | **163** |
+| Bad resource orientation | 5, 9 | 64 (59 + 5) |
+| Shadow models | 2 | 30 |
+| Duplicated functions | 1, 12 | 58 (47 + 11) |
+| **Goal total** | | **152** |
 
-**Done when** the goal total is below 30 (under a fifth of round 5's 163) and no high finding remains in the three classes. The user set this target on 2026-11-08; it replaced the first target of 81.
+The first count gave 163, because it also counted round 5's summary tables of concerns. The counter now reads only tables that have a status or severity column, so 152 is the baseline.
+
+**Done when** the goal total is below 30 (under a fifth of round 5's 152) and no high finding remains in the three classes. The user set this target on 2026-11-08; it replaced the first target of 81.
 
 **What counts as cycling, and what to change when it happens.** After each round, compare it with the round before:
 - **Each round should cut the goal total by at least 20%.** If it doesn't, change the fix brief, not just the code. Find which findings were reported again:
@@ -94,6 +96,6 @@ From round 5 on, each round runs validate, writes a report, has agents fix it, a
 
 | Round | Bad resource orientation | Shadow models | Duplicated functions | Goal total | Change from last round | Regressions | Notes |
 |---|---|---|---|---|---|---|---|
-| 5 | 68 | 33 | 62 | 163 | baseline | — | First cross-file round. Nine fix agents ran on it |
+| 5 | 64 | 30 | 58 | 152 | baseline | — | First cross-file round. Nine fix agents ran on it |
 
 **Code metrics beside the findings.** [code-metrics-trend.md](code-metrics-trend.md) measures each round's input revision with standard tools. From round 6 on, each round also records the metrics that track bad resource orientation: classes with CBO above 14 (43 at the tip), classes with LCOM4 above 1 (252), runtime import cycles (2), the top module fan-in (62), the WMC of the largest classes (`Graph`, `PracticeGuidance`), and duplicated lines (0.42%). Shadow models and semantic duplicates are mostly invisible to these metrics, so the AI findings stay the measure for those two classes.

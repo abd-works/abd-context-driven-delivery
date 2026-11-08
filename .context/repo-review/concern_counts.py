@@ -8,7 +8,10 @@ for f in files:
         if not l.startswith('|'): ci=None if not l.strip() else ci; continue
         cells=[x.strip() for x in l.strip().strip('|').split('|')]
         low=[c.lower() for c in cells]
-        if 'concern' in low: ci=low.index('concern'); continue
+        if 'concern' in low:
+            # Only finding tables count: they also carry a status or severity column.
+            ci=low.index('concern') if any(h in low for h in ('status','severity','sev')) else None
+            continue
         if ci is None or set(l.strip())<=set('|- '): continue
         if ci>=len(cells): continue
         ks=set(int(k) for k in re.findall(r'\b(1[0-2]|[1-9])\b',cells[ci]))
