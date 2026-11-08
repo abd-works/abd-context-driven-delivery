@@ -22,10 +22,14 @@ import threading
 import time
 from typing import Any
 
+import harness.hooks.hook_server as hook_server_module
+import harness.hooks.hooks as hooks_module
+import harness.process.process as process_module
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.hooks.hook_server import HookResult, HookServer
+from harness.hooks.hooks import InstalledHookHandlers
 from harness.installation.repository_toolsets import RepositoryToolsets
-from harness.process.process import BackgroundStart, PythonInterpreter
-from harness.process.process import ProcessNotStopped, RunningProcess, StoppableProcess
+from harness.process.process import BackgroundStart, ExclusivePort, ProcessNotStopped, PythonInterpreter, RunningProcess, StoppableProcess
 
 logger = logging.getLogger(__name__)
 
@@ -40,13 +44,12 @@ _READY_POLL_SECONDS = 0.2
 _CALL_TIMEOUT_SECONDS = 600
 # A ping answers at once from a live daemon, so a dead or busy address is found quickly.
 _PING_TIMEOUT_SECONDS = 5
-_SOURCE_STAMP_FILES = (
-    Path("harness/hooks/hook_daemon.py"),
-    Path("harness/hooks/hook_server.py"),
-    Path("harness/hooks/hooks.py"),
-    Path("harness/process/process.py"),
-    Path("harness/guidance/rule.py"),
-    Path("harness/guidance_actions/guidance_actions.py"),
+# The hook server's own code: a daemon that loaded older copies of these is a different daemon.
+_HOOK_SERVER_FILES = (
+    Path(__file__).resolve(),
+    Path(hook_server_module.__file__).resolve(),
+    Path(hooks_module.__file__).resolve(),
+    Path(process_module.__file__).resolve(),
 )
 
 
@@ -203,11 +206,22 @@ class HookDaemon:
     def source_stamp(self) -> str:
         """Identity of the hook code this checkout holds now. A daemon that loaded older files is a different daemon."""
         parts: list[str] = []
-        for relative in _SOURCE_STAMP_FILES:
-            path = self.repo / relative
+        for path in self._stamped_files():
             if path.is_file():
-                parts.append(f"{relative.as_posix()}:{path.stat().st_mtime_ns}")
+                parts.append(f"{path.as_posix()}:{path.stat().st_mtime_ns}")
         return hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()
+
+    def _stamped_files(self) -> list[Path]:
+        """The hook server's own code, each hook install's ``hook-handlers.json``, and the module of each toolset those
+        files list: the code and the list a loaded daemon answers with."""
+        installed = InstalledHookHandlers(self.repo)
+        found = [*_HOOK_SERVER_FILES, *(handlers.path for handlers in installed.files)]
+        for ref in installed.refs:
+            try:
+                found.append(ToolsetReference(ref).module_file())
+            except (ModuleNotFoundError, ValueError):
+                continue
+        return found
 
     def ensure(self) -> HookDaemonAddress:
         """The address of this checkout's daemon, replacing one on older code and starting one when none answers."""
@@ -257,7 +271,7 @@ class HookDaemon:
         """Listen on this checkout's port and answer hook commands with server, until the process ends; with no
         server, the hook server of every toolset the checkout defines. Return at once when another daemon holds the
         port."""
-        listener = self._claim_port()
+        listener = ExclusivePort(self.HOST, self.port).claim()
         if listener is None:
             return
         try:
@@ -306,23 +320,6 @@ class HookDaemon:
             return None
         return HookDaemonAddress(state.get("host") or self.HOST, int(state["port"]), state.get("pid"), str(state.get("stamp") or ""))
 
-    def _claim_port(self) -> socket.socket | None:
-        """None when a daemon already holds this checkout's port, so the loser exits.
-
-        An exclusive bind is the claim — two daemons cannot both hold one port, and
-        no lock file can promise that once the holder is killed without cleanup.
-        """
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        if sys.platform == "win32":
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
-        try:
-            sock.bind((self.HOST, self.port))
-        except OSError:
-            sock.close()
-            return None
-        sock.listen(socket.SOMAXCONN)
-        return sock
-
     def _publish_address(self, port: int) -> None:
         self.folder.mkdir(parents=True, exist_ok=True)
         payload = {"host": self.HOST, "port": port, "pid": os.getpid(), "stamp": self.source_stamp}
@@ -361,10 +358,10 @@ class HookDaemon:
 
 def run_hook_command() -> None:
     """The hook command: hand the event on stdin to this checkout's hook daemon and print its answer for the IDE."""
-    checkout = Path(__file__).resolve().parents[2]
-    daemon = HookDaemon(checkout)
+    toolsets = RepositoryToolsets.of_running_checkout()
+    daemon = HookDaemon(toolsets.root)
     daemon.toolsets.use_for_this_process()
-    os.chdir(checkout)
+    os.chdir(toolsets.root)
     raw = sys.stdin.buffer.read()
     if not raw.strip():
         print(json.dumps(HookResult().as_dict()))

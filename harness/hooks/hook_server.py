@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
 from collections.abc import Iterator, Mapping
 from pathlib import Path
 from typing import Any, Callable, ClassVar
@@ -14,7 +13,8 @@ from typing import Any, Callable, ClassVar
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 from harness.annotations.annotation import HostedOnly
-from harness.hooks.hooks import HookHandlersFile, Hooks, InstalledHookHandlers
+from harness.hooks.hooks import Hook, HookHandlersFile, Hooks, InstalledHookHandlers
+from harness.installation.destination import SkippedTools
 from harness.installation.context_config import ContextConfig
 from harness.installation.repository_toolsets import RepositoryToolsets
 
@@ -390,7 +390,7 @@ class HandlerCatalog:
     def _handlers_by_event(self) -> dict[str, list[HookHandler]]:
         by_event: dict[str, dict[tuple[str, str], HookHandler]] = {}
         for tool in self._hook_tools():
-            for event in self._events_served(tool):
+            for event in Hook.events_served(tool.hook_event):
                 handlers = by_event.setdefault(event, {})
                 key = (type(tool.toolset).__name__, tool.name)
                 if key not in handlers:
@@ -400,23 +400,6 @@ class HandlerCatalog:
     def _hook_tools(self) -> list[AgentTool]:
         return [tool for toolset in self.toolsets for tool in toolset.tools_for(InstallDestination.HOOK)]
 
-    def _events_served(self, tool: AgentTool) -> list[str]:
-        """A tool serves the event its annotation names. Rule injection annotated for ``postToolUse`` also serves
-        ``afterFileEdit``, because Cursor reports a file edit under that event as well as ``postToolUse``."""
-        if tool.hook_event == "postToolUse" and tool.name == "inject_rules":
-            return [tool.hook_event, "afterFileEdit"]
-        return [tool.hook_event]
-
-
-class HookIllegitimateHandler(Exception):
-    """One hook handler was skipped: its toolset could not be loaded, or it raised while answering an event. The
-    server keeps answering every event with the other handlers, and diagnose reports this one."""
-
-    def __init__(self, tool: str, reason: str, cause: BaseException | None = None) -> None:
-        super().__init__(f"{tool}: {reason}")
-        self.tool = tool
-        self.reason = reason
-        self.cause = cause
 
 
 class HookServer:
@@ -435,7 +418,7 @@ class HookServer:
     def __init__(self, repo_root: Path, catalog: HandlerCatalog) -> None:
         self._repo_root = repo_root
         self._catalog = catalog
-        self.exceptions: list[HookIllegitimateHandler] = []
+        self.skipped = SkippedTools("hook", "handlers")
         self._absorb_catalog_failures()
 
     @classmethod
@@ -447,7 +430,7 @@ class HookServer:
         installed = InstalledHookHandlers(toolsets.root).refs
         server = cls(toolsets.root, HandlerCatalog(list(installed) or classes, toolsets.root))
         for unloadable in toolsets.unloadable:
-            server.skip(unloadable.reference, unloadable.cause)
+            server.skipped.skip(unloadable.reference, unloadable.cause)
         return server
 
     @classmethod
@@ -455,13 +438,8 @@ class HookServer:
         """The hook server of the toolsets a ``hook-handlers.json`` lists, for the checkout at repo."""
         resolved = Path(repo).resolve()
         server = cls(resolved, HandlerCatalog(list(HookHandlersFile(handlers).refs), resolved))
-        server.notify_exceptions()
+        server.skipped.notify()
         return server
-
-    def skip(self, tool: str, error: BaseException) -> None:
-        skipped = error if isinstance(error, HookIllegitimateHandler) else HookIllegitimateHandler(tool, str(error), error)
-        self.exceptions.append(skipped)
-        logger.error("hook standup exception: skipped %s: %s", skipped.tool, skipped.reason, exc_info=skipped.cause)
 
     def handle_stdin(self, raw: bytes) -> HookResult:
         """The answer to the event an IDE wrote on stdin, with the rules kept for its chat."""
@@ -513,25 +491,13 @@ class HookServer:
             "ok": True,
             "ping": "pong",
             "events": self._catalog.event_names,
-            "exceptions": [{"tool": item.tool, "reason": item.reason} for item in self.exceptions],
-            "notice": self.notice(),
+            "exceptions": self.skipped.as_data,
+            "notice": self.skipped.notice,
         }
-
-    def notice(self) -> str:
-        if not self.exceptions:
-            return ""
-        lines = ["hook standup skipped illegitimate handlers and continued:"]
-        lines.extend(f"- {item.tool}: {item.reason}" for item in self.exceptions)
-        return "\n".join(lines)
-
-    def notify_exceptions(self) -> None:
-        text = self.notice()
-        if text:
-            print(text, file=sys.stderr)
 
     def _absorb_catalog_failures(self) -> None:
         for tool, error in self._catalog.failures:
-            self.skip(tool, error)
+            self.skipped.skip(tool, error)
         self._catalog.failures.clear()
 
     def _invoke_enabled(self, event: str, payload: HookPayload) -> list[HookResult]:
@@ -547,7 +513,7 @@ class HookServer:
             # answers or the IDE's event, so it is recorded as a skipped handler, with its traceback in the log, and
             # diagnose reports it.
             except Exception as error:  # noqa: BLE001
-                self.skip(handler.label, error)
+                self.skipped.skip(handler.label, error)
                 continue
             results.append(result)
             self._append_debug(payload, f"HANDLER {handler.label} result={json.dumps(result.as_dict())}")

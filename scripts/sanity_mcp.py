@@ -32,8 +32,8 @@ class McpSanity:
         working: list[dict[str, str]] = []
         broken: list[dict[str, str]] = []
         server = host.checkout_server
-        failed = {item["tool"] for item in server.skipped}
-        for item in server.skipped:
+        failed = {item["tool"] for item in server.skipped.as_data}
+        for item in server.skipped.as_data:
             broken.append({"tool": item["tool"], "error": item["reason"]})
         names = ["cdd.ping", *sorted(server.tools), *sorted(server.prompts)]
         for name in names:

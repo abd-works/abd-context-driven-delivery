@@ -11,8 +11,7 @@ import urllib.request
 from pathlib import Path
 
 from harness.mcp.cdd_home import CddHome
-from harness.process.process import BackgroundStart
-from harness.process.process import StoppableProcess
+from harness.process.process import BackgroundStart, ExclusivePort, StoppableProcess
 
 SERVER_PORT_ENV = "CDD_SERVER_PORT"
 DEFAULT_SERVER_PORT = 47800
@@ -142,16 +141,7 @@ class McpDaemon:
 
     def claim_port(self) -> socket.socket | None:
         """A listening socket on the server port, or ``None`` when another server already holds it."""
-        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        if sys.platform == "win32":
-            listener.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
-        try:
-            listener.bind((self.HOST, self.port))
-        except OSError:
-            listener.close()
-            return None
-        listener.listen(socket.SOMAXCONN)
-        return listener
+        return ExclusivePort(self.HOST, self.port).claim()
 
     def publish(self, source: Path) -> None:
         """Write the address and pid for tools that look for the server without calling it."""

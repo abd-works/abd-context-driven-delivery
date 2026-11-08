@@ -100,6 +100,15 @@ class Hook(Destination):
     def companion_flags(cls) -> tuple[str, ...]:
         return (*super().companion_flags(), cls.disabled_flag)
 
+    # Cursor reports a file edit under afterFileEdit as well as postToolUse, so a postToolUse hook answers both.
+    _ALSO_SERVES = {"postToolUse": ("afterFileEdit",)}
+
+    @classmethod
+    def events_served(cls, event: str) -> tuple[str, ...]:
+        """The IDE events a hook annotated for event answers: event itself, and those the IDE reports the same thing
+        under."""
+        return (event, *cls._ALSO_SERVES.get(event, ()))
+
     @classmethod
     def disabled_on(cls, operation: Any) -> bool:
         """True when ``@Hook(..., disabled=True)`` turned the hook on this operation off."""

@@ -9,7 +9,7 @@ from typing import Any
 from harness.agent_tools.agent_tools import AgentTool
 from harness.hooks.hook_daemon import HookDaemon
 from harness.hooks.hook_server import HookServer
-from harness.hooks.hooks import HookHandlersFile, Hooks, HooksManifest
+from harness.hooks.hooks import Hook, HookHandlersFile, Hooks, HooksManifest
 from harness.installation.destination import ServerInstallation
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.installer import Installer
@@ -134,9 +134,10 @@ class HookInstallation(ServerInstallation):
             "timeout": _HOOK_COMMAND_TIMEOUT_SECONDS,
             "failClosed": False,
         }
-        events = {item["event"] for item in self._handlers}
+        events = {served for item in self._handlers for served in Hook.events_served(item["event"])}
         if "postToolUse" in events:
-            events.update({"afterFileEdit", "stop", "subagentStop"})
+            # The hook server keeps the rules a postToolUse hook gave each chat and answers its stop events with them.
+            events.update({"stop", "subagentStop"})
         for event in sorted(events):
             if event == "afterAgentResponse":
                 hooks[event] = [dict(hook_def)]

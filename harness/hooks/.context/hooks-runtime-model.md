@@ -218,18 +218,7 @@ The toolsets whose hooks the server runs.
 ----
 + ref_label(item): str
 + for_event(event_name: str): list[HookHandler]
-	// tools_for(InstallDestination.HOOK) whose hook_event matches; inject_rules annotated postToolUse also serves afterFileEdit
-
-## HookIllegitimateHandler : Exception                            <!-- Md -->
-
-One hook handler was skipped: its toolset did not load, or it raised while answering an event. The other handlers keep answering.
-
-+ HookIllegitimateHandler(tool: str, reason: str, cause: BaseException | None = None)
-------
-+ tool: str
-+ reason: str
-+ cause: BaseException | None
-----
+	// tools_for(InstallDestination.HOOK) serving the event: Hook.events_served(hook_event), so a postToolUse hook also serves afterFileEdit
 
 ## HookServer                                                     <!-- Md -->
 
@@ -238,14 +227,15 @@ The hooks of one checkout, loaded once in its hook daemon. It runs the enabled h
 + HookServer(repo_root: Path, catalog: HandlerCatalog)
 ------
 + << association >> catalog: HandlerCatalog
-+ exceptions: list[HookIllegitimateHandler]
++ << composition >> skipped: SkippedTools
+	// harness/installation's one record of what a server skipped, shared with the cdd server: skip, as_data, notice, notify
 ----
 + show_toasts_with(show: Callable[[str, list[Path]], Any]): None
 	// the notifier registers itself when it is loaded, so a hook names its toast and never the notifier
 + from_repository(toolsets: RepositoryToolsets): HookServer
 	// the toolsets the hook-handlers.json of every hook-running IDE folder lists (InstalledHookHandlers), else every class the repository defines; every module is imported either way
 + from_handlers(handlers: Path, repo: Path): HookServer
-	-> notify_exceptions()
+	-> SkippedTools.notify()
 + handle_stdin(raw: bytes): HookResult
 	// empty or unreadable raw → permission allow
 	-> HookPayload.from_stdin
@@ -262,13 +252,9 @@ The hooks of one checkout, loaded once in its hook daemon. It runs the enabled h
 	-> HookHandler.invoke
 	-> HookResult.merge
 	// then hands the merged toast to the registered notifier
-+ skip(tool: str, error: BaseException): None
-	// records a HookIllegitimateHandler; a failing handler never stops the others
 + diagnose(): dict
 	-> dispatch
 	-> HandlerCatalog.event_names
-+ notice(): str
-+ notify_exceptions(): None
 - _append_debug(payload: HookPayload, message: str): None
 	// dispatch.debug in the logs folder of the session the event works in
 	-> HookPayload.session

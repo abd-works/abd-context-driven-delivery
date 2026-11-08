@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import functools
 import inspect
+import logging
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Callable
 
 from harness.annotations.annotation import Annotation, OmissionAnnotation
 from harness.installation.ide_layout import IdeLayout
+
+_logger = logging.getLogger(__name__)
 
 InstallTracker = Callable[[Path], None]
 
@@ -324,6 +328,55 @@ class Installation:
 
     def write(self, tool: Any) -> None:
         raise NotImplementedError
+
+
+class SkippedTool(Exception):
+    """One published tool, handler, or toolset a server skipped so it could serve the rest: its toolset could not be
+    loaded, its name or arguments were wrong, or it raised while answering."""
+
+    def __init__(self, tool: str, reason: str, cause: BaseException | None = None) -> None:
+        super().__init__(f"{tool}: {reason}")
+        self.tool = tool
+        self.reason = reason
+        self.cause = cause
+
+
+class SkippedTools:
+    """What one server skipped while it stood up or answered, so it kept serving the rest: the cdd server's tools, the
+    hook server's handlers. A diagnosis reports them, and the notice names them for whoever started the server."""
+
+    def __init__(self, server: str, kind: str) -> None:
+        self._server = server
+        self._kind = kind
+        self._items: list[SkippedTool] = []
+
+    def skip(self, tool: str, error: BaseException) -> None:
+        """Record tool as skipped because of error, with its traceback in the log."""
+        skipped = error if isinstance(error, SkippedTool) else SkippedTool(tool, str(error), error)
+        self._items.append(skipped)
+        _logger.error("%s standup exception: skipped %s: %s", self._server, skipped.tool, skipped.reason, exc_info=skipped.cause)
+
+    def clear(self) -> None:
+        self._items.clear()
+
+    @property
+    def as_data(self) -> list[dict[str, str]]:
+        """Each skipped tool and why, as a diagnosis reports it."""
+        return [{"tool": item.tool, "reason": item.reason} for item in self._items]
+
+    @property
+    def notice(self) -> str:
+        """The lines that name each skipped tool; empty when nothing was skipped."""
+        if not self._items:
+            return ""
+        lines = [f"{self._server} standup skipped illegitimate {self._kind} and continued:"]
+        lines.extend(f"- {item.tool}: {item.reason}" for item in self._items)
+        return "\n".join(lines)
+
+    def notify(self) -> None:
+        """Print the notice for whoever started the server, when something was skipped."""
+        if self._items:
+            print(self.notice, file=sys.stderr)
 
 
 class ServerInstallation(Installation):

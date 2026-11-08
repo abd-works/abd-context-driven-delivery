@@ -77,4 +77,4 @@ with description("a cdd server answering a chat's tool calls") as self:
         with it("should record nothing as skipped"):
             _list(self.host)
             _list(self.host)
-            expect(self.host.checkout_server.skipped).to(equal([]))
+            expect(self.host.checkout_server.skipped.as_data).to(equal([]))
