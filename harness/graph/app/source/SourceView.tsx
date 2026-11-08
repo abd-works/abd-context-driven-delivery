@@ -1,10 +1,14 @@
 import Editor, { type OnMount } from '@monaco-editor/react';
+import type { editor as monaco } from 'monaco-editor';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { initialOpenFolds, inlineCallLayout, type FoldMember, type InlineFold } from './call-expansion';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
 import { buildViolationCorrectPrompt, type ViolationFocus } from './violation-prompt';
 
 const LINE_HEIGHT = 20;
+
+type Decoration = monaco.IModelDeltaDecoration;
+type Decorations = { current: monaco.IEditorDecorationsCollection | null };
 
 export type SourceRule = {
   name: string;
@@ -66,7 +70,7 @@ function SourceEditor({
     setOpenFolds(openBlockFolds(prepared.folds, source.type));
   }
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
-  const decorations = useRef<{ set: (next: object[]) => void; clear: () => void } | null>(null);
+  const decorations = useRef<monaco.IEditorDecorationsCollection | null>(null);
   const hideSource = useRef({ id: 'call-folds' });
   const foldsRef = useRef(prepared.folds);
   const depthsRef = useRef(prepared.depths);
@@ -283,12 +287,12 @@ function violationLineDecorations(
   startLine: number,
   endLine: number,
   active: boolean,
-): { range: { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number }; options: { isWholeLine: boolean; className: string } }[] {
+): Decoration[] {
   if (!active || startLine < 1) {
     return [];
   }
   const last = endLine >= startLine ? endLine : startLine;
-  const rows: { range: { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number }; options: { isWholeLine: boolean; className: string } }[] = [];
+  const rows: Decoration[] = [];
   for (let index = 0; index < lineNumbers.length; index += 1) {
     const fileLine = Number.parseInt(lineNumbers[index] ?? '', 10);
     if (!Number.isFinite(fileLine) || fileLine < startLine || fileLine > last) {
@@ -308,9 +312,9 @@ function applyCallFolds(
   folds: InlineFold[],
   openFolds: string[],
   source: object,
-  decorations: { current: { set: (next: object[]) => void; clear: () => void } | null },
+  decorations: Decorations,
   depths: number[] = [],
-  violationMarks: { range: { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number }; options: { isWholeLine?: boolean; className?: string; glyphMarginClassName?: string } }[] = [],
+  violationMarks: Decoration[] = [],
 ) {
   const open = new Set(openFolds);
   const ranges = hiddenRanges(folds, openFolds).map((fold) => ({

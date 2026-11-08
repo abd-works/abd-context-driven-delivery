@@ -13,11 +13,13 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.chat.chat import Chat
+from harness.diagnostics.server_health import ServerHealth
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
+from space.kanban.board_app import BoardAppPorts
 from space.kanban.format_choice import FormatGroup
 from space.repo.repo import Repo
 from space.session.session_log import LogTimestamp
@@ -211,10 +213,10 @@ class Board:
         return [card for column in self._columns if isinstance(column, Stage) for card in column.cards]
 
     @property
-    @data_field(reference=True)
+    @data_field
     def active(self) -> Ticket | None:
-        """The ticket of the session saved as open; none while main is, since main is not on the board. Sent by its
-        name, since its column sends the ticket."""
+        """The ticket of the session saved as open; none while main is, since main is not on the board. Sent whole, so
+        a reader such as the chat bar draws the active session from it without finding the ticket again by its name."""
         return self.ticket(self.sessions.open_name)
 
     def column(self, name: str) -> Column:
@@ -536,3 +538,7 @@ class Help:
         catalogued = self._catalogued
         has_page = self._fidelity is not None and self._fidelity in catalogued.fidelities
         return f"{FORGE}/{catalogued.fidelity_href(self._fidelity) if has_page else catalogued.href}"
+
+
+# Server health probes the board where its server listens, so a chat finds the board without naming its port.
+ServerHealth.reports_kanban_app_on(BoardAppPorts().board)

@@ -108,7 +108,7 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 	// @mcp. the key of every practice the graph holds
 + inventory(): Inventory
 	// @mcp
-+ filter_choices(practices, node_types): Filter
++ filter_choices(practices, node_types, practices_before): Filter
 	// @mcp. a new Filter; clears the graph's own
 + source(node_id): NodeSource | None
 	// @mcp

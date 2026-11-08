@@ -1,6 +1,7 @@
 import { expect } from 'claude-code/testing'
 
 import { CHAT_BAR, findText, textOf } from '../../../chat-bar-screen'
+import { PUBLISHED_INSTALL } from '../../../cdd-stub'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -23,14 +24,14 @@ story('Reinstall CDD Tools', CHAT_BAR, () => {
     when('the Person runs the install', async ($, on, scene) => {
       await scene.ui.press({ key: 'health-install' })
     })
-    // ServerHealthBandView press -> runInstall($) -> $.process.run(['python', 'scripts/install.py', '--ide', 'Claude'])
+    // ServerHealthBandView press -> runInstall($) -> $.process.run([...the mod's install.json command, the chat's folder])
     // The test kit draws nothing while an engine call is pending, so the Installing. line drawn while the installer runs
     // is read by the surface heavy spec, not here.
     then('the panel says Installed. Open a new session to pick it up.', async ($, on, scene) => {
       expect(textOf(await findText(scene.ui, /^Installed/))).toBe('Installed. Open a new session to pick it up.')
     })
-    and('the installer that ran is scripts/install.py --ide Claude', async ($, on, scene) => {
-      expect(scene.world.installs.map(argv => argv.slice(1))).toEqual([['scripts/install.py', '--ide', 'Claude']])
+    and("the installer that ran is the cdd home's install command, given the chat's folder", async ($, on, scene) => {
+      expect(scene.world.installs).toEqual([[...PUBLISHED_INSTALL, '/']])
     })
   })
   scenario('Show why the install failed', ({ given, when, then }) => {

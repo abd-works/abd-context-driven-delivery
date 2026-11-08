@@ -35,6 +35,11 @@ export class ServerHealthClient {
     return this.json?.kanban_app_port ?? null
   }
 
+  // Where a chat reaches the session board, whether or not it answers yet; empty before cdd has reported.
+  get kanbanAppUrl(): string {
+    return this.json?.kanban_app_url ?? ''
+  }
+
   get graphAppPort(): number | null {
     return this.json?.graph_app_port ?? null
   }
@@ -92,8 +97,8 @@ export async function hideDetails($: EngineInterface): Promise<void> {
 export async function runInstall($: EngineInterface): Promise<void> {
   await update($, install, () => ({ state: 'running', error: null }))
   try {
-    const { python, checkout } = await installTarget($)
-    const run = await $.process.run([python, 'scripts/install.py', '--ide', 'Claude'], { cwd: checkout, timeoutMs: INSTALL_TIMEOUT_MS })
+    const folder = await $.session.cwd()
+    const run = await $.process.run([...(await installCommand($)), folder], { cwd: folder, timeoutMs: INSTALL_TIMEOUT_MS })
     await update($, install, () => (run.exitCode === 0 ? { state: 'installed', error: null } : { state: 'failed', error: lastLines(run.stderr) }))
   } catch (failure) {
     await update($, install, () => ({ state: 'failed', error: String(failure) }))
@@ -129,16 +134,12 @@ async function recordAnswer($: EngineInterface, answer: Answer): Promise<void> {
   await update($, serverHealth, () => ({ ...answer, toolCount, attempt: 0 }))
 }
 
-// The python that runs the cdd server has what the install needs; ~/.cdd/runtime.json names it and the checkout the
-// server runs. The session's own checkout comes first, because it is the one the person is working on.
-async function installTarget($: EngineInterface): Promise<{ python: string; checkout: string }> {
-  const home = (await $.env.get('CDD_HOME')) ?? `${(await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME'))}/.cdd`
-  const runtimePath = `${home}/runtime.json`
-  const runtime = (await $.fs.exists(runtimePath)) ? (JSON.parse(await $.fs.read(runtimePath)) as { python?: string; source?: string }) : {}
-  const cwd = await $.session.cwd()
-  const python = runtime.python ?? 'python'
-  if (await $.fs.exists(`${cwd}/scripts/install.py`)) return { python, checkout: cwd }
-  return { python, checkout: runtime.source ?? cwd }
+// The cdd home publishes this mod with the command that installs for a chat's folder: the served checkout's install
+// script on the server's Python, which installs from the chat's folder when that is a CDD checkout.
+async function installCommand($: EngineInterface): Promise<string[]> {
+  const published = `${$.plugin.root}/install.json`
+  if (!(await $.fs.exists(published))) throw new Error(`this board mod was not published by a cdd home, so it has no install command; run python scripts/install.py --ide Claude in a CDD checkout`)
+  return (JSON.parse(await $.fs.read(published)) as { command: string[] }).command
 }
 
 const lastLines = (text: string): string => text.trim().split('\n').slice(-ERROR_LINES_SHOWN).join('\n')

@@ -10,7 +10,7 @@ import type { PracticeSessionOutputData } from '@cdd/space/session/practice-sess
 import type { SessionData } from '@cdd/space/session/session'
 
 // Seed: server-health.report while every part runs.
-export const HEALTHY = { kanban_app_port: 8778, graph_app_port: 5173, is_hook_server_running: false }
+export const HEALTHY = { kanban_app_port: 8778, kanban_app_url: 'http://127.0.0.1:8778', graph_app_port: 5173, is_hook_server_running: false }
 
 // Seed: each stage's fidelities, in the order the board's columns name them.
 export const DISCOVERY = ['stories-story-map', 'ddd-bounded-context', 'ux-ia', 'clean-engineering-modules', 'bdd-behavior']
@@ -151,7 +151,7 @@ const column = (name: string, tickets: TicketData[]): ColumnData => {
 // Seed: the board as board.show returns it, each ticket in the column it names, the tickets in a stage named as open in
 // column order, and the active one named.
 export function boardOf(active: string | null, ...tickets: TicketData[]): BoardData {
-  const activeTicket = tickets.some(ticket => ticket.name === active) ? { name: active! } : null
+  const activeTicket = tickets.find(ticket => ticket.name === active) ?? null
   const openTickets = STAGE_ORDER.filter(name => name in WORK_OF).flatMap(name => tickets.filter(ticket => ticket.column.name === name).map(ticket => ({ name: ticket.name })))
   return { project: 'abd-context-driven-delivery', practices: PRACTICES.map(practiceData), open_tickets: openTickets, active: activeTicket, columns: [{ name: 'Backlog', kind: 'backlog', items: [] }, ...STAGE_ORDER.map(name => column(name, tickets))], format_groups: [] }
 }

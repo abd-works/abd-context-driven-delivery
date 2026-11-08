@@ -204,6 +204,9 @@ function answerTool(world: World, tool: string, args: unknown) {
   }
 }
 
+// The install command a cdd home publishes in the mod, before the chat's folder is added.
+export const PUBLISHED_INSTALL = ['C:/cdd/python.exe', 'C:/cdd/runtime/scripts/install.py', '--ide', 'Claude', '--from-chat']
+
 function runProcess(world: World, argv: string[]) {
   world.installs.push(argv)
   return { value: { ...world.installExit, stdout: '' } }
@@ -275,7 +278,9 @@ export function cdd(on: any, board: BoardData = boardOf('checkout-flow', checkou
   })
   on('http.fetch', () => ({ value: { ok: true, status: 200, text: '' } }))
   on('env.get', () => ({ value: undefined }))
-  on('fs.exists', () => ({ value: false }))
+  // The cdd home publishes the mod with the command its Run install runs; nothing else is on disk.
+  on('fs.exists', (_: unknown, e: { path: string }) => ({ value: /[\\/]install\.json$/.test(e.path) }))
+  on('fs.read', () => ({ value: JSON.stringify({ command: PUBLISHED_INSTALL }) }))
   on('process.run', (_: unknown, e: { argv: string[] }) => runProcess(world, e.argv))
   on('session.start', (_: unknown, e: { cwd: string }) => ({ cwd: e.cwd }))
   return world

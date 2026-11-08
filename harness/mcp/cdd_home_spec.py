@@ -76,6 +76,20 @@ with description("a cdd home's Claude Code plugins") as self:
         with it("should keep the mod's own version as the start of the published one"):
             expect(_board_version(self.home).startswith("0.6.3-")).to(equal(True))
 
+        # Run install works when the server is what is broken, so the mod reads the command from its own folder.
+        with context("whose mod runs an install for a chat"):
+            with before.each:
+                self.command = json.loads((self.board / CddHome.INSTALL_COMMAND).read_text(encoding="utf-8"))["command"]
+
+            with it("should run it on the Python the server runs on"):
+                expect(self.command[0]).to(equal(str(self.home.interpreter.executable)))
+
+            with it("should run the served checkout's install script"):
+                expect(self.command[1]).to(equal(str(self.checkout.resolve() / "scripts" / "install.py")))
+
+            with it("should end on the flag that takes the chat's folder"):
+                expect(self.command[-1]).to(equal("--from-chat"))
+
         # Claude Code keeps a plugin it has seen at the same version, so a changed mod needs a new one.
         with context("whose board mod has since changed"):
             with before.each:

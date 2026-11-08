@@ -9,6 +9,7 @@ import re
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
+from collections.abc import Iterable
 from typing import Any, ClassVar
 
 from harness.annotations.annotation import hosted_only
@@ -728,6 +729,13 @@ class PracticeGuidance(Guidance):
         by its extension."""
         suffix = file.suffix.lower()
         return next((name for name in self.formats if suffix in getattr(self._format_adapter(name), "suffixes", ())), None)
+
+    def format_reading_with(self, file: Path, others: Iterable[PracticeGuidance]) -> str | None:
+        """The format that reads the file among this practice's formats, else among the formats of others in their
+        order: a Stories acceptance test in ``.ts`` is read by no Stories format, but by another practice's TypeScript
+        model. None when no practice reads it. The graph names a node's file language by it, and the catalog an
+        example's."""
+        return next((name for practice in (self, *others) if (name := practice.format_reading(file)) is not None), None)
 
     def format_for(self, file: Path) -> Any:
         """A new model of the file's format (``format_reading``). Raises ValueError when none of its formats reads it."""

@@ -124,13 +124,12 @@ export class ChatBarClient {
     return this.ticket?.agent_context ?? ''
   }
 
-  // The board names the active session's ticket, which its column sends whole.
+  // The active session's ticket, which the board sends whole.
   private get ticket(): TicketData | null {
-    const active = this.board?.active?.name
-    return active ? this.ticketNamed(active) : null
+    return this.board?.active ?? null
   }
 
-  // A ticket the board sends by its name, found where its column sends it whole.
+  // A ticket the board's switch list names, found where its column sends it whole (harness/chat-ui/.context/cdr/0002).
   private ticketNamed(name: string): TicketData | null {
     return this.board?.columns.flatMap(ticketsOf).find(ticket => ticket.name === name) ?? null
   }

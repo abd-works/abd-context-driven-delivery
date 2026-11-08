@@ -281,7 +281,7 @@ class ApproachGrids:
         source = example.file(self.catalog_root)
         if source is None or not source.is_file():
             return ""
-        return self._panel(stage.id, ExampleFile(source).panel_html(catalog_href=example.catalog_path))
+        return self._panel(stage.id, ExampleFile(source, self.stories).panel_html(catalog_href=example.catalog_path))
 
     def _practice_panels(self, practice) -> tuple[dict[str, str], dict[str, str]]:
         panels: dict[str, str] = {}
@@ -289,7 +289,7 @@ class ApproachGrids:
         for shown in practice.board_fidelities:
             relative = self.project_examples.file_for(shown) if self.project_examples else None
             examples = "".join(
-                ExampleFile(path).panel_html(editor_id=self._editor_id(practice, path), catalog_href=relative)
+                ExampleFile(path, practice).panel_html(editor_id=self._editor_id(practice, path), catalog_href=relative)
                 for path in self._practice_files(shown, relative)
             )
             panel = self._panel(shown.stage, examples)
@@ -414,7 +414,7 @@ class ApproachPage:
                 title=f"{stage.title} — ABD Context Driven Delivery",
                 h1=html.escape(stage.title),
                 tagline=html.escape(source.name),
-                body_inner=ExampleFile(source).stage_page_html,
+                body_inner=ExampleFile(source, self.grids.stories).stage_page_html,
                 commons_prefix="../commons/",
                 nav_prefix="../",
                 body_wrap_class="approach-wrap",

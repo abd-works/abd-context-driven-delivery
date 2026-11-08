@@ -66,10 +66,23 @@ with description("server health") as self:
             health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(self.port,))
             expect(data_of(health.report())["kanban_app_port"]).to(equal(self.port))
 
+        with it("should give the Kanban app's address on the port it answers on"):
+            health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(closed_port(), self.port))
+            expect(data_of(health.report())["kanban_app_url"]).to(equal(f"http://127.0.0.1:{self.port}"))
+
     with context("with nothing listening on the Kanban app's port"):
+        with before.each:
+            self.board_port = closed_port()
+
         with it("should report no Kanban app port"):
-            health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(closed_port(),))
+            health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(self.board_port,))
             expect(data_of(health.report())["kanban_app_port"]).to(be_none)
+
+        # A chat starts the board there, and checks in with it once it answers.
+        with it("should give the address the Kanban app answers on once started"):
+            health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(self.board_port,))
+            expect(data_of(health.report())["kanban_app_url"]).to(equal(f"http://127.0.0.1:{self.board_port}"))
+
 
     with context("with no hook server state in the project"):
         with it("should report the hook server is not running"):
@@ -90,7 +103,7 @@ with description("server health") as self:
         with it("should answer the band's call with every part"):
             result = self.server.invoke_tool("server-health.report", {})
             answer = json.loads(json.dumps(result, default=data_of))
-            expect(sorted(answer)).to(equal(["graph_app_port", "is_hook_server_running", "kanban_app_port"]))
+            expect(sorted(answer)).to(equal(["graph_app_port", "is_hook_server_running", "kanban_app_port", "kanban_app_url"]))
 
         with it("should leave the session log alone"):
             self.server.invoke_tool("server-health.report", {})

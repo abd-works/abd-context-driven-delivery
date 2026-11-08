@@ -1,7 +1,9 @@
 import type { EngineInterface } from 'claude-code'
 
-// Where the session board answers, shared by the chat relay and the board server.
-export const BOARD_URL = 'http://127.0.0.1:8778'
+import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
+
+import { currentServerHealth, ServerHealthClient } from '../health/server-health-client'
+
 // The board refuses a POST without this header, so another page cannot act on it.
 const BOARD_HEADERS = { 'X-CDD-Board': '1', 'Content-Type': 'application/json' }
 
@@ -17,6 +19,15 @@ export function after($: EngineInterface, milliseconds: number, answer: string):
   return new Promise(resolve => $.clock.after(milliseconds, () => resolve(answer)))
 }
 
-export function post($: EngineInterface, { chat, operation, body }: ChatRequest) {
-  return $.http.fetch(`${BOARD_URL}/api/chat/${encodeURIComponent(chat)}/${operation}`, { method: 'POST', headers: BOARD_HEADERS, body: JSON.stringify(body) })
+// Where the session board answers, as cdd's server health last gave it; empty until cdd has answered.
+export async function boardUrl($: EngineInterface): Promise<string> {
+  const { report } = await currentServerHealth($)
+  return new ServerHealthClient(report as ServerHealthData | null).kanbanAppUrl
+}
+
+// A chat with no board address yet has nothing to post to, which reads as a board that did not answer.
+export async function post($: EngineInterface, { chat, operation, body }: ChatRequest): Promise<{ ok: boolean; text: string }> {
+  const url = await boardUrl($)
+  if (!url) return { ok: false, text: '' }
+  return $.http.fetch(`${url}/api/chat/${encodeURIComponent(chat)}/${operation}`, { method: 'POST', headers: BOARD_HEADERS, body: JSON.stringify(body) })
 }

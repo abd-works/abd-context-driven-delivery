@@ -172,6 +172,10 @@ with description("a board") as self:
         with it("should name the ticket of the current session as active"):
             expect(self.board.active.name).to(equal("pet-visits"))
 
+        # The chat bar draws the active session from this alone, so it never finds the ticket again by its name.
+        with it("should send the active ticket whole, with its progress"):
+            expect(list(data_of(self.board)["active"])).to(contain("progress"))
+
         with it("should offer the tickets in a stage to switch to, neither backlog items nor closed tickets"):
             expect(names(self.board.open_tickets)).to(equal(["pet-visits", "sign-up"]))
 

@@ -494,11 +494,14 @@ it('should keep the first practice filters when another practice is added', asyn
   pickOnly('filter-node', ['Module']);
   await waitFor(() => expect(chosen('filter-connector')).toEqual(['contains']));
   await user.selectOptions(screen.getByTestId('filter-practice'), ['clean_engineering', 'stories']);
-  await waitFor(() => expect(chosen('filter-practice')).toEqual(['clean_engineering', 'stories']));
-  expect(chosen('filter-node')).toEqual(['Module', 'Epic']);
-  expect(options('filter-node')).toEqual(['Module', 'OoadClass', 'Operation', 'Epic']);
-  expect(chosen('filter-connector')).toEqual(['contains', 'tells']);
+  // The practices are offered in the order the approach walks them, stories first.
+  await waitFor(() => expect(chosen('filter-practice')).toEqual(['stories', 'clean_engineering']));
+  await waitFor(() => expect(chosen('filter-node')).toEqual(['Epic', 'Module']));
+  expect(options('filter-node')).toEqual(['Epic', 'Module', 'OoadClass', 'Operation']);
+  expect(chosen('filter-connector')).toEqual(['tells', 'contains']);
   expect(chosen('filter-rule')).toEqual(['clean_engineering.Module.module-rule', 'stories.Epic.verb-noun']);
+  const asked = calls.filter((call) => call.operation === 'filter_choices').at(-1);
+  expect(asked?.body).toMatchObject({ node_types: ['Module'], practices_before: ['clean_engineering'] });
 });
 
 it('should show a module without its children and a class with its module', async () => {
@@ -545,8 +548,11 @@ it('should put the chosen folder on the page and show its classes', async () => 
   expect(screen.getByText('AccountCredentials')).toBeTruthy();
   expect(calls.map((call) => call.operation).filter((operation) => operation !== 'progress')).toEqual([
     'choose_folder',
+    'practice_names',
     'load_working_copy',
     'inventory',
+    'filter_choices',
+    'explorer_trees',
   ]);
 });
 
@@ -767,12 +773,6 @@ it('should show invokes, observes, and demonstrates on a step', async () => {
     node_id: 'step-valid',
     children: [
       {
-        type: 'scopes',
-        name: 'scopes',
-        node_id: 'scopes-valid',
-        children: [{ type: 'Example', name: 'hiddenExample', node_id: 'hidden', children: [] }],
-      },
-      {
         type: 'invokes',
         name: 'invokes',
         node_id: 'invokes-valid',
@@ -802,7 +802,6 @@ it('should show invokes, observes, and demonstrates on a step', async () => {
   };
   render(<GraphView trees={[step]} loading={false} error="" selectedId="" activeRule="" onSelect={() => undefined} />);
   await user.click(screen.getByRole('button', { name: 'Expand when the User enters valid account credentials' }));
-  expect(document.querySelector('[data-node-id="scopes-valid"]')).toBeNull();
   expect(document.querySelector('[data-node-id="invokes-valid"]')).toBeTruthy();
   expect(document.querySelector('[data-node-id="observes-valid"]')).toBeTruthy();
   await user.click(screen.getByRole('button', { name: 'Expand observes' }));
@@ -906,7 +905,7 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
     return inventoryBundle();
   }
   if (operation === 'filter_choices') {
-    return constrained((body.node_types as string[] | undefined) ?? []);
+    return choicesFor((body.practices as string[]) ?? [], (body.node_types as string[]) ?? [], (body.practices_before as string[] | null | undefined) ?? null);
   }
   if (operation === 'explorer_trees') {
     const picked = body.filter as { practices?: string[]; types?: string[]; violations?: boolean };
@@ -1002,25 +1001,38 @@ function staleMaster() {
   return report;
 }
 
-function constrained(types: string[]) {
-  if (types.length === 1 && types[0] === 'Module') {
-    return { node_types: types, relationships: ['contains'], rules: ['clean_engineering.Module.module-rule'] };
+// The relationships each fixture node type sits on, as the graph's edges hold them.
+const edgesOfType: Record<string, string[]> = {
+  Module: ['contains'],
+  OoadClass: ['owns'],
+  Operation: ['invokes'],
+  Epic: ['tells'],
+  Aggregate: ['owns'],
+  EntityRoot: ['owns', 'associates'],
+  ValueObject: ['associates'],
+};
+
+// Graph.filter_choices as Python answers it: the node types the practices offer, those chosen (on a change of practice,
+// the chosen ones the new practices still hold and every one of each practice added), and the relationships and rules
+// of the chosen node types, or of every offered one when none is chosen.
+function choicesFor(practices: string[], nodeTypes: string[], before: string[] | null) {
+  const loaded = inventory as Record<string, { node_types: string[]; edge_types: string[]; rules: string[] }>;
+  const scope = practices.length ? practices : Object.keys(loaded);
+  const typesOf = (name: string) => loaded[name]?.node_types ?? [];
+  const offered = [...new Set(scope.flatMap(typesOf))];
+  let chosen = nodeTypes;
+  if (before !== null) {
+    const added = practices.filter((name) => !before.includes(name)).flatMap(typesOf);
+    chosen = before.length === 0 || practices.length === 0 ? offered : offered.filter((type) => nodeTypes.includes(type) || added.includes(type));
   }
-  if (types.length === 1 && types[0] === 'OoadClass') {
-    return { node_types: types, relationships: ['owns'], rules: ['clean_engineering.OoadClass.class-rule'] };
-  }
-  if (types.length === 1 && types[0] === 'Operation') {
-    return { node_types: types, relationships: ['invokes'], rules: ['clean_engineering.Operation.limit-operation-parameters'] };
-  }
-  return {
-    node_types: types,
-    relationships: ['contains', 'owns', 'invokes'],
-    rules: [
-      'clean_engineering.Module.module-rule',
-      'clean_engineering.OoadClass.class-rule',
-      'clean_engineering.Operation.limit-operation-parameters',
-    ],
-  };
+  const types = chosen.length ? chosen : offered;
+  const relationships = [
+    ...new Set(scope.flatMap((name) => (loaded[name]?.edge_types ?? []).filter((kind) => types.some((type) => (edgesOfType[type] ?? []).includes(kind))))),
+  ];
+  const rules = scope
+    .flatMap((name) => (loaded[name]?.rules ?? []).filter((rule) => types.some((type) => rule.startsWith(`${name}.${type}.`))))
+    .sort();
+  return { node_types: chosen, offered_node_types: offered, relationships, rules };
 }
 
 function violationTree(node: Entry): Entry | null {
@@ -1059,13 +1071,7 @@ function keptBy(node: Entry, matched: Set<string>): Entry | null {
 }
 
 function rowsFor(practices: string[], types: string[], violations = false) {
-  const trees = [];
-  if (practices.length === 0 || practices.includes('clean_engineering')) {
-    trees.push(engineeringTree);
-  }
-  if (practices.length === 0 || practices.includes('stories')) {
-    trees.push(storiesTree);
-  }
+  const trees: Record<string, Entry> = { clean_engineering: engineeringTree, ddd: domainTree, stories: storiesTree };
   const rows: { practice: string; type: string; name: string; node_id: string; ancestors: string[]; children: string[] }[] = [];
   const walk = (node: Entry, practice: string) => {
     const holder = node.type === node.name;
@@ -1086,11 +1092,10 @@ function rowsFor(practices: string[], types: string[], violations = false) {
       walk(child, practice);
     }
   };
-  if (trees.includes(engineeringTree)) {
-    walk(engineeringTree, 'clean_engineering');
-  }
-  if (trees.includes(storiesTree)) {
-    walk(storiesTree, 'stories');
+  for (const [practice, tree] of Object.entries(trees)) {
+    if (practices.length === 0 || practices.includes(practice)) {
+      walk(tree, practice);
+    }
   }
   return rows;
 }

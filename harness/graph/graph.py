@@ -285,6 +285,12 @@ class Filter:
 
     @property
     @data_field
+    def offered_node_types(self) -> list[str]:
+        """Every node type the chosen practices hold, or every loaded practice's when none is chosen."""
+        return self._available_node_types()
+
+    @property
+    @data_field
     def relationships(self) -> list[str]:
         """The edge kinds the chosen node types sit on, or those chosen."""
         return self._relationships
@@ -336,18 +342,30 @@ class Filter:
         self.node_types = list(node_types)
         self._fill_from_nodes()
 
+    def change_practices(self, practices: list[str]) -> None:
+        """Choose practices in place of those chosen, so a person who narrowed the node types keeps that choice: the
+        chosen node types the new practices still hold stay chosen, and every node type of each practice added is
+        chosen. A change from or to every practice chooses every node type the new choice holds."""
+        before, kept = list(self.practices), set(self.node_types)
+        self.select_practices(practices)
+        if not before or not practices:
+            return
+        added = {node_type for key in practices if key not in before for node_type in self._node_types_of(key)}
+        self.select_node_types([node_type for node_type in self.node_types if node_type in kept | added])
+
     def _scope(self) -> list[str]:
         if self.practices:
             return list(self.practices)
         return list(self.graph.practices)
 
+    def _node_types_of(self, key: str) -> list[str]:
+        practice = self.graph.practices.get(key)
+        return list(practice.in_graph.node_types) if practice is not None else []
+
     def _available_node_types(self) -> list[str]:
         found: list[str] = []
         for name in self._scope():
-            practice = self.graph.practices.get(name)
-            if practice is None:
-                continue
-            for node_type in practice.in_graph.node_types:
+            for node_type in self._node_types_of(name):
                 if node_type not in found:
                     found.append(node_type)
         return found
@@ -582,8 +600,7 @@ class Node:
         file = self.source.file or ""
         if file in {"", "."}:
             return "graph" if self.type in {"Module", "Package"} else None
-        practices = (self.practice, *self.graph.every_practice.values())
-        return next((name for practice in practices if (name := practice.format_reading(Path(file))) is not None), "graph")
+        return self.practice.format_reading_with(Path(file), self.graph.every_practice.values()) or "graph"
 
     @property
     def failed_rules(self) -> list[str]:
@@ -1658,15 +1675,21 @@ class Graph:
 
     @mcp
     @agent_tool
-    def filter_choices(self, practices: list[str], node_types: list[str]) -> Filter:
-        """Return the node types, relationships, and rules a filter offers once practices and node types are chosen.
-        The graph's own filter is cleared."""
+    def filter_choices(self, practices: list[str], node_types: list[str], practices_before: list[str] | None = None) -> Filter:
+        """Return the node types a filter offers and those it chooses, with the relationships and rules of the chosen
+        ones (of every offered one when none is chosen), once practices and node types are chosen. practices_before
+        names the practices chosen before a change of practice: then node_types are those chosen before, the ones the
+        new practices still hold stay chosen, and every node type of each practice added is chosen. The graph's own
+        filter is cleared."""
         self.filter.clear()
         offered = Filter(self)
-        if practices:
-            offered.select_practices(practices)
-        if node_types:
-            offered.select_node_types(node_types)
+        if practices_before is not None:
+            offered.practices = list(practices_before)
+            offered.node_types = list(node_types)
+            offered.change_practices(practices)
+            return offered
+        offered.select_practices(practices)
+        offered.select_node_types(node_types)
         return offered
 
     @mcp

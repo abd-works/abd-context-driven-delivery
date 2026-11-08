@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.catalog_generator.drawio_diagram import DrawioDiagram
+from harness.markdown.format import Format
 from harness.markdown.front_matter import FrontMatter
 from harness.catalog_generator.markdown_html import MarkdownHtml
 from harness.catalog_generator.source_folds import Fold, SourceFolds
@@ -20,14 +21,6 @@ if TYPE_CHECKING:
     from harness.catalog_generator.catalog_practice import CatalogPractice
 
 EXAMPLES_FOLDER = "catalog-examples"
-# The order a fidelity's examples are shown in: prose, then code, then diagrams, then pictures.
-_SUFFIX_ORDER = {
-    ".md": 0, ".markdown": 0,
-    ".ts": 1, ".tsx": 1, ".html": 1, ".htm": 1,
-    ".drawio": 2, ".dio": 2,
-    ".png": 3, ".jpg": 3, ".jpeg": 3, ".gif": 3, ".webp": 3, ".svg": 3,
-}
-_UNORDERED = 50
 _MARKDOWN_SUFFIXES = (".md", ".markdown")
 _HTML_SUFFIXES = (".html", ".htm")
 _DRAWIO_SUFFIXES = (".drawio", ".dio")
@@ -39,15 +32,7 @@ _IMAGE_MIME = {
     ".webp": "image/webp",
     ".svg": "image/svg+xml",
 }
-_MONACO_LANGUAGES = {
-    ".ts": "typescript",
-    ".tsx": "typescript",
-    ".js": "javascript",
-    ".jsx": "javascript",
-    ".py": "python",
-    ".html": "html",
-    ".htm": "html",
-}
+
 _MONACO_LOADER = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"
 # An approach panel's code viewer and a stage example page each load the viewer script at their own version.
 _PANEL_MONACO_SCRIPT = "commons/catalog-monaco.js?v=cdd-109"
@@ -126,11 +111,13 @@ class MonacoViewer:
 
 
 class ExampleFile:
-    """One example file and the ways the catalog shows it: as a figure on a fidelity page, inside an approach panel,
-    and as a stage example's own page."""
+    """One example file of a practice in the catalog, and the ways the catalog shows it: as a figure on a fidelity page,
+    inside an approach panel, and as a stage example's own page. Its code opens in the language the practice's formats,
+    or another catalogued practice's, read it in."""
 
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, practice: CatalogPractice) -> None:
         self.path = path
+        self._practice = practice
 
     @property
     def suffix(self) -> str:
@@ -193,7 +180,7 @@ class ExampleFile:
 
     @property
     def _language(self) -> str:
-        return _MONACO_LANGUAGES.get(self.suffix, "plaintext")
+        return self._practice.language_of(self.path) or "plaintext"
 
     def _figure_inner(self, name: str) -> str:
         if self.suffix in _MARKDOWN_SUFFIXES:
@@ -266,8 +253,9 @@ class CatalogFidelity:
     ticket, and approach panel reads the same one. The fidelity page and the approach panel both start from these
     files, so a file shown on one is never missing from the other."""
 
-    def __init__(self, fidelity) -> None:
+    def __init__(self, fidelity, practice: CatalogPractice) -> None:
         self.fidelity = fidelity
+        self.practice = practice
 
     @property
     def name(self) -> str:
@@ -307,17 +295,14 @@ class CatalogFidelity:
         return "\n".join(lines).strip()
 
     @property
-    def examples_folder(self) -> Path:
-        return Path(self.fidelity.practice_guidance.module_dir) / EXAMPLES_FOLDER
-
-    @property
     def example_files(self) -> list[Path]:
-        if not self.examples_folder.is_dir():
+        folder = self.practice.examples_folder
+        if not folder.is_dir():
             return []
         name = self.fidelity.name
         names = {name, name.replace("_", "-"), name.replace("-", "_"), self.label}
         found = (
-            path for path in self.examples_folder.iterdir()
+            path for path in folder.iterdir()
             if path.is_file() and not path.name.startswith(".") and path.stem in names
         )
         return sorted(found, key=self._display_order)
@@ -337,7 +322,7 @@ class CatalogFidelity:
         """The collapsible Examples block on the fidelity and practice pages; empty when the fidelity has none."""
         if not self.example_files:
             return ""
-        figures = "".join(ExampleFile(path).figure_html for path in self.example_files)
+        figures = "".join(ExampleFile(path, self.practice).figure_html for path in self.example_files)
         return (
             '<details class="catalog-examples">'
             "<summary>Examples</summary>"
@@ -346,10 +331,11 @@ class CatalogFidelity:
         )
 
     def _display_order(self, path: Path) -> tuple[int, str]:
-        return _SUFFIX_ORDER.get(path.suffix.lower(), _UNORDERED), path.name
+        """Prose, then code, then diagrams, as ``Format.file_order`` orders a fidelity's files; pictures after them."""
+        return Format.from_extension(path.suffix.lower()).file_order, path.name
 
     def _preferred(self, group: list[Path]) -> list[Path]:
-        pictures = [path for path in group if ExampleFile(path).is_image]
+        pictures = [path for path in group if ExampleFile(path, self.practice).is_image]
         if pictures:
             return pictures
         diagrams = [path for path in group if path.suffix.lower() in _DRAWIO_SUFFIXES]

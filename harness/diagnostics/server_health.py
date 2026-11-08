@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import socket
 from pathlib import Path
+from typing import ClassVar
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
@@ -13,8 +14,7 @@ from harness.mcp.mcp_server import mcp
 
 PROBE_SECONDS = 0.2
 _GRAPH_APP_PORTS = GraphAppPorts().app
-# The session board's own port, set in space/kanban/app/packages/session-board/serve.ts.
-KANBAN_APP_PORTS = (8778,)
+_HOST = "127.0.0.1"
 
 
 @language_adapter(language="typescript")
@@ -25,15 +25,23 @@ class ServerHealth:
     # The server health band reads this after every cdd call and every prompt, so its tool stays out of the session log.
     # This tool answers only while the MCP host is up, so the band itself works out that the host is lost.
 
+    # The ports the session board listens on, which the board registers from its own ports file: harness names none.
+    _registered_kanban_ports: ClassVar[tuple[int, ...]] = ()
+
+    @classmethod
+    def reports_kanban_app_on(cls, ports: tuple[int, ...]) -> None:
+        """Have every report probe the Kanban app (the session board) on ports, the ones its server listens on."""
+        ServerHealth._registered_kanban_ports = tuple(ports)
+
     def __init__(
         self,
         repo_root: Path | str,
         graph_ports: tuple[int, ...] = _GRAPH_APP_PORTS,
-        kanban_ports: tuple[int, ...] = KANBAN_APP_PORTS,
+        kanban_ports: tuple[int, ...] | None = None,
         hook_daemon: HookDaemon | None = None,
     ) -> None:
         self._repo_root = Path(repo_root).resolve()
-        self._kanban_ports = kanban_ports
+        self._kanban_ports = kanban_ports if kanban_ports is not None else ServerHealth._registered_kanban_ports
         self._graph_ports = graph_ports
         self._hook_daemon = hook_daemon if hook_daemon is not None else HookDaemon(self._repo_root)
 
@@ -57,6 +65,14 @@ class ServerHealth:
 
     @property
     @data_field
+    def kanban_app_url(self) -> str:
+        """Where a chat reaches the Kanban app: on the port it answers on, else on the port its server starts on; empty
+        when the board registered no port."""
+        port = self.kanban_app_port or next(iter(self._kanban_ports), None)
+        return f"http://{_HOST}:{port}" if port is not None else ""
+
+    @property
+    @data_field
     def graph_app_port(self) -> int | None:
         return self._first_answering(self._graph_ports)
 
@@ -71,4 +87,4 @@ class ServerHealth:
     def _answers(self, port: int) -> bool:
         with socket.socket() as probe:
             probe.settimeout(PROBE_SECONDS)
-            return probe.connect_ex(("127.0.0.1", port)) == 0
+            return probe.connect_ex((_HOST, port)) == 0

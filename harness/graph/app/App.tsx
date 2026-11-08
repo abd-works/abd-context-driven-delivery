@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
 import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
 import type { CddProgress } from '@cdd/cdd-shared';
-import type { ExplorerEntryData, GraphRuleData, InventoryData, PracticeInventoryData, NodeSourceData } from '@cdd/harness/graph/graph';
+import type { ExplorerEntryData, FilterData, GraphRuleData, NodeSourceData } from '@cdd/harness/graph/graph';
 import { nodeFilter, type FilterSelection } from './filter/filter-selection';
 import { FilterView } from './filter/FilterView';
 import { GraphClient } from './graph/GraphClient';
@@ -23,6 +23,7 @@ const EMPTY: FilterSelection = {
   rules: [],
   violations: false,
 };
+const NO_CHOICES: FilterData = { node_types: [], offered_node_types: [], relationships: [], rules: [] };
 
 const graphs = new GraphClient();
 
@@ -33,7 +34,6 @@ export function App() {
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [selection, setSelection] = useState<FilterSelection>(EMPTY);
   const [trees, setTrees] = useState<ExplorerEntryData[]>([]);
-  const [catalog, setCatalog] = useState<Record<string, PracticeInventoryData>>({});
   const [practices, setPractices] = useState<string[]>([]);
   const [nodeTypes, setNodeTypes] = useState<string[]>([]);
   const [relationships, setRelationships] = useState<string[]>([]);
@@ -135,10 +135,10 @@ export function App() {
       if (generation !== loadGeneration.current) {
         return;
       }
-      const synced = { ...next, overlays: bundle.overlays };
-      adoptInventory(bundle, synced);
-      setSelection(synced);
-      await applyFilter(synced, bundle.practices);
+      const synced = { ...next, overlays: bundle.overlays?.length ? bundle.overlays : next.overlays };
+      setAvailableOverlays(bundle.available_overlays ?? []);
+      await offerChoices(synced);
+      await showFilter(synced);
       setLoadedFolder(trimmed);
       window.localStorage.setItem(LAST_FOLDER, trimmed);
       window.localStorage.setItem(LAST_OVERLAYS, JSON.stringify(bundle.overlays));
@@ -163,19 +163,6 @@ export function App() {
     setSource(opened?.text != null && opened.file != null ? opened : null);
   }
 
-  function adoptInventory(bundle: InventoryData, filter: FilterSelection) {
-    setCatalog(bundle.practices);
-    setAvailableOverlays(bundle.available_overlays ?? []);
-    const overlays = bundle.overlays?.length ? bundle.overlays : filter.overlays;
-    const merged = { ...filter, overlays };
-    const shown = merged.practices.length ? merged.practices : Object.keys(bundle.practices);
-    setTrees(shown.map((name) => bundle.practices[name]?.tree).filter((tree): tree is ExplorerEntryData => Boolean(tree)));
-    setNodeTypes(unique(shown.flatMap((name) => bundle.practices[name]?.node_types ?? [])));
-    setRelationships(unique(shown.flatMap((name) => bundle.practices[name]?.edge_types ?? [])));
-    setRules(unique(shown.flatMap((name) => bundle.practices[name]?.rules ?? [])));
-    setSelection(merged);
-  }
-
   async function applyOverlays(overlays: string[]) {
     const next = { ...selection, overlays };
     if (!folder.trim()) {
@@ -188,10 +175,10 @@ export function App() {
     setError('');
     try {
       const bundle = normalizeInventoryBundle(await graphs.setOverlays(overlays));
-      const scope = next.practices.length ? next.practices : Object.keys(bundle.practices);
-      const refreshed = overlayFilterRefresh(selection, { ...next, practices: scope }, bundle.practices, bundle.overlays);
-      adoptInventory(bundle, refreshed);
-      await applyFilter(refreshed, bundle.practices);
+      setAvailableOverlays(bundle.available_overlays ?? []);
+      // The overlays change the node types the practices hold, so the node choice starts again from every one offered.
+      const applied = { ...next, overlays: bundle.overlays?.length ? bundle.overlays : overlays, node_types: [] };
+      await showFilter(chosen(applied, await offerChoices(applied)));
       window.localStorage.setItem(LAST_OVERLAYS, JSON.stringify(bundle.overlays));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -228,29 +215,34 @@ export function App() {
   }
 
 
-  async function applyFilter(next: FilterSelection, practices = catalog) {
+  // Python's Filter works out what the filter offers: the node types the practices hold, and the relationships and rules
+  // of the node types chosen. practicesBefore names the practices chosen before a change of practice.
+  async function offerChoices(next: FilterSelection, practicesBefore?: string[]): Promise<FilterData> {
+    const choices = (await graphs.filterChoices(next.practices, next.node_types, practicesBefore)) ?? NO_CHOICES;
+    setNodeTypes(choices.offered_node_types);
+    setRelationships(choices.relationships);
+    setRules(choices.rules);
+    return choices;
+  }
+
+  // Python's Filter keeps the nodes the selection matches, with the way to each, in every practice it names.
+  async function showFilter(resolved: FilterSelection) {
+    setSelection(resolved);
+    setTrees((await graphs.explorerTrees(nodeFilter(resolved))) ?? []);
+  }
+
+  async function applyFilter(next: FilterSelection) {
     if (!folder.trim()) {
       setSelection(next);
       return;
     }
-    const practiceChanged = joined(next.practices) !== joined(selection.practices);
-    const nodeChanged = joined(next.node_types) !== joined(selection.node_types);
-    let resolved = next;
-    if (practiceChanged) {
-      resolved = practiceSelection(selection, next, practices);
-      const scope = resolved.practices.length ? resolved.practices : Object.keys(practices);
-      setNodeTypes(listed(scope, practices, 'node_types'));
-      setRelationships(listed(scope, practices, 'edge_types'));
-      setRules(listed(scope, practices, 'rules'));
-    } else if (nodeChanged) {
-      const choices = (await graphs.filterChoices(next.practices, next.node_types)) ?? { node_types: [], relationships: [], rules: [] };
-      resolved = { ...next, relationships: choices.relationships, rules: choices.rules };
-      setRelationships(choices.relationships);
-      setRules(choices.rules);
+    if (joined(next.practices) !== joined(selection.practices)) {
+      await showFilter(chosen(next, await offerChoices(next, selection.practices)));
+    } else if (joined(next.node_types) !== joined(selection.node_types)) {
+      await showFilter(chosen(next, await offerChoices(next)));
+    } else {
+      await showFilter(next);
     }
-    setSelection(resolved);
-    // Python's Filter keeps the nodes the selection matches, with the way to each, in every practice it names.
-    setTrees((await graphs.explorerTrees(nodeFilter(resolved))) ?? []);
   }
 
   return (
@@ -376,39 +368,13 @@ export function App() {
   );
 }
 
-function unique(values: string[]): string[] {
-  return [...new Set(values)];
-}
-
 function joined(values: string[]): string {
   return values.join('\n');
 }
 
-function listed(
-  practices: string[],
-  catalog: Record<string, PracticeInventoryData>,
-  field: 'node_types' | 'edge_types' | 'rules',
-): string[] {
-  return unique(practices.flatMap((name) => catalog[name]?.[field] ?? []));
-}
-
-function overlayFilterRefresh(
-  previous: FilterSelection,
-  next: FilterSelection,
-  catalog: Record<string, PracticeInventoryData>,
-  activeOverlays: string[] = next.overlays,
-): FilterSelection {
-  const scope = next.practices.length ? next.practices : Object.keys(catalog);
-  const nodes = listed(scope, catalog, 'node_types');
-  const edges = listed(scope, catalog, 'edge_types');
-  const rules = listed(scope, catalog, 'rules');
-  return {
-    ...next,
-    overlays: activeOverlays.length ? activeOverlays : next.overlays,
-    node_types: mergeNewCatalogItems(previous.node_types, nodes),
-    relationships: mergeNewCatalogItems(previous.relationships, edges),
-    rules: mergeNewCatalogItems(previous.rules, rules),
-  };
+// The selection with the node types, relationships, and rules Python's Filter chose for it.
+function chosen(next: FilterSelection, choices: FilterData): FilterSelection {
+  return { ...next, node_types: choices.node_types, relationships: choices.relationships, rules: choices.rules };
 }
 
 function readSavedOverlays(): string[] {
@@ -425,56 +391,7 @@ function readSavedOverlays(): string[] {
 }
 
 function overlayIsActive(overlays: string[], name: string): boolean {
-  return overlays.some((item) => overlayLabel(item) === name || item === name);
-}
-
-function overlayLabel(path: string): string {
-  return overlayPathLabel(path);
-}
-
-function mergeNewCatalogItems(current: string[], available: string[]): string[] {
-  const kept = current.filter((item) => available.includes(item));
-  for (const item of available) {
-    if (!kept.includes(item)) {
-      kept.push(item);
-    }
-  }
-  return kept;
-}
-
-function practiceSelection(
-  previous: FilterSelection,
-  next: FilterSelection,
-  catalog: Record<string, PracticeInventoryData>,
-): FilterSelection {
-  const scope = next.practices.length ? next.practices : Object.keys(catalog);
-  const nodes = listed(scope, catalog, 'node_types');
-  const edges = listed(scope, catalog, 'edge_types');
-  const rules = listed(scope, catalog, 'rules');
-  const added = next.practices.filter((name) => !previous.practices.includes(name));
-  if (previous.practices.length === 0 || next.practices.length === 0) {
-    return { ...next, node_types: nodes, relationships: edges, rules };
-  }
-  return {
-    ...next,
-    node_types: mergeKept(previous.node_types, nodes, added.flatMap((name) => catalog[name]?.node_types ?? [])),
-    relationships: mergeKept(
-      previous.relationships,
-      edges,
-      added.flatMap((name) => catalog[name]?.edge_types ?? []),
-    ),
-    rules: mergeKept(previous.rules, rules, added.flatMap((name) => catalog[name]?.rules ?? [])),
-  };
-}
-
-function mergeKept(current: string[], available: string[], added: string[]): string[] {
-  const kept = current.filter((item) => available.includes(item));
-  for (const item of added) {
-    if (available.includes(item) && !kept.includes(item)) {
-      kept.push(item);
-    }
-  }
-  return kept;
+  return overlays.some((item) => overlayPathLabel(item) === name || item === name);
 }
 
 function findNode(nodes: TreeItem[], id: string): TreeItem | null {

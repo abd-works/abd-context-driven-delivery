@@ -91,11 +91,43 @@ with description("an example graph"):
 
         with context("with clean engineering chosen in the filter"):
             with it("should offer the node types clean engineering holds"):
-                expect(data_of(self.graph.filter_choices(["clean_engineering"], []))["node_types"]).to(contain("Operation"))
+                expect(data_of(self.graph.filter_choices(["clean_engineering"], []))["offered_node_types"]).to(contain("Operation"))
+
+            with it("should offer the relationships of every node type when none is chosen"):
+                expect(data_of(self.graph.filter_choices(["clean_engineering"], []))["relationships"]).not_to(equal([]))
 
             with it("should leave nothing chosen for the next filter"):
                 data_of(self.graph.filter_choices(["clean_engineering"], ["Operation"]))
                 expect(self.graph.filter.practices).to(equal([]))
+
+        with context("with no practice chosen in the filter"):
+            with it("should offer every node type the loaded practices hold"):
+                offered = data_of(self.graph.filter_choices([], []))["offered_node_types"]
+                expect(set(offered)).to(equal({node_type for name in _PRACTICES for node_type in self.graph.practice(name).in_graph.node_types}))
+
+            with it("should offer the rules of every practice"):
+                rules = data_of(self.graph.filter_choices([], []))["rules"]
+                expect({rule.split(".")[0] for rule in rules}).to(contain("stories", "clean_engineering"))
+
+        with context("with clean engineering narrowed to operations and stories added"):
+            with before.all:
+                self.changed = data_of(self.graph.filter_choices(["clean_engineering", "stories"], ["Operation"], practices_before=["clean_engineering"]))
+
+            with it("should keep operations chosen"):
+                expect(self.changed["node_types"]).to(contain("Operation"))
+
+            with it("should leave the other clean engineering node types unchosen"):
+                expect(self.changed["node_types"]).not_to(contain("OoadClass"))
+
+            with it("should choose every node type stories holds"):
+                expect(set(self.graph.practice("stories").in_graph.node_types) - set(self.changed["node_types"])).to(equal(set()))
+
+            with it("should offer every node type of both practices"):
+                expect(self.changed["offered_node_types"]).to(contain("OoadClass"))
+
+            with it("should offer the relationships of the chosen node types"):
+                chosen = data_of(self.graph.filter_choices(["clean_engineering", "stories"], self.changed["node_types"]))
+                expect(self.changed["relationships"]).to(equal(chosen["relationships"]))
 
         with context("with an operation opened"):
             with before.all:

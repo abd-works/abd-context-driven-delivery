@@ -141,7 +141,7 @@ class CatalogPractice:
     @cached_property
     def shown_fidelities(self) -> list[CatalogFidelity]:
         """The catalog's view of each fidelity it shows, in declared order, made once."""
-        return [CatalogFidelity(fidelity) for fidelity in self.practice.fidelities if not NoCatalog.annotates(fidelity)]
+        return [CatalogFidelity(fidelity, self) for fidelity in self.practice.fidelities if not NoCatalog.annotates(fidelity)]
 
     def fidelity_in(self, column: StageColumn) -> CatalogFidelity | None:
         """The practice's fidelity in ``column``; none when the practice has no fidelity at that stage."""
@@ -168,6 +168,11 @@ class CatalogPractice:
     def examples_folder(self) -> Path:
         """The practice's ``catalog-examples`` folder, whose files its fidelities show."""
         return Path(self.practice.module_dir) / EXAMPLES_FOLDER
+
+    def language_of(self, path: Path) -> str | None:
+        """The language an example file's code is in: the format of this practice, else of another practice in the
+        catalogue, that reads it; none when no practice reads it."""
+        return self.practice.format_reading_with(path, PracticeCatalogue.practices())
 
     def copy_examples_into(self, out_root: Path) -> None:
         """Copy the practice's example files into the catalog's ``examples/{practice}`` folder, where its fidelity

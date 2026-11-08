@@ -149,7 +149,7 @@ Inferred: the Executive and Engineering buttons switch the page and editor betwe
 ## (E) Filter Graph In Graph App
 ### (S) Person --> Filter By Practice
 
-Observed: choosing practices selects every node type, connector and rule those practices hold, and adding another practice keeps the first practice's choices (`App.tsx` `practiceSelection`, `app.test.tsx` "should select every node, connector, and rule for the practice", "should keep the first practice filters when another practice is added").
+Observed: choosing practices selects every node type, connector and rule those practices hold, and adding another practice keeps the first practice's choices; Python's *Filter* works this out (`graph.py` `Filter.change_practices`, `Graph.filter_choices` with `practices_before`, `app.test.tsx` "should select every node, connector, and rule for the practice", "should keep the first practice filters when another practice is added").
 
 ### (S) Person --> Filter By Node Type
 
@@ -186,7 +186,7 @@ Observed: `graph.inventory` returns each loaded practice's node counts, edge cou
 
 ### (S) Agent --> List Filter Choices
 
-Observed: `graph.filter_choices` returns the node types, relationships and rules a filter offers once practices and node types are chosen, and clears the graph's own filter (`graph.py` `Graph.filter_choices`, `app_smoke_spec.py` "with clean engineering chosen in the filter").
+Observed: `graph.filter_choices` returns the node types a filter offers and those it chooses, with the relationships and rules of the chosen ones, once practices and node types are chosen (and, given `practices_before`, after a change of practice), and clears the graph's own filter (`graph.py` `Graph.filter_choices`, `app_smoke_spec.py` "with clean engineering chosen in the filter").
 
 ### (S) Agent --> Read Node Source With Members
 

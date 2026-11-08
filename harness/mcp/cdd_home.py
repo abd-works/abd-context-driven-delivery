@@ -62,6 +62,8 @@ class CddHome:
 
     PINNED = "pinned"
     CHECKOUT = "checkout"
+    # The file in the published board mod naming the command its Run install runs.
+    INSTALL_COMMAND = "install.json"
 
     def __init__(self, folder: Path | str | None = None) -> None:
         named = folder or os.environ.get(CDD_HOME_ENV) or Path.home() / ".cdd"
@@ -112,6 +114,7 @@ class CddHome:
         for part in BOARD_MOD_PARTS:
             if (source / part).is_dir():
                 shutil.copytree(source / part, target / part, ignore=shutil.ignore_patterns("*.test.*"))
+        self._write_json(target / self.INSTALL_COMMAND, {"command": self.install_command})
         manifest_path = target / ".claude-plugin" / "plugin.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         manifest["version"] = f"{manifest.get('version', '0.0.0')}-{self._content_hash(target)}"
@@ -170,6 +173,12 @@ class CddHome:
     def interpreter(self) -> PythonInterpreter:
         """The Python the server runs on: the one the first install recorded, else the one running this install."""
         return PythonInterpreter(self._runtime().get("python") or sys.executable)
+
+    @property
+    def install_command(self) -> list[str]:
+        """What the board mod's Run install runs, with the chat's folder added: the served checkout's install script on
+        the Python the server runs on. The mod runs it itself because the server may be what is broken."""
+        return [str(self.interpreter.executable), str(self.source / "scripts" / "install.py"), "--ide", _CLAUDE_CODE.ide, "--from-chat"]
 
     @property
     def server_environment(self) -> dict[str, str]:

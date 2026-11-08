@@ -6,14 +6,15 @@ import { CddConnection } from '@cdd/cdd-connection'
 import { BoardUpdate } from '@src/session-board/board-update'
 
 import { createApp } from './app'
+// The board's port, written once for this server and for the Python that reports it to a chat.
+import ports from './ports.json'
 
-const DEFAULT_PORT = 8778
 const HOST = '127.0.0.1'
 const SERVE_ARGUMENTS = ['--import', 'tsx', 'packages/session-board/serve.ts']
 
 const here = dirname(fileURLToPath(import.meta.url))
 const appRoot = resolve(here, '..', '..')
-const port = Number(process.env.BOARD_PORT ?? DEFAULT_PORT)
+const port = Number(process.env.BOARD_PORT ?? ports.board[0])
 // The board's project defaults to the checkout cdd was installed from.
 const cdd = new CddConnection(process.env.BOARD_PROJECT)
 const app = createApp(cdd, port, join(appRoot, 'dist'), new BoardUpdate(appRoot, () => restartOnNewCode()))

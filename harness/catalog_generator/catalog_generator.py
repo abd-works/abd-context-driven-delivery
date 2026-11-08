@@ -33,6 +33,7 @@ from harness.guidance.action_catalogue import Action, ActionCatalogue
 from harness.installation.destination import NoCatalog
 from harness.installation.files import skill
 from harness.installation.repository_toolsets import RepositoryToolsets
+from harness.markdown.format import Format
 from harness.mcp.mcp_server import mcp
 from harness.annotations.name import Name
 
@@ -47,6 +48,8 @@ _SITE_SENTENCE = (
 )
 _BACK_TO_CATALOG = '<a href="index.html">Back to catalog</a>.'
 _TITLE_LINE = re.compile(r"^#\s+.*\n+", re.MULTILINE)
+# A template that is not itself a file of its format ends in .tpl after the format's extension.
+_TEMPLATE_ENDING = ".tpl"
 
 
 # -- What the catalog shows ---------------------------------------------------
@@ -165,12 +168,10 @@ class FidelityTemplate:
 
     @property
     def language(self) -> str:
-        """The code-fence language the template's text is shown in."""
-        path = self.path
-        if path.name.endswith(".py.tpl"):
-            return "python"
-        language = path.suffix.lstrip(".") or "text"
-        return {"md": "markdown", "tpl": "text"}.get(language, language)
+        """The code-fence language the template's text is shown in: the format its extension names, read past a
+        ``.tpl`` ending, so ``model.py.tpl`` is ``python``; ``text`` when it names none."""
+        name = self.path.name.removesuffix(_TEMPLATE_ENDING)
+        return Format.from_extension(Path(name).suffix).name or "text"
 
     @property
     def fence_html(self) -> str:

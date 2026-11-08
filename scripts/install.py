@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 from pathlib import Path
 
@@ -47,7 +48,19 @@ def main() -> int:
         help="Serve this checkout as it is on disk to every chat, for working on CDD itself; cdd.restart reloads it. "
         "Only switches the server: run a plain install as well when skills, rules, or commands changed.",
     )
+    parser.add_argument(
+        "--from-chat",
+        default=None,
+        metavar="FOLDER",
+        help="Install for the chat working in FOLDER: from FOLDER when it is a CDD checkout, the one the person is "
+        "working on, else from this checkout. The chat bar's Run install runs this.",
+    )
     args = parser.parse_args()
+    if args.from_chat is not None:
+        chat_checkout = Path(args.from_chat).resolve()
+        if chat_checkout != _REPO and (chat_checkout / "scripts" / "install.py").is_file():
+            command = [sys.executable, str(chat_checkout / "scripts" / "install.py"), *(["--ide", args.ide] if args.ide else [])]
+            return subprocess.run(command, cwd=chat_checkout, check=False).returncode
     # The MCP and hook installations register with the Installer when their modules are imported.
     import harness.hooks.hook_installation  # noqa: F401
     from harness.installation.installer import Installer

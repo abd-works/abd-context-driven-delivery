@@ -1,4 +1,4 @@
-﻿import { expect, test } from 'claude-code/testing'
+import { expect, test } from 'claude-code/testing'
 
 // Organised by story. A test whose name starts `should` has the same signature as a Mamba example in
 // harness/diagnostics/server_health_spec.py; the others cover what a person sees and presses on the band.
@@ -9,7 +9,7 @@ const BAND = {
   props: { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 120, scroll: { offset: 0, bodyRows: 12 }, view: {} },
 } as const
 
-const HEALTHY = { kanban_app_port: 8778, graph_app_port: 5173, is_hook_server_running: false }
+const HEALTHY = { kanban_app_port: 8778, kanban_app_url: 'http://127.0.0.1:8778', graph_app_port: 5173, is_hook_server_running: false }
 const CDD_TOOLS = Array.from({ length: 116 }, (_, index) => ({ name: `mcp__plugin_cdd_cdd__tool_${index}`, description: '', mcp: true }))
 
 type Engine = { serverLost: boolean; report: unknown; rawText: string | null; calls: string[] }
