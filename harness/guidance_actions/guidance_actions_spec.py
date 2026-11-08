@@ -264,11 +264,11 @@ with description("a guidance action"):
 
         with it("should keep the format a generate names on that session's fidelity"):
             from harness.guidance_actions import GuidanceAction
-            from space.session import Session
+            from space.session import Sessions
 
             action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio {self.session_word}", self.project))
             action.run(lambda item: None, action="generate")
-            reloaded = Session.load(self.project / ".sessions" / "sign-up", self.project)
+            reloaded = Sessions(self.project).load(self.project / ".sessions" / "sign-up")
             expect(reloaded.practices["stories"].saved.get("formats")).to(equal({"story_map": "drawio"}))
 
         with it("should work in the kept format when the next command names none"):
@@ -283,11 +283,11 @@ with description("a guidance action"):
 
         with it("should keep the practice turned on when it keeps a format"):
             from harness.guidance_actions import GuidanceAction
-            from space.session import Session
+            from space.session import Sessions
 
             action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio {self.session_word}", self.project))
             action.run(lambda item: None, action="generate")
-            reloaded = Session.load(self.project / ".sessions" / "sign-up", self.project)
+            reloaded = Sessions(self.project).load(self.project / ".sessions" / "sign-up")
             expect(reloaded.practices["stories"].enabled).to(equal(True))
 
         with it("should log a call in that session"):
@@ -313,7 +313,7 @@ with description("a guidance action"):
 
             generate = Generate().for_call(_call(f"stories-story-map {self.session_word}", self.project))
             listed = generate.listed()[0]
-            generate._rules()
+            generate.rules_to_follow()
             expect(generate.session.practices["stories"].guidance).to(be(listed))
 
         with it("should make an action started inside another work in that action's session"):

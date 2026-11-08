@@ -23,8 +23,6 @@ _BUILD_SCRIPT = _HERE / "build-canvas-fixtures.mjs"
 class LernCanvasFixtures:
     """Builds ``canvas-fixtures.js`` from a LERN workspace's ``*.story.shared.ts`` files."""
 
-    # The LERN pattern's step library, so the bundle runs the same story runtime the tests do.
-    story_test_folder = LernDomainDriven.story_test_folder
     tests_folder = "tests"
     work_folder = ".temp/canvas-fixtures"
     shared_story_glob = "*.story.shared.ts"
@@ -33,9 +31,11 @@ class LernCanvasFixtures:
 
     def __init__(self, workspace: str | Path, story_test_folder: str | None = None, resettables: Iterable[str] = ()) -> None:
         """*resettables*: ``module#export`` names (module relative to the workspace, without .ts) of other test state
-        whose ``_reset()`` must run with the repositories' on every load — gateways, clocks."""
+        whose ``_reset()`` must run with the repositories' on every load — gateways, clocks. story_test_folder is the
+        step library the bundle runs, the LERN pattern's own unless the workspace keeps it elsewhere, so the bundle runs
+        the same story runtime the tests do."""
         self.workspace = Path(workspace)
-        self.story_test_folder = story_test_folder or self.story_test_folder
+        self.story_test_folder = story_test_folder or LernDomainDriven.story_test_folder
         self.resettables = list(resettables)
 
     def shared_story_files(self) -> List[Path]:

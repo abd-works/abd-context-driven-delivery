@@ -72,22 +72,13 @@ class Validate(GuidanceAction):
                 return item
             if graph_paths:
                 return ""
-            return _rules_text(item)
+            return item.checked_rules_text()
 
         parts = [part for part in self.run(on, action="validate") if part]
         sections.extend(parts)
         report = "\n\n".join(sections)
-        self._reports.save(report, graph_paths)
+        self._reports.save(report, self._graph)
         return f"{report}\n\nValidation report for these artifacts: {self._reports.where()}"
-
-    def listed_rules(self) -> str:
-        """The shared rules and the active fidelity's rules of each listed guidance, as text for another action to
-        follow. It checks nothing, so it saves no report and writes nothing to the session log, where a validate line
-        would tell the session board the work had been checked."""
-        return "\n\n".join(part for part in self.each(self._rules_text_of) if part)
-
-    def _rules_text_of(self, item) -> str:
-        return item if isinstance(item, str) else _rules_text(item)
 
     def _fidelities(self) -> list:
         """The fidelity each listed guidance is validated at. A listed practice is the one this action's session holds,
@@ -144,7 +135,7 @@ class Validate(GuidanceAction):
         if len(violations) > _LOGGED_VIOLATIONS:
             synopsis.append(f"graph-rule … and {len(violations) - _LOGGED_VIOLATIONS} more")
         for practice in self._listed_practices():
-            practice.log_validation(synopsis)
+            self.session.log.validation(practice, synopsis)
         # This line is the call's validate line; the session board reads the latest one, so no clean line may follow.
         self._logged_session_action = "validate"
 
@@ -161,7 +152,7 @@ class Validate(GuidanceAction):
         if self._guidance_text is not None:
             return
         for practice in self._listed_practices():
-            practice.log_validation([])
+            self.session.log.validation(practice, [])
 
     @noDeploy
     @mcp
@@ -184,9 +175,3 @@ class Validate(GuidanceAction):
             "Then run collection validate on the asset and detect a failure "
             "that matches the Mistake."
         )
-
-
-def _rules_text(guidance) -> str:
-    """The rules a validate of guidance checks, as their markdown, for an agent to judge against."""
-    texts = (collection.validate.strip() for collection in guidance.checked_rule_collections())
-    return "\n\n".join(text for text in texts if text)

@@ -6,8 +6,18 @@ This module holds the core lifecycle verbs; their folders have no card of their 
 - *Generate* writes each listed Guidance's artifact at its current fidelity, with that fidelity's rules, then has the result validated (`generate.generate`).
 - *Document* records what already exists for each listed Guidance without correcting it, so violations are flagged, not fixed (`document.document`).
 - *Validate* checks artifacts against each listed Guidance's rules, adds the graph rules' hits for graph-backed practices, and saves a report in the session's `validation-reports/` folder (`validate.validate`); *CheckedGraph* is the graph one call checks and the files it is built from: it holds the fidelity each listed practice is checked at, reads each one's checked format once, and keeps the graph it builds so its violations are read from that graph, not from the file written for the report. *ReportFiles* are the reports the call saves, and *ValidationReport* writes one from the listed guidance it holds: the rules each guidance checks (`checked_rules()`), and for a graph hit of a rule it does not check, that rule as the guidance has it (`every_rule()`). `Validate.create_rule` adds a named rule from a failed example and the behaviour wanted; it carries `@noDeploy`, so it is called from Python and is not an installed MCP operation or slash command.
-- *Satisfy* validates, applies the fixes the report implies, and validates again (`satisfy.satisfy`); the fixes are the ones the Generate it starts gives (`Generate.fix_instructions`).
-- *Render* converts content a practice already generated into another format, such as markdown into drawio (`render.render`).
+- *Satisfy* gives the listed Guidance's rules, lists `validate` as the tool the agent calls before and after its fixes, and names the fixes step of the Generate it starts (`Generate.generate_fixes_from_validate`) (`satisfy.satisfy`). Expanding it checks nothing, so it saves no report and logs no validate line.
+- *Render* converts content a practice already generated into another format, such as markdown into drawio (`render.render`). It only converts: it opens no session and commits nothing, and with `paths` it reads the files itself, once.
+
+## How a recipe reaches its text
+
+An action's instructions are its `@agent_instructions` recipe, which the MCP host expands from the call's arguments without running the recipe as Python. Only three shapes put text into the prompt:
+
+- a string statement, or `instructions(text)` with a text the recipe computed;
+- a recipe or tool named on another action the recipe starts, such as `instructions(self._generate().generate)` or `tools(self._validate().validate)`. The other action is made with `_inside`, so it already works on what this one lists, at the same fidelity; an action held as a tool (`as_tool()`) is listed by name instead of pasted in;
+- a callback passed to `each` or `run`, which hands it the fidelity this action works at on each listed practice, and whose returned text the recipe reads.
+
+A recipe called as an ordinary Python method, such as `grill.grill_with_context()` inside a callback, gives the prompt only its return value. `fidelity_text_spec.py` expands each action that writes or fixes an artifact this way and checks that the fidelity's instructions, template, rules, and tools arrive.
 
 The other actions are separate modules with their own cards: `actions/diagnose`, `actions/grill_context`, `actions/improvement`, `actions/iterate`, `actions/partition`, and `actions/sketch`.
 

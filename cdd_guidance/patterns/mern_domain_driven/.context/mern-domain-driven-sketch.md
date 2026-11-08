@@ -4,8 +4,10 @@ Source: `abd-skills/practices/architecture-centric-engineering/specs/mern-domain
 (old-world ABD skill: `archiecture-specification.md`, `rules/*.md` × 18,
 `scanners/typescript/*.py` × 18, `templates/`, diagrams).
 
-Decisions below are locked (see `grill-answers.md`). The tool is built: the
-sections below describe it as it is in `cdd_guidance/patterns/mern_domain_driven/`.
+> **Historical.** This sketch records how the pattern was designed. Where it names an old scanner file, that scanner
+> was never ported: the rule is judged by the validating agent. `mern_domain_driven.md` is the pattern as it is.
+
+Decisions below are locked (see `grill-answers.md`).
 Where the port plan differed from what was built, the section says what was built.
 
 ---

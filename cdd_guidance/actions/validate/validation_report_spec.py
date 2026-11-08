@@ -16,7 +16,7 @@ from expects import contain, expect
 from mamba import before, context, description, it
 
 from harness.graph.violation import Violation
-from space.session import Session
+from space.session import Session, Sessions
 from cdd_guidance.actions.validate.validation_report import ValidationReport
 
 
@@ -41,7 +41,7 @@ with description("a validation report"):
             ]
 
         with it("should link each finding to its file by absolute path and line"):
-            session = Session(self.root)
+            session = Session(Sessions(self.root))
             session.workpath = self.root
             session.session_path = self.session_dir
             report_md = ValidationReport(session, []).of_graph(self.violations)

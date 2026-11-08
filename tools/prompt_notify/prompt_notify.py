@@ -1,5 +1,5 @@
 """
-Prompt notify hook — detect CDD action, practice, fidelity, and guideline use.
+Prompt notify hook — detect CDD action, practice, fidelity, and rule use.
 
 Fires on preToolUse. Matches MCP names (`sketch.sketch`, `bdd-behavior()`),
 CallMcpTool wrappers, and skill/rule paths.
@@ -41,7 +41,7 @@ _RULE_DIRS = ("/.cursor/rules/", "/.claude/rules/")
 @noCatalog
 @agent_toolset
 class PromptNotify:
-    """Echo detected action, practice, fidelity, and guideline names on preToolUse."""
+    """Echo detected action, practice, fidelity, and rule names on preToolUse."""
 
     _catalog: ClassVar[list[tuple[str, str]] | None] = None
     _installed_extension: ClassVar[Path | None] = None
@@ -69,7 +69,7 @@ class PromptNotify:
             names[practice.slug] = "practice"
             for fidelity in practice.fidelities:
                 names[fidelity.slug] = "fidelity"
-                names[f"{practice.slug}-{fidelity.slug}"] = "guideline"
+                names[f"{practice.slug}-{fidelity.slug}"] = "rule"
         return names
 
     def _action_names(self) -> dict[str, str]:
@@ -170,12 +170,12 @@ class PromptNotify:
                     continue
                 if kind == "action" and hay not in action_names:
                     continue
-                if kind == "guideline" and in_skills:
+                if kind == "rule" and in_skills:
                     # Rule tokens join folder and file (bdd-bdd-behavior); a skill path's
                     # nested folders can spell the same token without being a rule.
                     continue
                 if "/rules/" in hay.replace("\\", "/").lower():
-                    return "guideline", token
+                    return "rule", token
                 return kind, token
         return None
 

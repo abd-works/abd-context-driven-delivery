@@ -17,7 +17,6 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.generate.generate import Generate
-from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
@@ -39,17 +38,6 @@ def _expanded_generate(action, arguments):
     )
 
 
-@agent_toolset
-class _FixingGenerate(Generate):
-    """A generate whose fixes step says what to close."""
-
-    @agent_instructions
-    def generate_fixes_from_validate(self) -> str:
-        """Close the gaps the latest report names."""
-        "Close every gap the latest report names."
-        return ""
-
-
 def _logged_verbs(project):
     log = project / ".sessions" / "alpha" / "session.log"
     return [line.split(" ")[1] for line in log.read_text(encoding="utf-8").splitlines() if len(line.split(" ")) > 1]
@@ -69,10 +57,11 @@ with description("a generate action on practice guidance") as self:
     with after.each:
         self.throwaway.close()
 
-    # Satisfy hands these on after its own validate, so they come from the generate that owns them.
-    with context("asked for its fix instructions"):
-        with it("should give what its generate_fixes_from_validate tells the agent"):
-            expect(_FixingGenerate().fix_instructions()).to(contain("Close every gap the latest report names."))
+    # Satisfy names this step after asking for validate; a step that expands to nothing leaves the agent no fixes to apply.
+    with context("whose fixes step is expanded"):
+        with it("should tell the agent to apply the fixes the latest validate report names"):
+            fixes = AgentInstructions.for_callable(Generate.generate_fixes_from_validate, self.action).expand({})
+            expect(fixes.instructions).to(contain("Apply the fixes the latest validate report names"))
 
     with context("with a fidelity active"):
         with it("should include that fidelity's rules in the generate instructions"):

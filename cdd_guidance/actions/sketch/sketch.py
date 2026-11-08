@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from cdd_guidance.actions.generate.generate import Generate
 from cdd_guidance.actions.grill_context.grill_context import GrillContext
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
@@ -28,11 +29,6 @@ class Sketch(GuidanceAction):
         """A sketch made for session that finds its template in this sketch's agent_dir."""
         return type(self)(agent_dir=self._agent_dir, session=session)
 
-    def _context_folder(self, module: str) -> Path:
-        """The .context folder sketches go in: the session root's, or a module's under that root."""
-        folder = self.session.root / module if module else self.session.root
-        return folder if folder.name == ".context" else folder / ".context"
-
     @property
     def _sketch_name(self) -> str:
         """The session's sketch file name: a session is named for the subject it works on, so its sketch is too."""
@@ -46,6 +42,19 @@ class Sketch(GuidanceAction):
     def _grill_context(self) -> GrillContext:
         """The grill this sketch runs: made for this sketch's session and working on what it lists."""
         return self._inside(GrillContext)
+
+    def _generate(self) -> Generate:
+        """The generate the agreed sketch becomes the formal artifact through, working on what this sketch lists."""
+        return self._inside(Generate)
+
+    def _sketch_text(self, item) -> str:
+        """What sketching one listed guidance asks for, read from the fidelity this sketch works at on it: its Scaffold
+        section, which is the shell's level of detail, the rules the sketch answers are held to, and its practice's
+        sketch template, which is the notation; text guidance is itself. The recipe reads the text returned."""
+        if isinstance(item, str):
+            return item
+        parts = (item.scaffold, item.checked_rules_text(), item.sketch_template)
+        return "\n\n".join(part.strip() for part in parts if part and part.strip())
 
     @mcp
     @agent_tool
@@ -74,7 +83,7 @@ class Sketch(GuidanceAction):
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the sketch body in content.
         content: in-process text. Leave this empty on an MCP call.
         module: a module's folder under the session root, for a sketch of that module alone; it goes in that module's .context folder."""
-        target = self._context_folder(module) / self._sketch_name
+        target = self.session.context_folder(module) / self._sketch_name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(self.document_named(content, paths), encoding="utf-8")
         self.wrote([target])
@@ -86,7 +95,7 @@ class Sketch(GuidanceAction):
         """List the sketch files in the session root's .context folder, or in a module's under that root.
         Returns newline-separated paths, or ``no sketches`` when the folder is missing or empty.
         module: a module's folder under the session root."""
-        context_dir = self._context_folder(module)
+        context_dir = self.session.context_folder(module)
         if not context_dir.is_dir():
             return "no sketches"
         paths = [str(path) for path in sorted(context_dir.glob("*-sketch.md"))]
@@ -112,15 +121,15 @@ class Sketch(GuidanceAction):
     @agent_instructions
     def sketch(self, guidance: GuidanceArg) -> str:
         """Confirm views only when the user did not already name them. Write a high-level shell in one integrated sketch file, one section per practice. The shell's level of detail is that fidelity's Scaffold section; the notation is the practice sketch template. Then ask which theme to start. Ask three or four questions from that fidelity's Sketch section, then sketch those answers into the existing sections. Practice Rules apply after those answers, not to the shell. The reply includes these sketch instructions, each practice's sketch template, and each practice's rules."""
-        self.begin(guidance, action="sketch")
+        self._work_on(guidance)
         "save_sketch the shell in the same turn it is written. After three or four grill answers, sketch the theme into that same file, save_sketch again, then review_sketch. Do not ask the next theme until that review confirms the sketch."
         "Carry forward every mistake named in review. Correct the sketch. Do not regenerate as if those mistakes never happened."
-        for item in self.listed():
-            instructions(item.rules.markdown_block)
-            instructions(item.sketch_template)
-        self._grill_context().grill_with_context()
+        "Evaluate the sketch against each listed guidance's rules below as an AI check — not a graph query."
+        self.each(self._sketch_text)
+        instructions(self._grill_context().grill_with_context)
         tools(self.find_template)
         tools(self.save_sketch)
         tools(self.review_sketch)
-        self._grill_context().generate_each()
+        "When the sketch is agreed, generate each listed guidance from it:"
+        instructions(self._generate().generate)
         return "Sketch complete; generate instructions applied."

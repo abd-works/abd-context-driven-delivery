@@ -13,6 +13,7 @@ from harness.agent_tools.chat_pointer import NO_CHAT, ChatPointer
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
     from harness.guidance.rule import RulesCollection
+    from space.session.practice_session_output import PracticeSessionOutput
     from space.session.session import Session
 
 LOG_FILE = "session.log"
@@ -226,6 +227,12 @@ class SessionLog:
         self.record(f"{line} {self._line_chat()}")
         self.injected_rules.clear()
 
+    def validation(self, practice: PracticeSessionOutput, violations: list[str]) -> None:
+        """Log a validate of practice at its working fidelity, pointing at this session's chat, with each violation's
+        synopsis; no violations is a validate that passed."""
+        detail = " ".join(violations)
+        self.line(f"validate {type(practice.guidance).__name__} {practice.working_fidelity} {detail}".rstrip())
+
     def action(self, action: str, paths: list[Path]) -> None:
         """Log action with the paths it worked on and what the session's opened practices were working at."""
         if self.path is None:
@@ -317,13 +324,13 @@ class SessionLog:
         return Loop(number, self._lines_of_loop(number))
 
     def _lines_of_loop(self, number: int) -> list[str]:
-        lines = self._lines()
-        numbers = [LogEntry(line).loop_number for line in lines]
+        entries = self.entries
+        numbers = [entry.loop_number for entry in entries]
         if number not in numbers:
             return []
         start = numbers.index(number)
-        end = next((index for index in range(start + 1, len(lines)) if numbers[index] not in (None, number)), len(lines))
-        return lines[start:end]
+        end = next((index for index in range(start + 1, len(entries)) if numbers[index] not in (None, number)), len(entries))
+        return [entry.text for entry in entries[start:end]]
 
     @property
     def latest_loop_with_entries(self) -> int:
