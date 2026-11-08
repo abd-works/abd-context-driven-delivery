@@ -586,7 +586,7 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## Repo
 
-`space/repo/repo.py`. The board reads `root`, `is_clone`, `checkout_folder`, `primary_root()`, `worktrees` (the `Worktrees` of `space/repo/worktree.py`, each `Worktree` with its `path` and `branch`), `path_from_top(path)`, and `branch_named(name)`; a ticket calls `switch_branch`, `switch_worktree`, `push_commit`, and `close_branch`.
+`space/repo/repo.py`. The board reads the main clone of the project's sessions' repository (`Sessions.of_project(project).repo.main_clone`), and from it `root`, `is_clone`, `worktrees` (the `Worktrees` of `space/repo/worktree.py`, each `Worktree` with its `path` and `branch`), `path_from_top(path)`, and `branch_named(name)`; a ticket calls `switch_branch`, `switch_worktree`, `push_commit`, and `close_branch`.
 
 ## Branch
 

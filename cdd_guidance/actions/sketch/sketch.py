@@ -30,7 +30,7 @@ class Sketch(GuidanceAction):
 
     def _context_folder(self, module: str) -> Path:
         """The .context folder sketches go in: the session root's, or a module's under that root."""
-        folder = self.session.root / module if module else self.session.root
+        folder = self.session.work_root / module if module else self.session.work_root
         return folder if folder.name == ".context" else folder / ".context"
 
     @property

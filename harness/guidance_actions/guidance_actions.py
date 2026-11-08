@@ -429,7 +429,7 @@ class GuidanceAction:
         if session is None or session.session_path is None:
             return ""
         session_json = session.session_file
-        root = session.root.as_posix()
+        root = session.work_root.as_posix()
         project = session.repo_path.as_posix()
         practices = [(item, self._session_practice(item)) for item in self.listed() if not isinstance(item, str)]
         writes = [f"- {item.slug}: {practice.folder.as_posix()}" for item, practice in practices if practice is not None]

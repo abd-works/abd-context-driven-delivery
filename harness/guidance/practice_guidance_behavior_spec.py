@@ -220,10 +220,10 @@ with description("a practice"):
                     "Story: Browse Product Catalog\nActor: Customer\n",
                     encoding="utf-8",
                 )
-                from space.session.session import Session
+                from space.session import Session, Sessions
 
                 self.tool = Stories(fidelity="story_map", format="python")
-                self.tool.work_in(Session(self.root).practice("stories"))
+                self.tool.work_in(Session(Sessions(self.root)).practice("stories"))
                 self.result = self.tool.render("markdown", self.tool)
 
             with it("should instantiate the object model from that code"):

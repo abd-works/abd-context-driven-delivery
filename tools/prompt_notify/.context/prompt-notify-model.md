@@ -8,10 +8,10 @@ Markdown channel for *PromptNotify*. The module's purpose, seam, and dependencie
 
 *Toast* is the annotation an author puts on an `@agent_tool` or `@agent_instructions` member so that an agent's call to that member shows an IDE toast naming it. `harness/guidance_actions` annotates `GuidanceAction.begin`, the step every guidance action starts with, so each action toasts as **Action →** its name without its own annotation.
 
-*PromptNotify* is the `preToolUse` *Hook*. It looks at the invoked member first, then at a toolset's inherited `begin`, then at its *catalog* of action, practice, fidelity, and guideline names, and writes the first match as a toast notice into each workspace folder. When the module is loaded it registers `PromptNotify.show_toast` with `HookServer.show_toasts_with`, so the toast any hook gives in its result is shown here.
+*PromptNotify* is the `preToolUse` *Hook*. It looks at the invoked member first, then at a toolset's inherited `begin`, then at its *catalog* of action, practice, fidelity, and rule names, and writes the first match as a toast notice into each workspace folder. When the module is loaded it registers `PromptNotify.show_toast` with `HookServer.show_toasts_with`, so the toast any hook gives in its result is shown here.
 
 - **Invariant:** practice and fidelity `instructions` toast only when those members carry *Toast* — never because `begin` is annotated.
-- **Invariant:** toasts in the same burst join their rule lines under one `rules :` prefix; a later matching guideline never overwrites an earlier one.
+- **Invariant:** toasts in the same burst join their rule lines under one `rules :` prefix; a later matching rule never overwrites an earlier one.
 
 ---
 
@@ -42,7 +42,7 @@ detect_echo(payload: HookPayload, toolsets: list | None): tuple[str, str] | None
 	-> PromptNotify.echo_toolsets
 detect(payload: HookPayload): tuple[str, str] | None
 	// never toasts an action from a path
-	// names a guideline when the path is a rules path
+	// names a rule when the path is a rules path
 echo_toolsets: list
 	// the toolsets RepositoryToolsets lists in the CDD checkout, loaded once by the hook server's notifier and kept; a toolset that fails to load raises
 show_toast(toast: str, workspace_roots: list[Path]): list[Path]
@@ -57,4 +57,4 @@ install_ide_toast_extension(): Path
 The toast notice of one workspace folder, `.cursor/prompt-notify-toast.json`. Nothing about one hook event is kept on the shared *PromptNotify*; each toast is written through its own *ToastFile*.
 
 show(message: str, now: datetime): Path
-	// joins same-burst rule lines under one "rules :" prefix; never overwrites an earlier guideline in that burst
+	// joins same-burst rule lines under one "rules :" prefix; never overwrites an earlier rule in that burst

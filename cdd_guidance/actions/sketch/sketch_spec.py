@@ -105,7 +105,7 @@ with description("Sketch toolset") as self:
 
         with it("writes the session's sketch in the .context folder under the session root"):
             path = Path(self.sketcher.save_sketch("rough\n"))
-            expect(path).to(equal(self.session.root / ".context" / f"{self.session.name}-sketch.md"))
+            expect(path).to(equal(self.session.work_root / ".context" / f"{self.session.name}-sketch.md"))
 
         with it("reads the sketch from a file when paths is set"):
             source = self.throwaway.root / "draft.md"
@@ -115,11 +115,11 @@ with description("Sketch toolset") as self:
 
         with it("writes a module's sketch in that module's .context folder"):
             path = Path(self.sketcher.save_sketch("rough\n", module="billing"))
-            expect(path.parent).to(equal(self.session.root / "billing" / ".context"))
+            expect(path.parent).to(equal(self.session.work_root / "billing" / ".context"))
 
         with it("writes straight into a module that is already a .context folder"):
             path = Path(self.sketcher.save_sketch("rough\n", module="billing/.context"))
-            expect(path.parent).to(equal(self.session.root / "billing" / ".context"))
+            expect(path.parent).to(equal(self.session.work_root / "billing" / ".context"))
 
         with it("overwrites the session's sketch when saved again"):
             self.sketcher.save_sketch("first draft\n")
@@ -135,12 +135,12 @@ with description("Sketch toolset") as self:
             expect(self.sketcher.list_sketches()).to(equal("no sketches"))
 
         with it("returns no sketches when the .context directory exists but is empty"):
-            (self.session.root / ".context").mkdir(parents=True)
+            (self.session.work_root / ".context").mkdir(parents=True)
             expect(self.sketcher.list_sketches()).to(equal("no sketches"))
 
         with it("lists every *-sketch.md file in the session root's .context folder"):
             self.sketcher.save_sketch("a\n")
-            (self.session.root / ".context" / "older-sketch.md").write_text("b\n", encoding="utf-8")
+            (self.session.work_root / ".context" / "older-sketch.md").write_text("b\n", encoding="utf-8")
             expect(len(self.sketcher.list_sketches().splitlines())).to(equal(2))
 
         with it("lists a module's sketches when a module is named"):

@@ -75,7 +75,7 @@ class CheckedGraph:
         if self.prefixes and self._named in (None, True) and self._fidelities:
             return [self._built_at(reports.graph_file())]
         if self._named is True:
-            saved = self.session.root / ".context" / "graph.json"
+            saved = self.session.work_root / ".context" / "graph.json"
             return [saved] if saved.is_file() else []
         return load_graph_json_paths(self._named)
 
@@ -105,7 +105,7 @@ class CheckedGraph:
         A relative path is read from the project's checkout, where the agent works and every path it sees starts. A
         path that is not there, or not under the session's root, is refused: the graph would be built from nothing,
         and its empty report would read as a clean validate."""
-        root = self.session.root
+        root = self.session.work_root
         named = [(item, self.session.path_named(item)) for item in paths or []]
         unreadable = [item for item, path in named if not path.exists() or not self._under_root(path)]
         if unreadable:
@@ -122,7 +122,7 @@ class CheckedGraph:
             for path in paths
             if "{" not in path
         ]
-        return {path.relative_to(self.session.root).as_posix() for path in others if self.session.root in path.parents}
+        return {path.relative_to(self.session.work_root).as_posix() for path in others if self.session.work_root in path.parents}
 
     def _written_outputs(self) -> list[str]:
         """The folders holding what each listed fidelity declares in its checked format and has already written. The
@@ -133,5 +133,5 @@ class CheckedGraph:
         return sorted(str(folder) for folder in folders if self._under_root(folder))
 
     def _under_root(self, path: Path) -> bool:
-        root = self.session.root
+        root = self.session.work_root
         return path == root or root in path.parents

@@ -30,7 +30,7 @@ class GrillContext(GuidanceAction):
     def _grill_answers_path(self) -> Path:
         """The session's grill-answers.md, in the .context folder of the session's root, so the answers outlast the
         session. A root inside a .context or .sessions folder writes to that project's .context instead."""
-        folder = self.session.root
+        folder = self.session.work_root
         for candidate in (folder, *folder.parents):
             if candidate.name == ".context":
                 return candidate / "grill-answers.md"
@@ -57,7 +57,7 @@ class GrillContext(GuidanceAction):
         Returns a JSON array of {path, kind} where kind is 'context-named' or 'context-folder'.
         folder: a folder the plan names, from the project's root or absolute. Omit it to scan the session's root."""
         results: list[dict] = []
-        root_path = self.path_named(folder) if folder else self.session.root
+        root_path = self.path_named(folder) if folder else self.session.work_root
         if not root_path.exists():
             return json.dumps([])
         for candidate in self._files_under(root_path):

@@ -53,7 +53,7 @@ class Partition(GuidanceAction):
 
     def _folder(self, out_root: str | None) -> Path:
         """The folder the index and segments go under: out_root when the call names one, else the session's root."""
-        return self.path_named(out_root) if out_root else self.session.root
+        return self.path_named(out_root) if out_root else self.session.work_root
 
     @mcp
     @agent_tool
