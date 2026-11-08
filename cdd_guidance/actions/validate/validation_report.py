@@ -9,8 +9,6 @@ from typing import Any
 from harness.graph.violation import Violation
 from harness.guidance.rule import Rule
 
-from cdd_guidance.actions.validate.graph_json_reader import violations_by_rule
-
 
 class ValidationReport:
     """The validation report of one session on the guidance a validate call lists, each at the fidelity it is validated
@@ -26,7 +24,7 @@ class ValidationReport:
 
     def of_graph(self, violations: list[Violation], graph_sources: list[str] | None = None) -> str:
         """Graph hits and AI judgment prompts in one section per rule (description under each heading)."""
-        grouped = violations_by_rule(violations)
+        grouped = Violation.by_rule(violations)
         rules = [rule for item in self._guidance for rule in item.checked_rules()]
         lines = [
             "# Graph rule validation",

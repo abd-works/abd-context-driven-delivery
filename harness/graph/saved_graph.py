@@ -181,6 +181,39 @@ class SavedGraph:
     def from_text(cls, text: str, source: str = "") -> SavedGraph:
         return cls.from_document(json.loads(text) if text.strip() else {"version": SAVED_SHAPE_VERSION}, source)
 
+    @classmethod
+    def from_file(cls, path: Path) -> SavedGraph:
+        """The graph a checked graph file holds: a saved graph document, or the node list ``graph.return_nodes`` answers
+        with; an empty file holds no practices. ``SavedGraphOutdated`` for a saved graph in another shape."""
+        text = path.read_text(encoding="utf-8")
+        document = json.loads(text) if text.strip() else {"version": SAVED_SHAPE_VERSION}
+        if isinstance(document, list):
+            return cls.from_nodes(document)
+        if not isinstance(document, dict):
+            raise SavedGraphOutdated(str(path), type(document).__name__)
+        return cls.from_document(document, str(path))
+
+    @classmethod
+    def from_nodes(cls, nodes: list[dict]) -> SavedGraph:
+        """The violations of each violating rule on the nodes ``graph.return_nodes`` answers with, each under the
+        practice of its node. A node list keeps no pattern overlays, so only each practice's own scanners count."""
+        return cls.from_violations([
+            Violation.from_data({"practice": node.get("practice", ""), **hit})
+            for node in nodes
+            for rule in node.get("rules") or []
+            if rule.get("status") == "violating"
+            for hit in rule.get("violations") or []
+        ])
+
+    @classmethod
+    def from_violations(cls, violations: list[Violation], overlays: list[str] | None = None) -> SavedGraph:
+        """A graph that keeps only violations, each under the practice that found it: what a node list holds, or the
+        violations of several graph files read together."""
+        found: dict[str, list[Violation]] = {}
+        for violation in violations:
+            found.setdefault(violation.practice, []).append(violation)
+        return cls(list(overlays or []), {name: SavedPractice(name, "", {}, [], [], hits) for name, hits in found.items()})
+
     @property
     def document(self) -> dict:
         return {

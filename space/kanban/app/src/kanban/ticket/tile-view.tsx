@@ -19,18 +19,18 @@ function TileNameView({ ticket, stage, progress }: TileProps) {
   const { fidelity } = progress
   const slug = fidelity.slug
   const place = cellPlace(stage.name, fidelity)
-  const practice = page.board.practiceNamed(progress.practice.key)
+  const shown = page.board.fidelityShown(slug)
   const toggle = () => page.tiles.toggle(ticket, { ticket, stage, place, fidelities: [fidelity] })
   return (
-    <button className="tile-name" title={practice?.skillOf(slug)} disabled={!progress.isEnabled} aria-expanded={page.tiles.isOpen(ticket.name, place)} onClick={() => void toggle()}>
-      {practice?.fidelityNameOf(slug) ?? slug}
+    <button className="tile-name" title={shown?.skill} disabled={!progress.isEnabled} aria-expanded={page.tiles.isOpen(ticket.name, place)} onClick={() => void toggle()}>
+      {shown?.label ?? slug}
     </button>
   )
 }
 
 function TileHelpView({ progress }: { progress: FidelityProgressClient }) {
   const { page } = useBoard()
-  const name = page.board.practiceNamed(progress.practice.key)?.fidelityNameOf(progress.fidelity.slug) ?? progress.fidelity.slug
+  const name = page.board.fidelityShown(progress.fidelity.slug)?.label ?? progress.fidelity.slug
   return (
     <button className="help-link" title={`Help for ${name}`} aria-label={`Help for ${name}`} onClick={() => void page.panels.openFidelityHelp(progress)}>
       ?

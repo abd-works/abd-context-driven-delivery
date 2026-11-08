@@ -1244,7 +1244,7 @@ Observed: the graph-rule report lists only the violations of the guidance's own 
 
 ### (S) Validate --> Report Saved Graph Hits
 
-Observed: with `graph: true` or a graph path, Validate reads the hits from the saved `graph.json` or `graph_return_nodes` JSON (`validate.py` `_resolve_graph_json_paths`, `validate_spec.py` "with the saved graph", `graph_json_reader_spec.py` "a saved graph document").
+Observed: with `graph: true` or a graph path, Validate reads the hits from the saved `graph.json` or `graph_return_nodes` JSON (`validate.py` `_resolve_graph_json_paths`, `validate_spec.py` "with the saved graph", `checked_graph_spec.py` "that was named a saved graph document").
 
 ### (S) Validate --> Leave Unedited Files Out
 

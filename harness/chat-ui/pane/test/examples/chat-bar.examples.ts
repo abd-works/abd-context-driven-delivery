@@ -153,7 +153,7 @@ const column = (name: string, tickets: TicketData[]): ColumnData => {
 export function boardOf(active: string | null, ...tickets: TicketData[]): BoardData {
   const activeTicket = tickets.some(ticket => ticket.name === active) ? { name: active! } : null
   const openTickets = STAGE_ORDER.filter(name => name in WORK_OF).flatMap(name => tickets.filter(ticket => ticket.column.name === name).map(ticket => ({ name: ticket.name })))
-  return { project: 'abd-context-driven-delivery', practices: PRACTICES.map(practiceData), open_tickets: openTickets, active: activeTicket, columns: [{ name: 'Backlog', kind: 'backlog', items: [] }, ...STAGE_ORDER.map(name => column(name, tickets))], format_groups: [] }
+  return { project: 'abd-context-driven-delivery', practices: PRACTICES.map(practiceData), open_tickets: openTickets, active: activeTicket, columns: [{ name: 'Backlog', kind: 'backlog', items: [] }, ...STAGE_ORDER.map(name => column(name, tickets))], fidelities: [] }
 }
 
 // Interaction: the name a person types in the session list's field.

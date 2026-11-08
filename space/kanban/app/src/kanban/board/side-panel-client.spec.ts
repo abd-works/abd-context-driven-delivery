@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import type { ReportRuleData } from '@cdd/space/kanban/ticket'
-import { folderGroupsOf, generatedPaths, offeredTabs, tabOrderOf } from '@src/kanban/ticket/files-panel-client'
+import { folderGroupsOf, generatedPaths, offeredTabs } from '@src/kanban/ticket/files-panel-client'
 import { BoardOnProject, ticketOn as shownTicket } from 'test-utils/board-page-support'
 import type { FidelityProgressClient } from '@src/kanban/ticket/fidelity-progress-client'
 import type { FilesByFidelity, TicketClient } from '@src/kanban/ticket/ticket-client'
@@ -125,10 +125,9 @@ describe('View Fidelity Files', () => {
     expect(filesPanel(page).tabs).toEqual(['.context/story-map.md', '.context/story-map.drawio'])
   })
 
-  it('should keep markdown before code before diagrams', async () => {
-    const { page } = await board.page()
-    const files: FilesByFidelity = { [SLUG]: { drawio: [{ path: 'b.drawio', exists: true }], python: [{ path: 'c.py', exists: true }], markdown: [{ path: 'a.md', exists: true }] } }
-    expect(offeredTabs(files, [SLUG], tabOrderOf(page.board.formatGroups))).toEqual(['a.md', 'c.py', 'b.drawio'])
+  it('should open the tabs in the order Python sends the formats', () => {
+    const files: FilesByFidelity = { [SLUG]: { markdown: [{ path: 'a.md', exists: true }], python: [{ path: 'c.py', exists: true }], drawio: [{ path: 'b.drawio', exists: true }] } }
+    expect(offeredTabs(files, [SLUG])).toEqual(['a.md', 'c.py', 'b.drawio'])
   })
 
   it('should read the text of the file a tab shows', async () => {

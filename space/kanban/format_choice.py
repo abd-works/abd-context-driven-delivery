@@ -12,29 +12,6 @@ if TYPE_CHECKING:
     from space.session.file_manager import FileEntry
 
 
-class FormatGroup:
-    """*FormatGroup* is one group a person picks formats by, such as code, with the formats it holds. The board sends
-    every group, so the page orders a fidelity's files by group without a list of formats of its own."""
-
-    def __init__(self, label: str, formats: tuple[str, ...]) -> None:
-        self._label = label
-        self._formats = formats
-
-    @classmethod
-    def every(cls) -> list[FormatGroup]:
-        return [cls(label, formats) for label, formats in Format.GROUPS.items()]
-
-    @property
-    @data_field
-    def label(self) -> str:
-        return self._label
-
-    @property
-    @data_field
-    def formats(self) -> list[str]:
-        return list(self._formats)
-
-
 class FormatChoice:
     """*FormatChoice* is one chip of an action bar: a group of formats, the format each fidelity the bar acts on uses
     from it, how many of those fidelities offer it and have output in it already, and whether the bar opens with it

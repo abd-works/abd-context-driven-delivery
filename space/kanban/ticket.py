@@ -672,7 +672,7 @@ class FidelityProgress:
     @noSessionLog
     def help(self) -> Help:
         """Return the overview, guidance, and rules of this fidelity, with its stage and its page on the forge."""
-        return Help(self._practice, self._fidelity, self._stage)
+        return Help(self._practice, self._fidelity, self._stage, self._ticket.board.catalogued(self._practice))
 
     @mcp
     @agent_tool

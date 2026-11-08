@@ -60,7 +60,7 @@ export function HelpPanelHeadView({ panel: { help } }: { panel: HelpPanel }) {
       <div className="panel-kind">
         HELP<span className="accent-mark">_</span>
       </div>
-      <h1>{help.fidelity ? practice?.fidelityNameOf(help.fidelity.slug) : practice?.name}</h1>
+      <h1>{help.fidelity ? page.board.fidelityShown(help.fidelity.slug)?.label : practice?.name}</h1>
       <div className="help-place">
         <span className="practice-chip" style={{ borderLeftColor: practice?.color }}>
           {practice?.name}

@@ -59,7 +59,12 @@ describe('Display Ticket Details', () => {
 
   it('should keep a practice with two words in its skill', async () => {
     const { page } = await board.page()
-    expect(page.board.practiceOf('clean-engineering-code')?.skillOf('clean-engineering-code')).toBe('/practices-clean-engineering-clean-engineering-code')
+    expect(page.board.fidelityShown('clean-engineering-code')?.skill).toBe('/practices-clean-engineering-clean-engineering-code')
+  })
+
+  it("should name a fidelity's tile as the catalog names it", async () => {
+    const { page } = await board.page()
+    expect(page.board.fidelityShown('ux-ia')?.label).toBe('information-architecture')
   })
 })
 

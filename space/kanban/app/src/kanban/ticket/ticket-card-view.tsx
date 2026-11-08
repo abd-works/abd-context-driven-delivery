@@ -35,7 +35,7 @@ function SegmentsView({ ticket, stage, onSkill }: { ticket: TicketClient; stage:
         const slug = fidelity.slug
         const { key, label, color } = progress.look
         const practice = page.board.practiceNamed(progress.practice.key)
-        const skill = practice?.skillOf(slug) ?? slug
+        const skill = page.board.fidelityShown(slug)?.skill ?? slug
         const isOpen = state.tiles.some(tile => tile.ticket.name === ticket.name && tile.fidelities.length === 1 && tile.fidelities[0]?.slug === slug)
         const leave = () => onSkill('')
         const enter = () => onSkill(skill)

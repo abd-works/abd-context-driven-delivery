@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.catalog_generator.catalog_examples import CatalogFidelity
 from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.chat.chat import Chat
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
@@ -18,7 +19,6 @@ from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
-from space.kanban.format_choice import FormatGroup
 from space.repo.repo import Repo
 from space.session.session_log import LogTimestamp
 from space.session.session import MAIN_SESSION_NAME
@@ -165,9 +165,24 @@ class Board:
 
     @property
     @data_field
-    def format_groups(self) -> list[FormatGroup]:
-        """The groups a person picks formats by, each with its formats, so the page sorts a fidelity's files by group."""
-        return FormatGroup.every()
+    def fidelities(self) -> list[BoardFidelity]:
+        """Every fidelity of the board's practices with its label and its skill's slash command, as the catalog names
+        them, so a tile shows both without taking the fidelity's slug apart."""
+        return [BoardFidelity(catalogued, shown) for catalogued in self._catalogued for shown in catalogued.shown_fidelities]
+
+    def catalogued(self, practice: PracticeGuidance) -> CatalogPractice:
+        """The catalog's view of practice, the board's own or a ticket's session's instance of it, which names its pages
+        and its fidelities' skills; one for each practice class the board works through."""
+        found = next((catalogued for catalogued in self._catalogued if type(catalogued.practice) is type(practice)), None)
+        if found is None:
+            raise PracticeNotFoundError(practice.key, "the board")
+        return found
+
+    @cached_property
+    def _catalogued(self) -> list[CatalogPractice]:
+        """The catalog's view of each of the board's practices, made once per board with one skill install they share."""
+        skills = CatalogPractice.skill_install()
+        return [CatalogPractice(practice, skills) for practice in self._practices]
 
     @property
     def chats(self) -> list[Chat]:
@@ -258,7 +273,8 @@ class Board:
     @noSessionLog
     def help(self, practice: str) -> Help:
         """Return the overview, guidance, and shared rules of the board's practice named practice, such as stories or clean_engineering, with its page on the forge. A fidelity's help comes from its progress on a ticket: fidelity-progress.help."""
-        return Help(self.practice(practice), None, None)
+        found = self.practice(practice)
+        return Help(found, None, None, self.catalogued(found))
 
     def works_through(self, practice: PracticeGuidance) -> bool:
         """Whether practice, the board's own or a ticket's session's instance of it, is one the board's tickets work
@@ -503,12 +519,12 @@ class Help:
     """Help on a practice or one of its fidelities: the guidance itself, which sends its own overview, guidance, and
     rules, with the fidelity's stage and its page on the forge."""
 
-    def __init__(self, practice: PracticeGuidance, fidelity: FidelityGuidance | None, stage: Stage | None) -> None:
+    def __init__(self, practice: PracticeGuidance, fidelity: FidelityGuidance | None, stage: Stage | None, catalogued: CatalogPractice) -> None:
         self._practice = practice
         self._fidelity = fidelity
         self._stage = stage
-        # The practice as the catalog gives it pages, which names every page on the forge.
-        self._catalogued = CatalogPractice(practice)
+        # The catalog's view of the practice, which names every page on the forge: the one the board holds.
+        self._catalogued = catalogued
 
     @property
     @data_field
@@ -534,5 +550,40 @@ class Help:
         """Its page on the forge, as the catalog generator names it: a fidelity's own page, or its practice's page for
         a fidelity the catalog has no page for."""
         catalogued = self._catalogued
-        has_page = self._fidelity is not None and self._fidelity in catalogued.fidelities
-        return f"{FORGE}/{catalogued.fidelity_href(self._fidelity) if has_page else catalogued.href}"
+        return f"{FORGE}/{catalogued.fidelity_href(self._fidelity) if self._has_page else catalogued.href}"
+
+    @property
+    def _has_page(self) -> bool:
+        """Whether the catalog shows the fidelity. The catalog's view is of the board's instance of the practice, and a
+        ticket's fidelity is its session's instance, so it is found by its name in the practice, which is the same in
+        both, as ``PracticeGuidance.fidelity_called`` finds a fidelity a person names."""
+        fidelity = self._fidelity
+        catalogued = self._catalogued
+        return fidelity is not None and catalogued.practice.fidelity_called(fidelity.name) in catalogued.fidelities
+
+
+class BoardFidelity:
+    """A fidelity as a board tile names it: its label and the slash command of the skill the installer publishes for it,
+    both answered by the catalog's view of its practice, so the page shows them and works out neither."""
+
+    def __init__(self, catalogued: CatalogPractice, shown: CatalogFidelity) -> None:
+        self._catalogued = catalogued
+        self._shown = shown
+
+    @property
+    @data_field(reference=True)
+    def fidelity(self) -> FidelityGuidance:
+        """The fidelity, sent by its slug, which its tile and its progress name it by."""
+        return self._shown.fidelity
+
+    @property
+    @data_field
+    def label(self) -> str:
+        """Its name on a tile, such as story-map, or information-architecture for UX's ia."""
+        return self._shown.label
+
+    @property
+    @data_field
+    def skill(self) -> str:
+        """The slash command of its skill, such as /practices-stories-stories-story-map."""
+        return f"/{self._catalogued.skill_of(self._shown.fidelity)}"

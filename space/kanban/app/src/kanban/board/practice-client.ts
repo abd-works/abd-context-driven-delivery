@@ -24,14 +24,4 @@ export class PracticeClient {
   has(slug: string): boolean {
     return this.data.fidelities.includes(slug)
   }
-
-  // A fidelity's name as a tile shows it, the part of its slug after its practice's: story-map for stories-story-map.
-  fidelityNameOf(slug: string): string {
-    return slug.slice(this.slug.length + 1)
-  }
-
-  // The practice's skill for one of its fidelities: `clean-engineering-code` is /practices-clean-engineering-clean-engineering-code.
-  skillOf(slug: string): string {
-    return `/practices-${this.slug}-${slug}`
-  }
 }

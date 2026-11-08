@@ -128,10 +128,13 @@ class CatalogPractice:
     def skill_name(self) -> str:
         """The slash command that runs the practice: the folder the skill install writes the practice's skill into; its
         key when the practice installs no skill."""
-        tool = next((tool for tool in self.practice.tools.values() if tool.install_to_skill), None)
-        if tool is None:
-            return self.key
-        return self._skills.relative_path(self.practice, tool.deploy_name).parent.name
+        return self.skill_of(self.practice) or self.key
+
+    def skill_of(self, guidance: PracticeGuidance | FidelityGuidance) -> str:
+        """The skill that runs guidance, the practice or one of its fidelities: the folder the skill install writes its
+        skill into, such as ``practices-stories-stories-story-map``; empty when it installs no skill."""
+        tool = next((tool for tool in guidance.tools.values() if tool.install_to_skill), None)
+        return self._skills.relative_path(guidance, tool.deploy_name).parent.name if tool is not None else ""
 
     @property
     def fidelities(self) -> list[FidelityGuidance]:

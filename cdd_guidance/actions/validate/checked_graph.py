@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 from harness.graph.saved_graph import SavedGraph
 from harness.graph.violation import Violation
-from harness.installation.data_class import data_of
 
 from cdd_guidance.actions.validate.report_files import ReportFiles
-from cdd_guidance.actions.validate.graph_json_reader import violations_from_graph_json_files
 
 
 class PathsNotFoundError(FileNotFoundError):
@@ -42,10 +39,10 @@ class CheckedGraph:
         self.unchecked_files = self._other_format_files()
         # Read now, so a path that is not there is refused before the call claims any report file.
         self.prefixes = self._prefixes(edited)
-        # The saved graph this call checks: the one it built from the files it names, or the session's saved graph.
+        # The graph this call checks: the one it built from the files it names, the session's saved graph, or the graph
+        # files it names, read once.
         self._checked: SavedGraph | None = None
         self.files: list[Path] = []
-        self._read_violations: list[Violation] | None = None
 
     def check_beside(self, reports: ReportFiles) -> list[Path]:
         """The graph files this call checks: a graph built from the prefixes and written where reports keeps the call's
@@ -54,41 +51,19 @@ class CheckedGraph:
         return self.files
 
     def violations(self) -> list[Violation]:
-        """The listed practices' violations in the files this call checks: from the graph it built, else from the graph
-        files it was named."""
+        """The listed practices' violations in the graph this call checks."""
         keys = [fidelity.practice_guidance.key for fidelity in self._fidelities]
-        if self._checked is not None:
-            found = self._checked.violations(keys)
-        else:
-            found = [violation for violation in self._named_violations() if not keys or violation.practice in keys]
+        found = self._checked.violations(keys) if self._checked is not None else []
         if self.prefixes:
             found = [violation for violation in found if violation.is_under(self.prefixes)]
         return [violation for violation in found if violation.location not in self.unchecked_files]
 
     def save_at(self, destination: Path) -> None:
         """Keep the graph this call checked at destination, beside a report, so the report's violations stay on their
-        nodes: the graph it built, the one graph file it was named, or the violations of the several it was named,
-        merged into one node list in the shape ``graph.return_nodes`` answers with."""
-        if destination in self.files or not self.files:
+        nodes: the graph it built, the session's saved graph, or the graph files it was named, read as one saved graph."""
+        if destination in self.files or self._checked is None:
             return
-        if self._checked is not None:
-            destination.write_text(self._checked.text, encoding="utf-8")
-        elif len(self.files) == 1:
-            destination.write_bytes(self.files[0].read_bytes())
-        else:
-            nodes = [self._violating_node(violation) for violation in self._named_violations()]
-            destination.write_text(json.dumps(nodes), encoding="utf-8")
-
-    def _named_violations(self) -> list[Violation]:
-        """Every violation in the graph files the call names, read once."""
-        if self._read_violations is None:
-            self._read_violations = violations_from_graph_json_files(self.files)
-        return self._read_violations
-
-    def _violating_node(self, violation: Violation) -> dict[str, Any]:
-        """One violation as the node it was found on."""
-        rule = {"name": violation.rule, "status": "violating", "violations": [data_of(violation)]}
-        return {"practice": violation.practice, "node_id": violation.node_id, "rules": [rule]}
+        destination.write_text(self._checked.text, encoding="utf-8")
 
     def judged_files(self, on_graph: bool) -> str:
         """Each checked format and its files, for the fidelities judged on this call's graph (on_graph) or on their
@@ -105,7 +80,7 @@ class CheckedGraph:
             return [self._built_at(reports.graph_file())]
         if self._named is True:
             return self._session_saved()
-        return self._named_files()
+        return self._read_named()
 
     def _session_saved(self) -> list[Path]:
         """The session's saved graph, read from the file its graph saves in; none when nothing is saved there."""
@@ -113,13 +88,18 @@ class CheckedGraph:
         self._checked = saved_file.read()
         return [saved_file.path] if self._checked is not None else []
 
-    def _named_files(self) -> list[Path]:
-        """The graph files the call names: one path, or several; none for true or nothing."""
+    def _read_named(self) -> list[Path]:
+        """The graph files the call names, one path or several, each read as the graph it holds: one file is checked as
+        its graph, and several as one graph of all their violations. None for nothing."""
         named = self._named
-        if not named or named is True:
-            return []
-        entries = [named] if isinstance(named, str) else named
-        return [Path(str(entry).strip()) for entry in entries if str(entry).strip()]
+        entries = [named] if isinstance(named, str) else list(named or [])
+        files = [Path(str(entry).strip()) for entry in entries if str(entry).strip()]
+        graphs = [SavedGraph.from_file(file) for file in files]
+        if len(graphs) == 1:
+            self._checked = graphs[0]
+        elif graphs:
+            self._checked = SavedGraph.from_violations([violation for graph in graphs for violation in graph.violations()])
+        return files
 
     def _built_at(self, destination: Path) -> Path:
         """Refresh the session's graph with the edited files, read as they are now, keep the nodes read from them as this
