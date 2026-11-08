@@ -170,6 +170,8 @@ class DataClass:
     def of(cls, data_class: type) -> DataClass:
         """The DataClass data_class holds, made and kept on data_class itself the first time it is asked for. A subclass
         holds its own, since it may annotate more fields."""
+        if not isinstance(data_class, type):  # a generic alias such as list[str] holds nothing of its own
+            return cls(data_class)
         held = data_class.__dict__.get(cls._HELD_AS)
         if held is None:
             held = cls(data_class)

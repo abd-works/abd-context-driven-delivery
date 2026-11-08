@@ -32,6 +32,8 @@ from space.session.practice_session_output import PracticeRootInContextError
 from space.session.session_log import LoopNotFoundError
 from space.session.sessions import SessionNameRequiredError
 from space.work_state import WorkState
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 
 def _attach_mandatory_chat(session: Session, work: Path, chat_id: str = "spec-chat") -> Path:
