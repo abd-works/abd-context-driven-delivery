@@ -277,6 +277,9 @@ class PracticeGuidance(Guidance):
     """The practice's name where there is little room, such as `CE` on a session board's chip."""
     COLOUR: str = ""
     """The colour a session board draws the practice's chips and tiles in, such as `#6BCB77` for Stories."""
+    shows_every_fidelity: bool = False
+    """Whether scoped markdown shows every fidelity's block even when one is current, as DDD's does; otherwise it shows
+    only the current fidelity's."""
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -487,18 +490,16 @@ class PracticeGuidance(Guidance):
     
     ## workspace integration to move
 
-    def _activate(self, fidelity: str | None = None, stage: str | None = None) -> None:
+    def _activate(self, fidelity: str | None = None) -> None:
         if getattr(self, "_activating", False):
             return
         self._activating = True
         try:
-            self._activate_fidelity(fidelity, stage)
+            self._activate_fidelity(fidelity)
         finally:
             self._activating = False
 
-    def _activate_fidelity(self, fidelity: str | None, stage: str | None) -> None:
-        if stage is not None:
-            fidelity = self.fidelities.at_stage(STAGES.of(stage)).name
+    def _activate_fidelity(self, fidelity: str | None) -> None:
         if fidelity is not None:
             self._make_current(fidelity)
         if self.format:
@@ -833,14 +834,10 @@ class PracticeGuidance(Guidance):
         parts = [self._section(label).extract() for label in ("overview", "guidance", "shared rules", "language")]
         current = self.fidelities.current
         current_name = current.name if current is not None else None
-        shown = [fidelity for fidelity in self.fidelities if not self._skip_inactive_fidelity(current_name, fidelity.name)]
+        shown = [fidelity for fidelity in self.fidelities if self.shows_every_fidelity or current_name in (None, fidelity.name)]
         parts.extend(fidelity.titled_section for fidelity in shown)
         return "\n\n".join(part for part in parts if part.strip())
 
-    def _skip_inactive_fidelity(self, current_name: str | None, name: str) -> bool:
-        """Whether scoped markdown leaves out the fidelity called name: every fidelity but the current one, when one
-        is current. A practice whose scoped markdown shows every fidelity, as DDD's does, overrides it."""
-        return current_name is not None and current_name != name
 
 
 def _folder_of(paths: list[str] | str) -> str:

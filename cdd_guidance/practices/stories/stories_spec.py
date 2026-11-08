@@ -33,9 +33,9 @@ def _expanded(stories, action_name):
 
 
 with description("Stories"):
-    with context("that resolves discovery stage to story_map"):
+    with context("with its defaults"):
         with before.each:
-            self.stories = Stories(stage="discovery")
+            self.stories = Stories()
 
         with it("should default format to markdown"):
             expect(self.stories.format).to(equal("markdown"))

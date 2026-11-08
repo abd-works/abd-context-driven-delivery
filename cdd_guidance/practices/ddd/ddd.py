@@ -33,11 +33,10 @@ class Ddd(PracticeGuidance):
         self,
         fidelity: str = "bounded_context",
         format: str | None = None,
-        stage: str | None = None,
     ) -> None:
         super().__init__(
             format=format,
-            fidelity=None if stage is not None else fidelity,
+            fidelity=fidelity,
             default_workspace_folder="src",
             formats={
                 "sketch": ("cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model", "SketchDddModel"),
@@ -56,12 +55,12 @@ class Ddd(PracticeGuidance):
                 ),
             },
         )
-        if stage is not None:
-            self._activate(stage=stage)
 
     # In the knowledge graph: DDD's nodes are read after Clean Engineering's classes, and it checks its rules with
     # Clean Engineering's.
     reads_after = ("clean_engineering",)
+    # Its scoped markdown shows every fidelity, since a bounded context, its model and its tactics read as one.
+    shows_every_fidelity = True
     extends = "clean_engineering"
     class_types = ("Entity", "EntityRoot", "ValueObject", "Aggregate", "Repository", "DomainEvent", "DomainService", "Specification")
 
@@ -77,10 +76,6 @@ class Ddd(PracticeGuidance):
         from cdd_guidance.practices.ddd.model.graph_reading import DddReading
 
         DddReading(self).read()
-
-    def _skip_inactive_fidelity(self, current_name: str | None, name: str) -> bool:
-        del current_name, name
-        return False
 
     def _parse_content(self, source_format: str, content):
         """A text the map reads as a plain class model, with no aggregate in it, is read by the Clean Engineering

@@ -38,7 +38,6 @@ class Stories(PracticeGuidance):
         self,
         fidelity: str = "story_map",
         format: str | None = None,
-        stage: str | None = None,
         story_test_folder: str | None = None,
     ) -> None:
         # Step library folder for the TypeScript render; a pattern names it. None keeps story-test.ts at the tests root.
@@ -47,7 +46,7 @@ class Stories(PracticeGuidance):
         self.recorded_map = None
         super().__init__(
             format=format,
-            fidelity=None if stage is not None else fidelity,
+            fidelity=fidelity,
             default_workspace_folder="tests",
             formats={
                 "sketch": ("cdd_guidance.practices.stories.model.sketch.sketch_story_model", "SketchStoryModel"),
@@ -61,8 +60,6 @@ class Stories(PracticeGuidance):
                 "javascript": ("cdd_guidance.practices.stories.model.javascript.javascript_story_model", "JavaScriptStoryModel"),
             },
         )
-        if stage is not None:
-            self._activate(stage=stage)
 
     @cached_property
     def typescript_stories(self):
