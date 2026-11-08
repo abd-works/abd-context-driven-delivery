@@ -304,8 +304,8 @@ with description("a ContextSetup"):
             with it("should mention partition delegation to context tools"):
                 expect("partition" in self.prose).to(be_true)
 
-            with it("should tell the AI to set guidance to the selected practices"):
-                expect(self.prose).to(contain("guidance set to the selected practices"))
+            with it("should tell the AI to pass the context tools chosen in Step 2 as guidance"):
+                expect(self.prose).to(contain("guidance = the context tools selected in Step 2"))
 
             with it("should mention embed as the final step"):
                 expect("embed" in self.prose).to(be_true)
