@@ -768,6 +768,24 @@ def ts_metrics(mirror: Path, files: list[str], node_tools: Path | None, work: Pa
 
 # --------------------------------------------------------------------------------------------- main
 
+def offenders(functions, cognitive, classes, modules) -> dict:
+    """Each function, class, and module past a limit, by name with its number, so a comparison of two revisions can
+    name what a change made worse rather than only how a count moved."""
+    def named(items, key, limit, label):
+        return {f"{item['file']}:{item[label]}": item[key] for item in items if item[key] is not None and item[key] > limit}
+    return {
+        "functions_over_10_paths": named(functions, "ccn", 10, "name"),
+        "functions_hard_to_read": named(cognitive, "cognitive", 15, "name"),
+        "functions_over_50_lines": named(functions, "nloc", 50, "name"),
+        "functions_over_5_parameters": named(functions, "params", 5, "name"),
+        "classes_depending_on_over_14": named(classes, "cbo", 14, "class"),
+        "classes_with_unrelated_jobs": named(classes, "lcom4", 1, "class"),
+        "classes_total_complexity": {f"{c['file']}:{c['class']}": c["wmc"] for c in classes},
+        "classes_methods": {f"{c['file']}:{c['class']}": c["nom"] for c in classes},
+        "modules_lines": {m["file"]: m["sloc"] for m in modules},
+    }
+
+
 def measure(checkout: Path, label: str, node_tools: Path | None) -> dict:
     work = Path(tempfile.mkdtemp(prefix="cm-"))
     mirror = work / "src"
@@ -868,6 +886,7 @@ def measure(checkout: Path, label: str, node_tools: Path | None) -> dict:
             "python": py, "typescript": ts,
             "shadow_models": shadow_models(classes, ts_types),
             "worst": worst,
+            "offenders": offenders(functions, cognitive, cls_list, modules),
         }
     finally:
         shutil.rmtree(work, ignore_errors=True)
