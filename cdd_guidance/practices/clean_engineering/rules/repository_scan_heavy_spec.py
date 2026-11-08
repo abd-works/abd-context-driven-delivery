@@ -63,13 +63,16 @@ class RepositoryScan:
             if violation.rule == slug
         ]
 
-    def blocks_outside_examples(self) -> list[str]:
-        """Each DDD building block read from production code outside an example, as `kind: file`."""
+    def blocks_in_harness(self) -> list[str]:
+        """Each DDD building block read from the framework's production code outside an example, as `kind: file`. The
+        framework has no bounded context and no class with a DDD stereotype, so a block there is one guessed from a
+        class's name."""
         return sorted(
             f"{kind}: {node.source.file}"
             for kind in BUILDING_BLOCK_KINDS
             for node in self.ddd.nodes(kind)
-            if not _EXAMPLE.search((node.source.file or "").replace("\\", "/"))
+            for file in [(node.source.file or "").replace("\\", "/")]
+            if file.startswith("harness/") and not _EXAMPLE.search(file)
         )
 
     def developed_spec_files(self) -> set[str]:
@@ -143,8 +146,8 @@ with description("the Clean Engineering graph rules on this repository") as self
         reaching = [node.name for node, _message in self.scan.failing(self.scan.clean, "hide-inner-details") if node.name in _COMPARISON_DUNDERS]
         expect(reaching).to(equal([]))
 
-    with it("should read no DDD building block from a folder no bounded context or stereotype marks as a domain"):
-        expect(self.scan.blocks_outside_examples()).to(equal([]))
+    with it("should read no DDD building block from the framework, which no bounded context or stereotype marks as a domain"):
+        expect(self.scan.blocks_in_harness()).to(equal([]))
 
     with it("should judge no finished spec by the rules of a behavior sketch"):
         finished = self.scan.developed_spec_files()
