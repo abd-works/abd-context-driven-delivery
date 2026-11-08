@@ -1099,3 +1099,35 @@ function rowsFor(practices: string[], types: string[], violations = false) {
   }
   return rows;
 }
+
+// B10: a node whose source the graph cannot give, or a source read that fails, says so in the source pane.
+function answeringSource(answerFor: () => { ok: boolean; payload: unknown }) {
+  const answered = vi.mocked(fetch);
+  const every = answered.getMockImplementation()!;
+  answered.mockImplementation(async (url, init) => {
+    if (operationOf(String(url), init) !== 'source') return every(url, init);
+    const { ok, payload } = answerFor();
+    const serialized = JSON.stringify(payload);
+    return { ok, status: ok ? 200 : 500, text: async () => serialized, json: async () => payload } as Response;
+  });
+}
+
+it('should say a node has no source the graph can show', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  answeringSource(() => ({ ok: true, payload: null }));
+  await expand(user, 'clean_engineering');
+  await expand(user, 'account');
+  await user.click(screen.getByText('AccountCredentials'));
+  expect(await screen.findByText('The graph holds no source for this node. Load the folder again if it should.')).toBeTruthy();
+});
+
+it('should say why reading a source failed', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  answeringSource(() => ({ ok: false, payload: { error: 'graph.source is still running after 10 seconds' } }));
+  await expand(user, 'clean_engineering');
+  await expand(user, 'account');
+  await user.click(screen.getByText('AccountCredentials'));
+  expect(await screen.findByText(/The source did not open: .*still running after 10 seconds/)).toBeTruthy();
+});
