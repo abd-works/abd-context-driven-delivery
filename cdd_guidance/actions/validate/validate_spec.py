@@ -38,6 +38,9 @@ _STORY_FOLDER = "tests/onboard-a-customer/authenticate-user"
 _ENTITY_ROOT_FILE = "src/account-credentials/account-credentials.ts"
 _STORY_FILE = f"{_STORY_FOLDER}/authenticate_user.story.shared.ts"
 _SPEC_FILE = f"{_STORY_FOLDER}/authenticate_user.story.server.spec.ts"
+# The edited spec, still a behavior sketch: its `it` has no test body and no `BDD: SIGNATURE` marker, which
+# framework-syntax asks for. The sample's own spec is a finished test, which the behavior rules leave alone.
+_SKETCH_WITHOUT_MARKER = "describe('a customer account', () => {\n  it('should sign the customer up', () => {});\n});\n"
 
 # Five parameters, over the three limit-operation-parameters allows.
 _OVER_LIMIT = "export class {name} {{\n  place(a: string, b: string, c: string, d: string, e: string): void {{}}\n}}\n"
@@ -407,6 +410,7 @@ with description("a validate action on practice guidance") as self:
             # A copy of the sample in a folder of its own, so it is a project of its own as a checked-out one is.
             sample = Path(tempfile.mkdtemp()) / "input"
             shutil.copytree(_SAMPLE, sample)
+            (sample / _SPEC_FILE).write_text(_SKETCH_WITHOUT_MARKER, encoding="utf-8")
             self.action = Validate(session=_working_in(self.project, sample, sample))
             self.session = Path(self.action.session.session_path)
 
