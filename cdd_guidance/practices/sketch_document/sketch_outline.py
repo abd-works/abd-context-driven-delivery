@@ -1,12 +1,19 @@
-"""The sketch document — one section per practice, hierarchy carried by markdown headings."""
+"""The sketch document — a header with its title and sources, then one section per practice, hierarchy carried by
+markdown headings."""
 
 from __future__ import annotations
+
+import re
 
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.sketch_lens import SketchLens
 
 
 _HORIZONTAL_RULES = {"---", "***", "___"}
+_TITLE = "# "
+_SOURCE = "source:"
+_SKETCH_SUFFIX = re.compile(r"\s+sketch\s*$", re.IGNORECASE)
+_TRAILING_SEPARATOR = re.compile(r"[\s\-–—€”]+$")
 
 
 class _Section:
@@ -32,6 +39,29 @@ class SketchOutline:
         # opens any of them starts that practice's section, since a sketch holds one section for each practice.
         self._lenses = tuple(PracticeCatalogue.practice_class(key).sketch_lens for key in PracticeCatalogue.keys())
 
+    @property
+    def title(self) -> str:
+        """The title the header's `# ` line gives, without a trailing `sketch` or separator; empty when it has none."""
+        line = next((line for line in self._header if line.startswith(_TITLE)), "")
+        titled = _SKETCH_SUFFIX.sub("", line[len(_TITLE):].strip()).strip()
+        return _TRAILING_SEPARATOR.sub("", titled).strip() or titled
+
+    @property
+    def sources(self) -> str:
+        """The sources the header's `source:` line names; empty when it names none."""
+        line = next((line for line in self._header if line.lower().startswith(_SOURCE)), "")
+        return line.split(":", 1)[1].strip() if line else ""
+
+    @property
+    def _header(self) -> list[str]:
+        """The lines above the first practice section, stripped. A sketch that names no lens is all one section, so it
+        has no header."""
+        first = next((index for index, _, title in self._outline if self._opens_a_section(title)), 0)
+        return [line.strip() for line in self._lines[:first]]
+
+    def _opens_a_section(self, title: str) -> bool:
+        return any(lens.opens(title) for lens in self._lenses)
+
     def holds(self, lens: SketchLens) -> bool:
         """True when this sketch has a section for that practice."""
         return self._section_for(lens) is not None
@@ -49,10 +79,7 @@ class SketchOutline:
 
     @property
     def _names_a_lens(self) -> bool:
-        return any(
-            any(lens.opens(title) for lens in self._lenses)
-            for _, _, title in self._outline
-        )
+        return any(self._opens_a_section(title) for _, _, title in self._outline)
 
     @property
     def _outline(self) -> list[tuple[int, int, str]]:
@@ -87,7 +114,7 @@ class SketchOutline:
                 continue
             if other_depth and other_depth <= depth:
                 return other
-            if any(lens.opens(title) for lens in self._lenses):
+            if self._opens_a_section(title):
                 return other
         return len(self._lines)
 

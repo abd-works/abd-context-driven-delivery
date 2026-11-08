@@ -19,7 +19,7 @@ python = PythonCleanEngineeringModel().render(model, previous)
 
 - **Purpose:** One class model for every format. Callers see the base nodes; a format only differs in how it reads and spells its text.
 - **Seam (terms):** CleanEngineeringModel, UnreadableSource, Module, OoadClass, Property, Operation, Parameter, Relationship, CodeBody
-- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*), actions/sketch (*SketchOutline*), harness/guidance (*SketchLens*), practices/clean_engineering/model/drawio (*DrawIOCleanEngineeringModel*)
+- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*), practices/sketch_document (*SketchOutline*), harness/guidance (*SketchLens*), practices/clean_engineering/model/drawio (*DrawIOCleanEngineeringModel*)
 
 *ModelNode*, *ModelChildren*, *Graph*, *SketchOutline*, and *SketchLens* are owned by the modules above; this model only uses them. The draw.io format — *DrawIOCleanEngineeringModel*, *DrawIOModule*, *DrawIOClass*, and its *DrawIOImportedClass* — is modelled in [drawio-model.md](../drawio/.context/drawio-model.md).
 
