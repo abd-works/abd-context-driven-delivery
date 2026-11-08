@@ -193,7 +193,7 @@ with description("a graph"):
                     {"Module", "OoadClass", "Operation", "Property", "Parameter"} <= owned_types(self.clean_tree, "clean_engineering")
                 ).to(equal(True))
 
-            with it("should order relative, owns, properties, belongsTo, hasParameter, hasType, invokedBy, and dependsOn"):
+            with it("should offer relative, owns, properties, hasParameter, hasType, invokedBy, and dependsOn to filter by, in that order"):
                 expect(PracticeInventory(self.graph, self.clean).edge_types).to(
                     equal(
                         [
@@ -201,7 +201,6 @@ with description("a graph"):
                             "owns",
                             "properties",
                             "demonstrates",
-                            "belongsTo",
                             "hasParameter",
                             "hasType",
                             "demonstratedThrough",
@@ -704,8 +703,8 @@ with description("a graph"):
             with it("should count two repositories"):
                 expect(tree_count(self.ddd_tree, "Repository")).to(equal(2))
 
-            with it("should order root, owns, belongsTo, accesses, and associates"):
-                expect(PracticeInventory(self.graph, self.ddd).edge_types).to(equal(["root", "owns", "belongsTo", "accesses", "associates"]))
+            with it("should offer root, owns, accesses, and associates to filter by, in that order, leaving out the belongsTo back-edge"):
+                expect(PracticeInventory(self.graph, self.ddd).edge_types).to(equal(["root", "owns", "accesses", "associates"]))
 
             with it("should include only domain stereotypes"):
                 expect(
@@ -827,6 +826,20 @@ with description("a graph"):
 
                     with it("should leave entity roots out of the aggregate results"):
                         expect("EntityRoot" in {node["type"] for node in data_of(self.graph.return_nodes())}).to(equal(False))
+
+                    with it("should keep the practice's root as the explorer tree"):
+                        expect([tree["type"] for tree in data_of(self.graph.explorer_trees())]).to(equal(["Practice"]))
+
+                    with it("should keep the account-credentials aggregate in the explorer tree"):
+                        expect([item["name"] for item in walk_tree(data_of(self.graph.explorer_trees())[0])]).to(contain("account-credentials"))
+
+                    with it("should keep an entity root in the explorer tree only as the way to an aggregate, without its rules"):
+                        roots = [item for item in walk_tree(data_of(self.graph.explorer_trees())[0]) if item["type"] == "EntityRoot"]
+                        expect([child["type"] for root in roots for child in root["children"] if child["type"] in _RULE_TYPES]).to(equal([]))
+
+                    with it("should keep the aggregates' rules in the explorer tree"):
+                        aggregate = tree_named(data_of(self.graph.explorer_trees())[0], "account-credentials", "Aggregate")
+                        expect([child["type"] for child in aggregate["children"]]).to(contain("rules"))
 
         with context("with behavior-driven development that has one story spec without describes"):
             with before.all:

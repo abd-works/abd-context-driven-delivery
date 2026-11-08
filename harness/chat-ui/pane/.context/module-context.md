@@ -9,6 +9,6 @@ The *cdd-board* plugin connects a Claude Code chat to the Session Board, so the 
 
 ## Constraint
 
-Load it with `claude --plugin-dir harness/chat-ui/pane`, or install it from this repository's marketplace. It holds no board logic: it checks the chat in every second, runs the commands waiting for it, and reads the board for the active ticket.
+Load it with `claude --plugin-dir harness/chat-ui/pane`, or install it from this repository's marketplace. It holds no board logic: it checks the chat in every second, runs the commands waiting for it, and reads the board for the active ticket. The chat bar shows what the Python Board, Ticket and FidelityProgress send: the tickets to switch to, whether the stage is done, each action's command, the agent context, and the choices the open and close dialogs offer.
 
 A fill waits until the chat's turn has ended, because one made during a turn can report success and show nothing.
