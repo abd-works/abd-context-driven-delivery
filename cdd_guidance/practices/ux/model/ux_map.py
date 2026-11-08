@@ -59,7 +59,9 @@ class UxMap(UxNode):
     folder's own name. The first pattern that matches a file wins."""
 
     def __init__(self, name: str = "UxMap", sequential_order: int = 0, graph: Graph | None = None) -> None:
-        super().__init__(name, sequential_order, graph)
+        # A map is the root of its screens, their parts and the stories they show; one made on no graph keeps its own,
+        # since its story links resolve on the graph its screens are on.
+        super().__init__(name, sequential_order, graph if graph is not None else Graph())
         self.scope: str = ""
         self._story_references = ReferencePaths()
         self._object_references = ReferencePaths()

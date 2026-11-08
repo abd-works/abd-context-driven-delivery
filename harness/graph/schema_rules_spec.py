@@ -1,6 +1,6 @@
 """A practice schema gives each node type its rules as a rules collection."""
 
-from expects import be_a, contain, equal, expect
+from expects import be, be_a, contain, equal, expect
 from mamba import before, description, it
 
 from harness.graph.graph import Graph, Node, Source
@@ -113,3 +113,22 @@ with description("a rule label"):
         expect(PracticeSchema(PracticeCatalogue.practice("ddd"), _LERN).rule_label("Route", "keep-classes-single-responsibility")).to(
             equal("lern.domain.driven.ddd.Route.keep-classes-single-responsibility")
         )
+
+
+with description("a practice's schema in a graph"):
+    with before.all:
+        self.graph = Graph()
+        self.practice = self.graph.practice("ddd")
+        self.own_storage = set(vars(self.practice))
+        self.schema = self.practice.in_graph.schema
+
+    with it("should be made once, by the practice's part of the graph"):
+        expect(self.practice.in_graph.schema).to(be(self.schema))
+
+    with it("should leave the practice's own storage to the practice"):
+        expect(set(vars(self.practice)) - self.own_storage).to(equal(set()))
+
+    with it("should read the extended practice's schema from that practice's part of the same graph"):
+        clean = self.graph.practice("clean_engineering")
+        expect(self.schema.anchor_type("ValueObject")).to(equal("OoadClass"))
+        expect(clean.in_graph.schema_with(())).to(be(clean.in_graph.schema))

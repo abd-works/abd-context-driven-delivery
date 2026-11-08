@@ -9,6 +9,7 @@ import shutil
 import sys
 from pathlib import Path
 
+from harness.installation.ide_layout import IdeLayout
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.process.git import Git, RepoConnectError
 from harness.process.process import PythonInterpreter
@@ -23,6 +24,8 @@ BOARD_MOD_FOLDER = Path("harness") / "chat-ui" / "pane"
 BOARD_MOD_PARTS = (".claude-plugin", "hooks", "types")
 # A commit without the server cannot serve chats, so pinning one would leave every chat without cdd.
 SERVER_MODULE = "harness/mcp/mcp_daemon.py"
+# Claude Code, the IDE whose plugins this home publishes.
+_CLAUDE_CODE = IdeLayout("Claude")
 
 
 class RuntimeNotInstalled(Exception):
@@ -90,7 +93,7 @@ class CddHome:
         plugin = self.claude_plugins / CLAUDE_PLUGIN
         files = {
             plugin / ".claude-plugin" / "plugin.json": {"name": CLAUDE_PLUGIN, "version": "1.0.0", "description": CLAUDE_PLUGIN_DESCRIPTION},
-            plugin / ".mcp.json": {"mcpServers": {"cdd": server}},
+            plugin / ".mcp.json": {_CLAUDE_CODE.mcp_servers_key: {"cdd": server}},
         }
         for path, content in files.items():
             self._write_json(path, content)
@@ -170,10 +173,12 @@ class CddHome:
 
     @property
     def server_environment(self) -> dict[str, str]:
-        """What the server process needs to import the source checkout's packages and keep bytecode out of it."""
+        """What the server process needs to import the source checkout's packages and keep bytecode out of it: the
+        checkout's toolsets say both, as they do for the hook daemon."""
+        toolsets = RepositoryToolsets(self.source)
         return {
-            "PYTHONPATH": RepositoryToolsets(self.source).pythonpath(),
-            "PYTHONPYCACHEPREFIX": str(self.folder / ".pycache"),
+            "PYTHONPATH": toolsets.pythonpath(),
+            "PYTHONPYCACHEPREFIX": toolsets.pycache_prefix(),
             "PYTHONIOENCODING": "utf-8",
             CDD_HOME_ENV: str(self.folder),
         }

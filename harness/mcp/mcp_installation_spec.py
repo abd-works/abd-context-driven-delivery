@@ -54,3 +54,18 @@ with description("an MCP config that cdd writes its entry into") as self:
             except McpConfigUnreadable:
                 pass
             expect(self.config.read_text(encoding="utf-8")).to(equal(UNREADABLE))
+
+
+with description("a VS Code install tree's MCP config") as self:
+    with before.each:
+        self.tree = Path(tempfile.mkdtemp(prefix="cdd-vscode-tree-")) / ".vscode"
+        self.installation = McpInstallation(IdeLayout("VS Code"), self.tree)
+        self.installation.record_operation(SimpleNamespace(install_to_mcp=True))
+        self.installation.write_mcp_manifest()
+        self.config = json.loads(self.installation.manifest_path.read_text(encoding="utf-8"))
+
+    with after.each:
+        shutil.rmtree(self.tree.parent, ignore_errors=True)
+
+    with it("should list cdd under the key VS Code reads its servers from"):
+        expect(self.config).to(equal({"servers": self.config["servers"]}))

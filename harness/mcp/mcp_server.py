@@ -33,7 +33,7 @@ from harness.mcp.claude_plugins import ClaudePlugins
 from harness.mcp.mcp_daemon import MCP_PATH, PING_PATH, PROJECT_HEADER, McpDaemon
 from harness.mcp.server_hooks import CddServerHooks
 from harness.mcp.restart_gate import _RestartGate
-from harness.mcp.tool_calls import _StillRunning, _ToolCalls
+from harness.mcp.tool_calls import ThrottledReporter, _StillRunning, _ToolCalls
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
@@ -233,8 +233,7 @@ class McpInstallation(ServerInstallation):
             server["headers"] = {PROJECT_HEADER: str(self._project_root().resolve())}
         if not self.layout.names_mcp_transport:
             del server["type"]
-        key = self.layout.mcp_servers_key if self._user_level else "mcpServers"
-        return {key: {"cdd": server}}
+        return {self.layout.mcp_servers_key: {"cdd": server}}
 
     def _has_cdd_entry(self, dest: Path, manifest: dict[str, Any]) -> bool:
         """Rewriting ``~/.claude.json`` makes Claude Code reconnect cdd in every open chat, so an entry already in
@@ -648,7 +647,11 @@ class McpHost:
 
     async def _answer_off_loop(self, call: ToolCall) -> object:
         """Run the call on a worker thread, because a synchronous call on the event loop holds every other chat's
-        requests. A call still running at its time limit keeps running and is reported as still running, not failed."""
+        requests. A call still running at its time limit keeps running and is reported as still running, not failed.
+        ``cdd.ping`` answers on the event loop itself, so it says whether the loop answers, whatever the worker threads
+        are busy with."""
+        if call.tool == BUILTIN_PING_TOOL:
+            return self.ping()
         seconds = self._checkout_server.call_seconds(call.tool)
         answer = await self._tool_calls.run(
             call, seconds, lambda reporter: self._answer_reporting(call, reporter), self._progress_reporter()
@@ -664,7 +667,8 @@ class McpHost:
 
     def _progress_reporter(self) -> Callable[[str], None] | None:
         """Sends a tool's progress reports as notifications for its call, when the caller asked for them with a progress
-        token. The tool runs on a worker thread, so each report goes back through the event loop."""
+        token. The tool runs on a worker thread, so each report goes back through the event loop, at most four a
+        second (*ThrottledReporter*), however often the tool reports."""
         try:
             context = self._protocol.request_context
         except LookupError:
@@ -677,7 +681,7 @@ class McpHost:
         def report(message: str) -> None:
             anyio.from_thread.run(context.session.send_progress_notification, token, next(reported), None, message)
 
-        return report
+        return ThrottledReporter(report)
 
     def _requested_project(self, tool: str) -> Path | None:
         """The project the calling chat works on, from its ``X-CDD-Project`` header. Only ``cdd.ping`` and
@@ -696,10 +700,13 @@ class McpHost:
         raise ProjectNotNamed(tool)
 
     def _answer_reporting(self, call: ToolCall, reporter: Callable[[str], None] | None) -> object:
-        # Read it from the module as it is now: a restart imports it again, and tools read the new one.
+        """Answer a chat's call on its worker thread: its progress goes to reporter, and the work it does knows it
+        answers a chat (``answering_a_chat``), so work that would hold the interpreter runs in a worker process."""
+        # Read them from their modules as they are now: a restart imports them again, and tools read the new ones.
         from harness.agent_tools.progress import reporting_to
+        from harness.mcp.tool_calls import answering_a_chat
 
-        with reporting_to(reporter):
+        with reporting_to(reporter), answering_a_chat():
             return self.answer(call)
 
     def dispatch(self, name: str, arguments: dict[str, object] | None = None, project: Path | None = None) -> object:

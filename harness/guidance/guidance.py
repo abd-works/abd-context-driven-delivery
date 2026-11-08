@@ -497,11 +497,9 @@ class PracticeGuidance(Guidance):
         return rules_in(f"{self.package}.rules") if self.package else {}
 
     def checks(self) -> dict[str, Any]:
-        """The graph rules this practice checks, with those the pattern overlays its graph applies add to it, by slug."""
-        merged = dict(self.graph_checks())
-        if self.graph is not None:
-            merged.update(self.in_graph.overlay_checks)
-        return merged
+        """The graph rules this practice checks, with those the pattern overlays its graph applies add to it, by slug;
+        its own alone for a practice no graph holds."""
+        return self.in_graph.checks if self.in_graph is not None else dict(self.graph_checks())
 
     @property
     @data_field
@@ -730,16 +728,19 @@ class PracticeGuidance(Guidance):
             return getattr(importlib.import_module(module_path), attr)
         return entry
 
-    def format_for(self, file: Path) -> Any:
-        """A new model of the file's format: the one among this practice's formats whose adapter reads the file's
-        extension, such as Python for ``cart_spec.py``. A format whose adapter names no ``suffixes`` reads no file by
-        its extension. Raises ValueError when none of its formats reads it."""
+    def format_reading(self, file: Path) -> str | None:
+        """The name of the format among this practice's formats whose adapter reads the file's extension, such as
+        ``python`` for ``cart_spec.py``; none when none does. A format whose adapter names no ``suffixes`` reads no file
+        by its extension."""
         suffix = file.suffix.lower()
-        for name in self.formats:
-            adapter = self._format_adapter(name)
-            if suffix in getattr(adapter, "suffixes", ()):
-                return adapter()
-        raise ValueError(f"No {type(self).__name__} format reads {file.name}")
+        return next((name for name in self.formats if suffix in getattr(self._format_adapter(name), "suffixes", ())), None)
+
+    def format_for(self, file: Path) -> Any:
+        """A new model of the file's format (``format_reading``). Raises ValueError when none of its formats reads it."""
+        name = self.format_reading(file)
+        if name is None:
+            raise ValueError(f"No {type(self).__name__} format reads {file.name}")
+        return self._format_adapter(name)()
 
     @property
     def readable_suffixes(self) -> frozenset[str]:
