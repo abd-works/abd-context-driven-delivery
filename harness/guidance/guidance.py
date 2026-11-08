@@ -606,7 +606,7 @@ class PracticeGuidance(Guidance):
 
         Override when the practice owns generation (for example drawio render).
         The default is instruction-only: generate already expanded instructions;
-        the agent writes under the session path.
+        the agent writes under the session's root.
         """
         return ""
 

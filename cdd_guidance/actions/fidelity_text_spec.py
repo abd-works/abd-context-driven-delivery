@@ -308,6 +308,22 @@ with description("an action that writes a practice's artifacts") as self:
             expect(self.prose).not_to(contain(f"`{list(self.scenarios.rules)[0].slug}`"))
 
 
+def _rules_given_twice() -> list[str]:
+    """Each fidelity of every practice with the rule slugs its checked rules hold more than once."""
+    found = []
+    for key in PracticeCatalogue.keys():
+        for fidelity in PracticeCatalogue.create(key).fidelities:
+            slugs = [rule.slug for collection in fidelity.checked_rule_collections() for rule in collection]
+            found.extend(f"{fidelity.slug}: {slug}" for slug in dict.fromkeys(slugs) if slugs.count(slug) > 1)
+    return found
+
+
+# Two texts for one rule leave the agent to guess which one holds; a fidelity restates no shared rule.
+with description("the rules an action gives at any fidelity of any practice"):
+    with it("should give each rule once"):
+        expect(_rules_given_twice()).to(equal([]))
+
+
 # A practice's first fidelity is the one it is made at, so an action that loses the fidelity a call names still gives
 # the first one's text. Each action is asked here at a later fidelity: its text must be that fidelity's, not the first's.
 _DDD_MODEL = "ddd-model"
