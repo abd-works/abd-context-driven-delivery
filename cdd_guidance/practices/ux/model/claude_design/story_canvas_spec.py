@@ -149,7 +149,7 @@ with description("a Claude Design story map") as self:
             self.held.render(ux_map=_ux_map(_catalog_screen()), sources={"Choose Plan": "tests/select_plan.story.shared.ts:69"})
 
         with it("leaves the caller's canvas without the screens of that render"):
-            expect(self.held.screens).to(equal([]))
+            expect(self.held.screen_map.screens).to(equal([]))
 
         with it("leaves the caller's canvas without the sources of that render"):
             expect(self.held.sources).to(equal({}))

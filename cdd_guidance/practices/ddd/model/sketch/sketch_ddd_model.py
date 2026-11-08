@@ -6,19 +6,21 @@ Each context reads and writes its own lines, and each aggregate and card its own
 from __future__ import annotations
 
 from cdd_guidance.actions.sketch.sketch_outline import SketchOutline
+from harness.guidance.sketch_lens import SketchLens
 from cdd_guidance.practices.ddd.model.markdown.nodes import (
     BUILD_ORDER,
     SKETCH_CONTEXT,
     SKETCH_INDENT,
+    MarkdownAggregate,
     MarkdownBoundedContext,
-    MarkdownBoundedContextMap,
     fenced,
     sketch_level,
 )
-from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
 
 _SECTION = "## domain driven design:"
+# The headings that open the DDD section of a sketch; the DDD practice declares them from here.
+_LENS = SketchLens(("ddd:", "domain driven design:"))
 _EVENT_MAP = "event_map:"
 _EVENT_HEADINGS = {"event_map:", "event map:", "event_map", "event map"}
 _PROSE_HEADINGS = (
@@ -44,14 +46,14 @@ def _is_prose_heading(stripped: str) -> bool:
     return lower.startswith(BUILD_ORDER)
 
 
-class SketchDddModel(MarkdownBoundedContextMap):
-    lens = Ddd.sketch_lens
-    """The section of a sketch DDD writes, opened by the headings the DDD practice declares."""
+class SketchDddModel(BoundedContextMap):
+    """The `sketch` format: the map as the DDD section of a sketch. Its contexts and aggregates read and write their
+    own sketch lines."""
 
-    @property
-    def holds_classes_only(self) -> bool:
-        """A sketch's ddd section is always a map."""
-        return False
+    lens = _LENS
+    """The section of a sketch DDD writes, opened by its `ddd:` or `domain driven design:` heading."""
+    bounded_context_type = MarkdownBoundedContext
+    aggregate_type = MarkdownAggregate
 
     def parse(self, text: str) -> "SketchDddModel":
         """Read the ddd section of a sketch, flattened to indentation, into this map, and return it: each context the
@@ -110,7 +112,7 @@ class SketchDddModel(MarkdownBoundedContextMap):
 
     def _open_context(self, stripped: str) -> MarkdownBoundedContext:
         name, _, owner = stripped.rstrip(":").partition("|")
-        context = MarkdownBoundedContext(name.strip(), len(self.contexts) + 1)
+        context = self.bounded_context_type(name.strip(), len(self.contexts) + 1)
         context.owner = owner.strip()
         self.append_context(context)
         return context

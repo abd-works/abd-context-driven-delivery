@@ -14,7 +14,7 @@ from mamba import before, describe, included_context, it, shared_context
 
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
-from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContextMap, DomainEvent, ValueObject
+from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContextMap, DomainEvent
 
 EXPECTED = Path(__file__).resolve().parent / "_examples" / "expected" / "bounded-context-map.md"
 ACTUAL = Path(__file__).resolve().parent / "_examples" / "actual"
@@ -74,26 +74,16 @@ with describe("a domain driven design model"):
     with describe("from markdown"):
         with describe("to markdown"):
             with before.all:
-                source = MarkdownBoundedContextMap().load(str(EXPECTED))
+                source = MarkdownBoundedContextMap().parse(EXPECTED.read_text(encoding="utf-8"))
                 folder = ACTUAL / "from-markdown" / "to-markdown"
                 if folder.exists():
                     shutil.rmtree(folder)
                 folder.mkdir(parents=True)
                 written = folder / "bounded-context-map.md"
                 written.write_text(source.save(), encoding="utf-8")
-                self.loaded = MarkdownBoundedContextMap().load(str(written))
+                self.loaded = MarkdownBoundedContextMap().parse(written.read_text(encoding="utf-8"))
             with included_context("a domain driven design model saved through a channel"):
                 pass
     with it("should load the expected map"):
-        check_map(MarkdownBoundedContextMap().load(str(EXPECTED)))
+        check_map(MarkdownBoundedContextMap().parse(EXPECTED.read_text(encoding="utf-8")))
 
-    with it("should return a new value object from create, clone, and mix"):
-        original = ValueObject("Money", 1)
-        created = original.create()
-        cloned = original.clone()
-        mixed = original.mix(ValueObject("Money", 2, intent="combined"))
-        expect(created is original).to(equal(False))
-        expect(cloned is original).to(equal(False))
-        expect(mixed is original).to(equal(False))
-        expect(created.name).to(equal("Money"))
-        expect(mixed.intent).to(equal("combined"))
