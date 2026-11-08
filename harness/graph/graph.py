@@ -15,7 +15,6 @@ from harness.guidance.practice_catalogue import PracticeCatalogue, UnknownPracti
 from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import long_call, mcp
-from harness.mcp.tool_calls import is_answering_a_chat
 from harness.graph.edge import Display, Edge, EdgeType
 from harness.graph.graph_build import BuildOrder, BuildStep, WorkerBuild
 from harness.graph.explorer import ExplorerEntry, FilteredNode, GraphLoaded, GraphSaved, NodeSource, Overlay, PracticeInventory
@@ -812,6 +811,27 @@ class PracticeNodes:
             return list(self._nodes.get(type, []))
         return [node for group in self._nodes.values() for node in group]
 
+    def nodes_read_now(self, type: str | None = None) -> list[Node]:
+        """The nodes of type that the load or refresh in progress read: every one on a load of the whole folder, and
+        only those read from its files on a load of edited files or a refresh. The others were held from before. In a
+        worker process, or in a graph opened from its saved graph, they are plain nodes holding only their saved facts,
+        never the objects the practice parsed. A practice that builds its own nodes from another practice's builds them
+        from these, so it sees the same parsed objects whichever process built the graph, and keeps the nodes it built
+        before from the others."""
+        found = self.nodes(type)
+        edited = self.graph.edited_files()
+        if edited is None:
+            return found
+        files = self.files_from_root(path.resolve() for path in edited)
+        return [node for node in found if node.source.file in files]
+
+    def files_from_root(self, files: Iterable[Path]) -> set[str]:
+        """Each of files under the practice's source root, as a path from that root, the way its nodes name their file."""
+        root = self._source_root.resolve() if self._source_root is not None else self.graph.loaded_folder
+        if root is None:
+            return set()
+        return {file.relative_to(root).as_posix() for file in files if file == root or root in file.parents}
+
     def node(self, node_id: str) -> Node | None:
         """The practice's node called node_id; none when it holds none."""
         return self._by_id.get(node_id)
@@ -1140,8 +1160,10 @@ class Graph:
 
     def open_saved(self, folder: Path) -> None:
         """Open this graph on folder, then read back the graph saved in its ``.context`` when there is one, each saved
-        practice on the source root it was read from, and run its rules: a session opened again shows what was loaded
-        in it before. A folder with nothing saved opens holding no node until a load reads it."""
+        practice on the source root it was read from, with the violations it was saved with: a session opened again
+        shows what was loaded in it before. Its rules run again on the next load or refresh, which a call makes and
+        which builds where that call says; opening a session runs no build. A folder with nothing saved opens holding
+        no node until a load reads it."""
         self.open(folder)
         with self._changing:
             saved = self.saved_file.read()
@@ -1150,7 +1172,7 @@ class Graph:
             self.overlays = list(saved.overlays)
             kept = {key: practice for key, practice in saved.practices.items() if key in self._held}
             self._choose_roots({key: Path(practice.source_root) if practice.source_root else folder for key, practice in kept.items()})
-            self._load_saved(saved)
+            self._hold(saved.of_practices(list(kept)))
 
     def report_progress(self, message: str) -> None:
         """Tell whoever called the running tool which practice, file, node, or rule is in progress."""
@@ -1262,17 +1284,19 @@ class Graph:
         return child.practice.in_graph.direct_parent(child)
 
     def _restore_links(self, saved: SavedPractice) -> None:
-        """Read back the edges and violations a saved graph kept for a practice, once every practice's nodes are back."""
+        """Read back the edges and violations a saved graph kept for a practice, once every practice's nodes are back.
+        An edge's parent and a violation's node are most often the practice's own, so it looks there first."""
+        own = self._held[saved.name].in_graph
         for kept in saved.edges:
-            parent = self.node(kept.parent)
-            child = self.node(kept.child)
+            parent = own.node(kept.parent) or self.node(kept.parent)
+            child = own.node(kept.child) or self.node(kept.child)
             if parent is not None and child is not None:
                 edge_type = EdgeType(kept.kind, kept.order, kept.display)
                 self.record(edge_type, parent, child)
                 if parent.practice is not child.practice:
                     self.record(edge_type, child, parent)
         for violation in saved.violations:
-            node = self.node(violation.node_id)
+            node = own.node(violation.node_id) or self.node(violation.node_id)
             if node is not None:
                 node.rules.restore(violation)
 
@@ -1307,6 +1331,7 @@ class Graph:
         database: str | None = None,
         overlays: list[str] | None = None,
         force: bool = False,
+        call: ToolCall | None = None,
     ) -> GraphLoaded:
         """Open each practice on its source root and build the explorer tree.
 
@@ -1325,13 +1350,12 @@ class Graph:
             saved = None if force else self.saved_file.holding(self._roots_by_key(), self.overlays)
             if saved is not None:
                 self.report_progress("Loading the saved graph")
-                self._load_saved(saved)
+                self._load_saved(saved, call)
                 return GraphLoaded("Loaded the saved graph.")
             self._scope = None
             self.report_progress("Scanning the folder")
-            self._build_working_copy()
-            self.report_progress("Saving the graph")
-            self.save_json()
+            self._open_chosen_roots()
+            self._build(BuildStep.READ, None, call, saves=True)
             return GraphLoaded("Loaded the working copies.")
 
     @mcp
@@ -1343,6 +1367,7 @@ class Graph:
         practices: list[str],
         files: list[str],
         overlays: list[str] | None = None,
+        call: ToolCall | None = None,
     ) -> GraphLoaded:
         """Build each practice from only the given files and run its rules on them.
 
@@ -1356,12 +1381,13 @@ class Graph:
             self.overlays = list(overlays or [])
             self._scope = self._scoped_files(files)
             self.report_progress("Reading the edited files")
-            self._build_working_copy()
+            self._open_chosen_roots()
+            self._build(BuildStep.READ, None, call)
             return GraphLoaded(f"Loaded {len(self._scope)} edited files.")
 
     @mcp
     @agent_tool
-    def refresh(self, paths: list[str]) -> GraphLoaded:
+    def refresh(self, paths: list[str], call: ToolCall | None = None) -> GraphLoaded:
         """Read again exactly the files at paths, the files an action just wrote, into the graph held in memory: drop
         every node read from them, read them as they are now, link them to the other practices' nodes, and run the
         rules again. Every other node stays as it was; nothing watches the files, so a written file is in the graph
@@ -1369,20 +1395,30 @@ class Graph:
         paths: the files written, absolute or from the graph's folder (the session's root); a folder stands for the
         source files under it. A file that is gone is dropped from the graph."""
         with self._changing:
-            if self._folder is None or not self._chosen:
-                return GraphLoaded("No graph is open, so nothing was refreshed.")
-            files = self._refreshed_files(paths)
-            if not files:
-                return GraphLoaded("None of those files is in the graph's folder, so nothing was refreshed.")
-            self.report_progress(f"Refreshing {len(files)} files")
-            self._forget(files)
-            kept = self._scope
-            self._scope = [path for path in files if path.is_file()]
-            try:
-                self._read_scope()
-            finally:
-                self._scope = kept
-            return GraphLoaded(f"Refreshed {len(files)} files.")
+            return self._refresh(paths, call)
+
+    def refreshed(self, paths: list[str], call: ToolCall | None = None) -> SavedGraph:
+        """Refresh the graph with exactly the files at paths and answer the nodes read from them, as they save, as one
+        change: no other call's load or refresh comes between the two, so a call that checks the files it names sees
+        the graph its own refresh left, whole, whatever other calls in the session do at the same time."""
+        with self._changing:
+            self._refresh(paths, call)
+            return SavedGraph.from_graph(self, paths)
+
+    def _refresh(self, paths: list[str], call: ToolCall | None) -> GraphLoaded:
+        if self._folder is None or not self._chosen:
+            return GraphLoaded("No graph is open, so nothing was refreshed.")
+        files = self._refreshed_files(paths)
+        if not files:
+            return GraphLoaded("None of those files is in the graph's folder, so nothing was refreshed.")
+        self.report_progress(f"Refreshing {len(files)} files")
+        kept = self._scope
+        self._scope = files
+        try:
+            self._build(BuildStep.REFRESH, None, call)
+        finally:
+            self._scope = kept
+        return GraphLoaded(f"Refreshed {len(files)} files.")
 
     def _refreshed_files(self, paths: list[str]) -> list[Path]:
         """Each path a refresh names that lies in the graph's folder, outside the folders no practice reads; a folder
@@ -1406,43 +1442,35 @@ class Graph:
         """Drop the nodes read from files in every practice, and every edge that joins one of them."""
         dropped: set[int] = set()
         for practice in self.practices.values():
-            source_root = practice.in_graph.source_root_path
-            root = source_root.resolve() if source_root is not None else self._folder
-            relative = {file.relative_to(root).as_posix() for file in files if root is not None and (file == root or root in file.parents)}
-            dropped |= practice.in_graph.forget_files(relative)
+            dropped |= practice.in_graph.forget_files(practice.in_graph.files_from_root(files))
         for practice in self.practices.values():
             practice.in_graph.drop_edges(lambda edge: id(edge.parent) in dropped or id(edge.child) in dropped)
 
-    def _read_scope(self) -> None:
-        """Read the files in scope into the practices this graph holds, then run every rule again on every node, since a
-        rule over a whole practice can change its finding on a node no file in scope holds."""
-        for practice in self.practices.values():
-            practice.in_graph.renew_rules()
-        self._fill()
-
-    def _fill(self) -> None:
-        """Read the working copy into the open practices, run their rules, and rebuild each practice's tree. A working
-        copy's edges are the ones its practices read; its parsed objects never add schema edges of their own."""
-        self.syncs_schema_edges = False
-        self._build(BuildStep.READ, None)
-
-    def _build(self, step: BuildStep, state: SavedGraph | None) -> None:
-        """Carry step out, from state when one is given, else from what the graph holds now. In a call the cdd server
-        answers for a chat, a worker process carries it out and this graph then holds what the worker built: a build is
-        minutes of CPU-bound Python, and in the server's interpreter it would keep the server from answering every
-        other chat."""
-        if is_answering_a_chat():
-            before = state if state is not None else SavedGraph.from_graph(self)
-            order = BuildOrder(step, self.folder, self._roots_as_text(), self.overlays, self._scope_as_text(), before, self._registering_modules())
-            self._hold(WorkerBuild(order, self.report_progress).result())
+    def _build(self, step: BuildStep, state: SavedGraph | None, call: ToolCall | None, saves: bool = False) -> None:
+        """Carry step out, from state when one is given, else from what the graph holds now, and save the graph after
+        when saves is set. A call the cdd server answers for a chat (``call.answers_a_chat``) has a worker process carry
+        it out, and this graph then holds what the worker built: a build is minutes of CPU-bound Python, and in the
+        server's interpreter it would keep the server from answering every other chat. The graph changes only once the
+        worker answers, so a build that fails leaves it holding what it held. Any other call, or none, builds here."""
+        if call is not None and call.answers_a_chat:
+            WorkerBuild(self.report_progress).carry_out(lambda: self._order(step, state, saves), self._hold)
             return
         if state is not None:
             self._hold(state)
         self._carry_out(step)
+        if saves:
+            self.report_progress("Saving the graph")
+            self.save_json()
+
+    def _order(self, step: BuildStep, state: SavedGraph | None, saves: bool) -> BuildOrder:
+        """step as a worker carries it out: from state when one is given, else from what the graph holds now."""
+        before = state if state is not None else SavedGraph.from_graph(self)
+        return BuildOrder(step, self.folder, self._roots_as_text(), self.overlays, self._scope_as_text(), before, self._registering_modules(), saves)
 
     def carry_out(self, order: BuildOrder) -> SavedGraph:
-        """Carry order out on this graph, as a worker process does for a graph the cdd server holds, and answer the
-        graph as it is then."""
+        """Carry order out on this graph, as a worker process does for a graph the cdd server holds, save it when the
+        order says, and answer the graph as it is then. The worker saves it, so the server never serialises the graph
+        it built a second time."""
         with self._changing:
             self._folder = Path(order.folder) if order.folder else None
             self._scope = None if order.scope is None else [Path(path) for path in order.scope]
@@ -1451,17 +1479,31 @@ class Graph:
             self.syncs_schema_edges = False
             self._hold(order.state)
             self._carry_out(order.step)
+            if order.saves:
+                self.report_progress("Saving the graph")
+                self.save_json()
             return SavedGraph.from_graph(self)
 
     def _carry_out(self, step: BuildStep) -> None:
-        """Run step on what this graph holds, in this process."""
-        if step is BuildStep.READ:
-            self._read_working_copy()
+        """Run step on what this graph holds, in this process. A read fills the open practices from the working copy;
+        a refresh first drops the nodes read from the files in scope, and every rule's findings, since a rule over a
+        whole practice can change its finding on a node no file in scope holds. Both run every rule and rebuild each
+        practice's tree. A working copy's edges are the ones its practices read; its parsed objects never add schema
+        edges of their own. A check only runs the rules on what the graph holds."""
+        if step is BuildStep.CHECK:
             for practice in self.practices.values():
-                practice.in_graph.rebuild_tree()
+                practice.in_graph.check()
             return
+        self.syncs_schema_edges = False
+        if step is BuildStep.REFRESH:
+            files = list(self._scope or [])
+            self._forget(files)
+            self._scope = [path for path in files if path.is_file()]
+            for practice in self.practices.values():
+                practice.in_graph.renew_rules()
+        self._read_working_copy()
         for practice in self.practices.values():
-            practice.in_graph.check()
+            practice.in_graph.rebuild_tree()
 
     def _roots_as_text(self) -> dict[str, str]:
         return {practice.key: str(practice.in_graph.source_root_path) for practice in self._chosen if practice.in_graph.source_root_path is not None}
@@ -1592,10 +1634,6 @@ class Graph:
             held = self._saved_graph_file = (folder, SavedGraphFile(folder, self.report_progress))
         return held[1]
 
-    def _build_working_copy(self) -> None:
-        self._open_chosen_roots()
-        self._fill()
-
     def _choose_roots(self, roots: dict[str, Path]) -> None:
         """Read each practice a call names, by key, from its root; the next load reads only those."""
         chosen = {self.practice(name): Path(root) for name, root in roots.items()}
@@ -1612,10 +1650,10 @@ class Graph:
         for practice in self._chosen:
             self._open_practice(practice, practice.in_graph.source_root_path)
 
-    def _load_saved(self, saved: SavedGraph) -> None:
+    def _load_saved(self, saved: SavedGraph, call: ToolCall | None) -> None:
         """Read the requested practices back from the saved graph, which holds each on its chosen root, then run their
-        rules on what was read."""
-        self._build(BuildStep.CHECK, saved.of_practices([practice.key for practice in self._chosen]))
+        rules on what was read, where call says to build."""
+        self._build(BuildStep.CHECK, saved.of_practices([practice.key for practice in self._chosen]), call)
 
     def sync_schema_edges(self) -> None:
         """Record the schema relationship edges between the model objects on this graph, unless a working copy loaded
@@ -1642,12 +1680,12 @@ class Graph:
     @long_call
     @mcp
     @agent_tool
-    def set_overlays(self, overlays: list[str]) -> AppliedOverlays:
+    def set_overlays(self, overlays: list[str], call: ToolCall | None = None) -> AppliedOverlays:
         """Apply pattern overlays, folders holding practices/, and rebuild the explorer tree from the open folder; answer with the graph's inventory."""
         self.overlays = list(overlays or [])
         if self._folder is not None and self._chosen:
             roots = {name: str(path) for name, path in self._roots_by_key().items()}
-            self.load_working_copy(str(self._folder), roots, database=str(self._folder), overlays=self.overlays)
+            self.load_working_copy(str(self._folder), roots, database=str(self._folder), overlays=self.overlays, call=call)
         label = ", ".join(Path(item).name for item in self.overlays) if self.overlays else "none"
         return AppliedOverlays(f"Applied pattern overlays: {label}.", self.inventory())
 

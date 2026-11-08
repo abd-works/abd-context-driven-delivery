@@ -31,8 +31,17 @@ class CheckedGraph:
     its formats is written. Validate checks one format of each fidelity, so the declared files of its other formats are
     left out of the report: the formats mirror each other, and judging both reports every finding twice."""
 
-    def __init__(self, session: Any, fidelities: list[Any], edited: list[str] | None, named: bool | str | list[str] | None) -> None:
+    def __init__(
+        self,
+        session: Any,
+        fidelities: list[Any],
+        edited: list[str] | None,
+        named: bool | str | list[str] | None,
+        call: Any = None,
+    ) -> None:
         self.session = session
+        # The call this validate answers, which says where the graph it refreshes is built.
+        self._call = call
         self._fidelities = fidelities
         # The format each fidelity is checked in, read once, so another call changing a fidelity's format mid-way never
         # changes which files this call checks.
@@ -123,14 +132,13 @@ class CheckedGraph:
 
     def _built_at(self, destination: Path) -> Path:
         """Refresh the session's graph with the edited files, read as they are now, keep the nodes read from them as this
-        call's graph, and write it at destination for the report; the saved graph stays as it is. Each call writes its
-        own file, so calls running at once never read each other's report graph.
+        call's graph, and write it at destination for the report; the saved graph stays as it is. The refresh and the
+        nodes it keeps are one change to the graph (``graph.refreshed``), so another call's refresh never comes between
+        them, and each call writes its own file, so calls running at once never read each other's report graph.
 
         The session's graph holds every practice, because one builds on another (DDD building blocks come from the
         clean engineering classes); the report keeps only the listed guidance's practice."""
-        graph = self.session.graph
-        graph.refresh(self.prefixes)
-        self._checked = graph.saved(self.prefixes)
+        self._checked = self.session.graph.refreshed(self.prefixes, self._call)
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(self._checked.text, encoding="utf-8")
         return destination

@@ -80,13 +80,15 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 	// clear every node's children, then the practice's root populates
 + restored_from(saved: SavedGraph): None
 	// the saved nodes back as plain Nodes at their saved lines, then the edges and violations
-+ load_working_copy(folder, practices, database=None, overlays=None, force=False): GraphLoaded
++ load_working_copy(folder, practices, database=None, overlays=None, force=False, call=None): GraphLoaded
 	// @mcp. reuse the saved graph when it holds every requested practice on the same roots and overlays; no date is compared
-	// else -> _build_working_copy, -> save_json
-+ load_files(folder, practices, files, overlays=None): GraphLoaded
+	// else -> _open_chosen_roots, -> _build(READ, saves=True); in a chat's call the worker builds and saves
++ load_files(folder, practices, files, overlays=None, call=None): GraphLoaded
 	// @mcp, /load-files. build from only the edited files; never reads or writes the saved graph
-+ refresh(paths): GraphLoaded
++ refresh(paths, call=None): GraphLoaded
 	// @mcp. drop the nodes read from exactly paths, read them as they are now, link them, run every rule again
++ refreshed(paths, call=None): SavedGraph
+	// refresh, then the nodes read from paths as they save, as one change no other call comes between
 + save_json(): GraphSaved
 	// @mcp. merge into .context/graph.json through SavedGraphFile; practices already saved and not loaded now stay
 + saved(files=None): SavedGraph
