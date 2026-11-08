@@ -182,7 +182,7 @@ class Stories(PracticeGuidance):
         paths = [Path(item).resolve() for item in files]
         tests = [path for path in paths if self._story_test_reader(path) is not None]
         maps = [path for path in paths if is_story_map_file(path)]
-        maps += [found for found in self._maps_beside(tests) if found not in maps]
+        maps += [found for found in self._maps_beside(tests, project) if found not in maps]
         merged = StoryModel()
         for path in maps:
             read = self._story_map_file(path, project, on_file)
@@ -211,10 +211,10 @@ class Stories(PracticeGuidance):
 
         return self.format_for(path).from_workspace(path, on_file=on_file, project=project) or StoryModel()
 
-    def _maps_beside(self, tests: list[Path]) -> list[Path]:
-        """The story map each story test belongs to: in its own folder, or the nearest folder above it, since story
-        tests sit in epic folders below their map."""
-        return list(dict.fromkeys(found for path in tests for found in [StoryMapFiles(path.parent).nearest()] if found))
+    def _maps_beside(self, tests: list[Path], project: Path) -> list[Path]:
+        """The story map each story test belongs to: in its own folder, or the nearest folder above it inside project,
+        since story tests sit in epic folders below their map."""
+        return list(dict.fromkeys(found for path in tests for found in [StoryMapFiles(path.parent, top=project).nearest()] if found))
 
 
 StoryNode.register_practice(Stories)

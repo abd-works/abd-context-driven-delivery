@@ -76,3 +76,27 @@ with description("the thin slicing of a folder"):
 
         with it("should find the one in the folder itself"):
             expect(_named(self.root, [StoryMapFiles(self.root).thin_slicing()])).to(equal(["thin-slicing.md"]))
+
+
+with description("the nearest story map of a folder"):
+    with before.each:
+        self.folder = tempfile.TemporaryDirectory()
+        self.root = Path(self.folder.name)
+        _write(self.root, "story-map.md", _MAP)
+        (self.root / "project" / "tests" / "place-order").mkdir(parents=True)
+
+    with after.each:
+        self.folder.cleanup()
+
+    with context("with no story map in the project the search stops at"):
+        with it("should find none above the project"):
+            files = StoryMapFiles(self.root / "project" / "tests" / "place-order", top=self.root / "project")
+            expect(files.nearest()).to(equal(None))
+
+    with context("with a story map in the project"):
+        with before.each:
+            _write(self.root, "project/.context/story-map.md", _MAP)
+
+        with it("should find the project's map"):
+            files = StoryMapFiles(self.root / "project" / "tests" / "place-order", top=self.root / "project")
+            expect(_named(self.root, [files.nearest()])).to(equal(["project/.context/story-map.md"]))

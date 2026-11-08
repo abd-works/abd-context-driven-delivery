@@ -204,6 +204,12 @@ Extend module level **public seam** documentation — what callers invoke, what 
 Use an interface when the model requires more than one implementation, when a caller must depend on a stable contract owned by another module, or when the domain describes access to an external system. Default to the concrete class when none of these conditions exists. A domain wrapper may name and represent the external type it wraps, but the external-system type must not import the domain wrapper or expose domain types; knowledge points from the domain toward the external contract, not back into the domain.
 
 
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough class index for a **partition** pass or first cut — under each module of the module index, the classes it holds, each with its stereotype where the source says it and a one-line responsibility. No operations, properties, or interactions yet: those are written when the model is generated.
+
 #### Rules
 
 ```yaml
@@ -292,6 +298,12 @@ When writing out code take care to **Fill out all interactions with real code.**
 **Refresh the language and the seam.** Keep class identity in the docstring; put member bullets on the members. Edit the same public-seam module-context — how to use it, what callers must honor, what it depends on. Never internals. Never a parallel file — two documents drift, and documented internals read as promises callers build against.
 
 
+
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough source index for a **partition** pass or first cut — under each module, the source files it will hold and the classes each file declares, with the public operations the source names. No bodies, tests, or wiring yet.
 
 #### Rules
 

@@ -1,7 +1,7 @@
 import { scenario, story } from "stories/story-test";
+import { validCustomer } from "./examples/customers.examples";
 
 // examples: validCustomer
-export const validCustomer = { email: 'ann@example.com' };
 
 story('Onboard Customer', () => {
   scenario('a customer signs up', ({ given }) => {

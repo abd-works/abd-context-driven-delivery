@@ -158,6 +158,12 @@ Ask what the person does on this screen to accomplish the outcome, and what they
 9. Document every faked behaviour explicitly — list all stubs; no silent pretence of production services.
 10. **Claude Design channel.** When the session runs in Claude Design, port each story's screen as a prototype screen on the canvas instead of a greybox: the product's own markup and stylesheets, data from the stories' fixtures, real domain logic, the shared fixture bar, and buttons that move the story explorer to the next story. Follow `model/claude_design/story_canvas.md` § Prototype screens.
 
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough mockup index for a **partition** pass or first cut — each screen of the screen index with its regions and the controls the source names in each, and the interaction each control starts. No layout, styling, or brand yet.
+
 #### Rules
 
 ```yaml
@@ -203,6 +209,12 @@ Ask what the person can complete here against the real product, what they see wh
 - Call CE **code**-fidelity backend / Production collaborators — not Fake factory or in-browser demo domain alone.
 - Story Demo may still exist as a review/exploration shell; it is not the product UI at this fidelity.
 - Carry IA vocabulary and control decisions forward; do not redecide screens under a new product name.
+
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough front-end index for a **partition** pass or first cut — each screen with the route and component files it becomes and the backend operations each control calls. No component bodies or styling yet.
 
 #### Rules
 

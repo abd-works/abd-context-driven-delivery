@@ -29,16 +29,19 @@ def is_story_map_file(path) -> bool:
 
 
 class StoryMapFiles:
-    """The story maps around one folder: the one in it or the nearest folder above it, and the ones below it."""
+    """The story maps around one folder: the one in it or the nearest folder above it, up to the top folder the search
+    stops at (the project the folder belongs to, when one is given), and the ones below it."""
 
-    def __init__(self, folder: Path) -> None:
+    def __init__(self, folder: Path, top: Optional[Path] = None) -> None:
         folder = Path(folder).resolve()
         self.folder = folder.parent if folder.is_file() else folder
+        self.top = Path(top).resolve() if top is not None else None
 
     def nearest(self) -> Optional[Path]:
-        """The story map in this folder or the nearest folder above it, or in that folder's ``.context``: its markdown
-        when it has one, since a drawio of the same map would add every Story twice."""
-        for candidate in (self.folder, *self.folder.parents):
+        """The story map in this folder or the nearest folder above it, up to the top folder, or in that folder's
+        ``.context``: its markdown when it has one, since a drawio of the same map would add every Story twice. A map
+        outside the project is another project's, and the folders above a project can hold far more files than it."""
+        for candidate in self._this_and_above():
             maps = self._maps_in(candidate)
             if maps:
                 markdown = [path for path in maps if path.suffix.lower() == _MARKDOWN]
@@ -83,6 +86,12 @@ class StoryMapFiles:
         for folder, folders, names in os.walk(self.folder):
             folders[:] = sorted(name for name in folders if name == CONTEXT_FOLDER or not skips_folder(name))
             yield from (Path(folder, name).resolve() for name in sorted(names) if name.lower().endswith(_MARKDOWN))
+
+    def _this_and_above(self) -> List[Path]:
+        folders = [self.folder, *self.folder.parents]
+        if self.top is None or self.top not in folders:
+            return folders
+        return folders[: folders.index(self.top) + 1]
 
     def _maps_in(self, folder: Path) -> List[Path]:
         context = folder / CONTEXT_FOLDER

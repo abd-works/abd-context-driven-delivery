@@ -208,6 +208,12 @@ Start from the aggregates already named at **bounded_context**. Read Clean Engin
 
 **Work one bounded context and one aggregate at a time.** Begin at the root, work inward through the members it owns, then outward through its dependencies. Classify every class: `<<Aggregate Root>> <<Entity>>` for the root, `<<Entity>>` for an owned thing with its own identity, `<<Value Object>>` for a thing that is only its values, `<<Repository>>` for the collection.
 
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough domain-model index for a **partition** pass or first cut — under each bounded context, its aggregates, each with its root, the entities and value objects it owns, the repository that keeps it, and the domain operations the source names. No fields, invariants, or dependency arcs yet.
+
 #### Rules
 
 ```yaml
@@ -287,6 +293,12 @@ Ask whether creating this thing needs more than the root can do alone, which rul
 **Keep the domain free of UI and transport.** Persistence and messaging sit behind ports; the domain types do not import screens or HTTP clients.
 
 **Load with the identity already in hand** when wrapping live code. Do not assume a browser session. Load once and reuse the variable. A cart has no identity outside its prospect — reach it through the owner, not `cartRepository().current()`.
+
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough building-block index for a **partition** pass or first cut — under each aggregate, the factories, specifications, domain services, domain events, and interfaces to other systems the source calls for, each with the implementation pattern the source implies. No code yet.
 
 #### Rules
 
