@@ -14,7 +14,7 @@ from expects import be_a, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.tool_call import ToolCall
-from harness.mcp.tool_calls import ThrottledReporter, _StillRunning, _ToolCalls, answering_a_chat, is_answering_a_chat
+from harness.mcp.tool_calls import ThrottledReporter, _StillRunning, _ToolCalls
 
 # Short enough that a held call outlives it; long enough that a released call finishes inside it.
 SHORT_SECONDS = 0.05
@@ -202,13 +202,3 @@ with description("a tool's progress reports passed on to its caller"):
         with it("should pass on each"):
             expect(self.heard).to(equal(["reading stories", "checking rules"]))
 
-
-with description("code a chat's call runs"):
-    with it("should know it answers a chat"):
-        with answering_a_chat():
-            expect(is_answering_a_chat()).to(equal(True))
-
-    with it("should know nothing of a chat once the call is answered"):
-        with answering_a_chat():
-            pass
-        expect(is_answering_a_chat()).to(equal(False))

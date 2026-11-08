@@ -207,11 +207,13 @@ class GuidanceAction:
     """Whether the action hands the agent its listed Guidance's rules after it returns; an action that only records
     what exists, such as Document, sets it false."""
 
-    def __init__(self, session: Any = None, chat: ChatPointer | None = None) -> None:
+    def __init__(self, session: Any = None, chat: ChatPointer | None = None, call: ToolCall | None = None) -> None:
         super().__init__()
         self._session = session
         # The chat of the call this action was made for: every line it logs points at it.
-        self._chat = chat
+        self._chat = chat if chat is not None or call is None else call.chat
+        # The call this action was made for, which says where a graph build it starts runs; none in process.
+        self.call = call
         # The guidance argument this action works on, so naming the same argument again keeps what it built.
         self._guidance_worked_on: Any = _NOTHING_WORKED_ON
         self._guidance_text: str | None = None
@@ -231,14 +233,14 @@ class GuidanceAction:
         A session is space/session's *Session*, which the call opens; the framework never names its class."""
         guidance = call.arguments.get("guidance")
         named = session_file_named(guidance)
-        action = self.made_for((call.session_named(named) if named else None) or call.session or self._session, call.chat)
+        action = self.made_for((call.session_named(named) if named else None) or call.session or self._session, call)
         if guidance is not None:
             action._take(guidance)
         return action
 
-    def made_for(self, session: Any, chat: ChatPointer | None = None) -> GuidanceAction:
-        """An action of this kind, set up as this one is, made for session and the call from chat."""
-        return type(self)(session=session, chat=chat)
+    def made_for(self, session: Any, call: ToolCall | None = None) -> GuidanceAction:
+        """An action of this kind, set up as this one is, made for session and call."""
+        return type(self)(session=session, call=call)
 
     def session_for(self, call: ToolCall) -> Any:
         """The session this action logs call in: the one it was made for."""
@@ -266,7 +268,7 @@ class GuidanceAction:
         """Refresh the session's graph with exactly the files this action just wrote, so the graph holds them as they
         are now; nothing watches the files. An action made for no session holds no graph to refresh."""
         if self._session is not None:
-            self.graph.refresh([str(path) for path in paths])
+            self.graph.refresh([str(path) for path in paths], self.call)
 
     def source_label(self, content: str = "", paths: list[str] | str | None = None) -> str:
         """What an instruction names as its source: the paths a call names, one per line, else its in-process text. The

@@ -24,8 +24,8 @@ _LOGGED_VIOLATIONS = 40
 class Validate(GuidanceAction):
     """Validate artifacts for provided context tools."""
 
-    def __init__(self, session=None, chat=None) -> None:
-        super().__init__(session, chat)
+    def __init__(self, session=None, chat=None, call=None) -> None:
+        super().__init__(session, chat, call)
         # What this call checks, made by each validate; the cdd server makes a new action for each call.
         self._graph: CheckedGraph | None = None
         self._reports: ReportFiles | None = None
@@ -52,7 +52,7 @@ class Validate(GuidanceAction):
         self._work_on(guidance)
         sections: list[str] = [_VALIDATE_MARKDOWN]
         fidelities = self._fidelities()
-        self._graph = CheckedGraph(self.session, fidelities, paths, graph)
+        self._graph = CheckedGraph(self.session, fidelities, paths, graph, self.call)
         self._reports = ReportFiles(self.session, fidelities)
         graph_paths = self._graph.check_beside(self._reports)
         if fidelities:

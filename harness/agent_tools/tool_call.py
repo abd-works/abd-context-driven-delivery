@@ -39,7 +39,10 @@ class ToolCall:
     another chat's project. A call that names no project, such as one a spec makes in process, works in no session.
 
     A call the cdd server answers also names the tool it calls, by its published name, and the MCP host answering it,
-    which a diagnostics tool probes; a call made in process names neither."""
+    which a diagnostics tool probes; a call made in process names neither. A call the server answers for a chat says so
+    (``answers_a_chat``): every chat shares the server's one interpreter, so work the call starts that would hold it for
+    minutes, such as a graph build, runs in a worker process. A call made in process, by a spec or a script, does that
+    work in its own process."""
 
     _sessions: ClassVar[SessionOpener | None] = None
 
@@ -51,22 +54,30 @@ class ToolCall:
         *,
         tool: str = "",
         mcp_host: Any = None,
+        answers_a_chat: bool = False,
     ) -> None:
         self.arguments = dict(arguments or {})
         self.project = Path(project).resolve() if project is not None else None
         self.chat = chat
         self.tool = tool
         self.mcp_host = mcp_host
+        self.answers_a_chat = answers_a_chat
         self._session: Any = None
 
     @classmethod
     def sent(
-        cls, arguments: dict[str, Any] | None, project: Path | str | None, *, tool: str = "", mcp_host: Any = None
+        cls,
+        arguments: dict[str, Any] | None,
+        project: Path | str | None,
+        *,
+        tool: str = "",
+        mcp_host: Any = None,
+        answers_a_chat: bool = False,
     ) -> ToolCall:
         """A call as a chat sent it: the chat its arguments name is taken out of them and kept as the call's chat, so
         the tool is handed only its own arguments."""
         chat, remaining = ChatPointer.taken_from(arguments)
-        return cls(remaining, project, chat, tool=tool, mcp_host=mcp_host)
+        return cls(remaining, project, chat, tool=tool, mcp_host=mcp_host, answers_a_chat=answers_a_chat)
 
     @property
     def identity(self) -> str:
