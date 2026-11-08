@@ -8,45 +8,35 @@ schema. Each page class below renders one of those objects; ``Catalog`` writes t
 from __future__ import annotations
 
 import html
-import importlib
 import inspect
 import logging
 import os
 import re
-import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
-from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterable
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import tool_subject
 from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, ApproachCopy
 from harness.catalog_generator.approach_page import ApproachPage
 from harness.catalog_generator.brand import Brand
-from harness.catalog_generator.catalog_examples import EXAMPLES_FOLDER, CatalogFidelity
+from harness.catalog_generator.catalog_examples import CatalogFidelity
+from harness.catalog_generator.catalog_practice import CatalogPractice
+from harness.catalog_generator.git_citation import GitCitation
 from harness.catalog_generator.hub_board import HubBoard
 from harness.catalog_generator.markdown_html import MarkdownHtml
 from harness.catalog_generator.page_shell import PageShell
-from harness.catalog_generator.stage_columns import StageColumn
+from harness.catalog_generator.project_approach import ProjectApproach, ProjectFiles
 from harness.guidance.action_catalogue import Action, ActionCatalogue
-from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
-from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import NoCatalog
 from harness.installation.files import skill
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.mcp.mcp_server import mcp
 from harness.annotations.name import Name
-from harness.process.git import Git
-
-if TYPE_CHECKING:
-    from harness.catalog_generator.project_approach import ProjectApproach
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_SKILLS_ROOTS = (_REPO_ROOT / ".claude" / "skills", _REPO_ROOT / ".cursor" / "skills")
-_SKILL_NAME_RE = re.compile(r"^name:\s*(.+?)\s*$", re.MULTILINE)
 # The command a person runs to install CDD into an IDE, and the file it runs.
 _INSTALL_COMMAND = "python scripts/install.py --ide Claude"
 _INSTALL_SCRIPT = _REPO_ROOT / "scripts" / "install.py"
@@ -60,146 +50,6 @@ _TITLE_LINE = re.compile(r"^#\s+.*\n+", re.MULTILINE)
 
 
 # -- What the catalog shows ---------------------------------------------------
-
-
-class CatalogPractice:
-    """One practice as the catalog shows it: the live ``PracticeGuidance``, the catalog card it gives itself, its place in
-    the practice catalogue, and the catalog's view of each fidelity it shows (a ``CatalogFidelity``), made once and
-    kept with the fidelity's board column. Every page, board ticket, and grid card for the practice reads it."""
-
-    _CARD_DEFAULTS: dict[str, Any] = {
-        "family": "aad-fam-other",
-        "perspective": "other",
-        "order": 100,
-        "blurb": "",
-        "spec_blurb": "",
-        "stage_examples": False,
-    }
-
-    def __init__(self, practice: PracticeGuidance, skills: SkillSlashName | None = None, position: int = 0) -> None:
-        self.practice = practice
-        self.position = position
-        self._skills = skills or SkillSlashName()
-        self._card = self._card_of(type(practice))
-
-    @classmethod
-    def load_all(cls) -> list[CatalogPractice]:
-        """Every practice in the practice catalogue with a fidelity on the board, unless annotated ``@noCatalog``, in the
-        order each practice's catalog card gives. Each keeps its place in the catalogue, the order the approach's grids
-        list the practices in."""
-        catalogued = enumerate(PracticeCatalogue.practices())
-        practices = [cls(practice, position=position) for position, practice in catalogued if not NoCatalog.annotates(type(practice))]
-        shown = [practice for practice in practices if practice.on_board]
-        return sorted(shown, key=lambda practice: (practice.order, practice.display_name))
-
-    def _card_of(self, practice_class: type) -> dict[str, Any]:
-        card = {**self._CARD_DEFAULTS, **(getattr(practice_class, "catalog_card", None) or {})}
-        card.setdefault("name", " ".join(word.capitalize() for word in Name(practice_class.__name__).words))
-        card.setdefault("label", Name(card["name"]).title_slug)
-        return card
-
-    @property
-    def key(self) -> str:
-        """The practice's key, such as ``clean_engineering``: its page names, board tickets, and skill lookups use it."""
-        return self.practice.key
-
-    @property
-    def display_name(self) -> str:
-        return self._card["name"]
-
-    @property
-    def label(self) -> str:
-        """The practice's kebab-case name on the board's practice rail and approach grids."""
-        return self._card["label"]
-
-    @property
-    def product_engineering_label(self) -> str:
-        """The rail label of the practice's Product Engineering board: its card's, else its key in kebab case."""
-        return self._card.get("product_engineering_label") or Name(self.key).kebab
-
-    @property
-    def gives_stage_examples(self) -> bool:
-        """Whether the approach's stage examples are this practice's artifacts, as its card says."""
-        return bool(self._card["stage_examples"])
-
-    @property
-    def family(self) -> str:
-        """The practice's colour family class on the board."""
-        return self._card["family"]
-
-    @property
-    def perspective(self) -> str:
-        return self._card["perspective"]
-
-    @property
-    def order(self) -> int:
-        return self._card["order"]
-
-    @property
-    def spec_blurb(self) -> str:
-        return self._card["spec_blurb"]
-
-    @property
-    def href(self) -> str:
-        return f"context-tools/{self.key}.html"
-
-    @property
-    def skill_name(self) -> str:
-        """The slash command that runs the practice, from its deployed skill; its key when it has none deployed."""
-        return self._skills.resolve(self.key) or self.key
-
-    @property
-    def fidelities(self) -> list[FidelityGuidance]:
-        """The practice's fidelities in declared order, less those annotated ``@noCatalog``."""
-        return [shown.fidelity for shown in self.shown_fidelities]
-
-    @cached_property
-    def shown_fidelities(self) -> list[CatalogFidelity]:
-        """The catalog's view of each fidelity it shows, in declared order, made once."""
-        return [CatalogFidelity(fidelity) for fidelity in self.practice.fidelities if not NoCatalog.annotates(fidelity)]
-
-    def fidelity_in(self, column: StageColumn) -> CatalogFidelity | None:
-        """The practice's fidelity in ``column``; none when the practice has no fidelity at that stage."""
-        return next((shown for shown in self.shown_fidelities if shown.column is column), None)
-
-    @property
-    def board_fidelities(self) -> list[CatalogFidelity]:
-        """The fidelities that have a column on the board."""
-        return [shown for shown in self.shown_fidelities if shown.column is not None]
-
-    @property
-    def on_board(self) -> bool:
-        """Whether any fidelity has a board column; a practice with none, such as a pattern, has no catalog page."""
-        return bool(self.board_fidelities)
-
-    def fidelity_href(self, fidelity: FidelityGuidance) -> str:
-        return f"fidelities/{self.key}-{fidelity.name}.html"
-
-    @property
-    def examples_folder(self) -> Path:
-        """The practice's ``catalog-examples`` folder, whose files its fidelities show."""
-        return Path(self.practice.module_dir) / EXAMPLES_FOLDER
-
-    def copy_examples_into(self, out_root: Path) -> None:
-        """Copy the practice's example files into the catalog's ``examples/{practice}`` folder, where its fidelity
-        pages and approach panels link them."""
-        if not self.examples_folder.is_dir():
-            return
-        destination = Path(out_root) / "examples" / self.examples_folder.parent.name
-        for path in self.examples_folder.iterdir():
-            if path.is_file() and not path.name.startswith("."):
-                destination.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(path, destination / path.name)
-
-    @property
-    def shared_markdown(self) -> str:
-        """The practice-level ``##`` sections of the practice guide, each with its heading: everything but
-        ``## Fidelities``, whose blocks each fidelity page shows. They are read from the practice's own document,
-        which gives each ``FidelityGuidance`` its section too."""
-        document = self.practice.document
-        names = [name for _start, _end, level, name in document.headings() if level == 2]
-        sections = (document.slice_heading(name) for name in names if name.casefold() != "fidelities")
-        return "\n\n".join(section for section in sections if section)
 
 
 # The utilities are the toolsets the installer finds in ``space`` (sessions, the board, the repository) and ``tools``
@@ -216,11 +66,16 @@ class Utility:
 
     @classmethod
     def load_all(cls) -> list[Utility]:
-        """Every toolset the installer finds in ``space`` and ``tools``, less those annotated ``@noCatalog``, in the order
-        the installer finds them. A toolset that cannot be imported raises rather than leaving a silent gap."""
-        refs = [ref for ref in RepositoryToolsets(_REPO_ROOT).collect() if ref.startswith(_UTILITY_PACKAGES)]
-        classes = [getattr(importlib.import_module(module), name) for module, name in (ref.split(":") for ref in refs)]
-        return [cls(toolset_class) for toolset_class in classes if not NoCatalog.annotates(toolset_class)]
+        """Every toolset class the installer loads from ``space`` and ``tools``, less those annotated ``@noCatalog``, in
+        the order the installer finds them; each class says where it belongs through the module that defines it. A
+        utility that cannot be imported raises rather than leaving a silent gap."""
+        toolsets = RepositoryToolsets(_REPO_ROOT)
+        classes = toolsets.classes()
+        unloadable = [failure for failure in toolsets.unloadable if failure.reference.startswith(_UTILITY_PACKAGES)]
+        if unloadable:
+            raise unloadable[0]
+        utilities = [toolset_class for toolset_class in classes if toolset_class.__module__.startswith(_UTILITY_PACKAGES)]
+        return [cls(toolset_class) for toolset_class in utilities if not NoCatalog.annotates(toolset_class)]
 
     @property
     def name(self) -> str:
@@ -323,82 +178,6 @@ class FidelityTemplate:
             f'<pre class="code-fence"><code class="language-{html.escape(self.language)}">'
             f"{html.escape(self.body)}</code></pre>"
         )
-
-
-class GitCitation:
-    """Git blob URLs, the only source citation catalog pages give. An SSH remote and a trailing ``.git`` are written
-    as the plain https address of the repository."""
-
-    def __init__(self, repo_url: str = "", ref: str = "") -> None:
-        self.repo_url = self._https(repo_url)
-        self.ref = ref
-
-    @classmethod
-    def from_checkout(cls, repo_root: Path | None = None) -> GitCitation:
-        """The checkout's origin and the commit it has checked out."""
-        git = Git(repo_root or _REPO_ROOT)
-        return cls(git.run("remote", "get-url", "origin"), git.run("rev-parse", "HEAD"))
-
-    def blob_url(self, path: Path, lines: tuple[int, int] | None = None) -> str:
-        try:
-            relative = path.resolve().relative_to(_REPO_ROOT)
-        except ValueError:
-            relative = path
-        url = f"{self.repo_url.rstrip('/')}/blob/{self.ref}/{relative.as_posix()}"
-        if lines:
-            start, end = lines
-            url += f"#L{start}-L{end}" if end != start else f"#L{start}"
-        return url
-
-    def blob_url_for_callable(self, func: object) -> str:
-        source_file = Path(inspect.getsourcefile(func))  # type: ignore[arg-type]
-        _, start_line = inspect.getsourcelines(func)  # type: ignore[arg-type]
-        end_line = start_line + len(inspect.getsource(func).splitlines()) - 1  # type: ignore[arg-type]
-        return self.blob_url(source_file, (start_line, end_line))
-
-    def _https(self, repo_url: str) -> str:
-        url = repo_url.strip()
-        if url.startswith("git@"):
-            hostname, _, path = url[len("git@"):].partition(":")
-            url = f"https://{hostname}/{path}"
-        return url[: -len(".git")] if url.endswith(".git") else url
-
-
-class SkillSlashName:
-    """Slash-invocable skill name from deployed SKILL.md frontmatter."""
-
-    def __init__(self, skills_roots: Iterable[Path] = _SKILLS_ROOTS) -> None:
-        self._skills_roots = tuple(skills_roots)
-
-    def resolve(self, module_dir_name: str) -> str | None:
-        for candidate in (module_dir_name, module_dir_name.replace("_", "-")):
-            for skill_md in self._skill_files(candidate):
-                match = _SKILL_NAME_RE.search(skill_md.read_text(encoding="utf-8"))
-                if match:
-                    return match.group(1)
-        return None
-
-    def _skill_files(self, candidate: str) -> list[Path]:
-        found: list[Path] = []
-        for root in self._skills_roots:
-            found.extend(self._skill_files_under(root, candidate))
-        return [path for path in found if path.is_file()]
-
-    def _skill_files_under(self, root: Path, candidate: str) -> list[Path]:
-        """``{candidate}/SKILL.md`` at the skills root, the Cursor layout
-        ``{category}/{candidate}/SKILL.md``, and the Claude layout, which joins the
-        category into one folder name: ``{category}-{candidate}/SKILL.md``."""
-        found = [root / candidate / "SKILL.md"]
-        if not root.is_dir():
-            return found
-        flat_name = re.compile(rf"^[a-z0-9_]+-{re.escape(candidate)}$")
-        for folder in sorted(root.iterdir()):
-            if not folder.is_dir():
-                continue
-            found.append(folder / candidate / "SKILL.md")
-            if flat_name.match(folder.name):
-                found.append(folder / "SKILL.md")
-        return found
 
 
 # -- Detail pages ---------------------------------------------------------------
@@ -896,8 +675,6 @@ class Catalog:
         artifacts. ``examples_json`` is optional JSON mapping practice → stage → path relative to the project; when
         blank, use ``.context/project-approach-examples.json`` and auto-discovery. ``project_title`` names the page;
         blank uses the saved title, else the project folder's name."""
-        from harness.catalog_generator.project_approach import ProjectApproach, ProjectFiles
-
         files = ProjectFiles(self.project.root, self.practices)
         approach = ProjectApproach.for_project(files, project_title).with_examples_json(examples_json)
         approach.save_examples()

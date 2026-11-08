@@ -17,6 +17,7 @@ from mamba import context, description, it
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.ddd.ddd import Ddd
 from harness.agent_tools.agent_tools import AgentInstructions
+from harness.guidance.practice_catalogue import PracticeCatalogue
 
 
 class _DddSpecSupport:
@@ -28,7 +29,7 @@ class _DddSpecSupport:
         return "\n".join(body.prompt)
 
     def ddd(self) -> Ddd:
-        return Ddd(fidelity="bounded_context")
+        return PracticeCatalogue.create("ddd", fidelity="bounded_context")
 
 
 _support = _DddSpecSupport()
@@ -67,17 +68,17 @@ with description("a Ddd toolset"):
     with context("that provides a CleanEngineering companion"):
         with context("with bounded_context fidelity"):
             with it("should treat the modules fidelity as the companion"):
-                companion = Ddd(fidelity="bounded_context").fidelities.current.clean_engineering
+                companion = PracticeCatalogue.create("ddd", fidelity="bounded_context").fidelities.current.clean_engineering
                 expect(companion.name).to(equal("modules"))
 
         with context("with model fidelity"):
             with it("should treat the model fidelity as the companion"):
-                companion = Ddd(fidelity="model").fidelities.current.clean_engineering
+                companion = PracticeCatalogue.create("ddd", fidelity="model").fidelities.current.clean_engineering
                 expect(companion.name).to(equal("model"))
 
         with context("with tactics fidelity"):
             with it("should treat the code fidelity as the companion"):
-                companion = Ddd(fidelity="tactics").fidelities.current.clean_engineering
+                companion = PracticeCatalogue.create("ddd", fidelity="tactics").fidelities.current.clean_engineering
                 expect(companion.name).to(equal("code"))
 
     with context("whose contexts instruction is expanded"):
@@ -152,3 +153,12 @@ with description("a Ddd toolset"):
                 python = "class Cart:\n    def add(self, item: object) -> None:\n        self.items.append(item)\n"
                 result = Ddd(fidelity="model").render("typescript", python, source="python")
                 expect("    // self.items.append(item)" in result["content"]).to(be_true)
+
+
+with description("a Ddd practice made in a set with the Clean Engineering practice it extends"):
+    with it("should read a plain class model through that same Clean Engineering practice"):
+        from harness.guidance.practice_catalogue import PracticeCatalogue
+
+        practices = {type(item).__name__: item for item in PracticeCatalogue.create_all(fidelity=None)}
+        practices["Ddd"].render("markdown", "## Cart\n\n------\n+ total: int\n----\n", source="markdown")
+        expect("markdown" in vars(practices["Ddd"].extended).get("_live_adapters", {})).to(be_true)

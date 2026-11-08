@@ -35,6 +35,7 @@ from harness.hooks.hooks import hook
 from harness.mcp.mcp_server import mcp
 from harness.agent_tools.agent_tools import AgentInstructions, ToolSetCollectionAnnotation
 from harness.agent_tools.recipe import RecipeLineFailed, RecipePlaceholders
+from harness.agent_tools.tool_call import ToolCall
 from cdd_guidance.actions._examples.car_story.car_story import CarStory
 from harness.agent_tools._examples.super_delegation.super_delegation_demo import (
     EmptySuperChild,
@@ -237,6 +238,19 @@ with description("a class"):
                 expect(response.tools).to(equal(["ping"]))
 
 
+@agent_toolset
+class _SplitRecipe:
+    """A recipe with an optional parameter and a docstring of several lines, as partition's is."""
+
+    @agent_instructions
+    def split(self, paths: str, mode: str = "one_go") -> str:
+        """Split the source into segments.
+
+        Name every segment after its heading."""
+        "Write segments for {{paths}} in {{mode}}."
+        return f"Split {paths} in {mode}"
+
+
 with description("an action"):
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
@@ -273,6 +287,20 @@ with description("an action"):
                     raised = True
                     expect("destination" in str(error)).to(be_true)
                 expect(raised).to(be_true)
+
+    with context("that a call sends only its required arguments"):
+        with it("should fill a placeholder of an optional parameter with that parameter's default"):
+            expansion = _SplitRecipe().instructions["split"].expand({"paths": "notes.md"})
+            expect(expansion.result).to(equal("Split notes.md in one_go"))
+
+        with it("should fill the prompt's placeholder of an optional parameter with its default"):
+            expansion = _SplitRecipe().instructions["split"].expand({"paths": "notes.md"})
+            expect(expansion.instructions).to(contain("Write segments for notes.md in one_go"))
+
+    with context("whose recipe has a docstring of several lines"):
+        with it("should send the docstring once"):
+            reply = _SplitRecipe().instructions["split"].answer(ToolCall({"paths": "notes.md"}))
+            expect(reply.count("Name every segment after its heading.")).to(equal(1))
 
     with context("that has templated string literals in the @agent_instructions body"):
         with it("should put {{param}} / {{self.attr}} values into expanded instructions"):
@@ -1305,6 +1333,24 @@ class Crate:
         return f"{self.label} shipped from {self.project.name}"
 
 
+@agent_toolset
+class Pallet:
+    """A pallet loaded for the chat a call came from."""
+
+    def __init__(self, label: str, chat: str) -> None:
+        self.label = label
+        self.chat = chat
+
+    @classmethod
+    @tool_subject
+    def load(cls, pallet: str, *, call: ToolCall) -> "Pallet":
+        return cls(pallet, call.chat.id if call.chat is not None else "no chat")
+
+    @_tool
+    def lift(self) -> str:
+        return f"{self.label} lifted for {self.chat}"
+
+
 with description("a domain class whose constructor takes collaborators"):
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
@@ -1354,6 +1400,17 @@ with description("a domain class whose constructor takes collaborators"):
             with it("should hand it the project the call works on"):
                 pack = AgentToolSet.instantiate(Crate).tools["pack"]
                 expect(pack.invoke({"label": "crate-2"}, project=self.project)).to(equal(f"crate-2 packed in {self.project.name}"))
+
+    with context("whose loader takes the call it serves"):
+        with before.each:
+            self.call = ToolCall.sent({"pallet": "pallet-1", "conversation_id": "chat-7"}, ThrowawayProject().root)
+            self.lift = AgentToolSet.instantiate(Pallet).tools["lift"]
+
+        with it("should leave the call out of the tool's arguments, since no caller passes it"):
+            expect(list(self.lift.parameter_schema.names)).to(equal(["pallet"]))
+
+        with it("should load the object with the chat the call came from"):
+            expect(self.lift.answer(self.call)).to(equal("pallet-1 lifted for chat-7"))
 
 
 with description("a toolset reference"):

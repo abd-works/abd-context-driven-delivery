@@ -9,7 +9,7 @@ from typing import Annotated
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tool_subject
-from harness.installation.destination import SourceFile, data_field, edits, identity, language_adapter
+from harness.installation.data_class import SourceFile, data_field, edits, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 
 

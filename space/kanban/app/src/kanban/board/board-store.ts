@@ -25,9 +25,9 @@ export type Activation = {
   // What a person has ticked, starting from what Python chooses at first.
   leaving: string[]
   opening: string[]
-  // What the dialog offers: on leaving, what the ticket left can do with its work now; on opening, what the ticket does
-  // not have yet. The branch the work left is on, empty while nothing checked out is its own, and whether the ticket
-  // opened has its own branch.
+  // What the dialog offers, as Python answers it: on leaving, what the ticket left can do with its work now; on
+  // opening, what the ticket does not have yet. The branch the work left is on, empty while nothing checked out is its
+  // own, and whether the ticket opened has its own branch.
   offeredLeaving: string[]
   offeredOpening: string[]
   leavingBranch: string

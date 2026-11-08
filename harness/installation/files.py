@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from harness.agent_tools.agent_tools import AgentTool, InstallDestination
 from harness.annotations.name import Name
@@ -32,6 +32,27 @@ class Rules(Destination):
 skill = Skill
 command = Command
 rules = Rules
+
+
+class RulesScope(Protocol):
+    """The files a published rules collection applies to: every file, or those its globs match."""
+
+    always_apply: bool | None
+    globs: str
+
+
+class PublishedRules(Protocol):
+    """What a member annotated ``@rules`` answers, such as a practice's rules collection: its rules as an installed
+    rules file holds them, as a list when it has no markdown of its own, and the files they apply to. The installation
+    writes it as a rules file without knowing the class that answers it."""
+
+    @property
+    def prose(self) -> str: ...
+
+    @property
+    def applies_to(self) -> RulesScope: ...
+
+    def formatted(self) -> str: ...
 
 
 class InstructionsUnreadableAtInstall(Exception):
@@ -98,7 +119,7 @@ class FileInstallation(Installation):
         body = "\n\n".join(part for part in parts if part).rstrip()
         text = f"{body}\n" if body else ""
         if self.destination == InstallDestination.RULE:
-            text = self._rules_front_matter(text, tool.toolset) + text
+            text = self._rules_front_matter(text, self._published_rules(tool)) + text
         elif self.destination == InstallDestination.SKILL:
             text = self._skill_front_matter(relative.parent.name, self._skill_overview(tool.toolset, parts)) + text
         self._write_file(self.path / relative, text)
@@ -137,8 +158,7 @@ class FileInstallation(Installation):
         other toolset."""
         if not toolset.is_part_of_practice:
             return None
-        slug = getattr(toolset, "slug", None)
-        return Name(str(slug)).kebab if slug else None
+        return Name(toolset.slug).kebab if toolset.slug else None
 
     def _rule_path(self, toolset: Any, folder: Path) -> Path:
         suffix = self.layout.rule_suffix
@@ -183,9 +203,7 @@ class FileInstallation(Installation):
         """Practice schema joined into instructions, including a fidelity skill."""
         if tool.name != "instructions":
             return ""
-        toolset = tool.toolset
-        guide = getattr(toolset, "schema_guide", None)
-        return (guide() or "").strip() if callable(guide) else ""
+        return tool.toolset.schema_guide().strip()
 
     def _instructions_at_install(self, tool: AgentTool) -> str:
         """Expand ``@agent_instructions`` on the live toolset when writing slash markdown."""
@@ -204,18 +222,17 @@ class FileInstallation(Installation):
         if tool.kind == "instructions":
             return self._instructions_at_install(tool)
         if self.destination == InstallDestination.RULE:
-            result = getattr(tool.toolset, tool.name, None)
-            prose = getattr(result, "prose", None)
-            if isinstance(prose, str) and prose.strip():
-                return prose.strip()
-            formatted = getattr(result, "formatted", None)
-            if callable(formatted):
-                return str(formatted()).strip()
+            published = self._published_rules(tool)
+            return published.prose.strip() or published.formatted().strip()
         return tool.docstring
 
+    def _published_rules(self, tool: AgentTool) -> PublishedRules:
+        """What the ``@rules`` member tool publishes answers, read from its toolset."""
+        return getattr(tool.toolset, tool.name)
+
     def _fidelity_one_liner(self, child: Any) -> str:
-        name = getattr(child, "name", "") or ""
-        overview = (getattr(child, "overview", None) or "").strip()
+        name = child.name or ""
+        overview = (child.overview or "").strip()
         summary = next(
             (line.strip() for line in overview.splitlines() if line.strip() and not line.strip().startswith(("#", "**"))),
             "",
@@ -241,11 +258,10 @@ class FileInstallation(Installation):
         return f"{self._SHELL_INVOKE}\n\n```text\n{self._shell_command(tool)}\n```"
 
     def _fidelity_invoke_parts(self, toolset: Any) -> list[str]:
-        """One line for each fidelity a practice holds: its name and summary, then the MCP tool its instructions are
-        published as, written by that tool."""
-        entries = getattr(getattr(toolset, "fidelities", None), "entries", None) or {}
+        """One line for each part a toolset holds in its collections, such as each fidelity of a practice: its name and
+        summary, then the MCP tool its instructions are published as, written by that tool."""
         parts: list[str] = []
-        for child in entries.values():
+        for child in toolset.child_toolsets():
             published = child.tools.get("instructions")
             invoke = published.invoke_line() if published is not None and published.install_to_mcp else ""
             parts.append("\n\n".join(piece for piece in (self._fidelity_one_liner(child), invoke) if piece))
@@ -262,7 +278,7 @@ class FileInstallation(Installation):
     def _install_reference(self, name: str, dest: Path) -> str:
         """Copy one ``cdd_guidance/references`` file of the repository being installed into ``<ide>/references``; return
         its link from ``dest``. An installation made for no repository has none to copy."""
-        source = self.repo / "cdd_guidance" / "references" / name if self.repo is not None else None
+        source = self.repository.references_folder / name if self.repository is not None else None
         target = Path(self.path) / "references" / name
         if source is not None and source.is_file():
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -299,7 +315,7 @@ class FileInstallation(Installation):
         indented = "\n".join(f"  {line}" if line else "  " for line in description.splitlines())
         return f"---\nname: {name}\ndescription: >-\n{indented}\n---\n\n"
 
-    def _rules_front_matter(self, body: str, toolset: Any = None) -> str:
+    def _rules_front_matter(self, body: str, published: PublishedRules) -> str:
         description = next(
             (
                 line.strip().replace('"', "'")
@@ -308,11 +324,11 @@ class FileInstallation(Installation):
             ),
             "Practice rules.",
         )
-        applies = getattr(getattr(toolset, "rules", None), "applies_to", None)
-        globs = (getattr(applies, "globs", "") or "") if applies is not None else ""
+        applies = published.applies_to
+        globs = applies.globs or ""
         if self.layout.scopes_rules_by_paths:
             return self._claude_rules_front_matter(description, globs)
-        always_apply = bool(getattr(applies, "always_apply", None)) if applies is not None else False
+        always_apply = bool(applies.always_apply)
         lines = ["---", f"alwaysApply: {'true' if always_apply else 'false'}", f'description: "{description}"']
         if globs:
             lines.append(f"globs: {globs}")

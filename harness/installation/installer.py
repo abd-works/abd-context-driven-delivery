@@ -230,7 +230,7 @@ class Installer:
     def _install_agents(self) -> None:
         """Copy cdd_guidance/agents into the IDE agents folder, each named as its front matter names it. The source
         stays on cdd_guidance."""
-        source = self.repo / "cdd_guidance" / "agents"
+        source = self.toolsets.agents_folder
         if not source.is_dir():
             return
         for path in sorted(source.glob("*.md")):
@@ -242,7 +242,7 @@ class Installer:
 
     def _install_standing_rules(self) -> None:
         """Install cdd_guidance/rules as always-on rules in the IDE rules folder."""
-        source = self.repo / "cdd_guidance" / "rules"
+        source = self.toolsets.standing_rules_folder
         if not source.is_dir():
             return
         rules = self._channels_of_run().standing_rules

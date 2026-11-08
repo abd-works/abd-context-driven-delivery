@@ -14,7 +14,10 @@ from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import joined_module_path, module_path_in
+from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.type_refs import pascal_type_names
 from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
 # The `# Title` line of a bounded context's `.context/bounded-context.md`: the context's name.
@@ -25,15 +28,10 @@ _TARGET_SEGMENT = re.compile(r"[·•]")
 _ARROWS = ("→", "->")
 # `Product (by ProductId)`: the identity an integration holds its target by.
 _HELD_BY = "(by"
-# Where a class lives, as code and class drawings keep it: the labels of the contexts that hold its aggregate, then the
-# aggregate's name, `Customer | custom · Customer Profile`.
-_PLACE = " · "
 # A module's path: the labels of the contexts that hold it, then its own name, as Clean Engineering nests modules.
 _PATH = "/"
 # The context classes with no place gather in.
 _DEFAULT_CONTEXT = "Domain"
-# The words between the names in a type hint: `list[CartLine]`, `Map<Id, Cart>`.
-_TYPE_SEPARATORS = re.compile(r"[\[\]<>|,\s]+")
 
 
 class DomainNode(ModelNode):
@@ -46,6 +44,8 @@ class Integration:
 
     FIELDS = ("pattern", "direction", "crosses", "integration")
     """The fields of an arc, in the order its lines write them under its target."""
+    TARGET = "to"
+    """The detail a class model's dependency names the arc's whole target by: `to: → Customer · Customer Profile`."""
 
     def __init__(self) -> None:
         self.context = ""
@@ -77,6 +77,19 @@ class Integration:
     def lines(self) -> list[str]:
         """The arc as an aggregate writes it under `Integrations:`: `- target`, then each field it has, indented."""
         return [f"- {self.target}"] + [f"  {key}: {getattr(self, key)}" for key in self.FIELDS if getattr(self, key)]
+
+    def as_dependency(self) -> Relationship:
+        """The arc as a class model keeps it on the aggregate's root: a dependency on the class it reaches, labelled by
+        its pattern, with its whole target and its other fields as details."""
+        details = {self.TARGET: self.target}
+        details.update({key: getattr(self, key) for key in self.FIELDS[1:] if getattr(self, key)})
+        return Relationship(target=self.target_name, kind="dependency", label=self.pattern, details=details)
+
+    def read_dependency(self, dependency: Relationship) -> None:
+        """Take the fields a class model's dependency keeps for this arc: its pattern is the label, the rest details."""
+        self.pattern = dependency.label
+        for key in self.FIELDS[1:]:
+            setattr(self, key, dependency.details.get(key, ""))
 
 
 class InvariantObject(DomainNode, Property):
@@ -157,6 +170,13 @@ class DomainEvent(DomainNode, Property):
         self.consumers = []
         self.subject = Property("subject", 0, description="the state of the event")
 
+    def map_entry(self) -> str:
+        """The event as a map's event map lists it: `CartCheckedOut: emitted by ShoppingCart; consumed by Inventory`,
+        which `BoundedContextMap.wire_events` reads back."""
+        producer = self.producer.name if self.producer is not None else ""
+        consumers = ", ".join(item.name for item in self.consumers)
+        return f"{self.name}: emitted by {producer}; consumed by {consumers}"
+
 
 class Specification(DomainNode, OoadClass):
     _semantic_type_name = "Specification"
@@ -218,18 +238,22 @@ class Aggregate(DomainNode, Module):
         return list(self.root.invariant_objects) if self.root is not None else []
 
     @property
+    def place_labels(self) -> list[str]:
+        """Where the aggregate lives: each enclosing context's label, then its own name."""
+        return [context.label for context in self.parent.enclosing_contexts] + [self.name]
+
+    @property
     def code_place(self) -> str:
-        """Where the aggregate lives, as code keeps it: each enclosing context's label, then its own name."""
-        return _PLACE.join([context.label for context in self.parent.enclosing_contexts] + [self.name])
+        """The aggregate's place as one module name, as a class model names the module that holds its classes."""
+        return joined_module_path(self.place_labels)
 
     @property
     def module_path(self) -> str:
         """The aggregate as a module nested in its context's module: `Sales | custom/ShoppingCart`."""
         return f"{self.parent.module_path}{_PATH}{self.name}"
 
-    def take_class(self, oclass: OoadClass, intent: str) -> None:
-        """Hold a class read from a class model, with the intent its place left."""
-        oclass.intent = intent
+    def take_class(self, oclass: OoadClass) -> None:
+        """Hold a class read from a class model."""
         self.classes.append(oclass)
 
     def take_root_from_classes(self) -> None:
@@ -254,6 +278,8 @@ class BoundedContext(DomainNode, Module):
         ("Aggregate", "BoundedContext"),
         ("BoundedContext", "BoundedContext"),
     }
+    aggregate_type: type[Aggregate] = Aggregate
+    """The aggregates this context opens: each format's context names its own format's aggregate."""
 
     def __init__(self, name: str = "", sequential_order: int = 0, graph: Graph | None = None, **kwargs) -> None:
         if isinstance(name, Graph):
@@ -263,7 +289,6 @@ class BoundedContext(DomainNode, Module):
         self.owner = ""
         self.contexts = ModelChildren(self, "contexts")
         self.aggregates = ModelChildren(self, "aggregates")
-        self._map: BoundedContextMap | None = None
         self.context_file_lines = 1
 
     @property
@@ -281,7 +306,6 @@ class BoundedContext(DomainNode, Module):
         self.load_folder_facts(folder)
 
     def append_context(self, context: "BoundedContext") -> None:
-        context._map = self._map
         self.contexts.append(context)
 
     def append_aggregate(self, aggregate: Aggregate) -> None:
@@ -291,7 +315,7 @@ class BoundedContext(DomainNode, Module):
         """This context's aggregate called name, opened the first time a class names it."""
         found = next((item for item in self.aggregates if item.name == name), None)
         if found is None:
-            found = self._aggregate_type(name, len(self.aggregates) + 1)
+            found = self.aggregate_type(name, len(self.aggregates) + 1)
             self.append_aggregate(found)
         return found
 
@@ -299,10 +323,6 @@ class BoundedContext(DomainNode, Module):
     def module_path(self) -> str:
         """The context as a module nested in the contexts around it: each enclosing context's label, joined by `/`."""
         return _PATH.join(context.label for context in self.enclosing_contexts)
-
-    @property
-    def _aggregate_type(self) -> type:
-        return self._map.aggregate_type if self._map is not None else Aggregate
 
     @property
     def every_aggregate(self) -> list[Aggregate]:
@@ -338,10 +358,8 @@ class BoundedContext(DomainNode, Module):
         return child
 
     def get_next_bounded_context_from_file(self) -> "BoundedContext":
-        context_type = BoundedContext
-        if self._map is not None:
-            context_type = self._map.bounded_context_type
-        return context_type(sequential_order=len(self.contexts) + 1)
+        """The next context nested in this one, of this context's own format."""
+        return type(self)(sequential_order=len(self.contexts) + 1)
 
     def load_aggregates(self) -> None:
         while self.has_more_aggregate():
@@ -356,18 +374,18 @@ class BoundedContext(DomainNode, Module):
         return aggregate
 
     def get_next_aggregate_from_file(self) -> Aggregate:
-        return self._aggregate_type(sequential_order=len(self.aggregates) + 1)
+        return self.aggregate_type(sequential_order=len(self.aggregates) + 1)
 
 
 class BoundedContextMap:
     """The bounded contexts of a domain, each holding its aggregates and the contexts nested in it. Each format
-    subclasses the map and names the context and aggregate types it reads and writes; each context loads its own
-    children."""
+    subclasses the map and names the context type it reads and writes, which names its own aggregate type; each
+    context loads its own children."""
 
     bounded_context_type: type[BoundedContext] = BoundedContext
-    aggregate_type: type[Aggregate] = Aggregate
 
     def __init__(self) -> None:
+        super().__init__()
         self.contexts: list[BoundedContext] = []
 
     def load_bounded_contexts(self) -> None:
@@ -379,7 +397,6 @@ class BoundedContextMap:
 
     def load_next_bounded_context(self) -> BoundedContext:
         context = self.get_next_bounded_context_from_file()
-        context._map = self
         context.load_bounded_contexts()
         context.load_aggregates()
         return context
@@ -388,7 +405,6 @@ class BoundedContextMap:
         return self.bounded_context_type(sequential_order=len(self.contexts) + 1)
 
     def append_context(self, context: BoundedContext) -> None:
-        context._map = self
         self.contexts.append(context)
 
     @property
@@ -470,18 +486,18 @@ class BoundedContextMap:
         names its context and aggregate, which takes the class; classes with no place gather around the roots that
         hold them."""
         self.contexts = []
-        unplaced: list[tuple[str, OoadClass, str]] = []
+        unplaced: list[tuple[str, OoadClass]] = []
         for module in model.modules:
             for oclass in module.classes:
                 if oclass.name.startswith("_"):
                     continue
-                place, intent = _place_of(module, oclass)
+                place = _place_of(module, oclass)
                 if place:
-                    self.context_at(place[:-1]).aggregate_named(place[-1]).take_class(oclass, intent)
+                    self.context_at(place[:-1]).aggregate_named(place[-1]).take_class(oclass)
                 else:
-                    unplaced.append((module.name or _DEFAULT_CONTEXT, oclass, intent))
-        for context_name, aggregate_name, oclass, intent in _grouped(unplaced):
-            self.context_at([context_name]).aggregate_named(aggregate_name).take_class(oclass, intent)
+                    unplaced.append((module.name or _DEFAULT_CONTEXT, oclass))
+        for context_name, aggregate_name, oclass in _grouped(unplaced):
+            self.context_at([context_name]).aggregate_named(aggregate_name).take_class(oclass)
         for aggregate in self.every_aggregate:
             aggregate.take_root_from_classes()
         return self
@@ -491,30 +507,24 @@ def _same_name(left: str, right: str) -> bool:
     return bool(right) and left.strip().lower() == right.strip().lower()
 
 
-def _place_in(text: str) -> list[str]:
-    """The context labels and the aggregate name a place names: `Customer | custom · Customer Profile`."""
-    return [part.strip() for part in text.split(_PLACE.strip()) if part.strip()]
+def _place_of(module: Module, oclass: OoadClass) -> list[str]:
+    """Where a class read from a class model lives, its contexts' labels then its aggregate: the module path code names
+    for it, else the module a class drawing keeps it in; none for a class with neither."""
+    for place in (oclass.module_path, module_path_in(module.name)):
+        if len(place) >= 2:
+            return list(place)
+    return []
 
 
-def _place_of(module: Module, oclass: OoadClass) -> tuple[list[str], str]:
-    """Where a class read from a class model lives, and the intent left after its place: code keeps the place as the
-    first line of the class's intent, a class drawing as the class's module; none for a class with neither."""
-    first, _, rest = (oclass.intent or "").partition("\n")
-    place = _place_in(first)
-    if len(place) < 2:
-        place, rest = _place_in(module.name), oclass.intent or ""
-    return (place, rest.strip()) if len(place) >= 2 else ([], rest.strip())
-
-
-def _grouped(unplaced: list[tuple[str, OoadClass, str]]):
+def _grouped(unplaced: list[tuple[str, OoadClass]]):
     """Classes with no place: each root, or each class nobody composes, opens an aggregate; the rest join it. A class
     the business keeps in its own repository is an aggregate root."""
-    names = {oclass.name: oclass for _context, oclass, _intent in unplaced}
+    names = {oclass.name: oclass for _context, oclass in unplaced}
     owner: dict[str, str] = {}
-    for _context, oclass, _intent in unplaced:
+    for _context, oclass in unplaced:
         tactical = TacticalClass(oclass)
         for prop in oclass.properties:
-            for target in _TYPE_SEPARATORS.split(prop.type_hint or ""):
+            for target in pascal_type_names(prop.type_hint or ""):
                 if target in names and target != oclass.name and TacticalClass(names[target]).kind() != "EntityRoot":
                     owner.setdefault(target, oclass.name)
         root = names.get(tactical.kept_root_name)
@@ -522,13 +532,13 @@ def _grouped(unplaced: list[tuple[str, OoadClass, str]]):
             owner.setdefault(oclass.name, root.name)
             if not TacticalClass(root).stereotypes:
                 root.stereotypes = ["Aggregate Root", "Entity", *root.stereotypes]
-    for context, oclass, intent in unplaced:
+    for context, oclass in unplaced:
         top = oclass.name
         seen = set()
         while top in owner and top not in seen:
             seen.add(top)
             top = owner[top]
-        yield context, top, oclass, intent
+        yield context, top, oclass
 
 
 def _wire_event(text: str, aggregates: dict[str, Aggregate], services: dict[str, DomainService]) -> None:

@@ -1,0 +1,160 @@
+"""The sketch document — a header with its title and sources, then one section per practice, hierarchy carried by
+markdown headings."""
+
+from __future__ import annotations
+
+import re
+
+from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.guidance import SketchLens
+
+
+_HORIZONTAL_RULES = {"---", "***", "___"}
+_TITLE = "# "
+_SOURCE = "source:"
+_SKETCH_SUFFIX = re.compile(r"\s+sketch\s*$", re.IGNORECASE)
+_TRAILING_SEPARATOR = re.compile(r"[\s\-–—€”]+$")
+
+
+class _Section:
+    """Where one lens starts, where it ends, and the heading depth that opened it."""
+
+    def __init__(self, first: int, last: int, depth: int) -> None:
+        self.first = first
+        self.last = last
+        self.depth = depth
+
+
+class SketchOutline:
+    """A sketch whose hierarchy is carried by markdown headings above fenced detail.
+
+    Each heading becomes one nesting level of `nesting_indent` spaces, so a practice
+    reads the shape it already knows. Detail inside a fence keeps its own relative
+    indentation under the heading that owns it."""
+
+    def __init__(self, text: str, nesting_indent: int = 2) -> None:
+        self._lines = text.splitlines()
+        self._nesting_indent = nesting_indent
+        # Every practice's lens, which each practice class holds, so no practice is built to read it: a heading that
+        # opens any of them starts that practice's section, since a sketch holds one section for each practice.
+        self._lenses = tuple(PracticeCatalogue.practice_class(key).sketch_lens for key in PracticeCatalogue.keys())
+
+    @property
+    def title(self) -> str:
+        """The title the header's `# ` line gives, without a trailing `sketch` or separator; empty when it has none."""
+        line = next((line for line in self._header if line.startswith(_TITLE)), "")
+        titled = _SKETCH_SUFFIX.sub("", line[len(_TITLE):].strip()).strip()
+        return _TRAILING_SEPARATOR.sub("", titled).strip() or titled
+
+    @property
+    def sources(self) -> str:
+        """The sources the header's `source:` line names; empty when it names none."""
+        line = next((line for line in self._header if line.lower().startswith(_SOURCE)), "")
+        return line.split(":", 1)[1].strip() if line else ""
+
+    @property
+    def _header(self) -> list[str]:
+        """The lines above the first practice section, stripped. A sketch that names no lens is all one section, so it
+        has no header."""
+        first = next((index for index, _, title in self._outline if self._opens_a_section(title)), 0)
+        return [line.strip() for line in self._lines[:first]]
+
+    def _opens_a_section(self, title: str) -> bool:
+        return any(lens.opens(title) for lens in self._lenses)
+
+    def holds(self, lens: SketchLens) -> bool:
+        """True when this sketch has a section for that practice."""
+        return self._section_for(lens) is not None
+
+    def body_for(self, lens: SketchLens) -> str:
+        """That practice's section, flattened to indentation.
+
+        A sketch that names no lens is a single section, so the whole document is its body."""
+        section = self._section_for(lens)
+        if section is None:
+            if self._names_a_lens:
+                return ""
+            section = _Section(0, len(self._lines), 0)
+        return self._flattened(section)
+
+    @property
+    def _names_a_lens(self) -> bool:
+        return any(self._opens_a_section(title) for _, _, title in self._outline)
+
+    @property
+    def _outline(self) -> list[tuple[int, int, str]]:
+        """Every line outside a fence, as index, heading depth, and text."""
+        found: list[tuple[int, int, str]] = []
+        fenced = False
+        for index, raw in enumerate(self._lines):
+            stripped = raw.strip()
+            if stripped.startswith("```"):
+                fenced = not fenced
+                continue
+            if fenced or not stripped:
+                continue
+            depth = len(stripped) - len(stripped.lstrip("#"))
+            found.append((index, depth, stripped[depth:].strip()))
+        return found
+
+    def _section_for(self, lens: SketchLens) -> _Section | None:
+        outline = self._outline
+        opening = next(
+            ((index, depth) for index, depth, title in outline if lens.opens(title)),
+            None,
+        )
+        if opening is None:
+            return None
+        index, depth = opening
+        return _Section(index + 1, self._end_after(outline, index, depth), depth)
+
+    def _end_after(self, outline: list[tuple[int, int, str]], index: int, depth: int) -> int:
+        for other, other_depth, title in outline:
+            if other <= index:
+                continue
+            if other_depth and other_depth <= depth:
+                return other
+            if self._opens_a_section(title):
+                return other
+        return len(self._lines)
+
+    def _flattened(self, section: _Section) -> str:
+        base = self._base_depth(section)
+        written: list[str] = []
+        indent = 0
+        fenced = False
+        for raw in self._lines[section.first : section.last]:
+            stripped = raw.strip()
+            if stripped.startswith("```"):
+                fenced = not fenced
+                continue
+            if not stripped:
+                written.append("")
+                continue
+            if fenced:
+                written.append(" " * indent + raw)
+                continue
+            if stripped in _HORIZONTAL_RULES:
+                continue
+            depth = len(stripped) - len(stripped.lstrip("#"))
+            if not depth:
+                written.append(" " * indent + raw)
+                continue
+            level = max(depth - base, 0)
+            written.append(" " * (level * self._nesting_indent) + stripped[depth:].strip())
+            indent = (level + 1) * self._nesting_indent
+        return self._without_margin(written)
+
+    def _without_margin(self, written: list[str]) -> str:
+        """The section's shallowest line is its top level, however far it was written in."""
+        margins = [len(line) - len(line.lstrip(" ")) for line in written if line.strip()]
+        margin = min(margins) if margins else 0
+        return "\n".join(line[margin:] if line.strip() else line for line in written) + "\n"
+
+    def _base_depth(self, section: _Section) -> int:
+        depths = [
+            depth
+            for index, depth, _ in self._outline
+            if section.first <= index < section.last and depth
+        ]
+        return min(depths) if depths else section.depth + 1

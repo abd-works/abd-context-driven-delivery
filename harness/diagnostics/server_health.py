@@ -6,12 +6,13 @@ from pathlib import Path
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.graph.graph_app import GraphAppPorts
 from harness.hooks.hook_daemon import HookDaemon
-from harness.installation.destination import data_field, language_adapter
+from harness.installation.data_class import data_field, language_adapter
 from harness.mcp.mcp_server import mcp
-from scripts.instances import GRAPH_APP_PORTS
 
 PROBE_SECONDS = 0.2
+_GRAPH_APP_PORTS = GraphAppPorts().app
 # The session board's own port, set in space/kanban/app/packages/session-board/serve.ts.
 KANBAN_APP_PORTS = (8778,)
 
@@ -27,7 +28,7 @@ class ServerHealth:
     def __init__(
         self,
         repo_root: Path | str,
-        graph_ports: tuple[int, ...] = GRAPH_APP_PORTS,
+        graph_ports: tuple[int, ...] = _GRAPH_APP_PORTS,
         kanban_ports: tuple[int, ...] = KANBAN_APP_PORTS,
         hook_daemon: HookDaemon | None = None,
     ) -> None:

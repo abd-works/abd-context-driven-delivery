@@ -258,19 +258,21 @@ The hooks of one checkout, loaded once in its hook daemon. It runs the enabled h
 - _append_debug(payload: HookPayload, message: str): None
 	// dispatch.debug in the logs folder of the session the event works in
 	-> HookPayload.session
-	-> Session.append_hook_log
+	-> Session.hook_log("dispatch.debug").stamped
 
 ## HookDaemon                                                     <!-- Md -->
 
-The hook daemon of one checkout: it listens on the one port the checkout's daemon may hold, publishes its address, and serves every hook command with one loaded HookServer. The hook command (`run_hook_command` in `hook_daemon.py`) runs `HookDaemon(checkout).ensure().handle_stdin(raw)`.
+The hook daemon of one checkout: it listens on the one port the checkout's daemon may hold, publishes its address, and serves every hook command with one loaded HookServer. The hook command (`run_hook_command` in `hook_daemon.py`) runs `HookDaemon(checkout).ensure().handle_stdin(raw)`. A daemon that finds the port held by this checkout's daemon on older code, including one the older layout started (address in `.cursor/hook-server.json`, a ping that names no process or checkout), stops it and takes the port; anything else on the port raises *HookPortTaken*, so a daemon never exits silently. Closing a worktree stops its checkout's daemon (`Worktrees.remove` in space/repo calls `stop`).
 
 + HookDaemon(repo: Path, port: int | None = None)
 ------
 + HOST: str
 	// "127.0.0.1"
 + repo: Path
-+ state_path: Path
++ address_file: HookDaemonAddressFile
 	// .hook-server/address.json in the checkout, the running daemon's address; it belongs to no IDE folder
+- _older_layout_file: HookDaemonAddressFile
+	// .cursor/hook-server.json, read only to find and stop a daemon the older layout started
 + port: int
 	// the one port this checkout's daemon may listen on, from the checkout's path
 + source_stamp: str
@@ -285,25 +287,42 @@ The hook daemon of one checkout: it listens on the one port the checkout's daemo
 	-> spawn
 + replace_stale(): None
 	-> StoppableProcess.stop
++ stop(): None
+	// stop the daemon answering on the port as this checkout's, or as one of the older layout; remove both address files
 + spawn(): None
 	// the daemon imports from the checkout, through RepositoryToolsets.pythonpath and pycache_prefix
 + serve(server: HookServer | None = None): None
-	// with no server, loads every toolset class the repository defines first, so their registrations hold here
+	// answers pings at once with its address; with no server, loads every toolset class the repository defines first
+	-> claim_port
 	-> HookServer.from_repository(self.toolsets)
++ claim_port(): socket | None
+	// the port, taken over from this checkout's daemon on older code; none when its daemon on this code holds it
+	-> ExclusivePort.claim
+	-> HookDaemonAddress.reported
+	-> ExclusivePort.holder
+	// raises HookPortTaken for a process that is not this checkout's daemon, or one that will not stop
 
 ## HookDaemonAddress                                              <!-- Md -->
 
-Where a running hook daemon answers.
+Where a running hook daemon answers, and who it is. The address file holds these fields, and a ping answers them.
 
-+ HookDaemonAddress(host: str, port: int, pid: int | None = None)
++ HookDaemonAddress(host: str, port: int, pid: int | None = None, stamp: str = "", repo: str = "")
 ------
 + host: str
 + port: int
 + pid: int | None
++ stamp: str
++ repo: str
 ----
 + answers(): bool
++ reported(): HookDaemonAddress | None
+	// the address as the daemon answering here reports it; a daemon of the older layout reports no pid, stamp, or repo
++ serves(repo: Path): bool
 + handle_stdin(raw: bytes): dict
 
+## HookDaemonAddressFile                                          <!-- Md -->
+
+The file a daemon publishes its address in: `read()`, `write(address)`, `remove()`.
 ---
 
 ## Installed artifacts                                            <!-- Mu -->

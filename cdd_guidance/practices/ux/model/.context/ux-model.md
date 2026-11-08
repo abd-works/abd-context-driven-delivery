@@ -245,7 +245,7 @@ Ordered paths to story or object-model JavaScript, each stored once.
 
 ## Formats
 
-Each format class below is a *UxMap* subclass. It overrides `parse`, `save`, and `workspace_files`, and names the node types it is made of (`screen_type`, `region_type`, `control_type`, `story_demo_control_type`, `transition_type`), which its reader and `UxMap.copy_of` make. `render(canonical)` copies the map it is given into the format's own class (`copy_of`), which writes itself with `save`; a reader class beside it holds the reading steps.
+Each format class below is a *UxMap* subclass. It overrides `parse`, `save`, and `workspace_files`, and names the node types it is made of (`screen_type`, `region_type`, `control_type`, `story_demo_control_type`, `transition_type`, `content_type_type`, `nav_component_type`), which its reading and `UxMap.copy_of` make. `render(canonical)` copies the map it is given into the format's own class (`copy_of`), which writes itself with `save`; a reader class beside it holds the reading steps.
 
 ## JsonUxMap : UxMap
 
@@ -253,21 +253,20 @@ The `json` format: the whole map as one JSON document; every other format can ro
 
 ----
 + parse(content: str | dict): UxMap
-	-> JsonUxMapReader.read
+	-> read_record(data)
++ read_record(data: dict): None
+	// its own fields, then each part reading its own record
+	-> JsonScreen.from_record, JsonScreen.read_record, JsonTransition.from_record, JsonContentType.from_record, JsonNavComponent.from_record
+	Invariant: every screen is on the map before any link to a screen is read, so a transition, a tab, or a destination names a screen that is already there
++ screen_named(name: str): Screen | None
 + render(canonical: UxMap): str
 	-> copy_of(canonical).save
 + map_record(): dict
-	// this map: each screen and transition writes its own record; a link to a screen is written as that screen's name
+	// this map: each screen, transition, content type, and navigation component writes its own record; a link to a screen is written as that screen's name
 
-Its nodes are JsonScreen, JsonRegion, JsonControl, JsonStoryDemoControl, and JsonTransition, each writing its own
-record (`as_record()`). The HTML format's controls subclass the JSON controls, since the page carries the JSON document.
-
-## JsonUxMapReader
-
-+ JsonUxMapReader(ux_map: UxMap, data: dict)
-----
-+ read(): UxMap
-	Invariant: every screen is on the map before any link to a screen is read, so a transition, a tab, or a destination names a screen that is already there
+Its nodes are JsonScreen, JsonRegion, JsonControl, JsonStoryDemoControl, JsonTransition, JsonContentType, and
+JsonNavComponent, each writing its own record (`as_record()`) and reading one back (`from_record`). The HTML format's
+controls subclass the JSON controls, since the page carries the JSON document.
 
 ## HtmlUxMap : JsonUxMap
 

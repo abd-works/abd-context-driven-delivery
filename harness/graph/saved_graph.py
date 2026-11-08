@@ -8,11 +8,13 @@ saved violation is the same Violation data a returned node's rule lists, so a re
 from __future__ import annotations
 
 import json
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
+from harness.graph.pattern_overlays import PatternOverlays
 from harness.graph.violation import Violation
-from harness.installation.destination import data_of
+from harness.installation.data_class import data_of
 
 if TYPE_CHECKING:
     from harness.graph.edge import Edge
@@ -191,6 +193,10 @@ class SavedGraph:
     def text(self) -> str:
         return json.dumps(self.document, separators=(",", ":"))
 
+    def of_practices(self, keys: list[str]) -> SavedGraph:
+        """This saved graph holding only the practices keys names."""
+        return SavedGraph(self.overlays, {key: self.practices[key] for key in keys if key in self.practices})
+
     def merged_over(self, older: SavedGraph | None) -> SavedGraph:
         """This graph, keeping the practices an older saved graph holds that this one did not load."""
         kept = dict(older.practices) if older is not None else {}
@@ -210,14 +216,16 @@ class SavedGraph:
         """Every violation the saved practices hold; with practices, only those the named practices found."""
         return [violation for name, saved in self.practices.items() if not practices or name in practices for violation in saved.violations]
 
-    def restored_graph(self) -> Graph:
-        """A graph holding every saved practice: each practice's nodes first, then the edges between them, which may
-        cross practices, and the violations on them."""
-        from harness.graph.graph import Graph
+    def checks_of(self, practice: PracticeGuidance) -> dict[str, Any]:
+        """The graph rules practice checks with the overlays this graph was saved with, by slug, answered by practice
+        itself: no graph is read back to ask it. A graph is read back into a graph that holds it
+        (``graph.restored_from(saved)``)."""
+        return self.applied_patterns.checks_of(practice)
 
-        graph = Graph()
-        graph.restored_from(self)
-        return graph
+    @cached_property
+    def applied_patterns(self) -> PatternOverlays:
+        """The pattern overlays this graph was saved with, each pattern made once."""
+        return PatternOverlays(self.overlays)
 
 
 class SavedGraphFile:

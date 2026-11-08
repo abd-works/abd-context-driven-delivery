@@ -1,10 +1,10 @@
 import type { EngineInterface } from 'claude-code'
 
-import type { CloseChoicesData, TicketData } from '@cdd/space/kanban/ticket'
+import type { LeaveChoicesData, OpenChoicesData, TicketData } from '@cdd/space/kanban/ticket'
 
 import { reasonOf } from '../failure'
 import { callTool, currentChatBar, refreshChatBar, type ChatBarClient } from './chat-bar-client'
-import { cancelClose, cancelSwitch, currentChatBarView, pickSession, showClose } from './session-dialogs-client'
+import { cancelClose, cancelSwitch, currentChatBarView, showClose, showSwitch } from './session-dialogs-client'
 
 // The person's moves between sessions: open one, create one, close the active one. Each is one ticket tool; the
 // dialogs they open and close, and what they chose, are in session-dialogs-client.ts.
@@ -29,11 +29,25 @@ export async function activateSession($: EngineInterface, sessionName: string): 
   return currentChatBar($)
 }
 
+// Picking a session opens the activation dialog on it, with what leaving the active session and opening this one can
+// do now, as their Tickets answer.
+export async function pickSession($: EngineInterface, chatBar: ChatBarClient, name: string): Promise<void> {
+  try {
+    const [leaving, opening] = await Promise.all([
+      chatBar.hasSession ? callTool<LeaveChoicesData>($, 'ticket.leave_choices', { ticket: chatBar.sessionName }) : null,
+      callTool<OpenChoicesData>($, 'ticket.open_choices', { ticket: name }),
+    ])
+    await showSwitch($, name, leaving, opening)
+  } catch (failure) {
+    $.ui.toast(`${name} cannot open: ${reasonOf(failure)}`)
+  }
+}
+
 // A new session opens through the same activation dialog as one picked from the list.
 export async function createSession($: EngineInterface, chatBar: ChatBarClient, sessionName: string): Promise<ChatBarClient> {
   try {
     const created = await callTool<TicketData>($, 'ticket.create', { title: sessionName })
-    await pickSession($, chatBar, created)
+    await pickSession($, chatBar, created.name)
   } catch (failure) {
     $.ui.toast(`${sessionName} was not created: ${reasonOf(failure)}`)
   }
@@ -44,7 +58,7 @@ export async function createSession($: EngineInterface, chatBar: ChatBarClient, 
 // The close dialog offers what the Python Ticket answers closing can do with the session's work.
 export async function openClose($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
   try {
-    await showClose($, await callTool<CloseChoicesData>($, 'ticket.close_choices', { ticket: chatBar.sessionName }))
+    await showClose($, await callTool<LeaveChoicesData>($, 'ticket.close_choices', { ticket: chatBar.sessionName }))
   } catch (failure) {
     $.ui.toast(`${chatBar.sessionName} cannot close: ${reasonOf(failure)}`)
   }

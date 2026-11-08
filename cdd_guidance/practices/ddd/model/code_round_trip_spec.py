@@ -5,6 +5,7 @@ from pathlib import Path
 from expects import be_true, contain, equal, expect
 from mamba import context, description, it
 
+from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
 from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 
@@ -15,6 +16,13 @@ def _round_trip(code_format):
     code = Ddd(fidelity="model").render(code_format, _MODEL, source="markdown")["content"]
     back = Ddd(fidelity="model").render("markdown", code, source=code_format)["content"]
     return code, MarkdownBoundedContextMap().parse(back)
+
+
+def _written_class(name):
+    """The python class the map writes for the card called name."""
+    code = PythonCleanEngineeringModel()
+    MarkdownBoundedContextMap().parse(_MODEL).write_classes(code)
+    return next(oclass for oclass in code.every_class() if oclass.name == name)
 
 
 def _aggregate(model, context_name, aggregate_name):
@@ -96,14 +104,35 @@ with description("Ddd.render at model fidelity"):
         with it("should keep the integrations from the map"):
             _keeps_integrations("typescript")
 
+    with context("written into a python class model"):
+        with it("should give each class the modules of its context and aggregate as its module path"):
+            expect(_written_class("CustomerProfile").module_path).to(equal(["Customer | custom", "Customer Profile"]))
+
+        with it("should leave the class's own intent free of its place"):
+            expect("Customer Profile" in _written_class("CustomerProfile").intent).to(equal(False))
+
+        with it("should give the root a dependency for each integration, with its facts as details"):
+            arcs = [item for item in _written_class("Subscription").dependencies if item.details]
+            expect([(item.target, item.label, item.details["direction"]) for item in arcs]).to(
+                equal([("CustomerProfile", "Customer/Supplier", "downstream")])
+            )
+
+        with it("should leave the root's intent free of its integrations"):
+            expect("Integrations" in _written_class("Subscription").intent).to(equal(False))
+
     with context("to python"):
         with it("should write each class's stereotypes as decorators"):
             code, _model = _round_trip("python")
             expect(code).to(contain("@aggregate_root\n@entity\nclass CustomerProfile"))
 
-        with it("should keep only the class's place in its doc comment"):
+        with it("should name the class's module path in its doc comment"):
             code, _model = _round_trip("python")
-            expect(code).to(contain('class CustomerProfile:\n    """Customer | custom · Customer Profile"""'))
+            expect(code).to(contain('class CustomerProfile:\n    """Module: Customer | custom · Customer Profile"""'))
+
+        with it("should keep each integration's direction and what it crosses"):
+            _code, model = _round_trip("python")
+            integration = _aggregate(model, "Service", "Subscription").integrations[0]
+            expect((integration.direction, integration.crosses)).to(equal(("downstream", "customer identity")))
 
         with it("should write generics python can read back"):
             code, _model = _round_trip("python")

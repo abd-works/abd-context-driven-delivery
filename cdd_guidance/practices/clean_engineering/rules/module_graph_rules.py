@@ -4,21 +4,21 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from harness.graph.practice_rule import PracticeGraphRule
+from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
     from harness.graph.rule_context import RuleCheckContext
 
 
-class NamedSeamAndConstraint(PracticeGraphRule):
+class NamedSeamAndConstraint(ProductionCodeRule):
     """A module card names the module's seam, `**Seam (terms):**`, and its constraint, what callers must or must not
     do. A folder with no card is `missing-module-context`'s to report."""
 
     slug = "named-seam-and-constraint"
     node_types = ("Module",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if not node.get_fact("has_module_context"):
             return []
         missing = [part for part, fact in (("**Seam (terms):**", "names_seam"), ("a Constraint", "names_constraint")) if not node.get_fact(fact)]
@@ -27,11 +27,14 @@ class NamedSeamAndConstraint(PracticeGraphRule):
         return [f"Module '{node.name}' card does not name {' or '.join(missing)}; say what callers use and what they must not do."]
 
 
-class PublicSeamOnly(PracticeGraphRule):
-    slug = "public-seam-only"
-    node_types = ("Module", "Package")
+class PublicSeamOnly(ProductionCodeRule):
+    """A module's card names its public seam; a package inside a module has no card and no seam of its own, so only
+    modules are judged."""
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    slug = "public-seam-only"
+    node_types = ("Module",)
+
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         found = node.get_fact("public_source_internal", "")
         if found == "heading":
             return [f"Module '{node.name}' exposes internal design in a public source file."]
@@ -47,7 +50,7 @@ def _python_class_folder(node: "Node", context: "RuleCheckContext") -> "Node | N
     return next(iter(context.targets(node, "belongsTo")), None)
 
 
-class MissingModuleContext(PracticeGraphRule):
+class MissingModuleContext(ProductionCodeRule):
     """A folder of classes needs a module card: its own, or one on a folder above it inside the project, because a
     nested folder without a card rolls up to the nearest enclosing module (`deep-module`). The project's own root card
     lists the modules; it is not a module's card."""
@@ -55,7 +58,7 @@ class MissingModuleContext(PracticeGraphRule):
     slug = "missing-module-context"
     node_types = ("OoadClass",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         folder = _python_class_folder(node, context)
         if folder is None or folder.get_fact("has_module_context", True):
             return []
@@ -77,11 +80,11 @@ class MissingModuleContext(PracticeGraphRule):
         return False
 
 
-class LanguageModulesOneSection(PracticeGraphRule):
+class LanguageModulesOneSection(ProductionCodeRule):
     slug = "language-modules-one-section"
     node_types = ("OoadClass",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         folder = _python_class_folder(node, context)
         if folder is None or not folder.get_fact("modules_heading"):
             return []
@@ -91,11 +94,11 @@ class LanguageModulesOneSection(PracticeGraphRule):
         ]
 
 
-class ModulesNotModelBlocks(PracticeGraphRule):
+class ModulesNotModelBlocks(ProductionCodeRule):
     slug = "modules-not-model-blocks"
     node_types = ("OoadClass",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         folder = _python_class_folder(node, context)
         if folder is None:
             return []

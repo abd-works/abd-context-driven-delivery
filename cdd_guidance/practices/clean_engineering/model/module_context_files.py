@@ -20,24 +20,30 @@ _CARD_NAME = "module-context.md"
 _SEAM = re.compile(r"\*\*Seam(?:\s*\(terms\))?:\*\*", re.IGNORECASE)
 # A `## Constraint` heading, or a `**Constraint:**` line: what callers must or must not do.
 _CONSTRAINT = re.compile(r"^\s*#{1,6}\s+Constraints?\b|\*\*Constraints?:\*\*", re.MULTILINE | re.IGNORECASE)
+# `*is a type of*`: an inheritance line a modules-fidelity card writes in prose.
+_IS_A = re.compile(r"\*is a type of\*", re.I)
+# `## Child : Parent`: a heading that writes a class with its base.
+_CHILD_PARENT = re.compile(r"^\s*#{1,6}\s+\S.+\s+:\s+\S", re.MULTILINE)
 
 
 class ModuleContext:
-    """The module card of one code folder."""
+    """The module card of one code folder. It reads its card once, the first time it is asked, and answers every
+    question about the card from that text."""
 
     def __init__(self, folder: Path) -> None:
         self.folder = folder
         # The folder's module card: `module-context.md` in its `.context`.
         self.path = folder / ".context" / _CARD_NAME
+        self._text: str | None = None
 
     def exists(self) -> bool:
         return self.path.is_file()
 
     def read(self) -> str:
         """The card's text; empty when the folder has no card."""
-        if not self.exists():
-            return ""
-        return self.path.read_text(encoding="utf-8")
+        if self._text is None:
+            self._text = self.path.read_text(encoding="utf-8") if self.exists() else ""
+        return self._text
 
     def has_modules_heading(self) -> bool:
         """True when the card has a `Modules` heading; the opening lines of each card already say what it is."""
@@ -50,6 +56,14 @@ class ModuleContext:
     def names_constraint(self) -> bool:
         """True when the card says what callers must or must not do: a `Constraint` heading or line."""
         return bool(_CONSTRAINT.search(self.read()))
+
+    def says_is_a_type_of(self) -> bool:
+        """True when the card writes inheritance in prose, `*is a type of*`."""
+        return bool(_IS_A.search(self.read()))
+
+    def writes_child_parent_headings(self) -> bool:
+        """True when a heading of the card writes a class with its base, `## Child : Parent`."""
+        return bool(_CHILD_PARENT.search(self.read()))
 
     def model_blocks(self) -> List[str]:
         """Model-fidelity detail written into a modules-fidelity card, one description per kind found."""

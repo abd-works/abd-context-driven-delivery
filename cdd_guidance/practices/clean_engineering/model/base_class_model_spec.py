@@ -408,13 +408,6 @@ with description("call graph lines"):
         expect(entries.callees()).to(equal(["payment.charge()"]))
         expect(entries.block()).to(equal(text.strip()))
 
-    with it("should lift flat callees into graph entries"):
-        entries = CallGraph.of_callees(["a.fetch()", "b.save()"])
-        expect(entries).to(equal([
-            CallGraphEntry(depth=1, kind="out", text="a.fetch()"),
-            CallGraphEntry(depth=2, kind="out", text="b.save()"),
-        ]))
-
 
 with description("a class's property list reconciling itself with another class's"):
     with before.each:

@@ -2,8 +2,8 @@ import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../brand'
 import type { ChatBarDraw } from './chat-bar-view'
-import { activateSession, closeSession, createSession } from './session-client'
-import { cancelClose, cancelSwitch, pickSession, toggleLeaving, toggleOpening } from './session-dialogs-client'
+import { activateSession, closeSession, createSession, pickSession } from './session-client'
+import { cancelClose, cancelSwitch, toggleLeaving, toggleOpening } from './session-dialogs-client'
 import { stageIconOf } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
@@ -39,7 +39,7 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
       {chatBar.openTickets.map(ticket => (
         <Box key={`session-row-${ticket.name}`} flexDirection="row" gap={1}>
           <Text color={BRAND.accent}>{stageIconOf(ticket.column.name)}</Text>
-          <Button key={`session-${ticket.name}`} plain onPress={() => pickSession($, chatBar, ticket)}>
+          <Button key={`session-${ticket.name}`} plain onPress={() => pickSession($, chatBar, ticket.name)}>
             <Text color={ticket.name === chatBar.sessionName ? BRAND.accent : BRAND.text}>{ticket.name}</Text>
           </Button>
         </Box>

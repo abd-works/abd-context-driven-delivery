@@ -8,6 +8,7 @@ from harness.agent_tools import agent_instructions, agent_toolset, instructions,
 from harness.installation.files import skill
 from harness.markdown.format import Format
 from harness.mcp.mcp_server import mcp
+from cdd_guidance.actions.render.render import Render
 from cdd_guidance.actions.validate.validate import Validate
 
 @agent_toolset
@@ -36,10 +37,8 @@ class Generate(GuidanceAction):
         """Validate as a tool, so its rules are injected again when it is called."""
         return self._inside(Validate).as_tool()
 
-    def _render(self):
+    def _render(self) -> Render:
         """Render action, available while generating code from another format."""
-        from cdd_guidance.actions.render.render import Render
-
         return self._inside(Render)
 
     def _earlier_renders(self) -> str:
@@ -51,7 +50,7 @@ class Generate(GuidanceAction):
 
     def _earlier_render(self, practice: PracticeGuidance) -> str:
         current = self.fidelity_of(practice)
-        wanted = Format(current.format if current is not None else practice.format).name
+        wanted = (current.format if current is not None else practice.format).name
         earlier = self._fidelity_before(practice, current) if current is not None else None
         if earlier is None or not wanted or wanted not in {Format(label).name for label in earlier.outputs}:
             return ""

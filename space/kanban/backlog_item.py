@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.installation.destination import data_field, identity, language_adapter
+from harness.installation.data_class import data_field, identity, language_adapter
 from harness.annotations.name import Name
 from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
 from harness.mcp.mcp_server import mcp
@@ -88,7 +88,9 @@ class BacklogItem(Card):
         return self._path.stem.replace("-", " ").replace("_", " ").capitalize()
 
     @property
+    @data_field(reference=True)
     def column(self) -> Column:
+        """The Backlog, sent by its name, which with the item's title is where the board shows it."""
         return self._board.column(BACKLOG_COLUMN)
 
     @property

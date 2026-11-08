@@ -18,8 +18,9 @@ Base of every guidance class; an *AgentToolSet* through `@agent_toolset`.
 
 Guidance(format)
 ------
-format: str
+format: Format
 	Invariant: an omitted format uses default_format
+	// a Format is its own name as text, made once from the spelling given and held
 default_format: str
 session: Session | None
 	// the session work_in gives a practice; none until a session works on it
@@ -48,8 +49,6 @@ current: Guidance | None
 overview, guidance, rules, templates, instructions
 	// gathered from every child
 ----
-at_stage(stage: ApproachStage): FidelityGuidance
-	// the fidelity holding that stage; raises KeyError when none does
 child(name: str, body: str): FidelityGuidance
 	-> FidelityGuidance.apply_settings
 
@@ -59,9 +58,14 @@ PracticeGuidance(format, fidelity, default_workspace_folder, formats)
 ------
 fidelities: GuidanceCollection
 	// the Fidelities section; fidelities.current is the active fidelity
-format: str
+format: Format
 	Invariant: the current fidelity's format; the practice's own only while it has no current fidelity
 	Invariant: a constructor format is the format the fidelity made current at construction works in
+	// the fidelity a constructor names is looked up once, at construction; from then on work_at takes the fidelity itself
+companion: PracticeGuidance | None
+	// the Clean Engineering practice of the set it was made with (hold_set); none for a practice made apart from any set
+set_keys: tuple[str, ...]
+	// the keys of the practices it works with in its set: the one it extends and its Clean Engineering companion
 	Invariant: an unsupported fidelity or format raises ValueError at construction
 graph: Graph | None
 	// the graph that holds this practice; a session's practices are held by the session's graph
@@ -70,10 +74,8 @@ extended: PracticeGuidance | None
 formats: dict[str, Any]
 	Invariant: keys are format names; values are adapters in {practice}/model/{format}/
 supported_formats: frozenset
-sketch_titles: tuple[str, ...]
-	// the headings that open this practice's section of a sketch, such as "stories:"
 sketch_lens: SketchLens
-	// made once from sketch_titles; the practice's sketch format reads its section of a sketch with it
+	// the headings that open this practice's section of a sketch, such as "stories:"; the practice holds the one lens its sketch format reads its section with
 SHORT_NAME: str
 	// the practice's name where there is little room, such as "CE" on a session board chip
 COLOUR: str
@@ -98,6 +100,12 @@ files(): dict[str, dict[str, list]]
 	-> FidelityGuidance.files
 output_paths(): dict[str, list[str]]
 	-> fidelities.current.output_paths
+work_at(fidelity: FidelityGuidance): FidelityGuidance
+	// makes fidelity, one of its own, current; ValueError for another practice's fidelity
+answers_to(slug: str): PracticeGuidance | FidelityGuidance | None
+	// itself for its slug, the fidelity whose slug it is, else none
+fidelity_called(name: str): FidelityGuidance | None
+	// the fidelity named by its bare name, snake or kebab case
 work_in(session_output: PracticeSessionOutput): None
 	// the practice works in that output's session; each fidelity is given its FidelitySessionOutput through FidelityGuidance.work_in
 schema_guide(): str
@@ -111,6 +119,7 @@ scoped_markdown(): str
 generate_output(): str
 	// instruction-only by default; a practice that owns generation overrides it
 render(format: str, content: Any, source: str | None, previous: str): dict
+	// the formats are made into Format objects once, in the RenderRequest the call carries
 	Interaction:
 		# formats empty: hand the call to the companion's practice
 		-> clean_engineering_companion.practice_guidance._render
@@ -134,21 +143,22 @@ FidelityGuidance(name, stage, default_format, clean_engineering)
 ------
 name: str
 stage: str
-default_format: str
+default_format: Format
 	// setting it sets format when no format has been chosen yet
 outputs: dict[str, str | list[str]]
 	// each format this fidelity writes, with its file, pattern, or folder
-default_output: str | list[str]
-format: str | None
+format: Format
 	Invariant: the format this fidelity last used, kept in the session its practice works in, else its default
-	Invariant: a Clean Engineering companion writes in the format of the fidelity it serves while that format is code
 practice_guidance: PracticeGuidance | None
 	// the nearest PracticeGuidance parent
 clean_engineering: FidelityGuidance | None
-	// the CleanEngineering fidelity named in the clean_engineering field; the companion records this fidelity in its `companion_of` field
-	Invariant: Clean Engineering's own fidelities have none
-companion_of: FidelityGuidance | None
-	// set only on a Clean Engineering companion
+	// the Clean Engineering fidelity its clean_engineering field names: that fidelity itself, of its practice's companion
+	Invariant: Clean Engineering's own fidelities have none; a practice made apart from any set has none
+companion_instructions: str
+	// the companion's instructions_in this fidelity's format while it is code, else the companion's own format
+instructions_in(format: Format): str
+	// its instructions with its template in format; instructions is instructions_in(format)
+templates_in(format: Format): str
 session_output: FidelitySessionOutput | None
 	// set when a session works on the practice
 slug: str
@@ -201,7 +211,6 @@ practice: str
 pattern: str
 shared: bool
 ----
-attribute_to(practice: str, tag: str, shared: bool): Rule
 validate(): str
 	// the instructions to check the current context against this rule
 from_bullet(text: str, fidelity: str | None): Rule
@@ -251,19 +260,18 @@ register(*practice_classes: type[PracticeGuidance])
 keys(): tuple[str, ...]
 	// PracticesNotRegistered when no package registered the practices in this process
 has(key: str): bool
-holds(practice_class: type): bool
 practices(): tuple[PracticeGuidance, ...]
 	// the shared instances
 practice(key: str): PracticeGuidance
 create(key: str): PracticeGuidance
 	Invariant: outside a session, a caller that changes a practice's fidelity or format makes its own instance here; a session makes its set once with create_all
+	// made with the practices of its set it works with (set_keys), each holding the others (hold_set)
 create_all(): list[PracticeGuidance]
 	-> PracticeGuidance.hold_set
 	// each practice holds the one it extends and the Clean Engineering practice whose fidelities accompany its own, from the same set
 practice_class(key: str): type[PracticeGuidance]
 practice_named(slug: str): PracticeGuidance | None
-toolset_ref(slug: str): str | dict | None
-	// the toolset ref a guidance action lists for a practice's or fidelity's slug, or a fidelity's bare name
+	// the shared practice that answers_to slug, for a reader that works in no session
 
 ## ActionCatalogue
 
@@ -289,7 +297,6 @@ Action(name: str, toolset_class: type)
 ------
 name: str
 toolset_class: type
-toolset_ref: str
 	// "{module}:{Class}" of the toolset
 operation: Callable
 folder: Path

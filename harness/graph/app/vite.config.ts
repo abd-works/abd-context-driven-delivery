@@ -2,6 +2,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vitest/config';
+// The app's ports, written once for this config, the web server, and the Python that reports and starts the app.
+import ports from './ports.json';
 
 const resolved = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
 
@@ -22,7 +24,7 @@ function ping(): Plugin {
           return;
         }
         const address = server.httpServer?.address();
-        const heard = typeof address === 'object' && address ? address.port : 5173;
+        const heard = typeof address === 'object' && address ? address.port : ports.app[0];
         const host = typeof address === 'object' && address ? address.address : '127.0.0.1';
         const origin = host === '::1' || host === '::' ? `http://localhost:${heard}` : `http://127.0.0.1:${heard}`;
         const body = JSON.stringify({
@@ -48,9 +50,9 @@ export default defineConfig({
   },
   server: {
     host: '::',
-    port: 5173,
+    port: ports.app[0],
     proxy: {
-      '/api': 'http://localhost:3000',
+      '/api': `http://localhost:${ports.web[0]}`,
     },
   },
 });

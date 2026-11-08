@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Iterable
 
 from harness.agent_tools.agent_tools import ToolsetReference
+from harness.annotations.annotation import annotation_kinds
 from harness.annotations.name import Name
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,8 @@ class RepositoryToolsets:
             ".retired",
         }
     )
+    # The folder that holds the guidance CDD ships: its practices, actions, agents, always-on rules and references.
+    GUIDANCE_FOLDER = "cdd_guidance"
     # The packages under these folders import by their own names (``from validate.validate import ...``). This is the one
     # list of a checkout's import folders: the installer, the hook server, the cdd server's environment (CddHome), and
     # the catalog generator all read it through ``pythonpath``; ``pyproject.toml`` repeats it, since it cannot read code.
@@ -62,15 +65,25 @@ class RepositoryToolsets:
     )
     _SKIP_FILE_NAMES = frozenset({"conftest.py"})
     _SKIP_FILE_SUFFIXES = ("_spec.py", "_test.py")
-    # The annotations install reads on members, by name, because it reads the source without importing it. An annotation is matched
-    # by its snake-case name, so its class name (``Mcp``) and its lowercase alias (``mcp``) both count.
-    ANNOTATIONS = frozenset(
-        {"skill", "command", "rules", "mcp", "hook", "hooks", "agent_tool", "agent_instructions"}
-    )
 
     def __init__(self, root: Path | str) -> None:
         self.root = Path(root).resolve()
         self.unloadable: list[ToolsetUnloadable] = []
+
+    @property
+    def agents_folder(self) -> Path:
+        """The agent definitions the repository ships, which an install copies into the IDE's agents folder."""
+        return self.root / self.GUIDANCE_FOLDER / "agents"
+
+    @property
+    def standing_rules_folder(self) -> Path:
+        """The always-on rules the repository ships, which an install writes into every IDE's rules folder."""
+        return self.root / self.GUIDANCE_FOLDER / "rules"
+
+    @property
+    def references_folder(self) -> Path:
+        """The reference documents the repository ships, which an installed file links to through its own copy."""
+        return self.root / self.GUIDANCE_FOLDER / "references"
 
     @classmethod
     def of_running_checkout(cls) -> RepositoryToolsets:
@@ -118,24 +131,27 @@ class RepositoryToolsets:
         registration the repository makes."""
         self.unloadable = []
         found: list[type] = []
-        for reference in self.collect():
+        for reference in self.references():
             try:
-                found.append(ToolsetReference(reference).toolset_class)
+                found.append(reference.toolset_class)
             # A toolset's module is the repository's own code; any failure importing it is that toolset's failure.
             except Exception as error:  # noqa: BLE001
                 logger.exception("could not load toolset %s", reference)
-                self.unloadable.append(ToolsetUnloadable(reference, error))
+                self.unloadable.append(ToolsetUnloadable(str(reference), error))
         return found
 
-    def collect(self) -> list[str]:
-        """The ``module:Class`` reference of every toolset class in the repository, each once, in folder order."""
+    def references(self) -> list[ToolsetReference]:
+        """The reference to every toolset class in the repository, each once, in folder order, read from the source
+        without importing it. A caller that needs the classes takes ``classes``; one that starts another process, such
+        as an MCP host, writes each reference as its ``module:Class`` text."""
         self.ensure_import_path()
-        found: dict[str, None] = {}
+        found: dict[str, ToolsetReference] = {}
         for py_file in self._collected_files():
-            found.update(dict.fromkeys(self._toolset_refs_in_file(py_file)))
-        return list(found)
+            for reference in self._toolset_refs_in_file(py_file):
+                found.setdefault(str(reference), reference)
+        return list(found.values())
 
-    def _toolset_refs_in_file(self, py_file: Path) -> list[str]:
+    def _toolset_refs_in_file(self, py_file: Path) -> list[ToolsetReference]:
         try:
             tree = ast.parse(py_file.read_text(encoding="utf-8"))
         except (OSError, SyntaxError, UnicodeDecodeError):
@@ -144,7 +160,7 @@ class RepositoryToolsets:
         if not module:
             return []
         return [
-            str(ToolsetReference.in_module(module, node.name))
+            ToolsetReference.in_module(module, node.name)
             for node in tree.body
             if isinstance(node, ast.ClassDef)
             and not self._is_hosted_only(node)
@@ -187,8 +203,10 @@ class RepositoryToolsets:
     def _class_is_installable(self, class_def: ast.ClassDef) -> bool:
         if any(self._annotation_id(dec) == "agent_toolset" for dec in class_def.decorator_list):
             return True
+        # A decorator is matched by its snake-case name, so a kind's class name (``Mcp``) and its alias (``mcp``) both count.
+        installing = annotation_kinds.installing_names
         return any(
-            Name(self._annotation_id(dec) or "").snake in self.ANNOTATIONS
+            Name(self._annotation_id(dec) or "").snake in installing
             for item in class_def.body
             if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
             for dec in item.decorator_list

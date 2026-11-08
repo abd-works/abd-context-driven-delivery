@@ -11,10 +11,11 @@ from typing import TYPE_CHECKING, ClassVar
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.chat.chat import Chat
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
-from harness.installation.destination import data_field, identity, language_adapter
+from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.kanban.format_choice import FormatGroup
@@ -506,6 +507,8 @@ class Help:
         self._practice = practice
         self._fidelity = fidelity
         self._stage = stage
+        # The practice as the catalog gives it pages, which names every page on the forge.
+        self._catalogued = CatalogPractice(practice)
 
     @property
     @data_field
@@ -530,8 +533,6 @@ class Help:
     def href(self) -> str:
         """Its page on the forge, as the catalog generator names it: a fidelity's own page, or its practice's page for
         a fidelity the catalog has no page for."""
-        from harness.catalog_generator.catalog_generator import CatalogPractice
-
-        catalogued = CatalogPractice(self._practice)
+        catalogued = self._catalogued
         has_page = self._fidelity is not None and self._fidelity in catalogued.fidelities
         return f"{FORGE}/{catalogued.fidelity_href(self._fidelity) if has_page else catalogued.href}"

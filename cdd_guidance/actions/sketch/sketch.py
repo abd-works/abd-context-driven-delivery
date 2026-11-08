@@ -1,7 +1,6 @@
 """Sketch a solution interactively before generating the formal artifact.
 
-Sketch is a standalone toolset. Any agent or human can invoke its tools and
-sketch_session action directly without decorating anything.
+Sketch is a standalone action. Any agent or human can call its tools and its sketch instructions directly.
 """
 from __future__ import annotations
 
@@ -21,13 +20,13 @@ _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 class Sketch(GuidanceAction):
     """Sketch a solution interactively before generating the formal artifact."""
 
-    def __init__(self, agent_dir: str = "", session=None) -> None:
-        super().__init__(session)
+    def __init__(self, agent_dir: str = "", session=None, chat=None) -> None:
+        super().__init__(session, chat)
         self._agent_dir = agent_dir
 
-    def made_for(self, session) -> Sketch:
-        """A sketch made for session that finds its template in this sketch's agent_dir."""
-        return type(self)(agent_dir=self._agent_dir, session=session)
+    def made_for(self, session, chat=None) -> Sketch:
+        """A sketch made for session and the call from chat, which finds its template in this sketch's agent_dir."""
+        return type(self)(agent_dir=self._agent_dir, session=session, chat=chat)
 
     @property
     def _sketch_name(self) -> str:
@@ -49,11 +48,12 @@ class Sketch(GuidanceAction):
 
     def _sketch_text(self, item) -> str:
         """What sketching one listed guidance asks for, read from the fidelity this sketch works at on it: its Scaffold
-        section, which is the shell's level of detail, the rules the sketch answers are held to, and its practice's
-        sketch template, which is the notation; text guidance is itself. The recipe reads the text returned."""
+        section, which is the shell's level of detail, and its practice's sketch template, which is the notation; text
+        guidance is itself. The rules the sketch answers are held to arrive once, with the generate the sketch ends with.
+        The recipe reads the text returned."""
         if isinstance(item, str):
             return item
-        parts = (item.scaffold, item.checked_rules_text(), item.sketch_template)
+        parts = (item.scaffold, item.sketch_template)
         return "\n\n".join(part.strip() for part in parts if part and part.strip())
 
     @mcp
@@ -124,7 +124,7 @@ class Sketch(GuidanceAction):
         self._work_on(guidance)
         "save_sketch the shell in the same turn it is written. After three or four grill answers, sketch the theme into that same file, save_sketch again, then review_sketch. Do not ask the next theme until that review confirms the sketch."
         "Carry forward every mistake named in review. Correct the sketch. Do not regenerate as if those mistakes never happened."
-        "Evaluate the sketch against each listed guidance's rules below as an AI check — not a graph query."
+        "Evaluate the sketch against each listed guidance's rules, which the generate instructions below give, as an AI check — not a graph query."
         self.each(self._sketch_text)
         instructions(self._grill_context().grill_with_context)
         tools(self.find_template)

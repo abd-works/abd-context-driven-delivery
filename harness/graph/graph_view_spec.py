@@ -5,7 +5,7 @@ from pathlib import Path
 _HERE = Path(__file__).resolve().parent
 
 from expects import contain, equal, expect
-from harness.installation.destination import data_of  # noqa: E402
+from harness.installation.data_class import data_of  # noqa: E402
 from mamba import before, context, description, it
 
 from harness.graph.edge import EdgeType
@@ -106,8 +106,7 @@ with description("a graph"):
                 ],
             })
             graph.restored_from(SavedGraph([], {"clean_engineering": saved}))
-            root.populate()
-            self.tree = data_of(root.serialize())
+            self.tree = data_of(graph.practice("clean_engineering").in_graph.root.serialize())
 
         with it("should parent the package on the module"):
             package = next(child for child in self.tree["children"][0]["children"] if child["name"] == "customer")
@@ -115,4 +114,4 @@ with description("a graph"):
 
         with it("should parent the class on the package"):
             package = next(child for child in self.tree["children"][0]["children"] if child["name"] == "customer")
-            expect([child["name"] for child in package["children"]]).to(equal(["Customer"]))
+            expect([child["name"] for child in package["children"] if child["type"] != "rules"]).to(equal(["Customer"]))

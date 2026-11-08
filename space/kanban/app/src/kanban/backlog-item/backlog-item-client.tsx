@@ -4,8 +4,6 @@ import type { TicketData } from '@cdd/space/kanban/ticket'
 import type { BoardPage } from '../board/board-page'
 import { EMPTY_DRAFT } from '../board/board-store'
 
-const ITEM_COLUMN = 'Backlog'
-
 export class BacklogItemClient extends BacklogItemClientGenerated {
   constructor(
     json: BacklogItemData,
@@ -15,7 +13,7 @@ export class BacklogItemClient extends BacklogItemClientGenerated {
   }
 
   get address(): string {
-    return `${ITEM_COLUMN}/${this.title}`
+    return `${this.column.name}/${this.title}`
   }
 
   select(): void {

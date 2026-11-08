@@ -87,3 +87,10 @@ The graph check did not finish for this area.
 The call was `clean-engineering-modules` with `graph: true` on `cdd_guidance/practices/stories`, `ux` and `ddd`. It started at 02:23 UTC, as the only call on the host at that time. It left an empty report, `C:\Users\jeffa\.claude\spares\spare-GRHl26\.sessions\ensure-domain-orientation-refactor\validation-reports\clean-engineering-modules-20261108T022359.md`, and then the host answered `ECONNREFUSED`. `cdd_ping` and three retries of the same call all answered `MCP server "plugin:cdd:cdd" is not connected`. `~/.cdd/server.log` ends with `WinError 64` in `harness.mcp.listening_loop`.
 
 Following `.claude/rules/mcp-fail-loud.md`, I stopped and did not run validate any other way or restart the host. No hits came back, so no finding here is marked "both".
+
+## Graph check, run after the round-5 fixes (at 8a91c49f, 2026-11-08)
+
+`validate` with `clean-engineering-model` and `graph: true` over `stories`, `ux` and `ddd` finished in about 55 seconds. Before the B10 fix, this same call hung the server until it was killed.
+- **Server during the call:** 5 of 13 pings timed out at 10 seconds, so for about 50 seconds the server answered nothing else. It recovered afterwards and did not crash. That is still a stall while the graph builds.
+- **Hits:** 706 across 18 rules, almost all single-file rules. The largest were `use-typed-signatures` (338), `keep-operations-small-focused` (92) and `limit-operation-parameters` (54). 54 hits are in `catalog-examples`, which the scanners should not read as production code.
+- **Cross-file hits:** `one-way-deps` reports a 4-module cycle through `ddd` (model, markdown and sketch) and an 11-module cycle through `stories` (model and sketch). These still need checking against the practice-registration fix; they carry into round 6.

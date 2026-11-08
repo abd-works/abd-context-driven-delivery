@@ -16,7 +16,7 @@ RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from harness.diagnostics.server_health import ServerHealth  # noqa: E402
 from harness.hooks.hook_daemon import HookDaemon  # noqa: E402
-from harness.installation.destination import data_of  # noqa: E402
+from harness.installation.data_class import data_of  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 
 
@@ -77,7 +77,7 @@ with description("server health") as self:
 
     with context("with a hook server state file whose process has gone"):
         with it("should report the hook server is not running"):
-            state = HookDaemon(self.root).state_path
+            state = HookDaemon(self.root).address_file.path
             state.parent.mkdir()
             state.write_text(json.dumps({"port": closed_port()}), encoding="utf-8")
             expect(data_of(ServerHealth(self.root).report())["is_hook_server_running"]).to(be_false)

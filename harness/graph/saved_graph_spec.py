@@ -5,13 +5,17 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from expects import be_none, equal, expect, raise_error
+from expects import be_none, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.graph.graph import Graph
-from harness.installation.destination import data_of
+from harness.graph.spec_support import GraphsMade
+from harness.installation.data_class import data_of
 from harness.graph.saved_graph import SavedGraph, SavedGraphFile, SavedGraphOutdated
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's overlays
+from harness.graph.pattern_overlays import PatternOverlays
+from harness.guidance.practice_catalogue import PracticeCatalogue
 
 _CART = "export class Cart {\n  total() { return 1; }\n  place(a, b, c, d, e, f) { return a; }\n}\n"
 
@@ -41,7 +45,8 @@ with description("a saved graph"):
         self.graph = Graph()
         self.graph.load_files(str(self.root), ["clean_engineering"], ["src"])
         self.text = self.graph.saved().text
-        self.restored = SavedGraph.from_text(self.text).restored_graph()
+        self.restored = Graph()
+        self.restored.restored_from(SavedGraph.from_text(self.text))
 
     with after.all:
         shutil.rmtree(self.root, ignore_errors=True)
@@ -91,3 +96,25 @@ with description("a saved graph"):
             saved.parent.mkdir(parents=True)
             saved.write_text(json.dumps(self.old), encoding="utf-8")
             expect(SavedGraphFile(self.root / "old", lambda message: None).read()).to(be_none)
+
+
+
+
+with description("a saved graph asked which rules a practice checks"):
+    with before.all:
+        self.practice = PracticeCatalogue.create("ddd")
+        saved = SavedGraph(PatternOverlays(["lern_domain_driven"]).paths, {})
+        with GraphsMade() as self.graphs:
+            self.checks = saved.checks_of(self.practice)
+
+    with it("should answer the practice's own rules"):
+        expect(list(self.checks)).to(contain(*self.practice.graph_checks()))
+
+    with it("should answer the rules the overlays it was saved with add"):
+        expect(list(self.checks)).to(contain("node-repository-parses-on-read"))
+
+    with it("should read no graph back to answer"):
+        expect(self.graphs.made).to(equal(0))
+
+    with it("should leave the practice it was asked about out of any graph"):
+        expect(self.practice.graph).to(be_none)

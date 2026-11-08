@@ -23,25 +23,14 @@ _TYPE_FIELDS = frozenset({"is", "fidelity", "name", "path"})
 
 class PracticeSchema:
     """One practice's schema with the applied patterns' schemas on top: which rules each node type carries, which type
-    of the extended practice it is, and the fidelities that create it."""
-
-    # Each practice holds its own schemas, one per set of overlays, so a schema reads only the practice it was made for,
-    # never another session's practice of the same class.
-    _HELD_AS = "_practice_schemas"
+    of the extended practice it is, and the fidelities that create it. A practice's part of a graph makes one for each
+    set of overlays and keeps it (``practice.in_graph.schema_with(overlays)``), so a schema reads only the practice it
+    was made for, never another session's practice of the same class."""
 
     def __init__(self, practice: PracticeGuidance, overlays: tuple[GraphOverlay, ...] = ()) -> None:
         self.practice = practice
         self.key = practice.key
         self.overlays = tuple(overlays)
-
-    @classmethod
-    def load(cls, practice: PracticeGuidance, overlays: tuple[GraphOverlay, ...] = ()) -> PracticeSchema:
-        """The schema of practice with the patterns' overlays applied, made once and held by practice itself."""
-        held: dict[tuple[GraphOverlay, ...], PracticeSchema] = vars(practice).setdefault(cls._HELD_AS, {})
-        key = tuple(overlays)
-        if key not in held:
-            held[key] = cls(practice, key)
-        return held[key]
 
     @cached_property
     def types(self) -> frozenset[str]:
@@ -64,15 +53,21 @@ class PracticeSchema:
 
     @cached_property
     def _extended_schema(self) -> PracticeSchema:
-        return PracticeSchema.load(self.practice.extended, self.overlays)
+        return self._schema_of(self.practice.extended, self.overlays)
 
     @cached_property
     def _without_overlays(self) -> PracticeSchema:
-        return self if not self.overlays else PracticeSchema.load(self.practice)
+        return self if not self.overlays else self._schema_of(self.practice, ())
 
     @cached_property
     def _each_overlay(self) -> list[tuple[GraphOverlay, PracticeSchema]]:
-        return [(overlay, PracticeSchema.load(self.practice, (overlay,))) for overlay in self.overlays]
+        return [(overlay, self._schema_of(self.practice, (overlay,))) for overlay in self.overlays]
+
+    def _schema_of(self, practice: PracticeGuidance, overlays: tuple[GraphOverlay, ...]) -> PracticeSchema:
+        """practice's schema with overlays, as its part of the graph keeps it; one of its own for a practice no graph
+        holds."""
+        part = practice.in_graph
+        return part.schema_with(overlays) if part is not None else PracticeSchema(practice, overlays)
 
     def slugs_for(self, node_type: str) -> tuple[str, ...]:
         """The rule slugs a node of this type carries, with those of each type its practice says it also carries."""

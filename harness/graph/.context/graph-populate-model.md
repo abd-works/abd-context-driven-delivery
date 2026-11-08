@@ -1,6 +1,6 @@
 # Graph
 
-`Graph` reads a working copy into the practices it holds: the `PracticeGuidance` objects it is given, which a session gives from its own practices and a graph no session holds makes with `PracticeCatalogue.create_all`. Each practice holds the graph (`practice.graph`), and the graph keeps every practice's nodes and edges itself, indexed by the practice. The graph names no practice: each practice's `PracticeGuidance` class says what the graph reads from it, and each pattern is a *PracticeGuidance* that makes its `GraphOverlay` once and keeps it as `graph_overlay`; the graph holds the pattern objects its overlays name, which *PatternOverlays* makes once per process, and the graph asks for them when its overlays are set, so the practices depend on the graph and never the other way round.
+`Graph` reads a working copy into the practices it holds: the `PracticeGuidance` objects it is given, which a session gives from its own practices and a graph no session holds makes with `PracticeCatalogue.create_all`. Each practice holds the graph (`practice.graph`), and the graph keeps every practice's nodes and edges itself, indexed by the practice. The graph names no practice: each practice's `PracticeGuidance` class says what the graph reads from it, and each pattern is a *PracticeGuidance* that makes its `GraphOverlay` once and keeps it as `graph_overlay`; the graph holds one *PatternOverlays* (`graph.applied_patterns`), which makes each pattern its overlays name once, when its overlays are set, so the practices depend on the graph and never the other way round.
 
 A practice reader parses its files with the practice's own model and adds each parsed object (a class, an operation, a story, a spec's observation) to its practice in the graph as the node itself (`practice.in_graph.add(node, ...)`), so a rule reads its measurements from the same object the explorer shows. A node with no parsed object behind it, such as a story's example or a LERN tier file, is a plain `Node` made with `practice.in_graph.add_named`. Edges are recorded with `Graph.link`, on the parent's practice; an edge's place under its parent in the explorer tree comes from `EDGE_ORDER`.
 
@@ -56,8 +56,10 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 + PracticeNodes.holds(node_id): bool
 + PracticeNodes.schema: PracticeSchema
 	// the practice's schema with the graph's overlays applied
-+ PracticeNodes.overlay_checks: dict
-	// each applied overlay's rules_for(practice.key)
++ PracticeNodes.schema_with(overlays): PracticeSchema
+	// made the first time and kept here
++ PracticeNodes.checks: dict
+	// graph.applied_patterns.checks_of(practice): the practice's graph_checks, then each applied overlay's rules_for(practice)
 + PracticeNodes.rule_labels: list[str]
 	// practice.NodeType.slug, with the owning pattern in front
 + PracticeNodes.add(node, node_id, file, start_line, end_line): Node
@@ -95,7 +97,7 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 	// the practice of that class the last load reads; an overlay asks for the practices it adds to this way
 	// the applied overlays' pattern names
 + sync_schema_edges(): None
-	// -> SchemaEdges(graph).sync(), unless a working copy loaded this graph (syncs_schema_edges is false) or a batch holds it
+	// -> the graph's one SchemaEdges.sync(), unless a working copy loaded this graph (syncs_schema_edges is false) or a batch holds it
 + schema_sync_held(): contextmanager
 	// hold schema-edge rebuilds until a batch of links is done, then rebuild once
 + set_overlays(overlays): AppliedOverlays
@@ -334,7 +336,7 @@ What one practice gives the graph is declared on its own `PracticeGuidance` clas
 + own_graph_checks(): dict[str, PracticeGraphRule]
 	// -> rules_in(f"{package}.rules"): the module's BY_SLUG, else its RULES
 
-`PracticeGuidance.checks()` adds each active overlay's `rules_for(practice)` (through `practice.in_graph.overlay_checks`) to the practice's own; `node.rules` keeps those whose `node_types` hold the node's type, its file language's, or the Clean Engineering type a pattern's schema anchors it to.
+`PracticeGuidance.checks()` is its part of the graph's `checks`, which adds each active overlay's `rules_for(practice)` to the practice's own (`PatternOverlays.checks_of`); `node.rules` keeps those whose `node_types` hold the node's type, its file language's, or the Clean Engineering type a pattern's schema anchors it to.
 
 ## GraphOverlay
 

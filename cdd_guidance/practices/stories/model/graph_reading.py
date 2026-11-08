@@ -7,12 +7,9 @@ from __future__ import annotations
 import re
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from harness.graph.skipped_folders import scanned_files
-
-if TYPE_CHECKING:
-    from cdd_guidance.practices.stories.stories import Stories
+from harness.guidance.guidance import PracticeGuidance
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 _FUNCTION_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b")
@@ -33,7 +30,7 @@ class StoriesReading:
     """One read of the Stories practice's working copy: the story tests under its root, through the TypeScript format
     Stories holds, or the story maps there when there are none; with edited files, only what they touch."""
 
-    def __init__(self, practice: Stories) -> None:
+    def __init__(self, practice: PracticeGuidance) -> None:
         self.practice = practice
         self.graph = practice.graph
         self.root = Path(practice.in_graph.source_root)
@@ -83,7 +80,7 @@ class StoryLinks:
     uses the modules those operations sit in, and an example demonstrates the classes it names and retrieves the
     properties it reads. Each is read from the text of the files the story map Stories recorded was read from."""
 
-    def __init__(self, stories: Stories, clean) -> None:
+    def __init__(self, stories: PracticeGuidance, clean: PracticeGuidance) -> None:
         self.stories = stories
         self.clean = clean
         self.graph = stories.graph

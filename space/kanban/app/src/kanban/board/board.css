@@ -304,7 +304,6 @@ ul.help-overview, ul.help-guidance { padding-left: 18px; }
 .fact-name { color: var(--muted); }
 .fact-value { font-weight: 600; overflow-wrap: anywhere; }
 .dialog-option { display: flex; align-items: center; gap: 10px; min-height: 28px; color: var(--text); }
-.dialog-option.is-off { color: var(--muted); }
 .dialog-option input { width: 16px; height: 16px; accent-color: #E5531A; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .roots-dialog { width: 600px; }

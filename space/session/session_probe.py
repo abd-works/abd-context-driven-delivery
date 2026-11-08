@@ -52,9 +52,9 @@ class SessionProbe:
         transcript = session.session_path / "chats" / "guidance-probe.md"
         transcript.parent.mkdir(parents=True, exist_ok=True)
         transcript.write_text("guidance diagnostics probe\n", encoding="utf-8")
-        session.chat = ChatPointer("guidance-probe", transcript, "1")
-        Generate(session).generate(["bdd"])
-        Validate(session).validate(["bdd"])
+        chat = ChatPointer("guidance-probe", transcript, "1")
+        Generate(session, chat).generate(["bdd"])
+        Validate(session, chat).validate(["bdd"])
         return session, transcript
 
     def _report(self, session, transcript: Path) -> dict[str, Any]:
@@ -78,7 +78,7 @@ class SessionProbe:
         return log.read_text(encoding="utf-8") if log.is_file() else ""
 
     def _marks_loops(self, session) -> bool:
-        session.log.next_loop()
-        session.log.next_loop()
+        session.log.by(None).next_loop()
+        session.log.by(None).next_loop()
         text = self._log_text(session)
         return "--- 1" in text and "--- 2" in text

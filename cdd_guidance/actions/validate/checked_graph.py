@@ -8,7 +8,7 @@ from typing import Any
 
 from harness.graph.saved_graph import SavedGraph
 from harness.graph.violation import Violation
-from harness.installation.destination import data_of
+from harness.installation.data_class import data_of
 
 from cdd_guidance.actions.validate.report_files import ReportFiles
 from cdd_guidance.actions.validate.graph_json_reader import violations_from_graph_json_files
@@ -42,7 +42,8 @@ class CheckedGraph:
         self.unchecked_files = self._other_format_files()
         # Read now, so a path that is not there is refused before the call claims any report file.
         self.prefixes = self._prefixes(edited)
-        self._built: SavedGraph | None = None
+        # The saved graph this call checks: the one it built from the files it names, or the session's saved graph.
+        self._checked: SavedGraph | None = None
         self.files: list[Path] = []
         self._read_violations: list[Violation] | None = None
 
@@ -56,8 +57,8 @@ class CheckedGraph:
         """The listed practices' violations in the files this call checks: from the graph it built, else from the graph
         files it was named."""
         keys = [fidelity.practice_guidance.key for fidelity in self._fidelities]
-        if self._built is not None:
-            found = self._built.violations(keys)
+        if self._checked is not None:
+            found = self._checked.violations(keys)
         else:
             found = [violation for violation in self._named_violations() if not keys or violation.practice in keys]
         if self.prefixes:
@@ -70,8 +71,8 @@ class CheckedGraph:
         merged into one node list in the shape ``graph.return_nodes`` answers with."""
         if destination in self.files or not self.files:
             return
-        if self._built is not None:
-            destination.write_text(self._built.text, encoding="utf-8")
+        if self._checked is not None:
+            destination.write_text(self._checked.text, encoding="utf-8")
         elif len(self.files) == 1:
             destination.write_bytes(self.files[0].read_bytes())
         else:
@@ -103,9 +104,14 @@ class CheckedGraph:
         if self.prefixes and self._named in (None, True) and self._fidelities:
             return [self._built_at(reports.graph_file())]
         if self._named is True:
-            saved = self.session.work_root / ".context" / "graph.json"
-            return [saved] if saved.is_file() else []
+            return self._session_saved()
         return self._named_files()
+
+    def _session_saved(self) -> list[Path]:
+        """The session's saved graph, read from the file its graph saves in; none when nothing is saved there."""
+        saved_file = self.session.graph.saved_file
+        self._checked = saved_file.read()
+        return [saved_file.path] if self._checked is not None else []
 
     def _named_files(self) -> list[Path]:
         """The graph files the call names: one path, or several; none for true or nothing."""
@@ -124,9 +130,9 @@ class CheckedGraph:
         clean engineering classes); the report keeps only the listed guidance's practice."""
         graph = self.session.graph
         graph.refresh(self.prefixes)
-        self._built = graph.saved(self.prefixes)
+        self._checked = graph.saved(self.prefixes)
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(self._built.text, encoding="utf-8")
+        destination.write_text(self._checked.text, encoding="utf-8")
         return destination
 
     def _prefixes(self, edited: list[str] | None) -> list[str]:

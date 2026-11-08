@@ -24,6 +24,8 @@ _INSTRUCTIONS_FILE = Path(__file__).parent / "SESSION-LOG.md"
 # line, so they wait in the session's folder rather than in either process.
 _INJECTED_RULES_FILE = "injected-rules.txt"
 _TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+# The verb of the line a tool call writes first, naming the tool: every line that call writes follows it.
+_TOOL_VERB = "tool"
 _LOOP_MARKER = re.compile(r"---\s+(\d+)(?:\s|$)")
 # The arguments of a tool call that name a file or folder the call worked on.
 _TOOL_INPUT_PATH_KEYS = ("path", "file_path", "target_directory", "working_directory", "transcript_path", "agent_transcript_path")
@@ -55,6 +57,24 @@ class LogTimestamp:
 
     def __str__(self) -> str:
         return self.moment.strftime(_TIMESTAMP_FORMAT)
+
+
+class HookLog:
+    """A log a hook appends to while a session is open, such as ``dispatch.debug`` or the prompt log, in the ``logs``
+    folder of the session's folder: the one place that writes such a log, so its entries are appended one way."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = Path(path)
+
+    def append(self, text: str) -> None:
+        """Append text, an entry that carries its own time, such as a prompt log entry under its stamped header."""
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("a", encoding="utf-8") as log:
+            log.write(text if text.endswith("\n") else f"{text}\n")
+
+    def stamped(self, line: str) -> None:
+        """Append line stamped with the time it was written."""
+        self.append(f"{LogTimestamp.now()} {line}")
 
 
 class LogEntry:
@@ -90,6 +110,12 @@ class LogEntry:
         """The stage a move or a mark names: the first word after its verb."""
         words = self.words
         return words[0] if words else ""
+
+    @property
+    def tool_called(self) -> str:
+        """The tool a ``tool …`` line records a call of, such as ``generate.generate``; empty for any other line."""
+        words = self.words
+        return words[0] if self.verb == _TOOL_VERB and words else ""
 
     @property
     def loop_number(self) -> int | None:
@@ -174,15 +200,18 @@ class InjectedRules:
 class SessionLog:
     """The log of one session: ``session.log``, one timestamped line per action, tool call, note, and loop marker, each
     ending with a pointer to the chat that caused it, and ``session.err``, the full trace of each failure a log line
-    points at. A session without a folder has a log that writes nothing."""
+    points at. A session without a folder has a log that writes nothing. A session is one object for every call made
+    in it, from any chat, so a chat writes its lines through ``by(chat)``, which points each of them at that chat."""
 
     def __init__(self, session: Session) -> None:
         self._session = session
-        # A chat named for the next log line only, ahead of the chat of the tool call being served.
-        self._chat: ChatPointer | None = None
         # The rules a hook gave the agent since the last line, which the next line names. The file it keeps them in is
         # shared with the hook server, so it is read on each ask.
         self.injected_rules = InjectedRules(self)
+
+    @property
+    def session(self) -> Session:
+        return self._session
 
     @property
     def path(self) -> Path | None:
@@ -216,78 +245,12 @@ class SessionLog:
         with self.path.open("a", encoding="utf-8") as handle:
             handle.write(f"{LogTimestamp.now()} {line}\n")
 
-    def note_chat(self, chat: ChatPointer) -> None:
-        """Point the next log line at chat, in place of the chat of the tool call the session was opened for."""
-        self._chat = chat
+    def by(self, chat: ChatPointer | None) -> ChatLog:
+        """The lines chat writes in this log, each pointing at it; ``no-chat`` when no chat is known, such as for work
+        run in process."""
+        return ChatLog(self, chat)
 
-    def line(self, line: str) -> None:
-        """Append line with the noted chat's pointer, such as a practice's validate line."""
-        if self.path is None:
-            return
-        self.record(f"{line} {self._line_chat()}")
-        self.injected_rules.clear()
-
-    def validation(self, practice: PracticeSessionOutput, violations: list[str]) -> None:
-        """Log a validate of practice at its working fidelity, pointing at this session's chat, with each violation's
-        synopsis; no violations is a validate that passed."""
-        detail = " ".join(violations)
-        self.line(f"validate {type(practice.guidance).__name__} {practice.working_fidelity} {detail}".rstrip())
-
-    def action(self, action: str, paths: list[Path]) -> None:
-        """Log action with the paths it worked on and what the session's opened practices were working at."""
-        if self.path is None:
-            return
-        self.record(self._action_line(action, paths))
-        self.injected_rules.clear()
-
-    def guidance_action(self, action: str) -> None:
-        """Log a guidance action on the practices the session has opened, with the workpath and each practice's folders
-        as the paths it worked on."""
-        workpath = self._session.workpath
-        work = [Path(workpath).resolve()] if workpath is not None else []
-        folders = [practice.folder for practice in self._session.opened_practices]
-        self.action(action, list(dict.fromkeys([*work, *folders])))
-
-    def tool(self, tool_name: str, tool_input: dict | None = None) -> None:
-        """Append a ``tool …`` line for a tool call, with the paths its arguments name."""
-        name = (tool_name or "").strip()
-        if self.path is None or not name:
-            return
-        parts = ["tool", name]
-        paths = self._paths_from_tool_input(tool_input or {})
-        if paths:
-            parts.append(", ".join(str(path) for path in paths))
-        rules = self.injected_rules.text
-        if rules:
-            parts.append(rules)
-        # A tool line names its chat only when one is known; most tool calls come from a chat the server can name.
-        chat = self._line_chat()
-        if not chat.is_missing:
-            parts.append(str(chat))
-        self.record(" ".join(parts))
-        self.injected_rules.clear()
-
-    def note(self, message: str, paths: list[Path] | None = None) -> None:
-        """Record a correction or decision in the current loop."""
-        text = (message or "").strip()
-        if self.path is None or not text:
-            return
-        parts = ["note", text]
-        if paths:
-            parts.append(", ".join(str(path) for path in paths))
-        parts.append(str(self._line_chat()))
-        self.record(" ".join(parts))
-
-    def failure(self, failure: BaseException, *, tool: str = "") -> None:
-        """Append the full trace of failure to session.err and a line pointing at it to session.log."""
-        if self.path is None:
-            return
-        line_number = self._append_trace(failure, tool)
-        parts = ["error", *([tool.strip()] if tool.strip() else []), str(self.error_path), str(line_number)]
-        parts.append(str(self._line_chat()))
-        self.record(" ".join(parts))
-
-    def _append_trace(self, failure: BaseException, tool: str) -> int:
+    def append_trace(self, failure: BaseException, tool: str) -> int:
         """Append failure's trace to session.err; the line its header is on."""
         err = self.error_path
         err.parent.mkdir(parents=True, exist_ok=True)
@@ -313,12 +276,6 @@ class SessionLog:
         if self.path is not None and self.last_loop_number < 1:
             self.record("--- 1")
 
-    def next_loop(self) -> Loop:
-        """Mark the next loop, one past the highest marked, pointing at the noted chat or the chat being served."""
-        number = self.last_loop_number + 1
-        self.record(f"--- {number} {self._line_chat()}")
-        return self.loop_at(number)
-
     def loop_at(self, number: int) -> Loop:
         """Loop number with its lines read from session.log; no lines when the log has not marked it."""
         return Loop(number, self._lines_of_loop(number))
@@ -337,10 +294,6 @@ class SessionLog:
         """The highest marked loop that has lines; 0 when none has."""
         return next((number for number in range(self.last_loop_number, 0, -1) if self._lines_of_loop(number)), 0)
 
-    def mark_loop(self) -> int:
-        """Mark the next loop and answer its number."""
-        return self.next_loop().number
-
     def read_loop(self, number: int | None = None) -> str:
         """Loop number, the latest with lines when none is named, with each line's chat transcript put under it."""
         loop_number = self.latest_loop_with_entries if number is None else number
@@ -351,17 +304,8 @@ class SessionLog:
             raise LoopNotFoundError(f"loop {loop_number} not found (missing --- {loop_number} in session.log?)")
         return f"# Loop {loop_number} ({self._session.name})\n\n" + opened.expanded_text()
 
-    def append_note(self, note: str, loop: int | None = None, paths: list[str] | None = None) -> str:
-        """Append note to loop, the latest with lines when none is named, with the paths it names."""
-        text = (note or "").strip()
-        if not text:
-            return "nothing appended: the note is empty"
-        loop_number = self._loop_to_append_to(loop)
-        body = text if text.lower().startswith(f"loop {loop_number}") else f"loop {loop_number}: {text}"
-        self.note(body, [Path(item) for item in (paths or []) if str(item).strip()] or None)
-        return f"appended note to {self.path or LOG_FILE} (loop {loop_number})"
-
-    def _loop_to_append_to(self, loop: int | None) -> int:
+    def loop_to_note(self, loop: int | None) -> int:
+        """The loop a note goes in: loop, which the log must have marked, else the latest with lines, else the latest."""
         if loop is not None:
             if loop < 1 or self.last_loop_number < loop:
                 raise LoopNotFoundError(f"loop {loop} not found in session.log (no --- {loop} marker)")
@@ -371,27 +315,8 @@ class SessionLog:
             raise LoopNotFoundError("no loop in session.log; run mark-loop first")
         return chosen
 
-    def _line_chat(self) -> ChatPointer:
-        """The chat the next log line points at: one noted for it, else the chat of the call the session was opened
-        for, else ``no-chat``. A noted chat is used once."""
-        chat = self._chat or self._session.chat or NO_CHAT
-        self._chat = None
-        return chat
-
-    def _action_line(self, action: str, paths: list[Path]) -> str:
-        opened = self._session.opened_practices
-        parts = (
-            action,
-            ", ".join(str(path) for path in paths),
-            ", ".join(entry.name for entry in opened),
-            ", ".join(entry.working_fidelity for entry in opened if entry.working_fidelity),
-            ", ".join(entry.working_format for entry in opened if entry.working_format),
-            self.injected_rules.text,
-            str(self._line_chat()),
-        )
-        return " ".join(part for part in parts if part)
-
-    def _paths_from_tool_input(self, tool_input: dict) -> list[Path]:
+    def paths_named_by(self, tool_input: dict) -> list[Path]:
+        """The files and folders the arguments of a tool call name, each once."""
         raw_paths = tool_input.get("paths")
         listed = raw_paths if isinstance(raw_paths, list) else []
         tokens = [str(tool_input.get(key) or "").strip() for key in _TOOL_INPUT_PATH_KEYS] + [str(item).strip() for item in listed]
@@ -402,3 +327,113 @@ class SessionLog:
         session's files go."""
         guide = _INSTRUCTIONS_FILE.read_text(encoding="utf-8").strip()
         return f"{guide}\n\nLog file: {self.path or LOG_FILE}. Errors: {self.error_path or ERROR_FILE}."
+
+
+class ChatLog:
+    """The lines one chat writes in a session's log: each action, tool call, note, failure, and loop marker of a call
+    from that chat, each ending with its pointer, so ``session.read_loop`` can put that chat's words back under the
+    line. One session serves calls from many chats at once, so the chat is held here, by what one call writes, and
+    never on the session."""
+
+    def __init__(self, log: SessionLog, chat: ChatPointer | None) -> None:
+        self._log = log
+        self._chat = chat or NO_CHAT
+
+    @property
+    def chat(self) -> ChatPointer:
+        return self._chat
+
+    def line(self, line: str) -> None:
+        """Append line with this chat's pointer, such as a practice's validate line."""
+        if self._log.path is None:
+            return
+        self._log.record(f"{line} {self._chat}")
+        self._log.injected_rules.clear()
+
+    def validation(self, practice: PracticeSessionOutput, violations: list[str]) -> None:
+        """Log a validate of practice at its working fidelity, with each violation's synopsis; no violations is a
+        validate that passed."""
+        detail = " ".join(violations)
+        self.line(f"validate {type(practice.guidance).__name__} {practice.working_fidelity} {detail}".rstrip())
+
+    def action(self, action: str, paths: list[Path], practices: list[PracticeSessionOutput] | None = None) -> None:
+        """Log action with the paths it worked on and what each practice it worked on was working at."""
+        if self._log.path is None:
+            return
+        worked_on = list(practices or [])
+        parts = (
+            action,
+            ", ".join(str(path) for path in paths),
+            ", ".join(entry.name for entry in worked_on),
+            ", ".join(entry.working_fidelity for entry in worked_on if entry.working_fidelity),
+            ", ".join(entry.working_format for entry in worked_on if entry.working_format),
+            self._log.injected_rules.text,
+            str(self._chat),
+        )
+        self._log.record(" ".join(part for part in parts if part))
+        self._log.injected_rules.clear()
+
+    def guidance_action(self, action: str, practices: list[PracticeSessionOutput]) -> None:
+        """Log a guidance action on practices, with the session's workpath and each practice's folder as the paths it
+        worked on."""
+        workpath = self._log.session.workpath
+        work = [Path(workpath).resolve()] if workpath is not None else []
+        folders = [practice.folder for practice in practices]
+        self.action(action, list(dict.fromkeys([*work, *folders])), practices)
+
+    def tool(self, tool_name: str, tool_input: dict | None = None) -> None:
+        """Append a ``tool …`` line for a tool call, with the paths its arguments name."""
+        name = (tool_name or "").strip()
+        if self._log.path is None or not name:
+            return
+        parts = [_TOOL_VERB, name]
+        paths = self._log.paths_named_by(tool_input or {})
+        if paths:
+            parts.append(", ".join(str(path) for path in paths))
+        rules = self._log.injected_rules.text
+        if rules:
+            parts.append(rules)
+        # A tool line names its chat only when one is known; most tool calls come from a chat the server can name.
+        if not self._chat.is_missing:
+            parts.append(str(self._chat))
+        self._log.record(" ".join(parts))
+        self._log.injected_rules.clear()
+
+    def note(self, message: str, paths: list[Path] | None = None) -> None:
+        """Record a correction or decision in the current loop."""
+        text = (message or "").strip()
+        if self._log.path is None or not text:
+            return
+        parts = ["note", text]
+        if paths:
+            parts.append(", ".join(str(path) for path in paths))
+        parts.append(str(self._chat))
+        self._log.record(" ".join(parts))
+
+    def append_note(self, note: str, loop: int | None = None, paths: list[str] | None = None) -> str:
+        """Append note to loop, the latest with lines when none is named, with the paths it names."""
+        text = (note or "").strip()
+        if not text:
+            return "nothing appended: the note is empty"
+        loop_number = self._log.loop_to_note(loop)
+        body = text if text.lower().startswith(f"loop {loop_number}") else f"loop {loop_number}: {text}"
+        self.note(body, [Path(item) for item in (paths or []) if str(item).strip()] or None)
+        return f"appended note to {self._log.path or LOG_FILE} (loop {loop_number})"
+
+    def failure(self, failure: BaseException, *, tool: str = "") -> None:
+        """Append the full trace of failure to session.err and a line pointing at it to session.log."""
+        if self._log.path is None:
+            return
+        line_number = self._log.append_trace(failure, tool)
+        named = [tool.strip()] if tool.strip() else []
+        self._log.record(" ".join(["error", *named, str(self._log.error_path), str(line_number), str(self._chat)]))
+
+    def next_loop(self) -> Loop:
+        """Mark the next loop, one past the highest marked, pointing at this chat."""
+        number = self._log.last_loop_number + 1
+        self._log.record(f"--- {number} {self._chat}")
+        return self._log.loop_at(number)
+
+    def mark_loop(self) -> int:
+        """Mark the next loop and answer its number."""
+        return self.next_loop().number

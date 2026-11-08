@@ -23,13 +23,13 @@ Load the umbrella skill for each selected lens to establish shared vocabulary an
 - `clean-engineering-code` for production modules, real collaborator wiring, clean code practices, and maintained public module interfaces.
 - `bdd-development` for driving production code through red-green-refactor one test signature at a time until all tests pass.
 
-Run the `generate` action skill for each practice. When complete run the `get_fix_violation_instructions` for each practice and fix any returned violations.
+Run the `actions-generate` skill (the Generate action) for each practice. When it is complete, run the `actions-satisfy` skill for each practice: it validates the artifacts and applies the fixes the validate report names.
 
 ## Working Method
 
 Evaluate the specification, existing codebase, runtime behavior, and tests directly. Maintain a question-and-answer log with evidence, decisions, affected files, and test results.
 
-**For sketching or grilling:** Defer to the `Sketch` skill to run the grill-sketch-confirm cycle when an implementation uncertainty must be resolved before changing files. When the sketch is confirmed, return here and write production code.
+**For sketching or grilling:** Run the `actions-sketch` skill (the Sketch action) to run the grill-sketch-confirm cycle when an implementation uncertainty must be resolved before changing files. When the sketch is confirmed, return here and write production code.
 
 Execute relevant automated tests and validation commands after each small behavior slice and across the completed scope, verifying that code quality and behavior match specifications. Maintain one-way module dependencies, public module interfaces, domain language, scenario traceability, UI behavior, and test hierarchies. Completion requires working production behavior, zero remaining test signatures in scope, passing test suites, and no silent placeholder paths.
 

@@ -75,7 +75,7 @@ class ServiceIsHomeless(PracticeGraphRule):
     node_types = ("DomainService",)
 
     def check(self, node, context) -> list[str]:
-        if not node.name.endswith("Service"):
+        if not node.get_fact("named_for_its_kind", False):
             return []
         for name in node.get_fact("delegating_operations", []):
             return [
@@ -89,7 +89,7 @@ class RepositoryIsCollectionLifecycle(PracticeGraphRule):
     node_types = ("Repository",)
 
     def check(self, node, context) -> list[str]:
-        if not node.name.endswith("Repository") or not node.has_fact("operation_shapes"):
+        if not node.get_fact("named_for_its_kind", False) or not node.has_fact("operation_shapes"):
             return []
         if node.get_fact("lifecycle_operations", []):
             return []

@@ -4,20 +4,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from harness.graph.practice_rule import PracticeGraphRule
+from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
     from harness.graph.rule_context import RuleCheckContext
 
 
-class NoPrototypeSwapping(PracticeGraphRule):
+class NoPrototypeSwapping(ProductionCodeRule):
     """Checked on the whole class: private helpers that do the swap are not graph operations."""
 
     slug = "no-prototype-swapping"
     node_types = ("OoadClass",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         swap = node.get_fact("prototype_swap") or {}
         if not swap:
             return []

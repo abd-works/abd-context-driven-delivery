@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import is_interface_name
-from cdd_guidance.practices.clean_engineering.model.class_stereotypes import pascal_case_decorator
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import DocumentedIntent, pascal_case_decorator
 from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
 from cdd_guidance.practices.clean_engineering.model.code_class_model import (
     BraceCleanEngineeringModel,
@@ -53,7 +53,7 @@ class TypeScriptClass(CodeClass):
         return ["/**", *notes, " */"] if notes else []
 
     def doc_intent(self) -> str:
-        return self.intent
+        return DocumentedIntent.of(self, marked=False).text()
 
     def stereotype_decorators(self) -> List[str]:
         return [f"@{pascal_case_decorator(item)}()" for item in self.stereotypes]

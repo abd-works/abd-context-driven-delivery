@@ -6,12 +6,12 @@ import { activationHeading } from './activation-client'
 
 const NONE_YET = 'none yet'
 
-type OptionProps = { label: string; isChecked: boolean; isOff: boolean; onToggle: () => void }
+type OptionProps = { label: string; isChecked: boolean; onToggle: () => void }
 
-function OptionView({ label, isChecked, isOff, onToggle }: OptionProps) {
+function OptionView({ label, isChecked, onToggle }: OptionProps) {
   return (
-    <label className={isOff ? 'dialog-option is-off' : 'dialog-option'}>
-      <input type="checkbox" checked={isChecked} disabled={isOff} onChange={onToggle} />
+    <label className="dialog-option">
+      <input type="checkbox" checked={isChecked} onChange={onToggle} />
       <span>{label}</span>
     </label>
   )
@@ -44,10 +44,9 @@ function LeaveGroupView({ open }: { open: Activation }) {
     <div className="dialog-group">
       <div className="dialog-group-heading">{open.isClosing ? 'CLOSE' : 'LEAVE'}</div>
       <SessionFactsView session={open.leavingTitle} branch={branch || NONE_YET} />
-      {open.ticket.leaveChoices.map(choice => {
-        const isOffered = open.offeredLeaving.includes(choice)
-        return <OptionView key={choice} label={labels[choice] ?? choice} isChecked={isOffered && open.leaving.includes(choice)} isOff={!isOffered} onToggle={() => page.activation.toggleLeaving(choice)} />
-      })}
+      {open.offeredLeaving.map(choice => (
+        <OptionView key={choice} label={labels[choice] ?? choice} isChecked={open.leaving.includes(choice)} onToggle={() => page.activation.toggleLeaving(choice)} />
+      ))}
     </div>
   )
 }
@@ -55,26 +54,17 @@ function LeaveGroupView({ open }: { open: Activation }) {
 function OpenGroupView({ open }: { open: Activation }) {
   const { page } = useBoard()
   const { name } = open.ticket
-  const labels: Record<string, [offered: string, made: string]> = {
-    branch: [`Create branch ${name}`, `Branch ${name} already exists`],
-    worktree: [`Create worktree for ${name}`, 'Worktree already exists'],
+  const labels: Record<string, string> = {
+    branch: `Create branch ${name}`,
+    worktree: `Create worktree for ${name}`,
   }
   return (
     <div className="dialog-group">
       <div className="dialog-group-heading">OPEN</div>
       <SessionFactsView session={open.ticket.title} branch={open.hasBranch ? name : NONE_YET} />
-      {open.ticket.openChoices.map(choice => {
-        const isOffered = open.offeredOpening.includes(choice)
-        return (
-          <OptionView
-            key={choice}
-            label={labels[choice]?.[isOffered ? 0 : 1] ?? choice}
-            isChecked={isOffered && open.opening.includes(choice)}
-            isOff={!isOffered}
-            onToggle={() => page.activation.toggleOpening(choice)}
-          />
-        )
-      })}
+      {open.offeredOpening.map(choice => (
+        <OptionView key={choice} label={labels[choice] ?? choice} isChecked={open.opening.includes(choice)} onToggle={() => page.activation.toggleOpening(choice)} />
+      ))}
     </div>
   )
 }

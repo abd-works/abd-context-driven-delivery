@@ -720,12 +720,12 @@ with description("an agent toolset") as self:
                     RepositoryToolsets(self.repo).ensure_import_path()
 
                 with it("should not collect toolsets under examples folders"):
-                    refs = RepositoryToolsets(self.repo).collect()
+                    refs = [str(reference) for reference in RepositoryToolsets(self.repo).references()]
                     expect(any("examples" in ref.replace("\\", "/") for ref in refs)).to(equal(False))
                     expect(any("car_story" in ref for ref in refs)).to(equal(False))
 
                 with it("should collect deployable toolsets under harness and patterns"):
-                    refs = RepositoryToolsets(self.repo).collect()
+                    refs = [str(reference) for reference in RepositoryToolsets(self.repo).references()]
                     expect(refs).to(contain("cdd_guidance.patterns.lern_domain_driven.lern_domain_driven:LernDomainDriven"))
                     expect(refs).to(contain("cdd_guidance.patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven"))
                     expect(refs).to(contain("harness.graph.graph:Graph"))

@@ -30,4 +30,4 @@ class Document(GuidanceAction):
         "After writing, call refresh with exactly the files you wrote, so the session's graph holds them as they are now; nothing watches the files."
         if self._session is not None:
             tools(self.graph.refresh)
-        return "Document existing state under {session.path}/ - violations flagged, none corrected."
+        return "Document existing state under the session's root, which the session section names - violations flagged, none corrected."

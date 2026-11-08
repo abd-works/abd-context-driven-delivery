@@ -11,7 +11,6 @@ from pathlib import Path
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
-from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import (
     DrawIOCleanEngineeringModel,
@@ -27,11 +26,11 @@ class Drawio:
     validate/scan layout rules → repair (sub-agent) on definitive failures.
     """
 
-    def __init__(self, source: CleanEngineeringModel | None = None) -> None:
-        # The class model the source a diagram is drawn from is read with: the Clean Engineering practice's markdown
-        # format when the practice composes this toolset, else a markdown model of its own, when the installer or the
-        # MCP host makes the toolset on its own. It never needs the practice itself.
-        self.source = source if source is not None else MarkdownCleanEngineeringModel()
+    def __init__(self) -> None:
+        # The markdown class model the source a diagram is drawn from is read with. The toolset keeps its own, so reading
+        # a diagram's source never changes a model the Clean Engineering practice renders with, and it never needs the
+        # practice itself.
+        self.source = MarkdownCleanEngineeringModel()
         # The one Draw.io model this toolset writes; its `previous` and `keep_positioning` are the layout policy.
         self.channel = DrawIOCleanEngineeringModel()
         self.scan_root = None

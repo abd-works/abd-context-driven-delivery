@@ -482,16 +482,11 @@ html[data-theme="engineering"] .site-nav {
   overflow: auto;
 }
 
-.overlay-status,
-.overlay-hint {
+.overlay-status {
   font-size: var(--text-xs);
   color: var(--muted);
   margin: var(--space-2xs) 0;
   line-height: 1.45;
-}
-
-.overlay-hint {
-  color: var(--accent-deep);
 }
 
 .overlay-empty {

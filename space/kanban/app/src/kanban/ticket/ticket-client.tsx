@@ -163,7 +163,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   async dropOn(edge: string): Promise<void> {
-    if (edge === 'Backlog') await this.moveTo('Backlog', false)
+    if (this.page.board.columnNamed(edge)?.isBacklog) await this.moveTo(edge, false)
     else if (this.isActive) await this.page.activation.start(this, true)
     else await this.moveNext()
   }

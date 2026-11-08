@@ -8,7 +8,7 @@ from typing import Any
 from harness.guidance.rule import Rule, RulesCollection
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.violation import NodeViolation, Violation
-from harness.installation.destination import data_field
+from harness.installation.data_class import data_field
 
 
 class GraphRule(PracticeGraphRule, Rule):
@@ -58,7 +58,8 @@ class GraphRule(PracticeGraphRule, Rule):
 
     @property
     @data_field
-    def children(self) -> list:
+    def children(self) -> list[GraphRule]:
+        """None: a rule is a leaf of the explorer tree."""
         return []
 
     @property

@@ -95,6 +95,11 @@ class Property(InvariantHolder, OoadNode):
         return cls(match.group(1), type_hint=match.group(2).strip()) if match else None
 
     @property
+    def value_type(self) -> str:
+        """The type a reader of this property gets: its declared type."""
+        return self.type_hint
+
+    @property
     def owner(self) -> str:
         """The name of the class that declares this property; empty before a class holds it."""
         parent = self.parent

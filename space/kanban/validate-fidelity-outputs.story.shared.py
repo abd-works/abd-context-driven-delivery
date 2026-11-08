@@ -65,12 +65,12 @@ def _(s):
         world.project.seed_session(PET_VISITS.with_log(generated("stories", "story_map")))
         world.session = world.Sessions(world.project.root).load(world.project.sessions / PET_VISITS.name)
         world.stories = world.session.practice("stories")
-        world.stories.guidance.work_at("story_map")
+        world.stories.guidance.work_at(world.stories.guidance.fidelities["story_map"])
         world.ticket = world.Ticket.load(PET_VISITS.name)
 
     @s.when("Claude Code validates the story map and finds no graph-rule violation")
     def _(world):
-        world.session.log.validation(world.stories, [])
+        world.session.log.by(None).validation(world.stories, [])
 
     @s.then("the session log ends with validate Stories story_map")
     def _(world):
@@ -83,7 +83,7 @@ def _(s):
 
     @s.when("Claude Code validates it again and finds actor-named-in-step on map.md line 12")
     def _(world):
-        world.session.log.validation(world.stories, ["graph-rule actor-named-in-step map.md:12"])
+        world.session.log.by(None).validation(world.stories, ["graph-rule actor-named-in-step map.md:12"])
 
     @s.then("the session log ends with validate Stories story_map graph-rule actor-named-in-step map.md:12")
     def _(world):

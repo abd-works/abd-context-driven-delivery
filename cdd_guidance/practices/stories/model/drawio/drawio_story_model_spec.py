@@ -507,6 +507,14 @@ with description("a DrawIO Story Map rendered in a workspace") as self:
             expect([story.name for story in stories]).to(equal(["Select Sim", "Activate Sim"]))
             expect(stories[0].actors).to(equal(["Customer"]))
 
+    with context("whose story map is kept in the folder's .context under a prefixed name"):
+        with it("should link an epic cell to that story map's entry"):
+            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+
+            root = _workspace({".context/sims-story-map.md": _LINKED_MAP})
+            text = DrawIOStoryModel().render(MarkdownStoryModel().parse(_LINKED_MAP), workspace=str(root))
+            expect(_links_by_label(text)["Onboard A Customer"][0]).to(equal("sims-story-map.md#e-onboard-a-customer"))
+
     with context("with no story-map.md and no story files"):
         with it("should draw every cell without a link"):
             from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel

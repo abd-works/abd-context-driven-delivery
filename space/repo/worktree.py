@@ -11,6 +11,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from harness.hooks.hook_daemon import HookDaemon
 from harness.process.git import RepoConnectError
 
 if TYPE_CHECKING:
@@ -179,10 +180,12 @@ class Worktrees:
         return Worktree(self, path, branch_name)
 
     def remove(self, worktree: Worktree) -> None:
-        """Remove worktree's folder and forget it, forcing the folder away when git cannot delete a locked checkout.
-        A folder still there afterwards raises WorktreeNotRemovedError, so a close is never reported done for a checkout
-        that still exists."""
+        """Stop the checkout's hook daemon, then remove worktree's folder and forget it, forcing the folder away when git
+        cannot delete a locked checkout. A folder still there afterwards raises WorktreeNotRemovedError, so a close is
+        never reported done for a checkout that still exists."""
         dest = worktree.path
+        # The checkout's hook daemon runs from its folder; stopped first, it neither outlives the checkout nor holds it.
+        HookDaemon(dest).stop()
         try:
             self._repo.git.run("worktree", "remove", "--force", str(dest))
         except RepoConnectError as exc:

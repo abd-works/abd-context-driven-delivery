@@ -15,7 +15,7 @@ from harness.agent_tools.agent_tools import (
 )
 from harness.annotations.annotation import hosted_only
 from harness.annotations.name import Name
-from harness.installation.destination import data_field
+from harness.installation.data_class import data_field
 from harness.markdown.markdown import MarkdownCollection, MarkdownText
 from harness.hooks.hooks import Hook, hook
 
@@ -103,13 +103,6 @@ class Rule:
         """What the rule asks for, as its markdown says it."""
         return self._body
 
-    def attribute_to(self, practice: str, *, tag: str = "base", shared: bool = False) -> Rule:
-        """Name the practice that owns this rule and whether it is shared across fidelities."""
-        self.practice = practice
-        self.tag = tag or "base"
-        self.shared = shared
-        return self
-
     def validate(self) -> str:
         return instructions(
             f"### `{self.slug}`",
@@ -164,7 +157,7 @@ class RulesCollection(MarkdownCollection):
     def inject_rules(self, payload: HookPayload) -> dict[str, Any]:
         """The rules that apply to the file the agent just edited, as context for its next step. The session notes
         them even while the hook is turned off, so its log still names the rules each edit was checked against."""
-        path = payload.edited_path() if self._just_edited(payload) else ""
+        path = payload.edited_path() if payload.is_edit else ""
         bags = self._bags_for_path(path) if path else []
         if bags:
             self._note_session_injected_rules(payload, path, bags)
@@ -284,10 +277,8 @@ class RulesCollection(MarkdownCollection):
     def _matched_globs(self, bags: list[RulesCollection]) -> list[str]:
         return list(dict.fromkeys(pattern for bag in bags for pattern in bag.applies_to.patterns))
 
-    def _inject_echo_instruction(
-        self, path: str, bags: list[RulesCollection], hook_payload: dict[str, Any] | None = None
-    ) -> str:
-        if not self._just_edited(hook_payload or {}):
+    def _inject_echo_instruction(self, path: str, bags: list[RulesCollection], hook_payload: HookPayload | None = None) -> str:
+        if hook_payload is None or not hook_payload.is_edit:
             return ""
         lines = [
             f"You just edited {self._edited_label(path)}.",
@@ -329,13 +320,8 @@ class RulesCollection(MarkdownCollection):
         sep = "\\" if "\\" in path else "/"
         return f"{parent}{sep}{file.name}"
 
-    def _just_edited(self, hook_payload: dict[str, Any]) -> bool:
-        event = str(hook_payload.get("hook_event_name") or "")
-        tool = str(hook_payload.get("tool_name") or "")
-        return event == "afterFileEdit" or tool in {"Write", "StrReplace", "EditNotebook"}
-
     def _inject_context(
-        self, path: str, bags: list[RulesCollection], parts: list[str], hook_payload: dict[str, Any] | None = None
+        self, path: str, bags: list[RulesCollection], parts: list[str], hook_payload: HookPayload | None = None
     ) -> str:
         preamble = self._inject_echo_instruction(path, bags, hook_payload).strip()
         rules = "\n\n".join(parts).strip()

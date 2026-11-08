@@ -4,7 +4,7 @@ from __future__ import annotations
 from harness.graph.violation import Violation
 
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
-from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import (
+from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
     DrawioPage,
     cell_box,
 )

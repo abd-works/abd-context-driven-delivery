@@ -9,15 +9,14 @@ from mamba import before, context, description, it
 from harness.catalog_generator.catalog_generator import (
     ActionPage,
     Catalog,
-    CatalogPractice,
     FidelityPage,
-    GitCitation,
     LifecycleAction,
     PracticePage,
-    SkillSlashName,
     Utility,
     UtilityPage,
 )
+from harness.catalog_generator.catalog_practice import CatalogPractice
+from harness.catalog_generator.git_citation import GitCitation
 from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.actions.diagnose.diagnose import Diagnose
 from tools.echo.echo import Echo
@@ -48,12 +47,12 @@ with description("a lifecycle action's page"):
 with description("a fidelity's page"):
     with before.all:
         self.actions = LifecycleAction.load_all()
-        practice = CatalogPractice(Ddd(), skills=SkillSlashName([]))
+        practice = CatalogPractice(Ddd())
         tactics = next(shown for shown in practice.shown_fidelities if shown.name == "tactics")
         self.page = FidelityPage(practice, tactics, _CITATION, self.actions).body
 
     with it("should open with the chat command, escaped for a browser"):
-        expect("/ddd &lt;action&gt; tactics" in self.page).to(be_true)
+        expect("/practices-ddd &lt;action&gt; tactics" in self.page).to(be_true)
 
     with it("should link every lifecycle action"):
         expect(all(f'<a href="../{action.href}">{action.name}</a>' in self.page for action in self.actions)).to(be_true)
@@ -64,7 +63,7 @@ with description("a fidelity's page"):
 
 with description("a practice's page"):
     with before.all:
-        self.page = PracticePage(CatalogPractice(Ddd(), skills=SkillSlashName([]))).body
+        self.page = PracticePage(CatalogPractice(Ddd())).body
 
     with it("should show the practice's name"):
         expect("Domain-Driven Design" in self.page).to(be_true)

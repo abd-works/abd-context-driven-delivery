@@ -19,7 +19,6 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     UnreadableSource,
     class_names_imported_by,
 )
-from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -34,14 +33,22 @@ class GraphReading:
     """Clean Engineering's operations over the graph it is read in: reading the code, then the model documents."""
 
     graph: Graph
-    # The class model each model document read describes, by the document's path from the source root.
-    _model_documents: dict[str, CleanEngineeringModel] = {}
-    # Whether the model documents have been read for the graph this practice is in.
-    _documents_read: bool = False
+    # The format the practice's model documents are written in, which reads each into the class model it describes.
+    model_document_format: type[CleanEngineeringModel]
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        # The class model each model document read describes, by the document's path from the source root.
+        self._model_documents: dict[str, CleanEngineeringModel] = {}
+        # Whether the model documents have been read for the graph this practice is in.
+        self._documents_read = False
+        # The operations and properties of the code read, by name; made the first time a reader asks after a read.
+        self._members_by_name: dict[str, list[Node]] | None = None
 
     def read_working_copy(self) -> None:
         """Read each source file with its language's class model, adding the folders, classes, properties, operations,
         and parameters it parsed as nodes, and keep the class model each model document describes."""
+        self._members_by_name = None
         with schema_sync_paused():
             self._read_code()
             self._read_model_documents()
@@ -57,6 +64,16 @@ class GraphReading:
                 return found
         return None
 
+    def members_named(self, name: str) -> list[Node]:
+        """The operations and properties of the code read into the graph that are called name, each class's operation
+        before its property: one index of the graph's members, made once after each read, which every practice that
+        links to the code asks."""
+        if self._members_by_name is None:
+            self._members_by_name = {}
+            for member in [*self.in_graph.nodes("Operation"), *self.in_graph.nodes("Property")]:
+                self._members_by_name.setdefault(member.name, []).append(member)
+        return self._members_by_name.get(name, [])
+
     ## the code
 
     @property
@@ -68,6 +85,7 @@ class GraphReading:
         folders = self._code_folders(self.graph.scope_folders())
         files = self.graph.source_files(self._source_root, self.readable_suffixes)
         modules = self._parsed_modules(files)
+        self._record_public_sources(folders, modules)
         self._class_names = {cls.name for module in modules.values() for cls in module.classes}
         self._class_names |= self._read_unparsed(self._unparsed_declaring_files(files))
         nodes = {rel: self.in_graph.add(module, f"clean_engineering:{module.type}:{rel}", rel, 1, 1) for rel, module in folders.items()}
@@ -93,18 +111,42 @@ class GraphReading:
         for index, file in enumerate(files, start=1):
             self.graph.report_progress(f"clean_engineering · classes · {index}/{len(files)} · {file.relative_to(self._source_root).as_posix()}")
             try:
-                text = file.read_text(encoding="utf-8")
+                modules[file] = self._parsed_module(file)
             except (OSError, UnicodeDecodeError) as error:
                 self._unreadable[file] = f"cannot be read: {error}"
-                continue
-            try:
-                module = self.format_for(file).parse(text).file_module()
             except UnreadableSource as unreadable:
                 self._unreadable[file] = str(unreadable)
-                continue
-            module.load_source_facts(file, self._source_root)
-            modules[file] = module
         return modules
+
+    def _parsed_module(self, file: Path) -> Module:
+        """The file's module, read by its language's class model from the practice's formats, with its source facts
+        loaded. Raises UnreadableSource for a file its language cannot read."""
+        module = self.format_for(file).parse(file.read_text(encoding="utf-8")).file_module()
+        module.load_source_facts(file, self._source_root)
+        return module
+
+    def _record_public_sources(self, folders: dict, modules: dict) -> None:
+        """Give each folder the modules of its own public source files: each one this load parsed, and each one an
+        edited-file scope left out, read now. A file that cannot be read counts as a file with no documentation."""
+        parsed = {file.resolve(): module for file, module in modules.items()}
+        unreadable = {file.resolve() for file in self._unreadable}
+        for rel, folder in folders.items():
+            directory = self._source_root / rel
+            public = sorted(
+                path
+                for path in directory.iterdir()
+                if path.is_file() and path.suffix.lower() in self.readable_suffixes and folder.holds_public_source(path.name)
+            )
+            folder.take_public_sources([parsed.get(path.resolve()) or self._module_read_now(path, unreadable) for path in public])
+
+    def _module_read_now(self, file: Path, unreadable: set[Path]) -> Module:
+        """The module of a file this load did not parse; an empty one for a file that cannot be read."""
+        if file.resolve() not in unreadable:
+            try:
+                return self._parsed_module(file)
+            except (OSError, UnicodeDecodeError, UnreadableSource):
+                pass
+        return Module(name=file.name, sequential_order=1)
 
     def _unparsed_declaring_files(self, files: list[Path]) -> list[Path]:
         """The source files outside an edited-file scope, whose class names a type hint may still name.
@@ -204,21 +246,19 @@ class GraphReading:
                 self._operation(relative, node, operation)
 
     def _property(self, relative: str, cls: Node, prop: Operation | Property) -> None:
-        """A field the class declares, or a getter: the operation that reads it, which is the property's node."""
+        """A field the class declares, or a getter: the operation that reads it, which is the property's node. Its type
+        is the field's declared type, or the type the getter returns."""
         prop_id = f"clean_engineering:Property:{relative}:{prop.name}:{cls.name}"
         line = prop.line or 1
-        if isinstance(prop, Property):
-            hint = prop.type_hint or ""
-        else:
-            prop.type = "Property"
-            hint = prop.name[:1].upper() + prop.name[1:]
+        hint = prop.value_type or ""
         node = self.in_graph.add(prop, prop_id, relative, line, line)
         self.graph.link("properties", cls, node, "grouped")
-        if not _names_class(hint, self._class_names):
+        named = _classes_named_in(hint, self._class_names)
+        if not named:
             return
         self.graph.link("relative", cls, node)
-        for other in self._class_names:
-            other_node = self._class_named(other) if other != cls.name and other in hint else None
+        for other in named:
+            other_node = self._class_named(other) if other != cls.name else None
             if other_node is not None:
                 self.graph.link("hasType", node, other_node, "relationship")
                 self.graph.link("dependsOn", cls, other_node, "relationship")
@@ -227,17 +267,14 @@ class GraphReading:
         start, end = operation.source_lines
         operation.load_span_facts()
         node = self.in_graph.add(operation, f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}", relative, start, end)
-        node.set_fact("parameters", [[p.name, (p.type_hint or "").strip()] for p in operation.parameters])
         self.graph.link("owns", cls, node)
         for parameter in operation.parameters:
             param_id = f"clean_engineering:Parameter:{relative}:{parameter.name}:{cls.name}.{operation.name}"
             self.graph.link("hasParameter", node, self.in_graph.add(parameter, param_id, relative, start, start), "relationship")
-        returned = operation.return_type or ""
-        if _names_class(returned, self._class_names):
-            for other in self._class_names:
-                other_node = self._class_named(other) if other in returned else None
-                if other_node is not None:
-                    self.graph.link("returns", node, other_node, "relationship")
+        for other in _classes_named_in(operation.return_type or "", self._class_names):
+            other_node = self._class_named(other)
+            if other_node is not None:
+                self.graph.link("returns", node, other_node, "relationship")
 
     def _code_folders(self, scope: list[Path] | None) -> dict:
         """A module owns a module card (``.context/module-context.md``). Any other folder with source is a package.
@@ -289,7 +326,7 @@ class GraphReading:
         for file in self._model_files():
             relative = file.relative_to(self._source_root).as_posix()
             self.graph.report_progress(f"clean_engineering · model · {relative}")
-            self._model_documents[relative] = MarkdownCleanEngineeringModel().parse(file.read_text(encoding="utf-8"))
+            self._model_documents[relative] = self.model_document_format().parse(file.read_text(encoding="utf-8"))
 
     def _model_files(self) -> list[Path]:
         """Each scoped folder's and each of its parents' ``.context/*-model.md``, up to the root. ``.context`` is a
@@ -317,6 +354,12 @@ class GraphReading:
                     break
                 folder = folder.parent
         return folders
+
+
+def parameters_of(operation: Node) -> list[Node]:
+    """The parameters an operation takes, in the order it declares them: the nodes its hasParameter edges lead to, which
+    a graph read back from its saved file keeps too."""
+    return [edge.child for edge in operation.graph.edges_from("hasParameter", operation)]
 
 
 def _nearest(path: str, folders: dict) -> str:
@@ -350,8 +393,9 @@ def _imported_folders(targets: list[str], held: dict, own: str) -> list:
     return [found[folder] for folder in sorted(found)]
 
 
-def _names_class(hint: str, class_names: set[str]) -> bool:
-    """A hint names a class when that class is a whole type, not a prefix of a longer name."""
+def _classes_named_in(hint: str, class_names: set[str]) -> list[str]:
+    """The classes a type hint names, each as a whole type, not as a prefix of a longer name; a generic container's hint
+    names none."""
     if not hint or "[" in hint:
-        return False
-    return any(re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", hint) for name in class_names)
+        return []
+    return sorted(name for name in class_names if re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", hint))

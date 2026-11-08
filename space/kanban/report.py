@@ -13,7 +13,7 @@ from harness.graph.saved_graph import SavedGraph, SavedGraphOutdated
 from harness.graph.violation import UNKNOWN_LOCATION, Violation
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.rule import Rule
-from harness.installation.destination import data_field
+from harness.installation.data_class import data_field
 
 if TYPE_CHECKING:
     from space.repo.repo import Repo
@@ -260,7 +260,7 @@ class ReportFile:
         of violating nodes keeps no overlays, so only the practice's own scanners count."""
         checked = self._checked_graph
         saved = SavedGraph([], {}) if isinstance(checked, list) else checked
-        return set(saved.restored_graph().practice_of(type(self._practice)).checks())
+        return set(saved.checks_of(self._practice))
 
     def _judged_rules(self, text: str) -> list[ReportRule]:
         """Each rule the judgment fails, once however many judged files fail it, with its findings at the judged files' lines."""

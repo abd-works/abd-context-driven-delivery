@@ -432,9 +432,12 @@ it('should number a step from its line in the file', async () => {
         text: "    when('My Paradise loads the customer', async () => {\n      customer = await ctx.customerRepository.load(accountCredentials);\n    });",
         start_line: 93,
         end_line: 95,
+        owner: '',
         members: [],
       }}
       violation={null}
+      rules={[]}
+      activeRule=""
     />,
   );
   const editor = await screen.findByTestId('source-editor');
@@ -797,7 +800,7 @@ it('should show invokes, observes, and demonstrates on a step', async () => {
       },
     ],
   };
-  render(<GraphView trees={[step]} loading={false} error="" selectedId="" onSelect={() => undefined} />);
+  render(<GraphView trees={[step]} loading={false} error="" selectedId="" activeRule="" onSelect={() => undefined} />);
   await user.click(screen.getByRole('button', { name: 'Expand when the User enters valid account credentials' }));
   expect(document.querySelector('[data-node-id="scopes-valid"]')).toBeNull();
   expect(document.querySelector('[data-node-id="invokes-valid"]')).toBeTruthy();
@@ -1020,8 +1023,8 @@ function constrained(types: string[]) {
   };
 }
 
-function violationTree(node: (typeof engineeringTree)): (typeof engineeringTree) | null {
-  const children = node.children.map((child) => violationTree(child)).filter((child): child is typeof engineeringTree => Boolean(child));
+function violationTree(node: Entry): Entry | null {
+  const children = node.children.map((child) => violationTree(child)).filter((child): child is Entry => Boolean(child));
   if (node.type === 'Rule') {
     return node.status === 'violating' ? { ...node, children } : null;
   }
@@ -1031,7 +1034,8 @@ function violationTree(node: (typeof engineeringTree)): (typeof engineeringTree)
   return { ...node, children };
 }
 
-type Entry = { type: string; name: string; node_id: string; children: Entry[] };
+// An explorer tree item as the fixtures write it: an entry, a rules collection, or a rule with its status.
+type Entry = { type: string; name: string; node_id: string; children: Entry[]; status?: string };
 
 // Graph.explorer_trees as Python answers it: each named practice's tree, every practice's when none is named, keeping
 // its root, the nodes the filter matches with their rules, and the nodes on the way to them.
@@ -1063,7 +1067,7 @@ function rowsFor(practices: string[], types: string[], violations = false) {
     trees.push(storiesTree);
   }
   const rows: { practice: string; type: string; name: string; node_id: string; ancestors: string[]; children: string[] }[] = [];
-  const walk = (node: { type: string; name: string; node_id: string; children: typeof engineeringTree.children }, practice: string) => {
+  const walk = (node: Entry, practice: string) => {
     const holder = node.type === node.name;
     const violating = (node.children ?? []).some(
       (child) => child.name === 'rules' && (child.children ?? []).some((hit) => hit.status === 'violating'),

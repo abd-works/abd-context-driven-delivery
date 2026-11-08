@@ -13,7 +13,7 @@ markdown = BddModel().render(model)
 
 - **Purpose:** Keep observable behaviour as one describe tree — descriptions, contexts, observations — so a sketch and a spec file stay the same hierarchy every later fidelity reads, and so the graph can check BDD rules against facts each node carries.
 - **Seam (terms):** BddModel, SketchBddModel, CodeBddModel, PythonBddModel, TypeScriptBddModel, GraphBddModel, BehaviorNode, Description, Context, Observation, UnreadableSpec
-- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*, *Node*, *Edge*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*), harness/guidance (*SketchLens*)
+- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*, *Node*, *Edge*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), practices/sketch_document (*SketchOutline*), harness/guidance (*SketchLens*)
 
 *ModelNode*, *ModelChildren*, *CodeBody*, *CodeLanguage*, *WrittenBlock*, and *CallGraphEntry* are owned by the modules above; this model only uses them.
 
@@ -164,8 +164,40 @@ The `typescript` format: `describe`, `context`, `it`, and Playwright's `test.des
 	// TYPESCRIPT (the code_body constant)
 ----
 + parse_code(text: str): TypeScriptBddModel
+	// each outermost describe call is added through BddModel.add_description, each call inside one through DescribeBlock.add_child
+	-> DescribeCalls.describes
 + default_imports, block_open, block_close
 	// TypeScript spelling only. The marker is `// BDD: SIGNATURE`
+
+## DescribeCalls
+
+Every describe, context, it, and test call of a script spec whose parentheses and callback both close, each adopted by the innermost describe or context around it.
+
++ DescribeCalls(text: str)
+------
++ roots: list[DescribeCall]
+----
++ describes: list[DescribeCall]
+	// the outermost describe calls: the spec's descriptions
+
+## DescribeCall : BraceCall
+
+One `describe`, `context`, `it`, or `test` call, with the lines of its file it spans.
+
++ DescribeCall(text: str, match: Match, file_lines: list[str])
+------
++ kind: str
++ children: list[DescribeCall]
+----
++ is_observation: bool
++ behavior_kind: str
+	// "it" for an it or a test, else "context"
++ first_line, last_line: int
++ is_inline: bool
++ inside: tuple[int, int]
++ whole_lines, heading_lines, inside_lines, close_lines: list[str]
++ encloses(other: DescribeCall): bool
++ adopt(child: DescribeCall): None
 
 ## GraphBddModel : BddModel
 

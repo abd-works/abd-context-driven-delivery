@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from cdd_guidance.actions.sketch.sketch_outline import SketchOutline
+from cdd_guidance.practices.sketch_document.sketch_outline import SketchOutline
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
-from harness.guidance.sketch_lens import SketchLens
+from harness.guidance.guidance import SketchLens
 
 
 class SketchBddModel(BddModel):

@@ -18,11 +18,10 @@ class SessionOpener(Protocol):
         event or a diagnostics probe."""
 
     def open_in(self, call: ToolCall) -> Any:
-        """The session saved as open in the call's project, opened for this call alone."""
+        """The session saved as open in the call's project."""
 
     def named_in(self, session_file: str, call: ToolCall) -> Any:
-        """The session whose session.json is session_file, a path from the call's project or an absolute one, opened
-        for this call alone."""
+        """The session whose session.json is session_file, a path from the call's project or an absolute one."""
 
 
 class SessionsNotLoaded(LookupError):
@@ -84,9 +83,9 @@ class ToolCall:
     @property
     def session(self) -> Any:
         """The session saved as open in the ``.sessions/session.json`` of the checkout holding the project, main when
-        none is, opened for this call and read once; none when the call names no project or no sessions are registered.
-        Each call reads its own, so what one call does to it, such as the fidelity an action works at, is never seen by
-        another."""
+        none is, read once for this call; none when the call names no project or no sessions are registered. Every call
+        in a session works on the one object its sessions hold for it; the lines a call logs point at this call's
+        chat."""
         if self.project is None or ToolCall._sessions is None:
             return None
         if self._session is None:
@@ -103,8 +102,8 @@ class ToolCall:
         return ToolCall._sessions.saved_in(Path(project).resolve())
 
     def session_named(self, session_file: str) -> Any:
-        """The session whose session.json is session_file, a path from the project or an absolute one, opened for this
-        call. A board command names its ticket's session this way, because it runs in whichever chat it is sent to."""
+        """The session whose session.json is session_file, a path from the project or an absolute one, for this call.
+        A board command names its ticket's session this way, because it runs in whichever chat it is sent to."""
         if ToolCall._sessions is None:
             raise SessionsNotLoaded(session_file)
         return ToolCall._sessions.named_in(session_file, self)

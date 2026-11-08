@@ -18,7 +18,6 @@ class Bdd(BddGraphReading, PracticeGuidance):
 
     # Its section of a sketch is the one its sketch format reads, held as that one lens.
     sketch_lens = SketchBddModel.lens
-    sketch_titles = sketch_lens.titles
     SHORT_NAME = "BDD"
     COLOUR = "#00B894"
 

@@ -11,6 +11,7 @@ from typing import Any
 
 from harness.agent_tools.tool_call import ToolCall
 from harness.diagnostics.cdd_diagnostic_bridge import CddDiagnosticFixtures
+from harness.guidance.practice_catalogue import PracticeCatalogue
 
 
 class ProbeArguments:
@@ -25,23 +26,21 @@ class ProbeArguments:
         self._created: list[Path] = []
 
     @property
-    def guidance_folder(self) -> Path:
-        return self.repo / "cdd_guidance"
-
-    @property
     def content_paths(self) -> list[str]:
-        """The folder of each practice the slugs name, or of the practice whose fidelity they name; the practices
-        folder when no slug names a practice."""
-        from harness.guidance.practice_catalogue import PracticeCatalogue
-
-        base = self.guidance_folder / "practices"
+        """The folder of each practice the slugs name, or of the practice whose fidelity they name, as each practice
+        answers it; the folder that holds every practice's folder when no slug names a practice."""
         found: list[str] = []
         for slug in self.slugs:
             practice = PracticeCatalogue.practice_named(slug)
-            folder = str(base / practice.key) if practice is not None else ""
+            folder = str(practice.module_dir) if practice is not None else ""
             if folder and folder not in found:
                 found.append(folder)
-        return found or [str(base)]
+        return found or [str(self._practices_folder)]
+
+    @property
+    def _practices_folder(self) -> Path:
+        """The folder that holds the practices' folders, as the first practice in the catalogue answers it."""
+        return PracticeCatalogue.practices()[0].module_dir.parent
 
     def for_operation(self, mcp_name: str, member: Any) -> tuple[dict[str, Any], list[str]]:
         """The arguments to call the operation published as mcp_name with, and the names of the required ones the probe
@@ -129,11 +128,8 @@ class ProbeArguments:
         return str(path)
 
     def _sample_guidance_file(self) -> str:
-        candidate = self.guidance_folder / "practices" / "bdd" / "bdd.md"
-        if candidate.is_file():
-            return str(candidate)
-        found = next((path for path in sorted(self.guidance_folder.rglob("*.md")) if path.is_file()), None)
-        return str(found or self.guidance_folder)
+        """A practice's own document for a read probe: the first practice in the catalogue's, as it answers its path."""
+        return str(PracticeCatalogue.practices()[0].domain_markdown_path())
 
 
 class _OperationParameters:

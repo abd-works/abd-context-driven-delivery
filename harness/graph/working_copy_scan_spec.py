@@ -13,7 +13,7 @@ for path in (_HERE, _REPO):
         sys.path.insert(0, str(path))
 
 from expects import be_above, contain, equal, expect
-from harness.installation.destination import data_of  # noqa: E402
+from harness.installation.data_class import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
 from harness.graph.graph import Graph
@@ -81,6 +81,8 @@ def _working_copy() -> Path:
     _write(root, "src/shared/.examples/sample.ts", _WITHIN_LIMIT.format(name="Sample"))
     _write(root, "src/orders/_examples/faulty/order.ts", _OVER_LIMIT.format(name="FaultyOrder"))
     _write(root, "src/billing/fixtures/invoice.ts", _OVER_LIMIT.format(name="FixtureInvoice"))
+    _write(root, "guidance/stories/catalog-examples/cart.ts", _OVER_LIMIT.format(name="CatalogCart"))
+    _write(root, "installer/templates/typescript/connection.ts", _OVER_LIMIT.format(name="TemplateConnection"))
     _write(root, "test-results/run-1/trace/resources/trace.js", _OVER_LIMIT.format(name="TraceBundle"))
     _write(root, "playwright-report/data/report.js", _OVER_LIMIT.format(name="ReportBundle"))
     _write(root, "packages/app/dist/bundle.js", _OVER_LIMIT.format(name="DistBundle"))
@@ -128,6 +130,10 @@ with description("a working copy scan") as self:
         with it("should leave a rule's _examples and a test's fixtures out"):
             names = _class_names(self.graph)
             expect([name in names for name in ("FaultyOrder", "FixtureInvoice")]).to(equal([False, False]))
+
+        with it("should leave a catalog's examples and an installer's templates out"):
+            names = _class_names(self.graph)
+            expect([name in names for name in ("CatalogCart", "TemplateConnection")]).to(equal([False, False]))
 
     with context("over module cards"):
         with it("should make a module of a folder with .context/module-context.md"):

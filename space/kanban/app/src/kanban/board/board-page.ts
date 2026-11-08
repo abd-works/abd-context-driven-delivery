@@ -108,11 +108,23 @@ export class BoardPage {
 
   start(): () => void {
     const stopBoard = this.reader.startPolling()
-    const chatTimer = setInterval(() => void Promise.all([this.chat.refresh(), this.build.check()]), CHAT_POLL_MILLISECONDS)
-    void Promise.all([this.chat.refresh(), this.build.check()])
+    const chatTimer = setInterval(() => void this.pollChats(), CHAT_POLL_MILLISECONDS)
+    void this.pollChats()
     return () => {
       stopBoard()
       clearInterval(chatTimer)
     }
+  }
+
+  // A slow cdd server answers after the next tick, so a tick is skipped while the last read is still pending, as the
+  // board's own poll does; otherwise each tick opens another connection and they pile up on the server.
+  private isPollingChats = false
+
+  private async pollChats(): Promise<void> {
+    if (this.isPollingChats) return
+    this.isPollingChats = true
+    await Promise.all([this.chat.refresh(), this.build.check()]).finally(() => {
+      this.isPollingChats = false
+    })
   }
 }

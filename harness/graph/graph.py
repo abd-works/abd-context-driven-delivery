@@ -6,16 +6,18 @@ import re
 import threading
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, ClassVar, Iterable, Iterator
+from typing import TYPE_CHECKING, Callable, Iterable, Iterator
 
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.progress import report_progress
 from harness.guidance.practice_catalogue import PracticeCatalogue, UnknownPractice
-from harness.installation.destination import data_field, language_adapter
+from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import long_call, mcp
+from harness.mcp.tool_calls import is_answering_a_chat
 from harness.graph.edge import Display, Edge, EdgeType
+from harness.graph.graph_build import BuildOrder, BuildStep, WorkerBuild
 from harness.graph.explorer import ExplorerEntry, FilteredNode, GraphLoaded, GraphSaved, NodeSource, Overlay, PracticeInventory
 from harness.graph.graph_rules_collection import GraphRulesCollection
 from harness.graph.pattern_overlays import GraphOverlay, PatternOverlays
@@ -29,9 +31,6 @@ if TYPE_CHECKING:
     from harness.agent_tools.tool_call import ToolCall
     from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 
-# File endings and the channel a file with that ending is written in; any other file is read as part of the graph.
-# Languages a node's file can be in whose rules every practice already checks; any other names a channel.
-_FILE_LANGUAGES = (((".ts", ".tsx"), "typescript"), ((".js", ".jsx", ".mjs"), "javascript"), (".py", "python"), ((".drawio", ".xml"), "drawio"))
 # A refresh reads files a practice keeps in `.context` (model documents, bounded contexts, story maps); every other
 # skipped folder, such as a session's reports in `.sessions`, holds nothing a practice reads.
 _REFRESH_SKIPPED_FOLDERS = SKIPPED_FOLDERS - {".context"}
@@ -113,14 +112,6 @@ class Source:
         text = path.read_text(encoding="utf-8") if path is not None and path.is_file() else ""
         end = text.count("\n") + (0 if not text or text.endswith("\n") else 1)
         return cls(relative, 1, max(1, end), root)
-
-    @property
-    def language(self) -> str:
-        if self.file.endswith(".py"):
-            return "python"
-        if self.file.endswith(".ts") or self.file.endswith(".tsx"):
-            return "typescript"
-        return "javascript"
 
     @property
     def text(self) -> str:
@@ -493,7 +484,8 @@ class Node:
         self.data[key] = value
 
     def get_fact(self, key: str, default=None):
-        """This node's fact, else the nearest ancestor's: a fact a whole file owns lives once, on the file's top node."""
+        """This node's fact, else the nearest ancestor's: a fact a whole file owns lives once, on the file's top node. A
+        node no practice holds yet has only the ancestors its parser gave it."""
         node, visited = self, set()
         while node is not None and id(node) not in visited:
             if node._holds_attribute(key):
@@ -501,7 +493,7 @@ class Node:
             if key in node.data:
                 return node.data[key]
             visited.add(id(node))
-            node = node.parent or node.graph.direct_parent(node)
+            node = node.parent or (node.graph.direct_parent(node) if node.practice is not None else None)
         return default
 
     def merge_fact(self, key: str, values: list) -> None:
@@ -571,14 +563,27 @@ class Node:
             self._rules = GraphRulesCollection.from_node(self)
         return self._rules
 
+    def forget_rules(self) -> None:
+        """Make this node's rules fresh when next read, with no violation found yet."""
+        self._rules = None
+
+    def leave_tree(self) -> None:
+        """Take this node out of the explorer tree, so the next populate places it again from its practice's edges."""
+        self.children = []
+        self.parent = None
+        self._populated = False
+
     @property
     def file_language(self) -> str | None:
-        """The channel the node's file is written in (``python``, ``typescript``, ``drawio``, ...), ``graph`` for a node
-        read from no file of its own such as a module; none for any other node without a file."""
-        file = (self.source.file or "").lower()
+        """The format the node's file is written in (``python``, ``typescript``, ``drawio``, ...), as the format of its
+        practice, else of another practice the graph holds, that reads the file's extension says; ``graph`` for a node
+        read from no file of its own such as a module, or from a file no format reads; none for any other node without
+        a file."""
+        file = self.source.file or ""
         if file in {"", "."}:
             return "graph" if self.type in {"Module", "Package"} else None
-        return next((language for suffixes, language in _FILE_LANGUAGES if file.endswith(suffixes)), "graph")
+        practices = (self.practice, *self.graph.every_practice.values())
+        return next((name for practice in practices if (name := practice.format_reading(Path(file))) is not None), "graph")
 
     @property
     def failed_rules(self) -> list[str]:
@@ -736,6 +741,8 @@ class PracticeNodes:
         self._edge_pairs: dict[str, tuple[tuple[int, int], set[tuple[int, int]]]] = {}
         self._edges_by_parent: dict[str, tuple[tuple[int, int], dict[int, list[Edge]]]] = {}
         self._direct_parents: tuple[tuple, dict[int, Node]] | None = None
+        # The practice's schema for each set of overlays, made the first time it is asked for.
+        self._schemas: dict[tuple[GraphOverlay, ...], PracticeSchema] = {}
 
     ## where the practice is read from, and its root
 
@@ -821,7 +828,7 @@ class PracticeNodes:
             node.parent = None
         node.place(file, start_line, end_line)
         self.hold(node)
-        node._rules = None
+        node.forget_rules()
         return node
 
     def add_named(self, type: str, node_id: str, name: str, source: Source) -> Node:
@@ -867,7 +874,7 @@ class PracticeNodes:
     def renew_rules(self) -> None:
         """Forget every node's rules, so each is made fresh when next read and the next check finds each violation again."""
         for node in self._by_id.values():
-            node._rules = None
+            node.forget_rules()
 
     ## edges
 
@@ -948,25 +955,28 @@ class PracticeNodes:
     def rebuild_tree(self) -> None:
         """Rebuild the practice's explorer tree from its edges after late-bound nodes or overlays."""
         for node in self._by_id.values():
-            node.children = []
-            node.parent = None
-            node._populated = False
+            node.leave_tree()
         self.root.populate()
 
     ## schema and rules
 
     @property
-    def schema(self):
-        """The practice's schema, with the graph's pattern overlays applied, which the practice itself holds."""
-        return PracticeSchema.load(self.practice, tuple(self.graph.pattern_overlays))
+    def schema(self) -> PracticeSchema:
+        """The practice's schema, with the graph's pattern overlays applied."""
+        return self.schema_with(tuple(self.graph.pattern_overlays))
+
+    def schema_with(self, overlays: tuple[GraphOverlay, ...]) -> PracticeSchema:
+        """The practice's schema with overlays applied, made the first time and kept here."""
+        schema = self._schemas.get(overlays)
+        if schema is None:
+            schema = self._schemas[overlays] = PracticeSchema(self.practice, overlays)
+        return schema
 
     @property
-    def overlay_checks(self) -> dict:
-        """The graph rules the graph's pattern overlays add to the practice, by slug."""
-        merged: dict = {}
-        for overlay in self.graph.pattern_overlays:
-            merged.update(overlay.rules_for(self.practice))
-        return merged
+    def checks(self) -> dict:
+        """The graph rules the practice checks in this graph, by slug: its own and those the graph's pattern overlays
+        add to it."""
+        return self.graph.applied_patterns.checks_of(self.practice)
 
     @property
     def rule_labels(self) -> list[str]:
@@ -1010,7 +1020,6 @@ class PracticeNodes:
             for rule in node.rules:
                 if not rule.runs or rule.slug in skipped:
                     continue
-                self.graph.report_progress(f"{key} · rule {rule.slug} · {index}/{len(nodes)} · {node.name}")
                 for message in rule.check(node, context):
                     node.rules.record_violation(rule.slug, message)
 
@@ -1042,7 +1051,6 @@ class PracticeNodes:
             node.stage = kept.stage
             node.data = dict(kept.facts)
             self.hold(node)
-            node._rules = None
 
 
 def _inside(node: Node, spans: dict[str, list[tuple[int, int]]]) -> bool:
@@ -1089,16 +1097,14 @@ class Graph:
         # The saved graph file of the folder last loaded, with that folder.
         self._saved_graph_file: tuple[Path, SavedGraphFile] | None = None
         self.filter = Filter(self)
-        self._overlay_paths: list[str] = []
-        self._pattern_overlays: list[GraphOverlay] = []
+        # The pattern overlays this graph applies, each pattern made once.
+        self.applied_patterns = PatternOverlays()
+        self._schema_edges = SchemaEdges(self)
         self.syncs_schema_edges = True
         self._schema_sync_holds = 0
         self._syncing_schema = False
         # A load, a refresh, and a write each run alone: calls in one session can arrive at once.
         self._changing = threading.RLock()
-
-    # One graph builds at a time in this process, whichever session's graph it is (see ``_fill``).
-    _builds: ClassVar[threading.BoundedSemaphore] = threading.BoundedSemaphore(1)
 
     def for_call(self, call: ToolCall) -> Graph:
         """The graph call works on: its session's, which the server holds between calls; this graph for a call that
@@ -1121,7 +1127,7 @@ class Graph:
         in it before. A folder with nothing saved opens holding no node until a load reads it."""
         self.open(folder)
         with self._changing:
-            saved = self._saved_file().read()
+            saved = self.saved_file.read()
             if saved is None:
                 return
             self.overlays = list(saved.overlays)
@@ -1151,19 +1157,24 @@ class Graph:
     @property
     def overlays(self) -> list[str]:
         """The folders of the pattern overlays this graph applies."""
-        return list(self._overlay_paths)
+        return list(self.applied_patterns.paths)
 
     @overlays.setter
-    def overlays(self, paths: list[str]) -> None:
-        """Apply the overlays at paths: the graph holds the pattern each one is, and asks each for the GraphOverlay it
-        owns."""
-        self._overlay_paths = list(paths)
-        self._pattern_overlays = [pattern.graph_overlay for pattern in PatternOverlays(self._overlay_paths).patterns]
+    def overlays(self, overlays: list[str]) -> None:
+        """Apply the overlays named, each a folder or a pattern's name: the graph holds the pattern each one is, and
+        asks each for the GraphOverlay it owns."""
+        self.applied_patterns.apply(list(overlays))
 
     @property
     def pattern_overlays(self) -> list[GraphOverlay]:
         """What each pattern this graph applies gives it: its nodes and its rules."""
-        return list(self._pattern_overlays)
+        return self.applied_patterns.graph_overlays
+
+    @property
+    def every_graph_overlay(self) -> list[GraphOverlay]:
+        """The overlay of every registered pattern, applied or not, whose schemas name relationships between the
+        practices' types."""
+        return self.applied_patterns.every_graph_overlay
 
     ## the practices this graph holds, and their nodes and edges
 
@@ -1174,7 +1185,9 @@ class Graph:
 
     def practice(self, key: str) -> PracticeGuidance:
         """The practice called key among those this graph holds, opened in this graph on the folder it last loaded the
-        first time it is asked for. It is always the same object: the one the graph was given."""
+        first time it is asked for. It is always the same object: the one the graph was given. This is the one lookup
+        by key, for a call that names a practice by the key it sent; code that knows the practice's class asks
+        ``practice_of``."""
         practice = self._held.get(key)
         if practice is None:
             raise UnknownPractice(key, tuple(self._held))
@@ -1247,13 +1260,25 @@ class Graph:
                 node.rules.restore(violation)
 
     def restored_from(self, saved: SavedGraph) -> None:
-        """Hold every practice saved keeps: each practice's nodes first, then the edges between them, which may cross
-        practices, and the violations on them."""
+        """Hold every practice saved keeps, with the overlays it was saved with: each practice's nodes first, then the
+        edges between them, which may cross practices, and the violations on them."""
         self.overlays = list(saved.overlays)
-        for name, kept in saved.practices.items():
-            self.practice(name).in_graph.restore(kept)
-        for kept in saved.practices.values():
-            self._restore_links(kept)
+        self._hold(saved)
+
+    def _hold(self, saved: SavedGraph) -> None:
+        """Hold exactly the practices saved keeps, of those this graph holds, each on the source root it was saved
+        with: their nodes, then the edges between them and the violations on them, then each practice's tree."""
+        self._close_practices()
+        kept = {key: practice for key, practice in saved.practices.items() if key in self._held}
+        for key, practice in kept.items():
+            self.report_progress(f"Loading saved {key} nodes")
+            root = Path(practice.source_root) if practice.source_root else self._folder
+            self._open_practice(self._held[key], root)
+            self._held[key].in_graph.restore(practice)
+        for practice in kept.values():
+            self._restore_links(practice)
+        for practice in self.practices.values():
+            practice.in_graph.root.populate()
 
     @long_call
     @mcp
@@ -1278,9 +1303,9 @@ class Graph:
         with self._changing:
             self._folder = Path(database or folder).resolve()
             self._choose_roots({name: (Path(folder) / root).resolve() for name, root in practices.items()})
-            self.overlays = PatternOverlays(list(overlays or [])).paths
+            self.overlays = list(overlays or [])
             self.report_progress("Checking the saved graph")
-            saved = None if force else self._saved_file().holding(self._roots_by_key(), self.overlays)
+            saved = None if force else self.saved_file.holding(self._roots_by_key(), self.overlays)
             if saved is not None:
                 self.report_progress("Loading the saved graph")
                 self._load_saved(saved)
@@ -1311,7 +1336,7 @@ class Graph:
         with self._changing:
             self._folder = Path(folder).resolve()
             self._choose_roots({name: self._folder for name in practices})
-            self.overlays = PatternOverlays(list(overlays or [])).paths
+            self.overlays = list(overlays or [])
             self._scope = self._scoped_files(files)
             self.report_progress("Reading the edited files")
             self._build_working_copy()
@@ -1379,20 +1404,59 @@ class Graph:
         self._fill()
 
     def _fill(self) -> None:
-        """Read the working copy into the open practices and rebuild each practice's tree. A working copy's edges are
-        the ones its practices read; its parsed objects never add schema edges of their own. Building is CPU-bound
-        Python, and every session's graph shares the one interpreter of the process serving it, so one graph builds at a
-        time: several at once each take far longer, and the server answers no other call while they run."""
+        """Read the working copy into the open practices, run their rules, and rebuild each practice's tree. A working
+        copy's edges are the ones its practices read; its parsed objects never add schema edges of their own."""
         self.syncs_schema_edges = False
-        if not Graph._builds.acquire(blocking=False):
-            self.report_progress("Waiting for another graph build to finish")
-            Graph._builds.acquire()
-        try:
+        self._build(BuildStep.READ, None)
+
+    def _build(self, step: BuildStep, state: SavedGraph | None) -> None:
+        """Carry step out, from state when one is given, else from what the graph holds now. In a call the cdd server
+        answers for a chat, a worker process carries it out and this graph then holds what the worker built: a build is
+        minutes of CPU-bound Python, and in the server's interpreter it would keep the server from answering every
+        other chat."""
+        if is_answering_a_chat():
+            before = state if state is not None else SavedGraph.from_graph(self)
+            order = BuildOrder(step, self.folder, self._roots_as_text(), self.overlays, self._scope_as_text(), before, self._registering_modules())
+            self._hold(WorkerBuild(order, self.report_progress).result())
+            return
+        if state is not None:
+            self._hold(state)
+        self._carry_out(step)
+
+    def carry_out(self, order: BuildOrder) -> SavedGraph:
+        """Carry order out on this graph, as a worker process does for a graph the cdd server holds, and answer the
+        graph as it is then."""
+        with self._changing:
+            self._folder = Path(order.folder) if order.folder else None
+            self._scope = None if order.scope is None else [Path(path) for path in order.scope]
+            self._choose_roots({key: Path(root) for key, root in order.roots.items()})
+            self.overlays = order.overlays
+            self.syncs_schema_edges = False
+            self._hold(order.state)
+            self._carry_out(order.step)
+            return SavedGraph.from_graph(self)
+
+    def _carry_out(self, step: BuildStep) -> None:
+        """Run step on what this graph holds, in this process."""
+        if step is BuildStep.READ:
             self._read_working_copy()
             for practice in self.practices.values():
                 practice.in_graph.rebuild_tree()
-        finally:
-            Graph._builds.release()
+            return
+        for practice in self.practices.values():
+            practice.in_graph.check()
+
+    def _roots_as_text(self) -> dict[str, str]:
+        return {practice.key: str(practice.in_graph.source_root_path) for practice in self._chosen if practice.in_graph.source_root_path is not None}
+
+    def _scope_as_text(self) -> list[str] | None:
+        return None if self._scope is None else [str(path) for path in self._scope]
+
+    def _registering_modules(self) -> list[str]:
+        """The modules that define the practices this graph holds and the patterns it applies; importing them registers
+        them with their catalogues, so a worker process holds the same classes."""
+        held = [*self._held.values(), *self.applied_patterns.patterns]
+        return sorted({type(item).__module__ for item in held})
 
     def _read_working_copy(self) -> None:
         """Read every open practice from the loaded folder, each after the practices it reads while it reads its own;
@@ -1405,7 +1469,7 @@ class Graph:
             practice.read_working_copy()
         for practice in practices:
             practice.link_to_other_practices()
-        for overlay in self._pattern_overlays:
+        for overlay in self.pattern_overlays:
             overlay.read(self)
         self._offer_overlay_types()
         for practice in self.practices.values():
@@ -1429,7 +1493,7 @@ class Graph:
 
     def _offer_overlay_types(self) -> None:
         """Offer the overlay schemas' node and relationship types in the filter lists before rules run."""
-        overlays = self._pattern_overlays
+        overlays = self.pattern_overlays
         if not overlays:
             return
         for practice in self.practices.values():
@@ -1498,11 +1562,13 @@ class Graph:
         """
         if self._folder is None:
             return GraphSaved("")
-        saved_file = self._saved_file()
+        saved_file = self.saved_file
         return GraphSaved(str(saved_file.write(SavedGraph.from_graph(self).merged_over(saved_file.read()))))
 
-    def _saved_file(self) -> SavedGraphFile:
-        """The saved graph file of the loaded folder, made once for each folder the graph loads."""
+    @property
+    def saved_file(self) -> SavedGraphFile:
+        """The saved graph file of the loaded folder, made once for each folder the graph loads; a validate that checks
+        the session's saved graph reads it here."""
         folder = self._folder or Path()
         held = self._saved_graph_file
         if held is None or held[0] != folder:
@@ -1515,17 +1581,10 @@ class Graph:
 
     def _choose_roots(self, roots: dict[str, Path]) -> None:
         """Read each practice a call names, by key, from its root; the next load reads only those."""
-        chosen = {self._held_practice(name): Path(root) for name, root in roots.items()}
+        chosen = {self.practice(name): Path(root) for name, root in roots.items()}
         for practice in self._held.values():
             practice.in_graph.source_root_path = chosen.get(practice)
         self._chosen = list(chosen)
-
-    def _held_practice(self, key: str) -> PracticeGuidance:
-        """The practice a call names by key, among those this graph holds."""
-        practice = self._held.get(key)
-        if practice is None:
-            raise UnknownPractice(key, tuple(self._held))
-        return practice
 
     def _roots_by_key(self) -> dict[str, Path]:
         return {practice.key: practice.in_graph.source_root_path for practice in self._chosen}
@@ -1537,16 +1596,9 @@ class Graph:
             self._open_practice(practice, practice.in_graph.source_root_path)
 
     def _load_saved(self, saved: SavedGraph) -> None:
-        """Read the requested practices back from the saved graph, then run their rules on what was read."""
-        self._open_chosen_roots()
-        for practice in self.practices.values():
-            self.report_progress(f"Loading saved {practice.key} nodes")
-            practice.in_graph.restore(saved.practices[practice.key])
-        for practice in list(self.practices.values()):
-            self._restore_links(saved.practices[practice.key])
-        for practice in self.practices.values():
-            practice.in_graph.root.populate()
-            practice.in_graph.check()
+        """Read the requested practices back from the saved graph, which holds each on its chosen root, then run their
+        rules on what was read."""
+        self._build(BuildStep.CHECK, saved.of_practices([practice.key for practice in self._chosen]))
 
     def sync_schema_edges(self) -> None:
         """Record the schema relationship edges between the model objects on this graph, unless a working copy loaded
@@ -1555,7 +1607,7 @@ class Graph:
             return
         self._syncing_schema = True
         try:
-            SchemaEdges(self).sync()
+            self._schema_edges.sync()
         finally:
             self._syncing_schema = False
 
@@ -1575,7 +1627,7 @@ class Graph:
     @agent_tool
     def set_overlays(self, overlays: list[str]) -> AppliedOverlays:
         """Apply pattern overlays, folders holding practices/, and rebuild the explorer tree from the open folder; answer with the graph's inventory."""
-        self.overlays = PatternOverlays(list(overlays or [])).paths
+        self.overlays = list(overlays or [])
         if self._folder is not None and self._chosen:
             roots = {name: str(path) for name, path in self._roots_by_key().items()}
             self.load_working_copy(str(self._folder), roots, database=str(self._folder), overlays=self.overlays)
@@ -1586,7 +1638,7 @@ class Graph:
     @agent_tool
     def overlay_of(self, folder: str) -> Overlay:
         """Return the pattern overlay folder holds: folder itself or the overlay root above it, which must hold practices/."""
-        root = PatternOverlays().root_of(folder)
+        root = self.applied_patterns.root_of(folder)
         if not (root / "practices").is_dir():
             raise GraphFailure("overlay_of", f"Not an overlay root (missing practices/): {folder}")
         return Overlay(str(root))
@@ -1602,7 +1654,7 @@ class Graph:
     def inventory(self) -> Inventory:
         """Return each loaded practice's node and edge counts, node types, rules, and explorer tree, with the overlays applied and those available."""
         loaded = {key: PracticeInventory(self, practice) for key, practice in self.practices.items()}
-        return Inventory(loaded, list(self.overlays), PatternOverlays().available)
+        return Inventory(loaded, list(self.overlays), self.applied_patterns.available)
 
     @mcp
     @agent_tool

@@ -6,7 +6,7 @@ draw the stages from here, so a stage's order, scope, and actions are written on
 
 from __future__ import annotations
 
-from harness.installation.destination import data_field
+from harness.installation.data_class import data_field
 
 DISCOVERY: str = "discovery"
 SPECIFICATION: str = "specification"

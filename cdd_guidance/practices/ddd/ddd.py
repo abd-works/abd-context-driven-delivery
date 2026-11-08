@@ -6,6 +6,7 @@ from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
+from cdd_guidance.practices.ddd.model.graph_reading import DddReading
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap, DomainNode
 from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS
@@ -16,7 +17,8 @@ from cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model import SketchDddMo
 class Ddd(PracticeGuidance):
     """# Instructions"""
 
-    sketch_titles = SketchDddModel.lens.titles
+    # Its section of a sketch is the one its sketch format reads, held as that one lens.
+    sketch_lens = SketchDddModel.lens
     SHORT_NAME = "DDD"
     COLOUR = "#6C5CE7"
 
@@ -76,24 +78,24 @@ class Ddd(PracticeGuidance):
         """Bounded contexts come from the folders that hold ``.context/bounded-context.md``, aggregates from the folders
         that hold domain classes, and building blocks from the classes Clean Engineering read, each seen through the DDD
         stereotype its declaration or name gives it."""
-        from cdd_guidance.practices.ddd.model.graph_reading import DddReading
-
         DddReading(self).read()
 
     def _parse_content(self, source_format: str, content):
         """A text the map reads as a plain class model, with no aggregate in it, is read by the Clean Engineering
-        practice this practice's fidelity has as its companion, through that practice's own adapter."""
+        practice of this practice's set, the one it extends, through that practice's own adapter."""
         parsed = super()._parse_content(source_format, content)
         if isinstance(parsed, BoundedContextMap) and parsed.holds_classes_only:
-            return self.clean_engineering_companion.practice_guidance._parse_content(source_format, content)
+            return self.extended._parse_content(source_format, content)
         return parsed
 
     def _model_for(self, target, parsed):
         """The code formats are Clean Engineering class models, which the map writes itself into as their own classes,
         so they render themselves; the DDD formats render the bounded-context map, which reads a class model back."""
-        if isinstance(target, CleanEngineeringModel) and isinstance(parsed, BoundedContextMap):
-            parsed.write_classes(target)
-            return target
+        if isinstance(parsed, BoundedContextMap):
+            if isinstance(target, CleanEngineeringModel) and not isinstance(target, BoundedContextMap):
+                parsed.write_classes(target)
+                return target
+            return parsed
         if isinstance(target, BoundedContextMap) and isinstance(parsed, CleanEngineeringModel):
             return MarkdownBoundedContextMap().read_class_model(parsed)
         return parsed

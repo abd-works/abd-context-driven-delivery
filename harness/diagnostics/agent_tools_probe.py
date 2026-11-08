@@ -73,7 +73,7 @@ class AgentToolsProbe:
         if self._mcp_host is None:
             from harness.mcp.mcp_server import McpHost
 
-            refs = tuple(self.installer.toolsets.collect())
+            refs = tuple(str(reference) for reference in self.installer.toolsets.references())
             self._mcp_host = McpHost.from_refs(refs, repo=str(self.installer.repo), project=str(self.installer.path))
         return self._mcp_host
 
@@ -83,7 +83,8 @@ class AgentToolsProbe:
         refs = [ref for ref in self.installer.diagnostics.installed_items("toolset") if agent_tools_toolset_ref(ref)]
         if refs:
             return tuple(refs)
-        return tuple(ref for ref in self.installer.toolsets.collect() if agent_tools_toolset_ref(ref))
+        refs = (str(reference) for reference in self.installer.toolsets.references())
+        return tuple(ref for ref in refs if agent_tools_toolset_ref(ref))
 
     @property
     def published(self) -> list[str]:

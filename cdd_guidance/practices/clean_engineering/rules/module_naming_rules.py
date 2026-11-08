@@ -5,9 +5,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from harness.graph.practice_rule import PracticeGraphRule
-
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.clean_engineering.model.production_code import ProductionCodeRule, is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -20,11 +18,11 @@ _VERB_MODULE = re.compile(
 _BAD_SUFFIX = re.compile(r"(Model|Runtime|Service|Manager|Helper|Util|Utils|Processor)$")
 
 
-class DomainNounsOnly(PracticeGraphRule):
+class DomainNounsOnly(ProductionCodeRule):
     slug = "domain-nouns-only"
     node_types = ("Module",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         name = (node.name or "").strip()
         if not name:
             return []
@@ -36,11 +34,11 @@ class DomainNounsOnly(PracticeGraphRule):
         return []
 
 
-class NoModulePerClass(PracticeGraphRule):
+class NoModulePerClass(ProductionCodeRule):
     slug = "no-module-per-class"
     node_types = ("Module",)
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if node.get_fact("is_a_in_context"):
             return [
                 f"Module {node.name!r} module-context uses '*is a type of*'; "
@@ -62,8 +60,10 @@ class NoModulePerClass(PracticeGraphRule):
 
 
 def _holds_modules(folder_node: "Node", context: "RuleCheckContext") -> bool:
-    """A folder above modules of its own may hold only the base they share; it groups those modules, not one class."""
-    return any(child.type == "Module" for child in context.children(folder_node, "owns"))
+    """A folder above folders of code of its own, modules with a card or packages without one, may hold only the base
+    they share, or the class that names the whole: Bdd in `bdd/` above its `model/` and `rules/` packages. It groups
+    those folders, so it is not a module of one class."""
+    return any(child.type in ("Module", "Package") for child in context.children(folder_node, "owns"))
 
 
 def _public_classes_in(folder_node: "Node", context: "RuleCheckContext") -> int:

@@ -7,7 +7,7 @@ from pathlib import Path
 _HERE = Path(__file__).resolve().parent
 
 from expects import be, be_a, be_above, be_none, contain, equal, expect
-from harness.installation.destination import data_of  # noqa: E402
+from harness.installation.data_class import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
 from harness.graph.edge import EdgeType
@@ -1295,37 +1295,23 @@ with description("a graph opened on a folder"):
             expect(self.message).to(contain("nothing was refreshed"))
 
 
-class _SlowBuild(Graph):
-    """A graph whose working copy takes a while to read, recording how many builds read at once."""
-
-    reading = 0
-    most_at_once = 0
-
-    def _read_working_copy(self) -> None:
-        import time
-
-        type(self).reading += 1
-        type(self).most_at_once = max(type(self).most_at_once, type(self).reading)
-        time.sleep(0.2)
-        type(self).reading -= 1
-
-
-with description("graphs of several sessions built at once"):
-    with before.each:
-        import threading
-
-        _SlowBuild.reading = 0
-        _SlowBuild.most_at_once = 0
-        graphs = [_SlowBuild(), _SlowBuild(), _SlowBuild()]
-        builds = [threading.Thread(target=graph._fill) for graph in graphs]
-        for build in builds:
-            build.start()
-        for build in builds:
-            build.join(10)
-
-    with it("should build one graph at a time, so the server keeps answering other calls"):
-        expect(_SlowBuild.most_at_once).to(equal(1))
-
-
 def _class_names_in(graph: Graph) -> list[str]:
     return sorted(node.name for node in graph.practice("clean_engineering").in_graph.nodes("OoadClass"))
+
+
+def _file_language(graph: Graph, practice: str, file: str) -> str | None:
+    return Node(graph.practice(practice), "OoadClass", f"{practice}:OoadClass:{file}", "Cart", Source(file, 1, 1)).file_language
+
+
+with description("the language of a node's file"):
+    with before.all:
+        self.graph = Graph()
+
+    with it("should be the format of the node's practice that reads the file's extension"):
+        expect(_file_language(self.graph, "clean_engineering", "src/Cart.java")).to(equal("java"))
+
+    with it("should be the format of another practice that reads it when the node's own practice reads no such file"):
+        expect(_file_language(self.graph, "ddd", "src/cart.py")).to(equal("python"))
+
+    with it("should be graph for a file no practice's format reads"):
+        expect(_file_language(self.graph, "clean_engineering", "src/cart.unknown")).to(equal("graph"))

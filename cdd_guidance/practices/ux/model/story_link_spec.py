@@ -14,6 +14,7 @@ from harness.graph.graph import Graph
 
 from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, Story, StoryModel
 from cdd_guidance.practices.ux.model.nodes import Screen
+from cdd_guidance.practices.ux.ux import Ux
 
 
 def edge_pairs(graph, practice, kind):
@@ -85,15 +86,17 @@ with description("a screen that shows stories"):
             self.screen.show_story("Browse Product Catalog")
             expect(self.screen.story_keys).to(equal(["Browse Product Catalog"]))
 
-        with context("that is joined by the story map"):
+        with context("that joins a graph the story map is on"):
             with before.each:
-                self.story_map, self.story, _scenario = story_map_on(self.screen.graph)
+                self.graph = Graph()
+                self.screen.join(self.graph.practice_of(Ux))
+                self.story_map, self.story, _scenario = story_map_on(self.graph)
 
             with it("should show the story once it is on the graph"):
                 expect(self.screen.shows).to(equal([self.story]))
 
             with it("should record the story shown on the screen"):
-                expect(edge_pairs(self.screen.graph, "stories", "shownOn")).to(contain(("Browse Product Catalog", "Catalog")))
+                expect(edge_pairs(self.graph, "stories", "shownOn")).to(contain(("Browse Product Catalog", "Catalog")))
 
     with context("with a copy of the story map drawn on another graph"):
         with before.each:
