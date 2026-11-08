@@ -177,6 +177,7 @@ class Stories(PracticeGuidance):
         with no map listed reads the map in its own folder or the nearest one above it."""
         from cdd_guidance.practices.stories.model.source_location import path_from
         from cdd_guidance.practices.stories.model.story_model import StoryModel
+        from cdd_guidance.practices.stories.model.story_recording import imported_example_files
 
         project = Path(project).resolve()
         paths = [Path(item).resolve() for item in files]
@@ -195,6 +196,10 @@ class Stories(PracticeGuidance):
                 on_file(file)
             text = path.read_text(encoding="utf-8")
             merged.source_texts[file] = text
+            for source in imported_example_files(file, text):
+                example_file = project / source
+                if example_file.is_file():
+                    merged.source_texts[source] = example_file.read_text(encoding="utf-8")
             merged.take_scenarios(self._story_test_reader(path).story_type.load_all(text), file)
         return merged
 

@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.markdown.format import Format
 
+from cdd_guidance.practices.stories.model.story_recording import example_source_file
+
 if TYPE_CHECKING:
     from harness.graph.graph import Node
     from harness.graph.rule_context import RuleCheckContext
@@ -38,11 +40,7 @@ class DomainFixtureExampleFiles(PracticeGraphRule):
     def _fixture_path(self, node: Node) -> str:
         """The file the example comes from: the module the story test imports it from, in the story test's language,
         else the story test itself."""
-        story_test = node.source.file or ""
-        module = (node.get_fact("imported_modules") or {}).get(node.name)
-        if module is None:
-            return story_test
-        return module + PurePosixPath(story_test).suffix
+        return example_source_file(node.source.file or "", node.get_fact("imported_modules") or {}, node.name)
 
     def _ending_for(self, name: str) -> str:
         """The examples-file ending of the file's own language; every ending when the file is in none of them."""

@@ -230,7 +230,7 @@ class Example(StoryNode):
         """Add this example to the graph under scenario, the node of the scenario that uses it, at that scenario's
         lines; an example two scenarios of one file share is one node. Its graph parent is the scenario that uses it,
         not its scope, so the scenario is handed in."""
-        node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at)
+        node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
         recording.graph.link("examples", scenario, node)
 
     def clone(self) -> "Example":

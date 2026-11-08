@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 from typing import TYPE_CHECKING, Callable, Optional
+from pathlib import PurePosixPath
 
 from harness.graph.graph import Node
 
@@ -82,6 +83,32 @@ def _opening_docblock(lines: list[str]) -> str:
     return text[start:end]
 
 
+def example_source_file(story_test: str, imported_modules: dict[str, str], name: str) -> str:
+    """The file the example called name comes from, named from the project like story_test: the module story_test
+    imports it from, with story_test's own extension and, for a relative import, resolved against story_test's folder;
+    else story_test itself, which declares the example."""
+    module = imported_modules.get(name)
+    if module is None:
+        return story_test
+    suffix = PurePosixPath(story_test).suffix
+    if not module.startswith("."):
+        return module + suffix
+    parts: list[str] = list(PurePosixPath(story_test).parent.parts)
+    for part in PurePosixPath(module).parts:
+        if part == "..":
+            parts = parts[:-1]
+        elif part != ".":
+            parts.append(part)
+    return "/".join(parts) + suffix
+
+
+def imported_example_files(story_test: str, text: str) -> list[str]:
+    """The files story_test imports names from by a relative import, named from the project: where its examples can
+    come from."""
+    imported = _imported_modules(text)
+    return sorted({example_source_file(story_test, imported, name) for name, module in imported.items() if module.startswith(".")})
+
+
 def story_file_facts(text: str) -> dict:
     """Facts a story file owns, read from its text: they sit on the Story node, and its scenarios, steps, and examples
     read them through get_fact."""
@@ -138,6 +165,14 @@ class StoryRecording:
 
     def facts_of(self, file: str) -> dict:
         return story_file_facts(self.text_of(file))
+
+    def example_facts(self, file: str, name: str) -> dict:
+        """The facts of the example called name that story file declares or imports: the names exported by the file
+        it comes from, when that is another file the map read; none otherwise, so the story file's own apply."""
+        source = example_source_file(file, story_file_facts(self.text_of(file))["imported_modules"], name)
+        if source == file or not self.text_of(source):
+            return {}
+        return {"export_names": _EXPORT_CONST.findall(self.text_of(source))}
 
     def name_span(self, file: str, name: str, folder: str) -> SourceLocation:
         """The line of file that names name; the folder alone when no line of file does."""
