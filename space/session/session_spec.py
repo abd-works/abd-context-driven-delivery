@@ -949,6 +949,27 @@ with description("a session with no folder of its own, on a project inside its c
         expect(stories.folder).to(equal(self.session.root / stories.guidance.default_workspace_folder))
 
 
+with description("a session working in a folder of its own, holding an aggregate's files") as self:
+    with before.each:
+        self.repo = Path(tempfile.mkdtemp(prefix="session-declared-")).resolve()
+        (self.repo / ".git").mkdir()
+        self.work = self.repo / "work"
+        for name in ("client.ts", "helpers.ts"):
+            (self.work / "sales" / "client").mkdir(parents=True, exist_ok=True)
+            (self.work / "sales" / "client" / name).write_text("export class Client {}\n", encoding="utf-8")
+        Sessions(self.repo).switch("alpha", self.work)
+        self.model = Sessions(self.repo).current().practice("ddd").fidelities["model"]
+
+    with after.each:
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    with it("should list the file named for its aggregate's folder"):
+        expect([entry.path for entry in self.model.files()["typescript"]]).to(equal(["work/sales/client/client.ts"]))
+
+    with it("should find the declared file there"):
+        expect(self.model.has_declared_output()).to(equal(True))
+
+
 # (E) Open Work Session
 # (S) Session --> Switch Session
 with description("a session on an MCP host whose CDD_REPO is the CDD checkout, not the project"):

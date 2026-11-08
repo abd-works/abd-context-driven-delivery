@@ -263,7 +263,7 @@ class PromptNotify:
     def _echo_kind_label(self, tool) -> tuple[str, str]:
         toolset = tool.toolset
         if tool.name == "instructions":
-            if getattr(toolset, "practice_guidance", None) is not None:
+            if toolset.is_part_of_practice:
                 return "fidelity", tool.slug
             return "practice", getattr(toolset, "slug", tool.name)
         if tool.name == "begin":
@@ -284,7 +284,7 @@ class PromptNotify:
         toolset = tool.toolset
         slug = str(getattr(toolset, "slug", "") or "")
         names = {f"{slug}.{tool.name}", f"{slug}_{tool.name}", tool.name}
-        if getattr(toolset, "practice_guidance", None) is not None:
+        if toolset.is_part_of_practice:
             names.add(tool.slug)
         if tool.name == "instructions" and slug:
             names.add(slug)

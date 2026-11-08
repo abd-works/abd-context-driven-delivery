@@ -181,7 +181,7 @@ class RulesCollection(MarkdownCollection):
         practice = self._owner_practice()
         if practice is None:
             return
-        session = practice.session if practice.session is not None else payload.call.session
+        session = practice.session if practice.session is not None else payload.session
         if session is None:
             return
         for bag in bags:

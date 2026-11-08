@@ -251,7 +251,7 @@ with description("clean_engineering content helpers"):
 
 with description("the Clean Engineering practice reading a source file"):
     with it("should read a .tsx file with its TypeScript format"):
-        expect(type(CleanEngineering().code_model_for(Path("cart.tsx"))).__name__).to(equal("TypeScriptCleanEngineeringModel"))
+        expect(type(CleanEngineering().format_for(Path("cart.tsx"))).__name__).to(equal("TypeScriptCleanEngineeringModel"))
 
     with it("should read a .py file with its Python format"):
-        expect(type(CleanEngineering().code_model_for(Path("cart.py"))).__name__).to(equal("PythonCleanEngineeringModel"))
+        expect(type(CleanEngineering().format_for(Path("cart.py"))).__name__).to(equal("PythonCleanEngineeringModel"))

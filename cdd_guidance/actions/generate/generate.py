@@ -83,15 +83,12 @@ class Generate(GuidanceAction):
         """The files fidelity has in this session, by the format it declares them in, each a path from the project."""
         return {label: [entry.path for entry in entries if entry.exists] for label, entries in fidelity.files().items()}
 
-    def _generate_item(self, item) -> None:
+    def _generate_item(self, item) -> str:
+        """What generating one listed guidance asks for: the text itself, or the instructions of the fidelity this
+        generate works at and what its practice says about writing the artifact. The recipe reads the text returned."""
         if isinstance(item, str):
-            instructions(item)
-            self.generate_output()
-        else:
-            item.instructions
-            item.generate_output()
-        self.generate_fixes_from_validate()
-        self.add_generate_header_to_generated()
+            return item
+        return "\n\n".join(part.strip() for part in (item.instructions, item.generate_output()) if part and part.strip())
 
     def _where_outputs_go(self) -> str:
         worked = [self.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
@@ -100,19 +97,6 @@ class Generate(GuidanceAction):
         if not places:
             return ""
         return f"Save each format you write at its path, filling any {{name}} from the work: {'; '.join(places)}"
-
-    @agent_instructions
-    def add_generate_header_to_generated(self) -> str:
-        """Prepend the following block verbatim as the very first lines of the file you are writing - before any imports, before any code."""
-        return (
-            '"""\n'
-            '"""\n'
-        )
-
-    @agent_instructions
-    def generate_output(self) -> str:
-        """Write this context tool's artifact for the current fidelity. Override on the practice; the default writes nothing."""
-        return ""
 
     def fix_instructions(self) -> str:
         """What generate_fixes_from_validate tells the agent, expanded for the guidance this generate works on, so another

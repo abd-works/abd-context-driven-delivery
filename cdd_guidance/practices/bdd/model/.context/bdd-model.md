@@ -13,7 +13,7 @@ markdown = MarkdownBddModel().render(model)
 
 - **Purpose:** Keep observable behaviour as one describe tree — descriptions, contexts, observations — so a sketch and a spec file stay the same hierarchy every later fidelity reads, and so the graph can check BDD rules against facts each node carries.
 - **Seam (terms):** BddModel, MarkdownBddModel, SketchBddModel, CodeBddModel, PythonBddModel, TypeScriptBddModel, GraphBddModel, BehaviorNode, Description, Context, Observation, UnreadableSpec
-- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*, *Node*, *Edge*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*, *SketchLens*)
+- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*, *Node*, *Edge*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*), harness/guidance (*SketchLens*)
 
 *ModelNode*, *ModelChildren*, *CodeBody*, *CodeLanguage*, *WrittenBlock*, and *CallGraphEntry* are owned by the modules above; this model only uses them.
 

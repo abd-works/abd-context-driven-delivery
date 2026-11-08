@@ -42,13 +42,14 @@ class Partition(GuidanceAction):
     def partition_guidance(self) -> str: ...
 
     def _guidance_to_index_by(self, item) -> str:
-        """partition_guidance.md for one listed practice, naming that practice's own file and the Scaffold subsection
-        of the fidelity it works at, which says what the index lists. Text guidance, and a practice with no current
-        fidelity, have none."""
+        """partition_guidance.md for one listed practice, handed over at the fidelity this partition works at, naming
+        that practice's own file and the fidelity's Scaffold subsection, which says what the index lists. Text guidance,
+        and a practice with no current fidelity, have none."""
         fidelity = None if isinstance(item, str) else self.fidelity_of(item)
         if fidelity is None:
             return ""
-        return self.partition_guidance.replace("{{slug}}", item.key).replace("{{scaffold}}", fidelity.scaffold)
+        practice = self.practice_of(item)
+        return self.partition_guidance.replace("{{slug}}", practice.key).replace("{{scaffold}}", fidelity.scaffold)
 
     def _folder(self, out_root: str | None) -> Path:
         """The folder the index and segments go under: out_root when the call names one, else the session's root."""

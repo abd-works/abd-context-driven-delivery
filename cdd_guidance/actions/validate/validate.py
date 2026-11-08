@@ -130,8 +130,8 @@ class Validate(GuidanceAction):
 
         violations = self._graph.violations()
         self._log_graph_validation(violations)
-        guidance = [item for item in self.listed() if not isinstance(item, str)]
-        sources = [str(path.resolve()) for path in self._graph.files]
+        guidance = [self.at_fidelity(item) for item in self.listed() if not isinstance(item, str)]
+        sources =[str(path.resolve()) for path in self._graph.files]
         return ValidationReport(self.session, guidance).of_graph(violations, sources)
 
     def _log_graph_validation(self, violations: list) -> None:
@@ -173,11 +173,10 @@ class Validate(GuidanceAction):
         wanted: path to the behavior the rule must require. Pass the file. Do not paste its body."""
         self._work_on(guidance)
 
-        def on(item) -> None:
+        def on(item) -> str:
             if isinstance(item, str):
-                return
-            item.examples
-            item.templates
+                return ""
+            return "\n\n".join(part.strip() for part in (str(item.examples or ""), item.templates or "") if part.strip())
 
         self.run(on, action="create_rule")
         return (

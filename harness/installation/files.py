@@ -81,7 +81,7 @@ class FileInstallation(Installation):
             skill_folder = self._skill_folder(toolset, operation)
             return Path("skills") / (skill_folder if self.layout.nests_skills else self._flat_skill_folder(skill_folder)) / "SKILL.md"
         if self.destination == InstallDestination.COMMAND:
-            parent = folder.parent if getattr(toolset, "practice_guidance", None) is not None and folder.name else folder
+            parent = folder.parent if toolset.is_part_of_practice and folder.name else folder
             return Path(self.layout.commands_folder) / parent / f"{self._command_stem(toolset, operation)}.md"
         if self.destination == InstallDestination.RULE:
             return self._rule_path(toolset, folder)
@@ -132,14 +132,14 @@ class FileInstallation(Installation):
     def _guidance_slug(self, toolset: Any) -> str | None:
         """The kebab slug of a practice or fidelity's guidance toolset, whose files are named after it; none for any
         other toolset."""
-        if getattr(toolset, "practice_guidance", None) is None:
+        if not toolset.is_part_of_practice:
             return None
         slug = getattr(toolset, "slug", None)
         return Name(str(slug)).kebab if slug else None
 
     def _rule_path(self, toolset: Any, folder: Path) -> Path:
         suffix = self.layout.rule_suffix
-        if getattr(toolset, "practice_guidance", None) is None:
+        if not toolset.is_part_of_practice:
             return Path("rules") / folder.with_suffix(suffix)
         parent = folder.parent if folder.name else folder
         return Path("rules") / parent / f"{self._guidance_slug(toolset) or self._command_stem(toolset, folder.name)}{suffix}"
@@ -184,9 +184,6 @@ class FileInstallation(Installation):
             return ""
         toolset = tool.toolset
         guide = getattr(toolset, "schema_guide", None)
-        if not callable(guide):
-            practice = getattr(toolset, "practice_guidance", None)
-            guide = getattr(practice, "schema_guide", None) if practice is not None else None
         return (guide() or "").strip() if callable(guide) else ""
 
     def _instructions_at_install(self, tool: AgentTool) -> str:

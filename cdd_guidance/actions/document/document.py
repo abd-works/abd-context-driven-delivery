@@ -21,11 +21,10 @@ class Document(GuidanceAction):
         """Record what already exists for the listed guidance without correcting it. Read contexts and templates, and write the observed state under the session path so violations are flagged, not fixed.
         paths: the files and folders to scan."""
         self._work_on(guidance)
-        def on(item) -> None:
+        def on(item) -> str:
             if isinstance(item, str):
-                return
-            item.templates
-            item.generate_output()
+                return ""
+            return "\n\n".join(part.strip() for part in (item.templates, item.generate_output()) if part and part.strip())
 
         self.run(on, action="document")
         "After writing, call refresh with exactly the files you wrote, so the session's graph holds them as they are now; nothing watches the files."

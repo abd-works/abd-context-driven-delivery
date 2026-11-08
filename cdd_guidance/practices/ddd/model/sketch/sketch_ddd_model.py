@@ -5,7 +5,7 @@ Each context reads and writes its own lines, and each aggregate and card its own
 
 from __future__ import annotations
 
-from cdd_guidance.actions.sketch.sketch_outline import SketchLens, SketchOutline
+from cdd_guidance.actions.sketch.sketch_outline import SketchOutline
 from cdd_guidance.practices.ddd.model.markdown.nodes import (
     BUILD_ORDER,
     SKETCH_CONTEXT,
@@ -15,6 +15,7 @@ from cdd_guidance.practices.ddd.model.markdown.nodes import (
     fenced,
     sketch_level,
 )
+from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
 
 _SECTION = "## domain driven design:"
@@ -44,6 +45,9 @@ def _is_prose_heading(stripped: str) -> bool:
 
 
 class SketchDddModel(MarkdownBoundedContextMap):
+    lens = Ddd.sketch_lens
+    """The section of a sketch DDD writes, opened by the headings the DDD practice declares."""
+
     @property
     def holds_classes_only(self) -> bool:
         """A sketch's ddd section is always a map."""
@@ -58,7 +62,7 @@ class SketchDddModel(MarkdownBoundedContextMap):
         lines: list[str] | None = None
         in_events = False
         in_meta = True
-        for raw in SketchOutline(text, SKETCH_INDENT).body_for(SketchLens.of("ddd")).splitlines():
+        for raw in SketchOutline(text, SKETCH_INDENT).body_for(self.lens).splitlines():
             stripped = raw.strip()
             lowered = stripped.lower()
             if not stripped or stripped.startswith(("#", "---")):

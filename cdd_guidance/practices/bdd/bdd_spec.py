@@ -94,7 +94,7 @@ with description("a Bdd toolset"):
 
     with context("that reads a spec file into the graph"):
         with it("should read a Python spec with its Python format"):
-            expect(type(Bdd().spec_model_for(Path("cart_spec.py"))).__name__).to(equal("PythonBddModel"))
+            expect(type(Bdd().format_for(Path("cart_spec.py"))).__name__).to(equal("PythonBddModel"))
 
         with it("should read a JavaScript spec with its TypeScript format"):
-            expect(type(Bdd().spec_model_for(Path("cart.spec.js"))).__name__).to(equal("TypeScriptBddModel"))
+            expect(type(Bdd().format_for(Path("cart.spec.js"))).__name__).to(equal("TypeScriptBddModel"))

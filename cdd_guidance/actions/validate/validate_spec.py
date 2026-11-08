@@ -71,8 +71,8 @@ def _write(root: Path, relative: str, text: str) -> None:
 def _working_in(throwaway: ThrowawayProject, project: Path, root: Path) -> Session:
     """The main session of the spec's own project, where its logs and reports go, made to work in root, a folder of the
     project checked out at project."""
-    session = ToolCall(project=throwaway.root).session
-    session.repo_path = Path(project).resolve()
+    kept_in = ToolCall(project=throwaway.root).session.session_path
+    session = Session.load(kept_in, Path(project).resolve())
     session.workpath = Path(root).resolve()
     return session
 

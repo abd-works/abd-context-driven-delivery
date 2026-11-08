@@ -13,7 +13,8 @@ from cdd_guidance.actions.validate.graph_json_reader import violations_by_rule
 
 
 class ValidationReport:
-    """The validation report of one session on the guidance a validate call lists. It shows each rule that guidance
+    """The validation report of one session on the guidance a validate call lists, each at the fidelity it is validated
+    at. It shows each rule that guidance
     checks, and for a graph hit of a rule it does not check, that rule as the guidance has it. It names files by their
     path from the session's root and links each hit to its file by absolute path and line, so a link opens the file from
     wherever the report is read."""

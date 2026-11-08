@@ -38,7 +38,7 @@ def _add_spec(practice: Bdd, file: Path, relative: str) -> None:
         text = file.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return
-    spec = practice.spec_model_for(file).parse_code(text)
+    spec = practice.format_for(file).parse_code(text)
     spec.load_source_facts(text)
     lines = text.splitlines()
     behavior = spec.behavior_nodes()

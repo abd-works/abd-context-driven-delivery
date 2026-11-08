@@ -17,6 +17,18 @@ class DeclaredFile:
         self._declared = declared
 
     @functools.cached_property
+    def glob(self) -> str:
+        """The declared path as the glob a file search reads, which finds every file the pattern can match: a named
+        folder is ``**/`` and a named part of a file name is ``*``. A path with no named parts stays the plain path."""
+        folders = re.sub(r"\{[^{}/]+\}/", "**/", self._declared)
+        return re.sub(r"\{[^{}/]+\}", "*", folders)
+
+    @property
+    def names_one_path(self) -> bool:
+        """Whether the declared path is one plain path, with no named parts or wildcards."""
+        return "*" not in self.glob
+
+    @functools.cached_property
     def pattern(self) -> re.Pattern[str]:
         """The pattern, made once."""
         named: set[str] = set()
