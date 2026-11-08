@@ -45,7 +45,7 @@ describe('Activate Ticket', () => {
   it('should offer a handoff, commit and push of main when the session has no branch of its own', async () => {
     const { page } = await board.page()
     await page.activation.start(ticketOn(page, CHOSEN), false)
-    expect([page.store.state.activation?.leavingBranch?.name, page.store.state.activation?.leaving]).toEqual(['main', ['handoff', 'commit', 'push']])
+    expect([page.store.state.activation?.leaveChoices?.branch.name, page.store.state.activation?.leaving]).toEqual(['main', ['handoff', 'commit', 'push']])
   })
 
   it('should leave only the handoff chosen once a person unchooses commit and push', async () => {

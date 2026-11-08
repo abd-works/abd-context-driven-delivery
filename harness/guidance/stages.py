@@ -16,6 +16,8 @@ IMPLEMENTATION: str = "implementation"
 GENERATE: str = "generate"
 VALIDATE: str = "validate"
 REVIEW: str = "review"
+# The action that converts a fidelity's output into other formats, so it needs output to convert.
+RENDER: str = "render"
 
 
 class StageScope:
@@ -61,10 +63,10 @@ class ApproachStage:
     # The steps every fidelity goes through, then the other actions a person can run on a fidelity in place of the
     # next step. Each but review is an operation in the action catalogue; review is the person's approval.
     _STEPS = (GENERATE, VALIDATE, REVIEW)
-    _OTHER_ACTIONS = ("iterate", "sketch", "render", "document")
+    _OTHER_ACTIONS = ("iterate", "sketch", RENDER, "document")
     # Generate writes a fidelity in the formats a person picks, and render converts it into them; every other action
     # writes or reads a fidelity's files in the formats they already have.
-    _ACTIONS_WITH_FORMATS = (GENERATE, "render")
+    _ACTIONS_WITH_FORMATS = (GENERATE, RENDER)
 
     def __init__(self, name: str, scope: StageScope) -> None:
         self._name = name

@@ -89,13 +89,13 @@ export class BoardClient extends BoardClientGenerated {
     this.page.store.change({ selected: address })
   }
 
-  // A ticket moved back out of Discovery leaves the columns and comes back as a backlog item under its title.
+  // A ticket moved back into the Backlog leaves the columns and comes back as the backlog item that, Python says, holds it.
   private returnsSince(before: BoardClient): string[] {
     const names = new Set(this.tickets.map(ticket => ticket.name))
-    const earlierItems = before.backlogItems.map(item => item.title)
-    const items = this.backlogItems.map(item => item.title)
+    const earlierHeld = before.backlogItems.map(item => item.ticket)
+    const held = this.backlogItems.map(item => item.ticket)
     return before.tickets
-      .filter(ticket => !names.has(ticket.name) && items.includes(ticket.title) && !earlierItems.includes(ticket.title))
+      .filter(ticket => !names.has(ticket.name) && held.includes(ticket.name) && !earlierHeld.includes(ticket.name))
       .map(ticket => `${ticket.title} moved to Backlog`)
   }
 

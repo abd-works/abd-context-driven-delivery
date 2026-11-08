@@ -57,6 +57,8 @@ export function progressOf(ticket: string, slug: string, state = 'not_started', 
     is_enabled: practice in ROOTS,
     next_action: nextAction,
     allowed_actions: [],
+    has_violations: state === 'violations',
+    next_command: nextAction && nextAction !== 'review' ? `/actions-${nextAction} ${slug}` : '',
     state,
     actions,
     report_file: '',
@@ -93,6 +95,8 @@ export function checkoutFlow(seed: TicketSeed = {}): TicketData {
     is_done: seed.is_done ?? false,
     next: next ? { ticket: { name }, fidelity: { slug: next } } : null,
     worktree: '',
+    working_chat: null,
+    stage_work: [],
   }
 }
 
@@ -143,7 +147,7 @@ const column = (name: string, tickets: TicketData[]): ColumnData => {
 // Seed: the board as board.show returns it, each ticket in the column it names and the active one named.
 export function boardOf(active: string | null, ...tickets: TicketData[]): BoardData {
   const activeTicket = tickets.some(ticket => ticket.name === active) ? { name: active! } : null
-  return { project: 'abd-context-driven-delivery', practices: PRACTICES.map(practiceData), active: activeTicket, columns: [{ name: 'Backlog', items: [] }, ...STAGE_ORDER.map(name => column(name, tickets))] }
+  return { project: 'abd-context-driven-delivery', practices: PRACTICES.map(practiceData), active: activeTicket, columns: [{ name: 'Backlog', items: [] }, ...STAGE_ORDER.map(name => column(name, tickets))], format_groups: [] }
 }
 
 // Interaction: the name a person types in the session list's field.

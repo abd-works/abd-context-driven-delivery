@@ -1,17 +1,16 @@
-import type { BranchData } from '@cdd/space/kanban/ticket'
+import type { SessionChoicesData } from '@cdd/space/kanban/ticket'
 
 import type { BoardPage } from '../board/board-page'
 import type { Activation } from '../board/board-store'
 import type { TicketClient } from './ticket-client'
 
-// Leaving writes a handoff for the session left, and commits and pushes the branch its work is on while that branch is
-// checked out; merge waits for the person to choose it.
-const FIRST_LEAVING = ['handoff', 'commit', 'push']
-const HANDOFF_ONLY = ['handoff']
 const LEFT_STEPS: Record<string, string> = { handoff: 'handoff written', commit: 'committed', push: 'pushed', merge: 'merged to main' }
 const OPENED_STEPS: Record<string, string> = { branch: 'branch created', worktree: 'worktree created' }
-// A branch read that failed is offered as missing, since the page has already shown the failure.
-const missingBranch = (name: string): BranchData => ({ name, exists: false, is_checked_out: false })
+// A read that failed offers nothing, since the page has already shown the failure.
+const nothingOn = (branch: string): SessionChoicesData => ({ branch: { name: branch, exists: false, is_checked_out: false }, choices: [] })
+
+// What Python chooses to start with.
+const chosenIn = (offered: SessionChoicesData | null): string[] => (offered?.choices ?? []).filter(choice => choice.is_chosen).map(choice => choice.name)
 
 const toggled = (chosen: string[], option: string): string[] => (chosen.includes(option) ? chosen.filter(entry => entry !== option) : [...chosen, option])
 
@@ -47,17 +46,17 @@ export class ActivationClient {
   async start(ticket: TicketClient, isClosing: boolean): Promise<void> {
     ticket.select()
     const active = this.page.board.activeTicket
-    // The branch the work being left is on, its own or main, which leaving commits and pushes.
-    const [branch, leavingBranch] = await Promise.all([ticket.branch(), active ? active.workBranch() : null])
+    // Python offers what leaving the active ticket can do with its work and what opening this one can create.
+    const [openChoices, leaveChoices] = await Promise.all([ticket.openChoices(), active ? active.leaveChoices() : null])
     const leavingTitle = isClosing ? ticket.title : (active?.title ?? '')
     this.show({
       ticket,
       isClosing,
       leavingTitle,
-      leaving: leavingBranch?.is_checked_out ? FIRST_LEAVING : HANDOFF_ONLY,
-      opening: branch?.exists ? [] : ['branch'],
-      branch: branch ?? missingBranch(ticket.name),
-      leavingBranch,
+      leaving: chosenIn(leaveChoices),
+      opening: chosenIn(openChoices),
+      leaveChoices,
+      openChoices: openChoices ?? nothingOn(ticket.name),
     })
   }
 

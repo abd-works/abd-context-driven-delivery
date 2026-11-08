@@ -4,7 +4,7 @@ import type { TicketData } from '@cdd/space/kanban/ticket'
 import type { ChatData } from '@cdd/harness/chat/chat'
 
 import { BacklogDraftClient, BacklogItemClient } from '../backlog-item/backlog-item-client'
-import { ChatClient, isWorkingIn } from '../chat/chat-client'
+import { ChatClient } from '../chat/chat-client'
 import { ActivationClient } from '../ticket/activation-client'
 import { FilesPanelClient } from '../ticket/files-panel-client'
 import { OpenCardClient } from '../ticket/open-card-client'
@@ -27,7 +27,7 @@ const BUILD_PATH = '/build'
 const SERVER_BACK_WITHIN_MILLISECONDS = 30_000
 const SERVER_BACK_CHECK_MILLISECONDS = 1000
 const CLAUDE_OPEN_PATH = '/claude/open'
-const NOT_READ_YET: BoardData = { project: '', practices: [], active: null, columns: [] }
+const NOT_READ_YET: BoardData = { project: '', practices: [], active: null, columns: [], format_groups: [] }
 
 // Everything the page's views act through, wired once.
 export class BoardPage {
@@ -68,9 +68,9 @@ export class BoardPage {
     await Promise.all([this.tiles.reload(), this.panels.reload(), this.files.reload()])
   }
 
-  // A chat working in a ticket's worktree goes by the ticket's name.
+  // A chat working on a ticket, as Python names it, goes by the ticket's name.
   chatName(chat: ChatData): string {
-    return this.board.tickets.find(ticket => isWorkingIn(chat.folder, ticket.worktree))?.name ?? (chat.name || chat.id)
+    return this.board.tickets.find(ticket => ticket.workingChat?.id === chat.id)?.name ?? (chat.name || chat.id)
   }
 
   ticket(json: TicketData): TicketClient {
@@ -81,12 +81,12 @@ export class BoardPage {
     return new BacklogItemClient(json, this)
   }
 
-  // Brings the board and every chat onto the latest code: the server pulls, rebuilds, pins cdd, and restarts itself, and
+  // Brings the board and every chat onto the latest code: the installer pulls and pins cdd, the server rebuilds and restarts itself, and
   // the page loads again from it.
   async update(): Promise<void> {
     if (this.store.state.isUpdating) return
     this.store.change({ isUpdating: true })
-    this.store.toast('Updating: getting the latest code, rebuilding, and re-pinning cdd')
+    this.store.toast('Updating: getting the latest code, re-pinning cdd, and rebuilding')
     const updated = await this.api.post<{ is_updated: boolean }>(UPDATE_PATH)
     if (updated && (await this.boardServerIsBack())) this.store.change({ isNewBuild: true })
     this.store.change({ isUpdating: false })

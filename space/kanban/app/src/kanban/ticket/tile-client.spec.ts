@@ -5,9 +5,8 @@ import type { BoardPage } from '@src/kanban/board/board-page'
 import type { ColumnClient } from '@src/kanban/board/column-client'
 import { BoardOnProject, ticketOn } from 'test-utils/board-page-support'
 
-import type { FilesByFidelity } from './ticket-client'
 import { headPlace } from './tile-client'
-import { chipsOf, chosenFormats, defaultPicks } from './tile-formats'
+import { chosenFormats } from './tile-formats'
 
 // billing-report is made the active ticket: nothing is recorded on it yet. The project's story map,
 // .context/story-map.md, is its markdown; a spec removes it for a ticket with nothing generated.
@@ -31,13 +30,6 @@ let STORY_MAP_FIDELITY: FidelityGuidanceData
 let OTHER_FIDELITY: FidelityGuidanceData
 let THIRD_FIDELITY: FidelityGuidanceData
 let TWO_FIDELITIES: FidelityGuidanceData[]
-let NOTHING_MADE: FilesByFidelity
-let MARKDOWN_MADE: FilesByFidelity
-
-const filesOn = async (): Promise<FilesByFidelity> => {
-  const ticket = ticketOn((await board.page()).page, TICKET)
-  return (await ticket.filesOf([ticket.progressNamed(SLUG)!]))!
-}
 
 beforeAll(async () => {
   board = await BoardOnProject.start()
@@ -47,9 +39,6 @@ beforeAll(async () => {
   OTHER_FIDELITY = required(OTHER_SLUG)
   THIRD_FIDELITY = required(THIRD_SLUG)
   TWO_FIDELITIES = [STORY_MAP_FIDELITY, OTHER_FIDELITY]
-  MARKDOWN_MADE = await filesOn()
-  board.remove(STORY_MAP)
-  NOTHING_MADE = await filesOn()
 })
 
 beforeEach(() => {
@@ -70,21 +59,30 @@ const spot = (page: BoardPage, fidelities = [STORY_MAP_FIDELITY], place = PLACE)
 const barAt = (page: BoardPage, place = PLACE) => page.tiles.openOn(TICKET, place)
 const openPlaces = (page: BoardPage) => page.store.state.tiles.map(tile => tile.place)
 
+// Python answers each chip of a bar; the page keeps what a person picks.
 describe('Choose Action And Formats', () => {
-  it('should give each fidelity its default format', () => {
-    expect(defaultPicks([STORY_MAP_FIDELITY], NOTHING_MADE)).toEqual(['markdown'])
+  it('should give each fidelity its default format', async () => {
+    const { page } = await activeTicketPage()
+    await page.tiles.open(spot(page), true)
+    expect(barAt(page)?.picked).toEqual(['markdown'])
   })
 
-  it('should not pick a format already generated', () => {
-    expect(defaultPicks([STORY_MAP_FIDELITY], MARKDOWN_MADE)).toEqual([])
+  it('should not pick a format already generated', async () => {
+    const { page } = await activeTicketPage({ isMarkdownMade: true })
+    await page.tiles.open(spot(page), true)
+    expect(barAt(page)?.picked).toEqual([])
   })
 
-  it('should let a chip stand for a group', () => {
-    expect(chipsOf(TWO_FIDELITIES).map(chip => chip.label)).toEqual(['diagram', 'markdown'])
+  it('should let a chip stand for a group', async () => {
+    const { page } = await activeTicketPage()
+    await page.tiles.open(spot(page, TWO_FIDELITIES, HEAD), true)
+    expect(barAt(page, HEAD)?.choices.map(choice => choice.label)).toEqual(['diagram', 'markdown'])
   })
 
-  it('should give each fidelity its default format from a chip', () => {
-    expect(chosenFormats(TWO_FIDELITIES, ['markdown'])).toEqual(['markdown'])
+  it('should give each fidelity its default format from a chip', async () => {
+    const { page } = await activeTicketPage()
+    await page.tiles.open(spot(page, TWO_FIDELITIES, HEAD), true)
+    expect(chosenFormats(barAt(page, HEAD)!.choices, ['markdown'])).toEqual(['markdown'])
   })
 
   describe('with a format generated on one fidelity of two', () => {
@@ -385,12 +383,12 @@ describe('Expand Ticket', () => {
 })
 
 describe('Refresh Board After Tool Calls', () => {
-  it("should read an open bar's files again when the board changes", async () => {
+  it("should read an open bar's chips again when the board changes", async () => {
     const { page } = await activeTicketPage()
     await page.tiles.open(spot(page), true)
     board.git('checkout', '--', STORY_MAP)
     board.write(`.sessions/${TICKET}/session.log`, `${LATER_STAMP} generate /work stories story_map markdown stories no-chat\n`)
     await page.reader.refresh()
-    expect(barAt(page)?.files).toEqual(MARKDOWN_MADE)
+    expect(barAt(page)?.choices.find(choice => choice.label === 'markdown')?.made).toBe(1)
   })
 })

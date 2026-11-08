@@ -1,15 +1,16 @@
+import type { FormatChoiceData } from '@cdd/space/kanban/ticket'
+
 import { ACTION_STANDINGS, countOf, STEP_FAILED } from '../board/board-brand'
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
 import type { FidelityProgressClient } from './fidelity-progress-client'
-import type { TicketClient } from './ticket-client'
-import { slugsOf } from './tile-client'
-import { chipDoneCount, chipOfferedCount, chipsOf, chosenFormats } from './tile-formats'
-import type { FormatChip } from './tile-formats'
+import type { TicketClient, WorkStanding } from './ticket-client'
+import { headPlace, slugsOf } from './tile-client'
+import { chosenFormats } from './tile-formats'
 
 const namedIn = (tile: Tile): string => slugsOf(tile.fidelities).join(' ')
 
-export type ChipFace = FormatChip & { hint: string; isOn: boolean; isDone: boolean; count: string }
+export type ChipFace = FormatChoiceData & { hint: string; isOn: boolean; isDone: boolean; count: string }
 export type StepFace = { mark: string; color: string; hint: string; text: string }
 export type TileBar = {
   chips: ChipFace[]
@@ -29,20 +30,12 @@ function reportOf(progress: FidelityProgressClient[]): FidelityProgressClient | 
   return reported.find(entry => entry.state === 'violations') ?? reported[0]
 }
 
-// How far one action has got across a tile's fidelities: done only when it is done on all of them.
-function standingOf(progress: FidelityProgressClient[], action: 'validate' | 'review'): string {
-  const states = progress.map(entry => entry.actions[action])
-  if (states.length && states.every(state => state === 'done')) return 'done'
-  return states.some(state => state !== 'to_do') ? 'in_progress' : 'to_do'
-}
-
-function chipFaceOf(tile: Tile, chip: FormatChip): ChipFace {
-  const done = chipDoneCount(tile.files, tile.fidelities, chip)
-  const offered = chipOfferedCount(tile.fidelities, chip)
-  const isOn = tile.picked.includes(chip.label)
-  const standing = done === 0 ? 'not done' : done === offered ? 'done' : `${done} of ${offered} done`
-  const count = done > 0 && done < offered ? `${done} of ${offered}` : ''
-  return { ...chip, isOn, isDone: done > 0, count, hint: `${chip.label}: ${standing}${isOn ? ', selected' : ''}` }
+function chipFaceOf(tile: Tile, choice: FormatChoiceData): ChipFace {
+  const { made, offered } = choice
+  const isOn = tile.picked.includes(choice.label)
+  const standing = made === 0 ? 'not done' : made === offered ? 'done' : `${made} of ${offered} done`
+  const count = made > 0 && made < offered ? `${made} of ${offered}` : ''
+  return { ...choice, isOn, isDone: made > 0, count, hint: `${choice.label}: ${standing}${isOn ? ', selected' : ''}` }
 }
 
 const stepFaceOf = (standing: string, name: string): StepFace => {
@@ -50,14 +43,11 @@ const stepFaceOf = (standing: string, name: string): StepFace => {
   return { mark, color, hint: `${name}: ${label}`, text: '' }
 }
 
-function validateFaceOf(progress: FidelityProgressClient[]): StepFace {
-  if (!progress.some(entry => entry.state === 'violations')) return stepFaceOf(standingOf(progress, 'validate'), 'Validate')
-  const count = progress.reduce((total, entry) => total + entry.violationCount, 0)
-  const text = count ? countOf(count, 'violation') : 'violations'
+function validateFaceOf(work: WorkStanding): StepFace {
+  if (!work.hasViolations) return stepFaceOf(work.actions.validate, 'Validate')
+  const text = work.violationCount ? countOf(work.violationCount, 'violation') : 'violations'
   return { mark: STEP_FAILED, color: 'var(--violations)', hint: text, text }
 }
-
-const allowsAll = (progress: FidelityProgressClient[], action: string): boolean => progress.length > 0 && progress.every(entry => entry.allows(action))
 
 // What an open action bar offers, and what its controls send to the chat.
 export class TileActionsClient {
@@ -79,31 +69,38 @@ export class TileActionsClient {
     this.save(tile, { picked: tile.picked.includes(chip) ? tile.picked.filter(entry => entry !== chip) : [...tile.picked, chip] })
   }
 
-  private canRun(ticket: TicketClient, tile: Tile): boolean {
-    if (ticket.isLocked || !this.chat.canSend || !tile.fidelities.length) return false
-    if (!chosenFormats(tile.fidelities, tile.picked).length) return false
-    return tile.action !== 'render' || chipsOf(tile.fidelities).some(chip => chipDoneCount(tile.files, tile.fidelities, chip) > 0)
+  // A stage head's bar acts on the ticket's work in that stage, which Python answers taken together; a tile's bar acts
+  // on its one fidelity.
+  private workOf(ticket: TicketClient, tile: Tile): WorkStanding | undefined {
+    if (tile.place === headPlace(tile.stage.name)) return ticket.workIn(tile.stage)
+    return ticket.progressOn(tile.fidelities)[0]
   }
 
-  // The ticket says when Validate and Review have something to look at: an action it recorded, or a declared file there.
-  private hasSomethingToCheck(ticket: TicketClient, progress: FidelityProgressClient[], action: string): boolean {
-    return !ticket.isLocked && allowsAll(progress, action)
+  // Python says which actions have something to work on; Render waits for output to convert.
+  private allows(ticket: TicketClient, work: WorkStanding | undefined, action: string): boolean {
+    return !ticket.isLocked && Boolean(work?.allowedActions.includes(action))
+  }
+
+  private canRun(ticket: TicketClient, tile: Tile, work: WorkStanding | undefined): boolean {
+    if (!this.chat.canSend || !tile.fidelities.length) return false
+    if (!chosenFormats(tile.choices, tile.picked).length) return false
+    return this.allows(ticket, work, tile.action)
   }
 
   // ticket is the tile's ticket as the board shows it now, which holds the fidelities' latest progress.
   barOf(ticket: TicketClient, tile: Tile): TileBar {
-    const progress = ticket.progressOn(tile.fidelities)
-    const validate = validateFaceOf(progress)
+    const work = this.workOf(ticket, tile)
+    const validate = work ? validateFaceOf(work) : stepFaceOf('to_do', 'Validate')
     return {
-      chips: chipsOf(tile.fidelities).map(chip => chipFaceOf(tile, chip)),
+      chips: tile.choices.map(choice => chipFaceOf(tile, choice)),
       isLocked: ticket.isLocked,
-      runOff: !this.canRun(ticket, tile),
+      runOff: !this.canRun(ticket, tile, work),
       // Validate runs in the chat; a review is the person's own approval, so it needs no chat.
-      validateOff: !this.chat.canSend || !this.hasSomethingToCheck(ticket, progress, 'validate'),
-      reviewOff: !this.hasSomethingToCheck(ticket, progress, 'review'),
+      validateOff: !this.chat.canSend || !this.allows(ticket, work, 'validate'),
+      reviewOff: !this.allows(ticket, work, 'review'),
       validate,
-      review: stepFaceOf(standingOf(progress, 'review'), 'Review'),
-      report: reportOf(progress),
+      review: stepFaceOf(work?.actions.review ?? 'to_do', 'Review'),
+      report: reportOf(ticket.progressOn(tile.fidelities)),
       hasViolations: validate.text !== '',
     }
   }
@@ -112,7 +109,7 @@ export class TileActionsClient {
   async run(tile: Tile): Promise<void> {
     // The stage says which of its actions take the formats chosen; every other one writes or reads files without one.
     if (!tile.stage.actionsWithFormats.includes(tile.action)) return this.sendFor(tile, `/actions-${tile.action} ${namedIn(tile)}`)
-    const formats = chosenFormats(tile.fidelities, tile.picked)
+    const formats = chosenFormats(tile.choices, tile.picked)
     this.save(tile, { picked: [] })
     await this.sendFor(tile, `/actions-${tile.action} ${namedIn(tile)} format=${formats.join(',')}`)
   }

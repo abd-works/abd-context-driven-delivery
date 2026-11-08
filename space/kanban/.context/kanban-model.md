@@ -268,6 +268,12 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// data field: the folder of its own worktree, where its chat works; empty while it has none
 	-> Ticket.branch
 	-> Board.worktrees
++ << association >> chat: Chat
+	// reference data field `working_chat`, sent by its id: the connected chat working in its worktree or a folder inside it, else one whose mod names no folder and that is titled by the ticket's name; none while no chat works on it
+	-> Board.chats
++ << composition >> stage_work: list[StageWork]
+	// data field: its work in each stage taken together, which a stage head's action bar shows and acts on
+	-> Ticket.work_in
 + last_activity: str
 	// the timestamp of its log's latest line
 	-> SessionLog.entries
@@ -292,6 +298,18 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> SessionLog.record
 + progress_of(slug: str): FidelityProgress
 	// raises `FidelityNotFoundError` for a fidelity the ticket does not have
++ work_in(stage: Stage): StageWork
+	// the progress of every fidelity stage requires whose practice its session works on
++ format_choices(fidelities: list[str]): list[FormatChoice]
+	// `ticket.format_choices`: the chips of an action bar over those fidelities, each fidelity's files read once
+	-> FidelityProgress.files
+	-> FormatChoice.offered_by
++ leave_choices(): SessionChoices
+	// `ticket.leave_choices`: what leaving or closing it offers and starts with: a handoff always, commit and push while the branch its work is on is checked out, merge while that branch is its own; the branch is the one its work is on
+	-> Ticket.work_branch
++ open_choices(): SessionChoices
+	// `ticket.open_choices`: what activating it offers and starts with: its own branch while it has none, chosen, and a worktree while it has none
+	-> Ticket.branch
 + activate(leaving: list[str], opening: list[str]): Ticket
 	// `ticket.activate`: the active ticket leaves its work as leaving says (handoff, commit, push, merge), this ticket opens what opening names (branch, worktree), and its session becomes current
 	-> Board.active
@@ -364,7 +382,9 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 + next_action: str
 	// data field: review while it has violations, else the first of its stage's actions not done
 + allowed_actions: list[str]
-	// data field: generate always; validate and review once an action is recorded or a declared file is there
+	// data field: every action of its stage; validate, review, and render only once an action is recorded or a declared file is there
++ next_command: str
+	// data field: the command Run next sends the chat, such as `/actions-generate stories-story-map`; none when its next action is a review or it is done
 + state: str
 	// data field: done, violations, in_progress, or not_started
 + action_states: ActionStates
@@ -373,9 +393,10 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 	// data field: its latest validation report, as a path from the project
 + violation_count: int
 	// data field
++ has_violations: bool
+	// data field: its latest validate left violations
 + done_actions: list[str]
 + remaining_actions: list[str]
-+ has_violations: bool
 + is_done: bool
 + << composition >> latest_report: ReportFile
 	// its latest report in its ticket's session that has its result, else its latest; none when it has none; found once per reading of the progress
@@ -416,6 +437,56 @@ Where each of a stage's actions stands on one fidelity.
 + review: str
 	// data field
 ----
++ taken_together(every: list[ActionStates]): ActionStates
+	// each action done only once it is done on all, in progress once it is under way on any, else to do
+
+## StageWork
+
+A ticket's work in one stage taken together: the progress of each fidelity the stage requires whose practice the ticket's session works on.
+
++ StageWork(stage: Stage, progress: list[FidelityProgress])
+------
++ << association >> stage: Stage
+	// reference data field
++ << association >> progress: list[FidelityProgress]
++ action_states: ActionStates
+	// data field `actions`
+	-> ActionStates.taken_together
++ has_violations: bool
+	// data field: any of its fidelities has violations
++ violation_count: int
+	// data field: its fidelities' violations together
++ allowed_actions: list[str]
+	// data field: the actions every one of its fidelities allows
+----
+
+## FormatChoice
+
+`space/kanban/format_choice.py`. One chip of an action bar: a group of formats over the fidelities the bar acts on.
+
+------
++ label: str
+	// data field: the group, such as markdown, or a format in no group under its own name
++ formats: list[str]
+	// data field: the format each fidelity uses from the group, its default when the group holds it, else the first it offers
++ offered: int
+	// data field
++ made: int
+	// data field: how many of the fidelities have a file in the group already
++ starts_picked: bool
+	// data field: it holds a fidelity's default format and nothing is made in it
+----
++ offered_by(read: list[tuple[FidelityGuidance, dict[str, list[FileEntry]]]]): list[FormatChoice]
+	// a chip per group the fidelities offer, in the order of `Format.GROUPS`
+	-> Format.group
+
+## FormatGroup
+
+`space/kanban/format_choice.py`. One group a person picks formats by, with its formats; `Board.format_groups` sends every one, so the page sorts a fidelity's files by group.
+
+## SessionChoices
+
+What a person can choose to do with a ticket's work on leaving it, or to create on opening it, with the `branch` they act on and its `choices`, each a *SessionChoice* with its `name`, `is_offered`, and `is_chosen`.
 
 ## BacklogItem : Card
 
@@ -586,11 +657,15 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## Repo
 
-`space/repo/repo.py`. The board reads `root`, `is_clone`, `checkout_folder`, `primary_root()`, `worktrees` (the `Worktrees` of `space/repo/worktree.py`, each `Worktree` with its `path` and `branch`), `path_from_top(path)`, and `branch_named(name)`; a ticket calls `switch_branch`, `switch_worktree`, `push_commit`, and `close_branch`.
+`space/repo/repo.py`. `Board.load` reads `Repo.of_project(project).main_clone`, the repository's main checkout, where every ticket's session lives. The board reads `root`, `is_clone`, `worktrees` (the `Worktrees` of `space/repo/worktree.py`, each `Worktree` with its `path` and `branch`), `path_from_top(path)`, and `branch_named(name)`; a ticket calls `switch_branch`, `switch_worktree`, `push_commit`, and `close_branch`.
+
+## Chat
+
+`harness/chat/chat.py`. `Board.chats` lists the connected chats once per board read with `Chat.list`; a ticket reads each chat's `folder` and `name`.
 
 ## Branch
 
-`space/repo/repo.py`. `name`, `exists`, and `is_checked_out` are data fields, which `ticket.branch` sends; `open_in_worktree()` opens a ticket's worktree.
+`space/repo/repo.py`. `name`, `exists`, and `is_checked_out` are data fields, which `ticket.branch` sends, and `ticket.leave_choices` and `ticket.open_choices` send with the choices they act on; `open_in_worktree()` opens a ticket's worktree.
 
 ## Sessions
 

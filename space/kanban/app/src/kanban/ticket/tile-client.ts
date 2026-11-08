@@ -1,10 +1,11 @@
 import type { FidelityGuidanceData } from '@cdd/space/kanban/board'
+import type { FormatChoiceData } from '@cdd/space/kanban/ticket'
 
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
 import type { ColumnClient } from '../board/column-client'
-import type { FilesByFidelity, TicketClient } from './ticket-client'
-import { defaultPicks } from './tile-formats'
+import type { TicketClient } from './ticket-client'
+import { startingPicks } from './tile-formats'
 
 const DEFAULT_ACTION = 'generate'
 const HOVER_OPEN_MILLISECONDS = 500
@@ -37,17 +38,18 @@ export class TileClient {
   }
 
 
-  // The bar shows at once and its files fill in when they are read, because reading them can take a second. Only the
-  // latest open of a place takes the files, so a slow read from an earlier open cannot change the bar shown now.
+  // The bar shows at once and its format chips fill in when Python has read the fidelities' files, because reading them
+  // can take a second. Only the latest open of a place takes the chips, so a slow read from an earlier open cannot
+  // change the bar shown now.
   async open(spot: TileSpot, isPinned: boolean): Promise<void> {
     const { ticket, stage, place, fidelities } = spot
     const order = ++this.opening
     this.latestOpening.set(`${ticket.name} ${place}`, order)
-    const shown: Tile = { ticket, place, stage, fidelities, action: DEFAULT_ACTION, picked: defaultPicks(fidelities, {}), isPinned, files: {} }
+    const shown: Tile = { ticket, place, stage, fidelities, action: DEFAULT_ACTION, picked: [], isPinned, choices: [] }
     this.store.change(state => ({ tiles: [...this.othersKept(state.tiles, shown), shown] }))
-    const files = (await ticket.filesOf(ticket.progressOn(fidelities))) ?? {}
+    const choices = (await ticket.formatChoices(slugsOf(fidelities))) ?? []
     if (this.latestOpening.get(`${ticket.name} ${place}`) !== order) return
-    this.change(ticket.name, place, tile => this.withFiles(tile, shown, files))
+    this.change(ticket.name, place, tile => this.withChoices(tile, shown, choices))
   }
 
   // A bar a hover opens replaces any other bar a hover opened; pressed bars stay.
@@ -56,9 +58,9 @@ export class TileClient {
     return shown.isPinned ? others : others.filter(tile => tile.isPinned)
   }
 
-  // A person's own choice of formats stays; until they make one, the defaults follow what is already generated.
-  private withFiles(tile: Tile, shown: Tile, files: FilesByFidelity): Tile {
-    return { ...tile, files, picked: tile.picked === shown.picked ? defaultPicks(tile.fidelities, files) : tile.picked }
+  // A person's own choice of formats stays; until they make one, the bar starts on the chips Python picks.
+  private withChoices(tile: Tile, shown: Tile, choices: FormatChoiceData[]): Tile {
+    return { ...tile, choices, picked: tile.picked === shown.picked ? startingPicks(choices) : tile.picked }
   }
 
   // Changes the one open bar on that ticket at that place, and leaves every other bar as it is.
@@ -110,11 +112,11 @@ export class TileClient {
 
   // What a bar shows was generated can change under it, so every open bar is read again with the board.
   async reload(): Promise<void> {
-    await Promise.all(this.store.state.tiles.map(tile => this.reloadFiles(tile)))
+    await Promise.all(this.store.state.tiles.map(tile => this.reloadChoices(tile)))
   }
 
-  private async reloadFiles(tile: Tile): Promise<void> {
-    const files = await tile.ticket.filesOf(tile.ticket.progressOn(tile.fidelities))
-    if (files) this.change(tile.ticket.name, tile.place, open => ({ ...open, files }))
+  private async reloadChoices(tile: Tile): Promise<void> {
+    const choices = await tile.ticket.formatChoices(slugsOf(tile.fidelities))
+    if (choices) this.change(tile.ticket.name, tile.place, open => ({ ...open, choices }))
   }
 }

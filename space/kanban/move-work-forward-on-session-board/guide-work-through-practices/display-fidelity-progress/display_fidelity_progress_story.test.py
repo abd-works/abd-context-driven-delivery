@@ -51,7 +51,7 @@ with story("Display Fidelity Progress"):
         with then("the story_map tile marks Generate ✓, Validate ✓, and Review ○"):
             pass
     with scenario("Show each fidelity of the stage on the ticket"):
-        # Evidence: observed: kanban_tools_spec 'should show each fidelity's Generate, Validate, and Review'; ticket-client.tsx standingOf for a stage head.
+        # Evidence: observed: kanban_tools_spec 'should show each fidelity's Generate, Validate, and Review'; Ticket.stage_work for a stage head.
         with given("billing-report has nothing recorded in its [session log](../../../.context/kanban-model.md#session)"):
             pass
         with when("the session board reads billing-report"):

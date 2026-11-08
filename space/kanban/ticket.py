@@ -22,7 +22,9 @@ from space.kanban.board import (
     NotAStageError,
     Stage,
 )
-from harness.guidance.stages import GENERATE, REVIEW, VALIDATE
+from harness.chat.chat import Chat
+from harness.guidance.stages import GENERATE, RENDER, REVIEW, VALIDATE
+from space.kanban.format_choice import FormatChoice
 from space.kanban.leaving_handoff import LeavingHandoff
 from space.kanban.report import Report, ReportFile
 from space.repo.repo import Branch
@@ -37,8 +39,10 @@ GRAPH_RULE_VIOLATION = "graph-rule"
 MOVED_INTO = "move"
 MARKED_DONE = "done"
 MARKED_IN_PROGRESS = "in-progress"
-ALWAYS_ALLOWED = (GENERATE,)
-ONCE_THERE_IS_OUTPUT = (VALIDATE, REVIEW)
+# The actions that check or convert a fidelity's output, so they wait until there is some.
+ONCE_THERE_IS_OUTPUT = (VALIDATE, REVIEW, RENDER)
+# Every action but review is a skill the chat runs; review is the person's own approval, which the board records.
+ACTION_COMMAND = "/actions-{action} {fidelity}"
 LEAVE_COMMIT = "commit"
 LEAVE_PUSH = "push"
 LEAVE_MERGE = "merge"
@@ -225,6 +229,61 @@ class Ticket(Card):
         """The folder of the ticket's own worktree, where its chat works; empty while it has none."""
         found = self._board.worktrees.get(self.branch())
         return str(found.path) if found else ""
+
+    @property
+    @data_field(key="working_chat", reference=True)
+    def chat(self) -> Chat | None:
+        """The connected chat working on the ticket, which every command the board sends for it goes to, sent by its id as
+        working_chat:
+        the one working in its worktree or a folder inside it, else one whose mod names no folder and that is titled by
+        the ticket's name, as the board titles the chat it opens for it. None while no chat works on it."""
+        worktree = self.worktree
+        chats = self._board.chats
+        working = next((chat for chat in chats if worktree and chat.folder and Path(chat.folder).resolve().is_relative_to(Path(worktree).resolve())), None)
+        return working or next((chat for chat in chats if not chat.folder and chat.name == self.name), None)
+
+    @property
+    @data_field
+    def stage_work(self) -> list[StageWork]:
+        """Its work in each stage taken together, in stage order: what a stage head's action bar shows and acts on."""
+        return [self.work_in(stage) for stage in self._stages]
+
+    def work_in(self, stage: Stage) -> StageWork:
+        """Its work in stage: the progress of every fidelity stage requires whose practice its session works on."""
+        return StageWork(stage, [progress for progress in self._enabled_progress if progress.stage is stage])
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def format_choices(self, fidelities: list[str]) -> list[FormatChoice]:
+        """Return the format chips of an action bar on ticket over fidelities, slugs such as stories-story-map: each group of formats they offer, the format each fidelity uses from it, how many offer it and have a file in it already, and whether the bar opens with it picked."""
+        read = [(progress.fidelity, progress.files()) for progress in (self.progress_of(slug) for slug in fidelities)]
+        return FormatChoice.offered_by(read)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def leave_choices(self) -> SessionChoices:
+        """Return what a person can choose to do with ticket's work on leaving or closing it, and which are chosen to start with: a handoff always, commit and push while the branch its work is on is checked out, and merge as well while that branch is its own. The branch is the one its work is on."""
+        branch = self.work_branch()
+        checked_out = branch.is_checked_out
+        return SessionChoices(branch, [
+            SessionChoice(LEAVE_HANDOFF, True, True),
+            SessionChoice(LEAVE_COMMIT, checked_out, checked_out),
+            SessionChoice(LEAVE_PUSH, checked_out, checked_out),
+            SessionChoice(LEAVE_MERGE, checked_out and not branch.is_default, False),
+        ])
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def open_choices(self) -> SessionChoices:
+        """Return what a person can choose to create on activating ticket, and which are chosen to start with: its own branch while it has none, chosen, and its own worktree while it has none. The branch is its own."""
+        branch = self.branch()
+        return SessionChoices(branch, [
+            SessionChoice(OPEN_BRANCH, not branch.exists, not branch.exists),
+            SessionChoice(OPEN_WORKTREE, not self.worktree, False),
+        ])
 
     @mcp
     @agent_tool
@@ -478,18 +537,29 @@ class FidelityProgress:
     @property
     @data_field
     def allowed_actions(self) -> list[str]:
-        """Generate always; Validate and Review once there is output to check: an action on the fidelity is recorded, or
-        a file it declares is already there, such as one a person wrote. A person can check the same output again as
-        often as they like."""
-        return [*ALWAYS_ALLOWED, *ONCE_THERE_IS_OUTPUT] if self._done_actions or self._has_files else list(ALWAYS_ALLOWED)
+        """Every action of its stage, in the stage's order; Validate, Review, and Render only once there is output to
+        check or convert: an action on the fidelity is recorded, or a file it declares is already there, such as one a
+        person wrote. A person can check the same output again as often as they like."""
+        has_output = bool(self._done_actions) or self._has_files
+        return [action for action in self._stage.actions if has_output or action not in ONCE_THERE_IS_OUTPUT]
 
     @property
     def _has_files(self) -> bool:
         return self._fidelity.has_declared_output()
 
     @property
+    @data_field
     def has_violations(self) -> bool:
+        """Whether its latest validate left violations, so it is validated again once they are fixed."""
         return self._has_violations
+
+    @property
+    @data_field
+    def next_command(self) -> str:
+        """The command Run next sends the chat for its next action, such as /actions-generate stories-story-map; none
+        when its next action is a review, which a person makes on the board, or when it is done."""
+        action = self.next_action
+        return ACTION_COMMAND.format(action=action, fidelity=self._fidelity.slug) if action and action != REVIEW else ""
 
     @property
     def is_done(self) -> bool:
@@ -583,6 +653,18 @@ class ActionStates:
     def __init__(self, states: dict[str, str]) -> None:
         self._states = dict(states)
 
+    @classmethod
+    def taken_together(cls, every: list[ActionStates]) -> ActionStates:
+        """Where each action stands across several fidelities: done only once it is done on all of them, in progress
+        once it is under way on any, else to do."""
+        return cls({action: cls._together([states._states[action] for states in every]) for action in (GENERATE, VALIDATE, REVIEW)})
+
+    @staticmethod
+    def _together(states: list[str]) -> str:
+        if states and all(state == "done" for state in states):
+            return "done"
+        return "in_progress" if any(state != "to_do" for state in states) else "to_do"
+
     @property
     @data_field
     def generate(self) -> str:
@@ -597,3 +679,95 @@ class ActionStates:
     @data_field
     def review(self) -> str:
         return self._states[REVIEW]
+
+
+class StageWork:
+    """*StageWork* is a ticket's work in one stage taken together: the progress of each fidelity the stage requires
+    whose practice the ticket's session works on. A stage head's action bar shows how far it has got and acts on all of
+    it at once."""
+
+    def __init__(self, stage: Stage, progress: list[FidelityProgress]) -> None:
+        self._stage = stage
+        self._progress = list(progress)
+
+    @property
+    @data_field(reference=True)
+    def stage(self) -> Stage:
+        return self._stage
+
+    @property
+    def progress(self) -> list[FidelityProgress]:
+        """The progress of each fidelity it holds."""
+        return list(self._progress)
+
+    @property
+    @data_field(key="actions")
+    def action_states(self) -> ActionStates:
+        """Each action done only once it is done on every fidelity, in progress once it is under way on any."""
+        return ActionStates.taken_together([progress.action_states for progress in self._progress])
+
+    @property
+    @data_field
+    def has_violations(self) -> bool:
+        """Whether any of its fidelities' latest validate left violations."""
+        return any(progress.has_violations for progress in self._progress)
+
+    @property
+    @data_field
+    def violation_count(self) -> int:
+        """How many violations its fidelities' latest reports name together."""
+        return sum(progress.violation_count for progress in self._progress)
+
+    @property
+    @data_field
+    def allowed_actions(self) -> list[str]:
+        """The actions every one of its fidelities allows, so one command can act on them all."""
+        if not self._progress:
+            return []
+        first, *others = self._progress
+        return [action for action in first.allowed_actions if all(action in other.allowed_actions for other in others)]
+
+
+class SessionChoice:
+    """One thing a person can tick when activating or closing a ticket, such as commit, with whether it is offered and
+    whether it is ticked to start with."""
+
+    def __init__(self, name: str, is_offered: bool, is_chosen: bool) -> None:
+        self._name = name
+        self._is_offered = is_offered
+        self._is_chosen = is_chosen
+
+    @property
+    @data_field
+    def name(self) -> str:
+        """handoff, commit, push, or merge on leaving; branch or worktree on opening: what activate and close take."""
+        return self._name
+
+    @property
+    @data_field
+    def is_offered(self) -> bool:
+        return self._is_offered
+
+    @property
+    @data_field
+    def is_chosen(self) -> bool:
+        return self._is_chosen
+
+
+class SessionChoices:
+    """What a person can choose to do with a ticket's work when leaving it, or to create when opening it, with the
+    branch those choices act on."""
+
+    def __init__(self, branch: Branch, choices: list[SessionChoice]) -> None:
+        self._branch = branch
+        self._choices = list(choices)
+
+    @property
+    @data_field
+    def branch(self) -> Branch:
+        return self._branch
+
+    @property
+    @data_field
+    def choices(self) -> list[SessionChoice]:
+        return list(self._choices)

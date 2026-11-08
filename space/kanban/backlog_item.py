@@ -90,6 +90,14 @@ class BacklogItem(Card):
 
     @property
     @data_field
+    def ticket(self) -> str:
+        """The name of the ticket whose folder the item holds, a ticket moved back with its work; empty for an idea that
+        has never been a ticket."""
+        kept_folder = self._held_ticket_folder
+        return kept_folder.name if kept_folder.is_dir() else ""
+
+    @property
+    @data_field
     def text(self) -> str:
         """The file's content after its heading."""
         content = self._path.read_text(encoding="utf-8")

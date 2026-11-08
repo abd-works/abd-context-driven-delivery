@@ -11,11 +11,13 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.chat.chat import Chat
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
+from space.kanban.format_choice import FormatGroup
 from space.repo.repo import Repo
 from space.session.session_log import LogTimestamp
 from space.session.session import MAIN_SESSION_NAME
@@ -149,6 +151,17 @@ class Board:
     def columns(self) -> list[Column]:
         return list(self._columns)
 
+    @property
+    @data_field
+    def format_groups(self) -> list[FormatGroup]:
+        """The groups a person picks formats by, each with its formats, so the page sorts a fidelity's files by group."""
+        return FormatGroup.every()
+
+    @cached_property
+    def chats(self) -> list[Chat]:
+        """The chats connected now, listed once per board read, so each ticket finds the one working on it."""
+        return Chat.list()
+
     @cached_property
     def tickets(self) -> list[Ticket]:
         """Every session's ticket, made once per board read: each column, and each ticket's own reads, ask for them."""
@@ -178,8 +191,8 @@ class Board:
         return Ticket(session, self)
 
     def reread(self) -> None:
-        """Forget the tickets, backlog items, and worktrees read so far, so the next read sees a change made since."""
-        for read in ("tickets", "backlog_items", "worktrees"):
+        """Forget the tickets, backlog items, worktrees, and chats read so far, so the next read sees a change made since."""
+        for read in ("tickets", "backlog_items", "worktrees", "chats"):
             self.__dict__.pop(read, None)
 
     @property

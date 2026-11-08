@@ -1019,19 +1019,24 @@ a generated ticket client
 
 Choose Action And Formats
   ```
-  -> _module.defaultPicks(stage: ColumnClient, slugs: string[], files: FilesByFidelity)
+  -> TileClient.open(spot: TileSpot, isPinned: boolean)
+    -> TicketClient.formatChoices(fidelities: string[]) <- FormatChoiceData[]
+    -> _module.startingPicks(choices: FormatChoiceData[])
   it should give each fidelity its default format
   ```
   ```
-  -> _module.defaultPicks(stage: ColumnClient, slugs: string[], files: FilesByFidelity)
+  -> TileClient.open(spot: TileSpot, isPinned: boolean)
+    -> TicketClient.formatChoices(fidelities: string[]) <- FormatChoiceData[]
+    -> _module.startingPicks(choices: FormatChoiceData[])
   it should not pick a format already generated
   ```
   ```
-  -> _module.chipsOf(stage: ColumnClient, slugs: string[])
+  -> TileClient.open(spot: TileSpot, isPinned: boolean)
+    -> TicketClient.formatChoices(fidelities: string[]) <- FormatChoiceData[]
   it should let a chip stand for a group
   ```
   ```
-  -> _module.chosenFormats(stage: ColumnClient, slugs: string[], picked: string[])
+  -> _module.chosenFormats(choices: FormatChoiceData[], picked: string[])
   it should give each fidelity its default format from a chip
   ```
   ```
