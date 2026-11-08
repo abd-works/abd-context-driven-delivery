@@ -30,8 +30,13 @@ class Drawio:
     validate/scan layout rules → repair (sub-agent) on definitive failures.
     """
 
-    def __init__(self, practice: CleanEngineering) -> None:
-        # The Clean Engineering practice whose formats read the source a diagram is drawn from.
+    def __init__(self, practice: CleanEngineering | None = None) -> None:
+        # The Clean Engineering practice whose formats read the source a diagram is drawn from. The installer makes
+        # this toolset on its own to list its tools, so it then reads through a Clean Engineering practice of its own.
+        if practice is None:
+            from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+
+            practice = CleanEngineering()
         self.practice = practice
         self.source_format = "markdown"
         # The one Draw.io model this toolset writes; its `previous` and `keep_positioning` are the layout policy.
