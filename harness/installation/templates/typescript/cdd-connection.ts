@@ -1,5 +1,4 @@
 import { execFile } from 'node:child_process'
-import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
@@ -73,9 +72,8 @@ export class CddConnection {
   }
 
   private async start(): Promise<Session> {
-    const projectHeaders = JSON.parse(await this.connectScriptOutput()) as Record<string, string>
-    const { url } = JSON.parse(readFileSync(join(cddHome(), 'server.json'), 'utf-8')) as { url: string }
-    const opening: Session = { url, headers: { ...projectHeaders, 'mcp-protocol-version': PROTOCOL_VERSION } }
+    const { url, headers } = JSON.parse(await this.connectScriptOutput()) as Session
+    const opening: Session = { url, headers: { ...headers, 'mcp-protocol-version': PROTOCOL_VERSION } }
     const opened = await this.post(opening, { jsonrpc: '2.0', id: this.nextId++, method: 'initialize', params: { protocolVersion: PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: 'cdd-language-adapter', version: '1' } } })
     const sessionId = opened.headers.get(SESSION_HEADER)
     await opened.text()
@@ -84,11 +82,12 @@ export class CddConnection {
     return session
   }
 
-  // The connect script runs in the project's own folder, so the header it prints names that project.
+  // The connect script runs in the project's own folder, so the header it prints names that project. Asked for the
+  // address, it prints the server's address too, so this connection never reads the file the server publishes it in.
   private connectScriptOutput(): Promise<string> {
     const script = join(cddHome(), 'connect.py')
     return new Promise((resolve, reject) => {
-      execFile(process.env.CDD_PYTHON ?? PYTHON, [script], { cwd: this.project, timeout: LONGEST_TOOL_MILLISECONDS }, (failure, stdout, stderr) =>
+      execFile(process.env.CDD_PYTHON ?? PYTHON, [script, '--address'], { cwd: this.project, timeout: LONGEST_TOOL_MILLISECONDS }, (failure, stdout, stderr) =>
         failure ? reject(new CddNotConnectedError(`${script} failed: ${stderr.trim() || failure.message}`)) : resolve(stdout.trim()),
       )
     })

@@ -19,13 +19,16 @@ export type ChatBarJson = { board: object | null; problem: string | null }
 
 // Which of the chat bar's boxes is open above the line. switchTo names the session the activation dialog opens;
 // closing holds the branch the active session's work is on, checked out, whose work the close dialog offers to commit
-// and push, or null. leaving and opening are what the open dialog has chosen, as ticket.activate and ticket.close take them.
+// and push, or null. leaveChoices and openChoices are what the Python Ticket offers the open dialog, in its order;
+// leaving and opening are what the dialog has chosen of them, as ticket.activate and ticket.close take them.
 export type ChatBarViewJson = {
   isSessionListOpen: boolean
   isCardOpen: boolean
   switchTo: string | null
   closing: { branch: string | null } | null
+  leaveChoices: string[]
   leaving: string[]
+  openChoices: string[]
   opening: string[]
 }
 

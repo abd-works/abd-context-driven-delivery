@@ -452,9 +452,12 @@ class TypeScriptToolset:
         return _SCALAR_TYPES.get(hint, "unknown")
 
     def _reference_type(self, hint: object) -> str:
-        """The identity fields alone of the object a reference field names, such as `{ name: string }` for a column."""
+        """The identity fields alone of the object a reference field names, such as `{ name: string }` for a column, and
+        a list of them for a field that names several, as `DataClass.reference` sends each."""
         if get_origin(hint) in (Union, types.UnionType):
             return " | ".join(self._reference_type(option) for option in get_args(hint))
+        if get_origin(hint) is list:
+            return _TypeText(self._reference_type(get_args(hint)[0])).as_list
         if hint is type(None):
             return "null"
         fields = DataClass(hint).fields

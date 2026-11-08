@@ -1080,6 +1080,9 @@ with description("the board tools") as self:
             with it("should name main as the branch its work is on"):
                 expect(self.project.call("ticket.work_branch", ticket="pet-visits")).to(equal({"name": "main", "exists": True, "is_checked_out": True}))
 
+            with it("should offer to close it with a handoff and a commit and push of main"):
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "choices": ["handoff", "commit", "push"]}))
+
             with it("should commit its work on main, merging nothing"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit", "merge"])
                 count = subprocess.run(["git", "rev-list", "--count", "main"], cwd=self.project.root, check=True, capture_output=True, text=True)
@@ -1126,6 +1129,9 @@ with description("the board tools") as self:
                 Sessions(self.project.root).switch("pet-visits")
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
+            with it("should offer to close it with a handoff alone, since nothing checked out is its own"):
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "choices": ["handoff"]}))
+
             with it("should commit nothing on a branch that is not checked out"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit"])
                 count = subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=self.project.root, check=True, capture_output=True, text=True)
@@ -1145,7 +1151,7 @@ with description("the board tools") as self:
             names = set(self.project.server.tools)
             expect(names).to(equal({
                 "board.show", "board.help", "board.folders", "stage.set_wip_limit",
-                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
+                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
                 "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
                 "session.choose_workpath", "session.folder_files", "session.read_file",

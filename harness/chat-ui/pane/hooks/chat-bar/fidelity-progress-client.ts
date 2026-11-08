@@ -8,7 +8,7 @@ import type { TicketData } from '@cdd/space/kanban/ticket'
 import { promptCommand } from '../chat-command'
 import { reasonOf } from '../failure'
 import { clearChosenAction } from './action-picker-client'
-import { callTool, currentChatBar, refreshChatBar, type ChatBarClient } from './chat-bar-client'
+import { callTool, currentChatBar, refreshChatBar } from './chat-bar-client'
 
 const selectedFidelity = atom({ plugin: 'cdd-board', key: 'selectedFidelity' } as const, null as string | null)
 
@@ -86,8 +86,10 @@ export class FidelityProgressClient {
     return this.ticket.session.practices[this.progress.practice.key]?.root ?? ''
   }
 
-  get defaultFormat(): string {
-    return this.progress.fidelity.default_format
+  // The command the Python FidelityProgress gives for action on this fidelity. It names the ticket's session, because the
+  // chat that runs it can have another session open, and no format, so the action works in the format the fidelity keeps.
+  commandFor(action: string): string {
+    return this.progress.commands[action] ?? ''
   }
 
   get #look(): (typeof LOOKS)[string] {
@@ -112,18 +114,10 @@ export async function selectFidelity($: EngineInterface, fidelity: FidelityProgr
   await clearChosenAction($)
 }
 
-// The one place a chat bar command names its session and format: every action command names the ticket's session.json,
-// because the chat that runs it can have another session open, and the fidelity's default format, so each action works
-// in the format the band shows rather than whichever one the session last used.
-function actionCommand(chatBar: ChatBarClient, fidelity: FidelityProgressClient, action: string): string {
-  const format = fidelity.defaultFormat ? ` format=${fidelity.defaultFormat}` : ''
-  return `/actions-${action} ${fidelity.slug}${format} session=${chatBar.sessionFile}`
-}
-
 // The action's command goes in the prompt box for the person to send. Generate renders the earlier fidelity first
 // itself when that fidelity has no file in the format, so every action is one command.
 export async function runAction($: EngineInterface, fidelity: FidelityProgressClient, action: string): Promise<void> {
-  await promptCommand($, actionCommand(await currentChatBar($), fidelity, action))
+  await promptCommand($, fidelity.commandFor(action))
 }
 
 // Review is the person's own approval, recorded by the Python FidelityProgress, which refuses it until the latest

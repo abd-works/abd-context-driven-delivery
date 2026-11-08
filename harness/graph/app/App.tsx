@@ -171,7 +171,7 @@ export function App() {
     const shown = merged.practices.length ? merged.practices : Object.keys(bundle.practices);
     setTrees(shown.map((name) => bundle.practices[name]?.tree).filter((tree): tree is ExplorerEntryData => Boolean(tree)));
     setNodeTypes(unique(shown.flatMap((name) => bundle.practices[name]?.node_types ?? [])));
-    setRelationships(visibleRelationships(unique(shown.flatMap((name) => bundle.practices[name]?.edge_types ?? []))));
+    setRelationships(unique(shown.flatMap((name) => bundle.practices[name]?.edge_types ?? [])));
     setRules(unique(shown.flatMap((name) => bundle.practices[name]?.rules ?? [])));
     setSelection(merged);
   }
@@ -246,24 +246,17 @@ export function App() {
       resolved = practiceSelection(selection, next, practices);
       const scope = resolved.practices.length ? resolved.practices : Object.keys(practices);
       setNodeTypes(listed(scope, practices, 'node_types'));
-      setRelationships(visibleRelationships(listed(scope, practices, 'edge_types')));
+      setRelationships(listed(scope, practices, 'edge_types'));
       setRules(listed(scope, practices, 'rules'));
     } else if (nodeChanged) {
       const choices = (await graphs.filterChoices(next.practices, next.node_types)) ?? { node_types: [], relationships: [], rules: [] };
       resolved = { ...next, relationships: choices.relationships, rules: choices.rules };
-      setRelationships(visibleRelationships(choices.relationships));
+      setRelationships(choices.relationships);
       setRules(choices.rules);
     }
     setSelection(resolved);
-    const rows = (await graphs.returnNodes(nodeFilter(resolved))) ?? [];
-    const names = new Set(rows.map((row) => row.node_id));
-    const bundle = normalizeInventoryBundle(await graphs.inventory());
-    const shown = resolved.practices.length ? resolved.practices : Object.keys(bundle.practices);
-    setTrees(
-      shown
-        .map((name) => keep(bundle.practices[name]?.tree, names, resolved.node_types, resolved.violations))
-        .filter((tree): tree is ExplorerEntryData => Boolean(tree)),
-    );
+    // Python's Filter keeps the nodes the selection matches, with the way to each, in every practice it names.
+    setTrees((await graphs.explorerTrees(nodeFilter(resolved))) ?? []);
   }
 
   return (
@@ -390,10 +383,6 @@ export function App() {
   );
 }
 
-function visibleRelationships(values: string[]): string[] {
-  return values.filter((value) => value !== 'belongsTo' && value !== 'scopes');
-}
-
 function unique(values: string[]): string[] {
   return [...new Set(values)];
 }
@@ -418,7 +407,7 @@ function overlayFilterRefresh(
 ): FilterSelection {
   const scope = next.practices.length ? next.practices : Object.keys(catalog);
   const nodes = listed(scope, catalog, 'node_types');
-  const edges = visibleRelationships(listed(scope, catalog, 'edge_types'));
+  const edges = listed(scope, catalog, 'edge_types');
   const rules = listed(scope, catalog, 'rules');
   let node_types = mergeNewCatalogItems(previous.node_types, nodes);
   if (lernOverlayActive(activeOverlays)) {
@@ -472,7 +461,7 @@ function practiceSelection(
 ): FilterSelection {
   const scope = next.practices.length ? next.practices : Object.keys(catalog);
   const nodes = listed(scope, catalog, 'node_types');
-  const edges = visibleRelationships(listed(scope, catalog, 'edge_types'));
+  const edges = listed(scope, catalog, 'edge_types');
   const rules = listed(scope, catalog, 'rules');
   const added = next.practices.filter((name) => !previous.practices.includes(name));
   if (previous.practices.length === 0 || next.practices.length === 0) {
@@ -484,7 +473,7 @@ function practiceSelection(
     relationships: mergeKept(
       previous.relationships,
       edges,
-      visibleRelationships(added.flatMap((name) => catalog[name]?.edge_types ?? [])),
+      added.flatMap((name) => catalog[name]?.edge_types ?? []),
     ),
     rules: mergeKept(previous.rules, rules, added.flatMap((name) => catalog[name]?.rules ?? [])),
   };
@@ -498,38 +487,6 @@ function mergeKept(current: string[], available: string[], added: string[]): str
     }
   }
   return kept;
-}
-
-function keep(
-  node: ExplorerEntryData | undefined,
-  ids: Set<string>,
-  types: string[],
-  violationsOnly = false,
-): ExplorerEntryData | null {
-  if (!node) {
-    return null;
-  }
-  const rules = node.children.filter((child) => child.type === 'rules');
-  const children = node.children
-    .filter((child) => child.type !== 'rules')
-    .map((child) => keep(child, ids, types, violationsOnly))
-    .filter((child): child is ExplorerEntryData => Boolean(child));
-  const holder = node.type === node.name;
-  if (holder) {
-    return children.length > 0 ? { ...node, children } : null;
-  }
-  const selectedType = types.length === 0 || types.includes(node.type) || node.type === 'Practice';
-  if (!selectedType) {
-    return children.length > 0 ? { ...node, children } : null;
-  }
-  const selectedId = violationsOnly ? ids.has(node.node_id) : ids.size === 0 || ids.has(node.node_id);
-  if (node.type !== 'Practice' && !selectedId && children.length === 0) {
-    return null;
-  }
-  if (node.type !== 'Practice' && !selectedId) {
-    return { ...node, children };
-  }
-  return { ...node, children: [...children, ...rules] };
 }
 
 function findNode(nodes: ExplorerEntryData[], id: string): ExplorerEntryData | null {

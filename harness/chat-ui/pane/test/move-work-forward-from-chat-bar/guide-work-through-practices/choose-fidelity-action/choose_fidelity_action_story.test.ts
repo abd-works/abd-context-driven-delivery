@@ -41,9 +41,9 @@ story('Choose Fidelity Action', CHAT_BAR, () => {
     when('the Person runs the action', async ($, on, scene) => {
       await scene.ui.press({ key: 'next-action' })
     })
-    // action button press -> runAction($, fidelity, 'iterate') -> promptCommand -> $.prompt.fill({ text: '/actions-iterate ux-mockup format=markdown session=...', mode: 'append' })
+    // action button press -> runAction($, fidelity, 'iterate') -> fidelity.commandFor('iterate') <- FidelityProgress.commands -> $.prompt.fill({ text: '/actions-iterate ux-mockup session=...', mode: 'append' })
     then("/actions-iterate ux-mockup in checkout-flow's session waits in the prompt box for the Person to send, and the button shows the next action again", async ($, on, scene) => {
-      expect(scene.world.fills).toEqual(['/actions-iterate ux-mockup format=markdown session=.sessions/checkout-flow/session.json'])
+      expect(scene.world.fills).toEqual(['/actions-iterate ux-mockup session=.sessions/checkout-flow/session.json'])
       expect(scene.world.sent).toEqual([])
       expect(await tipOf(scene.ui, 'action')).not.toBe('iterate ux-mockup')
     })

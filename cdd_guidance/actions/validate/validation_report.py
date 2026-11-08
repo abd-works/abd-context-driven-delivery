@@ -22,7 +22,7 @@ class ValidationReport:
     def __init__(self, session: Any, guidance: list[Any]) -> None:
         self._session = session
         self._guidance = guidance
-        self._root = session.root.resolve()
+        self._root = session.work_root.resolve()
 
     def of_graph(self, violations: list[Violation], graph_sources: list[str] | None = None) -> str:
         """Graph hits and AI judgment prompts in one section per rule (description under each heading)."""
@@ -32,7 +32,7 @@ class ValidationReport:
             "# Graph rule validation",
             "",
             f"**Generated:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
-            f"**Project:** {self._session.root.name}",
+            f"**Project:** {self._session.work_root.name}",
             "**Action:** validate (graph JSON + AI rules)",
             "",
         ]

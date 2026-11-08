@@ -1,6 +1,7 @@
 """Improvement action: repair a toolset whose expected behaviour failed, then verify the fix by theme."""
 from __future__ import annotations
 
+from cdd_guidance.actions.diagnose.diagnose import Diagnose
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.markdown import markdown
@@ -36,12 +37,17 @@ class Improvement(GuidanceAction):
         "After the fix is written, call refresh with exactly the files you wrote, so the session's graph holds them as they are now; nothing watches the files."
         if self._session is not None:
             tools(self.graph.refresh)
+        tools(self._diagnose().diagnose)
         return (
             "Diagnose why the toolset's expected behavior failed for {{asset}} "
-            "(run cdd_guidance.actions.diagnose.diagnose:Diagnose). State the proposed toolset change "
+            "(call the diagnose tool with this guidance). State the proposed toolset change "
             "before any test. Do not list tactical file fixes. Then fail-first "
             "at the seam. See repair.md."
         )
+
+    def _diagnose(self) -> Diagnose:
+        """The diagnosis the repair starts with, whose diagnose tool the agent calls on what this repair lists."""
+        return self._inside(Diagnose)
 
     @mcp
     @skill

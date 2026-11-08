@@ -2,7 +2,8 @@
 
 The installer copies this file to ``~/.cdd/connect.py``. In Claude Code the cdd plugin runs it as its server's
 ``headersHelper`` with the chat's folder as its argument. It prints the headers to send, so every request says which
-project its chat works on."""
+project its chat works on. A language adapter runs it with ``--address`` and reads the server's address from it too, so
+only the server reads and writes the file it publishes its address in."""
 from __future__ import annotations
 
 import json
@@ -11,6 +12,7 @@ import sys
 from pathlib import Path
 
 HOME = Path(__file__).resolve().parent
+ADDRESS_FLAG = "--address"
 
 
 def main() -> None:
@@ -19,8 +21,16 @@ def main() -> None:
     from harness.mcp.cdd_home import CddHome
     from harness.mcp.mcp_daemon import PROJECT_HEADER, McpDaemon
 
-    McpDaemon(CddHome(HOME)).ensure()
-    print(json.dumps({PROJECT_HEADER: project_folder(sys.argv[1:])}))
+    daemon = McpDaemon(CddHome(HOME))
+    daemon.ensure()
+    print(json.dumps(answer(sys.argv[1:], daemon.url, PROJECT_HEADER)))
+
+
+def answer(arguments: list[str], url: str, project_header: str) -> dict:
+    """What the script prints: the headers alone for an IDE's ``headersHelper``, or, asked with ``--address``, the
+    server's address with the headers, for a language adapter that connects on its own."""
+    headers = {project_header: project_folder([word for word in arguments if word != ADDRESS_FLAG])}
+    return {"url": url, "headers": headers} if ADDRESS_FLAG in arguments else headers
 
 
 def project_folder(arguments: list[str]) -> str:

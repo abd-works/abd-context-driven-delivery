@@ -28,9 +28,9 @@ class SketchOutline:
     def __init__(self, text: str, nesting_indent: int = 2) -> None:
         self._lines = text.splitlines()
         self._nesting_indent = nesting_indent
-        # Every practice's lens, asked of each practice CDD has: a heading that opens any of them starts that practice's
-        # section, since a sketch holds one section for each practice it works on.
-        self._lenses = tuple(practice.sketch_lens for practice in PracticeCatalogue.practices())
+        # Every practice's lens, which each practice class holds, so no practice is built to read it: a heading that
+        # opens any of them starts that practice's section, since a sketch holds one section for each practice.
+        self._lenses = tuple(PracticeCatalogue.practice_class(key).sketch_lens for key in PracticeCatalogue.keys())
 
     def holds(self, lens: SketchLens) -> bool:
         """True when this sketch has a section for that practice."""

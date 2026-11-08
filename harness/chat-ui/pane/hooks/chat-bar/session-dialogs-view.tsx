@@ -26,7 +26,7 @@ function ChoicesView(elements: ElementTable, heading: string, choices: Choice[])
   )
 }
 
-// Ticket.leave reads each choice by this word: write a handoff for the session left, commit, push, merge.
+// One choice the Ticket offers for leaving a session, by the word Ticket.leave reads: handoff, commit, push, merge.
 function leavingChoice($: EngineInterface, prefix: string, chosen: string[], word: string, label: string): Choice {
   return { key: `${prefix}-${word}`, label, isChosen: chosen.includes(word), onPress: () => toggleLeaving($, word) }
 }
@@ -36,27 +36,27 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
   if (!view.isSessionListOpen) return null
   return (
     <Box key="session-list" flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
-      {chatBar.sessions.map(session => (
-        <Box key={`session-row-${session.name}`} flexDirection="row" gap={1}>
-          <Text color={BRAND.accent}>{stageIconOf(session.stage)}</Text>
-          <Button key={`session-${session.name}`} plain onPress={() => pickSession($, session.name)}>
-            <Text color={session.name === chatBar.sessionName ? BRAND.accent : BRAND.text}>{session.name}</Text>
+      {chatBar.openTickets.map(ticket => (
+        <Box key={`session-row-${ticket.name}`} flexDirection="row" gap={1}>
+          <Text color={BRAND.accent}>{stageIconOf(ticket.column.name)}</Text>
+          <Button key={`session-${ticket.name}`} plain onPress={() => pickSession($, chatBar, ticket)}>
+            <Text color={ticket.name === chatBar.sessionName ? BRAND.accent : BRAND.text}>{ticket.name}</Text>
           </Button>
         </Box>
       ))}
-      <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, value.trim()) : undefined)} />
+      <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, chatBar, value.trim()) : undefined)} />
     </Box>
   )
 }
 
-// Opening a session leaves the active one with what the person chose, a handoff, a commit and a push at first, and
-// opens the new one on its own branch and worktree.
+// Opening a session leaves the active one with what the person chose, from what the active Ticket offers, and opens the
+// new one with what its Ticket offers to create.
 export function ActivateView($: EngineInterface, elements: ElementTable, { chatBar, view }: ChatBarDraw) {
   const { Box, Button, Text } = elements
   const switchTo = view.switchTo
   if (!switchTo) return null
-  const leaving = ['handoff', 'commit', 'push', 'merge'].map(word => leavingChoice($, 'leave', view.leaving, word, word === 'handoff' ? 'Create handoff' : word))
-  const opening: Choice[] = ['branch', 'worktree'].map(word => ({ key: `open-${word}`, label: `create ${word}`, isChosen: view.opening.includes(word), onPress: () => toggleOpening($, word) }))
+  const leaving = view.leaveChoices.map(word => leavingChoice($, 'leave', view.leaving, word, word === 'handoff' ? 'Create handoff' : word))
+  const opening: Choice[] = view.openChoices.map(word => ({ key: `open-${word}`, label: `create ${word}`, isChosen: view.opening.includes(word), onPress: () => toggleOpening($, word) }))
   return (
     <Box key="activate" flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.accent} backgroundColor={BRAND.raised}>
       <Text weight="semibold" color={BRAND.text}>{`Open ${switchTo}`}</Text>
@@ -70,18 +70,17 @@ export function ActivateView($: EngineInterface, elements: ElementTable, { chatB
   )
 }
 
-// Closing offers a handoff always, and to commit and push the branch the session's work is on, its own or main, while
-// it is checked out. Main has no branch to merge and no worktree to remove, so closing never offers either.
+// Closing offers what ticket.close_choices answers: a handoff always, and a commit and a push of the branch the
+// session's work is on while it is checked out, named beside each.
 export function CloseView($: EngineInterface, elements: ElementTable, { chatBar, view }: ChatBarDraw) {
   const { Box, Button, Text } = elements
   if (!view.closing) return null
   const { branch } = view.closing
-  const handoff = leavingChoice($, 'close', view.leaving, 'handoff', 'Create handoff')
-  const work = branch ? ['commit', 'push'].map(word => leavingChoice($, 'close', view.leaving, word, `${word} ${branch}`)) : []
+  const choices = view.leaveChoices.map(word => leavingChoice($, 'close', view.leaving, word, word === 'handoff' ? 'Create handoff' : `${word} ${branch}`))
   return (
     <Box key="close" flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.error} backgroundColor={BRAND.errorWash}>
       <Text weight="semibold" color={BRAND.text}>{`Close session ${chatBar.title}`}</Text>
-      {ChoicesView(elements, 'LEAVE', [handoff, ...work])}
+      {ChoicesView(elements, 'LEAVE', choices)}
       {branch ? null : <Text color={BRAND.muted}>Nothing checked out is this session's, so nothing is committed.</Text>}
       <Box flexDirection="row" gap={1}>
         <Button key="close-cancel" label="Cancel" onPress={() => cancelClose($)} />

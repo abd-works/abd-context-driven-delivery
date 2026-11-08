@@ -45,6 +45,11 @@ LEAVE_MERGE = "merge"
 LEAVE_HANDOFF = "handoff"
 OPEN_BRANCH = "branch"
 OPEN_WORKTREE = "worktree"
+# What leaving a ticket can do with its work, in the order leave does it, and those a person starts with chosen: merge
+# waits for the person to choose it.
+LEAVE_CHOICES = (LEAVE_HANDOFF, LEAVE_COMMIT, LEAVE_PUSH, LEAVE_MERGE)
+FIRST_LEAVE_CHOICES = (LEAVE_HANDOFF, LEAVE_COMMIT, LEAVE_PUSH)
+OPEN_CHOICES = (OPEN_BRANCH, OPEN_WORKTREE)
 
 
 class TicketNotFoundError(LookupError):
@@ -133,7 +138,7 @@ class Ticket(Card):
     @cached_property
     def _progress(self) -> list[FidelityProgress]:
         entries = self._session.log.entries
-        return [FidelityProgress.from_log(self._own(fidelity), stage, entries, self) for stage in self._stages for fidelity in stage.work_required]
+        return [FidelityProgress.from_log(fidelity, stage, entries, self) for stage in self._stages for fidelity in self._required_in(stage)]
 
     def record(self, line: str) -> Ticket:
         """Write line to its session's log; its progress is read from the log again next time it is asked for."""
@@ -141,19 +146,19 @@ class Ticket(Card):
         self.__dict__.pop("_progress", None)
         return self
 
-    def _own(self, fidelity: FidelityGuidance) -> FidelityGuidance:
-        """fidelity as this ticket's session holds it: one object per fidelity in a session, which finds its own files
-        and reports there and is the one an action on it works with."""
-        return self._session.practices[fidelity.practice_guidance.key].fidelities[fidelity.name]
+    def _required_in(self, stage: Stage) -> list[FidelityGuidance]:
+        """Every fidelity stage requires, in practice order, as this ticket's session holds it: one object per fidelity
+        in a session, which finds its own files and reports there and is the one an action on it works with."""
+        return [fidelity for practice in self._session.practices.values() for fidelity in practice.fidelities if stage.requires(fidelity)]
 
     def progress_of(self, slug: str) -> FidelityProgress:
         """The progress of the fidelity slug names, such as stories-story-map. Only that fidelity's progress is read,
         because a tool that names one fidelity needs no other's reports."""
-        found = next(((fidelity, stage) for stage in self._stages for fidelity in stage.work_required if fidelity.slug == slug), None)
+        found = next(((fidelity, stage) for stage in self._stages for fidelity in self._required_in(stage) if fidelity.slug == slug), None)
         if found is None:
             raise FidelityNotFoundError(slug, f"ticket {self.name!r}")
         fidelity, stage = found
-        return FidelityProgress.from_log(self._own(fidelity), stage, self._session.log.entries, self)
+        return FidelityProgress.from_log(fidelity, stage, self._session.log.entries, self)
 
     @property
     @data_field(reference=True)
@@ -215,6 +220,39 @@ class Ticket(Card):
         return next((progress for progress in self._enabled_progress if progress.stage in reached and not progress.is_done), None)
 
     @property
+    @data_field
+    def agent_context(self) -> str:
+        """What the agent is told about this ticket in its system prompt while it is the active one: the ticket, its
+        column, its next fidelity or that its stage waits for a person, and the steps every fidelity goes through."""
+        upcoming = self.next_fidelity
+        steps = self._stages[0].steps
+        following = f"Its next guidance is {upcoming.fidelity.slug}. " if upcoming else "Its stage is done and waits for a person to move it. "
+        return (
+            f'CDD session board: you are working on ticket {self.name} ("{self.title}"), in {self.column.name}. '
+            f"{following}Each fidelity goes through {', '.join(steps[:-1])}, then {steps[-1]}, which a person records on the board."
+        )
+
+    @property
+    @data_field
+    def leave_choices(self) -> list[str]:
+        """What leaving this ticket for another can do with its work, in the order leave does it: handoff, commit, push,
+        merge."""
+        return list(LEAVE_CHOICES)
+
+    @property
+    @data_field
+    def first_leave_choices(self) -> list[str]:
+        """What leaving this ticket for another starts with chosen: a handoff, a commit, and a push. Merge waits for the
+        person to choose it."""
+        return list(FIRST_LEAVE_CHOICES)
+
+    @property
+    @data_field
+    def open_choices(self) -> list[str]:
+        """What opening this ticket can create for it, each chosen at first: its own branch and its own worktree."""
+        return list(OPEN_CHOICES)
+
+    @property
     def last_activity(self) -> str:
         entries = self._session.log.entries
         return entries[-1].time if entries else ""
@@ -225,6 +263,14 @@ class Ticket(Card):
         """The folder of the ticket's own worktree, where its chat works; empty while it has none."""
         found = self._board.worktrees.get(self.branch())
         return str(found.path) if found else ""
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def close_choices(self) -> CloseChoices:
+        """Return what closing ticket can do with its work, each chosen at first: a handoff always, and a commit and a push of the branch its work is on while that branch is checked out, which branch names. Closing never merges."""
+        branch = self.work_branch()
+        return CloseChoices(branch if branch.is_checked_out else None)
 
     @mcp
     @agent_tool
@@ -347,11 +393,9 @@ class Ticket(Card):
     def _return_to_backlog(self) -> BacklogItem:
         """Into the Backlog from any column: its session closes and its whole folder becomes a backlog item, so starting
         the item brings the ticket back with its work."""
-        from space.kanban.backlog_item import BacklogItem
-
         self._session.close()
         kept_in_backlog = self._board.ticket_of(self._session.move_to_backlog())
-        item = BacklogItem.from_ticket(kept_in_backlog)
+        item = self._board.backlog_item_of(kept_in_backlog)
         item.write_if_missing(kept_in_backlog.title)
         return item
 
@@ -477,6 +521,19 @@ class FidelityProgress:
 
     @property
     @data_field
+    def commands(self) -> dict[str, str]:
+        """The command a chat runs for each action its stage offers on this fidelity, such as
+        ``/actions-generate ux-mockup session=.sessions/checkout-flow/session.json``."""
+        return {action: self.command(action) for action in self._stage.actions}
+
+    def command(self, action: str) -> str:
+        """The command that runs action on this fidelity in its ticket's session. It names the session, because the
+        chat that runs it can have another session open, and no format, so the action works in the format the fidelity
+        keeps in that session."""
+        return f"/actions-{action} {self._fidelity.slug} session={self._ticket.session.session_file_from_project}"
+
+    @property
+    @data_field
     def allowed_actions(self) -> list[str]:
         """Generate always; Validate and Review once there is output to check: an action on the fidelity is recorded, or
         a file it declares is already there, such as one a person wrote. A person can check the same output again as
@@ -575,6 +632,26 @@ class FidelityProgress:
             return False
         latest = self.latest_report
         return latest is not None and latest.is_judged_failing
+
+
+class CloseChoices:
+    """What closing a ticket can do with its work: a handoff always, and a commit and a push of the branch its work is
+    on while that branch is checked out, since those steps act on whatever is checked out. Closing never merges."""
+
+    def __init__(self, branch: Branch | None) -> None:
+        self._branch = branch
+
+    @property
+    @data_field
+    def branch(self) -> str:
+        """The branch closing commits and pushes; empty when nothing checked out is the ticket's."""
+        return self._branch.name if self._branch is not None else ""
+
+    @property
+    @data_field
+    def choices(self) -> list[str]:
+        """Each choice closing offers, in the order leave does them."""
+        return [LEAVE_HANDOFF, *((LEAVE_COMMIT, LEAVE_PUSH) if self._branch is not None else ())]
 
 
 class ActionStates:
