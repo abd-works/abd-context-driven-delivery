@@ -579,8 +579,9 @@ class FidelityProgress:
         has_output = bool(self._done_actions) or self._has_files
         return [action for action in self._stage.actions if has_output or action not in ONCE_THERE_IS_OUTPUT]
 
-    @property
+    @cached_property
     def _has_files(self) -> bool:
+        """Read once per reading of the progress: the board and its stage's work both ask."""
         return self._fidelity.has_declared_output()
 
     @property
@@ -629,6 +630,11 @@ class FidelityProgress:
     @data_field
     def violation_count(self) -> int:
         """How many violations its latest report names, graph hits and judged findings; none while it has no violations."""
+        return self._violation_count
+
+    @cached_property
+    def _violation_count(self) -> int:
+        """Counted once per reading of the progress: the board and its stage's work both ask."""
         return self.report().violation_count if self._has_violations else 0
 
     @mcp
