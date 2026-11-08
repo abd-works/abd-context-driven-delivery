@@ -2,7 +2,7 @@ import { BacklogItemClientGenerated, type BacklogItemData } from '@cdd/space/kan
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
 import type { BoardPage } from '../board/board-page'
-import { EMPTY_DRAFT } from '../board/board-store'
+import { EMPTY_DRAFT } from '../shared/board-store'
 
 export class BacklogItemClient extends BacklogItemClientGenerated {
   constructor(

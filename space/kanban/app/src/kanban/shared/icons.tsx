@@ -39,12 +39,17 @@ const FILE_VIEW_SHAPES: Record<string, string> = {
   files: 'M5 2.5h5l3 3V12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1zM10 2.5V5.5h3M3 5v8.5a1 1 0 0 0 1 1h6',
 }
 
-export function FileViewIcon({ mode }: { mode: string }) {
+// One line drawing in the board's stroke, at the size of the control it sits on; each icon below names its shape.
+function ShapeIcon({ shape, size }: { shape: string; size: number }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ display: 'block' }}>
-      <path d={FILE_VIEW_SHAPES[mode] ?? ''} {...STROKE} />
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ display: 'block' }}>
+      <path d={shape} {...STROKE} />
     </svg>
   )
+}
+
+export function FileViewIcon({ mode }: { mode: string }) {
+  return <ShapeIcon shape={FILE_VIEW_SHAPES[mode] ?? ''} size={14} />
 }
 
 // What a card does for its session: run the next step, hand off, split into child tickets, and activate or close it.
@@ -57,11 +62,7 @@ const SESSION_ACTION_SHAPES: Record<string, string> = {
 }
 
 export function SessionActionIcon({ action }: { action: string }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ display: 'block' }}>
-      <path d={SESSION_ACTION_SHAPES[action] ?? ''} {...STROKE} />
-    </svg>
-  )
+  return <ShapeIcon shape={SESSION_ACTION_SHAPES[action] ?? ''} size={14} />
 }
 
 const FORMAT_SHAPES: Record<string, string> = {
@@ -73,9 +74,5 @@ const FORMAT_SHAPES: Record<string, string> = {
 export function FormatIcon({ label }: { label: string }) {
   const shape = FORMAT_SHAPES[label]
   if (!shape) return <span className="format-word">{label}</span>
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ display: 'block' }}>
-      <path d={shape} {...STROKE} />
-    </svg>
-  )
+  return <ShapeIcon shape={shape} size={16} />
 }

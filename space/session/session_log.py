@@ -13,7 +13,7 @@ from harness.agent_tools.chat_pointer import NO_CHAT, ChatPointer
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
     from harness.guidance.rule import RulesCollection
-    from space.session.practice_session_output import FidelitySessionOutput, PracticeSessionOutput
+    from space.session.practice_session_output import FidelitySessionOutput
     from space.session.session import Session
 
 LOG_FILE = "session.log"
@@ -344,36 +344,37 @@ class ChatLog:
         self._log.record(f"{line} {self._chat}")
         self._log.injected_rules.clear()
 
-    def validation(self, practice: PracticeSessionOutput | FidelitySessionOutput, violations: list[str]) -> None:
-        """Log a validate of practice at its working fidelity, with each violation's synopsis; no violations is a
-        validate that passed."""
+    def validation(self, worked: FidelitySessionOutput, violations: list[str]) -> None:
+        """Log a validate of the fidelity worked, as its practice and its name, with each violation's synopsis; no
+        violations is a validate that passed."""
         detail = " ".join(violations)
-        self.line(f"validate {type(practice.guidance).__name__} {practice.working_fidelity} {detail}".rstrip())
+        self.line(f"validate {type(worked.practice.guidance).__name__} {worked.fidelity.name} {detail}".rstrip())
 
-    def action(self, action: str, paths: list[Path], practices: list[PracticeSessionOutput | FidelitySessionOutput] | None = None) -> None:
-        """Log action with the paths it worked on and what each practice it worked on was working at."""
+    def action(self, action: str, paths: list[Path], worked: list[FidelitySessionOutput] | None = None) -> None:
+        """Log action with the paths it worked on and, for each fidelity it worked at, its practice, its name, and the
+        format it worked in."""
         if self._log.path is None:
             return
-        worked_on = list(practices or [])
+        worked_on = list(worked or [])
         parts = (
             action,
             ", ".join(str(path) for path in paths),
-            ", ".join(entry.name for entry in worked_on),
-            ", ".join(entry.working_fidelity for entry in worked_on if entry.working_fidelity),
-            ", ".join(entry.working_format for entry in worked_on if entry.working_format),
+            ", ".join(entry.practice.name for entry in worked_on),
+            ", ".join(entry.fidelity.name for entry in worked_on),
+            ", ".join(entry.fidelity.format for entry in worked_on if entry.fidelity.format),
             self._log.injected_rules.text,
             str(self._chat),
         )
         self._log.record(" ".join(part for part in parts if part))
         self._log.injected_rules.clear()
 
-    def guidance_action(self, action: str, practices: list[PracticeSessionOutput | FidelitySessionOutput]) -> None:
-        """Log a guidance action on practices, with the session's workpath and each practice's folder as the paths it
-        worked on."""
+    def guidance_action(self, action: str, worked: list[FidelitySessionOutput]) -> None:
+        """Log a guidance action on the fidelities worked, with the session's workpath and each one's practice's folder
+        as the paths it worked on."""
         workpath = self._log.session.workpath
         work = [Path(workpath).resolve()] if workpath is not None else []
-        folders = [practice.folder for practice in practices]
-        self.action(action, list(dict.fromkeys([*work, *folders])), practices)
+        folders = [entry.practice.folder for entry in worked]
+        self.action(action, list(dict.fromkeys([*work, *folders])), worked)
 
     def tool(self, tool_name: str, tool_input: dict | None = None) -> None:
         """Append a ``tool …`` line for a tool call, with the paths its arguments name."""

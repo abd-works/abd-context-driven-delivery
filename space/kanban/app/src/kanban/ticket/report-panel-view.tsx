@@ -1,5 +1,5 @@
-import { useBoard } from '../board/board-context'
-import type { ReportPanel } from '../board/board-store'
+import { useBoard } from '../shared/board-context'
+import type { ReportPanel } from '../shared/board-store'
 import { RuleView } from './report-rule-view'
 
 export function ReportPanelHeadView({ panel }: { panel: ReportPanel }) {

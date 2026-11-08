@@ -9,7 +9,7 @@ import { TicketAdapter } from '@cdd/space/kanban/ticket'
 import { BoardOnProject, RunningBoard, ticketOn } from 'test-utils/board-page-support'
 
 import type { Send } from './board-api'
-import { ageOf } from './board-brand'
+import { ageOf } from '../shared/board-brand'
 
 const LATER_STAMP = '2026-11-02T10:00:00Z'
 const WAIT_MILLISECONDS = 10

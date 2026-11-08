@@ -419,18 +419,17 @@ class GuidanceAction:
             return None
         return next((output for output in self._session.practices.values() if output.guidance is item), None)
 
-    def _listed_practices(self) -> list:
-        """Each listed practice as this action's session holds it at the fidelity this action works at on it, which
-        the lines it logs name: that fidelity's FidelitySessionOutput, or the practice's PracticeSessionOutput for a
-        practice worked at no fidelity. Guidance that is no practice CDD has is left out."""
+    def _worked_fidelities(self) -> list:
+        """What the fidelity this action works at on each listed practice has in this action's session (its
+        FidelitySessionOutput), which the lines it logs name. Guidance that is no practice CDD has, and a practice
+        worked at no fidelity, are left out: a log line names the fidelity work was done at."""
         found = [self._worked_output(item) for item in self.listed() if not isinstance(item, str)]
-        return [practice for practice in found if practice is not None]
+        return [worked for worked in found if worked is not None]
 
     def _worked_output(self, item: Any) -> Any:
         practice = self._session_practice(item)
         fidelity = self.fidelity_of(item) if practice is not None else None
-        held = fidelity.session_output if fidelity is not None else None
-        return held if held is not None else practice
+        return fidelity.session_output if fidelity is not None else None
 
     def _inside(self, action_type: type[GuidanceAction], guidance: str | list | None = None) -> GuidanceAction:
         """An action of action_type started inside this one: made for this action's session and working on guidance,
@@ -500,7 +499,7 @@ class GuidanceAction:
     def _log(self, action: str) -> None:
         """Write the line saying this action runs action, naming the practices it works on; an action such as Validate
         that logs differently overrides it."""
-        self.log.guidance_action(action, self._listed_practices())
+        self.log.guidance_action(action, self._worked_fidelities())
 
     # No recipe runs begin: every guidance action inherits it, and the prompt-notify hook reads its Toast, so a call to any
     # of an action's tools toasts as that action without the action annotating anything.

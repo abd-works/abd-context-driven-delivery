@@ -5,7 +5,7 @@ import type { FormatChoiceData } from '@cdd/space/kanban/ticket'
 import type { ChatData, ChatMessageData } from '@cdd/harness/chat/chat'
 import type { FidelityProgressClient } from '../ticket/fidelity-progress-client'
 import type { ReportClient } from '../ticket/report-client'
-import type { ColumnClient } from './column-client'
+import type { ColumnClient } from '../board/column-client'
 import type { FilesByFidelity, TicketClient } from '../ticket/ticket-client'
 
 export type Toast = { id: number; text: string; isFailure: boolean }

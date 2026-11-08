@@ -2,11 +2,11 @@ import type { ReactNode } from 'react'
 
 import { FilesPanelBodyView, FilesPanelHeadView } from '../ticket/files-panel-view'
 import { ReportPanelBodyView, ReportPanelHeadView, ReportStatsView } from '../ticket/report-panel-view'
-import { useBoard } from './board-context'
-import type { SidePanel } from './board-store'
+import { useBoard } from '../shared/board-context'
+import type { SidePanel } from '../shared/board-store'
 import { useDragGrip } from './drag-grip'
 import { HelpPanelBodyView, HelpPanelHeadView } from './help-panel-view'
-import { ExpandIcon } from './icons'
+import { ExpandIcon } from '../shared/icons'
 
 const KIND_ORDER = ['report', 'files', 'help']
 const KIND_WORDS: Record<string, string> = { report: 'report', files: 'files', help: 'help' }

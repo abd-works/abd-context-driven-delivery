@@ -26,19 +26,14 @@ export class BoardClient extends BoardClientGenerated {
   }
 
   get shownPractices(): PracticeClient[] {
-    return this.practices.map(practice => new PracticeClient(practice))
-  }
-
-  // The practice a fidelity belongs to, found among the fidelities Python lists for each practice.
-  practiceOf(slug: string): PracticeClient | undefined {
-    return this.shownPractices.find(practice => practice.has(slug))
+    return this.practices.map(practice => new PracticeClient(practice, this.fidelities.filter(shown => shown.practice.key === practice.key)))
   }
 
   practiceNamed(key: string): PracticeClient | undefined {
     return this.shownPractices.find(practice => practice.key === key)
   }
 
-  // A fidelity as its tile names it: the label and the skill's slash command Python sends for it.
+  // A fidelity as its tile names it: its practice, its label, and its skill's slash command, as Python sends it.
   fidelityShown(slug: string): BoardFidelityData | undefined {
     return this.fidelities.find(shown => shown.fidelity.slug === slug)
   }

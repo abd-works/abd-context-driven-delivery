@@ -7,7 +7,7 @@ import type { FidelityProgressClient } from '@src/kanban/ticket/fidelity-progres
 import type { FilesByFidelity, TicketClient } from '@src/kanban/ticket/ticket-client'
 
 import type { BoardPage } from './board-page'
-import type { FilesPanel, ReportPanel } from './board-store'
+import type { FilesPanel, ReportPanel } from '../shared/board-store'
 
 // checkout-flow is the active ticket: its story map was validated with one rule broken on .context/story-map.md line 6.
 const TICKET = 'checkout-flow'

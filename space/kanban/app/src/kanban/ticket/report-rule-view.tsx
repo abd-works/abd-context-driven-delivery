@@ -1,9 +1,9 @@
 import type { ReportRuleData, SourceLineData, ViolationData } from '@cdd/space/kanban/ticket'
 
-import { countOf } from '../board/board-brand'
-import { useBoard } from '../board/board-context'
-import type { ReportPanel } from '../board/board-store'
-import { ChevronIcon } from '../board/icons'
+import { countOf } from '../shared/board-brand'
+import { useBoard } from '../shared/board-context'
+import type { ReportPanel } from '../shared/board-store'
+import { ChevronIcon } from '../shared/icons'
 import { locationOf, type ReportClient } from './report-client'
 import type { TicketClient } from './ticket-client'
 

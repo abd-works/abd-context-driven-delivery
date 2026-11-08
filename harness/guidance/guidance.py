@@ -549,13 +549,6 @@ class PracticeGuidance(Guidance):
         kebab case (``story-map``); none when this practice has no fidelity of that name."""
         return next((fidelity for fidelity in self.fidelities if name in (fidelity.name, Name(fidelity.name).kebab)), None)
 
-    @property
-    @data_field(key="fidelities")
-    def fidelity_slugs(self) -> list[str]:
-        """The slug of each of the practice's fidelities, such as `stories-story-map`, so a reader holding a fidelity's
-        slug finds its practice without taking the slug apart."""
-        return [fidelity.slug for fidelity in self.fidelities]
-
     def files(self) -> dict[str, dict[str, list]]:
         """The files each fidelity of this practice declares in the session it works in, by fidelity name and then
         format."""

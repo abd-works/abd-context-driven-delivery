@@ -85,7 +85,6 @@ key: str
 practice_slug: str
 short_name: str
 colour: str
-fidelity_slugs: list[str]
 guidance: str
 	// practice guidance, the active fidelity's guidance, and the companion's instructions
 instructions: str

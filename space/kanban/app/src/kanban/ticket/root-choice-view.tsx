@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from 'react'
 
-import { useBoard } from '../board/board-context'
-import type { RootChoice } from '../board/board-store'
+import { useBoard } from '../shared/board-context'
+import type { RootChoice } from '../shared/board-store'
 import { TICKET_ROOT } from './root-choice-client'
 import type { TicketClient } from './ticket-client'
 

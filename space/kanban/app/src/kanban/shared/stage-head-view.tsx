@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { SCOPE_SIZES } from './board-brand'
-import type { ColumnClient } from './column-client'
+import type { ColumnClient } from '../board/column-client'
 
 function ScopeView({ stage }: { stage: ColumnClient }) {
   const scope = stage.scope

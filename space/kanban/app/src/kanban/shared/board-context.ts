@@ -1,6 +1,6 @@
 import { createContext, useContext, useSyncExternalStore } from 'react'
 
-import type { BoardPage } from './board-page'
+import type { BoardPage } from '../board/board-page'
 import type { BoardState } from './board-store'
 
 export const BoardContext = createContext<BoardPage | null>(null)
