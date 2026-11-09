@@ -38,5 +38,5 @@ A story test holds two kinds of content: what the story map knows (story, scenar
 
 1. Subclass *CodeStoryModel* (or *BraceStoryModel* for a language with braces), set `language`, `epic_type`, and `story_type`, and give it a `file_name` and `file_header`.
 2. Override only the spelling operations the language writes differently (`story_open`, `scenario_open`, `step_open`, `and_open`, and the others listed in `story-model.md`). `CodeStoryModel.load` reads every language's story files one way; the language's story and scenario classes give only the patterns their text uses (`_NAME`, `_STORY_START`, `_SCENARIO`, `_IMPORT`).
-3. Add a *StoryFile* and *CodeBlock* pair that finds each block in a file, so code read in that language is kept, and give the format its `story_file_suffixes`.
+3. Add a *StoryFile* that finds each block in a file, and a block class that answers the *CodeBlock* shape, so code read in that language is kept; give the format its `story_file_suffixes`, and its `not_story_paths` when some files that end that way hold no story.
 4. List the format under `formats` in `Stories` (`practices/stories/stories.py`).

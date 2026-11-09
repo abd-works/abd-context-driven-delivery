@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Tuple
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
 from cdd_guidance.practices.clean_engineering.model.type_refs import pascal_type_names
-from cdd_guidance.practices.clean_engineering.model.drawio.diagram.diagram_node import (
+from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     DiagramClass,
     DiagramModule,
     ImportedClass,

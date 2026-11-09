@@ -2,14 +2,14 @@
 from expects import be_above, be_false, be_true, equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.clean_engineering.model.drawio.diagram.class_layout import (
+from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import (
     ArrowRouter,
     CardPlacement,
     DiagramArrow,
     paths_cross,
 )
-from cdd_guidance.practices.clean_engineering.model.drawio.diagram.diagram_node import DiagramClass
-from cdd_guidance.practices.clean_engineering.model.drawio.diagram.geometry import Geometry
+from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import DiagramClass
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
 
 
 def _card(name, group="sales", box=(0, 0, 200, 100)):

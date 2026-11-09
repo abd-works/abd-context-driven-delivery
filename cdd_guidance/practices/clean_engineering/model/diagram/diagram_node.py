@@ -10,7 +10,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     OoadClass,
     path_parent,
 )
-from cdd_guidance.practices.clean_engineering.model.drawio.diagram.geometry import (
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import (
     CELL_MIN_HEIGHT,
     CELL_WIDTH,
     LINE_HEIGHT,

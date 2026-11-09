@@ -6,7 +6,6 @@ A nested epic is an epic whose parent is an epic. Each node type implements clon
 from __future__ import annotations
 
 import re
-import zlib
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
@@ -20,7 +19,7 @@ from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock
 
 from .source_location import SourceLocation
-from .story_recording import StoryRecording, declared_evidence, file_of, folder_of, step_semantic
+from .story_recording import StoryRecording, declared_evidence, file_of, folder_of, step_node_id, step_semantic
 
 # Pairs the schema names with belongsTo. The facade does not grow a method for them.
 _BELONGS = {
@@ -197,10 +196,9 @@ class StoryNode(ModelNode, ABC):
         """The name this object's graph node is called by."""
         return self.name
 
-    @property
-    def recorded_type(self) -> str:
-        """The node type this object's graph node takes."""
-        return self._semantic_type_name
+    # The node type this object's graph node takes: its semantic type, unless a kind of node records itself as another
+    # (a step as Given, When or Then; an epic under another as SubEpic).
+    recorded_type = property(ModelNode.semantic_type)
 
     @abstractmethod
     def clone(self) -> "StoryNode":
@@ -427,16 +425,11 @@ class Step(StoryNode):
         return str(value).capitalize()
 
     @property
-    def is_continuation(self) -> bool:
+    def continuation(self) -> bool:
         """An And or But line continues the clause before it."""
         if self._keyword:
             return self._keyword.casefold() in ("and", "but")
         return self.text.strip().startswith(("And ", "But "))
-
-    @property
-    def continuation(self) -> bool:
-        """The fact name rules read for ``is_continuation``."""
-        return self.is_continuation
 
     @property
     def phase(self) -> str:
@@ -468,10 +461,7 @@ class Step(StoryNode):
         (``ands``), then the steps chained onto it."""
         at = recording.span_of(self, file, fallback_text=self.text)
         continuations = list(self.ands)
-        # A checksum of the name, never ``hash``: Python salts ``hash`` per process, and a step must keep its id in the
-        # worker process that refreshes the graph and in the server that holds it.
-        node_id = f"stories:{self.recorded_type}:{file}:{at.line}:{zlib.crc32(self.recorded_name.encode('utf-8')) & 0xFFFFFF}"
-        node = recording.add(self, node_id, at)
+        node = recording.add(self, step_node_id(self.recorded_type, file, at.line, self.recorded_name), at)
         recording.graph.link("ands" if isinstance(self.parent, Step) else "steps", parent, node)
         for continuation in continuations:
             continuation.record(recording, file, node)
@@ -1095,16 +1085,12 @@ class StoryModel(StoryNode):
         """Every Story under every epic and sub-epic, in map order."""
         return [story for epic in self.every_epic() for story in epic.stories]
 
-    def leaf_epics(self) -> List[Epic]:
-        """Every epic whose stories sit in columns: each epic's innermost sub-epics, or the epic when it has none."""
-        return [leaf for epic in self.epics for leaf in epic.leaf_epics()]
-
     def stories_named(self, names: List[str]) -> List["Story"]:
         """This map's own stories that names name, in the order names gives them; a name no story has adds nothing. A
         thin slice names the stories it delivers, so an increment read from one takes the map's stories through this."""
         stories = self.every_story()
-        named = (next((story for story in stories if story.name == name), None) for name in names)
-        return [story for story in named if story is not None]
+        matches = ([story for story in stories if story.name == name] for name in names)
+        return [found[0] for found in matches if found]
 
     def place_in(self, file: str) -> None:
         """Name file on every epic and story of this map that names no file yet; the line stays unknown."""

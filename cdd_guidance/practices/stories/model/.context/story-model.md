@@ -69,8 +69,6 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 + every_epic(): list[Epic]
 	// every epic and nested epic, each before its own children
 + every_story(): list[Story]
-+ leaf_epics(): list[Epic]
-	// each epic's innermost sub-epics, or the epic when it has none
 + stories_named(names: list[str]): list[Story]
 	// the map's own stories names name, in that order: how an increment read from a thin slice finds its stories
 + place_in(file: str): None
@@ -200,7 +198,8 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 + call_graph: list[CallGraphEntry]
 + body: CodeBody
 	// the step's test code as read, in the language it was written in. Empty outside code
-+ is_continuation: bool
++ continuation: bool
+	// an And or But line, which continues the clause before it
 + phase: str
 + callees: list[str]
 	// the capitalised concepts the step names: the domain classes it reaches
@@ -254,7 +253,7 @@ Each format class below is a *StoryModel* subclass. Its node subclasses (`Markdo
 
 ## SketchStoryModel : StoryModel
 
-The `sketch` format: the stories section of an integrated sketch. Nodes: SketchEpic, SketchStory, SketchScenario, SketchBackground, and SketchStep, which write their own sketch lines (`sketch_lines`) and read the lines nested under their own (`read_lines`, from a *SketchLines*: each entry `under()` gives is the line naming a node, `text`, then the lines `nested` under it).
+The `sketch` format: the stories section of an integrated sketch. Nodes: SketchEpic, SketchStory, SketchScenario, SketchBackground, and SketchStep, which write their own sketch lines (`sketch_lines`) and read the lines nested under their own (`read_lines`, from the *SketchLines* the module function `read_sketch_lines(raws)` reads: each entry `under()` gives is the line naming a node, `text`, then the lines `nested` under it).
 
 ------
 + epic_type: SketchEpic
@@ -360,9 +359,11 @@ A story map written as test code: one file per sub-epic holding its stories, und
 + tests_root: str
 + story_file_suffixes: tuple[str, ...]
 	// how a story file in this language ends; the first is the one it writes
++ not_story_paths: re.Pattern
+	// a path that ends like a story file but holds none: Java's specs, TypeScript's examples folders
 ----
 + is_story_file(path): bool
-	// class operation: a file this language reads stories from; Java and TypeScript also leave out helpers and examples
+	// class operation: a file this language reads stories from, by its suffixes and the paths it leaves out
 + parse(external: dict[str, str], on_file=None): CodeStoryModel
 	// external is the path-to-content map of the test tree
 + load(external: dict[str, str], on_file=None): CodeStoryModel
@@ -451,7 +452,7 @@ One story file's text as its language finds its blocks: the file's own code abov
 
 ## CodeBlock
 
-One block of a story file: a story, background, scenario, or step call. *PythonBlock* and *BraceBlock* answer it for their language.
+One block of a story file: a story, background, scenario, or step call. It is a shape, not a class: *PythonBlock* and *BraceBlock* each answer it for their language, and `story_file.py` names it for the readers that take either.
 
 ----
 + name, line_span, inside_lines, body

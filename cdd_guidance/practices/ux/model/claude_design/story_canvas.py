@@ -232,7 +232,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         thumbs_top = ClaudeDesignEpic.header_height() + self.thumbs_gap
         bottom = ClaudeDesignEpic.header_height()
         spans: Dict[int, list] = {}
-        for epic in self.leaf_epics():
+        for epic in (leaf for top_epic in self.epics for leaf in top_epic.leaf_epics()):
             top = epic.top_epic
             span = spans.setdefault(id(top), [top.name, x, x])
             span[2] = x + epic.column_width()

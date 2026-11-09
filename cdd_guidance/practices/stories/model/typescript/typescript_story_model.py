@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+import re
 from typing import Dict, Optional
 
 from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
@@ -11,13 +11,11 @@ from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
 from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptEpic, TypeScriptStory, _story_test_text
 
 
-_SKIP_NAMES = frozenset({"story-test.ts", "givens.ts"})
-
-
-
 class TypeScriptStoryModel(BraceStoryModel):
     LEAF_EXTENSION = ".ts"
     story_file_suffixes = ("_story.test.ts", "_story.spec.ts", ".story.shared.ts")
+    # A story test's examples module sits in its epic's examples folder and holds no story.
+    not_story_paths = re.compile(r"(?:^|/)examples/")
     epic_type = TypeScriptEpic
     story_type = TypeScriptStory
     language = TYPESCRIPT
@@ -76,11 +74,3 @@ class TypeScriptStoryModel(BraceStoryModel):
         name, text = epic.examples_file()
         files.setdefault(f"{folder}/examples/{name}", text)
 
-    @classmethod
-    def is_story_file(cls, path: "str | Path") -> bool:
-        """A story test file that this model reads a story from, not a step library, helper, or examples file."""
-        posix = str(path).replace("\\", "/")
-        name = posix.rsplit("/", 1)[-1]
-        if name in _SKIP_NAMES or name.endswith("-helper.ts") or "/examples/" in posix:
-            return False
-        return super().is_story_file(posix)

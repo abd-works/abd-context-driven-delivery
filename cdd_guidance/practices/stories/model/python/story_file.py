@@ -42,7 +42,7 @@ def call_of(item: ast.AST) -> str:
     return ""
 
 
-class PythonBlock(CodeBlock):
+class PythonBlock:
     """One `with` block in a Python story file."""
 
     def __init__(self, file: PythonStoryFile, node: ast.With) -> None:

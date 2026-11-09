@@ -52,28 +52,19 @@ class OneAssertionPerTest(PracticeGraphRule):
         return []
 
 
-class DevelopedSpecs:
-    """The spec files of one check that are finished tests (``developed``): past behavior fidelity, so the rules that
-    keep a behavior sketch free of test bodies leave their blocks alone. Made once per check, from each spec's fact."""
-
-    def __init__(self, context: RuleCheckContext) -> None:
-        self._files = {spec.source.file for spec in context.nodes("Spec") if spec.get_fact("developed", False)}
-
-    def holds(self, node: Node) -> bool:
-        """True when node was read from a finished spec."""
-        return node.source.file in self._files
-
-
 class NoImplementation(PracticeGraphRule):
-    """A behavior-fidelity block holds signatures only. A finished spec has replaced every signature with its test
-    body, so its blocks are not judged."""
+    """A behavior-fidelity block holds signatures only. A finished spec (``developed``) has replaced every signature
+    with its test body, so its blocks are not judged. Judged over the whole practice, so each spec's fact is read once
+    for all its blocks."""
 
     slug = "no-implementation"
     node_types = ("Observation", "Context")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        if context.index(DevelopedSpecs).holds(node):
-            return []
-        if node.get_fact("has_implementation"):
-            return [f"{node.type} {node.name!r} at behavior fidelity must not contain tests or imports."]
-        return []
+    def check_practice(self, context: RuleCheckContext) -> list[tuple[str, str]]:
+        finished = {spec.source.file for spec in context.nodes("Spec") if spec.get_fact("developed", False)}
+        return [
+            (node.node_id, f"{node.type} {node.name!r} at behavior fidelity must not contain tests or imports.")
+            for kind in self.node_types
+            for node in context.nodes(kind)
+            if node.source.file not in finished and node.get_fact("has_implementation")
+        ]

@@ -15,7 +15,7 @@ from typing import List, Optional
 
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import DescribeBlock
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph, CallGraphEntry
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.graph_reading import parameters_of
 from harness.graph.graph import Graph, Node
@@ -58,26 +58,35 @@ class GraphBddModel(BddModel):
         for edge in self._graph.edges_from("invokes", observation):
             member = edge.child
             entries.extend(self._call(member.get_fact("owner", ""), member.name, 0, set(), member))
-        return entries or CallGraph([CallGraphEntry(depth=0, kind="call", text=NO_OPERATION)])
+        if not entries:
+            entries.add_line(NO_OPERATION, 0)
+        return entries
 
-    def _call(self, owner: str, name: str, depth: int, trail: set, code: Optional[Node]) -> List[CallGraphEntry]:
+    def _call(self, owner: str, name: str, depth: int, trail: set, code: Optional[Node]) -> CallGraph:
         """A call on owner.name, then the interactions the model gives it, then what it returns."""
         described = self._clean.described_member(owner, name) if self._clean is not None else None
         # A described property, a described getter, and a getter's code node all read as a property.
         subject = described if described is not None else code
         is_property = subject is not None and subject.type == "Property"
         signature = ", ".join(f"{label}: {kind}" if kind else label for label, kind in self._parameters(described, code))
-        entries = [CallGraphEntry(depth=depth, kind="out", text=f"{owner}.{name}" if is_property else f"{owner}.{name}({signature})")]
+        entries = CallGraph()
+        entries.add_line(f"-> {owner}.{name}" if is_property else f"-> {owner}.{name}({signature})", depth)
         if depth < _DEEPEST_CALL and described is not None:
-            for interaction in described.callees:
-                callee = _member_named(interaction)
-                if callee is None or callee in trail:
-                    continue
-                entries.extend(self._call(callee[0], callee[1], depth + 1, trail | {(owner, name)}, self._code_member(*callee)))
+            entries.extend(self._interactions(described, depth + 1, trail | {(owner, name)}))
         returns = described.value_type.strip() if described is not None else ""
         if returns:
-            entries.append(CallGraphEntry(depth=depth, kind="in", text=returns))
+            entries.add_line(f"<- {returns}", depth)
         return entries
+
+    def _interactions(self, described, depth: int, trail: set) -> CallGraph:
+        """The calls the model gives a described member, each with its own interactions, at depth; a member already on
+        trail is not followed again."""
+        found = CallGraph()
+        for interaction in described.callees:
+            callee = _member_named(interaction)
+            if callee is not None and callee not in trail:
+                found.extend(self._call(callee[0], callee[1], depth, trail, self._code_member(*callee)))
+        return found
 
     def _parameters(self, described, code: Optional[Node]) -> List[tuple[str, str]]:
         """Each parameter's name and type: the model's when it describes the member, else the code's."""

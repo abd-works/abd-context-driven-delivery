@@ -36,19 +36,18 @@ class CallGraph(list):
     """An indented call graph: the operations a step or an observation reaches, one CallGraphEntry per line. It reads
     itself from a text block and writes itself as one."""
 
-    @classmethod
-    def parse(cls, text: str) -> "CallGraph":
-        """The call graph a fenced or plain call-graph block holds."""
-        graph = cls()
+    def read(self, text: str) -> "CallGraph":
+        """Add the lines a fenced or plain call-graph block holds, each at the depth its indent gives; this graph."""
         for raw in text.splitlines():
-            if not raw.strip():
-                continue
-            depth = (len(raw) - len(raw.lstrip(" "))) // 2
-            stripped = raw.strip()
-            arrow = parse_arrow_line(stripped)
-            kind, payload = arrow if arrow is not None else ("call", stripped)
-            graph.append(CallGraphEntry(depth=depth, kind=kind, text=payload))
-        return graph
+            if raw.strip():
+                self.add_line(raw.strip(), (len(raw) - len(raw.lstrip(" "))) // 2)
+        return self
+
+    def add_line(self, line: str, depth: int) -> None:
+        """Add one written line at depth: an arrow line (``-> Cart.add(item)``, ``<- Total``) keeps its direction,
+        and any other line is a call."""
+        kind, text = parse_arrow_line(line) or ("call", line)
+        self.append(CallGraphEntry(depth=depth, kind=kind, text=text))
 
     def block(self) -> str:
         """This call graph as an indented text block, without fences."""

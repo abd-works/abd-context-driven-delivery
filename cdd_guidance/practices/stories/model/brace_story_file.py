@@ -67,7 +67,7 @@ class BraceStoryFile(StoryFile):
         return BraceCall(self.text, start, self.text.index("(", start), unescaped(name))
 
 
-class BraceBlock(CodeBlock):
+class BraceBlock:
     """One call in a brace-language story file whose callback holds code."""
 
     def __init__(self, file: BraceStoryFile, call: BraceCall) -> None:

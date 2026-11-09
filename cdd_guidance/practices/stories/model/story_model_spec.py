@@ -265,8 +265,8 @@ with description("a Scenario") as self:
             self.scenario = scenario
 
         with context("the continuation clause"):
-            with it("should carry isContinuation true"):
-                expect(self.cont_clause.is_continuation).to(be_true)
+            with it("should be a continuation"):
+                expect(self.cont_clause.continuation).to(be_true)
 
             with it('should preserve the "And " prefix verbatim in text'):
                 expect(self.cont_clause.text).to(
@@ -285,8 +285,8 @@ with description("a Scenario") as self:
             self.scenario = scenario
 
         with context("the continuation clause"):
-            with it("should carry isContinuation true"):
-                expect(self.but_clause.is_continuation).to(be_true)
+            with it("should be a continuation"):
+                expect(self.but_clause.continuation).to(be_true)
 
             with it('should preserve the "But " prefix verbatim in text'):
                 expect(self.but_clause.text).to(
@@ -1017,9 +1017,6 @@ with description("an epic tree") as self:
 
     with it("should give an epic with sub-epics its innermost sub-epics as its leaf epics"):
         expect(self.shop.leaf_epics()).to(equal([self.pay]))
-
-    with it("should give the map each epic's leaf epics"):
-        expect(self.story_map.leaf_epics()).to(equal([self.pay]))
 
     with it("should give a story under no epic no top epic"):
         expect(Story("Loose").top_epic).to(be(None))

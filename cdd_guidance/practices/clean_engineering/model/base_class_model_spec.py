@@ -403,7 +403,7 @@ with description("call graph lines"):
 
     with it("should round-trip an indented graph"):
         text = "cart.checkout()\n  -> payment.charge()\n  <- receipt\n"
-        entries = CallGraph.parse(text)
+        entries = CallGraph().read(text)
         expect(entries[0].kind).to(equal("call"))
         expect(entries.callees()).to(equal(["payment.charge()"]))
         expect(entries.block()).to(equal(text.strip()))

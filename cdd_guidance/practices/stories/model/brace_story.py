@@ -95,7 +95,6 @@ class BraceStory(CodeStory):
     _STORY_MARK = re.compile(r"\*\s*Story:")
     _NAME = re.compile(r"\*\s*Story:\s*(?P<name>.+)")
     _CALL_NAME = re.compile(r"(?i)(?:shareStory|story)\(\s*(['\"])(?P<name>(?:\\.|(?!\1).)*)\1")
-    _CALL = re.compile(r"(?i)story\(")
     _CALL_LINE = re.compile(r"(?im)^[ \t]*(?:shareStory|story)\(")
 
     @classmethod
@@ -110,16 +109,24 @@ class BraceStory(CodeStory):
         comments name every story the file calls; otherwise split at each story call, each after the file's preamble."""
         pieces = cls._STORY_START.split(content)
         named = [piece for piece in pieces if cls._STORY_MARK.search(piece)]
-        if named and len(cls._CALL.findall(content)) <= len(named):
+        if named and len(cls._CALL_NAME.findall(content)) <= len(named):
             imports = "\n".join(match.group(0) for match in cls.scenario_type._IMPORT.finditer(content))
-            stories = [cls.load(f"{imports}\n{piece}") for piece in pieces if "Story:" in piece or cls._CALL.search(piece)]
-            return stories or [cls.load(content)]
-        calls = list(cls._CALL_LINE.finditer(content))
-        if len(calls) <= 1:
-            return [cls.load(content)]
-        preamble = content[: calls[0].start()]
-        ends = [call.start() for call in calls[1:]] + [len(content)]
-        return [cls.load(preamble + content[call.start() : end]) for call, end in zip(calls, ends)]
+            return [cls.load(piece) for piece in _story_pieces(pieces, imports, cls._CALL_NAME)] or [cls.load(content)]
+        return [cls.load(piece) for piece in _pieces_at(list(cls._CALL_LINE.finditer(content)), content)]
+
+
+def _story_pieces(pieces: List[str], imports: str, call: re.Pattern) -> List[str]:
+    """Each piece that holds a story, by its comment or its call, after the file's example imports."""
+    return [f"{imports}\n{piece}" for piece in pieces if "Story:" in piece or call.search(piece)]
+
+
+def _pieces_at(calls: list, content: str) -> List[str]:
+    """The text split at each story call, each piece after the file's preamble; the whole text for one call or none."""
+    if len(calls) <= 1:
+        return [content]
+    preamble = content[: calls[0].start()]
+    ends = [call.start() for call in calls[1:]] + [len(content)]
+    return [preamble + content[call.start() : end] for call, end in zip(calls, ends)]
 
 
 def quoted(value: str) -> str:
@@ -173,7 +180,7 @@ class BraceStoryModel(CodeStoryModel):
         return lines + [f"story({quoted(story.name)}, () => {{"]
 
     def story_close(self) -> List[str]:
-        return ["});"]
+        return self.scenario_close("")
 
     def story_background_lines(self, background: Background) -> List[str]:
         scope = background.name if re.fullmatch(r"\w+", background.name or "") else "each"
@@ -213,7 +220,7 @@ class BraceStoryModel(CodeStoryModel):
         return indent + self.language.indent * 2
 
     def and_close(self, indent: str) -> str:
-        return f"{indent}  }})"
+        return self.step_close(f"{indent}  ")
 
     def step_placeholder(self) -> str:
         return self.language.comment("TODO: implement step")

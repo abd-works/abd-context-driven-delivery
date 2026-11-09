@@ -140,12 +140,13 @@ class DddReading:
             self.graph.report_progress("ddd · bounded contexts")
             marked = self._bounded_contexts()
             contexts = self._contexts(marked)
-            members = self._members_by_folder(lambda folder: bool(marked) and _context_for(folder, contexts) is not None)
+            members = self._members_by_folder(contexts if marked else {})
             for folder, held in sorted(members.items()):
                 context = _context_for(folder, contexts) or self.practice.in_graph.root
                 aggregate = self._aggregate(folder, held, context) if held else self.practice.in_graph.node(_aggregate_id(folder))
                 if aggregate is not None:
-                    aggregate.set_fact("bare_classes", self._bare_classes(folder))
+                    held_classes = self.practice.extended.in_graph.nodes("OoadClass")
+                    aggregate.set_fact("bare_classes", _bare_classes(folder, self.practice.in_graph.nodes(), held_classes))
             self._link_blocks()
 
     def _contexts(self, marked: list[tuple]) -> dict[str, Node]:
@@ -183,11 +184,11 @@ class DddReading:
         context.load_folder_facts(self.root)
         return context
 
-    def _members_by_folder(self, in_marked_context) -> dict[str, list[tuple[TacticalClass, str]]]:
+    def _members_by_folder(self, marked_contexts: dict[str, Node]) -> dict[str, list[tuple[TacticalClass, str]]]:
         """The production classes the Clean Engineering practice read now, by folder, each building block among them
         with its kind; a folder whose classes read now are none of them holds an empty list. A class's DDD stereotype
         always names its kind. Its name names one only in a folder that holds a domain: one a marked bounded context
-        covers (in_marked_context), or one where a class carries a DDD stereotype; elsewhere a name such as
+        covers (one of marked_contexts), or one where a class carries a DDD stereotype; elsewhere a name such as
         `AgentOperation` or `MarkdownRepository` says nothing about the business. A refresh reads only the files it
         names, and the building blocks of every other class stay as DDD built them before; whether a folder holds a
         domain, and which root a repository names, both read every class Clean Engineering holds, restored ones too,
@@ -197,36 +198,16 @@ class DddReading:
             return {}
         every = clean.in_graph.nodes("OoadClass")
         names = {cls.name for cls in every}
-        modelled = {_folder_of(cls.source.file) for cls in every if kind_named_by(cls.get_fact("stereotypes") or [])}
+        modelled = _modelled_folders(every)
         members: dict[str, list[tuple[TacticalClass, str]]] = {}
         for cls in clean.in_graph.nodes_read_now("OoadClass"):
             # A class in a spec, a test folder, or test support is never a domain building block, whatever its name.
             if is_test_code(cls.source.file):
                 continue
             folder = _folder_of(cls.source.file)
-            tactical = TacticalClass(cls)
-            kind = tactical.inferred_kind(names) if folder in modelled or in_marked_context(folder) else tactical.kind()
-            held = members.setdefault(folder, [])
-            if kind is not None:
-                held.append((tactical, kind))
+            block = _block_of(TacticalClass(cls), names, folder in modelled or _context_for(folder, marked_contexts) is not None)
+            members.setdefault(folder, []).extend([block] if block else [])
         return members
-
-    def _bare_classes(self, folder: str) -> list[str]:
-        """The production classes in folder that are no building block DDD holds there: the classes its aggregate's
-        rule reports, by name. A class in a React screen module, one marked as another system's, and a private one
-        (`_module`, which holds a file's functions, or a helper named with `_`) are not domain classes. The names are
-        sorted, so a refresh that restores some classes and reads others gives the fact a fresh build gives."""
-        blocks = {block.name for block in self.practice.in_graph.nodes() if block.type in _BLOCK_KINDS and _folder_of(block.source.file) == folder}
-        return sorted(
-            cls.name
-            for cls in self.practice.extended.in_graph.nodes("OoadClass")
-            if _folder_of(cls.source.file) == folder
-            and not cls.name.startswith("_")
-            and cls.name not in blocks
-            and not is_test_code(cls.source.file)
-            and not cls.source.file.lower().endswith(_SCREEN_MODULE)
-            and not marks_another_system(cls.get_fact("stereotypes") or [])
-        )
 
     def _aggregate(self, folder: str, members: list[tuple[TacticalClass, str]], context: Node) -> Node:
         aggregate = Aggregate(Path(folder).name, 1)
@@ -261,6 +242,35 @@ class DddReading:
                 for other in _FOREIGN_KEY.findall(block.source.text):
                     if other in by_name and other != block.name:
                         self.graph.link("associates", block, by_name[other], "relationship")
+
+
+def _bare_classes(folder: str, ddd_nodes: list[Node], classes: list[Node]) -> list[str]:
+    """The production classes in folder that are no building block DDD holds there: the classes its aggregate's rule
+    reports, by name. Sorted, so a refresh that restores some classes and reads others gives the fact a fresh build
+    gives."""
+    blocks = {block.name for block in ddd_nodes if block.type in _BLOCK_KINDS and _folder_of(block.source.file) == folder}
+    return sorted(cls.name for cls in classes if _folder_of(cls.source.file) == folder and cls.name not in blocks and _is_domain_class(cls))
+
+
+def _modelled_folders(classes: list[Node]) -> set[str]:
+    """The folders where a class carries a DDD stereotype, which says the folder holds a domain."""
+    return {_folder_of(cls.source.file) for cls in classes if kind_named_by(cls.get_fact("stereotypes") or [])}
+
+
+def _block_of(tactical: TacticalClass, names: set[str], in_domain: bool) -> tuple[TacticalClass, str] | None:
+    """The class with the building-block kind it is: its stereotype's, or in a folder that holds a domain the one
+    its name says; none for a class that is no building block."""
+    kind = tactical.inferred_kind(names) if in_domain else tactical.kind()
+    return (tactical, kind) if kind is not None else None
+
+
+def _is_domain_class(cls: Node) -> bool:
+    """A production class of the domain: not a private one (`_module`, which holds a file's functions, or a helper
+    named with `_`), not test code, not a React screen module's, and not one marked as another system's."""
+    file = cls.source.file
+    return not (
+        cls.name.startswith("_") or is_test_code(file) or file.lower().endswith(_SCREEN_MODULE) or marks_another_system(cls.get_fact("stereotypes") or [])
+    )
 
 
 def _folder_of(file: str) -> str:

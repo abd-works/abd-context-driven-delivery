@@ -25,7 +25,7 @@ from __future__ import annotations
 import re
 import textwrap
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
 
 from harness.annotations.name import Name
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
@@ -41,7 +41,10 @@ from cdd_guidance.practices.stories.model.story_model import (
     StoryModel,
     StoryType,
 )
-from cdd_guidance.practices.stories.model.story_file import CodeBlock, StoryFile, flat_steps, paired, read_step_code
+from cdd_guidance.practices.stories.model.story_file import CodeBlock, flat_steps, paired, read_step_code
+
+if TYPE_CHECKING:
+    from cdd_guidance.practices.stories.model.story_file import StoryFile
 
 
 class CodeStoryModelError(Exception):
@@ -59,6 +62,41 @@ def example_names_of(stories: List[Story]) -> List[str]:
             for name in scenario.examples:
                 if name not in names:
                     names.append(name)
+    return names
+
+
+def _quoted_name_line(content: str, name: str) -> int:
+    """The line that quotes name, counted from 1; the first line when none does."""
+    for index, line in enumerate(content.splitlines(), start=1):
+        if f"'{name}'" in line or f'"{name}"' in line:
+            return index
+    return 1
+
+
+def _file_stem_slug(filename: str, suffixes: Tuple[str, ...]) -> str:
+    """The kebab slug of a story file's name without the story-file suffix it ends with; empty for any other file."""
+    suffix = next((item for item in suffixes if filename.endswith(item)), None)
+    return Name(filename[: -len(suffix)]).kebab if suffix else ""
+
+
+def _epic_slugs(folders: List[str], stem_slug: str, leaf_slug: str) -> List[str]:
+    """The epic, then each sub-epic, a story file sits in, from the folders above it under the tests root. A last
+    folder with the file's or its epic's slug is that sub-epic, not a second level; a file in its own top folder is the
+    epic itself."""
+    folders = folders[:-1] if folders and folders[-1] in (stem_slug, leaf_slug) else list(folders)
+    if not folders:
+        return [leaf_slug]
+    nested = folders[1:]
+    return [folders[0], *(nested if nested and nested[-1] == leaf_slug else [*nested, leaf_slug])]
+
+
+def _names_listed(lines: List[str]) -> List[str]:
+    """Each name the comma-separated lines list, once, in order: an import's alias when it gives one."""
+    names: List[str] = []
+    for part in (part for line in lines for part in line.split(",")):
+        name = part.strip().split(" as ")[-1].strip()
+        if name and name != "(" and name not in names:
+            names.append(name)
     return names
 
 
@@ -181,12 +219,7 @@ class CodeScenario(Scenario, CodeStoryNode):
         """The example names a story file imports and the ones its examples comment lists, each once, in order."""
         listed = [match.group("names") for match in cls._IMPORT.finditer(content)] if cls._IMPORT is not None else []
         listed += [match.group(1) for match in cls._EXAMPLES_LINE.finditer(content)]
-        names: List[str] = []
-        for part in (part for line in listed for part in line.split(",")):
-            name = part.strip().split(" as ")[-1].strip()
-            if name and name != "(" and name not in names:
-                names.append(name)
-        return names
+        return _names_listed(listed)
 
     @classmethod
     def steps_from(cls, calls: List[tuple]) -> List[Step]:
@@ -393,11 +426,15 @@ class CodeStoryModel(StoryModel):
     story_file_suffixes: Tuple[str, ...] = ()
     """How a story file in this language ends, such as ``_story.test.py``; the first is the one this language writes.
     Empty for a language with no story files."""
+    not_story_paths: re.Pattern = re.compile(r"(?!)")
+    """A path that ends like a story file but holds no story, such as a file in an examples folder; a pattern that
+    matches nothing in a language whose every such file is one."""
 
     @classmethod
     def is_story_file(cls, path: "str | Path") -> bool:
         """True when the file at path is a story file in this language, which this model's story type reads."""
-        return Path(path).name.endswith(cls.story_file_suffixes) if cls.story_file_suffixes else False
+        posix = str(path).replace("\\", "/")
+        return posix.endswith(cls.story_file_suffixes) and cls.not_story_paths.search(posix) is None
 
     def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
         """The story files in tree, path to text, in path order."""
@@ -544,7 +581,7 @@ class CodeStoryModel(StoryModel):
             lines.append(f"{prefix}Kind: {StoryType(story.story_type).value}")
         return lines
 
-    def story_file(self, content: str) -> Optional[StoryFile]:
+    def story_file(self, content: str) -> Optional["StoryFile"]:
         """The story file content is, as this language finds its blocks; None for a language that does not read its
         blocks, whose stories are written generically."""
         return None
@@ -733,24 +770,12 @@ class CodeStoryModel(StoryModel):
         file is not a second level. A file in its own top folder is the epic itself, and its stories sit on the epic.
         """
         parts = self._under_tests_root(path.strip("/").replace("\\", "/").split("/"))
-        if parts is None or len(parts) < 2:
-            return
-        stem_slug = self._file_stem_slug(parts[-1])
+        stem_slug = _file_stem_slug(parts[-1], self.story_file_suffixes) if parts is not None and len(parts) >= 2 else ""
         if not stem_slug:
             return
         epic_name = CodeEpic.epic_name_in(content)
-        leaf_slug = (Name(epic_name).title_slug or "unnamed") if epic_name else stem_slug
-        folders = list(parts[:-1])
-        if folders[-1] in (stem_slug, leaf_slug):
-            folders = folders[:-1]
-        if not folders:
-            holder = self.epic_for(leaf_slug)
-        else:
-            epic = self.epic_for(folders[0])
-            nested = folders[1:]
-            if not nested or nested[-1] != leaf_slug:
-                nested = [*nested, leaf_slug]
-            holder = self.sub_epic_for(epic, nested)
+        slugs = _epic_slugs(parts[:-1], stem_slug, (Name(epic_name).title_slug or "unnamed") if epic_name else stem_slug)
+        holder = self.epic_for(slugs[0]) if len(slugs) == 1 else self.sub_epic_for(self.epic_for(slugs[0]), slugs[1:])
         if epic_name:
             holder.name = epic_name
         self._take_stories(holder, content, path.replace("\\", "/"))
@@ -762,7 +787,7 @@ class CodeStoryModel(StoryModel):
         stories = self.story_type.load_all(content)
         for story in stories:
             if source_file:
-                line = self._quoted_name_line(content, story.name)
+                line = _quoted_name_line(content, story.name)
                 story.source = SourceLocation(source_file, line, line)
             holder.append_story(story)
         code = self.story_file(content)
@@ -770,19 +795,6 @@ class CodeStoryModel(StoryModel):
         if written is not None:
             written.key = holder.name
             holder.written = written
-
-    def _quoted_name_line(self, content: str, name: str) -> int:
-        for index, line in enumerate(content.splitlines(), start=1):
-            if f"'{name}'" in line or f'"{name}"' in line:
-                return index
-        return 1
-
-    def _file_stem_slug(self, filename: str) -> str:
-        for suffix in self.story_file_suffixes:
-            if filename.endswith(suffix):
-                stem = filename[: -len(suffix)]
-                return Name(stem).kebab
-        return ""
 
     def sub_epic_for(self, epic: Epic, slugs: List[str]) -> Epic:
         parent = epic

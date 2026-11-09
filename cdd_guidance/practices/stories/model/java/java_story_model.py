@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+import re
 from typing import List
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
@@ -13,17 +13,13 @@ from cdd_guidance.practices.stories.model.story_model import Epic, Story
 class JavaStoryModel(CodeStoryModel):
     LEAF_EXTENSION = "Story.java"
     story_file_suffixes = (LEAF_EXTENSION,)
+    # A spec beside the story files names itself a spec; a helper does not end like a story file at all.
+    not_story_paths = re.compile(r"Spec[^/]*$")
     epic_type = JavaEpic
     story_type = JavaStory
 
-    @classmethod
-    def is_story_file(cls, path: "str | Path") -> bool:
-        """A story file, not a helper or a spec beside it."""
-        name = Path(path).name
-        return super().is_story_file(path) and not name.endswith("Helper.java") and "Spec" not in name
-
     def file_name(self, epic: Epic) -> str:
-        return f"{epic.pascal()}Story.java"
+        return f"{epic.pascal()}{self.LEAF_EXTENSION}"
 
     def file_header(self, epic: Epic, parent: str) -> List[str]:
         return [f"// Epic: {epic.name}", f"// Orders: {epic.order_path()}", ""]

@@ -16,8 +16,8 @@ import random
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
-from cdd_guidance.practices.clean_engineering.model.drawio.diagram.diagram_node import DiagramNode
-from cdd_guidance.practices.clean_engineering.model.drawio.diagram.geometry import Geometry, segments_cross
+from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import DiagramNode
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry, segments_cross
 
 Point = Tuple[int, int]
 Heading = Tuple[int, int]

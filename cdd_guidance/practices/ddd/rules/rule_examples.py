@@ -44,12 +44,11 @@ def violations_for_ddd_rule(
     lang: str = "python",
     filename: str | None = None,
     beside: dict[str, str] | None = None,
-    in_bounded_context: bool = True,
 ) -> list[str]:
     """What the rule reports on the DDD node named class_name, or on every DDD node when none is named, with the source
     read from filename and the files beside it in the same folder."""
     files = {filename or f"example{source_suffix(lang)}": source, **(beside or {})}
-    fixture = ddd_fixture(files, in_bounded_context=in_bounded_context)
+    fixture = ddd_fixture(files)
     run = SchemaRuleRun(rule, fixture.context)
     if class_name is None:
         return run.hits()

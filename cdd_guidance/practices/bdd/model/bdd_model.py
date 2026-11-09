@@ -7,11 +7,7 @@ import re
 from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import (
-    CallGraph,
-    CallGraphEntry,
-    parse_arrow_line,
-)
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph, parse_arrow_line
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation, private_probe_in_text
 from cdd_guidance.practices.bdd.model.spec_source import has_signature_marker, is_developed
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
@@ -194,12 +190,7 @@ class _SketchReader:
                 observation = owner.add_child("it", stripped[3:].strip())
                 observation.call_graph, call_graph = call_graph, CallGraph()
                 continue
-            call_graph.append(self._call_graph_entry(raw, stripped))
-
-    def _call_graph_entry(self, raw: str, stripped: str) -> CallGraphEntry:
-        """An arrow line keeps its direction; any other line is a call."""
-        kind, payload = parse_arrow_line(stripped) or ("call", stripped)
-        return CallGraphEntry(depth=self._level(raw), kind=kind, text=payload)
+            call_graph.add_line(stripped, self._level(raw))
 
     def _read_surface(self, stripped: str) -> None:
         """A surface line belongs to the observation above it; before any observation it waits for the next one."""

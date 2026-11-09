@@ -147,7 +147,7 @@ class JsonIncrement(Increment):
         return payload
 
     @classmethod
-    def from_record(cls, record: Dict[str, Any], story_map: StoryModel) -> "JsonIncrement":
+    def from_record(cls, record: Dict[str, Any], story_map: "StoryModel") -> "JsonIncrement":
         """The increment a record lists, delivering story_map's own story for each name it gives."""
         named = [item.get("name") if isinstance(item, dict) else str(item) for item in record.get("stories", [])]
         increment = cls(

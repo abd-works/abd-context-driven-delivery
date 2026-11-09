@@ -230,7 +230,7 @@ class SourceText:
         the class the body belongs to (``own_class``), since privacy is per class: the class itself, the parameters
         typed as it (``typed_own``), and a local the body builds with ``new`` of it."""
         code = _STRING.sub('""', self._text)
-        own = _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS | typed_own | self._built_of(own_class)
+        own = _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS | typed_own | _built_of(own_class, self._text)
         for match in _PEER_PRIVATE_FIELD.finditer(code):
             receiver, member = match.group(1), match.group(2)
             if receiver in own or _is_dunder(member) or member.lstrip("_") in _WIRED_PEER_FIELDS:
@@ -239,13 +239,6 @@ class SourceText:
                 continue
             return True
         return False
-
-    def _built_of(self, class_name: str) -> frozenset[str]:
-        """The class itself and each local the body declares as a new object of it: ``const copy = new Money()``."""
-        if not class_name:
-            return frozenset()
-        built = re.findall(rf"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*new\s+{re.escape(class_name)}\b", self._text)
-        return frozenset({class_name, *built})
 
     def built_collaborators(self, parameter_names: frozenset[str], start_line: int) -> list[tuple[str, int]]:
         """The classes this brace-language constructor body builds with `new` that a caller cannot hand it, each with
@@ -282,8 +275,7 @@ class SourceText:
         for pattern in (_EDGE_RAISE, _EDGE_RAISE_BRACE):
             if any(not _names_declared_failure(match.group(1)) for match in pattern.finditer(self._text)):
                 return True
-        message = _EDGE_RAISE_MESSAGE.search(self._text)
-        return bool(message and not _names_declared_failure(message.group(1)) and _EDGE_GUARD.search(self._text))
+        return _raises_builtin_with_message(self._text)
 
     def exception_without_message(self) -> str:
         found = _EMPTY_EXCEPTION.search(self._text)
@@ -389,7 +381,7 @@ class PythonFunctionBody:
 
     def __init__(self, node: ast.FunctionDef | ast.AsyncFunctionDef, owner: ast.ClassDef | None) -> None:
         self._node = node
-        self._owner = owner
+        self._own = OwnObjects(node, owner)
 
     def control_flow_depth(self) -> int:
         return self._deepest_block(self._node.body, 0)
@@ -423,7 +415,7 @@ class PythonFunctionBody:
         brace-language body: not of itself (``self``, or its class in a classmethod), not of another object of its own
         class (privacy in Python is per class), not a dunder, not the repository a peer is wired to, and not a field it
         copies into the same field of this object."""
-        own = _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS | self._own_class_parameter() | self._own_class_objects()
+        own = _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS | self._own.names()
         for child in ast.walk(self._node):
             if not (isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name)):
                 continue
@@ -433,33 +425,6 @@ class PythonFunctionBody:
                 continue
             return True
         return False
-
-    def _own_class_objects(self) -> frozenset[str]:
-        """The names this method holds an object of its own class by: the class's own name, a parameter typed as the
-        class, the other operand of a comparison or arithmetic dunder such as ``__eq__``, a local it builds from the
-        class (``cls()``, ``Plan()``, ``cls.read(...)``, ``type(self)()``), and the loop name over a field the class
-        declares as holding objects of the class (``epics: list['Epic']``)."""
-        if self._owner is None:
-            return frozenset()
-        name = self._owner.name
-        arguments = self._node.args.posonlyargs + self._node.args.args + self._node.args.kwonlyargs
-        names = {name} | {argument.arg for argument in arguments if _names_class(argument.annotation, name)}
-        if self._node.name in _PEER_OPERAND_DUNDERS:
-            names.update(argument.arg for argument in arguments)
-        own_fields = _fields_holding_class(self._owner)
-        for child in ast.walk(self._node):
-            if isinstance(child, ast.Assign) and _builds_class(child.value, name):
-                names.update(target.id for target in child.targets if isinstance(target, ast.Name))
-            elif isinstance(child, (ast.For, ast.comprehension)) and _self_field(child.iter) in own_fields:
-                names.add(_name_of(child.target))
-        names.discard("")
-        return frozenset(names)
-
-    def _own_class_parameter(self) -> frozenset[str]:
-        """The first parameter of a classmethod, its own class whatever it is called."""
-        decorators = {decorator.id for decorator in self._node.decorator_list if isinstance(decorator, ast.Name)}
-        arguments = self._node.args.args
-        return frozenset({arguments[0].arg}) if "classmethod" in decorators and arguments else frozenset()
 
     def built_collaborators(self) -> list[tuple[str, int]]:
         """The classes this constructor builds that a caller cannot hand it, each with its line.
@@ -620,6 +585,62 @@ def _built_from(construction: ast.Call, owned: set[str]) -> bool:
         for child in nodes
         if isinstance(child, ast.Name) and id(child) not in called
     )
+
+
+class OwnObjects:
+    """The names a Python function holds an object of its own class by. Privacy in Python is per class, so reading a
+    ``_`` member through any of them is reading the class's own state: a classmethod's first parameter, the class's own
+    name, a parameter typed as the class, the other operand of a comparison or arithmetic dunder such as ``__eq__``, a
+    local it builds from the class (``cls()``, ``Plan()``, ``cls.read(...)``, ``type(self)()``), and the loop name
+    over a field the class declares as holding objects of the class (``epics: list['Epic']``). A module function has
+    no class, so none."""
+
+    def __init__(self, node: ast.FunctionDef | ast.AsyncFunctionDef, owner: ast.ClassDef | None) -> None:
+        self._node = node
+        self._owner = owner
+
+    def names(self) -> frozenset[str]:
+        if self._owner is None:
+            return frozenset()
+        names = self._parameters() | self._bound_in_body()
+        names.add(self._owner.name)
+        names.discard("")
+        return frozenset(names)
+
+    def _parameters(self) -> set[str]:
+        arguments = self._node.args.posonlyargs + self._node.args.args + self._node.args.kwonlyargs
+        if self._node.name in _PEER_OPERAND_DUNDERS:
+            return {argument.arg for argument in arguments}
+        typed = {argument.arg for argument in arguments if _names_class(argument.annotation, self._owner.name)}
+        decorators = {decorator.id for decorator in self._node.decorator_list if isinstance(decorator, ast.Name)}
+        if "classmethod" in decorators and self._node.args.args:
+            typed.add(self._node.args.args[0].arg)
+        return typed
+
+    def _bound_in_body(self) -> set[str]:
+        own_fields = _fields_holding_class(self._owner)
+        names: set[str] = set()
+        for child in ast.walk(self._node):
+            if isinstance(child, ast.Assign) and _builds_class(child.value, self._owner.name):
+                names.update(target.id for target in child.targets if isinstance(target, ast.Name))
+            elif isinstance(child, (ast.For, ast.comprehension)) and _self_field(child.iter) in own_fields:
+                names.add(_name_of(child.target))
+        return names
+
+
+def _built_of(class_name: str, text: str) -> frozenset[str]:
+    """The class itself and each local a brace-language body declares as a new object of it: ``const copy = new
+    Money()``; none for a module function."""
+    if not class_name:
+        return frozenset()
+    built = re.findall(rf"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*new\s+{re.escape(class_name)}\b", text)
+    return frozenset({class_name, *built})
+
+
+def _raises_builtin_with_message(text: str) -> bool:
+    """A builtin failure raised under an empty-value guard whose message says what is empty or missing."""
+    message = _EDGE_RAISE_MESSAGE.search(text)
+    return bool(message and not _names_declared_failure(message.group(1)) and _EDGE_GUARD.search(text))
 
 
 def _names_class(annotation: ast.expr | None, class_name: str) -> bool:

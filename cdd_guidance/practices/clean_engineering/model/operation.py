@@ -15,7 +15,7 @@ def operation_body_fingerprint(body: str) -> str:
     return hashlib.sha256(normalized.encode()).hexdigest()[:24]
 
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from harness.graph.model_node import ModelChildren
 
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
@@ -55,8 +55,7 @@ class Parameter(OoadNode):
         """True when the operation that declares it is written in a language with a syntax for a parameter's type;
         plain JavaScript has none. A parameter no code operation holds, such as one read from a model document, is
         judged as typed."""
-        language = self.operation.language if self.operation is not None else None
-        return language is None or language.declares_types
+        return self.operation is None or self.operation.declares_types
 
     @property
     def property_setter(self) -> bool:
@@ -89,8 +88,9 @@ class Parameter(OoadNode):
 
 class Operation(InvariantHolder, OoadNode):
     _semantic_type_name = "Operation"
-    # The language the operation is written in; a code operation sets it, one read from a model document has none.
-    language: CodeLanguage | None = None
+    # Whether the language the operation is written in has a syntax for a parameter's type. Plain JavaScript's
+    # operation says it has none; every other language, and a model document, has one.
+    declares_types = True
 
     @property
     def is_constructor(self) -> bool:

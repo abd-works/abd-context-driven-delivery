@@ -182,13 +182,7 @@ class ExtensionsLiveWithTheDomain(ProductionCodeRule):
         own_folder = _parent_folder(node.source.file or "")
         homes = {base: {_parent_folder(declared.source.file or "") for declared in classes.by_name.get(base, [])} for base in classes.bases_of(node)}
         own = [base for base, folders in homes.items() if own_folder in folders]
-        # The domain class an extension extends is the one it is named after: `GraphEpic` extends `Epic`. A package
-        # nested under that domain's package is still the domain's.
-        extended = [
-            base
-            for base, folders in homes.items()
-            if folders and not any(_is_under(own_folder, folder) for folder in folders) and node.name.endswith(base)
-        ]
+        extended = _extended_domain_bases(node.name, homes, own_folder)
         if not own or not extended:
             return []
         home = sorted(homes[extended[0]])[0]
@@ -210,6 +204,16 @@ class SourceParses(PracticeGraphRule):
             f"Source file {entry}; fix it so its classes can be checked."
             for entry in node.get_fact("unreadable_sources", []) or []
         ]
+
+
+def _extended_domain_bases(name: str, homes: dict[str, set[str]], own_folder: str) -> list[str]:
+    """The bases a class named name extends from another package's domain: the ones it is named after (`GraphEpic`
+    extends `Epic`), declared in a package that is neither the class's own nor one it is nested under."""
+    return [
+        base
+        for base, folders in homes.items()
+        if folders and not any(_is_under(own_folder, folder) for folder in folders) and name.endswith(base)
+    ]
 
 
 def _folders(context: "RuleCheckContext") -> list["Node"]:

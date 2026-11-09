@@ -77,7 +77,7 @@ class MarkdownIncrement(Increment):
     """Increment leaf node for the Markdown format. Knows how to parse thin-slicing.md."""
 
     @classmethod
-    def from_workspace(cls, root: "Path", story_map: StoryModel) -> List["MarkdownIncrement"]:
+    def from_workspace(cls, root: "Path", story_map: "StoryModel") -> List["MarkdownIncrement"]:
         """The increments of the thin-slicing markdown *root* holds (``StoryMapFiles.thin_slicing``), each delivering
         story_map's own stories; none when it holds none."""
         root = Path(root).resolve()
@@ -87,7 +87,7 @@ class MarkdownIncrement(Increment):
         return cls.parse(found.read_text(encoding="utf-8"), found.relative_to(root).as_posix(), story_map)
 
     @classmethod
-    def parse(cls, text: str, rel_file: str, story_map: StoryModel) -> List["MarkdownIncrement"]:
+    def parse(cls, text: str, rel_file: str, story_map: "StoryModel") -> List["MarkdownIncrement"]:
         """Parse a thin-slicing.md body into a list of MarkdownIncrement nodes; each bullet names one of story_map's
         stories, which the increment delivers."""
         increments: List[MarkdownIncrement] = []
@@ -163,9 +163,8 @@ class StorySection:
     def __init__(self, name: str, heading: Optional[str], line: int = 0) -> None:
         self.name = name
         self.heading = heading
-        # The line of the file the heading is on; 0 for a section with no heading of its own.
-        self.line = line
-        self.parts: list = [_HEADING_LINE] if heading is not None else []
+        # The line of the file the heading is on (line, where the section opens); 0 for a section with no heading.
+        self.line, self.parts = (line, [_HEADING_LINE]) if heading is not None else (0, [])
         self.background = Background("background", 1)
         self.scenarios: list = []
         # The story's own background (`### Story Background`), which the story that takes this section takes too.
@@ -364,7 +363,7 @@ class MarkdownScenario(Scenario):
     def _open_section(self, name: str, heading: Optional[str]) -> StorySection:
         if not self.sections:
             self.document_examples = self._shared_background.examples
-        section = StorySection(name, heading, self._line_index if heading is not None else 0)
+        section = StorySection(name, heading, self._line_index)
         self.sections.append(section)
         self.document_parts.append(section)
         self._section = section
@@ -469,7 +468,7 @@ class MarkdownScenario(Scenario):
             if stripped.startswith("```"):
                 body = "\n".join(self._realization_lines)
                 if self._realization_target is not None and body.strip():
-                    self._realization_target.call_graph = CallGraph.parse(body)
+                    self._realization_target.call_graph = CallGraph().read(body)
                 self._in_realization_fence = False
                 self._realization_lines = []
                 self._realization_target = None

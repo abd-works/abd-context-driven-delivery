@@ -177,7 +177,6 @@ class Stories(PracticeGuidance):
         with no map listed reads the map in its own folder or the nearest one above it."""
         from cdd_guidance.practices.stories.model.source_location import path_from
         from cdd_guidance.practices.stories.model.story_model import StoryModel
-        from cdd_guidance.practices.stories.model.story_recording import imported_example_files
 
         project = Path(project).resolve()
         paths = [Path(item).resolve() for item in files]
@@ -195,11 +194,7 @@ class Stories(PracticeGuidance):
             if on_file is not None:
                 on_file(file)
             text = path.read_text(encoding="utf-8")
-            merged.source_texts[file] = text
-            for source in imported_example_files(file, text):
-                example_file = project / source
-                if example_file.is_file():
-                    merged.source_texts[source] = example_file.read_text(encoding="utf-8")
+            merged.source_texts.update(_texts_of_story_test(file, text, project))
             merged.take_scenarios(self._story_test_reader(path).story_type.load_all(text), file)
         return merged
 
@@ -220,6 +215,18 @@ class Stories(PracticeGuidance):
         """The story map each story test belongs to: in its own folder, or the nearest folder above it inside project,
         since story tests sit in epic folders below their map."""
         return list(dict.fromkeys(found for path in tests for found in [StoryMapFiles(path.parent, top=project).nearest()] if found))
+
+
+def _texts_of_story_test(file: str, text: str, project: Path) -> dict[str, str]:
+    """The story test's own text under its path from project, and the text of each examples module it imports by a
+    relative import, which an example's facts read its exported names from."""
+    from cdd_guidance.practices.stories.model.story_recording import imported_example_files
+
+    texts = {file: text}
+    for source in imported_example_files(file, text):
+        if (project / source).is_file():
+            texts[source] = (project / source).read_text(encoding="utf-8")
+    return texts
 
 
 StoryNode.register_practice(Stories)

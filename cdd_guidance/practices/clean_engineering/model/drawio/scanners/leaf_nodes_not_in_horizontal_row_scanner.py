@@ -5,7 +5,7 @@ import re
 
 from harness.graph.violation import Violation
 
-from cdd_guidance.practices.clean_engineering.model.drawio.diagram.geometry import Geometry
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
     DrawioPage,
 )

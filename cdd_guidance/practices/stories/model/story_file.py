@@ -5,58 +5,17 @@ story, background, scenario, and step was written as. Each node reads its own bl
 
 from __future__ import annotations
 
-from typing import List, Optional, Sequence, Tuple
+from typing import Any, List, Optional, Sequence
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage, WrittenBlock
 
 
-class CodeBlock:
-    """One block of a story file as its language finds it: a story, background, scenario, or step call, with what a
-    node needs to read its own code from it."""
-
-    @property
-    def name(self) -> str:
-        """The name the block's call was written with: a story's, a scenario's, or a step's text."""
-        raise NotImplementedError(f"{type(self).__name__} must name its block")
-
-    @property
-    def line_span(self) -> Tuple[int, int]:
-        """The block's first and last line in the file, counted from 0."""
-        raise NotImplementedError(f"{type(self).__name__} must place its block")
-
-    @property
-    def inside_lines(self) -> List[str]:
-        """The lines inside the block, between its opening and its close."""
-        raise NotImplementedError(f"{type(self).__name__} must give its inside lines")
-
-    @property
-    def body(self) -> CodeBody:
-        """The code inside the block, as a step holds it."""
-        raise NotImplementedError(f"{type(self).__name__} must give its body")
-
-    def written(self, lead: List[str]) -> WrittenBlock:
-        """The block's lines as read: the lead above it, its opening, and its close; what is inside is the reader's."""
-        raise NotImplementedError(f"{type(self).__name__} must give its written lines")
-
-    def split_inside(self, children: Sequence["CodeBlock"]) -> Tuple[List[str], List[List[str]], List[str]]:
-        """The lines inside the block above the first child, each child's lead, and the lines below the last child."""
-        raise NotImplementedError(f"{type(self).__name__} must split its inside")
-
-    def scenarios(self) -> List["CodeBlock"]:
-        """The scenario blocks inside this block, in file order."""
-        raise NotImplementedError(f"{type(self).__name__} must find its scenarios")
-
-    def backgrounds(self, scenarios: Sequence["CodeBlock"]) -> List["CodeBlock"]:
-        """The background blocks inside this block and outside its scenarios, in file order."""
-        raise NotImplementedError(f"{type(self).__name__} must find its backgrounds")
-
-    def steps(self, skip: Sequence["CodeBlock"]) -> List["CodeBlock"]:
-        """Each step block inside this block and outside skip, chained steps included, in file order."""
-        raise NotImplementedError(f"{type(self).__name__} must find its steps")
-
-    def setup(self, children: Sequence["CodeBlock"]) -> CodeBody:
-        """The lines inside the block that belong to none of children: shared fields and helpers."""
-        raise NotImplementedError(f"{type(self).__name__} must give its setup")
+# One block of a story file as its language finds it (a story, background, scenario, or step call): a BraceBlock or a
+# PythonBlock. Each answers `name` (its call's name), `line_span` (its first and last line, from 0), `inside_lines`,
+# `body` (the code inside it, as a step holds it), `written(lead)` (its lines as read, the lead above it included),
+# `split_inside(children)`, `scenarios()`, `backgrounds(scenarios)`, `steps(skip)`, and `setup(children)` (the lines
+# no child holds), so a node reads its own code from it whichever language it was written in.
+CodeBlock = Any
 
 
 def paired(nodes: Sequence, blocks: Sequence[CodeBlock], leads: Sequence[List[str]]) -> List[tuple]:

@@ -10,6 +10,7 @@ keeps; nothing is read from disk again.
 from __future__ import annotations
 
 import re
+import zlib
 from functools import cached_property
 from typing import TYPE_CHECKING, Callable, Optional
 from pathlib import PurePosixPath
@@ -112,6 +113,12 @@ def imported_example_files(story_test: str, text: str) -> list[str]:
     come from."""
     imported = _imported_modules(text)
     return sorted({example_source_file(story_test, imported, name) for name, module in imported.items() if module.startswith(".")})
+
+
+def step_node_id(kind: str, file: str, line: int, name: str) -> str:
+    """A step's graph id: its kind, file, line, and a checksum of its name. A checksum, never ``hash``: Python salts
+    ``hash`` per process, and a step must keep its id in the worker that refreshes the graph and in the server."""
+    return f"stories:{kind}:{file}:{line}:{zlib.crc32(name.encode('utf-8')) & 0xFFFFFF}"
 
 
 def story_file_facts(text: str) -> dict:

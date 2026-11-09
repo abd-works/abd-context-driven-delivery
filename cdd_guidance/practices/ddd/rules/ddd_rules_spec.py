@@ -11,6 +11,7 @@ from expects import equal, expect, have_len
 from mamba import context, description, it
 
 from cdd_guidance.practices.ddd.rules.rule_examples import assert_ddd_example_pair, ddd_fixture, ddd_rule_by_slug, violations_for_ddd_rule
+from harness.graph.rule_fixture import SchemaRuleRun
 
 # A toolkit folder with no DDD model, shaped like the harness folders the scanner once misread: a class whose name ends
 # in a value object's word, and a class beside a peer named as its repository.
@@ -48,13 +49,8 @@ with description("DDD tactical rules (python .examples)"):
                 expect([node.name for node in fixture.context.nodes() if node.type != "BoundedContext"]).to(equal([]))
 
             with it("should report no bare class"):
-                hits = violations_for_ddd_rule(
-                    ddd_rule_by_slug("every-class-carries-ddd-stereotype"), _TOOLKIT["markdown.py"],
-                    filename="markdown.py",
-                    beside={"agent_operation.py": _TOOLKIT["agent_operation.py"]},
-                    in_bounded_context=False,
-                )
-                expect(hits).to(equal([]))
+                fixture = ddd_fixture(_TOOLKIT, in_bounded_context=False)
+                expect(SchemaRuleRun(ddd_rule_by_slug("every-class-carries-ddd-stereotype"), fixture.context).hits()).to(equal([]))
 
         with context("in a folder whose classes carry a DDD stereotype, with no bounded context marked"):
             with it("should still make a building block of a class its name's convention names"):

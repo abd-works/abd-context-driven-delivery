@@ -2,20 +2,21 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
-from harness.graph.graph import Node
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
 
-from .nodes import Screen
+    from .nodes import Screen
 
 
 class ExplorerScreen:
     """One screen as the story explorer lists it: by the slug the mockup page marks it with, holding each story it
     shows with that story's scenarios and their steps, read from the story map when the story is on the map's graph."""
 
-    def __init__(self, screen: Screen) -> None:
+    def __init__(self, screen: "Screen") -> None:
         self.name = screen.slug or screen.name
-        self.stories: List[tuple[Optional[Node], dict]] = [
+        self.stories: List[tuple[Optional["Node"], dict]] = [
             (link.node, self._story_entry(link.key, link.node)) for link in screen.story_links
         ]
 
@@ -36,7 +37,7 @@ class ExplorerScreen:
         entry = {"kind": "screen", "name": self.name, "key": f"screen:{place}/{self.name}", "children": [item[1] for item in shown]}
         return shown[0][0], entry
 
-    def _story_entry(self, name: str, story: Optional[Node]) -> dict:
+    def _story_entry(self, name: str, story: Optional["Node"]) -> dict:
         key = f"story:{self.name}/{name}"
         scenarios = [self._scenario_entry(name, index, scenario) for index, scenario in enumerate(story.scenarios)] if story is not None else []
         return {"kind": "story", "name": name, "screenName": self.name, "key": key, "children": scenarios}
@@ -75,7 +76,7 @@ class ExplorerTree:
     graph, the screens are listed flat. The tree names, for each screen, the keys the explorer opens to show it: those
     of the first place it sits."""
 
-    def __init__(self, screens: List[Screen]) -> None:
+    def __init__(self, screens: List["Screen"]) -> None:
         self.screens = [ExplorerScreen(screen) for screen in screens]
         self.screen_keys: Dict[str, List[str]] = {}
         self.nodes = self._epic_entries() or self._flat_entries()
@@ -97,7 +98,7 @@ class ExplorerTree:
                 epics.append(epic)
         return [entry for entry in (self._epic_entry(epic, shown) for epic in epics) if entry is not None]
 
-    def _epic_entry(self, epic, shown: List[Node]) -> Optional[dict]:
+    def _epic_entry(self, epic, shown: List["Node"]) -> Optional[dict]:
         epic_key = f"epic:{epic.name}"
         children: List[dict] = []
         pending = list(epic.epics)
@@ -111,7 +112,7 @@ class ExplorerTree:
         children.extend(self._placed(epic.stories, shown, f"{epic.name}/", [epic_key]))
         return {"kind": "epic", "name": epic.name, "key": epic_key, "children": children} if children else None
 
-    def _placed(self, stories: List[Node], shown: List[Node], place: str, opening: List[str]) -> List[dict]:
+    def _placed(self, stories: List["Node"], shown: List["Node"], place: str, opening: List[str]) -> List[dict]:
         """The screens that show any of stories, each holding those it shows, ranked by the first in story-map order;
         each placed screen's keys are recorded the first time it is placed."""
         order = {id(story): index for index, story in enumerate(item for item in stories if item in shown)}

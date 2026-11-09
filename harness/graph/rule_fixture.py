@@ -44,23 +44,25 @@ class RuleFixture:
 
 
 class SchemaRuleRun:
-    """One rule run over one practice's nodes by the graph's own check, as validate runs it (``InGraph.check``): the
-    practice's schema says which node types carry the rule, a check runs only on the nodes whose rules say it runs
-    there, and a node another practice's class covers skips that practice's checks. A rule the practice does not check,
-    or the schema never applies, finds nothing, so its spec fails."""
+    """One rule's findings over one practice's nodes, as the graph's own check records them when validate runs it
+    (``InGraph.check``): the practice's schema says which node types carry the rule, a check runs only on the nodes
+    whose rules say it runs there, and a node another practice's class covers skips that practice's checks. The check
+    runs every rule the practice checks, so the nodes a spec adds after the load are checked as a load checks its own;
+    a finding is kept once. A rule the practice does not check, or the schema never applies, finds nothing, so its
+    spec fails."""
 
     def __init__(self, rule, context: RuleCheckContext) -> None:
         self.rule = rule
         self.context = context
 
     def hits(self) -> list[str]:
-        """Each message the rule recorded, node by node, after the graph has run it."""
-        self.context.practice.in_graph.check(self.rule)
+        """Each message the rule recorded, node by node, after the graph has checked the practice."""
+        self.context.practice.in_graph.check()
         return [message for node in self.context.nodes() for message in self._recorded_on(node)]
 
     def node_hits(self, node) -> list[str]:
-        """The messages the rule recorded on node alone, after the graph has run it."""
-        self.context.practice.in_graph.check(self.rule)
+        """The messages the rule recorded on node alone, after the graph has checked the practice."""
+        self.context.practice.in_graph.check()
         return self._recorded_on(node)
 
     def _recorded_on(self, node) -> list[str]:
