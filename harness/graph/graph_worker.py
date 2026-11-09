@@ -28,7 +28,7 @@ def main(arguments: list[str]) -> None:
     for module in order.modules:
         importlib.import_module(module)
     with reporting_to(ThrottledReporter(_report_line)):
-        built = Graph().carry_out(order)
+        built = Graph().build.carry_out(order)
     Path(arguments[1]).write_text(built.text, encoding="utf-8")
     changes = order.changes(built)
     if changes is not None:

@@ -55,7 +55,7 @@ class StoriesReading:
     def _story_maps(self):
         """The story maps under the practice's root; with edited files, only the story maps among them."""
         on_file = lambda detail: self.graph.report_progress(f"stories · markdown · {detail}")  # noqa: E731
-        edited = self.graph.edited_files()
+        edited = self.graph.scope.edited_files
         if edited is None:
             return self.practice.read_folder(self.root, on_file=on_file)
         return self.practice.read_files(edited, self.root, on_file=on_file)
@@ -63,7 +63,7 @@ class StoriesReading:
     def _typescript_files(self) -> list[Path]:
         """TypeScript under the root; with edited files, each whole story folder that holds one. A story reads its
         examples and steps from sibling files, so one edited file needs its story's other files."""
-        edited = self.graph.edited_files()
+        edited = self.graph.scope.edited_files
         if edited is not None and not any(path.suffix.lower() in {".ts", ".tsx"} for path in edited):
             return []
         found = scanned_files(self.root, {".ts", ".tsx"})

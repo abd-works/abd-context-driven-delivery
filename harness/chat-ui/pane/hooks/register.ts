@@ -10,7 +10,7 @@ import { currentActionPicker } from './chat-bar/action-picker-client'
 import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
 import { FidelityFilesView } from './chat-bar/fidelity-files-view'
 import { currentChatBarView } from './chat-bar/session-dialogs-client'
-import { reasonOf } from './failure'
+import { reasonOf } from './shared/failure'
 import {
   currentHealthView,
   currentInstall,

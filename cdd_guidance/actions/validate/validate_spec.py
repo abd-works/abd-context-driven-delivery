@@ -461,6 +461,15 @@ with description("a validate action on practice guidance") as self:
                 expect(self.reports["ddd-tactics"]).to(contain("private-method-naming"))
                 expect(self.reports["bdd-development"]).to(contain("observable-behavior"))
 
+        # A rule over a whole practice compares the files a validate names with every file the session's graph holds, so
+        # two validates of one file found other hits as other chats loaded other files; the report names those files.
+        with context("after another validate refreshed other files into the session's graph"):
+            with it("should name the folders of the files the graph held beside those it checked"):
+                self.action.validate(guidance=["bdd-development"], paths=[_SPEC_FILE])
+                report = self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
+                expect(report).to(contain("The session's graph also held"))
+                expect(report).to(contain(f"- `{'/'.join(Path(_SPEC_FILE).parent.parts[:2])}`"))
+
         # Calls running at once would each read the graph the last one wrote.
         with it("should write no graph that every call in the session shares"):
             self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])

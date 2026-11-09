@@ -33,6 +33,7 @@
     "data-management",
     "filter",
     "graph",
+    "labels",
     "source"
   ]
 }

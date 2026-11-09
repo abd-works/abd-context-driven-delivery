@@ -24,7 +24,7 @@ _TYPE_FIELDS = frozenset({"is", "fidelity", "name", "path"})
 class PracticeSchema:
     """One practice's schema with the applied patterns' schemas on top: which rules each node type carries, which type
     of the extended practice it is, and the fidelities that create it. A practice's part of a graph makes one for each
-    set of overlays and keeps it (``practice.in_graph.schema_with(overlays)``), so a schema reads only the practice it
+    set of overlays and keeps it (``practice.in_graph.rule_run.schema_with(overlays)``), so a schema reads only the practice it
     was made for, never another session's practice of the same class."""
 
     def __init__(self, practice: PracticeGuidance, overlays: tuple[GraphOverlay, ...] = ()) -> None:
@@ -67,7 +67,7 @@ class PracticeSchema:
         """practice's schema with overlays, as its part of the graph keeps it; one of its own for a practice no graph
         holds."""
         part = practice.in_graph
-        return part.schema_with(overlays) if part is not None else PracticeSchema(practice, overlays)
+        return part.rule_run.schema_with(overlays) if part is not None else PracticeSchema(practice, overlays)
 
     def slugs_for(self, node_type: str) -> tuple[str, ...]:
         """The rule slugs a node of this type carries, with those of each type its practice says it also carries."""

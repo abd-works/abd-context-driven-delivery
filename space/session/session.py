@@ -310,7 +310,7 @@ class Session:
         """Every practice CDD has, by practice key, each the session's one instance of it: the ones its graph holds,
         kept between calls with the graph."""
         outputs = self._own_outputs
-        return {key: outputs[key] for key in self.graph.every_practice}
+        return {key: outputs[key] for key in self.graph.practices.held}
 
     @property
     @data_field(key="handoff")

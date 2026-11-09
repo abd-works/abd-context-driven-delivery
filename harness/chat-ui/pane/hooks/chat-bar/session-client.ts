@@ -2,7 +2,7 @@ import type { EngineInterface } from 'claude-code'
 
 import type { LeaveChoicesData, OpenChoicesData, TicketData } from '@cdd/space/kanban/ticket'
 
-import { reasonOf } from '../failure'
+import { reasonOf } from '../shared/failure'
 import { callTool, currentChatBar, refreshChatBar, type ChatBarClient } from './chat-bar-client'
 import { cancelClose, cancelSwitch, currentChatBarView, showClose, showSwitch } from './session-dialogs-client'
 

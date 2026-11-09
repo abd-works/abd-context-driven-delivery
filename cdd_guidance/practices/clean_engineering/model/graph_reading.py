@@ -84,8 +84,8 @@ class GraphReading:
 
     def _read_code(self) -> None:
         self.graph.report_progress("clean_engineering · folders")
-        folders = self._code_folders(self.graph.scope_folders())
-        files = self.graph.source_files(self._source_root, self.readable_suffixes)
+        folders = self._code_folders(self.graph.scope.folders)
+        files = self.graph.scope.source_files(self._source_root, self.readable_suffixes)
         modules = self._parsed_modules(files)
         self._record_public_sources(folders, modules)
         self._class_names = {cls.name for module in modules.values() for cls in module.classes}
@@ -160,7 +160,7 @@ class GraphReading:
         read, its classes parsed and its imports on its module, so it reads none of them again: a text match would name
         more than the parse did, and a refresh would then link and check what a fresh build does not.
         """
-        if self.graph.edited_files() is None:
+        if self.graph.scope.edited_files is None:
             return []
         parsed = set(files)
         held = {node.source.file for kind in ("Module", "Package") for node in self.in_graph.nodes(kind)}
@@ -345,7 +345,7 @@ class GraphReading:
         as the class model it describes, so a realization can follow an interaction into a class the load left out
         without a second copy of the class among the code's nodes. A refresh reads only some documents, so the models
         the others describe stay; a whole load reads them all again."""
-        if self.graph.edited_files() is None or not self._documents_read:
+        if self.graph.scope.edited_files is None or not self._documents_read:
             self._model_documents = {}
         self._documents_read = True
         for file in self._model_files():
@@ -356,7 +356,7 @@ class GraphReading:
     def _model_files(self) -> list[Path]:
         """Each scoped folder's and each of its parents' ``.context/*-model.md``, up to the root. ``.context`` is a
         skipped folder, so the code scan never reaches them."""
-        edited = self.graph.edited_files()
+        edited = self.graph.scope.edited_files
         folders = self._every_folder() if edited is None else self._folders_holding(edited)
         named = {path for path in (edited or []) if path.name.endswith("-model.md")}
         return sorted({model for folder in folders for model in (folder / ".context").glob("*-model.md")} | named)

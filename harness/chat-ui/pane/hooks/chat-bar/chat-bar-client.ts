@@ -2,10 +2,11 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
 import type { BoardData, ColumnData, PracticeGuidanceData } from '@cdd/space/kanban/board'
+import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
 import type { ChatBarJson } from '../../types'
-import { reasonOf } from '../failure'
+import { reasonOf } from '../shared/failure'
 import { SERVER } from '../health/server-health-client'
 import { FidelityProgressClient, selectedFidelitySlug } from './fidelity-progress-client'
 import { StageClient, shownStageName } from './stage-client'
@@ -196,4 +197,25 @@ export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Prom
 
 export async function runHandoff($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
   await $.prompt.fill({ text: `Write a handoff for ticket ${chatBar.sessionName} with /space-session-handoff-session session=${chatBar.sessionFile}`, mode: 'append' })
+}
+
+// fidelity-progress.finish_review refused the review, most often because the latest Validate did not pass. reason is the server's text.
+export class ReviewRefused {
+  constructor(readonly reason: string) {}
+}
+
+// Review is the person's own approval, recorded by the Python FidelityProgress, which refuses it until the latest
+// Validate passed. The chat bar then reads the board again and answers the fidelity as it now stands.
+export async function reviewFidelity($: EngineInterface, fidelity: FidelityProgressClient): Promise<FidelityProgressClient | ReviewRefused> {
+  const ticket = fidelity.progress.ticket.name
+  const slug = fidelity.slug
+  try {
+    await callTool<FidelityProgressData>($, 'fidelity-progress.finish_review', { ticket, fidelity: slug })
+  } catch (failure) {
+    $.ui.toast(`${slug} not reviewed: ${reasonOf(failure)}`)
+    return new ReviewRefused(reasonOf(failure))
+  }
+  $.ui.toast(`${slug} reviewed on ${ticket}`)
+  await refreshChatBar($)
+  return (await currentChatBar($)).fidelities.find(entry => entry.slug === slug) ?? fidelity
 }

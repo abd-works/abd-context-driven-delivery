@@ -104,7 +104,7 @@ class Stories(PracticeGuidance):
         and whose classes its examples show; none when the graph reads none."""
         from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
-        return self.graph.loaded(CleanEngineering) if self.graph is not None else None
+        return self.graph.practices.loaded(CleanEngineering) if self.graph is not None else None
 
     @property
     def domain_model(self) -> PracticeGuidance | None:
@@ -112,7 +112,7 @@ class Stories(PracticeGuidance):
         when the graph reads none."""
         from cdd_guidance.practices.ddd.ddd import Ddd
 
-        return self.graph.loaded(Ddd) if self.graph is not None else None
+        return self.graph.practices.loaded(Ddd) if self.graph is not None else None
 
     def align_node(self, node) -> None:
         align_story_node(node)

@@ -67,6 +67,12 @@ class CheckedGraph:
             found = [violation for violation in found if violation.is_under(self.prefixes)]
         return [violation for violation in found if violation.location not in self.unchecked_files]
 
+    @property
+    def held_beside(self) -> list[str]:
+        """The folders of the other files the session's graph held when this call checked its files, which a rule over a
+        whole practice compared them with; none for a graph this call did not build."""
+        return self._checked.held_beside if self._checked is not None else []
+
     def save_at(self, destination: Path) -> None:
         """Keep the graph this call checked at destination, beside a report, so the report's violations stay on their
         nodes: the graph it built, the session's saved graph, or the graph files it was named, read as one saved graph."""
@@ -112,15 +118,16 @@ class CheckedGraph:
 
     def _built_at(self, destination: Path) -> Path:
         """Refresh the session's graph with the edited files, read as they are now, keep the nodes read from them as this
-        call's graph, and write it at destination for the report; the saved graph stays as it is. The refresh and the
-        nodes it keeps are one change to the graph (``graph.refreshed``), so another call's refresh never comes between
-        them, and each call writes its own file, so calls running at once never read each other's report graph.
+        call's graph, written at destination for the report; the saved graph stays as it is. The refresh and the nodes
+        it keeps are one change to the graph (``graph.refreshed``), so another call's refresh never comes between them,
+        and each call writes its own file, so calls running at once never read each other's report graph. For a chat's
+        call the graph's worker writes the file, so the server answering chats never serialises the nodes; this call
+        reads back only the nodes of the files it names.
 
         The session's graph holds every practice, because one builds on another (DDD building blocks come from the
         clean engineering classes); the report keeps only the listed guidance's practice."""
-        self._checked = self.session.graph.refreshed(self.prefixes, self._call)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(self._checked.text, encoding="utf-8")
+        self.session.graph.refreshed(self.prefixes, destination, self._call)
+        self._checked = SavedGraph.from_file(destination)
         return destination
 
     def _prefixes(self, edited: list[str] | None) -> list[str]:

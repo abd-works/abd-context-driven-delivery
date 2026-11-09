@@ -215,9 +215,9 @@ class Operation(InvariantHolder, OoadNode):
         """The type a reader of this operation gets back: its return type, which is a getter's property type."""
         return self.return_type
 
-    def _link(self, child, kind: str) -> None:
+    def attach(self, child, kind: str) -> None:
         """A parameter it takes keeps it as the operation that declares it."""
-        super()._link(child, kind)
+        super().attach(child, kind)
         if isinstance(child, Parameter):
             child.operation = self
 
