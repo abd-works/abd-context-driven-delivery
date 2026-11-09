@@ -15,6 +15,38 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # - Commit, push, and merge into main are chosen when the session is left, and merge starts off. Observed: `Ticket.activate`, `Ticket.close`.
 # - Create Ticket Branch And Worktree: they are created when a ticket that has none is activated, and a ticket that has one is offered neither again. Observed.
 with story("Activate Ticket"):
+    with scenario("Find a branch and worktree made outside CDD"):
+        # Evidence: observed 2026-11-09: the chat bar offered to create a branch and worktree for chat-ui-defects, whose work was already on claude/chat-ui-defects-cef4bc in its own worktree, made by the Claude desktop app.
+        with given("checkout-flow's work is on claude/checkout-flow-cef4bc, open in its own worktree"):
+            pass
+        with but_("checkout-flow's session records no branch or worktree"):
+            pass
+        with when("the Person picks checkout-flow to open"):
+            # Person -> Ticket.open_choices()
+            # TicketCheckout -> Repo.branches, Worktrees.of(branch) -> Session.save_fields(branch, worktree)
+            pass
+        with then("the open dialog offers nothing to create"):
+            pass
+        with and_("checkout-flow's session records claude/checkout-flow-cef4bc and its worktree"):
+            pass
+    with scenario("Correct a branch the session records wrongly"):
+        with given("checkout-flow's work is on claude/checkout-flow-cef4bc, open in its own worktree"):
+            pass
+        with but_("checkout-flow's session records a branch the repository no longer has"):
+            pass
+        with when("the Person picks checkout-flow to open"):
+            pass
+        with then("checkout-flow's session records claude/checkout-flow-cef4bc and its worktree"):
+            pass
+    with scenario("Say which branches could be the session's rather than guess"):
+        with given("the repository has the branches claude/checkout-flow-cef4bc and claude/checkout-flow-9a1b2c"):
+            pass
+        with when("the Person picks checkout-flow to open"):
+            pass
+        with then("the open dialog names both branches"):
+            pass
+        with and_("checkout-flow's session records no branch"):
+            pass
     with scenario("Merge the branch left into main and keep it"):
         # Evidence: requested 2026-11-09: LEAVE offers, after push, merge to main, delete the branch, and delete the worktree, each with its existing repo operation.
         with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), on its own branch pushed to origin"):

@@ -47,14 +47,23 @@ export async function moveToMainCheckout($: EngineInterface): Promise<void> {
   await moveChatTo($, main)
 }
 
+// Claude Code's /cd moves the chat where the session offers it. The desktop app offers no /cd: there the chat's folder
+// changes through the app's change_directory tool, which only the agent can call, so the agent is asked to.
 async function moveChatTo($: EngineInterface, folder: string): Promise<boolean> {
   try {
-    await $.command.run({ command: 'cd', args: folder })
+    const hasCd = (await $.command.list()).some(command => command.name === 'cd')
+    if (hasCd) await $.command.run({ command: 'cd', args: folder })
+    else await askAgentToMove($, folder)
     return true
   } catch (failure) {
-    $.ui.toast(`This chat did not move to ${folder}: ${reasonOf(failure)}. Run /cd ${folder}`)
+    $.ui.toast(`This chat did not move to ${folder}: ${reasonOf(failure)}`)
     return false
   }
+}
+
+async function askAgentToMove($: EngineInterface, folder: string): Promise<void> {
+  const answer = await $.prompt.submit({ text: `Move this chat to ${folder}: call the change_directory tool with that path, and do nothing else.`, asUser: true })
+  if (answer.drop !== undefined) throw new Error(answer.drop || 'the chat did not take the request')
 }
 
 // Moves this chat to the folder the active session's work is in, as /cd does when the person types it.
@@ -62,6 +71,6 @@ export async function followSession($: EngineInterface, chatBar: ChatBarClient):
   await checkChatFolder($, chatBar)
   const { expected, isElsewhere } = await currentChatFolder($)
   if (!isElsewhere) return
-  if (await moveChatTo($, expected)) $.ui.toast(`This chat now works in ${expected}${chatBar.sessionName ? `, on ${chatBar.sessionName}` : ''}`)
+  if (await moveChatTo($, expected)) $.ui.toast(`Moving this chat to ${expected}${chatBar.sessionName ? `, for ${chatBar.sessionName}` : ''}`)
   await checkChatFolder($, chatBar)
 }

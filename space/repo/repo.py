@@ -181,6 +181,14 @@ class Repo:
         return Branch(self, name)
 
     @property
+    def branches(self) -> list[Branch]:
+        """Every local branch of this repository; none for a project that is no clone."""
+        if not self.is_clone:
+            return []
+        names = self.git.run("for-each-ref", "--format=%(refname:short)", "refs/heads").splitlines()
+        return [self.branch_named(name) for name in names if name.strip()]
+
+    @property
     def current_branch(self) -> Branch:
         """The branch this checkout has checked out."""
         return self.branch_named(self.git.run("rev-parse", "--abbrev-ref", "HEAD"))

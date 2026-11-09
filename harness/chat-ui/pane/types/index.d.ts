@@ -31,6 +31,8 @@ export type ChatBarViewJson = {
   leaveBranch: string
   leaving: string[]
   openChoices: string[]
+  // The branches that could each be the session's when more than one holds its name; none is chosen for it.
+  candidateBranches: string[]
   opening: string[]
 }
 

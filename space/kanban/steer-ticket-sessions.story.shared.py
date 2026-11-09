@@ -609,6 +609,89 @@ def _(s):
         expect(left_and_opened).to(equal((LEAVE_SESSION_COMMIT, BILLING_REPORT.name)))
 
 
+OUTSIDE_BRANCH = "claude/checkout-flow-cef4bc"
+OTHER_OUTSIDE_BRANCH = "claude/checkout-flow-9a1b2c"
+
+
+def seed_checkout_flow_on_an_outside_worktree(project) -> Path:
+    """checkout-flow's work on a branch and worktree the Claude desktop app made, named as it names them, with
+    checkout-flow's session recording neither."""
+    seed_checkout_flow_open_on_pushed_main(project)
+    folder = project.folder / "checkout-flow-cef4bc"
+    project.git("worktree", "add", "-q", "-b", OUTSIDE_BRANCH, str(folder))
+    return folder
+
+
+def recorded_checkout(world) -> tuple[str, str]:
+    fields = json.loads((world.project.sessions / CHECKOUT_FLOW.name / "session.json").read_text(encoding="utf-8"))
+    return fields.get("branch", ""), str(Path(fields["worktree"]).resolve()) if fields.get("worktree") else ""
+
+
+@shared_stories.scenario("Activate Ticket", "Find a branch and worktree made outside CDD")
+def _(s):
+    @s.given("checkout-flow's work is on claude/checkout-flow-cef4bc, open in its own worktree")
+    def _(world):
+        world.worktree = seed_checkout_flow_on_an_outside_worktree(world.project)
+
+    @s.but_("checkout-flow's session records no branch or worktree")
+    def _(world):
+        # The session seeded above records only its name and folders.
+        pass
+
+    @s.when("the Person picks checkout-flow to open")
+    def _(world):
+        world.opening = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).open_choices())
+
+    @s.then("the open dialog offers nothing to create")
+    def _(world):
+        expect(world.opening["choices"]).to(equal([]))
+
+    @s.and_("checkout-flow's session records claude/checkout-flow-cef4bc and its worktree")
+    def _(world):
+        expect(recorded_checkout(world)).to(equal((OUTSIDE_BRANCH, str(world.worktree.resolve()))))
+
+
+@shared_stories.scenario("Activate Ticket", "Correct a branch the session records wrongly")
+def _(s):
+    @s.given("checkout-flow's work is on claude/checkout-flow-cef4bc, open in its own worktree")
+    def _(world):
+        world.worktree = seed_checkout_flow_on_an_outside_worktree(world.project)
+
+    @s.but_("checkout-flow's session records a branch the repository no longer has")
+    def _(world):
+        session = world.project.sessions / CHECKOUT_FLOW.name / "session.json"
+        session.write_text(json.dumps({**json.loads(session.read_text(encoding="utf-8")), "branch": "gone-branch", "worktree": "C:/nowhere"}), encoding="utf-8")
+
+    @s.when("the Person picks checkout-flow to open")
+    def _(world):
+        world.Ticket.load(CHECKOUT_FLOW.name).open_choices()
+
+    @s.then("checkout-flow's session records claude/checkout-flow-cef4bc and its worktree")
+    def _(world):
+        expect(recorded_checkout(world)).to(equal((OUTSIDE_BRANCH, str(world.worktree.resolve()))))
+
+
+@shared_stories.scenario("Activate Ticket", "Say which branches could be the session's rather than guess")
+def _(s):
+    @s.given("the repository has the branches claude/checkout-flow-cef4bc and claude/checkout-flow-9a1b2c")
+    def _(world):
+        seed_checkout_flow_open_on_pushed_main(world.project)
+        world.project.git("branch", OUTSIDE_BRANCH)
+        world.project.git("branch", OTHER_OUTSIDE_BRANCH)
+
+    @s.when("the Person picks checkout-flow to open")
+    def _(world):
+        world.opening = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).open_choices())
+
+    @s.then("the open dialog names both branches")
+    def _(world):
+        expect(sorted(world.opening["candidate_branches"])).to(equal(sorted([OUTSIDE_BRANCH, OTHER_OUTSIDE_BRANCH])))
+
+    @s.and_("checkout-flow's session records no branch")
+    def _(world):
+        expect(recorded_checkout(world)[0]).to(equal(""))
+
+
 @shared_stories.scenario("Activate Ticket", "Merge the branch left into main and keep it")
 def _(s):
     @s.given("checkout-flow is the active ticket, on its own branch pushed to origin")

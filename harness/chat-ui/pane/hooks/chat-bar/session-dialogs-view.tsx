@@ -80,6 +80,7 @@ export function ActivateView($: EngineInterface, elements: ElementTable, { chatB
       <Text weight="semibold" color={BRAND.text}>{`Open ${switchTo}`}</Text>
       {chatBar.sessionName ? ChoicesView(elements, leaveHeadingOf(chatBar.sessionName, view.leaveBranch), leaving) : null}
       {ChoicesView(elements, 'OPEN', opening)}
+      {view.candidateBranches.length ? <Text color={BRAND.muted}>{`Several branches could be ${switchTo}'s: ${view.candidateBranches.join(', ')}. Record the right one as branch in its session.json, or create its own.`}</Text> : null}
       <Box flexDirection="row" gap={1}>
         <Button key="activate-cancel" label="Cancel" onPress={() => cancelSwitch($)} />
         <Button key="activate-confirm" label="Open" variant="primary" onPress={() => activateSession($, switchTo)} />

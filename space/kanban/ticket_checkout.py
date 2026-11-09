@@ -3,6 +3,7 @@ can do with them."""
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -43,15 +44,46 @@ class LeaveRefused(ValueError):
 
 
 class TicketCheckout:
-    """*TicketCheckout* is where one ticket's work sits in git: its own branch, named as the ticket, the worktree that
-    branch is open in, and the chat working there. It answers what opening and leaving the ticket can do now and does
-    it, so a dialog offers only what will be done. Made once per ticket, holding the ticket's *Branch*."""
+    """*TicketCheckout* is where one ticket's work sits in git: its own branch, the worktree that branch is open in, and
+    the chat working there. It answers what opening and leaving the ticket can do now and does it, so a dialog offers
+    only what will be done. Made once per ticket, holding the ticket's *Branch*.
+
+    The ticket's session records its branch and worktree, which are read first. A record git no longer agrees with,
+    or none, is found again from git and recorded: the branch named as the ticket, else the one branch whose name holds
+    the ticket's name as a whole word, as the Claude desktop app names one (``claude/chat-ui-defects-cef4bc``). With
+    several such branches none is chosen, and they are named instead."""
 
     def __init__(self, ticket: Ticket) -> None:
         self._ticket = ticket
         self._repo = ticket.board.repo
         # The ticket's own branch, whether or not the repository has it yet; a Branch reads its state from git each time.
-        self.branch: Branch = self._repo.branch_named(ticket.name)
+        self.branch: Branch = self._found_branch()
+
+    @property
+    def _recorded(self) -> dict:
+        return self._ticket.session.fields
+
+    def _record(self, **checkout: str) -> None:
+        if any(self._recorded.get(key, "") != value for key, value in checkout.items()):
+            self._ticket.session.save_fields(**checkout)
+
+    def _found_branch(self) -> Branch:
+        """The recorded branch while the repository has it, else the ticket's branch found in git and recorded."""
+        recorded = self._recorded.get("branch", "")
+        if recorded and self._repo.branch_named(recorded).exists:
+            return self._repo.branch_named(recorded)
+        named = self._repo.branch_named(self._ticket.name)
+        candidates = [] if named.exists else self.candidate_branches
+        found = named if named.exists or len(candidates) != 1 else candidates[0]
+        if found.exists:
+            self._record(branch=found.name)
+        return found
+
+    @property
+    def candidate_branches(self) -> list[Branch]:
+        """The branches whose name holds the ticket's name as a whole word, such as claude/chat-ui-defects-cef4bc."""
+        word = re.compile(rf"(^|[/_-]){re.escape(self._ticket.name)}($|[/_-])")
+        return [branch for branch in self._repo.branches if branch.name != self._ticket.name and word.search(branch.name)]
 
     @property
     def work_branch(self) -> Branch:
@@ -65,9 +97,16 @@ class TicketCheckout:
 
     @property
     def worktree(self) -> str:
-        """The folder of the ticket's own worktree, where its chat works; empty while it has none."""
+        """The folder of the ticket's own worktree, where its chat works; empty while it has none. The recorded folder
+        while git lists the branch's worktree there, else the folder git lists, recorded."""
         found = self._ticket.board.worktrees.get(self.branch)
-        return str(found.path) if found else ""
+        folder = str(found.path) if found else ""
+        recorded = self._recorded.get("worktree", "")
+        if found and recorded and Path(recorded).resolve() == found.path:
+            return recorded
+        if self.branch.exists:
+            self._record(worktree=folder)
+        return folder
 
     @property
     def chat(self) -> Chat | None:
@@ -91,7 +130,8 @@ class TicketCheckout:
     @property
     def open_choices(self) -> OpenChoices:
         """What opening the ticket can create for it now."""
-        return OpenChoices(self.branch, self.worktree)
+        candidates = [] if self.branch.exists else self.candidate_branches
+        return OpenChoices(self.branch, self.worktree, [branch.name for branch in candidates] if len(candidates) > 1 else [])
 
     @property
     def _checked_out_work_branch(self) -> Branch | None:
@@ -106,6 +146,9 @@ class TicketCheckout:
             self._repo.switch_branch(self.branch.name)
         if OPEN_WORKTREE in opening:
             self._repo.switch_worktree(self.branch.name)
+        if opening:
+            self._ticket.board.reread()
+            self._record(branch=self.branch.name, worktree=self.worktree)
 
     def open_worktree(self) -> None:
         """Open the ticket's own worktree beside the repository, creating its branch when missing. The board lists
@@ -216,15 +259,22 @@ class OpenChoices:
     """What opening a ticket can create for it now: its own branch while the repository has none, and its own worktree
     while it has none. ``TicketCheckout.open`` creates each one chosen."""
 
-    def __init__(self, branch: Branch, worktree: str) -> None:
+    def __init__(self, branch: Branch, worktree: str, candidate_branches: list[str]) -> None:
         self._branch = branch
         self._worktree = worktree
+        self._candidate_branches = list(candidate_branches)
 
     @property
     @data_field
     def has_branch(self) -> bool:
         """Whether the ticket's own branch is in the repository already."""
         return self._branch.exists
+
+    @property
+    @data_field
+    def candidate_branches(self) -> list[str]:
+        """The branches that could each be the ticket's, when more than one holds its name and none is chosen."""
+        return list(self._candidate_branches)
 
     @property
     @data_field

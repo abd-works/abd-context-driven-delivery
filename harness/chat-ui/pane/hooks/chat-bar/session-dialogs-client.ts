@@ -19,9 +19,10 @@ const chatBarView = atom(
     leaveBranch: '',
     leaving: [],
     openChoices: [],
+    candidateBranches: [],
     opening: [],
   } as ChatBarViewJson,
-  { shape: 'chat-bar-view-4' },
+  { shape: 'chat-bar-view-5' },
 )
 
 // A press turns choice on or off; the chosen stay in the order the Ticket offers them, so a choice sent reads the same
@@ -59,6 +60,7 @@ export async function showSwitch($: EngineInterface, name: string, leaving: Leav
     leaveBranch: leaving?.branch ?? '',
     leaving: leaving?.chosen ?? [],
     openChoices: opening.choices,
+    candidateBranches: opening.candidate_branches,
     opening: opening.choices,
   }))
 }
