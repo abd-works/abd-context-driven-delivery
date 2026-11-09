@@ -18,6 +18,7 @@ from harness.agent_tools.agent_tools import agent_toolset
 from harness.hooks.hook_server import HookPayload
 from harness.hooks.hooks import Hook, Hooks, hook
 from harness.installation.destination import noCatalog
+from harness.installation.ide_layout import IdeLayout
 from space.session.session_log import HookLog, LogTimestamp
 
 # A long prompt or file is shown by its first lines, cut at a length a person can still scan in the log.
@@ -43,23 +44,19 @@ class LoggedFile:
 
     @property
     def kind(self) -> str:
+        """What an install wrote the file as, which ``IdeLayout`` knows for every IDE; else an AGENTS.md, a skill's
+        SKILL.md, a reference, or a file."""
         if not self.path:
             return "unknown"
-        posix = str(Path(self.path)).replace("\\", "/").lower()
         name = Path(self.path).name.lower()
+        installed = IdeLayout.installed_guidance_kind(self.path)
         if name == "agents.md":
             return "agents-md"
-        if "/.cursor/agents/" in posix and posix.endswith(".md"):
-            return "agent"
-        if "/.cursor/rules/" in posix:
-            return "rule"
-        if name == "skill.md":
-            return "skill"
-        if "/references/" in posix:
+        if installed in ("agent", "rule") or name == "skill.md":
+            return installed or "skill"
+        if "/references/" in str(Path(self.path)).replace("\\", "/").lower():
             return "reference"
-        if "/.cursor/skills/" in posix or "/.agents/skills/" in posix:
-            return "skill"
-        return "file"
+        return installed or "file"
 
 
 class PromptLogEntry:
@@ -98,7 +95,7 @@ class PromptLogEntry:
         tool_input = self._payload.tool_input
         if self._payload.tool_name == "Task":
             return self.with_fields(tool_input, _TASK_INPUT_SHOWN)
-        file = LoggedFile(tool_input.get("path") or tool_input.get("file_path") or "")
+        file = LoggedFile(next(iter(self._payload.call.named_paths), ""))
         if self._payload.tool_name in ("Read", "TabRead"):
             self._lines.append(f"read [{file.kind}]: {file.path}")
             return self

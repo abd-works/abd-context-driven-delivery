@@ -10,7 +10,7 @@ from pathlib import Path
 
 from harness.agent_tools.agent_tools import agent_toolset
 
-from cdd_guidance.patterns.domain_driven_stack import DomainDrivenStack
+from cdd_guidance.patterns.domain_driven_stack.domain_driven_stack import DomainDrivenStack
 from cdd_guidance.patterns.lern_domain_driven.graph_overlay import LernOverlay
 
 # The test setup files a reset repository instance can be named in, besides the story test folder's repositories file.

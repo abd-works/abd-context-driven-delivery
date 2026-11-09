@@ -73,7 +73,7 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 
 ## Board
 
-+ Board(repo: Repo, practices: list[CatalogPractice])
++ Board(repo: Repo, practices: BoardPractices)
 ------
 + << association >> repo: Repo
 	// the repository the sessions folder sits in
@@ -86,8 +86,10 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 	// data field: the repository folder's name
 + << aggregation >> practices: list[PracticeGuidance]
 	// data field: the practices every ticket works through, each with its key, slug, short name, and colour: the practice each held catalog view is of
-+ << aggregation >> catalogued: list[CatalogPractice]
-	// the catalog's view of each practice, held for the checkout by `Sessions.board_practices`, so the process makes it and its one skill install once however many boards the calls make; `catalogued(practice)` answers the one for a practice's class, the board's own instance or a ticket's session's, and every `Help` is handed it
++ << aggregation >> catalogued_practices: BoardPractices
+	// the catalog's view of each practice, held for the checkout by `Sessions.board_practices` (`space/session/sessions.py`), so the process makes it and its one skill install once however many boards the calls make; it answers a practice by its class (`of`, `works_through`), which the board's own instance and a ticket's session's share, or by the key a tool names (`keyed`), and every `Help` is handed the one it answers; raises `PracticeNotFoundError` for a practice the board does not have
++ << composition >> stages: list[Stage]
+	// its columns from Discovery to Implementation, made once with the board; `stage(name)` answers one and refuses any other column with `NotAStageError`, for `stage.*` tools and `ticket.move_to`
 + << composition >> fidelities: list[BoardFidelity]
 	// data field: every fidelity of its practices with its practice, its label, and its skill's slash command, as the catalog names them, so a tile shows them and works out none; the board sends each fidelity once, here
 	-> CatalogPractice.shown_fidelities
@@ -123,9 +125,7 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 	-> FileManager.list
 + help(practice: str): Help
 	// `board.help`: the help of the board's practice named practice, such as `stories`; a fidelity's help comes from its progress, `fidelity-progress.help`
-	-> Board.practice
-+ practice(key: str): PracticeGuidance
-	// the practice whose folder name is key, such as `clean_engineering`; raises `PracticeNotFoundError` for one the board does not have
+	-> BoardPractices.keyed
 + open_ticket(title: str, scope: str, parent: str, path: str): Ticket
 	// a new ticket in Discovery, its session working on path, a folder in the repository; the session takes its name from the title
 	-> Sessions.create
@@ -219,6 +219,9 @@ Made for one `ApproachStage` of `STAGES`, which gives its title as the column's 
 	// data field: tickets done in this stage, waiting here until a person moves them
 	-> Ticket.is_done
 ----
++ requires(fidelity: FidelityGuidance): bool
+	// its approach stage is this stage's, and its practice's class is one the board works through
+	-> BoardPractices.works_through
 + load(stage: str, project: Path): Stage
 	// the `@tool_subject` of the `stage.*` tools; refuses a column that is not a stage with `NotAStageError`
 	-> Board.load
@@ -246,7 +249,7 @@ The base type of Ticket and BacklogItem. It marks `title` and `last_activity` as
 
 ## Ticket : Card
 
-Marked `@identity("name")`. Never moves to another column by itself: a person moves it, and the move is written to its session log.
+Marked `@identity("name")`. Never moves to another column by itself: a person moves it, and the move is written to its session log. It holds three parts, each made once with it: its *TicketWork* (its progress), its *TicketCheckout* (its branch and worktree), and its *StageMarks* (the moves and marks a person made). Its tools and data fields stay on it and hand the work to those parts, so their published names do not change (`cdr/0004`).
 
 + Ticket(session: Session, board: Board)
 ------
@@ -260,8 +263,10 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// data field: its folders, its practices and their files, and its log
 + << composition >> progress: list[FidelityProgress]
 	// data field: one per fidelity the board requires, in stage order, read from the session log once per ticket read and again after the ticket records a line; a judgment in the fidelity's latest report that fails a rule fails a validate the log shows passing
-	-> SessionLog.entries
-	-> FidelityProgress.from_log
+	-> TicketWork.progress
++ << composition >> work: TicketWork
++ << composition >> checkout: TicketCheckout
++ << composition >> marks: StageMarks
 + << association >> column: Column
 	// reference data field: Complete once its session is closed; otherwise the stage named by its latest `move` line; before any move, the earliest stage its log shows work in, or Discovery
 + is_closed: bool
@@ -276,14 +281,13 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// reference data field `next`: the first fidelity not done in its stage or any stage before it, earliest stage first, because later work builds on it; sent by its ticket and slug, since `progress` sends it; none once it is done in its stage
 + worktree: str
 	// data field: the folder of its own worktree, where its chat works; empty while it has none
-	-> Ticket.branch
-	-> Board.worktrees
+	-> TicketCheckout.worktree
 + << association >> chat: Chat
 	// reference data field `working_chat`, sent by its id: the connected chat working in its worktree or a folder inside it, else one whose mod names no folder and that is titled by the ticket's name; none while no chat works on it
-	-> Board.chats
+	-> TicketCheckout.chat
 + << composition >> stage_work: list[StageWork]
 	// data field: its work in each stage taken together, which a stage head's action bar shows and acts on
-	-> Ticket.work_in
+	-> TicketWork.in_stage
 + last_activity: str
 	// the timestamp of its log's latest line
 	-> SessionLog.entries
@@ -298,62 +302,44 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> Board.open_ticket
 + branch(): Branch
 	// `ticket.branch`: its own branch, named as the ticket, with whether the repository has it and whether it is checked out, so activating a ticket offers only what is missing and leaving one commits, pushes, and merges only its own branch
-	-> Repo.branch_named
+	-> TicketCheckout.branch
 + work_branch(): Branch
 	// `ticket.work_branch`: the branch its work is on, which leaving commits and pushes: its own branch while it is checked out, else the default branch while the checkout is on it, as for a session with no branch of its own; any other checkout gives its own branch, not checked out
-	-> Ticket.branch
-	-> Repo.branch_named
-+ record(line: str): Ticket
-	// writes line to its session's log, a move, a mark, or a review; its progress is read from the log again next time
-	-> SessionLog.record
-+ progress_of(slug: str): FidelityProgress
-	// raises `FidelityNotFoundError` for a fidelity the ticket does not have
-+ work_in(stage: Stage): StageWork
-	// the progress of every fidelity stage requires whose practice its session works on
-+ action_command(action: str, fidelities: list[FidelityGuidance]): str
-	// one command running action on fidelities, naming its session.json and no format; FidelityProgress.commands and StageWork.commands both ask it
+	-> TicketCheckout.work_branch
 + format_choices(fidelities: list[str]): list[FormatChoice]
 	// `ticket.format_choices`: the chips of an action bar over those fidelities, each fidelity's files read once
+	-> TicketWork.progress_of
 	-> FidelityProgress.files
 	-> FormatChoice.offered_by
 + activate(leaving: list[str], opening: list[str]): Ticket
 	// `ticket.activate`: the active ticket leaves its work as leaving says (handoff, commit, push, merge), this ticket opens what opening names (branch, worktree), and its session becomes current
 	-> Board.active
-	-> Ticket.leave
-	-> Repo.switch_branch
-	-> Repo.switch_worktree
+	-> TicketCheckout.leave
+	-> TicketCheckout.open
 	-> Sessions.switch
 + open_worktree(): Ticket
 	// `ticket.open_worktree`: opens its own worktree beside the repository, creating its branch when missing; the board forgets the worktrees it listed, so the ticket's next read lists the new one
-	-> Ticket.branch
-	-> Branch.open_in_worktree
-	-> Board.reread
-+ leave(leaving: list[str])
-	// writes a handoff for its session when leaving names handoff, then commits, pushes, and merges as leaving names, only while the branch its work is on is checked out; work on the default branch is committed and pushed there, never merged, and no worktree is removed
-	-> Handoffs.write
-	-> LeavingHandoff.document
-	-> Ticket.work_branch
-	-> Repo.push_commit
-	-> Repo.close_branch
+	-> TicketCheckout.open_worktree
 + move_next(): Ticket
 	// `ticket.move_next`: from In progress it writes `done <stage>`, from Done it writes `move <next stage>`, and out of Implementation it closes
 	-> Stage.next_stage
-	-> SessionLog.record
+	-> StageMarks.mark
+	-> StageMarks.enter
 + move_previous(): Ticket | BacklogItem
 	// `ticket.move_previous`: from Done it writes `in-progress <stage>`, from In progress it writes `move <previous stage>` and `done <previous stage>`; out of Complete it reopens, and out of Discovery it returns to the Backlog
 	-> Stage.previous_stage
-	-> SessionLog.record
+	-> StageMarks.place
 	-> Session.reopen
 + move_to(stage: str, done: bool): Ticket | BacklogItem
 	// `ticket.move_to`: a person's drag into a stage's In progress or Done; into the Backlog from any column it returns to the Backlog with its whole folder; raises `NotAStageError` for any other column
-	-> SessionLog.record
+	-> StageMarks.place
 	-> Session.close
 	-> Session.move_to_backlog
 	-> BacklogItem.from_ticket
 	-> BacklogItem.write_if_missing
 + close(leaving: list[str]): Ticket
 	// `ticket.close`: its session closes and its folder moves to `_complete/`
-	-> Ticket.leave
+	-> TicketCheckout.leave
 	-> Session.close
 	-> Session.move_to_closed
 + archive(): Ticket
@@ -366,6 +352,91 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> Session.reports_folder
 	-> Session.from_project
 	-> Report.from_reports
+
+## TicketWork
+
+A ticket's progress on each fidelity the board requires whose practice its session holds, in stage order, made once with the ticket.
+
++ TicketWork(ticket: Ticket)
+------
++ << composition >> progress: list[FidelityProgress]
+	// read from the session log once per ticket read and again after `record` writes a line
+	-> SessionLog.entries
+	-> Stage.requires
+	-> FidelityProgress.from_log
++ enabled: list[FidelityProgress]
+	// the progress of the fidelities whose practice its session works on
+----
++ progress_of(slug: str): FidelityProgress
+	// only that fidelity's progress is read; raises `FidelityNotFoundError` for a fidelity the ticket does not have
++ in_stage(stage: Stage): StageWork
+	// the progress of every fidelity stage requires whose practice its session works on
++ command(action: str, fidelities: list[FidelityGuidance]): str
+	// one command running action on fidelities, naming its session.json and no format; FidelityProgress.commands and StageWork.commands both ask it
++ record(line: str)
+	// writes line to its session's log, a move, a mark, a review, or a backlog line; its progress is read from the log again next time
+	-> SessionLog.record
+
+## TicketCheckout
+
+`space/kanban/ticket_checkout.py`. Where one ticket's work sits in git, made once with the ticket and holding its own *Branch*, named as the ticket.
+
++ TicketCheckout(ticket: Ticket)
+------
++ << composition >> branch: Branch
+	// made once; a Branch reads whether it exists and is checked out from git each time
+	-> Repo.branch_named
++ work_branch: Branch
+	// its own branch while it is checked out, else the default branch while the checkout is on it; any other checkout gives its own branch, not checked out
++ worktree: str
+	// the folder of its own worktree; empty while it has none
+	-> Board.worktrees
++ << association >> chat: Chat
+	// the connected chat working in its worktree or a folder inside it, else one with no folder titled by the ticket's name
+	-> Board.chats
++ leave_choices: LeaveChoices
+	// `ticket.leave_choices`: a merge included
++ close_choices: LeaveChoices
+	// `ticket.close_choices`: closing never merges
++ open_choices: OpenChoices
+	// `ticket.open_choices`
+----
++ open(opening: list[str])
+	// creates what opening names: its own branch, checked out, and its own worktree
+	-> Repo.switch_branch
+	-> Repo.switch_worktree
++ open_worktree()
+	// opens its own worktree, creating its branch when missing; the board forgets the worktrees it listed
+	-> Branch.open_in_worktree
+	-> Board.reread
++ leave(leaving: list[str])
+	// writes a handoff for its session when leaving names handoff, then commits, pushes, and merges as leaving names, only while the branch its work is on is checked out; work on the default branch is committed and pushed there, never merged, and no worktree is removed
+	-> Handoffs.write
+	-> LeavingHandoff.document
+	-> Repo.push_commit
+	-> Repo.close_branch
+
+## StageMarks
+
+The moves and marks a person made on one ticket's stages, made once with the ticket. Its session's log answers them (`SessionLog.latest`); a move or mark is written through the ticket's work.
+
++ StageMarks(ticket: Ticket)
+------
++ moved_into: Stage
+	// the stage named by its latest `move` line; none before a person has moved it
+	-> SessionLog.latest
+----
++ latest_in(stage: Stage): str
+	// the latest `done` or `in-progress` mark in stage since its latest `move` into it; none when there is none
+	-> SessionLog.latest
++ enter(stage: Stage): Ticket
+	// writes `move <stage>`
+	-> TicketWork.record
++ mark(mark: str, stage: Stage): Ticket
+	// writes `done <stage>` or `in-progress <stage>`
+	-> TicketWork.record
++ place(stage: Stage, mark: str): Ticket
+	// enters stage unless the ticket is there, then marks it there
 
 ## FidelityProgress
 
@@ -389,7 +460,7 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 	// data field: review while it has violations, else the first of its stage's actions not done
 + commands: dict[str, str]
 	// data field: the command for each action of its stage on this fidelity, naming its ticket's session.json and no format
-	-> Ticket.action_command
+	-> TicketWork.command
 + allowed_actions: list[str]
 	// data field: every action of its stage; validate, review, and render only once an action is recorded or a declared file is there
 + state: str
@@ -416,10 +487,10 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 + load(ticket: str, fidelity: str, project: Path): FidelityProgress
 	// the `@tool_subject` of the `fidelity-progress.*` tools
 	-> Ticket.load
-	-> Ticket.progress_of
+	-> TicketWork.progress_of
 + finish_review(): FidelityProgress
 	// `fidelity-progress.finish_review`: a person's approval, one `review <practice key> <fidelity>` line in its ticket's session log, as action lines name the practice; answers its progress read again from the log
-	-> Ticket.record
+	-> TicketWork.record
 	-> Ticket.progress
 + report(): Report
 	// `fidelity-progress.report`: its latest report, with the rules broken on the nodes of the graph saved beside it, then each rule the judgment fails
@@ -465,7 +536,7 @@ A ticket's work in one stage taken together: the progress of each fidelity the s
 	// data field: its fidelities' violations together
 + commands: dict[str, str]
 	// data field: the command for each action of its stage, one command naming every one of its fidelities
-	-> Ticket.action_command
+	-> TicketWork.command
 + allowed_actions: list[str]
 	// data field: the actions every one of its fidelities allows
 ----
@@ -540,7 +611,7 @@ What `board.help` answers for a practice and `fidelity-progress.help` for a fide
 + Help(practice: PracticeGuidance, fidelity: FidelityGuidance, stage: Stage, catalogued: CatalogPractice)
 ------
 + << association >> catalogued: CatalogPractice
-	// the catalog's view of the practice the board holds (`Board.catalogued`), which names every page on the forge
+	// the catalog's view of the practice the board holds (`BoardPractices.of`), which names every page on the forge
 + << association >> practice: PracticeGuidance
 	// data field
 + << association >> fidelity: FidelityGuidance
@@ -666,6 +737,8 @@ One rule the judgment in a validation report fails, in one judged file.
 
 ## PracticeNotFoundError : LookupError
 
+`space/session/sessions.py`, raised by `BoardPractices`.
+
 ## FidelityNotFoundError : LookupError
 
 ## TicketNotFoundError : LookupError
@@ -696,7 +769,7 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## Session
 
-`space/session/session.py`, sent whole as a ticket's `session` data field. The board reads `name`, `title`, `is_closed`, `workpath`, `practices`, `reports_folder`, and `log`, and calls `close()`, `reopen()`, `move_to_closed()`, `move_to_archive()`, `move_to_backlog()`, `keep_file(file)`, and `from_project(path)`. Its `log` is a `SessionLog` (`space/session/session_log.py`), whose `entries` are `LogEntry`s with `time`, `verb`, `stage`, `words`, and `names(fidelity)`, and whose `record(line)` writes a move or a review.
+`space/session/session.py`, sent whole as a ticket's `session` data field. The board reads `name`, `title`, `is_closed`, `workpath`, `practices`, `reports_folder`, and `log`, and calls `close()`, `reopen()`, `move_to_closed()`, `move_to_archive()`, `move_to_backlog()`, `keep_file(file)`, and `from_project(path)`. Its `log` is a `SessionLog` (`space/session/session_log.py`), whose `entries` are `LogEntry`s with `time`, `verb`, `stage`, `words`, and `names(fidelity)`, and whose `record(line)` writes a move or a review; `latest(*verbs, stage)` answers a ticket's latest move and its latest mark in a stage.
 
 ## PracticeGuidance
 

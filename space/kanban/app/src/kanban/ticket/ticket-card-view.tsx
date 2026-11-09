@@ -74,7 +74,7 @@ function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
       <div className="ticket-meta">{ageOf(state.now, ticket.lastActivity)}</div>
       <SegmentsView ticket={ticket} stage={stage} onSkill={setSkill} />
       {skill ? <div className="card-skill">{skill}</div> : null}
-      {ticket.hasViolationsIn(stage) ? (
+      {ticket.workIn(stage)?.hasViolations ? (
         <button className="violations-link card-violations" onClick={withoutSelecting(() => page.panels.openReport(ticket, null))}>
           violations
         </button>

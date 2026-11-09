@@ -8,6 +8,11 @@ from typing import Any, ClassVar, Protocol
 
 from harness.agent_tools.chat_pointer import ChatPointer
 
+# The arguments of a tool call that name a file or folder it works on, in every IDE's tools and CDD's own; ``paths``
+# names several.
+_PATH_ARGUMENTS = ("path", "file_path", "target_notebook", "target_directory", "working_directory", "transcript_path", "agent_transcript_path")
+_PATHS_ARGUMENT = "paths"
+
 
 class SessionOpener(Protocol):
     """How a call finds the sessions it works in. The framework keeps no sessions of its own: the module that does
@@ -85,6 +90,15 @@ class ToolCall:
         arguments, from the same chat."""
         chat = self.chat.id if self.chat is not None else ""
         return json.dumps([self.tool, str(self.project), self.arguments, chat], sort_keys=True, default=str)
+
+    @property
+    def named_paths(self) -> list[str]:
+        """The files and folders the call's arguments name, each once, as the caller wrote them: the one place a tool
+        call's input is read for its paths, so the session log, the hook server, and the hooks that log or toast a call
+        all read the same ones."""
+        listed = self.arguments.get(_PATHS_ARGUMENT)
+        values = [self.arguments.get(key) for key in _PATH_ARGUMENTS] + (listed if isinstance(listed, list) else [])
+        return list(dict.fromkeys(str(value).strip() for value in values if isinstance(value, str) and value.strip()))
 
     @classmethod
     def open_sessions_with(cls, opener: SessionOpener) -> None:

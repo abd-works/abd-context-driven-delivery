@@ -105,6 +105,13 @@ with description("prompt echo detection"):
             expect(kind).to(equal("fidelity"))
             expect(label).to(equal("bdd-behavior"))
 
+    # The tool call is the one reader of the paths its input names, so a path the session log reads the notifier reads.
+    with context("that receives a skill path in a call's list of paths"):
+        with it("should name the fidelity from the practice skill folder"):
+            skill = _REPO_ROOT / ".claude" / "skills" / "practices-bdd-bdd-behavior" / "SKILL.md"
+            detected = _prompt_notify.detect(HookPayload({"tool_name": "Grep", "tool_input": {"paths": [str(skill)]}}))
+            expect(detected).to(equal(("fidelity", "bdd-behavior")))
+
     with context("that receives a practice rules file"):
         with it("should name the rule from the rules path"):
             kind, label = _prompt_notify.detect(

@@ -11,6 +11,19 @@ if TYPE_CHECKING:
     from space.session.session import Session
 
 
+class NamedPathNotFoundError(FileNotFoundError):
+    """Raised when a call names a path that is not in its session's project, or, for a reader that reads only under the
+    session's root, such as its graph, not under that root: working on it would work on nothing, and an empty result
+    reads as if all were well. It names the path, the project it was read from, and the root when the root refused it."""
+
+    def __init__(self, named: str, project: Path, root: Path | None = None) -> None:
+        self.named = named
+        self.project = project
+        self.root = root
+        where = f" under the session's root {root}" if root is not None else ""
+        super().__init__(f"nothing{where} at {named}, read from {project}; name paths from the project's root, or absolute")
+
+
 class SessionFiles:
     """The files one session works with, read through two file managers that name paths from two tops: the session's
     own, named from its workpath, which a page lists and reads; and one named from the project's top, which reads and
@@ -58,6 +71,27 @@ class SessionFiles:
         """The text of path, a file in the session's repository or under a folder its practices write to, such as its
         ticket's worktree beside the repository; no text when the file is gone."""
         return self._from_project.read(path)
+
+    def existing(self, named: str | Path) -> Path:
+        """The path named, read as the session reads every path its agent writes (``Session.path_named``), once
+        something is there; refused otherwise."""
+        path = self._session.path_named(named)
+        if not path.exists():
+            raise NamedPathNotFoundError(str(named), self._session.repo_path)
+        return path
+
+    def from_root(self, named: str | Path) -> str:
+        """The path named, which must be there under the session's root, written from that root, the way the session's
+        graph names its files; a path outside the root is refused, since the graph would read nothing for it."""
+        path = self.existing(named)
+        if not self.in_root(path):
+            raise NamedPathNotFoundError(str(named), self._session.repo_path, self._session.work_root)
+        return path.relative_to(self._session.work_root).as_posix()
+
+    def in_root(self, path: Path) -> bool:
+        """Whether path is the session's root or lies under it."""
+        root = self._session.work_root
+        return path == root or root in path.parents
 
     def worked_on(self) -> set[Path] | None:
         """The files that are the session's work: every file when it works in a folder of its own, which holds only its

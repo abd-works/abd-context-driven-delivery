@@ -75,8 +75,8 @@ class SessionProbe:
         return {"color": "green", "report": report, "checks": checks, "tail": tail}
 
     def _log_text(self, session) -> str:
-        log = session.log.path
-        return log.read_text(encoding="utf-8") if log.is_file() else ""
+        """The session's log as its lines read, through the log, which is the one reader of its file."""
+        return "\n".join(entry.text for entry in session.log.entries)
 
     def _marks_loops(self, session) -> bool:
         session.log.by(None).next_loop()
