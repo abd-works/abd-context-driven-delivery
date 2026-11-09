@@ -558,6 +558,27 @@ export class Gate {
                 _USE_EXPLICIT_DEPENDENCIES_FAULT,
                 _USE_EXPLICIT_DEPENDENCIES_CLEAN,
             )
+        with it("should flag a file built from nothing and accept the file of its own path, named with its failure"):
+            assert_rule_pair(
+                "use-explicit-dependencies",
+                "class CddHome:\n    def __init__(self, folder):\n        self.folder = folder\n        self.state_file = JsonFile()\n",
+                (
+                    "class CddHome:\n    def __init__(self, folder):\n        self.folder = folder\n"
+                    "        self.state_file = JsonFile(self.folder / 'server.json', ServerStateUnreadable)\n"
+                ),
+            )
+
+        with it("should flag a TypeScript file built from nothing and accept the file of its own path"):
+            assert_rule_pair(
+                "use-explicit-dependencies",
+                "export class CddHome {\n  constructor(private folder: string) {\n    this.stateFile = new JsonFile();\n  }\n}\n",
+                (
+                    "export class CddHome {\n  constructor(private folder: string) {\n"
+                    "    this.stateFile = new JsonFile(folder + '/server.json', ServerStateUnreadable);\n  }\n}\n"
+                ),
+                lang="typescript",
+            )
+
         with it("should allow an Entity aggregate to construct peer types in the same module"):
             rule = ce_rule_by_slug("use-explicit-dependencies")
             source = """
@@ -605,6 +626,26 @@ export class CustomerProfile {
                 _NEVER_SWALLOW_EXCEPTIONS_CLEAN,
             )
 
+        with it("should flag a TypeScript class of many operations and accept a file of as many module functions"):
+            functions = "".join(f"  step{index}(): number {{\n    return {index};\n  }}\n" for index in range(11))
+            loose = "".join(f"export function step{index}(): number {{\n  return {index};\n}}\n" for index in range(11))
+            assert_rule_pair(
+                "keep-classes-single-responsibility", f"export class Steps {{\n{functions}}}\n", loose, lang="typescript"
+            )
+
+        with it("should flag a handler that drops the failure and accept one that keeps it on its object"):
+            for slug in ("never-swallow-exceptions", "use-exceptions-properly"):
+                assert_rule_pair(
+                    slug,
+                    "class Attempt:\n    def run(self):\n        try:\n            self.result = self.work()\n        except Exception:\n            return None\n",
+                    (
+                        "class Attempt:\n    def run(self):\n        try:\n            self.result = self.work()\n"
+                        "        except BaseException as error:\n            self._error = error\n\n"
+                        "    def read(self):\n        try:\n            self.lines = self.stream.read()\n"
+                        "        except Exception as error:\n            self.thread_errors.append(f'stdout: {error}')\n"
+                    ),
+                )
+
 
 _MODULE_CONTEXT = "# module\n"
 
@@ -637,6 +678,31 @@ with description("Clean Engineering graph rules (inline fault and clean fixtures
                 "class Invoice:\n    def total(self, order):\n        return order.total()\n",
             )
 
+        with it("should flag a private member of another class read off a local and accept one its own class declares"):
+            assert_rule_pair(
+                "hide-inner-details",
+                "class Ticket:\n    def move(self, name):\n        moved = self._board.ticket_of(name)\n        return moved._column\n",
+                (
+                    "import copy\n\n\nclass Ticket:\n"
+                    "    def __init__(self, board):\n        self._board = board\n        self._column = ''\n\n"
+                    "    def _enter(self, column):\n        self._column = column\n\n"
+                    "    def move(self, name, column):\n        moved = self._board.ticket_of(name)\n        moved._enter(column)\n\n"
+                    "    def copied(self):\n        made = copy.copy(self)\n        made._column = self._column\n        return made\n\n"
+                    "    def alias(self):\n        node = self\n        return node._column\n"
+                ),
+            )
+
+        with it("should flag a TypeScript method reading another class's private member and accept its own class's"):
+            assert_rule_pair(
+                "hide-inner-details",
+                "export class Ticket {\n  move(board: Board): string {\n    const moved = board.ticketOf();\n    return moved._column;\n  }\n}\n",
+                (
+                    "export class Ticket {\n  private _column = '';\n\n  _enter(column: string): void {\n    this._column = column;\n  }\n\n"
+                    "  move(board: Board): void {\n    const moved = board.ticketOf();\n    moved._enter('done');\n  }\n}\n"
+                ),
+                lang="typescript",
+            )
+
     with context("provide-meaningful-context"):
         with it("should flag an unnamed number and accept a named constant"):
             assert_rule_pair(
@@ -661,12 +727,45 @@ with description("Clean Engineering graph rules (inline fault and clean fixtures
                 "class Cart:\n    def total(self, items):\n        if not items:\n            return 0\n        return sum(items)\n",
             )
 
+        with it("should flag an ordinary empty case and accept a refused construction and a closed connection"):
+            assert_rule_pair(
+                "errors-out-of-existence",
+                "class Hooks:\n    def find(self, event):\n        if not event:\n            raise ValueError('event is missing')\n        return event\n",
+                (
+                    "class Hook:\n    def __new__(cls, event=None):\n        if not event:\n"
+                    "            raise ValueError('Hook requires an event: @Hook(\"sessionStart\")')\n        return object.__new__(cls)\n\n\n"
+                    "class Wire:\n    def received(self, size):\n        chunk = self.conn.recv(size)\n        if not chunk:\n"
+                    "            raise OSError('hook daemon closed')\n        return chunk\n"
+                ),
+            )
+
     with context("domain-exception-carries-context"):
         with it("should flag a domain exception without a message and accept one that names the rule"):
             assert_rule_pair(
                 "domain-exception-carries-context",
                 "class Cart:\n    def checkout(self):\n        if self.checked_out:\n            raise CartError()\n        self.checked_out = True\n",
                 "class Cart:\n    def checkout(self):\n        if self.checked_out:\n            raise CartError('cart already checked out')\n        self.checked_out = True\n",
+            )
+
+        with it("should flag a raise in the body and accept the same raise shown in a docstring"):
+            assert_rule_pair(
+                "domain-exception-carries-context",
+                "class Measure:\n    def refuse(self, paths):\n        if not paths:\n            raise PathsError()\n        return paths\n",
+                (
+                    'class Measure:\n    def refuse(self, paths):\n        """A missing path is refused, as in\n'
+                    '        ``raise PathsError()``."""\n        return paths\n'
+                ),
+            )
+
+        with it("should flag a failure that writes no message and accept one whose constructor writes its own"):
+            raising = "\n\nclass Repo:\n    def commit(self, paths):\n        if not paths:\n            raise CommitPathsRequiredError()\n        return paths\n"
+            assert_rule_pair(
+                "domain-exception-carries-context",
+                "class CommitPathsRequiredError(Exception):\n    pass\n" + raising,
+                (
+                    "class CommitPathsRequiredError(Exception):\n    def __init__(self) -> None:\n"
+                    "        super().__init__('a commit needs the paths it records')\n" + raising
+                ),
             )
 
     with context("no-prototype-swapping"):
@@ -701,6 +800,22 @@ with description("Clean Engineering graph rules (inline fault and clean fixtures
                     }
                 ).hits(ce_rule_by_slug("extensions-live-with-the-domain"))
             ).to(equal([]))
+
+        with it("should flag a framework holding a domain's extension and accept a format built on the package it extends"):
+            assert_files_rule_pair(
+                "extensions-live-with-the-domain",
+                {
+                    "framework/node.py": "class Node:\n    pass\n\n\nclass GraphEpic(Epic, Node):\n    pass\n",
+                    "domain/epic.py": "class Epic:\n    pass\n",
+                },
+                {
+                    "model/diagram/nodes.py": "class DiagramClass:\n    pass\n\n\nclass ImportedClass:\n    pass\n",
+                    "model/drawio/nodes.py": (
+                        "class DrawIOClass(DiagramClass):\n    pass\n\n\n"
+                        "class DrawIOImportedClass(ImportedClass, DrawIOClass):\n    pass\n"
+                    ),
+                },
+            )
 
         with it("should still flag an extension kept in the framework package beside the domain"):
             expect(

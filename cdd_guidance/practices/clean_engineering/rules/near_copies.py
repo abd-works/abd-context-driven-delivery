@@ -20,6 +20,9 @@ MIN_TOKENS = 24
 # An operation of fewer lines, its head included, is one expression; two that read alike are an idiom, not a copy worth a
 # function. The exact-copy check counts an operation's lines against the same floor.
 MIN_LINES = 3
+# A near copy shares most of at least this many statements. Two shorter bodies that differ in one call are each one's
+# own job said in the same words, such as two three-step operations that differ in the step that is their job.
+MIN_STATEMENTS = 4
 # The share of three-token runs two bodies must have in common to be one body written twice.
 MIN_SHARED = 0.7
 _RUN = 3
@@ -29,6 +32,7 @@ _SKETCH = 8
 _MAX_BUCKET = 40
 _TOKEN = re.compile(r"[A-Za-z_]\w*|\d+|\S")
 _COMMENT_LINE = re.compile(r"^\s*(#|//).*$", re.M)
+_DOCSTRING = re.compile(r'"""[\s\S]*?"""|' + r"'''[\s\S]*?'''")
 
 
 class NearCopies:
@@ -72,10 +76,10 @@ def _runs_of(operation: "Node") -> frozenset[int]:
     """The checksums of the body's three-token runs, comments left out; none for a body under the token or line floor.
     The body is the text the operation saves with the graph, and a checksum, never ``hash``, which Python salts per
     process, places each body in the same buckets in every process that checks the graph."""
-    code = _COMMENT_LINE.sub("", str(operation.get_fact("body_text") or ""))
+    code = _COMMENT_LINE.sub("", _DOCSTRING.sub("", str(operation.get_fact("body_text") or "")))
     tokens = _TOKEN.findall(code)
-    code_lines = sum(1 for line in code.splitlines() if line.strip())
-    if len(tokens) < MIN_TOKENS or code_lines + 1 < MIN_LINES:
+    statements = sum(1 for line in code.splitlines() if line.strip())
+    if len(tokens) < MIN_TOKENS or statements + 1 < MIN_LINES or statements < MIN_STATEMENTS:
         return frozenset()
     runs = (" ".join(tokens[start : start + _RUN]) for start in range(len(tokens) - _RUN + 1))
     return frozenset(zlib.crc32(run.encode("utf-8")) for run in runs)

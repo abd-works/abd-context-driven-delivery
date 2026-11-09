@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Optional, Tuple, Union
 
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
+from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
 
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _PROSE = re.compile(
@@ -154,7 +154,7 @@ class BraceCall:
     skipped, so a brace or an arrow inside the name is not taken for the callback's."""
 
     def __init__(self, text: str, start: int, open_paren: int, name: str) -> None:
-        source = SourceText(text)
+        source = BracketStructure(text)
         # The text of the file the call was read from, which its body is part of.
         self.text = text
         self.start = start

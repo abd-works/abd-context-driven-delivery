@@ -100,6 +100,62 @@ with description("classes compared across the graph"):
                 },
             )
 
+        with it("should flag a name copy of a class that has a name and accept one of a class that has none"):
+            assert_files_rule_pair(
+                "do-not-invent-parallel-object-models",
+                {
+                    "tools/action.py": "class Action:\n    name: str\n",
+                    "tools/invoke.py": "class Invoke:\n    def __init__(self, action_name: str) -> None:\n        self._action_name = action_name\n",
+                },
+                {
+                    "tools/mcp.py": "class Mcp:\n    flag = '_mcp'\n",
+                    "tools/tool.py": "class Tool:\n    def __init__(self, mcp_name: str) -> None:\n        self.mcp_name = mcp_name\n",
+                },
+            )
+
+        with it("should flag classes sharing three fields of one type each and accept three names of different types"):
+            assert_files_rule_pair(
+                "do-not-invent-parallel-object-models",
+                {
+                    "agent/run.py": "class RunResponse:\n    instructions: str\n    tools: list\n    result: str\n\n    def ok(self) -> bool:\n        return True\n",
+                    "agent/expansion.py": "class ExpansionResult:\n    instructions: str\n    tools: list\n    result: str\n",
+                },
+                {
+                    "agent/run.py": "class RunResponse:\n    instructions: str\n    tools: list\n    result: str\n\n    def ok(self) -> bool:\n        return True\n",
+                    "agent/expansion.py": "class ExpansionResult:\n    instructions: list\n    tools: dict\n    result: int\n",
+                },
+            )
+
+        with it("should accept a mixin's annotations, which declare what the class it is mixed into holds"):
+            files = {
+                "model/parse.py": "class BraceParse:\n    language: str\n    operation_type: type\n    property_type: type\n\n    def parse(self) -> int:\n        return 1\n",
+                "model/code.py": (
+                    "class CodeClass:\n    language: str\n    operation_type: type = int\n    property_type: type = str\n\n\n"
+                    "class CodeModel:\n    pass\n\n\nclass BraceModel(BraceParse, CodeModel):\n    pass\n"
+                ),
+            }
+            expect(_hits("do-not-invent-parallel-object-models", files)).to(equal([]))
+
+        with it("should flag a dict of one value per member the member holds, and accept one of values it does not"):
+            assert_files_rule_pair(
+                "do-not-invent-parallel-object-models",
+                {
+                    "story/source.py": "class Source:\n    text: str\n",
+                    "story/model.py": "class StoryModel:\n    source_texts: dict[str, str]\n",
+                },
+                {
+                    "story/source.py": "class Source:\n    file: str\n",
+                    "story/model.py": "class StoryModel:\n    source_texts: dict[str, str]\n",
+                },
+            )
+
+        with it("should accept a dict of each kind's own type object, named after the member class"):
+            files = {
+                "graph/edge.py": "class Edge:\n    kind: str\n\n\nclass EdgeType:\n    order: int\n",
+                "graph/nodes.py": "class PracticeNodes:\n    _edge_types: dict[str, EdgeType]\n",
+            }
+            expect(_hits("do-not-invent-parallel-object-models", files)).to(equal([]))
+
         with it("should accept a dict keyed by a number, whose values are names"):
             files = {
                 "recipe/loop.py": "class Loop:\n    item: str\n",

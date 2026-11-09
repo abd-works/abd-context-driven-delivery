@@ -185,11 +185,7 @@ class SketchModule(Module):
     """A module in the sketch notation: a `name/` heading, its own classes, then its nested modules, so each class
     is read back under its module. It reads the class cards written under its heading."""
 
-    def load_module(self, source: Module) -> "SketchModule":
-        return SketchModule(name=source.name, sequential_order=source.sequential_order)
-
-    def load_class(self, source: OoadClass) -> SketchOoadClass:
-        return SketchOoadClass(name=source.name, sequential_order=source.sequential_order)
+    class_type = SketchOoadClass
 
     def sketch_lines(self, depth: int) -> List[str]:
         lines = [f"{'#' * min(depth, _DEEPEST_HEADING)} {self.name}/", ""]
@@ -275,11 +271,9 @@ class SketchModule(Module):
 
 
 class SketchCleanEngineeringModel(CleanEngineeringModel):
+    module_type = SketchModule
     # The Clean Engineering section of a sketch, opened by either of its headings; the practice holds this lens.
     lens = SketchLens(("ce:", _SECTION_TITLE))
-
-    def load_module(self, source: Module) -> SketchModule:
-        return SketchModule(name=source.name, sequential_order=source.sequential_order)
 
     def parse(self, text: str) -> "SketchCleanEngineeringModel":
         """Read the sketch's clean engineering section into this model's own modules, and return it."""

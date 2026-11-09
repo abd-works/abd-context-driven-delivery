@@ -11,6 +11,7 @@ from harness.graph.graph import Graph, Node
 from harness.graph.model_node import schema_sync_paused
 
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.model.production_code import is_spec_file, is_test_code
 
 _BEHAVIOR_EDGES = {"Description": "descriptions", "Context": "contexts", "Observation": "observations"}
@@ -132,7 +133,7 @@ class ObservationLinks:
         members = [
             member for member in self._code_members(name, is_python)
             # A module function is reached by calling it; a read with its name belongs to some object's field.
-            if not (name in reads and member.get_fact("owner") == "_module")
+            if not (name in reads and member.get_fact("owner") == MODULE_FUNCTION_HOLDER)
         ]
         owners = {member.get_fact("owner") for member in members}
         # A name more than two classes share, such as `column`, does not say which one the observation reaches; a read,
@@ -147,7 +148,7 @@ class ObservationLinks:
         specs use drive the code under test, so an observation never invokes them."""
         return [
             member
-            for member in self.clean.members_named(name)
+            for member in self.clean.code_index.members_named(name)
             if member.source.file and not is_test_code(member.source.file) and _is_python(member) == is_python
         ]
 

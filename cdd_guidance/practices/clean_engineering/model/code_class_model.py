@@ -3,6 +3,7 @@ operation are subclasses of the domain parts that spell their own lines."""
 
 from __future__ import annotations
 
+import re
 from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
@@ -12,9 +13,9 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     is_interface_name,
 )
 from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
-from cdd_guidance.practices.clean_engineering.model.class_stereotypes import DocumentedIntent
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
-from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.operation import Operation, operation_body_fingerprint
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
 _CONSTRUCTOR_NAMES = frozenset({"constructor", "__init__"})
@@ -37,9 +38,52 @@ class CodeProperty(Property):
 
 
 class CodeOperation(Operation):
-    """An operation as one language writes it."""
+    """An operation as one language writes it. A brace-language parser gives it the statements inside its braces, and
+    it measures them itself once its class holds it, so it reads its own class, body, and parameters."""
 
     language: CodeLanguage
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        # The statements inside its braces as written, which the brace-language measures read.
+        self._brace_text = SourceText("")
+
+    def take_brace_body(self, text: str, callees: List[str]) -> None:
+        """Keep the statements inside its braces as its body, with the operations they call."""
+        self.callees = callees
+        self.take_body(text, self.language)
+        self._brace_text = SourceText(text)
+        self.line_count = max(1, len([line for line in text.splitlines() if line.strip()]))
+        self.body_fingerprint = operation_body_fingerprint(text)
+
+    def load_brace_body_facts(self) -> None:
+        """Fill the facts the rules measure on its brace-language body."""
+        measured = self._brace_text
+        self.max_control_flow_depth = measured.control_flow_depth()
+        self.has_bare_catch = measured.has_bare_catch()
+        self.swallows_exceptions = measured.swallows_exceptions()
+        self.unnamed_literal_numbers = measured.unnamed_numbers()
+        self.peer_private_access = measured.reaches_peer_private(self._own_objects(), self._own_members())
+        if self.is_constructor_of(self.parent):
+            parameters = frozenset(parameter.name for parameter in self.parameters if parameter.name)
+            self.constructed_types = measured.built_collaborators(parameters, self.line or 1)
+
+    def _own_objects(self) -> frozenset[str]:
+        """The names its body holds an object of its own class by, since privacy is per class: the class itself, each
+        parameter typed as it (``other: Money``), and each local it builds with ``new`` of it."""
+        owner = self.owner
+        if not owner:
+            return frozenset()
+        typed = re.compile(rf"\b{re.escape(owner)}\b")
+        parameters = {parameter.name for parameter in self.parameters if parameter.name and typed.search(parameter.type_hint or "")}
+        return frozenset({owner, *parameters, *self._brace_text.locals_built_of(owner)})
+
+    def _own_members(self) -> frozenset[str]:
+        """The operations and fields the class that holds it declares, which any object of that class may read."""
+        holder = self.parent
+        if not isinstance(holder, OoadClass):
+            return frozenset()
+        return frozenset(member.name for member in [*holder.operations, *holder.properties])
 
     def doc_text(self) -> str:
         """The operation's own description. A description joined from its comments is not documentation."""
@@ -80,7 +124,7 @@ class CodeClass(OoadClass):
         interface, or a class with the bases it declares. An interface takes no decorators, so its stereotypes are
         marked in its doc comment."""
         if self.is_contract:
-            return [""] + self.doc(DocumentedIntent.of(self, marked=True).text()) + self.interface_declaration()
+            return [""] + self.doc(self.doc_comment(marked=True).text()) + self.interface_declaration()
         lines = [""] + self.doc(self.doc_intent()) + self.stereotype_decorators()
         return lines + self.class_declaration(self.declared_bases(known_names))
 
@@ -89,7 +133,7 @@ class CodeClass(OoadClass):
 
     def doc_intent(self) -> str:
         """What the class's doc comment says. A language with no decorators marks the stereotypes there."""
-        return DocumentedIntent.of(self, marked=True).text()
+        return self.doc_comment(marked=True).text()
 
     def stereotype_decorators(self) -> List[str]:
         """The decorator lines that carry the class's stereotypes; none for a language that marks them in the doc."""
@@ -138,12 +182,6 @@ class CodeModule(Module):
 
     class_type: type = CodeClass
 
-    def load_module(self, source: Module) -> "CodeModule":
-        return type(self)(name=source.name, sequential_order=source.sequential_order)
-
-    def load_class(self, source: OoadClass) -> CodeClass:
-        return self.class_type(name=source.name, sequential_order=source.sequential_order)
-
 
 def _elides_parameters(constructor: Operation) -> bool:
     return bool(constructor.parameters) and all(parameter.name.strip() == "..." for parameter in constructor.parameters)
@@ -168,9 +206,6 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
     @property
     def property_type(self) -> type:
         return self.class_type.property_type
-
-    def load_module(self, source: Module) -> CodeModule:
-        return self.module_type(name=source.name, sequential_order=source.sequential_order)
 
     def file_module(self) -> Module:
         """The module the last text this model parsed forms, with that text kept, whether or not it holds a class."""

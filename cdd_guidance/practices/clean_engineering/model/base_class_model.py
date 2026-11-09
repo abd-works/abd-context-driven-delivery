@@ -9,6 +9,7 @@ from typing import Iterable, List, Optional
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
 
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import MODULE_LINE, DocComment, joined_module_path, marked_intent
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
@@ -35,6 +36,10 @@ _ASSIGNED_FIELD = re.compile(r"(?:self|this)\.(\w+)\s*(?::\s*([^=\n]+?))?\s*=(?!
 _INTERNAL_MARKDOWN = re.compile(r"^##\s+Internal\b", re.MULTILINE | re.IGNORECASE)
 # A class with one of these stereotypes owns the peers it builds, so building them is not a hidden dependency.
 _PEER_COMPOSING_STEREOTYPES = frozenset({"entity", "aggregate root"})
+
+
+# The class a parser puts a file's module functions in, which no rule judges as a class of its own.
+MODULE_FUNCTION_HOLDER = "_module"
 
 
 class UnreadableSource(ValueError):
@@ -212,6 +217,16 @@ class OoadClass(OoadNode):
         for operation in self.operations:
             operation.take_lines(lines)
 
+    def doc_comment(self, marked: bool) -> DocComment:
+        """The class's doc comment: its module path line, its intent, marked with its stereotypes for a language that
+        has no decorators, then the dependencies that name details, since a plain dependency shows in code as the call
+        that makes it."""
+        lines = [f"{MODULE_LINE} {joined_module_path(self.module_path)}"] if self.module_path else []
+        intent = marked_intent(list(self.stereotypes) if marked else [], self.intent)
+        lines.extend([intent] if intent else [])
+        lines.extend(line.strip() for item in self.dependencies if item.details for line in item.lines())
+        return DocComment("\n".join(lines))
+
     @property
     def held_fields(self) -> dict[str, str]:
         """Each field the class holds, with its type hint: its declared properties, then the fields its constructor
@@ -369,6 +384,8 @@ class Module(OoadNode):
     """A named module boundary grouping closely related classes."""
 
     _semantic_type_name = "Module"
+    # The kind of class this module holds; a format's module names its own.
+    class_type: type = OoadClass
     graph_facts = (
         "has_module_context",
         "has_bounded_context",
@@ -481,10 +498,13 @@ class Module(OoadNode):
         return cloned
 
     def load_module(self, source: "Module") -> "Module":
-        return Module(name=source.name, sequential_order=source.sequential_order)
+        """A module of this one's own kind for source, named and placed as it is; translating it fills the rest."""
+        return type(self)(name=source.name, sequential_order=source.sequential_order)
 
     def load_class(self, source: OoadClass) -> OoadClass:
-        return OoadClass(name=source.name, sequential_order=source.sequential_order)
+        """A class of the kind this module holds (``class_type``) for source, named and placed as it is; translating
+        it fills the rest."""
+        return self.class_type(name=source.name, sequential_order=source.sequential_order)
 
     def take_lines(self, text: str) -> None:
         """Keep the text of the file this module was read from, and the span of each class in it."""
@@ -555,6 +575,8 @@ class Module(OoadNode):
 
 class CleanEngineeringModel(OoadNode):
     _semantic_type_name = "CleanEngineeringModel"
+    # The kind of module this model holds; a format's model names its own.
+    module_type: type = Module
 
     def __init__(self, name: str | Graph = "", sequential_order: int = 1, graph: Optional[Graph] = None) -> None:
         opened = isinstance(name, Graph)
@@ -633,7 +655,9 @@ class CleanEngineeringModel(OoadNode):
         raise NotImplementedError(f"{type(self).__name__} must implement parse")
 
     def load_module(self, source: Module) -> Module:
-        return Module(name=source.name, sequential_order=source.sequential_order)
+        """A module of the kind this model holds (``module_type``) for source, named and placed as it is; translating
+        it fills the rest."""
+        return self.module_type(name=source.name, sequential_order=source.sequential_order)
 
     def reconcile_children(self, source: "OoadNode") -> None:
         assert isinstance(source, CleanEngineeringModel)

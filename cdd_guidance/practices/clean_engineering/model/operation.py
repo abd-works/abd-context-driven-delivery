@@ -25,7 +25,7 @@ from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
     names_call_io_and_domain,
 )
 from cdd_guidance.practices.clean_engineering.model.property import InvariantHolder
-from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
+from cdd_guidance.practices.clean_engineering.model.type_refs import name_with_type, split_top_level
 
 # `save(cart: Cart, note: str = ""): Receipt` as a model line writes an operation.
 _SIGNATURE = re.compile(r"^(_?\w+)\s*\((.*)\)\s*(?::\s*(.+))?$")
@@ -33,6 +33,9 @@ _SIGNATURE = re.compile(r"^(_?\w+)\s*\((.*)\)\s*(?::\s*(.+))?$")
 
 # The names a constructor goes by: Python's and the C-family languages'.
 CONSTRUCTOR_NAMES = frozenset({"__init__", "constructor"})
+# The operations that build their object, Python's `__new__` with the constructors. One can only build the object or
+# refuse the call; it has no quiet result to return instead.
+_BUILDING_NAMES = CONSTRUCTOR_NAMES | {"__new__"}
 
 
 class Parameter(OoadNode):
@@ -69,9 +72,7 @@ class Parameter(OoadNode):
         return type(self)(self.name, self.sequential_order, self.type_hint)
 
     def save(self) -> str:
-        if self.type_hint:
-            return f"{self.name}: {self.type_hint}"
-        return self.name
+        return name_with_type(self.name, self.type_hint)
 
     def __str__(self) -> str:
         return self.save()
@@ -291,6 +292,10 @@ class Operation(InvariantHolder, OoadNode):
             return start, start + self.line_count - 1
         return start, start
 
+    def take_body(self, text: str, language) -> None:
+        """Keep the statements its parser read, in the language they are written in, as its body."""
+        self.body = CodeBody(text, language)
+
     def take_lines(self, lines: List[str]) -> None:
         """Keep the lines of its file this operation spans."""
         start, end = self.source_lines
@@ -303,7 +308,7 @@ class Operation(InvariantHolder, OoadNode):
             self.body_fingerprint = _span_fingerprint(span.text)
         self.io_and_domain_callees = self._delegates_io_and_domain()
         self.io_and_domain = span.mixes_io_and_domain()
-        self.raises_on_empty = span.raises_on_empty()
+        self.raises_on_empty = self.name not in _BUILDING_NAMES and span.raises_on_empty()
         self.exception_without_message = span.exception_without_message()
         self.generic_exception_message = span.generic_exception_message()
         # A constructor sets up the object it builds and cannot return a record, so it is not a state change to report.
@@ -312,26 +317,6 @@ class Operation(InvariantHolder, OoadNode):
         bullets = span.markdown_bullet_lines()
         self.bold_interaction_lines = bullets.get("bold_interaction_lines", [])
         self.bold_invariant_lines = bullets.get("bold_invariant_lines", [])
-
-    def load_brace_body_facts(self, body: str, class_name: str) -> None:
-        """Fill the facts the rules measure on a brace-language method body (inside its `{` … `}`), declared by the
-        class named class_name (empty for a module function)."""
-        measured = SourceText(body)
-        parameter_names = frozenset(p.name for p in self.parameters if p.name)
-        self.max_control_flow_depth = measured.control_flow_depth()
-        self.has_bare_catch = measured.has_bare_catch()
-        self.swallows_exceptions = measured.swallows_exceptions()
-        self.unnamed_literal_numbers = measured.unnamed_numbers()
-        self.peer_private_access = measured.reaches_peer_private(class_name, self._parameters_typed_as(class_name))
-        if self.is_constructor:
-            self.constructed_types = measured.built_collaborators(parameter_names, self.line or 1)
-
-    def _parameters_typed_as(self, class_name: str) -> frozenset[str]:
-        """The parameters whose declared type names the class: ``other: Money``."""
-        if not class_name:
-            return frozenset()
-        typed = re.compile(rf"\b{re.escape(class_name)}\b")
-        return frozenset(parameter.name for parameter in self.parameters if parameter.name and typed.search(parameter.type_hint or ""))
 
     def _delegates_io_and_domain(self) -> bool:
         """A long operation that calls both I/O and domain calculations does two jobs, even when it only delegates."""

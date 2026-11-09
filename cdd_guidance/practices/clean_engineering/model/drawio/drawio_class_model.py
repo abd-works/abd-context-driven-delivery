@@ -33,6 +33,8 @@ import re
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional, Tuple
 
+from harness.annotations.name import Name
+
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in, without_marks
 from cdd_guidance.practices.clean_engineering.model.field_types import RELATIONSHIP_STRENGTH
@@ -49,7 +51,7 @@ from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import 
     module_tab_label,
 )
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry, MODULE_CELL_MIN_HEIGHT, MODULE_CELL_WIDTH
-from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import DrawioPage, class_name_in
+from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import DrawioPage, class_name_in, style_value
 from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
     DrawIOClass,
     DrawIOModule,
@@ -87,6 +89,7 @@ Relationships = List[Tuple[str, str, str]]
 
 
 class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
+    module_type = DrawIOModule
 
     module_cell_types: Tuple[type, ...] = (DrawIOModule,)
     """The cell types a modules view reads its cells back as, each picked by the kind its cell's style names; a model
@@ -97,9 +100,6 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         # The diagram as it is now; with keep_positioning, cards and arrows already on it stay where they are.
         self.previous = None
         self.keep_positioning = False
-
-    def load_module(self, source: Module) -> DrawIOModule:
-        return DrawIOModule(name=source.name, sequential_order=source.sequential_order)
 
     def save(self) -> str:
         return self.render(self)
@@ -213,7 +213,7 @@ class _ClassDiagramReader:
             self._names_by_cell[cell.get('id', '')] = oclass.name
             if 'dashed=1' in cell.get('style', ''):
                 continue
-            module_name = _style_module(cell.get('style', ''))
+            module_name = style_value(cell.get('style', ''), 'module')
             module = modules.setdefault(module_name, DrawIOModule(name=module_name, sequential_order=len(modules) + 1))
             oclass.sequential_order = len(self._classes_by_cell) + 1
             module.classes.append(oclass)
@@ -376,7 +376,7 @@ class _ModulesDiagramWriter:
     def _place(self, name: str, position: Tuple[float, float], parent_id: str) -> None:
         if parent_id == '1':
             self._bounds[name] = Geometry(position[0], position[1], *self._size(name))
-        cell_id = f'nest-{_slug(name)}' if name in self._forest.synthetic else _slug(name) or name
+        cell_id = f'nest-{_cell_slug(name)}' if name in self._forest.synthetic else _cell_slug(name) or name
         self._cell_ids[name] = cell_id
         self._parent_ids[name] = parent_id
         children = self._forest.children_of.get(name, [])
@@ -464,7 +464,7 @@ class _ClassDiagramWriter:
         """One cell id per class. The same name in two modules is two boxes."""
         for module in self.channel.modules:
             for oclass in module.classes:
-                cell_id = f"{_slug(module.name)}--{_slug(oclass.name)}"
+                cell_id = f"{_cell_slug(module.name)}--{_cell_slug(oclass.name)}"
                 if cell_id in self.classes_by_cell:
                     cell_id = f"{cell_id}-{oclass.sequential_order}"
                 self.cell_ids[id(oclass)] = cell_id
@@ -538,7 +538,7 @@ class _ClassDiagramWriter:
 
     def _write_module_page(self, mxfile: ET.Element, module: Module) -> None:
         page_name = module.name.strip()
-        graph = _add_diagram_page(mxfile, page_name, f'page-{_slug(page_name)}')
+        graph = _add_diagram_page(mxfile, page_name, f'page-{_cell_slug(page_name)}')
         local_ids = {self.cell_ids[id(oclass)] for oclass in module.classes}
         import_ids = self._direct_import_ids(local_ids, module_tab_label(page_name))
         _ClassDiagramPage(self, local_ids | set(import_ids), local_ids, import_ids).write(graph, {}, {})
@@ -788,10 +788,6 @@ def _vertex_diagram_kind(cell: ET.Element) -> Optional[str]:
     return None
 
 
-def _slug(name: str) -> str:
-    return re.sub('\\W+', '-', name).lower().strip('-')
-
-
 def _plain_class_name(name: str) -> str:
     """A card's name without bold marks or `<<Mark>>`s, as diagrams drawn by hand sometimes write it."""
     return without_marks(name.replace('*', ''))
@@ -799,11 +795,6 @@ def _plain_class_name(name: str) -> str:
 
 def _is_module_style(style: str) -> bool:
     return _MODULE_MARKER in style or _MODULE_CHILD_MARKER in style
-
-
-def _style_module(style: str) -> str:
-    found = re.search(r'(?:^|;)module=([^;]*)', style)
-    return found.group(1) if found else ''
 
 
 def _edge_waypoints(edge: ET.Element) -> List[Tuple[int, int]]:
@@ -838,3 +829,6 @@ def _card_lines(section: str) -> List[str]:
     ]
 
 
+def _cell_slug(name: str) -> str:
+    """A name as a cell id spells it: `cart-repository` for `Cart repository`, as Name spells every title."""
+    return Name(name).title_slug

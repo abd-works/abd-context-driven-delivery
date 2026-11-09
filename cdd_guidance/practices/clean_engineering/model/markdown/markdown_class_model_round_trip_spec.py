@@ -82,6 +82,21 @@ with description("a domain model Markdown document") as self:
             others = self.text.split("#### **PlanRepository**")[0]
             expect(self.rendered.startswith(others)).to(be_true)
 
+    with context("with a module renamed and a module the document did not have"):
+        with before.each:
+            from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownModule
+
+            self.parsed.modules[0].name = "Customers"
+            added = MarkdownModule("Billing", 3, description="Charges the plans.")
+            self.parsed.modules.append(added)
+            self.rendered = self.parsed.render()
+
+        with it("should write the renamed module's heading in its own place"):
+            expect(self.rendered).to(contain("## Customers\n"))
+
+        with it("should write the new module after the document, with its own heading and description"):
+            expect(self.rendered.endswith("## Billing\n\nCharges the plans.\n\n")).to(be_true)
+
     with context("rendered through the clean engineering render tool"):
         with it("should write the document it was given"):
             result = CleanEngineering(fidelity="model").render("markdown", self.text, source="markdown")

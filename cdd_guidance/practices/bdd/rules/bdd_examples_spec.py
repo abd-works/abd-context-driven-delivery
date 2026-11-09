@@ -117,6 +117,14 @@ with description("BDD example specs"):
             )
             expect(_failing(source, "no-implementation")).to(equal([]))
 
+        with it("should judge a spec whose comment marks a signature and not one that holds the marker in a sample"):
+            body = ['    with it("should total zero"):', "        expect(cart.total()).to(equal(0))"]
+            assert_bdd_source_pair(
+                "no-implementation",
+                _spec('with description("a cart"):', *body, '    with it("should count zero"):', "        pass  # BDD: SIGNATURE"),
+                _spec('_SAMPLE = """\\nwith it("x"):\\n    pass  # BDD: SIGNATURE\\n"""', "", 'with description("a cart"):', *body),
+            )
+
         with it("should flag a context whose setup runs shared setup, on that context alone"):
             source = _spec(
                 'with description("a cart"):',

@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
 
 from harness.annotations.name import Name
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
+from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock, WrittenKey
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
@@ -249,7 +249,7 @@ class CodeScenario(Scenario, CodeStoryNode):
 
     @classmethod
     def balanced(cls, text: str, open_at: int) -> str:
-        close = SourceText(text).closing_bracket(open_at)
+        close = BracketStructure(text).closing_bracket(open_at)
         return text[open_at + 1 : close] if close is not None else text[open_at + 1 :]
 
     @classmethod

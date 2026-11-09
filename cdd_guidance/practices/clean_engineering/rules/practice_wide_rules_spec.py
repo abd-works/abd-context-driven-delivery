@@ -129,6 +129,15 @@ with description("modules across the graph"):
                 _shop_importing("Cart"),
             )
 
+        with it("should flag a module of three classes with two public and accept two public classes beside a private record"):
+            importing = _module("shop", {"checkout.py": "from sketch.outline import SketchOutline, DiscoveryDocument\n"})
+            classes = "class SketchOutline:\n    def lines(self) -> list:\n        return []\n\n\nclass DiscoveryDocument:\n    pass\n\n\n"
+            assert_files_rule_pair(
+                "deep-module",
+                {**_module("sketch", {"outline.py": classes + "class Section:\n    pass\n"}), **importing},
+                {**_module("sketch", {"outline.py": classes + "class _Section:\n    pass\n"}), **importing},
+            )
+
         with it("should roll a nested folder without a card up into its module"):
             tree = _module("cart", {"cart.py": "class Cart:\n    pass\n"})
             tree["cart/pricing/pricing.py"] = "class Price:\n    pass\n\n\nclass Tax:\n    pass\n"

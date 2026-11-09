@@ -116,10 +116,12 @@ class DeepModule(PracticeGraphRule):
             (module for module in context.nodes("Module") if module.source.file),
             key=lambda module: -len(module.source.file),
         )
+        graph_classes = context.index(ClassGraph)
         classes: dict[str, list[str]] = {}
-        for node in context.nodes("OoadClass"):
+        for node in graph_classes.classes:
             owner = _owning_module(node.source.file, modules)
-            if owner is not None and node.name != "_module" and not is_test_code(node.source.file):
+            # A private record, such as a parser's `_Section`, is neither seam nor hidden design: it is not counted.
+            if owner is not None and not (node.name.startswith("_") and not graph_classes.has_behavior(node)):
                 classes.setdefault(owner.node_id, []).append(node.name)
         importers = _importers_by_name(context, modules)
         hits: list[tuple[str, str]] = []
@@ -180,16 +182,29 @@ class ExtensionsLiveWithTheDomain(ProductionCodeRule):
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         classes = context.index(ClassGraph)
         own_folder = _parent_folder(node.source.file or "")
-        homes = {base: {_parent_folder(declared.source.file or "") for declared in classes.by_name.get(base, [])} for base in classes.bases_of(node)}
+        homes = {base: {_parent_folder(declared.source.file or "") for declared in classes.named(base)} for base in classes.bases_of(node)}
         own = [base for base, folders in homes.items() if own_folder in folders]
         extended = _extended_domain_bases(node.name, homes, own_folder)
-        if not own or not extended:
+        if not own or not extended or self._builds_on(own, homes[extended[0]], classes):
             return []
         home = sorted(homes[extended[0]])[0]
         return [
             f"Class '{node.name}' extends {', '.join(extended)} from '{home}' with this package's {', '.join(own)}: "
             f"it is an extension of '{home}' and belongs there, so this package does not depend on it."
         ]
+
+
+    def _builds_on(self, own: list[str], home: set[str], classes: ClassGraph) -> bool:
+        """True when a base of the class's own package already derives from a class of the package it extends: the
+        package is a format built on that one (`DrawIOClass(DiagramClass)`), and the class is where it belongs, since
+        moving it would make the base package import its format."""
+        return any(
+            _parent_folder(declared.source.file or "") in home
+            for base in own
+            for node in classes.named(base)
+            for parent in classes.bases_of(node)
+            for declared in classes.named(parent)
+        )
 
 
 class SourceParses(PracticeGraphRule):

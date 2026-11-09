@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ast
 import re
+import textwrap
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
@@ -320,10 +322,8 @@ class EliminateDuplication(PracticeGraphRule):
         seen: dict[str, str] = {}
         hits: list[tuple[str, str]] = []
         copied: set[str] = set()
-        for op_node in operations:
+        for op_node in [node for node in operations if self._compared(node)]:
             fingerprint = op_node.get_fact("body_fingerprint", "")
-            if not fingerprint or op_node.get_fact("line_count", 0) < MIN_LINES:
-                continue
             if fingerprint in seen:
                 copied.add(op_node.node_id)
                 hits.append((op_node.node_id, f"Operation '{op_node.name}' duplicates the body of '{seen[fingerprint]}'."))
@@ -339,6 +339,30 @@ class EliminateDuplication(PracticeGraphRule):
                 )
             )
         return hits
+
+
+    def _compared(self, operation: "Node") -> bool:
+        """An operation whose body is long enough to copy, and is more than its class's configuration."""
+        counted = bool(operation.get_fact("body_fingerprint", "")) and operation.get_fact("line_count", 0) >= MIN_LINES
+        return counted and not self._configures_only(operation)
+
+    def _configures_only(self, operation: "Node") -> bool:
+        """True for a body that is one call given only literal values, such as a pattern's
+        `super().__init__(format="typescript", default_workspace_folder="harness")`: each class's own configuration,
+        not logic one function could hold."""
+        call = self._sole_call(operation.get_fact("body_text") or "")
+        return call is not None and all(isinstance(value, ast.Constant) for value in [*call.args, *(keyword.value for keyword in call.keywords)])
+
+    @staticmethod
+    def _sole_call(body: str) -> ast.Call | None:
+        """The call a Python body makes as its one statement, its docstring aside; none for any other body."""
+        try:
+            statements = ast.parse(textwrap.dedent(body)).body
+        except SyntaxError:
+            return None
+        code = [item for item in statements if not (isinstance(item, ast.Expr) and isinstance(item.value, ast.Constant))]
+        sole = code[0] if len(code) == 1 else None
+        return sole.value if isinstance(sole, ast.Expr) and isinstance(sole.value, ast.Call) else None
 
 
 CODE_RULES: tuple[PracticeGraphRule, ...] = (

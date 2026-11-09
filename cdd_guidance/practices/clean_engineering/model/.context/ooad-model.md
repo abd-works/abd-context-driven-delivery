@@ -157,6 +157,8 @@ Raised when `translate_from` is given a node of another semantic type.
 + module_helpers: list[list]
 	// the module's private functions only this class calls
 ----
++ doc_comment(marked: bool): DocComment
+	// its doc comment as code writes it: its module path line, its intent, marked with its stereotypes for a language with no decorators, then the dependencies that name details
 + place_relationship(relationship: Relationship): None
 	// puts the relationship on every property whose type names its target. Inheritance is not a property relationship
 	-> Property.take_relationship
@@ -244,9 +246,6 @@ Raised when `translate_from` is given a node of another semantic type.
 	-> SourceText
 + declares_types: bool
 	// the language it is written in has a syntax for a parameter's type; false for a JavaScriptOperation
-+ load_brace_body_facts(body: str, class_name: str): None
-	// what the rules measure on a brace-language body of the class named class_name (empty for a module function): control-flow depth, catches, unnamed numbers, reads of another object's private fields (an object of the same class, by its name, a parameter typed as it, or a `new` of it, is not another)
-	-> SourceText
 + save(): str
 	// name(parameters): return type, with - for a private name
 + load_parameter(source: Parameter): Parameter
@@ -284,8 +283,10 @@ A span of source in any language — an operation body, a class, a markdown card
 + has_bare_catch(): bool
 + swallows_exceptions(): bool
 + unnamed_numbers(): list[str]
-+ reaches_peer_private(own_class: str = "", typed_own: frozenset[str] = frozenset()): bool
-	// a read of another object's `_` member; a member of an object of own_class (the class itself, a typed_own parameter, a local built with `new`) is its own
++ reaches_peer_private(own_objects: frozenset[str] = frozenset(), own_members: frozenset[str] = frozenset()): bool
+	// a read of another object's `_` member; a member read off one of own_objects, or one its class declares (own_members), is its class's own
++ locals_built_of(class_name: str): frozenset[str]
+	// each local the body declares as a `new` object of the class
 + mixes_io_and_domain(): bool
 + calls_io_and_domain(): bool
 + raises_on_empty(): bool
@@ -300,6 +301,20 @@ A span of source in any language — an operation body, a class, a markdown card
 	// the line, counted from 1, holding the character at index
 + hits(pattern: Pattern): list[list]
 	// [line, matched code] for each match
++ << composition >> brackets: BracketStructure
+
+## BracketStructure
+
+<<Value Object>> A span of brace-language source read for its brackets. Every reader of brace-language code asks it: the C-family parser, the type reader, the code bodies, Stories' code model, and *SourceText*.
+
++ BracketStructure(text: str)
+------
+----
++ closing_bracket(open_at: int, opener: str = "{", closer: str = "}"): int | None
++ opening_bracket(close_at: int, opener: str = "(", closer: str = ")"): int
++ top_level_indexes(mark: str): list[int]
++ top_level_index(mark: str): int
++ braced(open_at: int): str | None
 
 ## PythonFunctionBody
 
@@ -308,11 +323,18 @@ A Python function read from its syntax tree, and what the rules measure in it.
 + PythonFunctionBody(node: FunctionDef, owner: ClassDef | None)
 	// a method keeps the class that declares it; a module function has none
 + << composition >> own: OwnObjects
-	// made once from the node and its class: the names the function holds its own class's objects by
+	// made once from the node and its class: the names the function holds its own class's objects by, and the private members the class declares
++ << composition >> constructions: Constructions
+	// the objects a constructor builds, and which of them its caller cannot hand it
 ------
 ----
 + control_flow_depth(): int
++ decorated(name: str): bool
++ parameters(): list[str]
++ callees(): list[str]
++ body(source: str): CodeBody
 + except_flags(): tuple[bool, bool]
+	-> CatchClause
 + unnamed_numbers(): list[str]
 + reaches_peer_private(): bool
 	// privacy in Python is per class: the class's own name, a parameter typed as it, the other operand of a comparison dunder, a local it builds from the class, and a loop over a field holding the class are all itself
@@ -370,15 +392,15 @@ The module card, `.context/module-context.md`, of one code folder.
 + model_blocks(): list[str]
 	// model-fidelity detail written into the card: a ------ member list, a Sources / context list, a Live instance list
 
-## DocumentedIntent
+## DocComment
 
-A doc comment read into the stereotypes its first line marks and the intent the rest of it says.
+<<Value Object>> A class's doc comment as written: its `Module:` line, the stereotypes its first line marks, the intent the rest of it says, and the dependencies it lists last. It holds the text, reads what it says into a class, and is written from one.
 
 ------
 + stereotypes: list[str]
-+ intent: str
 ----
-+ read(doc: str): DocumentedIntent
++ describe(oclass: OoadClass): None
++ text(): str
 
 ## ClassHead
 
@@ -395,13 +417,15 @@ What sits above a class declaration in brace-language source: its doc comment an
 The `markdown` format: a `#` heading per module and a `##` card per class, or a document of class cards under deeper headings.
 
 ------
++ module_type: type[MarkdownModule]
++ << composition >> cards: CardDocument | None
+	// the card document it was read from, which writes it back as it was read; none for a plain model document
 + parse(text: str): MarkdownCleanEngineeringModel
 	// fills this model and returns it; a card document keeps each card's text, so an unchanged class writes back as it was read
 + render(canonical: CleanEngineeringModel | None = None): str
 	// a markdown model handed in writes itself; any other is translated in, then this model writes itself
 	-> translate_from
 	-> MarkdownModule.render
-+ load_module(source: Module): MarkdownModule
 
 ## MarkdownModule : Module
 
@@ -410,7 +434,6 @@ The `markdown` format: a `#` heading per module and a `##` card per class, or a 
 + render(): str
 	// heading, description, Purpose / Seam (terms) / Dependencies when the module shows no members, then each class card
 + render_cards(module_level: int, card_level: int): str
-+ load_class(source: OoadClass): MarkdownOoadClass
 
 ## MarkdownOoadClass : OoadClass
 
@@ -427,6 +450,28 @@ The `markdown` format: a `#` heading per module and a `##` card per class, or a 
 + render_card(level: int): str
 + keep_card(card: str, heading: ClassHeading): None
 	// remembers the card this class was read from
+
+## CardDocument
+
+A model document of bold class cards under modules and resource groups, each one level deeper, as it was read: its lines in place, with each module where it stood.
+
++ CardDocument(model: MarkdownCleanEngineeringModel, card_level: int)
+----
++ read(text: str, headings: list[tuple]): None
++ render(): str
+
+## ModuleMeta
+
+<<Value Object>> The Purpose, Seam, and Dependencies bullets of a modules-fidelity block, and the prose left beside them.
+
++ ModuleMeta(text: str)
+------
++ purpose: str
++ seam_terms: list[str]
++ dependencies: list[str]
++ leftover: str
+----
++ terms(raw: str): list[str]
 
 ## ClassHeading
 
@@ -454,7 +499,6 @@ The `json` format: one array of module records.
 	// raises UnreadableSource when the text is not JSON or holds neither modules nor classes
 	-> JsonModule.from_record
 + render(canonical: CleanEngineeringModel | None = None): str
-+ load_module(source: Module): JsonModule
 
 ## JsonModule : Module
 
@@ -463,7 +507,6 @@ The `json` format: one array of module records.
 + from_record(record: dict, sequential_order: int): JsonModule
 	-> JsonOoadClass.from_record
 + render(): str
-+ load_class(source: OoadClass): JsonOoadClass
 
 ## JsonOoadClass : OoadClass
 
@@ -652,9 +695,6 @@ A class model written as code. The walk and the body rule live here; each langua
 
 ------
 + class_type: type[CodeClass]
-----
-+ load_module(source: Module): CodeModule
-+ load_class(source: OoadClass): CodeClass
 
 ## CodeClass : OoadClass
 
@@ -685,6 +725,11 @@ A class as one language writes it.
 
 ## CodeOperation : Operation
 
++ take_brace_body(text: str, callees: list[str]): None
+	// a brace-language parser gives it the statements inside its braces, which it keeps as its body
++ load_brace_body_facts(): None
+	// what the rules measure on its brace-language body, once its class holds it: control-flow depth, catches, unnamed numbers, reads of another object's private members (an object of its own class, by the class's name, a parameter typed as it, or a `new` of it, and a member its class declares, are its own)
+	-> SourceText
 + doc_text(): str
 	// the description when it is the operation's own text, not one joined from its comments
 + signature(contract: bool): list[str]

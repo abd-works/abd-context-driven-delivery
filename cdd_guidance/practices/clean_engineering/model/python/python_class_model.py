@@ -13,13 +13,14 @@ from pathlib import Path
 from typing import Iterator, List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
+    MODULE_FUNCTION_HOLDER,
     UnreadableSource,
     companion_interface_name,
     is_interface_name,
 )
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import (
     ClassHead,
-    DocumentedIntent,
+    DocComment,
     snake_case_decorator,
     stereotype_named,
 )
@@ -74,24 +75,23 @@ class PythonOperation(CodeOperation):
         """The operation a function in text declares: its signature, its body as written, and what the rules measure
         in it, read from its own syntax tree. A method names the class that declares it; a module function, None."""
         end_line = getattr(node, "end_lineno", None) or node.lineno
-        is_classmethod = _decorated(node, "classmethod")
         function = PythonFunctionBody(node, owner)
         operation = cls(
             name=node.name,
-            parameters=_parameter_strings(node, is_classmethod),
+            parameters=function.parameters(),
             return_type=ast.unparse(node.returns) if node.returns is not None else "",
             description=(ast.get_docstring(node) or "").strip(),
             line=node.lineno,
             end_line=end_line,
             line_count=end_line - node.lineno + 1,
             constructed_types=function.built_collaborators() if node.name in {"__init__", "constructor"} else [],
-            callees=_callees(node),
-            is_property=_decorated(node, "property"),
+            callees=function.callees(),
+            is_property=function.decorated("property"),
             body_fingerprint=operation_body_fingerprint("\n".join(ast.unparse(stmt) for stmt in node.body)),
-            body=_body_of(node, text),
         )
-        operation.is_static = _decorated(node, "staticmethod")
-        operation.is_classmethod = is_classmethod
+        operation.take_body(function.body_text(text), PYTHON)
+        operation.is_static = function.decorated("staticmethod")
+        operation.is_classmethod = function.decorated("classmethod")
         operation.is_setter = any(isinstance(item, ast.Attribute) and item.attr == "setter" for item in node.decorator_list)
         operation.measure(function)
         return operation
@@ -149,7 +149,7 @@ class PythonClass(CodeClass):
 
     def doc_intent(self) -> str:
         """Python marks the stereotypes as decorators, so its doc comment does not."""
-        return DocumentedIntent.of(self, marked=False).text()
+        return self.doc_comment(marked=False).text()
 
     def closing(self, has_members: bool) -> List[str]:
         return [] if has_members else ["    pass"]
@@ -175,8 +175,8 @@ class PythonModule(CodeModule):
     def keep_tree(self, tree: ast.Module) -> None:
         """Keep the file's syntax tree, and give each class the private module functions only it calls."""
         self.tree = tree
-        helpers = _module_private_functions(tree)
-        for function, owner in _sole_calling_class(tree, set(helpers)).items():
+        helpers = self._private_functions()
+        for function, owner in self._sole_calling_classes(set(helpers)).items():
             for oclass in self.classes:
                 if oclass.name == owner:
                     oclass.module_helpers.append([function, helpers[function]])
@@ -202,9 +202,9 @@ class PythonModule(CodeModule):
         if self.tree is None:
             return []
         package = file.parent.relative_to(root).parts
-        constants = _module_string_constants(self.tree, ".".join(package))
+        constants = self._string_constants(".".join(package))
         targets: list[str] = []
-        for node in _runtime_nodes(self.tree):
+        for node in self._runtime_nodes():
             if isinstance(node, ast.Import):
                 targets.extend(alias.name.replace(".", "/") for alias in node.names)
             elif isinstance(node, ast.ImportFrom):
@@ -212,6 +212,46 @@ class PythonModule(CodeModule):
             elif isinstance(node, ast.Call) and _call_name(node) in _IMPORT_CALLS and node.args:
                 targets.extend(_dynamic_import_target(node.args[0], constants))
         return targets
+
+    def _runtime_nodes(self) -> Iterator[ast.AST]:
+        """Every node of its tree that runs: the body of an `if TYPE_CHECKING:` (or `if typing.TYPE_CHECKING:`) block is
+        read only by a type checker, so it is left out; its `else` branch runs and is kept."""
+        pending: list[ast.AST] = [self.tree]
+        while pending:
+            node = pending.pop()
+            yield node
+            if isinstance(node, ast.If) and _is_type_checking(node.test):
+                pending.extend(node.orelse)
+                continue
+            pending.extend(ast.iter_child_nodes(node))
+
+    def _string_constants(self, package: str) -> dict[str, str]:
+        """The string each top-level `NAME = "…"` binds, and `__package__`, so an import spelled through one reads."""
+        constants = {"__package__": package}
+        for node in self.tree.body:
+            if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                constants.update({target.id: node.value.value for target in node.targets if isinstance(target, ast.Name)})
+        return constants
+
+    def _private_functions(self) -> dict[str, int]:
+        """The line of each private function the file defines at its top level, by its name."""
+        return {
+            node.name: node.lineno
+            for node in self.tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("_")
+        }
+
+    def _sole_calling_classes(self, function_names: set[str]) -> dict[str, str]:
+        """The one class of the file that calls each of the functions, by the function; a function more than one class
+        calls is left out."""
+        callers: dict[str, set[str]] = {}
+        for node in self.tree.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            for child in ast.walk(node):
+                if isinstance(child, ast.Call) and isinstance(child.func, ast.Name) and child.func.id in function_names:
+                    callers.setdefault(child.func.id, set()).add(node.name)
+        return {function: next(iter(classes)) for function, classes in callers.items() if len(classes) == 1}
 
 
 class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
@@ -240,7 +280,7 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         return self
 
     def _class_from_ast(self, node: ast.ClassDef, class_order: int) -> PythonClass:
-        documented = DocumentedIntent.read(ast.get_docstring(node) or "")
+        documented = DocComment(ast.get_docstring(node) or "")
         oclass = PythonClass(name=node.name, sequential_order=class_order, line=node.lineno)
         documented.describe(oclass)
         oclass.stereotypes = list(dict.fromkeys(self._stereotypes_above(node) + documented.stereotypes))
@@ -264,7 +304,7 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         top_ops = [PythonOperation.from_function(n, self._text, None) for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
         if not top_ops:
             return
-        holder = PythonClass(name="_module", sequential_order=len(module.classes) + 1, line=1)
+        holder = PythonClass(name=MODULE_FUNCTION_HOLDER, sequential_order=len(module.classes) + 1, line=1)
         holder.end_line = 1
         holder.operations = top_ops
         module.classes.append(holder)
@@ -294,46 +334,6 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         )
 
 
-def _decorated(node: Function, name: str) -> bool:
-    return any(isinstance(decorator, ast.Name) and decorator.id == name for decorator in node.decorator_list)
-
-
-def _parameter_strings(node: Function, is_classmethod: bool) -> list[str]:
-    items: list[str] = []
-    receivers = {"self", "cls"} if is_classmethod else {"self"}
-    for arg in list(node.args.args) + list(node.args.kwonlyargs):
-        if arg.arg in receivers:
-            continue
-        items.append(f"{arg.arg}: {ast.unparse(arg.annotation)}" if arg.annotation is not None else arg.arg)
-    return items
-
-
-def _body_of(node: Function, source: str) -> CodeBody:
-    """The statements as written, with the comments above them; the docstring stays the description."""
-    statements = node.body[1:] if ast.get_docstring(node) is not None else node.body
-    if not statements:
-        return CodeBody()
-    if statements[0].lineno == node.lineno:
-        return CodeBody("\n".join(ast.get_source_segment(source, stmt) or "" for stmt in statements), PYTHON)
-    lines = source.split("\n")
-    boundary = node.body[0].end_lineno if statements is not node.body else node.lineno
-    start = statements[0].lineno
-    while start - 1 > boundary and lines[start - 2].strip().startswith("#"):
-        start -= 1
-    return CodeBody("\n".join(lines[start - 1 : node.end_lineno]), PYTHON)
-
-
-def _callees(func: ast.AST) -> list[str]:
-    names: list[str] = []
-    for child in ast.walk(func):
-        if isinstance(child, ast.Call):
-            if isinstance(child.func, ast.Name):
-                names.append(child.func.id)
-            elif isinstance(child.func, ast.Attribute):
-                names.append(child.func.attr)
-    return names
-
-
 def _bare_decorator_name(decorator: ast.expr) -> str:
     """The name of a decorator written with no arguments, `@entity` or `@entity()`; empty for any other."""
     if isinstance(decorator, ast.Call) and not decorator.args and not decorator.keywords:
@@ -350,19 +350,6 @@ def _from_import_targets(node: ast.ImportFrom, package: tuple[str, ...]) -> list
     return [joined] + [f"{joined}/{alias.name}" for alias in node.names if alias.name != "*"]
 
 
-def _runtime_nodes(tree: ast.AST) -> Iterator[ast.AST]:
-    """Every node of the tree that runs: the body of an `if TYPE_CHECKING:` (or `if typing.TYPE_CHECKING:`) block is
-    read only by a type checker, so it is left out; its `else` branch runs and is kept."""
-    pending: list[ast.AST] = [tree]
-    while pending:
-        node = pending.pop()
-        yield node
-        if isinstance(node, ast.If) and _is_type_checking(node.test):
-            pending.extend(node.orelse)
-            continue
-        pending.extend(ast.iter_child_nodes(node))
-
-
 def _is_type_checking(test: ast.expr) -> bool:
     if isinstance(test, ast.Attribute):
         return test.attr == "TYPE_CHECKING"
@@ -374,15 +361,6 @@ def _call_name(node: ast.Call) -> str:
     if isinstance(node.func, ast.Attribute):
         return node.func.attr
     return node.func.id if isinstance(node.func, ast.Name) else ""
-
-
-def _module_string_constants(tree: ast.Module, package: str) -> dict[str, str]:
-    """The string each top-level `NAME = "…"` binds, and `__package__`, so an import spelled through one reads."""
-    constants = {"__package__": package}
-    for node in tree.body:
-        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-            constants.update({target.id: node.value.value for target in node.targets if isinstance(target, ast.Name)})
-    return constants
 
 
 def _dynamic_import_target(argument: ast.expr, constants: dict[str, str]) -> list[str]:
@@ -408,22 +386,3 @@ def _dynamic_import_target(argument: ast.expr, constants: dict[str, str]) -> lis
     if not spelled or spelled.startswith("."):
         return []
     return [spelled.rstrip(".").replace(".", "/")]
-
-
-def _module_private_functions(tree: ast.Module) -> dict[str, int]:
-    return {
-        node.name: node.lineno
-        for node in tree.body
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("_")
-    }
-
-
-def _sole_calling_class(tree: ast.Module, function_names: set[str]) -> dict[str, str]:
-    callers: dict[str, set[str]] = {}
-    for node in tree.body:
-        if not isinstance(node, ast.ClassDef):
-            continue
-        for child in ast.walk(node):
-            if isinstance(child, ast.Call) and isinstance(child.func, ast.Name) and child.func.id in function_names:
-                callers.setdefault(child.func.id, set()).add(node.name)
-    return {function: next(iter(classes)) for function, classes in callers.items() if len(classes) == 1}

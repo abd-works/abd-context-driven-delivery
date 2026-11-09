@@ -23,6 +23,7 @@ from cdd_guidance.practices.clean_engineering.rules import RULES
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
     assert_files_rule_pair,
     assert_module_example_pair,
+    assert_rule_pair,
     assert_python_example_pair,
     ce_rule_by_slug,
     practice_from_files,
@@ -458,6 +459,27 @@ with description("the Clean Engineering graph rules"):
                 "        return path.read_text(encoding='utf-8') if path.is_file() and path.suffix == '.md' else ''\n"
             )
             expect(_hits("eliminate-duplication", source)).to(equal([]))
+
+        with it("should flag a four-statement near copy and accept two three-statement bodies that differ in their one job"):
+            three = (
+                "class Daemon:\n    def pin_from(self, checkout) -> str:\n        self.home.install(checkout, CONNECT_SCRIPT)\n"
+                "        self.home.pin(checkout)\n        return self._status(self.restart())\n\n"
+                "    def serve_checkout(self, checkout) -> str:\n        self.home.install(checkout, CONNECT_SCRIPT)\n"
+                "        self.home.serve_from(checkout)\n        return self._status(self.restart())\n"
+            )
+            four = three.replace("        self.home.pin(checkout)\n", "        self.home.pin(checkout)\n        self.home.forget(checkout)\n").replace(
+                "        self.home.serve_from(checkout)\n", "        self.home.serve_from(checkout)\n        self.home.forget(checkout)\n"
+            )
+            expect([len(_hits("eliminate-duplication", four)), len(_hits("eliminate-duplication", three))]).to(equal([1, 0]))
+
+        with it("should flag a copied body and accept two classes that each configure their base with literal values"):
+            configured = "(Pattern):\n    def __init__(self) -> None:\n        super().__init__(\n            format='typescript',\n            default_workspace_folder='harness',\n        )\n"
+            copied = "(Pattern):\n    def __init__(self, folder) -> None:\n        super().__init__(\n            format='typescript',\n            default_workspace_folder=folder,\n        )\n"
+            assert_rule_pair(
+                "eliminate-duplication",
+                "class WebAccess" + copied + "\n\nclass ClaudeMod" + copied,
+                "class WebAccess" + configured + "\n\nclass ClaudeMod" + configured,
+            )
 
         with it("should accept two operations of different shape"):
             other = "\nclass Names:\n    def joined(self, people):\n        names = []\n        for person in people:\n            names.append(person.name.title())\n        names.sort()\n        return ', '.join(names)\n"

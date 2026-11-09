@@ -6,7 +6,7 @@
 
 *BoundedContextMap* is not itself a *CleanEngineeringModel*. Rendering to Python or TypeScript writes the map into that format's own class model once (`write_classes`), and reading code back makes one card per class (`read_class_model`, `ClassCard.from_code`). The draw.io format is different: *DrawIOBoundedContextMap* subclasses both the map and Clean Engineering's draw.io model, so it draws its own modules and renders itself with no held diagram.
 
-Where a class lives and the integrations of its aggregate travel as real fields, not intent text: the class's `module_path` and its root's dependencies with their details (`Relationship.details`), which the code formats write in the doc comment and read back through Clean Engineering's *DocumentedIntent*.
+Where a class lives and the integrations of its aggregate travel as real fields, not intent text: the class's `module_path` and its root's dependencies with their details (`Relationship.details`), which the code formats write in the doc comment and read back through Clean Engineering's *DocComment*.
 
 ## Why
 
