@@ -1279,8 +1279,9 @@ with description("the board tools") as self:
                 Sessions(self.project.root).switch("pet-visits")
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
-            with it("should offer to close it with a handoff alone, since nothing checked out is its own"):
-                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "choices": ["handoff"], "chosen": ["handoff"]}))
+            # Nothing checked out is its own, so nothing is committed or pushed; its branch can still be merged and deleted.
+            with it("should offer to close it with a handoff and a merge and delete of its branch, and no commit or push"):
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "own_branch": "pet-visits", "choices": ["handoff", "merge", "delete_branch"], "chosen": ["handoff"]}))
 
             with it("should commit nothing on a branch that is not checked out"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit"])
