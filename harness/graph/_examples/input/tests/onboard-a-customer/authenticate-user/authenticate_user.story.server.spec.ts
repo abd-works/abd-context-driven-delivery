@@ -36,6 +36,8 @@ withStory('Sign In With Existing Account', () => {
     'My Paradise returns user tothe enter validation code screen',
     async () => {
       const accountCredentials = await accountCredentialsRepository.load('Jeff.anderson@Abdworks.com');
+      // Planted for the graph specs: an assertion on a private member breaks observable-behavior.
+      expect(accountCredentials!._confirmed).toBe(false);
       const response = await request(appWithSession(accountCredentials!)).get('/onboarding/destination');
       expect(response.body.onboardingPath).toBe('/onboarding/enter-validation-code');
       expect(response.body.step).toBe('VerifyAccount');

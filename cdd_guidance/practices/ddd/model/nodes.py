@@ -87,14 +87,24 @@ class InvariantObject(DomainNode, Property):
         self.stereotype = "invariant"
 
 
-class Entity(DomainNode, OoadClass):
+class DomainClass(DomainNode, OoadClass):
+    """A class of the DDD model: a Clean Engineering class that is one of the domain's building blocks, made with its
+    name, its order, and its intent. It holds its *TacticalClass*, the one reading of which building block its
+    stereotypes make it."""
+
+    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
+        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
+        self.tactical = TacticalClass(self)
+
+
+class Entity(DomainClass):
     """Identity that stays the same when its values change."""
 
     _semantic_type_name = "Entity"
     _belongs = {("InvariantObject", "Entity")}
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
+        super().__init__(name, sequential_order, **kwargs)
         self.identity = []
         self.is_root = False
         self.aggregate = None
@@ -116,32 +126,26 @@ class Entity(DomainNode, OoadClass):
         return self.invariant_object_type(sequential_order=len(self.invariant_objects))
 
 
-class ValueObject(DomainNode, OoadClass):
+class ValueObject(DomainClass):
     """No write operations and no setters: a change makes a new value."""
 
     _semantic_type_name = "ValueObject"
 
-    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
-
-class Repository(DomainNode, OoadClass):
+class Repository(DomainClass):
     """A collection. Operations are any of create, read, update, delete, and search."""
 
     _semantic_type_name = "Repository"
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
+        super().__init__(name, sequential_order, **kwargs)
         self.accesses = None
 
 
-class DomainService(DomainNode, OoadClass):
+class DomainService(DomainClass):
     """No state. An operation here is one no domain object can perform."""
 
     _semantic_type_name = "DomainService"
-
-    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
 
 class DomainEvent(DomainNode, Property):
@@ -163,18 +167,12 @@ class DomainEvent(DomainNode, Property):
         return f"{self.name}: emitted by {producer}; consumed by {consumers}"
 
 
-class Specification(DomainNode, OoadClass):
+class Specification(DomainClass):
     _semantic_type_name = "Specification"
 
-    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
-
-class Factory(DomainNode, OoadClass):
+class Factory(DomainClass):
     _semantic_type_name = "Factory"
-
-    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
 
 class Aggregate(DomainNode, Module):
@@ -243,7 +241,7 @@ class Aggregate(DomainNode, Module):
 
     def take_root_from_classes(self) -> None:
         """Once its classes are read, make the one marked <<Aggregate Root>> its root."""
-        root = next((item for item in self.classes if isinstance(item, Entity) and TacticalClass(item).kind() == "EntityRoot"), None)
+        root = next((item for item in self.classes if isinstance(item, Entity) and item.tactical.kind() == "EntityRoot"), None)
         if root is not None:
             self.take_root(root)
 
@@ -502,19 +500,20 @@ def _place_of(module: Module, oclass: OoadClass) -> list[str]:
 def _grouped(unplaced: list[tuple[str, OoadClass]]):
     """Classes with no place: each root, or each class nobody composes, opens an aggregate; the rest join it. A class
     the business keeps in its own repository is an aggregate root."""
-    names = {oclass.name: oclass for _context, oclass in unplaced}
+    # Each class read once as DDD reads it, by the name a property's type or a repository's name gives it.
+    tactical_by_name = {oclass.name: TacticalClass(oclass) for _context, oclass in unplaced}
     owner: dict[str, str] = {}
     for _context, oclass in unplaced:
-        tactical = TacticalClass(oclass)
+        tactical = tactical_by_name[oclass.name]
         for prop in oclass.properties:
             for target in pascal_type_names(prop.type_hint or ""):
-                if target in names and target != oclass.name and TacticalClass(names[target]).kind() != "EntityRoot":
+                if target in tactical_by_name and target != oclass.name and tactical_by_name[target].kind() != "EntityRoot":
                     owner.setdefault(target, oclass.name)
-        root = names.get(tactical.kept_root_name)
+        root = tactical_by_name.get(tactical.kept_root_name)
         if root is not None:
-            owner.setdefault(oclass.name, root.name)
-            if not TacticalClass(root).stereotypes:
-                root.stereotypes = ["Aggregate Root", "Entity", *root.stereotypes]
+            owner.setdefault(oclass.name, root.oclass.name)
+            if not root.stereotypes:
+                root.oclass.stereotypes = ["Aggregate Root", "Entity", *root.oclass.stereotypes]
     for context, oclass in unplaced:
         top = oclass.name
         seen = set()

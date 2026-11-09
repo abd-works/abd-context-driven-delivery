@@ -1,58 +1,20 @@
 """TypeScript nodes: TypeScript, then code, then the story model."""
 from __future__ import annotations
 
-import re
-from typing import List
-
 from pathlib import Path
 
 from harness.annotations.name import Name
 
-from cdd_guidance.practices.stories.model.brace_story import BraceScenario
-from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeStory
+from cdd_guidance.practices.stories.model.brace_story import BraceScenario, BraceStory
+from cdd_guidance.practices.stories.model.code_story_model import CodeEpic
 
 
 class TypeScriptScenario(BraceScenario):
     """A scenario read from a TypeScript story file."""
 
 
-class TypeScriptStory(CodeStory):
+class TypeScriptStory(BraceStory):
     scenario_type = TypeScriptScenario
-
-    @classmethod
-    def load_all(cls, content: str) -> List["TypeScriptStory"]:
-        comment_chunks = re.split(r"(?=/\*\*\s*\n \* Story:)", content)
-        named = [chunk for chunk in comment_chunks if re.search(r"\*\s*Story:", chunk)]
-        if named and len(re.findall(r"(?i)story\(", content)) <= len(named):
-            imports = "\n".join(match.group(0) for match in cls.scenario_type._IMPORT.finditer(content))
-            stories = [
-                cls.load(f"{imports}\n{chunk}", "")
-                for chunk in comment_chunks
-                if "Story:" in chunk or re.search(r"(?i)story\(", chunk)
-            ]
-            return stories or [cls.load(content, "")]
-        calls = list(re.finditer(r"(?im)^[ \t]*(?:shareStory|story)\(", content))
-        if len(calls) <= 1:
-            return [cls.load(content, "")]
-        stories = []
-        preamble = content[: calls[0].start()]
-        for index, match in enumerate(calls):
-            end = calls[index + 1].start() if index + 1 < len(calls) else len(content)
-            stories.append(cls.load(preamble + content[match.start() : end], ""))
-        return stories
-
-    @classmethod
-    def load(cls, content: str, story_slug: str) -> "TypeScriptStory":
-        name_match = re.search(r"\*\s*Story:\s*(.+)", content)
-        call = re.search(r"(?i)(?:shareStory|story)\(\s*(['\"])((?:\\.|(?!\1).)*)\1", content)
-        found = name_match.group(1) if name_match else call.group(2) if call else None
-        story = cls(cls.name_read(found, story_slug), 1)
-        story.read_description(content)
-        evidence_match = re.search(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)", content)
-        if evidence_match:
-            story.evidence = [part.strip() for part in evidence_match.group(1).split(",") if part.strip()]
-        story.fill(content)
-        return story
 
 
 class TypeScriptEpic(CodeEpic):

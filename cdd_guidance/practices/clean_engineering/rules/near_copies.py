@@ -17,6 +17,9 @@ if TYPE_CHECKING:
 # A body of fewer tokens is a guard or a delegation; two such bodies look alike without being a copy worth a function.
 # Tokens, not lines, measure it, because an operation's lines count its docstring.
 MIN_TOKENS = 24
+# An operation of fewer lines, its head included, is one expression; two that read alike are an idiom, not a copy worth a
+# function. The exact-copy check counts an operation's lines against the same floor.
+MIN_LINES = 3
 # The share of three-token runs two bodies must have in common to be one body written twice.
 MIN_SHARED = 0.7
 _RUN = 3
@@ -66,12 +69,13 @@ class NearCopies:
 
 
 def _runs_of(operation: "Node") -> frozenset[int]:
-    """The checksums of the body's three-token runs, comments left out; none for a short body. The body is the text
-    the operation saves with the graph, and a checksum, never ``hash``, which Python salts per process, places each body
-    in the same buckets in every process that checks the graph."""
-    text = str(operation.get_fact("body_text") or "")
-    tokens = _TOKEN.findall(_COMMENT_LINE.sub("", text))
-    if len(tokens) < MIN_TOKENS:
+    """The checksums of the body's three-token runs, comments left out; none for a body under the token or line floor.
+    The body is the text the operation saves with the graph, and a checksum, never ``hash``, which Python salts per
+    process, places each body in the same buckets in every process that checks the graph."""
+    code = _COMMENT_LINE.sub("", str(operation.get_fact("body_text") or ""))
+    tokens = _TOKEN.findall(code)
+    code_lines = sum(1 for line in code.splitlines() if line.strip())
+    if len(tokens) < MIN_TOKENS or code_lines + 1 < MIN_LINES:
         return frozenset()
     runs = (" ".join(tokens[start : start + _RUN]) for start in range(len(tokens) - _RUN + 1))
     return frozenset(zlib.crc32(run.encode("utf-8")) for run in runs)

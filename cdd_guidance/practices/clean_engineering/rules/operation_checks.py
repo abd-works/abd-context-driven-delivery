@@ -9,7 +9,7 @@ from harness.graph.practice_rule import PracticeGraphRule
 
 from cdd_guidance.practices.clean_engineering.model.graph_reading import parameters_of
 from cdd_guidance.practices.clean_engineering.rules.class_graph import ClassGraph
-from cdd_guidance.practices.clean_engineering.rules.near_copies import NearCopies
+from cdd_guidance.practices.clean_engineering.rules.near_copies import MIN_LINES, NearCopies
 from cdd_guidance.practices.clean_engineering.rules.operation_semantics import SEMANTIC_RULES
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
@@ -322,7 +322,7 @@ class EliminateDuplication(PracticeGraphRule):
         copied: set[str] = set()
         for op_node in operations:
             fingerprint = op_node.get_fact("body_fingerprint", "")
-            if not fingerprint or op_node.get_fact("line_count", 0) < 3:
+            if not fingerprint or op_node.get_fact("line_count", 0) < MIN_LINES:
                 continue
             if fingerprint in seen:
                 copied.add(op_node.node_id)

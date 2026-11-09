@@ -8,14 +8,11 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
+    UnreadableSource,
 )
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-
-
-class JsonParseError(ValueError):
-    pass
 
 
 class JsonProperty(Property):
@@ -128,7 +125,7 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
         try:
             data = json.loads(text)
         except json.JSONDecodeError as exc:
-            raise JsonParseError(f"Invalid JSON: {exc}") from exc
+            raise UnreadableSource(f"Invalid JSON: {exc}") from exc
         model = self
         model.name = data.get("name", "")
         model.modules = []
@@ -142,7 +139,7 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
             if module.classes:
                 model.modules.append(module)
         else:
-            raise JsonParseError("JSON must contain a 'modules' or 'classes' key")
+            raise UnreadableSource("JSON must contain a 'modules' or 'classes' key")
         return model
 
     def render(self, canonical: Optional[CleanEngineeringModel] = None) -> str:

@@ -2,7 +2,7 @@
 
 *BoundedContextMap* reads text into bounded contexts and aggregates, the way the class model reads files and folders. A nested bounded context is a bounded context whose parent is a bounded context. Each bounded context holds one or more aggregates. When the text has no bounded context, the map has one bounded context and there is no folder for it; the aggregates sit in that context. A bounded context is a module. An aggregate is a module. Entity, value object, repository, domain service, specification, and factory are classes; a domain event and an invariant object are properties. An aggregate's root is an entity with `is_root` true. Markdown continues through a class card when the file has one, and stops at the class name when the file has only the name.
 
-The graph (*Ddd*'s `read_working_copy`, with its readers in `practices/ddd/model/graph_reading.py`) reads a bounded context from each folder holding `.context/bounded-context.md`, through `BoundedContext.load_context_folder`, and a building block from each class Clean Engineering read whose stereotypes or name give it a DDD kind. Each building block is a *BuildingBlock* node that holds the class Clean Engineering read (through a *TacticalClass*): the class's own facts are the class's, and the tactical facts DDD's rules read are the block's, worked out from the class's operations; the class itself stays Clean Engineering's node.
+The graph (*Ddd*'s `read_working_copy`, with its readers in `practices/ddd/model/graph_reading.py`) reads a bounded context from each folder holding `.context/bounded-context.md`, through `BoundedContext.load_context_folder`, and a building block from each class Clean Engineering read whose DDD stereotype, or, in a folder that holds a domain, whose name gives it a DDD kind. Each building block is a *BuildingBlock* node that holds the class Clean Engineering read (through a *TacticalClass*): the class's own facts are the class's, and the tactical facts DDD's rules read are the block's, worked out from the class's operations; the class itself stays Clean Engineering's node.
 
 Callers use the base nodes. The practice's formats (`Ddd(...).formats`: sketch, markdown, drawio) each name the map class that reads and writes that format; `parse` reads text into a `BoundedContextMap` and `render` writes one back. Every format subclasses `BoundedContextMap`, which holds the map's working operations (`context_at`, `aggregate_at`, `wire_events`, `has_class_cards`) and names the context type it reads into (`bounded_context_type`); each context type names the aggregate type it opens (`aggregate_type`), and a nested context is of its parent's own type. The sketch and draw.io formats name the markdown context type, whose nodes read and write the markdown and sketch notation. The draw.io map is itself Clean Engineering's draw.io diagram (`DrawIOBoundedContextMap(BoundedContextMap, DrawIOCleanEngineeringModel)`): it draws its contexts and aggregates as its own modules and renders itself; reading a drawing builds each cell as the cell type its style names (`kind=boundedContext;`, `kind=aggregate;`), and each cell reads itself into the map. The python and typescript formats are Clean Engineering's class models: the map writes itself into one as that format's own classes (`write_classes(model)`), so the format renders itself with no second copy, and reads one back (`read_class_model(model)`), each aggregate taking the classes its place names as the cards they are, with their own members; a markdown text with no aggregate is a plain class model, which `Ddd` hands to its Clean Engineering companion's own adapter. A card's stereotypes are the class's `stereotypes`, which the code channels write as decorators (`@aggregate_root`, `@AggregateRoot()`) and read back: a decorator with no arguments, or a `<<Mark>>` on the first line of the doc comment, is a stereotype, so Clean Engineering keeps no list of DDD's words. `stereotypes.KIND_OF_STEREOTYPE` is the one table of DDD's own words from that list — aggregate root, entity, value object, repository, domain service or service, domain event, specification, and factory — and the building block each names; a class marked `system` is another system's. `ClassCard.named` makes the card of the building block they name, the graph's building blocks read the same table through *TacticalClass*, and the tactical rules check `BUILDING_BLOCK_KINDS`. The DDD practice registers itself on `DomainNode`, the base of every DDD node, so the model never imports its practice. Where a class lives is its `module_path`, a Clean Engineering field (`["Customer | custom", "Customer Profile"]`), and an aggregate's integrations are dependencies of its root that carry the arc's fields as details (`Integration.as_dependency`, `MarkdownIntegration.kept_by`); the code formats write both in the class's doc comment and read them back.
 
@@ -141,28 +141,35 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 
 ## Integration
 
-+ Integration()
++ Integration(context: str = "", aggregate: str = "", entity: str = "", held_by: str = "")
 ------
 + context: str
+	// the bounded context the arrow reaches
 + aggregate: str
-+ target: str
-	// the class named on the arrow
+	// the aggregate the arrow reaches
++ entity: str
+	// the class the arrow reaches; a target that names one class names only its entity
++ held_by: str
+	// the identity the aggregate holds that class by
 + direction: str
 + crosses: str
 + integration: str
 + pattern: str
 	// Shared Kernel, Customer/Supplier, Conformist, Anticorruption Layer, Open Host / Published Language, or Separate Ways
-+ target_parts: tuple[str, str, str]
-	// the target's context, aggregate, and entity
++ FIELDS: tuple[str, ...]
+	// pattern, direction, crosses, integration: the fields in the order an arc's lines write them under its target
++ PARTS: tuple[str, ...]
+	// context, aggregate, entity, held_by: the parts of the target, each its own detail when a class model keeps the arc
 + target_name: str
 	// the entity when the target names one, else the aggregate
 ----
-+ lines(): list[str]
-	// `- target`, then each field it has, indented: what an aggregate writes under `Integrations:`
 + as_dependency(): Relationship
-	// the arc as a class model keeps it on the root: a dependency on target_name, labelled by its pattern, with `to` (the whole target) and its other fields as details
+	// the arc as a class model keeps it on the root: a dependency on target_name, labelled by its pattern, with each
+	// part of its target and each of its other fields as a detail
++ Integration.keeps_one(dependency: Relationship): bool
+	// whether a class model's dependency keeps an arc: it names a part of the arc's target as a detail
 + read_dependency(dependency: Relationship): None
-	// the pattern from the label, the other fields from the details
+	// the pattern from the label, the parts and the other fields from the details
 
 ## BuildingBlock : Node
 
@@ -172,24 +179,42 @@ around it, and it saves both.
 
 + BuildingBlock(practice: Ddd, tactical: TacticalClass, kind: str)
 ------
++ ooad_class: OoadClass
+	// the class Clean Engineering read, which this building block is
 + peer_private_operations: list[str]
 + public_derive_operations: list[str]
 + delegating_operations: list[str]
 + identity_free_loads: list[str]
 	// load, get, find, or fetch with no parameters that reads ambient state such as the session or request
-+ tactical_stereotype: bool
-	// the class carries a DDD stereotype, or its name says its kind
++ named_for_its_kind: bool
+	// the class's name follows the naming convention of the building block it is
 + public_operation_names: list[str]
 + lifecycle_operations: list[str]
+	// the public operations that add to, find in, or remove from a collection
 + drives_a_screen: bool
-+ in_screen_module: bool
-+ foreign_names: list[str]
-	// the roots its lines name with `// foreign Name`
+	// it opens and shows, or its name is a screen's
 
 *DddReading* is one read of a working copy into the graph that holds the DDD practice: bounded contexts, aggregates,
-and a *BuildingBlock* for each class the Clean Engineering practice it extends read.
+and a *BuildingBlock* for each class the Clean Engineering practice it extends read. A class's DDD stereotype always
+names its building block; its name names one (`TacticalClass.inferred_kind`) only in a folder that holds a domain: one
+a folder's `.context/bounded-context.md` covers, or one where a class carries a DDD stereotype. Elsewhere, such as a
+toolkit folder whose `MarkdownRepository` or `AgentOperation` only ends like a building block, DDD makes nothing.
+Each aggregate keeps the production classes in its folder that are no building block as its `bare_classes` fact,
+leaving out test code, React screen modules, and classes marked as another system's;
+`every-class-carries-ddd-stereotype` reports them. Each repository accesses the root its name says it keeps, and each
+root associates with every other root its lines name with `// foreign Name`.
 
-## Entity : OoadClass
+## DomainClass : OoadClass
+
+The base of every DDD class: a Clean Engineering class that is one of the domain's building blocks, made with its name,
+its order, and its intent.
+
++ DomainClass(name: str, sequential_order: int, intent: str = "")
+------
++ tactical: TacticalClass
+	// made once with the class: the one reading of which building block its stereotypes make it
+
+## Entity : DomainClass
 
 + Entity(name: str, sequential_order: int)
 ------
@@ -217,13 +242,13 @@ and a *BuildingBlock* for each class the Clean Engineering practice it extends r
 + stereotype: str
 	// invariant
 
-## ValueObject : OoadClass
+## ValueObject : DomainClass
 
 + ValueObject(name: str, sequential_order: int)
 	// no write operations and no setters: a change makes a new value
 	// it clones as every class does (OoadClass.clone), members and stereotypes included
 
-## Repository : OoadClass
+## Repository : DomainClass
 
 + Repository(name: str, sequential_order: int)
 ------
@@ -233,7 +258,7 @@ and a *BuildingBlock* for each class the Clean Engineering practice it extends r
 	// any of create, read, update, delete, and search. Not all of them
 	// a search may appear more than once. Its name is search and what it searches
 
-## DomainService : OoadClass
+## DomainService : DomainClass
 
 + DomainService(name: str, sequential_order: int)
 	// no state
@@ -249,9 +274,9 @@ and a *BuildingBlock* for each class the Clean Engineering practice it extends r
 + subject: Property
 	// the state of the event. A domain event always has one
 
-## Specification : OoadClass
+## Specification : DomainClass
 
-## Factory : OoadClass
+## Factory : DomainClass
 
 `ClassCard.named(name, stereotypes)` makes the card a class with those stereotypes is read into: specification, value object, repository, domain service (or service), factory, entity, or aggregate root (an entity); a card with none is a plain class card.
 
@@ -390,8 +415,16 @@ The `markdown` format.
 
 + MarkdownIntegration.read_arcs(lines: list[str]): list[MarkdownIntegration]
 	// each `- target` line opens an arc and the `key: value` lines under it fill it
++ MarkdownIntegration.targeting(text: str): MarkdownIntegration
+	// the arc to `→ Context · Aggregate · Entity (by Identity)`, or to one class alone: the one reading of the `·` text
 + MarkdownIntegration.kept_by(dependency: Relationship): MarkdownIntegration | None
-	// the arc a class model's dependency keeps, when its details name the arc's target
+	// the arc a class model's dependency keeps, when its details name a part of the arc's target
+------
++ target: str
+	// the target as the arc's line writes it: the one writing of the `·` text
+----
++ lines(): list[str]
+	// `- target`, then each field it has, indented: what an aggregate writes under `Integrations:`
 + read_field(line: str): None
 
 ## SketchDddModel : BoundedContextMap

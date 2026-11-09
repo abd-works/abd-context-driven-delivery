@@ -37,3 +37,14 @@ with description("the graph rules of every practice CDD ships"):
 
     with it("should list each rule on every node type its check judges, so validate runs it there"):
         expect([gap for practice in PracticeCatalogue.create_all() for gap in _unlisted(practice)]).to(equal([]))
+
+
+with description("the fidelities of every practice CDD ships"):
+    with it("should each give a Scaffold, which a partition at that fidelity indexes by"):
+        missing = sorted(
+            f"{practice.key}: {fidelity.name}"
+            for practice in PracticeCatalogue.create_all()
+            for fidelity in practice.fidelities
+            if not fidelity.scaffold
+        )
+        expect(missing).to(equal([]))

@@ -6,7 +6,6 @@ A nested epic is an epic whose parent is an epic. Each node type implements clon
 from __future__ import annotations
 
 import re
-import zlib
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
@@ -20,7 +19,7 @@ from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock
 
 from .source_location import SourceLocation
-from .story_recording import StoryRecording, declared_evidence, file_of, folder_of, step_semantic
+from .story_recording import StoryRecording, declared_evidence, file_of, folder_of, step_node_id, step_semantic
 
 # Pairs the schema names with belongsTo. The facade does not grow a method for them.
 _BELONGS = {
@@ -192,6 +191,15 @@ class StoryNode(ModelNode, ABC):
         if hasattr(self, "body"):
             self.body = getattr(source, "body", CodeBody())
 
+    @property
+    def recorded_name(self) -> str:
+        """The name this object's graph node is called by."""
+        return self.name
+
+    # The node type this object's graph node takes: its semantic type, unless a kind of node records itself as another
+    # (a step as Given, When or Then; an epic under another as SubEpic).
+    recorded_type = property(ModelNode.semantic_type)
+
     @abstractmethod
     def clone(self) -> "StoryNode":
         """Return a new copy of this node, including its children."""
@@ -217,11 +225,12 @@ class Example(StoryNode):
         self.value = {} if value is None else value
         self.scope = scope
 
-    def record(self, recording: StoryRecording, file: str, parent, span: tuple[int, int]) -> None:
-        """Add this example to the graph under the scenario that uses it, at that scenario's lines in file; an example
-        two scenarios of one file share is one node."""
-        node = recording.add(f"stories:Example:{file}:{self.name}", self.name, "Example", file, span, self, recording.example_facts(self.name))
-        recording.graph.link("examples", parent, node)
+    def record(self, recording: StoryRecording, scenario, at: SourceLocation) -> None:
+        """Add this example to the graph under scenario, the node of the scenario that uses it, at that scenario's
+        lines; an example two scenarios of one file share is one node. Its graph parent is the scenario that uses it,
+        not its scope, so the scenario is handed in."""
+        node = recording.add(self, f"stories:Example:{at.file}:{self.name}", at, recording.example_facts(at.file, self.name))
+        recording.graph.link("examples", scenario, node)
 
     def clone(self) -> "Example":
         value = dict(self.value) if isinstance(self.value, dict) else self.value
@@ -392,6 +401,12 @@ class Step(StoryNode):
         """What this step says in code: while it still says it, the lines it was read with stand."""
         return (self.keyword, self.text, self.body.text)
 
+    def read_code(self, block) -> None:
+        """The body of the step block found where this step sits in its file, when that block is this step's call; a
+        step whose text differs keeps no body."""
+        if self.text == block.name:
+            self.body = block.body
+
     @property
     def ands(self) -> List["Step"]:
         """And and But lines on this step, in order."""
@@ -410,16 +425,11 @@ class Step(StoryNode):
         return str(value).capitalize()
 
     @property
-    def is_continuation(self) -> bool:
+    def continuation(self) -> bool:
         """An And or But line continues the clause before it."""
         if self._keyword:
             return self._keyword.casefold() in ("and", "but")
         return self.text.strip().startswith(("And ", "But "))
-
-    @property
-    def continuation(self) -> bool:
-        """The fact name rules read for ``is_continuation``."""
-        return self.is_continuation
 
     @property
     def phase(self) -> str:
@@ -436,19 +446,25 @@ class Step(StoryNode):
                 found.append(token)
         return found
 
-    def record(self, recording: StoryRecording, file: str, parent, edge_kind: str) -> None:
-        """Add this step, as a Given, When, Then, or plain Step, under parent, then the steps chained onto it."""
-        semantic = step_semantic(self)
-        label = f"{self.keyword.lower()} {self.text}".strip()
-        span = recording.span_of(self, file, fallback_text=self.text)
+    @property
+    def recorded_name(self) -> str:
+        """`given a cart`: the keyword and the text, which is what a screen and a rule read a step by."""
+        return f"{self.keyword.lower()} {self.text}".strip()
+
+    @property
+    def recorded_type(self) -> str:
+        """Given, When, or Then; a step with none of them is a Step."""
+        return step_semantic(self)
+
+    def record(self, recording: StoryRecording, file: str, parent) -> None:
+        """Add this step under parent, its scenario's or background's node (``steps``) or the step it continues
+        (``ands``), then the steps chained onto it."""
+        at = recording.span_of(self, file, fallback_text=self.text)
         continuations = list(self.ands)
-        # A checksum of the label, never ``hash``: Python salts ``hash`` per process, and a step must keep its id in the
-        # worker process that refreshes the graph and in the server that holds it.
-        node_id = f"stories:{semantic}:{file}:{span[0]}:{zlib.crc32(label.encode('utf-8')) & 0xFFFFFF}"
-        node = recording.add(node_id, label, semantic, file, span, self)
-        recording.graph.link(edge_kind, parent, node)
+        node = recording.add(self, step_node_id(self.recorded_type, file, at.line, self.recorded_name), at)
+        recording.graph.link("ands" if isinstance(self.parent, Step) else "steps", parent, node)
         for continuation in continuations:
-            continuation.record(recording, file, node, "ands")
+            continuation.record(recording, file, node)
 
     def clone(self) -> "Step":
         cloned = type(self)(
@@ -502,16 +518,19 @@ class Background(StoryNode):
     def code_key(self) -> tuple:
         return (self.name, _steps_key(self.steps))
 
+    @property
+    def recorded_name(self) -> str:
+        return self.name or "background"
+
     def record(self, recording: StoryRecording, file: str, parent) -> None:
-        """Add this background under its story, then its steps."""
-        label = self.name or "background"
-        span = recording.span_of(self, file)
-        recording.place(self, file, span)
+        """Add this background under parent, its story's node, then its steps."""
+        at = recording.span_of(self, file)
+        recording.place(self, at)
         self.load_map_facts()
-        node = recording.add(f"stories:Background:{file}:{label}", label, "Background", file, span, self)
+        node = recording.add(self, f"stories:Background:{file}:{self.recorded_name}", at)
         recording.graph.link("background", parent, node)
         for step in self.steps:
-            step.record(recording, file, node, "steps")
+            step.record(recording, file, node)
 
     def clone(self) -> "Background":
         cloned = type(self)(self.name, self.sequential_order)
@@ -541,18 +560,12 @@ class Scenario(StoryNode):
     """The step and background types this format's scenarios are made of; a copy of a scenario makes its parts
     through them."""
 
-    def __init__(
-        self,
-        name: "str | Scenario" = "",
-        sequential_order: int = 0,
-        story_name: str = "",
-    ) -> None:
+    def __init__(self, name: "str | Scenario" = "", sequential_order: int = 0) -> None:
         source = name if isinstance(name, Scenario) else None
         super().__init__(
             name=source.name if source is not None else name,
             sequential_order=source.sequential_order if source is not None else sequential_order,
         )
-        self.story_name: str = source.story_name if source is not None else story_name
         self._backgrounds = ModelChildren(self, "background")
         self._steps = ModelChildren(self, "steps")
         self.examples = source.examples.clone(self) if source is not None else Examples(self)
@@ -629,21 +642,20 @@ class Scenario(StoryNode):
         Background holds, and scoped, those its story's Background holds. A scenario read from a story test sits in
         that file, not in the story map its Story came from."""
         file = file_of(self) or file
-        span = recording.span_of(self, file)
-        recording.place(self, file, span)
+        at = recording.span_of(self, file)
+        recording.place(self, at)
         self.load_map_facts()
-        facts = {"is_outline": bool(self.is_outline), "story_name": self.story_name or ""}
-        node = recording.add(f"stories:Scenario:{file}:{self.name}", self.name, "Scenario", file, span, self, facts)
+        node = recording.add(self, f"stories:Scenario:{file}:{self.name}", at, {"is_outline": bool(self.is_outline)})
         recording.graph.link("scenarios", parent, node)
         for step in self.steps:
-            step.record(recording, file, node, "steps")
+            step.record(recording, file, node)
         own_background = [example for background in self.backgrounds for example in background.examples.values()]
         used = {example.name: example for example in [*self.examples.values(), *own_background, *scoped]}
         for example in used.values():
-            example.record(recording, file, node, span)
+            example.record(recording, node, at)
 
     def clone(self) -> "Scenario":
-        cloned = type(self)(self.name, self.sequential_order, self.story_name)
+        cloned = type(self)(self.name, self.sequential_order)
         cloned.is_outline = self.is_outline
         cloned.evidence = list(self.evidence)
         cloned.source = self.source
@@ -727,20 +739,39 @@ class Epic(StoryNode):
             return estimate
         return f"* {estimate}"
 
-    def record(self, recording: StoryRecording, parent, top: bool) -> None:
-        """Add this epic, or sub-epic when it is not top, under parent, then its sub-epics and its stories. An epic
-        sits on the line that names it in the first file any story under it was read from."""
+    @property
+    def is_sub_epic(self) -> bool:
+        """An epic nested under another epic."""
+        return isinstance(self.parent, Epic)
+
+    @property
+    def recorded_type(self) -> str:
+        return "SubEpic" if self.is_sub_epic else "Epic"
+
+    @property
+    def top_epic(self) -> "Epic":
+        """The epic of the story map this epic sits under: itself when it is one."""
+        return self.parent.top_epic if self.is_sub_epic else self
+
+    def leaf_epics(self) -> List["Epic"]:
+        """The epics whose stories sit in columns under this epic: its innermost sub-epics, or itself when it has
+        none."""
+        if not self.epics:
+            return [self]
+        return [leaf for child in self.epics for leaf in child.leaf_epics()]
+
+    def record(self, recording: StoryRecording, parent) -> None:
+        """Add this epic or sub-epic under parent, the practice's root or its epic's node, then its sub-epics and its
+        stories. An epic sits on the line that names it in the first file any story under it was read from."""
         story_file = self.first_story_file() or file_of(self)
-        folder = folder_of(story_file, up=1 if top and self.epics else 0)
-        semantic = "Epic" if top else "SubEpic"
-        source_file, line, end = recording.name_span(story_file, self.name, folder)
-        self.source = SourceLocation(source_file, line, end)
+        folder = folder_of(story_file, up=1 if not self.is_sub_epic and self.epics else 0)
+        self.source = recording.name_span(story_file, self.name, folder)
         self.load_map_facts()
-        self.evidence = self.evidence_in(recording, story_file, top)
-        node = recording.add(f"stories:{semantic}:{folder}:{self.name}", self.name, semantic, source_file, (line, end), self)
+        self.evidence = self.evidence_in(recording, story_file)
+        node = recording.add(self, f"stories:{self.recorded_type}:{folder}:{self.name}", self.source)
         recording.graph.link("decomposedInto", parent, node)
         for child in self.epics:
-            child.record(recording, node, False)
+            child.record(recording, node)
         for story in self.stories:
             story.record(recording, node)
 
@@ -748,16 +779,16 @@ class Epic(StoryNode):
         """The first file any story under this epic was read from; empty when none names a file."""
         return next((file for story in self.every_story() for file in [file_of(story)] if file), "")
 
-    def evidence_in(self, recording: StoryRecording, story_file: str, top: bool) -> List[str]:
+    def evidence_in(self, recording: StoryRecording, story_file: str) -> List[str]:
         """What this epic declares, else its sub-epic file's opening docblock, else the labels its children carry."""
         if self.evidence:
             return list(self.evidence)
-        declared = declared_evidence(recording.text_of(story_file)) if not top else []
+        declared = declared_evidence(recording.text_of(story_file)) if self.is_sub_epic else []
         if declared:
             return declared
         labels: List[str] = []
         for child in self.epics:
-            labels.extend(child.evidence_in(recording, child.first_story_file(), False))
+            labels.extend(child.evidence_in(recording, child.first_story_file()))
         for story in self.stories:
             labels.extend(story.evidence)
         return list(dict.fromkeys(labels))
@@ -809,13 +840,6 @@ class Epic(StoryNode):
         story.parent = self
         self.stories.append(story)
 
-    def _stamp_source(self, loc) -> None:
-        for child in self.epics:
-            child.source = loc
-            child._stamp_source(loc)
-        for story in self.stories:
-            story.source = loc
-
     def place_in(self, file: str) -> None:
         """Name *file* on this epic and everything under it that names no file yet; the line stays unknown."""
         if not self.has_source_file:
@@ -825,25 +849,6 @@ class Epic(StoryNode):
         for story in self.stories:
             if not story.has_source_file:
                 story.source = SourceLocation(file)
-
-    def _stamp_epic(self, name: str, loc) -> bool:
-        for child in self.epics:
-            if child.name == name and not child.has_source_file:
-                child.source = loc
-                return True
-            if child._stamp_epic(name, loc):
-                return True
-        return False
-
-    def _stamp_story(self, name: str, loc) -> bool:
-        for child in self.epics:
-            if child._stamp_story(name, loc):
-                return True
-        for story in self.stories:
-            if story.name == name and not story.has_source_file:
-                story.source = loc
-                return True
-        return False
 
     def _has_estimate(self) -> bool:
         if (self.estimate or "").strip():
@@ -971,14 +976,19 @@ class Story(StoryNode):
         backgrounds = tuple(background.code_key for background in self.backgrounds)
         return (self.name, tuple(self.actors), tuple(self.evidence), backgrounds)
 
+    @property
+    def top_epic(self) -> Optional[Epic]:
+        """The epic of the story map this story sits under; none for a story under no epic."""
+        return self.parent.top_epic if isinstance(self.parent, Epic) else None
+
     def record(self, recording: StoryRecording, parent) -> None:
-        """Add this story under its epic with the facts of the file it was read from, then its backgrounds and its
-        scenarios."""
+        """Add this story under parent, its epic's node, with the facts of the file it was read from, then its
+        backgrounds and its scenarios."""
         recording.announce(self)
         file = file_of(self)
-        span = recording.span_of(self, file)
+        at = recording.span_of(self, file)
         self.load_map_facts()
-        node = recording.add(f"stories:Story:{file}:{self.name}", self.name, "Story", file, span, self, recording.facts_of(file))
+        node = recording.add(self, f"stories:Story:{file}:{self.name}", at, recording.facts_of(file))
         recording.graph.link("decomposedInto", parent, node)
         for background in self.backgrounds:
             background.record(recording, file, node)
@@ -1074,6 +1084,18 @@ class StoryModel(StoryNode):
     def every_story(self) -> List["Story"]:
         """Every Story under every epic and sub-epic, in map order."""
         return [story for epic in self.every_epic() for story in epic.stories]
+
+    def stories_named(self, names: List[str]) -> List["Story"]:
+        """This map's own stories that names name, in the order names gives them; a name no story has adds nothing. A
+        thin slice names the stories it delivers, so an increment read from one takes the map's stories through this."""
+        stories = self.every_story()
+        matches = ([story for story in stories if story.name == name] for name in names)
+        return [found[0] for found in matches if found]
+
+    def place_in(self, file: str) -> None:
+        """Name file on every epic and story of this map that names no file yet; the line stays unknown."""
+        for epic in self.epics:
+            epic.place_in(file)
 
     # -- Epic mutations -------------------------------------------------------
 

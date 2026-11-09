@@ -182,7 +182,7 @@ class Stories(PracticeGuidance):
         paths = [Path(item).resolve() for item in files]
         tests = [path for path in paths if self._story_test_reader(path) is not None]
         maps = [path for path in paths if is_story_map_file(path)]
-        maps += [found for found in self._maps_beside(tests) if found not in maps]
+        maps += [found for found in self._maps_beside(tests, project) if found not in maps]
         merged = StoryModel()
         for path in maps:
             read = self._story_map_file(path, project, on_file)
@@ -194,7 +194,7 @@ class Stories(PracticeGuidance):
             if on_file is not None:
                 on_file(file)
             text = path.read_text(encoding="utf-8")
-            merged.source_texts[file] = text
+            merged.source_texts.update(_texts_of_story_test(file, text, project))
             merged.take_scenarios(self._story_test_reader(path).story_type.load_all(text), file)
         return merged
 
@@ -203,7 +203,7 @@ class Stories(PracticeGuidance):
         from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 
         adapters = (self._format_adapter(name) for name in self.formats)
-        return next((adapter for adapter in adapters if issubclass(adapter, CodeStoryModel) and adapter.reads_story_test(path)), None)
+        return next((adapter for adapter in adapters if issubclass(adapter, CodeStoryModel) and adapter.is_story_file(path)), None)
 
     def _story_map_file(self, path: Path, project: Path, on_file=None):
         """The story map in the file at path, read by the format that reads its extension."""
@@ -211,10 +211,22 @@ class Stories(PracticeGuidance):
 
         return self.format_for(path).from_workspace(path, on_file=on_file, project=project) or StoryModel()
 
-    def _maps_beside(self, tests: list[Path]) -> list[Path]:
-        """The story map each story test belongs to: in its own folder, or the nearest folder above it, since story
-        tests sit in epic folders below their map."""
-        return list(dict.fromkeys(found for path in tests for found in [StoryMapFiles(path.parent).nearest()] if found))
+    def _maps_beside(self, tests: list[Path], project: Path) -> list[Path]:
+        """The story map each story test belongs to: in its own folder, or the nearest folder above it inside project,
+        since story tests sit in epic folders below their map."""
+        return list(dict.fromkeys(found for path in tests for found in [StoryMapFiles(path.parent, top=project).nearest()] if found))
+
+
+def _texts_of_story_test(file: str, text: str, project: Path) -> dict[str, str]:
+    """The story test's own text under its path from project, and the text of each examples module it imports by a
+    relative import, which an example's facts read its exported names from."""
+    from cdd_guidance.practices.stories.model.story_recording import imported_example_files
+
+    texts = {file: text}
+    for source in imported_example_files(file, text):
+        if (project / source).is_file():
+            texts[source] = (project / source).read_text(encoding="utf-8")
+    return texts
 
 
 StoryNode.register_practice(Stories)

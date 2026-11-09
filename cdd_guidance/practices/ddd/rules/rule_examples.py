@@ -2,8 +2,10 @@
 
 The example is read by Clean Engineering and the DDD practice that extends it, as a live load reads a working copy, so
 the graph's own reading names each building block's kind: from the stereotype the class carries, else the naming
-convention its name follows. Each rule then runs through the practice's schema, so a rule the schema never applies to a
-node type finds nothing there and its example fails.
+convention its name follows. The example's folder is a bounded context, as a domain's code is, because the naming
+convention names a building block only where a bounded context or a DDD stereotype says the folder holds a domain.
+Each rule then runs through the practice's schema, so a rule the schema never applies to a node type finds nothing
+there and its example fails.
 """
 
 from __future__ import annotations
@@ -23,9 +25,15 @@ def ddd_rule_by_slug(slug: str):
     return BY_SLUG[slug]
 
 
-def ddd_fixture(files: dict[str, str]) -> RuleFixture:
-    """The files, each named from the fixture's one folder, read by Clean Engineering and DDD."""
-    return RuleFixture(Ddd, {f"{FIXTURE_FOLDER}/{name}": text.strip() + "\n" for name, text in files.items()})
+# The bounded-context card that marks the fixture's folder as a domain's.
+_BOUNDED_CONTEXT = {f"{FIXTURE_FOLDER}/.context/bounded-context.md": "# Example\n"}
+
+
+def ddd_fixture(files: dict[str, str], *, in_bounded_context: bool = True) -> RuleFixture:
+    """The files, each named from the fixture's one folder, read by Clean Engineering and DDD; the folder is a bounded
+    context unless in_bounded_context is false, as for code with no DDD model."""
+    written = {f"{FIXTURE_FOLDER}/{name}": text.strip() + "\n" for name, text in files.items()}
+    return RuleFixture(Ddd, {**(_BOUNDED_CONTEXT if in_bounded_context else {}), **written})
 
 
 def violations_for_ddd_rule(

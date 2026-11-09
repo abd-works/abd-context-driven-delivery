@@ -464,7 +464,7 @@ cart.checkout()
 
 *Then* the receipt is visible
 """
-        scenarios = MarkdownScenario.from_text(text, "pay/cart_story.test.md")
+        scenarios = MarkdownScenario.from_text(text, "pay/cart_story.test.md")[0].scenarios
         when = scenarios[0].steps_in(StepType.WHEN)[0]
         expect(when.call_graph[1].text).to(equal("paymentGateway.charge(amount)"))
         story = MarkdownStory("")

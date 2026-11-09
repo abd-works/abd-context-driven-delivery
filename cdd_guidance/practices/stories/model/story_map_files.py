@@ -1,6 +1,6 @@
 """Where story maps and story files sit. This is the one place that knows a story map's file name, a story's own file
-name, the files scenarios are written in, and which folders are searched for them, so the practice, the markdown
-format, its links, and a story test's reader all find the same files."""
+name, the files scenarios and increments are written in, and which folders are searched for them, so the practice, the
+markdown format, its links, and a story test's reader all find the same files."""
 
 from __future__ import annotations
 
@@ -17,6 +17,8 @@ CONTEXT_FOLDER = ".context"
 _MARKDOWN = ".md"
 # A story's own markdown file: `submit_order_story.test.md`, `submit_order_story.spec.md`.
 STORY_FILE_SUFFIXES = ("_story.test.md", "_story.spec.md")
+# The markdown a map's increments are written in, in the order a folder is searched for them.
+THIN_SLICING_FILES = ("thin-slicing.md", "thin-slice.md", "thin-slices.md", "increments.md")
 
 
 def is_story_map_file(path) -> bool:
@@ -27,16 +29,19 @@ def is_story_map_file(path) -> bool:
 
 
 class StoryMapFiles:
-    """The story maps around one folder: the one in it or the nearest folder above it, and the ones below it."""
+    """The story maps around one folder: the one in it or the nearest folder above it, up to the top folder the search
+    stops at (the project the folder belongs to, when one is given), and the ones below it."""
 
-    def __init__(self, folder: Path) -> None:
+    def __init__(self, folder: Path, top: Optional[Path] = None) -> None:
         folder = Path(folder).resolve()
         self.folder = folder.parent if folder.is_file() else folder
+        self.top = Path(top).resolve() if top is not None else None
 
     def nearest(self) -> Optional[Path]:
-        """The story map in this folder or the nearest folder above it, or in that folder's ``.context``: its markdown
-        when it has one, since a drawio of the same map would add every Story twice."""
-        for candidate in (self.folder, *self.folder.parents):
+        """The story map in this folder or the nearest folder above it, up to the top folder, or in that folder's
+        ``.context``: its markdown when it has one, since a drawio of the same map would add every Story twice. A map
+        outside the project is another project's, and the folders above a project can hold far more files than it."""
+        for candidate in self._this_and_above():
             maps = self._maps_in(candidate)
             if maps:
                 markdown = [path for path in maps if path.suffix.lower() == _MARKDOWN]
@@ -54,6 +59,20 @@ class StoryMapFiles:
         """Each story's own markdown file in this folder and the folders below it."""
         return sorted(path for path in self._markdown_below() if path.name.endswith(STORY_FILE_SUFFIXES))
 
+    def thin_slicing(self) -> Optional[Path]:
+        """The markdown that slices the map into increments: `thin-slicing.md` (or `thin-slice.md`, `thin-slices.md`,
+        `increments.md`, in that order), in this folder, else the first in the folders below it; none when there is
+        none."""
+        below = list(self._markdown_below())
+        for name in THIN_SLICING_FILES:
+            beside = self.folder / name
+            if beside.is_file():
+                return beside.resolve()
+            found = next((path for path in below if path.name == name), None)
+            if found is not None:
+                return found
+        return None
+
     def scenario_files_below(self) -> List[Path]:
         """Each markdown file scenarios are written in, in this folder and the folders below it: in a `scenarios`, `md`
         or `stories` folder, a `scenarios.md` or `story-scenarios.md`, or a story's own file. Grouped by the kind of
@@ -67,6 +86,12 @@ class StoryMapFiles:
         for folder, folders, names in os.walk(self.folder):
             folders[:] = sorted(name for name in folders if name == CONTEXT_FOLDER or not skips_folder(name))
             yield from (Path(folder, name).resolve() for name in sorted(names) if name.lower().endswith(_MARKDOWN))
+
+    def _this_and_above(self) -> List[Path]:
+        folders = [self.folder, *self.folder.parents]
+        if self.top is None or self.top not in folders:
+            return folders
+        return folders[: folders.index(self.top) + 1]
 
     def _maps_in(self, folder: Path) -> List[Path]:
         context = folder / CONTEXT_FOLDER

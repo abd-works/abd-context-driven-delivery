@@ -15,7 +15,8 @@ Every story, background, scenario, and step read from a file keeps the code it w
 (`written`, `setup`, and each step's `body`). Rendered back in the same language and unchanged, a node
 is written exactly as read; otherwise it is spelled again with its bodies kept.
 
-load fills this map from the files; each language reads its own. save writes this map's epics and stories.
+load fills this map from the story files a language names (`is_story_file`), one way for every language; each
+story reads its own text and then its own block of the file (`read_code`). save writes this map's epics and stories.
 render writes another map in this language and parse reads a tree into a new map, through save and load.
 """
 
@@ -24,7 +25,7 @@ from __future__ import annotations
 import re
 import textwrap
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
 
 from harness.annotations.name import Name
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
@@ -40,6 +41,10 @@ from cdd_guidance.practices.stories.model.story_model import (
     StoryModel,
     StoryType,
 )
+from cdd_guidance.practices.stories.model.story_file import CodeBlock, flat_steps, paired, read_step_code
+
+if TYPE_CHECKING:
+    from cdd_guidance.practices.stories.model.story_file import StoryFile
 
 
 class CodeStoryModelError(Exception):
@@ -60,9 +65,44 @@ def example_names_of(stories: List[Story]) -> List[str]:
     return names
 
 
-def flat_steps(steps: List[Step]) -> List[Step]:
-    """Every step with its ands after it, in the order the file has them."""
-    return [line for step in steps for line in (step, *step.ands)]
+def _quoted_name_line(content: str, name: str) -> int:
+    """The line that quotes name, counted from 1; the first line when none does."""
+    for index, line in enumerate(content.splitlines(), start=1):
+        if f"'{name}'" in line or f'"{name}"' in line:
+            return index
+    return 1
+
+
+def _file_stem_slug(filename: str, suffixes: Tuple[str, ...]) -> str:
+    """The kebab slug of a story file's name without the story-file suffix it ends with; empty for any other file."""
+    suffix = next((item for item in suffixes if filename.endswith(item)), None)
+    return Name(filename[: -len(suffix)]).kebab if suffix else ""
+
+
+def _epic_slugs(folders: List[str], stem_slug: str, leaf_slug: str) -> List[str]:
+    """The epic, then each sub-epic, a story file sits in, from the folders above it under the tests root. A last
+    folder with the file's or its epic's slug is that sub-epic, not a second level; a file in its own top folder is the
+    epic itself."""
+    folders = folders[:-1] if folders and folders[-1] in (stem_slug, leaf_slug) else list(folders)
+    if not folders:
+        return [leaf_slug]
+    nested = folders[1:]
+    return [folders[0], *(nested if nested and nested[-1] == leaf_slug else [*nested, leaf_slug])]
+
+
+def _names_listed(lines: List[str]) -> List[str]:
+    """Each name the comma-separated lines list, once, in order: an import's alias when it gives one."""
+    names: List[str] = []
+    for part in (part for line in lines for part in line.split(",")):
+        name = part.strip().split(" as ")[-1].strip()
+        if name and name != "(" and name not in names:
+            names.append(name)
+    return names
+
+
+def unescaped(value: str) -> str:
+    """A quoted name or step text as it reads once its escapes are taken out: the one unescape every language uses."""
+    return value.replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
 
 
 def as_read(written: Optional[WrittenBlock], language: CodeLanguage, key: WrittenKey) -> Optional[WrittenBlock]:
@@ -138,9 +178,37 @@ class CodeScenario(Scenario, CodeStoryNode):
         """The (keyword, text) of each step call in a body of this language."""
         raise NotImplementedError
 
+    # How a language opens a scenario, with the scenario's name in the group `name`.
+    _SCENARIO: re.Pattern = re.compile(r"(?!)")
+    # How a language imports example names from an examples module, with the names in the group `names`; none for a
+    # language whose story files import no examples.
+    _IMPORT: Optional[re.Pattern] = None
+    # The comment line that lists the examples a story file uses.
+    _EXAMPLES_LINE = re.compile(r"examples:\s*(.+)")
+
+    def read_code(self, block: CodeBlock, lead: List[str]) -> None:
+        """This scenario's code from the block it was written as: each background's and step's body, the code that is
+        no step (`setup`), and the block's own lines (`written`)."""
+        backgrounds = block.backgrounds([])
+        for background, item in zip(self.backgrounds, backgrounds):
+            read_step_code(background, item.steps([]))
+        steps = block.steps(backgrounds)
+        read_step_code(self, steps)
+        self.setup = block.setup([*backgrounds, *steps])
+        written = block.written(lead)
+        written.inside = block.inside_lines
+        written.key = self.code_key
+        self.written = written
+
     @classmethod
     def scenario_blocks(cls, content: str) -> List[tuple]:
-        raise NotImplementedError
+        """(name, body) of each scenario in a file; a scenario runs to the next one."""
+        matches = list(cls._SCENARIO.finditer(content))
+        blocks = []
+        for index, match in enumerate(matches):
+            end = matches[index + 1].start() if index + 1 < len(matches) else len(content)
+            blocks.append((match.group("name").strip(), content[match.end() : end]))
+        return blocks
 
     @classmethod
     def backgrounds_in(cls, content: str) -> List[Background]:
@@ -148,11 +216,10 @@ class CodeScenario(Scenario, CodeStoryNode):
 
     @classmethod
     def example_names(cls, content: str) -> List[str]:
-        raise NotImplementedError
-
-    @classmethod
-    def create(cls, scenario) -> List[str]:
-        raise NotImplementedError
+        """The example names a story file imports and the ones its examples comment lists, each once, in order."""
+        listed = [match.group("names") for match in cls._IMPORT.finditer(content)] if cls._IMPORT is not None else []
+        listed += [match.group(1) for match in cls._EXAMPLES_LINE.finditer(content)]
+        return _names_listed(listed)
 
     @classmethod
     def steps_from(cls, calls: List[tuple]) -> List[Step]:
@@ -211,34 +278,72 @@ class CodeStory(Story, CodeStoryNode):
     _TIER_NEUTRAL = re.compile(r"\s*\(tier-neutral\)\.?\s*$")
     # What opens a line of the comment that describes a story in this language.
     description_mark = r"\*\s*"
+    # Where a file's next story starts, and what a piece of the file holds when it is a story.
+    _STORY_START: re.Pattern = re.compile(r"(?!)")
+    _STORY_MARK: re.Pattern = re.compile(r"Story:")
+    # The story's name as a story file writes it, in the group `name`.
+    _NAME: re.Pattern = re.compile(r"Story:\s*(?P<name>.+)")
 
     def read_description(self, content: str) -> None:
-        """The actor and kind the story's comment names; a story whose comment names no kind is a user story."""
+        """The actor, kind, domain terms, and evidence the story's comment names; a story whose comment names no kind
+        is a user story."""
         actor = re.search(rf"{self.description_mark}Actor:\s*(.+)", content, re.MULTILINE)
         if actor:
             self.actors = [actor.group(1).strip()]
         kind = re.search(rf"{self.description_mark}Kind:\s*(user|system|technical)\b", content, re.MULTILINE)
         if kind:
             self.story_type = StoryType.from_mark(kind.group(1))
+        terms = re.search(rf"{self.description_mark}Domain terms:\s*(.+)$", content, re.MULTILINE)
+        if terms:
+            self.domain_terms = [term.strip() for term in terms.group(1).split(",") if term.strip()]
+        evidence = re.search(rf"{self.description_mark}Evidence:\s*([A-Za-z][A-Za-z ,-]*)", content, re.MULTILINE)
+        if evidence:
+            self.evidence = [part.strip() for part in evidence.group(1).split(",") if part.strip()]
 
     @classmethod
-    def name_read(cls, found: Optional[str], story_slug: str) -> str:
-        """The story's name as its story test wrote it, else its file's slug as words. Every language reads a name
-        this one way, so a story test's scenarios find the story of the same name on the map."""
-        name = found.strip() if found else cls.name_from_slug(story_slug)
-        return cls._TIER_NEUTRAL.sub("", name).strip()
+    def name_read(cls, found: Optional[str]) -> str:
+        """The story's name as its story test wrote it. Every language reads a name this one way, so a story test's
+        scenarios find the story of the same name on the map."""
+        return cls._TIER_NEUTRAL.sub("", found.strip() if found else "").strip()
+
+    @classmethod
+    def name_in(cls, content: str) -> Optional[str]:
+        """The story's name as the text of one story writes it; None when it writes none."""
+        match = cls._NAME.search(content)
+        return match.group("name") if match else None
 
     @classmethod
     def load_all(cls, content: str) -> List["CodeStory"]:
-        """Every story in one sub-epic file. A language splits the file."""
-        return [cls.load(content, "")]
+        """Every story in one sub-epic file: the file split where each story starts, each piece that holds a story
+        read as one; the whole file as one story when no piece does."""
+        stories = [cls.load(piece) for piece in cls._STORY_START.split(content) if cls._STORY_MARK.search(piece)]
+        return stories or [cls.load(content)]
 
-    def write(self, parent: str, files: Dict[str, str], tests_root: str) -> None:
-        """A language story writes its file. The base story has no file."""
-        return
+    @classmethod
+    def load(cls, content: str) -> "CodeStory":
+        """The story the text of one story holds: its name, its description, then its backgrounds and scenarios."""
+        story = cls(cls.name_read(cls.name_in(content)), 1)
+        story.read_description(content)
+        story.fill(content)
+        return story
+
+    def read_code(self, block: CodeBlock, lead: List[str]) -> None:
+        """This story's code from the block it was written as: each background's step bodies, the code that is no
+        background or scenario (`setup`), the block's own lines (`written`), and each scenario's code from its block."""
+        scenarios = block.scenarios()
+        backgrounds = block.backgrounds(scenarios)
+        for background, item in zip(self.backgrounds, backgrounds):
+            read_step_code(background, item.steps(scenarios))
+        written = block.written(lead)
+        written.inside, leads, written.closing = block.split_inside(scenarios)
+        self.setup = block.setup([*backgrounds, *scenarios])
+        for scenario, item, scenario_lead in paired(self.scenarios, scenarios, leads):
+            scenario.read_code(item, scenario_lead)
+        written.key = self.code_key
+        self.written = written
 
     def add_scenario(self, name: str, body: str, example_names: List[str]) -> None:
-        scenario = self.scenario_type(name=name, sequential_order=len(self.scenarios) + 1, story_name=self.name)
+        scenario = self.scenario_type(name=name, sequential_order=len(self.scenarios) + 1)
         scenario.read(body, example_names)
         self.scenarios.append(scenario)
 
@@ -285,16 +390,6 @@ class CodeStory(Story, CodeStoryNode):
                         continue
                     background.examples = self.backgrounds[0].examples.clone(background)
 
-    @classmethod
-    def load(cls, content: str, story_slug: str) -> "CodeStory":
-        """Read a language file into this story. Each language overrides it."""
-        raise NotImplementedError
-
-    @classmethod
-    def create(cls, story: Story, **kwargs) -> str:
-        """Write this story in the language file. Each language overrides it."""
-        raise NotImplementedError
-
 
 class CodeIncrement(Increment, CodeStoryNode):
     pass
@@ -328,14 +423,22 @@ class CodeStoryModel(StoryModel):
     epic_type = CodeEpic
     story_type = CodeStory
     increment_type = CodeIncrement
-    story_test_suffix = ""
-    """How a story test file in this language ends, such as ``_story.test.py``; empty for a language whose story
-    tests are not read beside a story map."""
+    story_file_suffixes: Tuple[str, ...] = ()
+    """How a story file in this language ends, such as ``_story.test.py``; the first is the one this language writes.
+    Empty for a language with no story files."""
+    not_story_paths: re.Pattern = re.compile(r"(?!)")
+    """A path that ends like a story file but holds no story, such as a file in an examples folder; a pattern that
+    matches nothing in a language whose every such file is one."""
 
     @classmethod
-    def reads_story_test(cls, path: Path) -> bool:
-        """True when the file at path is a story test in this language, which this model's story type reads."""
-        return bool(cls.story_test_suffix) and Path(path).name.endswith(cls.story_test_suffix)
+    def is_story_file(cls, path: "str | Path") -> bool:
+        """True when the file at path is a story file in this language, which this model's story type reads."""
+        posix = str(path).replace("\\", "/")
+        return posix.endswith(cls.story_file_suffixes) and cls.not_story_paths.search(posix) is None
+
+    def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
+        """The story files in tree, path to text, in path order."""
+        return sorted(path for path in tree if self.is_story_file(path))
 
     def __init__(self, source: "StoryModel | str | None" = None, tests_root: str | None = None):
         if isinstance(source, str):
@@ -344,8 +447,8 @@ class CodeStoryModel(StoryModel):
         super().__init__(source)
         self._tests_root = ("tests" if tests_root is None else tests_root).strip("/")
 
-    def strip_tests_root_prefix(self, parts: list[str]) -> list[str] | None:
-        """Drop the workspace-relative deploy prefix from a rendered file path."""
+    def _under_tests_root(self, parts: List[str]) -> Optional[List[str]]:
+        """A file path's folders below the tests root; None for a path outside it."""
         if not self._tests_root:
             return parts
         root_parts = [p for p in self._tests_root.split("/") if p]
@@ -377,8 +480,8 @@ class CodeStoryModel(StoryModel):
             model._adopt_code(self.parse(previous))
         return model.save()
 
-    def copy_of(self, source: StoryModel) -> "CodeStoryModel":
-        """source in this language, with this model's settings."""
+    def copy_of(self, source: Optional[StoryModel]) -> "CodeStoryModel":
+        """source in this language, with this model's settings; an empty map when source is None."""
         return type(self)(source, tests_root=self._tests_root)
 
     # -- The one story render. A language model overrides only the spelling operations further down.
@@ -478,9 +581,9 @@ class CodeStoryModel(StoryModel):
             lines.append(f"{prefix}Kind: {StoryType(story.story_type).value}")
         return lines
 
-    def read_code(self, content: str, stories: List[Story], path: str) -> Optional[WrittenBlock]:
-        """Give each story, background, scenario, and step the code it was written with; return the file's own code.
-        A language that cannot read its blocks returns None and its stories are written generically."""
+    def story_file(self, content: str) -> Optional["StoryFile"]:
+        """The story file content is, as this language finds its blocks; None for a language that does not read its
+        blocks, whose stories are written generically."""
         return None
 
     def file_name(self, epic: Epic) -> str:
@@ -624,12 +727,24 @@ class CodeStoryModel(StoryModel):
         for step in flat_steps(node.steps):
             step.body = step.body.in_language_of(bodies.get(step.text, CodeBody()), language)
 
-    def load(self, external: Dict[str, str]) -> "CodeStoryModel":
-        """Read source files into this story map's epics and stories. Each language reads its own files."""
-        raise NotImplementedError(f"{type(self).__name__} must read its story files")
+    def load(self, external: Dict[str, str], *, on_file: Optional[Callable[[str], None]] = None) -> "CodeStoryModel":
+        """This story map's epics and stories from the story files in external, path to text, under the tests root:
+        each file one sub-epic, in the order its header gives. on_file hears each file as it is read."""
+        if not isinstance(external, dict):
+            raise CodeStoryModelError(f"{type(self).__name__} reads a path-to-content dict of story files")
+        self.epics.clear()
+        self.source_texts = dict(external)
+        paths = [path for path in self._ordered_paths(external) if self.is_story_file(path)]
+        with self.batch_schema_sync():
+            for index, path in enumerate(paths, start=1):
+                if on_file is not None:
+                    on_file(f"{index}/{len(paths)} · {path}")
+                self._read_story_file(path, external[path])
+        return self
 
-    def parse(self, external: Dict[str, str]) -> "CodeStoryModel":
-        return type(self)(self._tests_root).load(external)
+    def parse(self, external: Dict[str, str], *, on_file: Optional[Callable[[str], None]] = None) -> "CodeStoryModel":
+        """A new map read from the story files in external, with this model's settings."""
+        return self.copy_of(None).load(external, on_file=on_file)
 
     def _ordered_paths(self, external: Dict[str, str]) -> List[str]:
         def key(path: str) -> tuple:
@@ -647,36 +762,23 @@ class CodeStoryModel(StoryModel):
         self.append_epic(epic)
         return epic
 
-    def take_sub_epic_file(self, parts: List[str], content: str, source_file: str = "") -> bool:
-        """One file is one sub-epic. Every story in the file belongs to it.
+    def _read_story_file(self, path: str, content: str) -> None:
+        """One file is one sub-epic. Every story in the file belongs to it; a file outside the tests root, or at its
+        top, holds none.
 
         A parent folder with the same slug as the file, or as the epic its header names, is that sub-epic, so the
         file is not a second level. A file in its own top folder is the epic itself, and its stories sit on the epic.
         """
-        if len(parts) < 2:
-            return False
-        stem_slug = self._file_stem_slug(parts[-1])
+        parts = self._under_tests_root(path.strip("/").replace("\\", "/").split("/"))
+        stem_slug = _file_stem_slug(parts[-1], self.story_file_suffixes) if parts is not None and len(parts) >= 2 else ""
         if not stem_slug:
-            return False
+            return
         epic_name = CodeEpic.epic_name_in(content)
-        leaf_slug = (Name(epic_name).title_slug or "unnamed") if epic_name else stem_slug
-        if not leaf_slug:
-            return False
-        folders = list(parts[:-1])
-        if folders[-1] in (stem_slug, leaf_slug):
-            folders = folders[:-1]
-        if not folders:
-            holder = self.epic_for(leaf_slug)
-        else:
-            epic = self.epic_for(folders[0])
-            nested = folders[1:]
-            if not nested or nested[-1] != leaf_slug:
-                nested = [*nested, leaf_slug]
-            holder = self.sub_epic_for(epic, nested)
+        slugs = _epic_slugs(parts[:-1], stem_slug, (Name(epic_name).title_slug or "unnamed") if epic_name else stem_slug)
+        holder = self.epic_for(slugs[0]) if len(slugs) == 1 else self.sub_epic_for(self.epic_for(slugs[0]), slugs[1:])
         if epic_name:
             holder.name = epic_name
-        self._take_stories(holder, content, source_file.replace("\\", "/"))
-        return True
+        self._take_stories(holder, content, path.replace("\\", "/"))
 
     def _take_stories(self, holder: Epic, content: str, source_file: str) -> None:
         """The file's stories onto the sub-epic that holds them, each with where it is and the code it was written with."""
@@ -685,33 +787,14 @@ class CodeStoryModel(StoryModel):
         stories = self.story_type.load_all(content)
         for story in stories:
             if source_file:
-                line = self._quoted_name_line(content, story.name)
+                line = _quoted_name_line(content, story.name)
                 story.source = SourceLocation(source_file, line, line)
             holder.append_story(story)
-        written = self.read_code(content, stories, source_file)
+        code = self.story_file(content)
+        written = code.read(stories, source_file) if code is not None else None
         if written is not None:
             written.key = holder.name
             holder.written = written
-
-    def _quoted_name_line(self, content: str, name: str) -> int:
-        for index, line in enumerate(content.splitlines(), start=1):
-            if f"'{name}'" in line or f'"{name}"' in line:
-                return index
-        return 1
-
-    def _file_stem_slug(self, filename: str) -> str:
-        for suffix in (
-            ".story.shared.ts",
-            "_story.test.ts",
-            "_story.spec.ts",
-            "_story.test.py",
-            "_story.test.js",
-            "Story.java",
-        ):
-            if filename.endswith(suffix):
-                stem = filename[: -len(suffix)]
-                return Name(stem).kebab
-        return ""
 
     def sub_epic_for(self, epic: Epic, slugs: List[str]) -> Epic:
         parent = epic

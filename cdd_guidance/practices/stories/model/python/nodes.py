@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from typing import List
 
-from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory
+from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory, unescaped
 from cdd_guidance.practices.stories.model.story_model import Background
 
 
@@ -18,17 +18,8 @@ class PythonScenario(CodeScenario):
         calls = []
         for match in cls._CALL.finditer(body):
             keyword = {"and_": "and", "but_": "but"}.get(match.group("kw"), match.group("kw"))
-            calls.append((keyword, _unescape(match.group("text"))))
+            calls.append((keyword, unescaped(match.group("text"))))
         return calls
-
-    @classmethod
-    def scenario_blocks(cls, content: str) -> List[tuple]:
-        matches = list(cls._SCENARIO.finditer(content))
-        blocks = []
-        for index, match in enumerate(matches):
-            end = matches[index + 1].start() if index + 1 < len(matches) else len(content)
-            blocks.append((match.group("name"), content[match.end():end]))
-        return blocks
 
     @classmethod
     def backgrounds_in(cls, content: str) -> List[Background]:
@@ -43,25 +34,6 @@ class PythonScenario(CodeScenario):
         background.steps = steps
         return [background]
 
-    @classmethod
-    def example_names(cls, content: str) -> List[str]:
-        names: List[str] = []
-        for match in cls._IMPORT.finditer(content):
-            for part in match.group("names").split(","):
-                name = part.strip().split(" as ")[-1].strip()
-                if name and name != "(" and name not in names:
-                    names.append(name)
-        for match in re.finditer(r"examples:\s*(.+)", content):
-            for part in match.group(1).split(","):
-                name = part.strip()
-                if name and name not in names:
-                    names.append(name)
-        return names
-
-
-def _unescape(value: str) -> str:
-    return value.replace('\\"', '"').replace("\\\\", "\\")
-
 
 def quote(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"')
@@ -70,23 +42,9 @@ def quote(value: str) -> str:
 class PythonStory(CodeStory):
     scenario_type = PythonScenario
     description_mark = r"^#\s*"
-
-    @classmethod
-    def load_all(cls, content: str) -> List["PythonStory"]:
-        chunks = re.split(r"(?=^# Story:)", content, flags=re.M)
-        stories = [cls.load(chunk, "") for chunk in chunks if 'with story("' in chunk]
-        return stories or [cls.load(content, "")]
-
-    @classmethod
-    def load(cls, content: str, story_slug: str) -> "PythonStory":
-        name_match = re.search(r'with story\("([^"]+)"\)', content)
-        story = cls(cls.name_read(name_match.group(1) if name_match else None, story_slug), 1)
-        story.read_description(content)
-        domain_match = re.search(r"^# Domain terms:\s*(.+)$", content, re.MULTILINE)
-        if domain_match:
-            story.domain_terms = [term.strip() for term in domain_match.group(1).split(",") if term.strip()]
-        story.fill(content)
-        return story
+    _STORY_START = re.compile(r"(?=^# Story:)", re.M)
+    _STORY_MARK = re.compile(r'with story\("')
+    _NAME = re.compile(r'with story\("(?P<name>[^"]+)"\)')
 
 
 class PythonEpic(CodeEpic):

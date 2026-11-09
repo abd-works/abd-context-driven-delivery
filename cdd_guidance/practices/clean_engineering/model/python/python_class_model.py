@@ -70,12 +70,12 @@ class PythonOperation(CodeOperation):
     language = PYTHON
 
     @classmethod
-    def from_function(cls, node: Function, text: str) -> "PythonOperation":
+    def from_function(cls, node: Function, text: str, owner: ast.ClassDef | None) -> "PythonOperation":
         """The operation a function in text declares: its signature, its body as written, and what the rules measure
-        in it, read from its own syntax tree."""
+        in it, read from its own syntax tree. A method names the class that declares it; a module function, None."""
         end_line = getattr(node, "end_lineno", None) or node.lineno
         is_classmethod = _decorated(node, "classmethod")
-        function = PythonFunctionBody(node)
+        function = PythonFunctionBody(node, owner)
         operation = cls(
             name=node.name,
             parameters=_parameter_strings(node, is_classmethod),
@@ -247,7 +247,7 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         oclass.end_line = getattr(node, "end_lineno", None) or node.lineno
         oclass.bases = [ast.unparse(base) for base in node.bases]
         oclass.operations = [
-            PythonOperation.from_function(child, self._text) for child in node.body if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
+            PythonOperation.from_function(child, self._text, node) for child in node.body if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
         ]
         fields = [child for child in node.body if isinstance(child, ast.AnnAssign) and isinstance(child.target, ast.Name)]
         oclass.properties = [PythonProperty.from_annotation(child, order) for order, child in enumerate(fields, start=1)]
@@ -261,7 +261,7 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
 
     def _attach_top_level_ops(self, module: PythonModule, tree: ast.Module) -> None:
         """The file's module functions, on a `_module` holder after its classes, as every language puts them."""
-        top_ops = [PythonOperation.from_function(n, self._text) for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+        top_ops = [PythonOperation.from_function(n, self._text, None) for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
         if not top_ops:
             return
         holder = PythonClass(name="_module", sequential_order=len(module.classes) + 1, line=1)

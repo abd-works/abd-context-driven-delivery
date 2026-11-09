@@ -30,13 +30,13 @@ The step library is written only for a new tree. A tree read from code already h
 
 A story test holds two kinds of content: what the story map knows (story, scenario, and step names, actors, examples) and the code someone wrote to run each step against the system. Generating the file again from the map must not lose that code.
 
-- **Every node keeps the code it was read with.** Reading a story file gives each story, background, and scenario the block it was written as (`written`), the code inside it that is not a scenario or step (`setup`), and each step its `body`. The file's own code above the first story and below the last stays with the file (*StoryReader*).
+- **Every node keeps the code it was read with.** Reading a story file gives each story, background, and scenario the block it was written as (`written`), the code inside it that is not a scenario or step (`setup`), and each step its `body`. Each story, scenario, and step reads its own block (`read_code`); the file's own code above the first story and below the last stays with the file (*StoryFile*).
 - **An unchanged node is written exactly as read.** While a node's `code_key` (for a story: its name, actors, evidence, and backgrounds; for a step: its keyword, text, and body) is the one it was read with, rendering in the same language writes its lines unchanged. A changed node is spelled again from the map with its bodies kept.
 - **Rendering takes the previous tree's code.** `render(canonical, previous)` is given the tree already on disk; every epic, story, scenario, and step in the new map that has no code in this language takes the code of the node with the same name in that tree. Moving a story or adding a scenario therefore keeps every step body that was already written.
 
 ## Adding a language
 
 1. Subclass *CodeStoryModel* (or *BraceStoryModel* for a language with braces), set `language`, `epic_type`, and `story_type`, and give it a `file_name` and `file_header`.
-2. Override only the spelling operations the language writes differently (`story_open`, `scenario_open`, `step_open`, `and_open`, and the others listed in `story-model.md`), and `load` to read its story files.
-3. Add a *StoryReader* subclass that finds each story block in a file, so code read in that language is kept.
+2. Override only the spelling operations the language writes differently (`story_open`, `scenario_open`, `step_open`, `and_open`, and the others listed in `story-model.md`). `CodeStoryModel.load` reads every language's story files one way; the language's story and scenario classes give only the patterns their text uses (`_NAME`, `_STORY_START`, `_SCENARIO`, `_IMPORT`).
+3. Add a *StoryFile* that finds each block in a file, and a block class that answers the *CodeBlock* shape, so code read in that language is kept; give the format its `story_file_suffixes`, and its `not_story_paths` when some files that end that way hold no story.
 4. List the format under `formats` in `Stories` (`practices/stories/stories.py`).

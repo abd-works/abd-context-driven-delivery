@@ -10,8 +10,10 @@ keeps; nothing is read from disk again.
 from __future__ import annotations
 
 import re
+import zlib
 from functools import cached_property
 from typing import TYPE_CHECKING, Callable, Optional
+from pathlib import PurePosixPath
 
 from harness.graph.graph import Node
 
@@ -87,6 +89,38 @@ def _opening_docblock(lines: list[str]) -> str:
     return text[start:end]
 
 
+def example_source_file(story_test: str, imported_modules: dict[str, str], name: str) -> str:
+    """The file the example called name comes from, named from the project like story_test: the module story_test
+    imports it from, with story_test's own extension and, for a relative import, resolved against story_test's folder;
+    else story_test itself, which declares the example."""
+    module = imported_modules.get(name)
+    if module is None:
+        return story_test
+    suffix = PurePosixPath(story_test).suffix
+    if not module.startswith("."):
+        return module + suffix
+    parts: list[str] = list(PurePosixPath(story_test).parent.parts)
+    for part in PurePosixPath(module).parts:
+        if part == "..":
+            parts = parts[:-1]
+        elif part != ".":
+            parts.append(part)
+    return "/".join(parts) + suffix
+
+
+def imported_example_files(story_test: str, text: str) -> list[str]:
+    """The files story_test imports names from by a relative import, named from the project: where its examples can
+    come from."""
+    imported = _imported_modules(text)
+    return sorted({example_source_file(story_test, imported, name) for name, module in imported.items() if module.startswith(".")})
+
+
+def step_node_id(kind: str, file: str, line: int, name: str) -> str:
+    """A step's graph id: its kind, file, line, and a checksum of its name. A checksum, never ``hash``: Python salts
+    ``hash`` per process, and a step must keep its id in the worker that refreshes the graph and in the server."""
+    return f"stories:{kind}:{file}:{line}:{zlib.crc32(name.encode('utf-8')) & 0xFFFFFF}"
+
+
 def story_file_facts(text: str) -> dict:
     """Facts a story file owns, read from its text: they sit on the Story node, and its scenarios, steps, and examples
     read them through get_fact."""
@@ -119,20 +153,21 @@ class StoryRecording:
 
     def write(self) -> None:
         for epic in self.story_map.epics:
-            epic.record(self, self.practice.in_graph.root, True)
+            epic.record(self, self.practice.in_graph.root)
 
     def announce(self, story) -> None:
         self.story_at += 1
         if self.on_node is not None:
             self.on_node(f"{self.story_at}/{self.story_total} · {story.name}")
 
-    def add(self, node_id: str, name: str, semantic: str, file: str, span: tuple[int, int], story_object, facts=None) -> Node:
-        """The story object added as the graph node node_id, called name, of type semantic, at span in file, with the
-        facts it does not hold itself; the node already called node_id when two objects share it."""
+    def add(self, story_object, node_id: str, at: SourceLocation, facts=None) -> Node:
+        """story_object added as the graph node node_id, called by its recorded name and of its recorded type, at the
+        lines at names, with the facts it does not hold itself; the node already called node_id when two objects
+        share it."""
         if not self.practice.in_graph.holds(node_id):
-            story_object.name = name
-            story_object.type = semantic
-        node = self.practice.in_graph.add(story_object, node_id, file or ".", span[0], span[1])
+            story_object.name = story_object.recorded_name
+            story_object.type = story_object.recorded_type
+        node = self.practice.in_graph.add(story_object, node_id, at.file or ".", at.line, at.end_line or at.line)
         for key, value in (facts or {}).items():
             node.set_fact(key, value)
         return node
@@ -140,13 +175,6 @@ class StoryRecording:
     def text_of(self, file: str) -> str:
         return self.story_map.source_texts.get(file, "") if file else ""
 
-    def example_facts(self, name: str) -> dict:
-        """The names the source of the example called name holds: the text of the first TypeScript file the map was read
-        from that declares ``function name``. ``source_names`` is every identifier in it and ``source_reads`` every name
-        it reads as a member (``.name``). They save with the graph, so an example is linked to the classes it shows and
-        the properties it reads whichever process holds the graph."""
-        text = self._function_sources.get(name, "")
-        return {"source_names": sorted(set(_IDENTIFIER.findall(text))), "source_reads": sorted(set(_MEMBER_READ.findall(text)))}
 
     @cached_property
     def _function_sources(self) -> dict[str, str]:
@@ -162,19 +190,35 @@ class StoryRecording:
     def facts_of(self, file: str) -> dict:
         return story_file_facts(self.text_of(file))
 
-    def name_span(self, file: str, name: str, folder: str) -> tuple[str, int, int]:
-        """The file and line that name name; the folder alone when no line of file does."""
-        line = next((index for index, text in enumerate(self.text_of(file).splitlines(), start=1) if name and name in text), None)
-        return (file, line, line) if line is not None else (folder or ".", 0, 0)
+    def example_facts(self, file: str, name: str) -> dict:
+        """The facts of the example called name that story file declares or imports. They save with the graph, so a
+        reader in any process has them:
 
-    def span_of(self, node, file: str, fallback_text: str = "") -> tuple[int, int]:
-        """The lines node was read from, else the next line of file that holds its text."""
+        - ``source_names`` and ``source_reads``: every identifier, and every name read as a member (``.name``), in the
+          first TypeScript file the map was read from that declares ``function name``, so an example is linked to the
+          classes it shows and the properties it reads;
+        - ``export_names``: the names exported by the file the example comes from, when that is another file the map
+          read (an examples module the story test imports); otherwise the story file's own apply."""
+        text = self._function_sources.get(name, "")
+        facts = {"source_names": sorted(set(_IDENTIFIER.findall(text))), "source_reads": sorted(set(_MEMBER_READ.findall(text)))}
+        source = example_source_file(file, story_file_facts(self.text_of(file))["imported_modules"], name)
+        if source != file and self.text_of(source):
+            facts["export_names"] = _EXPORT_CONST.findall(self.text_of(source))
+        return facts
+
+    def name_span(self, file: str, name: str, folder: str) -> SourceLocation:
+        """The line of file that names name; the folder alone when no line of file does."""
+        line = next((index for index, text in enumerate(self.text_of(file).splitlines(), start=1) if name and name in text), None)
+        return SourceLocation(file, line, line) if line is not None else SourceLocation(folder or ".")
+
+    def span_of(self, node, file: str, fallback_text: str = "") -> SourceLocation:
+        """The lines of file node was read from, else the next line of file that holds its text."""
         source = getattr(node, "source", None)
         if source is not None and getattr(source, "line", None):
             start = int(source.line or 1)
-            return start, int(getattr(source, "end_line", None) or start)
+            return SourceLocation(file, start, int(getattr(source, "end_line", None) or start))
         line = self._next_line(file, fallback_text or getattr(node, "name", ""))
-        return line, line
+        return SourceLocation(file, line, line)
 
     def _next_line(self, file: str, text: str) -> int:
         lines = self.text_of(file).splitlines()
@@ -189,10 +233,10 @@ class StoryRecording:
                 return index + 1
         return 1
 
-    def place(self, node, file: str, span: tuple[int, int]) -> None:
-        """Name file and span on a node that names no file yet."""
+    def place(self, node, at: SourceLocation) -> None:
+        """Name the file and lines at gives on a node that names no file yet."""
         if not file_of(node):
-            node.source = SourceLocation(file or ".", span[0], span[1])
+            node.source = SourceLocation(at.file or ".", at.line, at.end_line)
 
 
 def file_of(node) -> str:

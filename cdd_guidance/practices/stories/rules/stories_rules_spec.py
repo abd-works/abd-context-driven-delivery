@@ -19,13 +19,10 @@ from cdd_guidance.practices.stories.rules.scenarios import AndChaining, Scenario
 
 
 def _scenario(practice, name: str = "Display Create Account") -> Node:
-    return Node(
-        practice,
-        "Scenario",
-        f"stories:Scenario:story.ts:{name}",
-        name,
-        Source("story.ts", 1, 1),
-    )
+    """A scenario the practice holds, as a read holds it, so the graph's check reaches it."""
+    scenario = Node(practice, "Scenario", f"stories:Scenario:story.ts:{name}", name, Source("story.ts", 1, 1))
+    practice.in_graph.hold(scenario)
+    return scenario
 
 
 def _step(practice, semantic: str, text: str, line: int) -> Node:

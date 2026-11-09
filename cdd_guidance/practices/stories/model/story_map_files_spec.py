@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 
 from expects import equal, expect
-from mamba import after, before, description, it
+from mamba import after, before, context, description, it
 
 from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles
 
@@ -43,3 +43,60 @@ with description("the story files of a folder"):
         expect(_named(self.root, StoryMapFiles(self.root).story_files_below())).to(
             equal(["shop/tests/place-order/submit_order_story.test.md"])
         )
+
+
+with description("the thin slicing of a folder"):
+    with before.each:
+        self.folder = tempfile.TemporaryDirectory()
+        self.root = Path(self.folder.name)
+
+    with after.each:
+        self.folder.cleanup()
+
+    with context("that sits only in a folder a scan never enters"):
+        with before.each:
+            _write(self.root, "node_modules/kit/thin-slicing.md", _MAP)
+            _write(self.root, ".venv/lib/thin-slicing.md", _MAP)
+
+        with it("should find none"):
+            expect(StoryMapFiles(self.root).thin_slicing()).to(equal(None))
+
+    with context("that is kept in a folder's .context"):
+        with before.each:
+            _write(self.root, "node_modules/kit/thin-slicing.md", _MAP)
+            _write(self.root, "shop/.context/thin-slicing.md", _MAP)
+
+        with it("should find the one in .context"):
+            expect(_named(self.root, [StoryMapFiles(self.root).thin_slicing()])).to(equal(["shop/.context/thin-slicing.md"]))
+
+    with context("that sits beside the map and below it"):
+        with before.each:
+            _write(self.root, "thin-slicing.md", _MAP)
+            _write(self.root, "shop/thin-slicing.md", _MAP)
+
+        with it("should find the one in the folder itself"):
+            expect(_named(self.root, [StoryMapFiles(self.root).thin_slicing()])).to(equal(["thin-slicing.md"]))
+
+
+with description("the nearest story map of a folder"):
+    with before.each:
+        self.folder = tempfile.TemporaryDirectory()
+        self.root = Path(self.folder.name)
+        _write(self.root, "story-map.md", _MAP)
+        (self.root / "project" / "tests" / "place-order").mkdir(parents=True)
+
+    with after.each:
+        self.folder.cleanup()
+
+    with context("with no story map in the project the search stops at"):
+        with it("should find none above the project"):
+            files = StoryMapFiles(self.root / "project" / "tests" / "place-order", top=self.root / "project")
+            expect(files.nearest()).to(equal(None))
+
+    with context("with a story map in the project"):
+        with before.each:
+            _write(self.root, "project/.context/story-map.md", _MAP)
+
+        with it("should find the project's map"):
+            files = StoryMapFiles(self.root / "project" / "tests" / "place-order", top=self.root / "project")
+            expect(_named(self.root, [files.nearest()])).to(equal(["project/.context/story-map.md"]))

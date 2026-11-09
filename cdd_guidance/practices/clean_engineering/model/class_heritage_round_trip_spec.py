@@ -157,6 +157,14 @@ with description("a source the class model cannot read"):
         with it("should raise UnreadableSource rather than read a partial model"):
             expect(lambda: PythonCleanEngineeringModel().parse("class Cart(:\n    pass\n")).to(raise_error(UnreadableSource))
 
+    with context("JSON that does not parse"):
+        with it("should raise UnreadableSource, as every other format does"):
+            expect(lambda: JsonCleanEngineeringModel().parse("{\"modules\": [")).to(raise_error(UnreadableSource))
+
+    with context("JSON that holds neither modules nor classes"):
+        with it("should raise UnreadableSource rather than read an empty model"):
+            expect(lambda: JsonCleanEngineeringModel().parse("{\"name\": \"shop\"}")).to(raise_error(UnreadableSource))
+
     with context("a draw.io file that is not XML"):
         with it("should raise UnreadableSource rather than read an empty model a sync would delete every class for"):
             expect(lambda: DrawIOCleanEngineeringModel().parse("<mxfile><diagram>")).to(raise_error(UnreadableSource))

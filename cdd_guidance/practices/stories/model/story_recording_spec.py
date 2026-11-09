@@ -21,7 +21,7 @@ with description("a story map recorded on a graph"):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
         story = Story("Submit Order")
-        scenario = Scenario("Happy path", story_name="Submit Order")
+        scenario = Scenario("Happy path")
         scenario.steps = [
             Step("cart has items", step_type=StepType.GIVEN, sequential_order=1, keyword="Given"),
             Step(
@@ -66,6 +66,33 @@ with description("a story map recorded on a graph"):
             if edge.parent is scenario
         ]
         expect(len(steps)).to(equal(3))
+
+
+with description("a merged story map whose two maps each hold a story a story test specifies"):
+    with before.each:
+        self.tmp = tempfile.TemporaryDirectory()
+        model = StoryModel()
+        for order, file in enumerate(["story-map.md", "story-map.drawio"], start=1):
+            story = Story("Submit Order")
+            story.source = SourceLocation(file, 1, 1)
+            epic = Epic(f"Place Orders {order}", order)
+            epic.append_story(story)
+            model.append_epic(epic)
+        read = Story("Submit Order")
+        read.scenarios = [Scenario("Happy path")]
+        model.take_scenarios([read], "tests/submit_order_story.test.ts")
+        graph = Graph()
+        graph.open(Path(self.tmp.name))
+        self.practice = graph.practice("stories")
+        model.record(self.practice)
+
+    with after.each:
+        self.tmp.cleanup()
+
+    with it("should record the story test's scenario under both stories"):
+        scenario = self.practice.in_graph.nodes("Scenario")[0]
+        stories = [edge.parent for edge in self.practice.in_graph.edges("scenarios") if edge.child is scenario]
+        expect(len(stories)).to(equal(2))
 
 
 def _imports_of(root: Path, file: str, text: str) -> dict:

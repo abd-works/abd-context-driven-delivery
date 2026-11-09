@@ -103,6 +103,18 @@ with description("a partition action"):
         with it("should write under the session's root"):
             expect(f"docs under {self.root}/.context/" in self.reply).to(be_true)
 
+    with context("that an agent calls on a fidelity after the practice's first"):
+        with before.each:
+            operation = Partition()._discover_instruction_members()["partition"]
+            arguments = {"guidance": "stories-scenarios", "paths": "README.md", "context": "", "mode": "one_go", "out_root": None}
+            self.reply = operation.invoke(arguments, project=self.project)
+
+        with it("should name what the index lists from that fidelity's own Scaffold subsection"):
+            expect("the names of its scenarios" in self.reply).to(be_true)
+
+        with it("should not hand over the first fidelity's Scaffold"):
+            expect("verb-noun Epic, Sub-Epic, and Story names" in self.reply).to(be_false)
+
     with context("that names an out_root"):
         with it("should index the corpus under that folder"):
             folder = Path(tempfile.mkdtemp())

@@ -45,8 +45,7 @@ function extractModelJson(html) {
 
 const current = fs.readFileSync(sandboxMockup, "utf8");
 const mapBody = extractMainBody(current);
-const storyOutline = extractJsonScript(current, "story-outline");
-const screenStories = extractJsonScript(current, "screen-stories");
+const explorerTree = extractJsonScript(current, "story-explorer-tree");
 const modelJson = extractModelJson(current);
 
 const inlineScript = [
@@ -59,8 +58,7 @@ let output = read("templates/html/map_mockup_shell.html");
 output = output
   .replaceAll("@@TITLE@@", "My Paradise")
   .replace("@@MAP_BODY@@", mapBody)
-  .replace("@@STORY_OUTLINE@@", storyOutline)
-  .replace("@@SCREEN_STORIES@@", screenStories)
+  .replace("@@EXPLORER_TREE@@", explorerTree)
   .replace("@@INLINE_SCRIPT@@", inlineScript)
   .replace("@@START_SCREEN@@", "Create Account")
   .replace("@@MODEL_JSON@@", modelJson);

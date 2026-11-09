@@ -187,6 +187,9 @@ with description("a graph built for a chat's call"):
         with before.all:
             self.domain = Path(tempfile.mkdtemp())
             (self.domain / "cart").mkdir()
+            # The folder is a bounded context, so DDD reads the classes' names as the building blocks they name.
+            (self.domain / ".context").mkdir()
+            (self.domain / ".context" / "bounded-context.md").write_text("# Sales\n", encoding="utf-8")
             (self.domain / "cart" / "cart.ts").write_text(_CART, encoding="utf-8")
             (self.domain / "cart" / "cart_repository.ts").write_text(_CART_REPOSITORY, encoding="utf-8")
             practices = {"clean_engineering": ".", "ddd": "."}

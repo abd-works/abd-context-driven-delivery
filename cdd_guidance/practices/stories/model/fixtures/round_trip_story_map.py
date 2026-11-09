@@ -76,7 +76,7 @@ def _background() -> Background:
 
 
 def _scenario() -> Scenario:
-    scenario = Scenario("pays a bill that is due", 1, "Submit Payment")
+    scenario = Scenario("pays a bill that is due", 1)
     given = Step("a bill is due", StepType.GIVEN, 1, keyword="Given")
     given.ands = [Step("the balance covers it", StepType.GIVEN, 1, keyword="And")]
     scenario.steps = [

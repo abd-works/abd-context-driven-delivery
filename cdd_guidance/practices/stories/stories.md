@@ -118,6 +118,12 @@ Ask what is already true, what the person or system does, what someone else can 
 
 **Use the correct evidence mode.** For brownfield capture, inspect the running product when it exists and reconcile the Story Map and Scenarios with observed behaviour before finalizing them. For greenfield specification, agreed Scenarios define intended behaviour before production code exists.
 
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough scenario index for a **partition** pass or first cut — the story map's epics and stories, each story with the names of its scenarios (`{Actor} {does something} {and sees a result}`) and the actor it serves. No Given/When/Then steps, no examples, no backgrounds yet: a scenario name says which case the source describes, and the steps are written when the scenarios are generated.
+
 #### Rules
 
 ```yaml
@@ -200,6 +206,12 @@ When scenario realizations exist (inline or `{scope}-scenario-realization.md`), 
 **Develop the behaviour, not only the test.** Acceptance-test work owns both the executable specification and the production code that satisfies it. Represent each named scenario example as one code fixture, and do not invent fixture values the scenario does not name. Take one Scenario at a time: write the failing acceptance test, invoke the Clean Engineering companion at `code` fidelity, implement the smallest production change that can pass, rerun the test, refactor when it is green, and then continue to the next behaviour. After two failed fix attempts, diagnose the failure before changing more code.
 
 Refer to [`cdd_guidance/references/language-tools.md`](../../references/language-tools.md) for language-specific test tools and idioms.
+
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough story-test index for a **partition** pass or first cut — for each story, the story-test file it becomes (`tests/<epic>/<story>_story.test.ts` or the language's spelling) and the scenarios that file will hold, with the domain objects and examples each scenario names. No test bodies, step library, or production code yet.
 
 #### Rules
 

@@ -234,14 +234,24 @@ class Screen(UxNode):
         self._story_links.append(link)
         self._sync_schema_edges()
 
+    @property
+    def story_links(self) -> List[StoryLink]:
+        """The stories this screen shows, in the order it shows them: each link holds its Story once the screen's
+        graph has it, else only the name the formats write."""
+        return self._links("Story")
+
     def _shown_nodes(self, kind: str) -> List[Node]:
-        """The Stories nodes this screen's links of kind name on its graph. While no practice holds the screen, the
-        nodes its links already hold, as a copy of a screen keeps the nodes its source found."""
+        """The Stories nodes this screen's links of kind name on its graph."""
+        return [link.node for link in self._links(kind) if link.node is not None]
+
+    def _links(self, kind: str) -> List[StoryLink]:
+        """This screen's links of kind, each holding the node it names on the screen's graph. While no practice holds
+        the screen, each holds the node it already held, as a copy of a screen keeps the nodes its source found."""
         links = [link for link in self._story_links if link.kind == kind]
-        if self.practice is None:
-            return [link.node for link in links if link.node is not None]
-        found = (link.resolved_on(self.graph) for link in links)
-        return [node for node in found if node is not None]
+        if self.practice is not None:
+            for link in links:
+                link.resolved_on(self.graph)
+        return links
 
     def _keys(self, kind: str) -> List[str]:
         return [link.key for link in self._story_links if link.kind == kind]

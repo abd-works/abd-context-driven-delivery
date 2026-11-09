@@ -35,11 +35,14 @@ class PlainEnglishOnly(PracticeGraphRule):
 
 
 class SignatureMarkers(PracticeGraphRule):
+    """A behavior-fidelity spec marks each signature. A finished spec has replaced every marker with its test body,
+    so it is not asked for one."""
+
     slug = "framework-syntax"
     node_types = ("Spec",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        if node.get_fact("signature_marker", True):
+        if node.get_fact("signature_marker", True) or node.get_fact("developed", False):
             return []
         return ["Spec file is missing a BDD: SIGNATURE marker."]
 

@@ -7,7 +7,7 @@ _REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from expects import be_true, contain, equal, expect
+from expects import be_true, contain, equal, expect, have_len
 from mamba import context, description, it
 
 from harness.graph.rule_fixture import SchemaRuleRun
@@ -228,6 +228,31 @@ export class AccountCredentialsClient {
             hits = fixture.hits(rule)
             expect(len(hits)).to(equal(1))
             expect(hits[0]).to(contain("verify"))
+
+        with it("should not flag a TypeScript constructor that sets several fields"):
+            source = """
+export class AccountCredentialsClient {
+  constructor(store: Store) {
+    this.validation.validationCode = '';
+    this.store.client = store;
+    this.validation.verified = false;
+  }
+}
+"""
+            fixture = practice_from_source(source, lang="typescript", filename="account-client.ts")
+            expect(fixture.hits(ce_rule_by_slug("state-change-returns-record-or-named-failure"))).to(equal([]))
+
+        with it("should not flag a Python __init__ that sets several nested fields"):
+            source = """
+class Client:
+    def __init__(self, store):
+        self.validation.code = ''
+        self.store.client = store
+        self.validation.verified = False
+"""
+            fixture = practice_from_source(source, filename="client.py")
+            expect(fixture.hits(ce_rule_by_slug("state-change-returns-record-or-named-failure"))).to(equal([]))
+
     with context("use-intention-revealing-names"):
         with it("should allow value on a TypeScript property setter"):
             rule = ce_rule_by_slug("use-intention-revealing-names")
@@ -313,6 +338,14 @@ export class Billing {
             hits = fixture.hits(rule)
             expect(hits).to(contain("Parameter 'maxAttempts' is missing a type annotation."))
             expect(" ".join(hits)).not_to(contain("retry"))
+        with it("should not judge plain JavaScript, which has no syntax for a parameter's type"):
+            source = "export class Tree {\n  draw(root, keys) {\n    return root.append(keys);\n  }\n}\n"
+            fixture = practice_from_source(source, lang="javascript", filename="screen-tree.js")
+            expect(fixture.hits(ce_rule_by_slug("use-typed-signatures"))).to(equal([]))
+        with it("should still judge the same parameters in TypeScript"):
+            source = "export class Tree {\n  draw(root, keys) {\n    return root.append(keys);\n  }\n}\n"
+            fixture = practice_from_source(source, lang="typescript", filename="screen-tree.ts")
+            expect(fixture.hits(ce_rule_by_slug("use-typed-signatures"))).to(have_len(2))
         with it("should not flag the cls of a Python classmethod"):
             rule = ce_rule_by_slug("use-typed-signatures")
             source = "class Ticket:\n    @classmethod\n    def load(cls, ticket: str) -> 'Ticket':\n        return cls()\n"
@@ -655,6 +688,29 @@ with description("Clean Engineering graph rules (inline fault and clean fixtures
                     }
                 ).hits(ce_rule_by_slug("extensions-live-with-the-domain"))
             ).to(equal([]))
+
+        with it("should accept a format class in a package nested under the domain it extends"):
+            expect(
+                practice_from_files(
+                    {
+                        "ddd/model/nodes.py": "class Aggregate:\n    pass\n",
+                        "ddd/model/markdown/nodes.py": (
+                            "from ddd.model.nodes import Aggregate\n\n\nclass MarkdownNode:\n    pass\n\n\n"
+                            "class MarkdownAggregate(Aggregate, MarkdownNode):\n    pass\n"
+                        ),
+                    }
+                ).hits(ce_rule_by_slug("extensions-live-with-the-domain"))
+            ).to(equal([]))
+
+        with it("should still flag an extension kept in the framework package beside the domain"):
+            expect(
+                practice_from_files(
+                    {
+                        "framework/node.py": "class Node:\n    pass\n\n\nclass GraphEpic(Epic, Node):\n    pass\n",
+                        "domain/epic.py": "class Epic:\n    pass\n",
+                    }
+                ).hits(ce_rule_by_slug("extensions-live-with-the-domain"))
+            ).to(have_len(1))
 
     with context("write-interactions"):
         with it("should flag a bold Interaction bullet in a markdown class"):

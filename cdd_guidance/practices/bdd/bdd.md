@@ -145,6 +145,12 @@ Define BDD signatures — describe/it names for every observation, no test bodie
 
 Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
 
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough behavior index for a **partition** pass or first cut — the subjects under test, each with its plain-English `describe` name, the `that` and `with` states the source describes, and the `it should` observations under each. Names only: no `BDD: SIGNATURE` bodies yet.
+
 #### Rules
 
 ```yaml
@@ -156,8 +162,8 @@ Whenever you name or re-nest describe/it signatures, change code that relies on 
 
 If this change will not stay here, follow `practices/bdd.mdc`.
 
-- **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup.
-- **`framework-syntax`** — Refer to [`cdd_guidance/references/language-tools.md`](../../references/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
+- **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup. The rule judges a spec still at behavior fidelity: once development has replaced every `BDD: SIGNATURE` marker with a test body that asserts, the spec is a finished test and its bodies belong there.
+- **`framework-syntax`** — Refer to [`cdd_guidance/references/language-tools.md`](../../references/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs. Mark each signature with `BDD: SIGNATURE` until development replaces it; a finished spec carries none.
 
 **Pass:**
 ```typescript
@@ -208,6 +214,12 @@ Ask which public operation on the subject under test each observation exercises,
 - Store graphs on observations in the BDD model: fenced blocks in `templates/bdd-sketch.md`, round-tripped through `practices/bdd/model` (same call-graph conversion as stories and clean engineering).
 
 Fill the **realization** section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`) — call-graph comments or structured `realization` data beside each `BDD: SIGNATURE` until **development** replaces them with real Arrange / Act / Assert.
+
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough realization index for a **partition** pass or first cut — under each `it should` observation of the behavior index, the domain operations it calls, in the order the observation runs them. No call-graph detail beyond the operation names yet.
 
 #### Rules
 
@@ -282,6 +294,12 @@ When generating or satisfying against a module that already exists, check the be
 #### Arrange-Act-Assert
 
 Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behavior` above). Split unrelated expects. Shared construction → `beforeEach` / factory at three sibling dupes.
+
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough development index for a **partition** pass or first cut — the spec files the behavior index becomes, each with the subject it describes and the production module it tests. No test bodies yet.
 
 #### Rules
 

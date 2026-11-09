@@ -5,6 +5,8 @@ from expects import be_false, be_true, equal, expect, have_len, raise_error
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError
+from cdd_guidance.practices.stories.model.java.java_story_model import JavaStoryModel
+from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
 from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
 from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Story, StoryModel, StoryType
 from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
@@ -196,3 +198,67 @@ with description("a code Story Map") as self:
     with context("that has been asked to parse a value that is not a mapping of paths to file content"):
         with it("should reject it"):
             expect(lambda: self.code_map.parse("not a mapping")).to(raise_error(CodeStoryModelError))
+
+
+def epic_names_read_back(model) -> list:
+    """The epic names model reads back from the files it writes for four epics."""
+    return [epic.name for epic in model.parse(model.render(epics_each_with_a_story(4))).epics]
+
+
+with description("a code Story Map under a tests root two folders deep") as self:
+    with context("in Python"):
+        with it("should read each epic from the folder below the tests root"):
+            expect(epic_names_read_back(PythonStoryModel("stories/tests"))).to(equal(["Epic 1", "Epic 2", "Epic 3", "Epic 4"]))
+
+    with context("in JavaScript"):
+        with it("should read each epic from the folder below the tests root"):
+            expect(epic_names_read_back(JavaScriptStoryModel("stories/tests"))).to(equal(["Epic 1", "Epic 2", "Epic 3", "Epic 4"]))
+
+    with context("in Java"):
+        with it("should read each epic from the folder below the tests root"):
+            expect(epic_names_read_back(JavaStoryModel("stories/tests"))).to(equal(["Epic 1", "Epic 2", "Epic 3", "Epic 4"]))
+
+    with context("in TypeScript"):
+        with it("should read each epic from the folder below the tests root"):
+            expect(epic_names_read_back(TypeScriptStoryModel("stories/tests"))).to(equal(["Epic 1", "Epic 2", "Epic 3", "Epic 4"]))
+
+
+with description("a code Story Map asked which files are its story files") as self:
+    with context("in Java"):
+        with it("should leave out a helper beside a story file"):
+            expect(JavaStoryModel.is_story_file("tests/checkout/PaymentHelper.java")).to(be_false)
+
+    with context("in TypeScript"):
+        with it("should leave out a story file under an examples folder"):
+            expect(TypeScriptStoryModel.is_story_file("tests/checkout/examples/card_story.test.ts")).to(be_false)
+
+        with it("should take a shared story file"):
+            expect(TypeScriptStoryModel.is_story_file("tests/checkout/pay.story.shared.ts")).to(be_true)
+
+
+with description("a story read from a TypeScript story file") as self:
+    with before.each:
+        from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
+        from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
+
+        text = (
+            "story('Pay by card', () => {\n"
+            "  const card = new Card();\n"
+            "  scenario('the card is charged', ({ given }) => {\n"
+            "    given('a basket', () => {\n"
+            "      basket.add(item);\n"
+            "    });\n"
+            "  });\n"
+            "});\n"
+        )
+        self.story = TypeScriptStoryModel.story_type.load_all(text)[0]
+        self.story.read_code(BraceStoryFile(TYPESCRIPT, text).story_blocks()[0], [])
+
+    with it("should keep the line that opens its block"):
+        expect(self.story.written.heading).to(equal(["story('Pay by card', () => {"]))
+
+    with it("should keep the code it shares between its scenarios as its setup"):
+        expect(self.story.setup.text.strip()).to(equal("const card = new Card();"))
+
+    with it("should give its scenario's step the body its block holds"):
+        expect(self.story.scenarios[0].steps[0].body.text.strip()).to(equal("basket.add(item);"))

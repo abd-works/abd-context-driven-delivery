@@ -22,6 +22,7 @@ def _hits(file: str, *, imported_from: str | None = None) -> list[str]:
     node = Node(practice, "Example", f"stories:Example:{file}:validCustomer", "validCustomer", Source(file, 1, 1))
     if imported_from is not None:
         node.set_fact("imported_modules", {"validCustomer": imported_from})
+    practice.in_graph.hold(node)
     return SchemaRuleRun(DomainFixtureExampleFiles(), RuleCheckContext(practice, None)).node_hits(node)
 
 

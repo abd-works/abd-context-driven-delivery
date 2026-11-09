@@ -35,8 +35,8 @@ with description("peer private access in operation bodies"):
 
     with it("should set peer_private_access on parsed operations"):
         own = Operation("constructor", 1)
-        own.load_brace_body_facts("this._email = email;\nthis._password = password;")
+        own.load_brace_body_facts("this._email = email;\nthis._password = password;", "Account")
         expect(own.peer_private_access).to(equal(False))
         cross = Operation("run", 2)
-        cross.load_brace_body_facts("other._state = value;")
+        cross.load_brace_body_facts("other._state = value;", "Account")
         expect(cross.peer_private_access).to(equal(True))

@@ -18,13 +18,16 @@ _FIELD_CHANGE = re.compile(r"^with[A-Z]")
 
 class UseTypedSignatures(ProductionCodeRule):
     """Judged on each parameter, which the graph reads for every operation's signature, so an untyped parameter is
-    reported once, where it is written."""
+    reported once, where it is written. A parameter of a language with no type syntax, such as plain JavaScript, has
+    nothing to judge."""
 
     slug = "use-typed-signatures"
     node_types = ("Parameter",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if _FIELD_CHANGE.match(str(node.get_fact("operation_name") or "")) or not node.has_fact("type_hint"):
+            return []
+        if not node.get_fact("in_typed_language", True):
             return []
         return _param_violation(node.name, node.get_fact("type_hint"))
 

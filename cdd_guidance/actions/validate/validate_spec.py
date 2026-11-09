@@ -427,9 +427,9 @@ with description("a validate action on practice guidance") as self:
             expect(report).to(contain("verb-noun-format"))
             expect(report).to(contain(f"[{_STORY_FILE}]("))
 
-        with it("should report the framework-syntax violation on the edited spec"):
+        with it("should report the observable-behavior violation on the edited spec"):
             report = self.action.validate(guidance=["bdd-development"], paths=[_SPEC_FILE])
-            expect(report).to(contain("framework-syntax"))
+            expect(report).to(contain("observable-behavior"))
             expect(report).to(contain(f"[{_SPEC_FILE}]("))
 
         with it("should report only the violations of the guidance's own practice"):
@@ -459,7 +459,7 @@ with description("a validate action on practice guidance") as self:
             with it("should report to each call the violations of the file it checks"):
                 expect(self.failures).to(equal([]))
                 expect(self.reports["ddd-tactics"]).to(contain("private-method-naming"))
-                expect(self.reports["bdd-development"]).to(contain("framework-syntax"))
+                expect(self.reports["bdd-development"]).to(contain("observable-behavior"))
 
         # Calls running at once would each read the graph the last one wrote.
         with it("should write no graph that every call in the session shares"):

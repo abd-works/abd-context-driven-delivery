@@ -100,6 +100,22 @@ with description("classes compared across the graph"):
                 },
             )
 
+        with it("should accept a dict keyed by a number, whose values are names"):
+            files = {
+                "recipe/loop.py": "class Loop:\n    item: str\n",
+                "recipe/expansion.py": "class RecipeExpansion:\n    _loop_item_modes: dict[int, str]\n",
+            }
+            expect(_hits("do-not-invent-parallel-object-models", files)).to(equal([]))
+
+        with it("should accept two classes of one file that each hold the one object they belong to"):
+            files = {
+                "kanban/board.py": (
+                    "class Board:\n    columns: list\n\n\nclass Card:\n    _board: Board\n\n    def move(self) -> int:\n        return 1\n\n\n"
+                    "class BoardReads:\n    _board: Board\n\n    def cards(self) -> int:\n        return 1\n"
+                ),
+            }
+            expect(_hits("do-not-invent-parallel-object-models", files)).to(equal([]))
+
         with it("should name the copied fields and the owner"):
             hits = _hits(
                 "do-not-invent-parallel-object-models",
