@@ -187,10 +187,25 @@ export async function currentChatBar($: EngineInterface): Promise<ChatBarClient>
 // A failed read keeps the last board and says why, so the bar never draws old state as if it were current.
 export async function refreshChatBar($: EngineInterface): Promise<void> {
   try {
-    const board = await callTool<BoardOverviewData>($, 'board.overview', {})
+    const board = await readBoard($)
     await update($, chatBar, json => ({ ...json, board, problem: null }))
   } catch (failure) {
     await update($, chatBar, json => ({ ...json, problem: reasonOf(failure) }))
+  }
+}
+
+// A restart of the cdd server, as an install does, cuts off a call in flight. board.overview only reads, so a read cut
+// off that way is asked again once the server is back, before the bar says the board did not answer.
+const CUT_OFF = 'connection closed'
+const RESTART_WAIT_MILLISECONDS = 3000
+
+async function readBoard($: EngineInterface): Promise<BoardOverviewData> {
+  try {
+    return await callTool<BoardOverviewData>($, 'board.overview', {})
+  } catch (failure) {
+    if (!reasonOf(failure).includes(CUT_OFF)) throw failure
+    await $.clock.sleep(RESTART_WAIT_MILLISECONDS)
+    return callTool<BoardOverviewData>($, 'board.overview', {})
   }
 }
 
