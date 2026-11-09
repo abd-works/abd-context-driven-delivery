@@ -15,7 +15,9 @@ export type HealthViewJson = { areDetailsOpen: boolean }
 export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; error: string | null }
 
 // What the chat bar keeps between draws: board.overview's answer, and the server's own text when the last call failed.
-export type ChatBarJson = { board: object | null; problem: string | null }
+// problem is why the last board read failed, cleared by the next read that works. failure is an action the person ran
+// that failed, such as a switch or a close, kept until they dismiss it, so a refresh never hides it.
+export type ChatBarJson = { board: object | null; problem: string | null; failure: string | null }
 
 // Which of the chat bar's boxes is open above the line. switchTo names the session the activation dialog opens;
 // closing holds the branch the active session's work is on, checked out, whose work the close dialog offers to commit

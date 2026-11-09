@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
 
 import type { ChatFolderJson } from '../../types'
 import { reasonOf } from '../shared/failure'
-import type { ChatBarClient } from './chat-bar-client'
+import { showFailure, type ChatBarClient } from './chat-bar-client'
 
 // Where this chat works against where the active session's work is: the ticket's own worktree, else the repository's
 // main checkout, where activating it checked its branch out. A switch made in the chat bar moves the chat there with
@@ -40,11 +40,27 @@ export async function checkChatFolder($: EngineInterface, chatBar: ChatBarClient
   await update($, chatFolder, () => ({ current, expected }))
 }
 
-// Moves this chat to the main checkout, before a worktree it may be working in is deleted.
-export async function moveToMainCheckout($: EngineInterface): Promise<void> {
+// The desktop app moves a chat only when the agent's turn ends, so the chat bar waits that long for the move to land.
+const MOVE_WAIT_MILLISECONDS = 120_000
+const MOVE_CHECK_MILLISECONDS = 500
+
+// Moves this chat to the main checkout before a worktree it may be working in is deleted, and waits until it is there:
+// a chat still in the worktree holds its folder open, so the delete fails halfway. Answers why the chat is not in the
+// main checkout, or '' once it is.
+export async function moveToMainCheckout($: EngineInterface): Promise<string> {
   const [current, main] = await Promise.all([$.session.root(), mainCheckoutOf($)])
-  if (!main || sameFolder(current, main)) return
-  await moveChatTo($, main)
+  if (!main) return `git found no main checkout from ${current}`
+  if (sameFolder(current, main)) return ''
+  if (!(await moveChatTo($, main))) return `this chat did not move out of ${current}`
+  return (await arrivedIn($, main)) ? '' : `this chat is still in ${current} after ${MOVE_WAIT_MILLISECONDS / 1000} seconds, so its worktree is held open`
+}
+
+async function arrivedIn($: EngineInterface, folder: string): Promise<boolean> {
+  for (let waited = 0; waited < MOVE_WAIT_MILLISECONDS; waited += MOVE_CHECK_MILLISECONDS) {
+    if (sameFolder(await $.session.root(), folder)) return true
+    await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
+  }
+  return false
 }
 
 // Claude Code's /cd moves the chat where the session offers it. The desktop app offers no /cd: there the chat's folder
@@ -56,7 +72,7 @@ async function moveChatTo($: EngineInterface, folder: string): Promise<boolean> 
     else await askAgentToMove($, folder)
     return true
   } catch (failure) {
-    $.ui.toast(`This chat did not move to ${folder}: ${reasonOf(failure)}`)
+    await showFailure($, `This chat did not move to ${folder}: ${reasonOf(failure)}`)
     return false
   }
 }

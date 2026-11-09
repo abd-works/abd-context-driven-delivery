@@ -4,7 +4,7 @@ import type { ActionPickerJson, ChatBarViewJson, ChatFolderJson } from '../../ty
 import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
 import { ActionButtonView, PickerView } from './action-button-view'
-import { runHandoff, type ChatBarClient } from './chat-bar-client'
+import { dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
 import { followSession } from './chat-folder-client'
 import { openFiles, openReport } from './fidelity-files-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
@@ -143,6 +143,19 @@ function ElsewhereView($: EngineInterface, { Box, Button, Text }: ElementTable, 
   )
 }
 
+// An action that failed, in red above the line, until the person sends it to the chat with Fix or dismisses it with ✕.
+function FailureView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
+  const { Box, Button, Text } = elements
+  if (!chatBar.failure) return null
+  return (
+    <Box key="failure" flexDirection="row" gap={1} alignItems="center">
+      <Text color={BRAND.error}>{chatBar.failure}</Text>
+      <Button key="fix-failure" label="Fix" variant="primary" onPress={() => fixFailure($, chatBar)} />
+      {GlyphButtonView(elements, 'dismiss-failure', '✕', BRAND.muted, () => dismissFailure($))}
+    </Box>
+  )
+}
+
 // The chat bar above the prompt: the boxes a person opened sit above one line holding the server health mark, the
 // session name, the fidelity dots, the action button, and the stage icons. A failed board read says so above the line.
 export function ChatBarView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
@@ -151,6 +164,7 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
   return (
     <Box key="chat-bar" flexDirection="column" width={draw.width}>
       {chatBar.problem ? <Text color={BRAND.error}>{`The board did not answer: ${chatBar.problem}`}</Text> : null}
+      {FailureView($, elements, draw)}
       {draw.busy.doing ? <Text key="busy" color={BRAND.accent}>{`${draw.busy.wheel} ${draw.busy.doing}…`}</Text> : null}
       {ElsewhereView($, elements, draw)}
       {CloseView($, elements, draw)}

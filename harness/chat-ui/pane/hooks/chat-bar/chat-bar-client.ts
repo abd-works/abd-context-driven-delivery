@@ -13,7 +13,7 @@ import { StageClient, shownStageName } from './stage-client'
 
 // The chat bar: the active session's line above the prompt. Sources: harness/chat-ui/.context/story-map.md,
 // cdr/0001-stage-strip-band.md, design/StageStrip.dc.html. Every rule lives in the Python Ticket; this file shows its answers.
-const chatBar = atom({ plugin: 'cdd-board', key: 'chatBar' } as const, { board: null, problem: null } as ChatBarJson, { shape: 'chat-bar-overview' })
+const chatBar = atom({ plugin: 'cdd-board', key: 'chatBar' } as const, { board: null, problem: null, failure: null } as ChatBarJson, { shape: 'chat-bar-overview-2' })
 
 
 // The active session's line: health mark, session name, fidelity dots, action button, stage icons.
@@ -27,9 +27,13 @@ export class ChatBarClient {
   ) {
     this.board = json.board as BoardOverviewData | null
     this.problem = json.problem
+    this.failure = json.failure ?? null
   }
 
   readonly problem: string | null
+
+  // An action the person ran that failed, in the server's own words, shown until they dismiss it.
+  readonly failure: string | null
 
   // The tickets a person can switch to, each named in the stage it is in, as board.overview sends them.
   get openTickets(): { name: string; stage: string }[] {
@@ -184,17 +188,33 @@ export async function currentChatBar($: EngineInterface): Promise<ChatBarClient>
 export async function refreshChatBar($: EngineInterface): Promise<void> {
   try {
     const board = await callTool<BoardOverviewData>($, 'board.overview', {})
-    await update($, chatBar, () => ({ board, problem: null }))
+    await update($, chatBar, json => ({ ...json, board, problem: null }))
   } catch (failure) {
     await update($, chatBar, json => ({ ...json, problem: reasonOf(failure) }))
   }
+}
+
+// An action that failed stays above the line until the person dismisses it: a toast passes before anyone reads it.
+export async function showFailure($: EngineInterface, failure: string): Promise<void> {
+  await update($, chatBar, json => ({ ...json, failure }))
+}
+
+export async function dismissFailure($: EngineInterface): Promise<void> {
+  await update($, chatBar, json => ({ ...json, failure: null }))
+}
+
+// Fix sends the failure to this chat's agent to diagnose and fix, and clears it from the line.
+export async function fixFailure($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
+  if (!chatBar.failure) return
+  await $.prompt.submit({ text: `The chat bar reported this failure; find its cause and fix it: ${chatBar.failure}`, asUser: true })
+  await dismissFailure($)
 }
 
 export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Promise<ChatBarClient | MoveRefused> {
   try {
     await callTool<TicketData>($, 'ticket.move_next', { ticket: chatBar.sessionName })
   } catch (failure) {
-    $.ui.toast(`${chatBar.sessionName} did not move: ${reasonOf(failure)}`)
+    await showFailure($, `${chatBar.sessionName} did not move: ${reasonOf(failure)}`)
     return new MoveRefused(reasonOf(failure))
   }
   await refreshChatBar($)
