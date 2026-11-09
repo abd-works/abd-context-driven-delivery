@@ -30,7 +30,7 @@ const practiceOf = (slug: string): string => PRACTICES.find(practice => slug.sta
 const SHORT_NAMES: Record<string, [string, string]> = { stories: ['Stories', '#6BCB77'], ddd: ['DDD', '#6C5CE7'], ux: ['UX', '#E84393'], clean_engineering: ['CE', '#4FC3F7'], bdd: ['BDD', '#00B894'] }
 // The chat bar shows no guidance text, so the seed sends none.
 const NO_TEXT = { overview: '', guidance: '', rules: [] }
-const practiceData = (key: string): PracticeGuidanceData => ({ key, slug: key.replace('_', '-'), short_name: SHORT_NAMES[key][0], colour: SHORT_NAMES[key][1], fidelities: EVERY_FIDELITY.filter(slug => practiceOf(slug) === key), ...NO_TEXT })
+const practiceData = (key: string): PracticeGuidanceData => ({ key, slug: key.replace('_', '-'), short_name: SHORT_NAMES[key][0], colour: SHORT_NAMES[key][1], ...NO_TEXT })
 // Seed: the stage that requires a fidelity.
 const stageOf = (slug: string): string => STAGE_ORDER.find(stage => (WORK_OF[stage] ?? []).includes(slug)) ?? ''
 // Seed: the fidelities this project writes in TypeScript by default; every other writes markdown.

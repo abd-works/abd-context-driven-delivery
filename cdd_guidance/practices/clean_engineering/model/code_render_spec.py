@@ -83,7 +83,7 @@ def _render(target: str, content: str, source: str, previous: str = "") -> str:
 def _bodies(language: str, text: str) -> dict:
     from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
-    adapter = CleanEngineering(fidelity="model")._live_adapter(language)
+    adapter = CleanEngineering(fidelity="model").formats.adapter(language)
     model = adapter.parse(text)
     return {
         f"{oclass.name}.{operation.name}": operation.body.text

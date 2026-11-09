@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
 from cdd_guidance.practices.clean_engineering.model.field_types import RELATIONSHIP_STRENGTH, Relationship
-from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
+from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names, name_with_type
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
@@ -62,7 +62,7 @@ _STEREOTYPE_NOTE = re.compile(r"^<<\s*(composition|aggregation|association)\s*>>
 
 class Property(InvariantHolder, OoadNode):
     _semantic_type_name = "Property"
-    graph_facts = ("owner",)
+    graph_facts = ("owner", "value_type")
 
     def __init__(
         self,
@@ -76,6 +76,8 @@ class Property(InvariantHolder, OoadNode):
         self.type_hint = type_hint
         self.description = description
         self.access = "both"
+        # The class that declares it, once kept (keep_owner).
+        self._declared_by = ""
         self.stereotype = ""
         self.cardinality = ""
         self.origin = ""
@@ -103,7 +105,12 @@ class Property(InvariantHolder, OoadNode):
     def owner(self) -> str:
         """The name of the class that declares this property; empty before a class holds it."""
         parent = self.parent
-        return parent.name if isinstance(parent, OoadNode) and parent.declares(self) else ""
+        return parent.name if isinstance(parent, OoadNode) and parent.declares(self) else self._declared_by
+
+    def keep_owner(self) -> None:
+        """Keep the class that declares this property as its owner from now on: a graph's tree may hang it under a group
+        of its class's members, and its owner, which saves with the graph, stays the class."""
+        self._declared_by = self.owner
 
     def clone(self) -> "Property":
         cloned = type(self)(self.name, self.sequential_order, self.type_hint, self.description)
@@ -182,9 +189,7 @@ class Property(InvariantHolder, OoadNode):
         )
 
     def save(self) -> str:
-        if self.type_hint:
-            return f"{self.name}: {self.type_hint}"
-        return self.name
+        return name_with_type(self.name, self.type_hint)
 
     def render(self) -> str:
         return self.save()

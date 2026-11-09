@@ -42,6 +42,13 @@ class Relationship:
         return cls(target=found.group("target"), kind="dependency", label=found.group("label"))
 
     @classmethod
+    def split_off(cls, lines: List[str]) -> tuple[List[str], List["Relationship"]]:
+        """A description's text lines, and the dependencies the lines after them write, from the first dependency line
+        on: a class card's body and a doc comment both end with them."""
+        first = next((index for index, line in enumerate(lines) if cls.read_line(line)), len(lines))
+        return lines[:first], cls.read_lines(lines[first:])
+
+    @classmethod
     def read_lines(cls, lines: List[str]) -> List["Relationship"]:
         """The dependencies the lines write: each dependency line opens one, and the `key: value` lines under it are
         its details."""

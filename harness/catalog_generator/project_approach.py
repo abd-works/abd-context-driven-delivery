@@ -16,6 +16,7 @@ from pathlib import Path
 from harness.catalog_generator.catalog_examples import CatalogFidelity, ProjectExampleSources
 from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.catalog_generator.git_citation import GitCitation
+from harness.installation.json_file import JsonFile
 from harness.process.git import RepoConnectError
 
 # Where a project keeps the examples it chose for its approach page.
@@ -58,6 +59,8 @@ class ProjectFiles:
         self.root = Path(root).resolve()
         self.practices = practices
         self.classifier = ExampleClassifier(self.root, practices)
+        # The examples, title, and repository the project saved, in its .context folder.
+        self.manifest = JsonFile(self.root / _EXAMPLES_MANIFEST)
 
     @property
     def discovered(self) -> Examples:
@@ -74,12 +77,8 @@ class ProjectFiles:
         return found
 
     @property
-    def manifest(self) -> Path:
-        return self.root / _EXAMPLES_MANIFEST
-
-    @property
     def saved(self) -> dict:
-        return json.loads(self.manifest.read_text(encoding="utf-8")) if self.manifest.is_file() else {}
+        return self.manifest.read()
 
     @property
     def saved_examples(self) -> Examples:
@@ -167,15 +166,12 @@ class ProjectApproach:
 
     def save_examples(self) -> Path:
         """Save the examples, title, and repository in the project's ``.context``, for the next run to start from."""
-        manifest = self.files.manifest
-        manifest.parent.mkdir(parents=True, exist_ok=True)
         ordered = sorted(self.files.practices, key=lambda practice: practice.position)
         nested: dict[str, dict[str, str]] = {practice.key: {} for practice in ordered}
         for (practice_key, stage), path in sorted((self._place_of(shown), path) for shown, path in self.examples.items()):
             nested.setdefault(practice_key, {})[stage] = path.relative_to(self.project_root).as_posix()
         payload = {"project": self.project_title, "repo_url": self.repo_url, "examples": nested}
-        manifest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-        return manifest
+        return self.files.manifest.write(payload)
 
     def staged_into(self, out_root: Path) -> ProjectExampleSources:
         """Copy each artifact into ``out_root/examples/{practice}`` under the board label of its fidelity, so every

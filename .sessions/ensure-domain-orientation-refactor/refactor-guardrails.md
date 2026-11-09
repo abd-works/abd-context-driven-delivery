@@ -32,3 +32,21 @@ Read your own diff and answer, in your final report, for each new or changed cla
 2. Does a class or function that does the same job already exist? (Name the grep you ran.)
 3. Did you look anything up by a name string that you could have held as a reference?
 4. Is any old name still alive?
+
+## 4. The code metrics may not get worse
+
+Run the metrics gate before every commit (`cdd_guidance/rules/metrics-gate.md`):
+
+```
+<metrics venv python> .context/repo-review/metrics_gate.py --base <your start commit> --head . --node-tools <node tools folder>
+```
+
+It must pass. Add its table to your report.
+
+**Why this exists:** from round 5 to round 8 the AI findings fell, but the code metrics slid, because nobody measured:
+- functions with more than 10 paths: 113 → 124
+- hard-to-read functions: 57 → 60
+- the most complex class (`Graph`): total complexity 227 → 249
+- classes depending on more than 14 others: 38 → 43
+
+Moving behaviour onto its owner is right, but the owner must then be split into parts it holds, not left to grow.

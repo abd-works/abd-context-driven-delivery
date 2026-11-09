@@ -1,7 +1,7 @@
 import { ChatClientGenerated, type ChatData } from '@cdd/harness/chat/chat'
 
 import type { BoardApi } from '../board/board-api'
-import type { BoardStore } from '../board/board-store'
+import type { BoardStore } from '../shared/board-store'
 
 const SHOWN_COMMAND = 80
 // A ticket's new chat is not opened again for this long, while the person confirms it and it checks in.
@@ -93,25 +93,38 @@ export class ChatClient {
   }
 
   // A message the chat took but did not show goes back in its queue, and the chat takes it again.
-  async resend(message: string): Promise<void> {
-    const { targetChat } = this.store.state
-    if (!targetChat || !(await ChatClientGenerated.named(this.api, targetChat).resend(message))) return
-    await this.readMessages()
+  resend(message: string): Promise<void> {
+    return this.actOnTarget(chat => chat.resend(message))
   }
 
-  async remove(message: string): Promise<void> {
-    const { targetChat } = this.store.state
-    if (!targetChat || !(await ChatClientGenerated.named(this.api, targetChat).remove(message))) return
-    await this.readMessages()
+  remove(message: string): Promise<void> {
+    return this.actOnTarget(chat => chat.remove(message))
   }
 
   toggleMessages(): void {
     this.store.change({ isMessagesOpen: !this.store.state.isMessagesOpen })
   }
 
-  private async readMessages(): Promise<void> {
+  // The target chat's client, made once for each chat the person targets rather than on every call to it.
+  private held: { chat: string; client: ChatClientGenerated } | null = null
+
+  private get targetClient(): ChatClientGenerated | null {
     const { targetChat } = this.store.state
-    const messages = targetChat ? await ChatClientGenerated.named(this.api, targetChat).messages() : []
+    if (!targetChat) return null
+    if (this.held?.chat !== targetChat) this.held = { chat: targetChat, client: ChatClientGenerated.named(this.api, targetChat) }
+    return this.held.client
+  }
+
+  // Act on the target chat's messages, then read them again to show what the act changed; nothing with no target.
+  private async actOnTarget(act: (chat: ChatClientGenerated) => Promise<unknown>): Promise<void> {
+    const chat = this.targetClient
+    if (!chat || !(await act(chat))) return
+    await this.readMessages()
+  }
+
+  private async readMessages(): Promise<void> {
+    const chat = this.targetClient
+    const messages = chat ? await chat.messages() : []
     if (messages) this.store.change({ messages })
   }
 
@@ -139,14 +152,15 @@ export class ChatClient {
   }
 
   private async send(kind: CommandKind, text: string, sent: string): Promise<void> {
-    const { targetChat } = this.store.state
-    if (!targetChat) {
+    if (!this.store.state.targetChat) {
       if (this.canSend) this.store.toast('Pick the chat to send to in the chat list first.')
       return
     }
-    if (!(await ChatClientGenerated.named(this.api, targetChat).send(kind, text))) return
-    this.store.toast(sent)
-    await this.readMessages()
+    await this.actOnTarget(async chat => {
+      const isSent = await chat.send(kind, text)
+      if (isSent) this.store.toast(sent)
+      return isSent
+    })
   }
 }
 

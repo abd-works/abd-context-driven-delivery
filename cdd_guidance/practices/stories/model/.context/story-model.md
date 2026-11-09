@@ -12,7 +12,7 @@ drawio = DrawIOStoryModel().render(story_map)
 # practices/stories/model
 
 - **Purpose:** Keep stakeholder behaviour as one story model — epics, stories, and increments, then scenarios and steps — so a markdown file, a diagram, and a test file stay the same hierarchy every later fidelity reads.
-- **Seam (terms):** StoryNode, StoryModel, Epic, Increment, Story, StoryType, Background, Scenario, Step, StepType, Example, Examples, SourceLocation, and one StoryModel subclass per format
+- **Seam (terms):** StoryNode, StoryModel, Epic, Increment, Story, StoryType, Background, Scenario, Step, StepType, Example, Examples, and one StoryModel subclass per format; where a node sits is the graph's *Source*
 - **Dependencies (one-way):** harness/graph (*ModelNode*, *Graph*), harness/annotations (*Name*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), practices/sketch_document (*SketchOutline*), harness/guidance (*SketchLens*)
 
 These dependencies are owned by the modules named; this model only uses them. Each node writes itself onto the stories practice graph (`StoryModel.record`, through a *StoryRecording*); cross-practice links from steps and examples to Clean Engineering nodes are recorded there.
@@ -69,6 +69,10 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 + every_epic(): list[Epic]
 	// every epic and nested epic, each before its own children
 + every_story(): list[Story]
++ stories_named(names: list[str]): list[Story]
+	// the map's own stories names name, in that order: how an increment read from a thin slice finds its stories
++ place_in(file: str): None
+	// names file on every epic and story that names no file yet
 + append_epic(epic: Epic): None
 + append_increment(increment: Increment): None
 + clone(): StoryModel
@@ -83,11 +87,17 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 + examples: Examples
 + has_epics: bool
 + depth: int
++ is_sub_epic: bool
+	// its parent is an epic; it records as a SubEpic
++ top_epic: Epic
+	// the epic of the map it sits under; itself when it is one
 ----
 + estimate_label(): str
 	// "* {estimate}". Load strips the star and any HTML
 + every_epic(): list[Epic]
 + every_story(): list[Story]
++ leaf_epics(): list[Epic]
+	// the epics whose stories sit in columns: its innermost sub-epics, or itself when it has none
 + append_epic(epic: Epic): None
 + append_story(story: Story): None
 + place_in(file: str): None
@@ -103,7 +113,7 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 + outcome: str
 + slicing_notes: str
 + decision_prompt: str
-+ source: SourceLocation | None
++ source: Source | None
 + stories: list[Story]
 	// the stories in this thin slice. Each story still belongs to its epic, and records this increment
 ----
@@ -123,6 +133,8 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 + scenarios: list[Scenario]
 + scenario_type: type
 	// the scenario class this story's format copies scenarios into
++ top_epic: Epic | None
+	// the epic of the map it sits under
 + code_key: tuple
 	// name, actors, evidence, and backgrounds: while it is the key the story was read with, its code stands
 ----
@@ -153,15 +165,15 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 
 ## Scenario : StoryNode
 
-+ Scenario(name: str | Scenario = "", sequential_order: int = 0, story_name: str = "")
++ Scenario(name: str | Scenario = "", sequential_order: int = 0)
+	// its story is its parent; a scenarios file links a scenario to its story only by the name its section is headed with
 ------
-+ story_name: str
 + backgrounds: list[Background]
 + steps: list[Step]
 + examples: Examples
 + is_outline: bool
 + evidence: list[str]
-+ source: SourceLocation | None
++ source: Source | None
 + code_key: tuple
 ----
 + steps_in(step_type: StepType): list[Step]
@@ -171,7 +183,7 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 
 ## Step : StoryNode
 
-+ Step(text: str | Step, step_type: StepType | None = None, sequential_order: int = 0, keyword: str = "", concepts, values, actor: str = "", source: SourceLocation | None = None, name: str = "")
++ Step(text: str | Step, step_type: StepType | None = None, sequential_order: int = 0, keyword: str = "", concepts, values, actor: str = "", source: Source | None = None, name: str = "")
 ------
 + text: str
 + step_type: StepType | None
@@ -182,11 +194,12 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 + concepts: list[str]
 + values: list[str]
 + actor: str
-+ source: SourceLocation | None
++ source: Source | None
 + call_graph: list[CallGraphEntry]
 + body: CodeBody
 	// the step's test code as read, in the language it was written in. Empty outside code
-+ is_continuation: bool
++ continuation: bool
+	// an And or But line, which continues the clause before it
 + phase: str
 + callees: list[str]
 	// the capitalised concepts the step names: the domain classes it reaches
@@ -225,12 +238,7 @@ Example name to value, for one scope.
 + table(): list[dict]
 + clone(scope: StoryNode | None = None): Examples
 
-## SourceLocation
-
-+ SourceLocation(file: str, line: int = 0, end_line: int = 0, text: str = "")
-----
-+ render(): str
-	// file:line-end_line
+Where a node sits is the graph's *Source* (`harness/graph/graph.py`): its `file`, `start_line`, and `end_line`, 0 while the line is not known. A reader names the lines it read a node on, and the graph keeps the same object type when it adds the node, so a node has one location type before and after it is on the graph. Every Stories reader makes it through `source_at(file, start, end)` (`story_map_files.py`).
 
 ---
 
@@ -240,7 +248,7 @@ Each format class below is a *StoryModel* subclass. Its node subclasses (`Markdo
 
 ## SketchStoryModel : StoryModel
 
-The `sketch` format: the stories section of an integrated sketch. Nodes: SketchEpic, SketchStory, SketchScenario, SketchBackground, and SketchStep, which write their own sketch lines (`sketch_lines`) and read the lines nested under their own (`read_lines`).
+The `sketch` format: the stories section of an integrated sketch. Nodes: SketchEpic, SketchStory, SketchScenario, SketchBackground, and SketchStep, which write their own sketch lines (`sketch_lines`) and read the lines nested under their own (`read_lines`, from the *SketchLines* the module function `read_sketch_lines(raws)` reads: each entry `under()` gives is the line naming a node, `text`, then the lines `nested` under it).
 
 ------
 + epic_type: SketchEpic
@@ -258,18 +266,19 @@ The `sketch` format: the stories section of an integrated sketch. Nodes: SketchE
 
 ## MarkdownStoryModel : StoryModel
 
-The `markdown` format: `story-map.md`, the scenario files beside it, and the increments file. Nodes: MarkdownEpic, MarkdownStory, MarkdownIncrement, MarkdownScenario, MarkdownStep.
+The `markdown` format: `story-map.md`, the scenario files beside it, and the increments file. Nodes: MarkdownEpic, MarkdownStory, MarkdownIncrement, MarkdownScenario, MarkdownStep. The text is read by a reading made for each read, which keeps where the read is so no node or format holds it: *HeadingMapReading* or *OutlineMapReading* (`map_reading.py`, chosen by `read_map`, sharing *MapReading*'s epic and sub-epic placement) for a story map, and *ScenarioFileReading* (`scenario_file.py`, holding the parts in `scenario_parts.py`: a *BackgroundReading*, an *ExamplesTable*, and a *RealizationFence*, with `take_step` for a step line) for a scenarios file; a scenarios document becomes a map through `scenario_document_map`. `markup.py` holds MarkdownStep, `step_marks` and `step_prose`, and how a name loses its links and emphasis.
 
 ------
 + epic_type: MarkdownEpic
 + story_type: MarkdownStory
 ----
 + from_workspace(root: Path, project: Path | None = None): MarkdownStoryModel | None
-+ parse(text: str): MarkdownStoryModel
+	// each story takes the scenarios of the scenario-file sections headed with its name (`scenario_sections_in`, *StorySection*, each file read by its own *ScenarioFileReading*), and the increments of `StoryMapFiles.thin_slicing`
++ parse(text: str, file: str = ""): MarkdownStoryModel
+	// read from file, each epic, sub-epic, story, and scenario names the line it is read on, as it is read
 + render(canonical: StoryModel, previous: str | None = None, workspace: str | None = None): str
 	// in a workspace folder, each story that has its own markdown file links to it
 + save(): str
-+ attach_source_locations(text: str, rel_file: str): None
 
 ## JsonStoryModel : StoryModel
 
@@ -277,6 +286,7 @@ The `json` format. Nodes: JsonEpic, JsonStory, JsonIncrement, JsonScenario, Json
 
 ----
 + from_workspace(root: Path): JsonStoryModel | None
+	// every epic and story names story-graph.json (`place_in`)
 + parse(text: str): JsonStoryModel
 	// fills this map and returns it
 + render(canonical: StoryModel, previous: str | None = None): str
@@ -284,7 +294,6 @@ The `json` format. Nodes: JsonEpic, JsonStory, JsonIncrement, JsonScenario, Json
 	-> save
 + save(): str
 	// this map as story-graph.json text
-+ attach_source_locations(file_name: str): None
 
 ## DiagramStoryModel : StoryModel
 
@@ -296,7 +305,10 @@ The layout shared by the diagram formats. Nodes: DiagramEpic, DiagramStory, Diag
 
 ## DiagramStoryNode
 
++ first_x, epic_spacing, story_pitch: int
+	// how a format lays out its epics: where the first starts, the space between two, and how far each story an epic holds itself pushes its sub-epics; the base diagram gives 0 for each
 + x: int
+	// the one walk every diagram format places its epics and stories by
 + y: int
 + width: int
 + height: int
@@ -337,16 +349,28 @@ The `miro` format: a canvas-composer SVG, with increments as a thin-slice table.
 
 ## CodeStoryModel : StoryModel
 
-A story map written as test code: one file per sub-epic holding its stories, under epic folders. Nodes: CodeEpic, CodeStory, CodeScenario, CodeIncrement, each also a *CodeStoryNode* (`slug`, `snake`, `pascal`, `camel`, `name_from_slug`).
+A story map written as test code: one file per sub-epic holding its stories, under epic folders. Nodes: CodeEpic, CodeStory, CodeScenario, CodeIncrement, each also a *CodeStoryNode* (`slug`, `snake`, `pascal`, `camel`, `name_from_slug`). The model keeps the layout of the story files and the code a render adopts; how its language writes a story file is the *StoryWriting* it holds (`writing`), beside the reader of its story files (`story_file`).
 
 ------
 + language: CodeLanguage | None
 	// each language model sets its instance
++ writing_type: type[StoryWriting]
++ writing: StoryWriting
+	// made once, with the model's language; TypeScript's also holds the import of its step library
 + tests_root: str
++ story_file_suffixes: tuple[str, ...]
+	// how a story file in this language ends; the first is the one it writes
++ not_story_paths: re.Pattern
+	// a path that ends like a story file but holds none: Java's specs, TypeScript's examples folders
 ----
-+ parse(external: dict[str, str]): CodeStoryModel
++ is_story_file(path): bool
+	// class operation: a file this language reads stories from, by its suffixes and the paths it leaves out
++ parse(external: dict[str, str], on_file=None): CodeStoryModel
 	// external is the path-to-content map of the test tree
-+ load(external: dict[str, str]): CodeStoryModel
++ load(external: dict[str, str], on_file=None): CodeStoryModel
+	// the one load for every language: each story file under the tests root is one sub-epic
+	-> story_file(text).stories(story_type, path)
+	// each file read once: a story made from each story block; a file the language cannot read in blocks (Java's, or Python that does not parse) is read from its text (`story_type.load_all`)
 + render(canonical: StoryModel, previous: dict[str, str] | None = None): dict[str, str]
 	Invariant: previous is the path-to-content map already on disk, never one text
 	// each epic, story, scenario, and step without code in this language takes the previous tree's code for the same names
@@ -354,24 +378,34 @@ A story map written as test code: one file per sub-epic holding its stories, und
 	-> adopt_code
 + save(): dict[str, str]
 + adopt_code(kept: CodeStoryModel): None
-+ story_lines(story: Story): list[str]
-	// read in this language and story.code_key unchanged: every line as read; otherwise the generic spelling
-+ scenario_lines(scenario: Scenario, indent: str): list[str]
++ story_file(content: str): StoryFile | None
+	// the file as this language finds its blocks; None for Java, whose stories are written generically
++ folder_files(epic, folder, files): None
+
+## StoryWriting
+
+How one language writes stories (`story_writing.py`): the one generic render, which writes a node read in this language and unchanged exactly as read, and the spelling the language gives as data (file name template, indents, the lines a story or scenario with nothing in it holds, the templates that open and close a scenario, a step, and an And step, the verbs, whether a repeated phase chains) or, where a template cannot say it, as its own operation. *PythonStoryWriting*, *BraceStoryWriting* (with *TypeScriptStoryWriting* and *JavaScriptStoryWriting*, which differ only in `story_test_import`), and *JavaStoryWriting* (doc comments, no code) are the languages.
+
++ StoryWriting(language: CodeLanguage | None)
+----
++ story_file(epic, parent, written): tuple[str, str]
+	// the path and text of the file holding a sub-epic's stories
++ story_text(story): str
++ story_lines(story): list[str]
 + step_lines(clause: StepClause, indent: str): list[str]
-+ read_code(content: str, stories: list[Story], path: str): WrittenBlock | None
-	// gives each story, background, scenario, and step the code it was written with
-+ file_name, file_header, folder_files, story_open, story_close, story_background_lines, no_scenarios_lines, scenario_open, scenario_close, scenario_background_lines, examples_lines, clauses, verb, step_open, step_close, and_open, and_body_indent, and_close, step_placeholder, empty_block
-	// each language overrides the spelling operations; none of them decides what a body holds
++ clauses(steps), verb(step), quoted(text)
++ file_header, story_open, story_background_lines, scenario_background_lines
+	// the parts a language spells as its own operation
 
 ## CodeStoryModelError : Exception
 
 ## PythonStoryModel : CodeStoryModel
 
-The `python` format: Mamba story tests. Nodes: PythonEpic, PythonStory, PythonScenario. Read through *PythonStoryReader*.
+The `python` format: Mamba story tests. Nodes: PythonEpic, PythonStory, PythonScenario. Its blocks are found by *PythonStoryFile*.
 
 ## BraceStoryModel : CodeStoryModel
 
-The spelling TypeScript and JavaScript share. Nodes: BraceScenario. Read through *BraceStoryReader*.
+The model TypeScript and JavaScript share; they write with a *BraceStoryWriting*. Nodes: BraceStory, BraceScenario. Its blocks are found by *BraceStoryFile*.
 
 ## TypeScriptStoryModel : BraceStoryModel
 
@@ -393,14 +427,57 @@ The `javascript` format. Nodes: JavaScriptEpic, JavaScriptStory, JavaScriptScena
 
 The `java` format. Nodes: JavaEpic, JavaStory, JavaScenario.
 
-## StoryReader
+## CodeStory : Story, CodeStoryNode
 
-Reads one story file: the file's own code around its stories, then each story the file and the model share. *PythonStoryReader* and *BraceStoryReader* spell the blocks.
+A story read from a story file. Each language gives its patterns (`_NAME`, `_STORY_START`, `_STORY_MARK`); reading is one way for every language.
 
-+ StoryReader(language: CodeLanguage, content: str)
 ----
-+ read(stories: list[Story], path: str): WrittenBlock | None
-	// the file's code above the first story and below the last
++ from_block(block: CodeBlock, lead: list[str], text: str): CodeStory
+	// class operation: the story one story block holds, with one scenario per scenario block, its code read from the same block
++ load_all(content: str): list[CodeStory]
+	// class operation: a file read from its text, split where each story starts (Java's files, and a file the language cannot read in blocks)
++ load(content: str, scenario_blocks: list[CodeBlock] | None = None): CodeStory
+	// class operation: name, description (actor, kind, domain terms, evidence), backgrounds, and scenarios
++ read_code(block: CodeBlock, lead: list[str], scenarios: list[CodeBlock]): None
+	// this story's own code from the block it was written as: background step bodies, setup, written, then each scenario's from its block, in order
+	-> CodeScenario.read_code(block, lead)
+
+## CodeScenario : Scenario, CodeStoryNode
+
+----
++ scenario_blocks(content: str): list[tuple]
+	// class operation over the language's `_SCENARIO`; BraceScenario reads balanced braces
++ example_imports(content: str): str
+	// class operation: the lines of a story file that import its examples
++ example_names(content: str): list[str]
+	// class operation over the language's `_IMPORT` and `_EXAMPLES_LINE`
++ read_code(block: CodeBlock, lead: list[str]): None
+	// background and step bodies, setup, and written from the scenario's own block
+	-> Step.read_code(block)
+
+## StoryFile
+
+One story file's text as its language finds its blocks: the file's own code above the first story and below the last, and each story block, from which its story is made. The file is read once; no story is matched to a block by its name. *PythonStoryFile* and *BraceStoryFile* find the blocks.
+
++ StoryFile(language: CodeLanguage, content: str)
+----
++ story_blocks(): list[CodeBlock] | None
++ stories(story_type, path: str): tuple[list[CodeStory], WrittenBlock] | None
+	// each story placed on its block's lines; None when the file cannot be read in blocks
+	-> CodeStory.from_block(block, lead, text)
++ comment_above(block): str
+	// the comment lines right above a block, which describe its story
+
+## CodeBlock
+
+One block of a story file: a story, background, scenario, or step call. It is a shape, not a class: *PythonBlock* and *BraceBlock* each answer it for their language, and `story_file.py` names it for the readers that take either.
+
+----
++ name, line_span, inside_lines, body, body_text, text
++ written(lead): WrittenBlock
++ split_inside(children): tuple
++ scenarios(), backgrounds(scenarios), steps(skip): list[CodeBlock]
++ setup(children): CodeBody
 
 ## StoryRecording
 
@@ -410,9 +487,13 @@ sits in the map's own file texts, and how many stories it has announced. Each no
 + StoryRecording(story_map: StoryModel, practice, on_node: Callable | None)
 ----
 + write(): None
-+ add(node_id, name, semantic, file, span, story_object, facts=None): Node
-+ name_span(file, name, folder): tuple
-+ span_of(node, file, fallback_text=""): tuple
++ add(story_object, node_id, at: Source, facts=None): Node
+	// named by the object's recorded_name and typed by its recorded_type, at the lines at names
++ name_span(file, name, folder): Source
++ span_of(node, file, fallback_text=""): Source
+	// the lines its reader named on the node (its source's start and end line), else the next line of file holding its text
+
+Each node's `record` is handed the node its parent was added as (and the file a background, scenario, or step sits in), not read from `parent`: a story test's scenarios are shared by every Story of that name in a merged map, and an example's graph parent is the scenario that uses it, not its scope (`stories/.context/cdr/0004-a-node-records-under-the-parent-that-walks-it.md`).
 
 ## StoryMapLinks
 

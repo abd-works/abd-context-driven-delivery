@@ -1,4 +1,4 @@
-import type { BoardStore, Region } from './board-store'
+import type { BoardStore, Region } from '../shared/board-store'
 
 const MINIMUM_REGION = 160
 const ROOM_OVER_REGIONS = 90

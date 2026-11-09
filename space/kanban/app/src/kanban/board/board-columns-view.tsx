@@ -6,9 +6,9 @@ import { BacklogCardView, ComposerView } from '../backlog-item/backlog-item-view
 import { TicketCardView } from '../ticket/ticket-card-view'
 import type { CardSpot } from '../ticket/ticket-card-view'
 import type { TicketClient } from '../ticket/ticket-client'
-import { useBoard } from './board-context'
+import { useBoard } from '../shared/board-context'
 import type { ColumnClient } from './column-client'
-import { StageHeadView } from './stage-head-view'
+import { StageHeadView } from '../shared/stage-head-view'
 
 function WipLimitFieldView({ column }: { column: ColumnClient }) {
   const { page } = useBoard()

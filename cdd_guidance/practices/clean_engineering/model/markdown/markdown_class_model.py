@@ -209,10 +209,8 @@ class MarkdownOoadClass(OoadClass):
     def read_body(self, body: str) -> None:
         """Read this class's card body: its intent, its constructor, its properties and operations, and the
         dependencies it names."""
-        lines = body.splitlines()
-        first_dependency = next((index for index, line in enumerate(lines) if Relationship.read_line(line)), len(lines))
-        dependencies = Relationship.read_lines(lines[first_dependency:])
-        body = "\n".join(lines[:first_dependency])
+        text_lines, dependencies = Relationship.split_off(body.splitlines())
+        body = "\n".join(text_lines)
         parts6 = re.split(r"(?m)^-{6}\s*$", body, maxsplit=1)
         pre6 = parts6[0] if parts6 else ""
         post6 = parts6[1] if len(parts6) > 1 else ""
@@ -360,10 +358,62 @@ class MarkdownOoadClass(OoadClass):
 
 
 class MarkdownModule(Module):
-    def load_class(self, source: OoadClass) -> MarkdownOoadClass:
-        loaded = MarkdownOoadClass(name=source.name, sequential_order=source.sequential_order)
-        loaded.update_self(source)
-        return loaded
+    """A module as a markdown model document writes it: its heading, the prose and bullets that describe it, and its
+    class cards. Read from a card document, it keeps its own lines and each card where it stood, so it writes itself
+    back as it was read."""
+
+    class_type = MarkdownOoadClass
+
+    _META_HEADINGS = frozenset({"seam", "dependencies", "modules fidelity", "purpose"})
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        # Its heading line, its own lines in place, and each class card where it stood, as a card document wrote them;
+        # none for a module no card document held.
+        self._card_parts: Optional[list] = None
+        self._card_name = ""
+
+    def start_card(self, heading: str) -> None:
+        """Begin the module as a card document writes it, under its heading line."""
+        self._card_name = self.name
+        self._card_parts = [heading]
+
+    def add_line(self, line: str) -> None:
+        """Keep a line the card document wrote in this module, where it stood."""
+        self._card_parts.append(line)
+
+    def add_card(self, card: str) -> None:
+        """Read a bold class card the card document wrote in this module, and keep it where it stood."""
+        class_heading = ClassHeading.read(card.split("\n", 1)[0].lstrip("#"))
+        body = card.split("\n", 1)[1] if "\n" in card else ""
+        loaded = MarkdownOoadClass.read_card(class_heading, body, len(self.classes) + 1)
+        loaded.keep_card(card, class_heading)
+        self.classes.append(loaded)
+        self._card_parts.append(loaded)
+
+    def read_body(self, body: str) -> None:
+        """Read the text under the module's `#` heading: its description and bullets, then a `##` card per class."""
+        split = re.split(r"(?m)^(?=##\s)", body, maxsplit=1)
+        self.take_preamble(split[0].strip())
+        class_order = 1
+        for class_block in self._class_blocks(split[1] if len(split) > 1 else ""):
+            heading = re.match(r"^#{2,3}\s+(.+)", class_block)
+            class_heading = ClassHeading.read(heading.group(1)) if heading else None
+            if class_heading is None or not class_heading.name or class_heading.name.lower().startswith("module "):
+                continue
+            self.classes.append(MarkdownOoadClass.read_card(class_heading, class_block[heading.end():].lstrip("\n"), class_order))
+            class_order += 1
+
+    def take_preamble(self, text: str) -> None:
+        """The module's description, seam terms, and dependencies, from the prose and bullets under its heading."""
+        if not text:
+            return
+        meta = ModuleMeta(text)
+        self.description = meta.purpose or meta.leftover or text
+        self.seam_terms = meta.seam_terms
+        self.dependencies = meta.dependencies
+        if meta.seam_terms and not self.seam:
+            self.seam = ", ".join(meta.seam_terms)
 
     def render(self) -> str:
         lines: List[str] = [f"# {self.name}", ""]
@@ -394,7 +444,7 @@ class MarkdownModule(Module):
     def render_cards(self, module_level: int, card_level: int) -> str:
         """The module as it was read: its own text in place, each class card where it stood,
         and a class the document did not have after the last card."""
-        parts = getattr(self, "_card_parts", None)
+        parts = self._card_parts
         if parts is None:
             parts = [f"{'#' * module_level} {self.name}\n", "\n"]
             if self.description:
@@ -414,66 +464,9 @@ class MarkdownModule(Module):
                 out.append(loaded.render_card(card_level))
         return "".join(out)
 
-
-class MarkdownCleanEngineeringModel(CleanEngineeringModel):
-
-    def __init__(self, name: str = "", sequential_order: int = 1, graph=None) -> None:
-        super().__init__(name, sequential_order, graph)
-        # A card document as it was read: its lines in place, with each module where it stood; None for a plain one.
-        self._card_parts: Optional[list] = None
-        self._card_levels = (0, 0)
-
-    def load_module(self, source: Module) -> MarkdownModule:
-        loaded = MarkdownModule(name=source.name, sequential_order=source.sequential_order)
-        loaded.update_self(source)
-        return loaded
-
-    def parse(self, text: str) -> "MarkdownCleanEngineeringModel":
-        headings = self._headings(text)
-        card_levels = [level for _index, level, raw in headings if _CARD_HEADING.match(raw)]
-        self.modules = []
-        self._card_parts = None
-        if card_levels and min(card_levels) - 2 >= 2:
-            self._parse_card_document(text, headings, min(card_levels))
-            return self
-        self._module_order = 1
-        for block in re.split(r"(?m)^(?=#\s)", text):
-            module = self._module_from_h1(block.strip())
-            if module is None:
-                continue
-            self.modules.append(module)
-            self._module_order += 1
-        return self
-
-    def _module_from_h1(self, block: str) -> MarkdownModule | None:
-        if not block:
-            return None
-        heading = re.match(r"^#\s+(.+)", block)
-        if not heading:
-            return None
-        body_after_h1 = block[heading.end():].lstrip("\n")
-        module = MarkdownModule(name=heading.group(1).strip(), sequential_order=self._module_order)
-        h2_split = re.split(r"(?m)^(?=##\s)", body_after_h1, maxsplit=1)
-        self._apply_module_preamble(module, h2_split[0].strip())
-        self._append_h2_classes(module, h2_split[1] if len(h2_split) > 1 else "")
-        return module
-
-    def _apply_module_preamble(self, module: MarkdownModule, pre_h2: str) -> None:
-        if not pre_h2:
-            return
-        purpose, seam_terms, deps, leftover = self._parse_module_meta(pre_h2)
-        if purpose:
-            module.description = purpose
-        elif leftover:
-            module.description = leftover
-        else:
-            module.description = pre_h2
-        module.seam_terms = seam_terms
-        module.dependencies = deps
-        if seam_terms and not module.seam:
-            module.seam = ", ".join(seam_terms)
-
-    def _class_blocks_in(self, module: Module, classes_text: str) -> List[str]:
+    def _class_blocks(self, classes_text: str) -> List[str]:
+        """Each `##` class card under the module, or each `###` card a `##` group holds. A `##` heading that names a
+        part of the module itself, such as its seam, describes the module."""
         blocks: List[str] = []
         for class_block in re.split(r"(?m)^(?=##\s)", classes_text):
             class_block = class_block.strip()
@@ -481,30 +474,215 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             if heading is None:
                 continue
             class_name = heading.group(1).strip()
-            if class_name.lower() in self._MODULE_META_HEADINGS:
-                self._apply_module_section(module, class_name, class_block[heading.end():])
-                continue
-            if re.search(r"(?m)^###\s+\*\*", class_block):
-                for nested in re.split(r"(?m)^(?=###\s)", class_block):
-                    nested = nested.strip()
-                    if nested.startswith("###"):
-                        blocks.append(nested)
-                continue
-            blocks.append(class_block)
+            if class_name.lower() in self._META_HEADINGS:
+                self._take_section(class_name.lower(), class_block[heading.end():])
+            elif re.search(r"(?m)^###\s+\*\*", class_block):
+                blocks.extend(nested.strip() for nested in re.split(r"(?m)^(?=###\s)", class_block) if nested.strip().startswith("###"))
+            else:
+                blocks.append(class_block)
         return blocks
 
-    def _append_h2_classes(self, module: MarkdownModule, classes_text: str) -> None:
-        class_order = 1
-        for class_block in self._class_blocks_in(module, classes_text):
-            heading = re.match(r"^#{2,3}\s+(.+)", class_block)
+    def _take_section(self, key: str, body: str) -> None:
+        """A `##` section that describes the module: its modules-fidelity bullets, its seam, its dependencies, or its
+        purpose."""
+        if key == "modules fidelity":
+            self._take_fidelity_bullets(ModuleMeta(body))
+        elif key == "seam":
+            self._take_seam(body)
+        elif key == "dependencies":
+            self._take_dependencies(body)
+        elif key == "purpose":
+            self.description = body.strip()
+
+    def _take_seam(self, body: str) -> None:
+        """A narrative seam section is kept as the seam's prose; its backticked names are its terms."""
+        self.seam = body.strip()
+        if not self.seam_terms:
+            self.seam_terms = [term for term in re.findall(r"`([^`]+)`", body) if term.strip() and "." not in term]
+
+    def _take_dependencies(self, body: str) -> None:
+        """A "**Formal (modules):** a, b" line names them; else the section's first line lists them."""
+        formal = re.search(r"\*\*Formal\s*\(modules\):\*\*\s*(.+)", body, re.IGNORECASE)
+        first = next((line.strip() for line in body.splitlines() if line.strip()), "")
+        self.dependencies = ModuleMeta.terms(formal.group(1) if formal else first)
+
+    def _take_fidelity_bullets(self, meta: "ModuleMeta") -> None:
+        if meta.purpose and not self.description:
+            self.description = meta.purpose
+        if meta.seam_terms:
+            self.seam_terms = meta.seam_terms
+            self.seam = self.seam or ", ".join(meta.seam_terms)
+        if meta.dependencies:
+            self.dependencies = meta.dependencies
+
+
+class ModuleMeta:
+    """<<Value Object>> The Purpose, Seam, and Dependencies bullets of a modules-fidelity block, and the prose left
+    beside them."""
+
+    _PURPOSE = re.compile(r"^-?\s*\*\*Purpose:\*\*\s*(.+)$", re.IGNORECASE)
+    _SEAM = re.compile(r"^-?\s*\*\*Seam(?:\s*\(terms\))?:\*\*\s*(.+)$", re.IGNORECASE)
+    _DEPENDENCIES = re.compile(r"^-?\s*\*\*Dependencies(?:\s*\(one-way\))?:\*\*\s*(.+)$", re.IGNORECASE)
+    # Lines that frame the bullets and say nothing of the module: a build order, a nested module's or the block's heading.
+    _FRAMING = re.compile(r"^-?\s*\*\*Build order:\*\*|^###\s+Module\s+|^##\s+Modules fidelity", re.IGNORECASE)
+
+    def __init__(self, text: str) -> None:
+        self.purpose = ""
+        self.seam_terms: List[str] = []
+        self.dependencies: List[str] = []
+        leftover: List[str] = []
+        for line in text.splitlines():
+            if not self._take_bullet(line.strip()):
+                leftover.append(line)
+        self.leftover = "\n".join(leftover).strip()
+        # A nested "### Module `path`" block often puts its purpose only in its prose.
+        prose = [line.strip() for line in self.leftover.splitlines() if line.strip() and not line.strip().startswith("- **")]
+        self.purpose = self.purpose or (prose[0] if prose else "")
+
+    @staticmethod
+    def terms(raw: str) -> List[str]:
+        """The terms a bullet lists, separated by commas or semicolons, without their backticks and bold; none for
+        `*(none)*`."""
+        text = re.sub(r"^\*\(?none\)?\*$", "", raw.strip(), flags=re.IGNORECASE).strip()
+        if text.lower() in {"*(none)*", "(none)", "none", "-"}:
+            return []
+        found = (re.sub(r"^\*\*?|\*\*?$", "", part.strip().strip("`").strip()).strip() for part in re.split(r"[,;]", text))
+        return [term for term in found if term]
+
+    def _take_bullet(self, stripped: str) -> bool:
+        """Keep the bullet this line is; true when the line is a bullet or framing, false for prose."""
+        purpose, seam, dependencies = (pattern.match(stripped) for pattern in (self._PURPOSE, self._SEAM, self._DEPENDENCIES))
+        if purpose:
+            self.purpose = purpose.group(1).strip()
+        elif seam:
+            self.seam_terms = self.terms(seam.group(1))
+        elif dependencies:
+            self.dependencies = self.terms(dependencies.group(1))
+        return bool(purpose or seam or dependencies or self._FRAMING.match(stripped))
+
+
+class CardDocument:
+    """A model document of bold class cards under modules and resource groups, each one level deeper (`#` title, `##`
+    module, `###` group, `####` card), as it was read: its lines in place, with each module where it stood, so the
+    model writes it back as it was. A module is a heading at the module level with a card under it."""
+
+    def __init__(self, model: "MarkdownCleanEngineeringModel", card_level: int) -> None:
+        self._model = model
+        self._card_level = card_level
+        self._module_level = card_level - 2
+        self._parts: list = []
+        # The document's lines, the level of each heading by its line, and the module headings with a card under them.
+        self._lines: List[str] = []
+        self._heading_at: dict = {}
+        self._starts: set = set()
+        # The module and the card the reading is in.
+        self._module: Optional[MarkdownModule] = None
+        self._card: List[str] = []
+
+    def read(self, text: str, headings: List[tuple]) -> None:
+        """Read the document's modules and cards; every other line stays where it was written."""
+        self._lines = text.splitlines(keepends=True)
+        self._heading_at = {index: level for index, level, _raw in headings}
+        self._starts = self._module_starts(headings)
+        for index, line in enumerate(self._lines):
+            self._take(index, line)
+        self._close()
+
+    def _take(self, index: int, line: str) -> None:
+        level = self._heading_at.get(index)
+        if level is not None and level <= self._module_level:
+            self._close()
+            self._module = self._module_at(index) if index in self._starts else None
+            if self._module is None:
+                self._parts.append(line)
+        elif level is not None and self._module is not None and level <= self._card_level:
+            self._close()
+            self._open_card(level, line)
+        else:
+            self._keep(line)
+
+    def _open_card(self, level: int, line: str) -> None:
+        """A heading inside a module: a bold card at the card level opens a card; any other stays in the module."""
+        if level == self._card_level and _CARD_HEADING.match(line):
+            self._card.append(line)
+        else:
+            self._module.add_line(line)
+
+    def _keep(self, line: str) -> None:
+        """A line that is no heading: part of the card the reading is in, else of its module, else of the document."""
+        if self._card:
+            self._card.append(line)
+        else:
+            (self._module.add_line if self._module is not None else self._parts.append)(line)
+
+    def render(self) -> str:
+        """The document as it was read, each module written in place, then any module it did not have."""
+        out: List[str] = []
+        written = []
+        for part in self._parts:
+            if isinstance(part, str):
+                out.append(part)
+            elif any(module is part for module in self._model.modules):
+                out.append(part.render_cards(self._module_level, self._card_level))
+                written.append(part)
+        for module in self._model.modules:
+            if not any(module is done for done in written):
+                out.append(module.render_cards(self._module_level, self._card_level))
+        return "".join(out)
+
+    def _module_at(self, index: int) -> MarkdownModule:
+        """The module whose heading is the line at index, with the preamble under its heading."""
+        heading = self._lines[index]
+        module = MarkdownModule(name=_HEADING.match(heading).group(2), sequential_order=len(self._model.modules) + 1)
+        module.start_card(heading)
+        self._model.modules.append(module)
+        self._parts.append(module)
+        end = next((later for later in sorted(self._heading_at) if later > index), len(self._lines))
+        module.take_preamble("".join(self._lines[index + 1:end]).strip())
+        return module
+
+    def _close(self) -> None:
+        """End the card the reading is in, giving it to its module."""
+        if self._card and self._module is not None:
+            self._module.add_card("".join(self._card))
+        self._card = []
+
+    def _module_starts(self, headings: List[tuple]) -> set:
+        starts = set()
+        current = None
+        for index, level, raw in headings:
+            if level <= self._module_level:
+                current = index if level == self._module_level else None
+            elif current is not None and level == self._card_level and _CARD_HEADING.match(raw):
+                starts.add(current)
+        return starts
+
+
+class MarkdownCleanEngineeringModel(CleanEngineeringModel):
+    module_type = MarkdownModule
+
+    def __init__(self, name: str = "", sequential_order: int = 1, graph=None) -> None:
+        super().__init__(name, sequential_order, graph)
+        # The card document it was read from; none for a plain model document.
+        self._cards: Optional[CardDocument] = None
+
+    def parse(self, text: str) -> "MarkdownCleanEngineeringModel":
+        headings = self._headings(text)
+        card_levels = [level for _index, level, raw in headings if _CARD_HEADING.match(raw)]
+        self.modules = []
+        self._cards = None
+        if card_levels and min(card_levels) - 2 >= 2:
+            self._cards = CardDocument(self, min(card_levels))
+            self._cards.read(text, headings)
+            return self
+        for block in re.split(r"(?m)^(?=#\s)", text):
+            heading = re.match(r"^#\s+(.+)", block.strip())
             if heading is None:
                 continue
-            class_heading = ClassHeading.read(heading.group(1))
-            if not class_heading.name or class_heading.name.lower().startswith("module "):
-                continue
-            parsed = MarkdownOoadClass.read_card(class_heading, class_block[heading.end():].lstrip("\n"), class_order)
-            module.classes.append(parsed)
-            class_order += 1
+            module = MarkdownModule(name=heading.group(1).strip(), sequential_order=len(self.modules) + 1)
+            module.read_body(block.strip()[heading.end():].lstrip("\n"))
+            self.modules.append(module)
+        return self
 
     def _headings(self, text: str) -> List[tuple]:
         """(line index, level, line) for each heading outside a fenced block."""
@@ -519,201 +697,12 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 found.append((index, len(heading.group(1)), line))
         return found
 
-    def _parse_card_document(self, text: str, headings: List[tuple], card_level: int) -> None:
-        """A document title over modules, resource groups, and bold class cards, each one level
-        deeper (`#` title, `##` module, `###` group, `####` card). A module is a heading at the
-        module level with a card under it; every other line stays where it was written."""
-        module_level = card_level - 2
-        model = self
-        model._card_levels = (module_level, card_level)
-        model._card_parts = []
-        heading_at = {index: level for index, level, _raw in headings}
-        module_starts = self._module_starts(headings, module_level, card_level)
-        lines = text.splitlines(keepends=True)
-        module: Optional[MarkdownModule] = None
-        card: List[str] = []
-
-        def close_card() -> None:
-            if card and module is not None:
-                self._append_card(module, "".join(card))
-            card.clear()
-
-        for index, line in enumerate(lines):
-            level = heading_at.get(index)
-            if level is not None and level <= module_level:
-                close_card()
-                module = None
-                if index in module_starts:
-                    module = MarkdownModule(name=_HEADING.match(line).group(2), sequential_order=len(model.modules) + 1)
-                    module._card_name = module.name
-                    module._card_parts = [line]
-                    model.modules.append(module)
-                    model._card_parts.append(module)
-                    self._apply_module_preamble(module, self._preamble_after(lines, index, heading_at))
-                    continue
-            elif level is not None and level <= card_level and module is not None:
-                close_card()
-                if level == card_level and _CARD_HEADING.match(line):
-                    card.append(line)
-                    continue
-            elif card:
-                card.append(line)
-                continue
-            (module._card_parts if module is not None else model._card_parts).append(line)
-        close_card()
-
-    def _module_starts(self, headings: List[tuple], module_level: int, card_level: int) -> set:
-        starts = set()
-        current = None
-        for index, level, raw in headings:
-            if level <= module_level:
-                current = index if level == module_level else None
-            elif current is not None and level == card_level and _CARD_HEADING.match(raw):
-                starts.add(current)
-        return starts
-
-    def _preamble_after(self, lines: List[str], start: int, heading_at: dict) -> str:
-        end = next((index for index in sorted(heading_at) if index > start), len(lines))
-        return "".join(lines[start + 1:end]).strip()
-
-    def _append_card(self, module: MarkdownModule, card: str) -> None:
-        class_heading = ClassHeading.read(card.split("\n", 1)[0].lstrip("#"))
-        body = card.split("\n", 1)[1] if "\n" in card else ""
-        loaded = MarkdownOoadClass.read_card(class_heading, body, len(module.classes) + 1)
-        loaded.keep_card(card, class_heading)
-        module.classes.append(loaded)
-        module._card_parts.append(loaded)
-
-    def _render_cards(self) -> str:
-        module_level, card_level = self._card_levels
-        out: List[str] = []
-        written = []
-        for part in self._card_parts:
-            if isinstance(part, str):
-                out.append(part)
-            elif any(module is part for module in self.modules):
-                out.append(part.render_cards(module_level, card_level))
-                written.append(part)
-        for module in self.modules:
-            if not any(module is done for done in written):
-                out.append(module.render_cards(module_level, card_level))
-        return "".join(out)
-
     def render(self, canonical: Optional[CleanEngineeringModel] = None) -> str:
         """Write this model; handed another model, a markdown one writes itself and any other is translated in first."""
         if canonical is not None and canonical is not self:
             if isinstance(canonical, MarkdownCleanEngineeringModel):
                 return canonical.render()
             self.translate_from(canonical)
-        if self._card_parts is not None:
-            return self._render_cards()
+        if self._cards is not None:
+            return self._cards.render()
         return "\n".join(module.render() for module in self.modules)
-
-    _MODULE_META_HEADINGS = frozenset({
-        "seam",
-        "dependencies",
-        "modules fidelity",
-        "purpose",
-    })
-
-
-    def _parse_term_list(self, raw: str) -> List[str]:
-        text = raw.strip()
-        text = re.sub(r"^\*\(?none\)?\*$", "", text, flags=re.IGNORECASE).strip()
-        if not text or text.lower() in {"*(none)*", "(none)", "none", "-", "-"}:
-            return []
-        # Strip surrounding backticks per token
-        parts = re.split(r"[,;]", text)
-        out: List[str] = []
-        for p in parts:
-            term = p.strip().strip("`").strip()
-            term = re.sub(r"^\*\*?|\*\*?$", "", term).strip()
-            if term:
-                out.append(term)
-        return out
-
-
-    def _parse_module_meta(self, text: str) -> tuple[str, List[str], List[str], str]:
-        """Parse Purpose / Seam / Dependencies bullets from a modules-fidelity block.
-
-        Returns (purpose, seam_terms, dependencies, leftover_prose).
-        """
-        purpose = ""
-        seam_terms: List[str] = []
-        deps: List[str] = []
-        leftover_lines: List[str] = []
-
-        for line in text.splitlines():
-            stripped = line.strip()
-            m_purpose = re.match(r"^-?\s*\*\*Purpose:\*\*\s*(.+)$", stripped, re.IGNORECASE)
-            m_seam = re.match(
-                r"^-?\s*\*\*Seam(?:\s*\(terms\))?:\*\*\s*(.+)$", stripped, re.IGNORECASE
-            )
-            m_deps = re.match(
-                r"^-?\s*\*\*Dependencies(?:\s*\(one-way\))?:\*\*\s*(.+)$",
-                stripped,
-                re.IGNORECASE,
-            )
-            m_build = re.match(r"^-?\s*\*\*Build order:\*\*", stripped, re.IGNORECASE)
-            if m_purpose:
-                purpose = m_purpose.group(1).strip()
-            elif m_seam:
-                seam_terms = self._parse_term_list(m_seam.group(1))
-            elif m_deps:
-                deps = self._parse_term_list(m_deps.group(1))
-            elif m_build:
-                continue
-            elif re.match(r"^###\s+Module\s+", stripped, re.IGNORECASE):
-                continue
-            elif re.match(r"^##\s+Modules fidelity", stripped, re.IGNORECASE):
-                continue
-            else:
-                leftover_lines.append(line)
-
-        leftover = "\n".join(leftover_lines).strip()
-        # Nested "### Module `path`" blocks often put purpose only in the bullet
-        if not purpose and leftover:
-            # Keep leftover as description when it is prose (not only bullets we already ate)
-            prose = "\n".join(
-                ln for ln in leftover.splitlines()
-                if ln.strip() and not ln.strip().startswith("- **")
-            ).strip()
-            if prose:
-                purpose = prose.splitlines()[0].strip() if not purpose else purpose
-        return purpose, seam_terms, deps, leftover
-
-
-    def _apply_module_section(self, module: Module, heading: str, body: str) -> None:
-        key = heading.lower().strip()
-        if key == "modules fidelity":
-            purpose, seam_terms, deps, _leftover = self._parse_module_meta(body)
-            if purpose and not module.description:
-                module.description = purpose
-            if seam_terms:
-                module.seam_terms = seam_terms
-                if not module.seam:
-                    module.seam = ", ".join(seam_terms)
-            if deps:
-                module.dependencies = deps
-            return
-        if key == "seam":
-            # Narrative seam section - keep as seam prose; pull backticked names as terms
-            module.seam = body.strip()
-            if not module.seam_terms:
-                module.seam_terms = [
-                    t for t in re.findall(r"`([^`]+)`", body)
-                    if t.strip() and "." not in t  # skip Check.resolve style
-                ]
-        elif key == "dependencies":
-            # Prefer a "**Formal (modules):** a, b" line; else comma list on first line
-            formal = re.search(
-                r"\*\*Formal\s*\(modules\):\*\*\s*(.+)", body, re.IGNORECASE
-            )
-            if formal:
-                module.dependencies = self._parse_term_list(formal.group(1))
-            else:
-                first = next((ln.strip() for ln in body.splitlines() if ln.strip()), "")
-                module.dependencies = self._parse_term_list(first)
-        elif key == "purpose":
-            module.description = body.strip()
-

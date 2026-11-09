@@ -23,6 +23,7 @@ from cdd_guidance.practices.clean_engineering.rules import RULES
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
     assert_files_rule_pair,
     assert_module_example_pair,
+    assert_rule_pair,
     assert_python_example_pair,
     ce_rule_by_slug,
     practice_from_files,
@@ -178,6 +179,27 @@ with description("the Clean Engineering graph rules"):
             )
             expect(_hits("errors-out-of-existence", source, "graph.py")).to(equal([]))
 
+        with it("should accept a raise of a named failure the program declares, with no arguments"):
+            source = (
+                "class Repo:\n    def commit(self, paths):\n        if not paths:\n"
+                "            raise CommitPathsRequiredError()\n        return self.git.commit(paths)\n"
+            )
+            expect(_hits("errors-out-of-existence", source, "repo.py")).to(equal([]))
+
+        with it("should accept a named failure whose message says what is missing"):
+            source = (
+                "class Repo:\n    def commit(self, paths):\n        if not paths:\n"
+                "            raise CommitPathsRequiredError('paths missing')\n        return self.git.commit(paths)\n"
+            )
+            expect(_hits("errors-out-of-existence", source, "repo.py")).to(equal([]))
+
+        with it("should still judge a builtin failure whose message says what is missing"):
+            source = (
+                "class Repo:\n    def commit(self, paths):\n        if not paths:\n"
+                "            raise ValueError('paths missing')\n        return self.git.commit(paths)\n"
+            )
+            expect(_hits("errors-out-of-existence", source, "repo.py")).to(have_len(1))
+
         with it("should still judge the same code in a production file"):
             expect(_hits("use-exceptions-properly", _CATCHES_EVERYTHING, "probe.py")).to(have_len(1))
 
@@ -220,6 +242,36 @@ with description("the Clean Engineering graph rules"):
                         "import typing\n\nif typing.TYPE_CHECKING:\n    pass\nelse:\n    from repo.repo import Repo\n\n\n"
                         "class Worktree:\n    pass\n"
                     ),
+                },
+            )
+            expect(practice_from_files(tree).hits(ce_rule_by_slug("one-way-deps"))).to(have_len(2))
+
+        with it("should not count a TypeScript import type as a dependency"):
+            tree = _module(
+                "board",
+                {
+                    "board-page.ts": "import { BoardStore } from './board-store';\n\nexport class BoardPage {\n  store = new BoardStore();\n}\n",
+                    "board-store.ts": "import type { BoardPage } from './board-page';\n\nexport class BoardStore {\n  page?: BoardPage;\n}\n",
+                },
+            )
+            expect(practice_from_files(tree).hits(ce_rule_by_slug("one-way-deps"))).to(equal([]))
+
+        with it("should not count a TypeScript import whose every name is marked type"):
+            tree = _module(
+                "board",
+                {
+                    "board-page.ts": "import { BoardStore } from './board-store';\n\nexport class BoardPage {\n  store = new BoardStore();\n}\n",
+                    "board-store.ts": "import { type BoardPage, type PageId } from './board-page';\n\nexport class BoardStore {\n  page?: BoardPage;\n}\n",
+                },
+            )
+            expect(practice_from_files(tree).hits(ce_rule_by_slug("one-way-deps"))).to(equal([]))
+
+        with it("should still count a TypeScript import that takes a value beside a type"):
+            tree = _module(
+                "board",
+                {
+                    "board-page.ts": "import { BoardStore } from './board-store';\n\nexport class BoardPage {\n  store = new BoardStore();\n}\n",
+                    "board-store.ts": "import { type PageId, BoardPage } from './board-page';\n\nexport class BoardStore {\n  page = new BoardPage();\n}\n",
                 },
             )
             expect(practice_from_files(tree).hits(ce_rule_by_slug("one-way-deps"))).to(have_len(2))
@@ -293,6 +345,46 @@ with description("the Clean Engineering graph rules"):
             source = "class Plan:\n    def copy_from(self, other: 'Plan') -> None:\n        self._tier = other._tier\n"
             expect(_hits("hide-inner-details", source)).to(equal([]))
 
+        with it("should accept a class reaching its own private class field by its name"):
+            source = "class Catalogue:\n    _runner = None\n\n    @staticmethod\n    def run_with(runner) -> None:\n        Catalogue._runner = runner\n"
+            expect(_hits("hide-inner-details", source)).to(equal([]))
+
+        with it("should accept a parameter typed as its own class"):
+            source = "class Plan:\n    def outranks(self, other: 'Plan') -> bool:\n        return self.rank > other._rank\n"
+            expect(_hits("hide-inner-details", source)).to(equal([]))
+
+        with it("should accept the other operand of a comparison dunder"):
+            source = "class Paths:\n    def __eq__(self, other) -> bool:\n        return self.keys == other._keys\n"
+            expect(_hits("hide-inner-details", source)).to(equal([]))
+
+        with it("should accept an instance its classmethod has just made"):
+            source = "class Card:\n    @classmethod\n    def read(cls, text: str) -> 'Card':\n        card = cls()\n        card._fill(text)\n        return card\n"
+            expect(_hits("hide-inner-details", source)).to(equal([]))
+
+        with it("should accept an instance of its own class it builds"):
+            source = "class Map:\n    def copy_of(self) -> 'Map':\n        copy = Map()\n        copy._place(self.screens)\n        return copy\n"
+            expect(_hits("hide-inner-details", source)).to(equal([]))
+
+        with it("should accept a loop over children it declares of its own class"):
+            source = "class Epic:\n    epics: list['Epic']\n\n    def stamp(self) -> None:\n        for child in self.epics:\n            child._stamp()\n"
+            expect(_hits("hide-inner-details", source)).to(equal([]))
+
+        with it("should still flag a parameter typed as another class"):
+            source = "class Cart:\n    def total(self, order: 'Order') -> int:\n        return sum(order._lines)\n"
+            expect(_hits("hide-inner-details", source)).to(have_len(1))
+
+        with it("should accept a TypeScript parameter typed as its own class"):
+            source = "export class Money {\n  equals(other: Money): boolean {\n    return this.cents === other._cents;\n  }\n}\n"
+            expect(_hits("hide-inner-details", source, "money.ts")).to(equal([]))
+
+        with it("should accept a TypeScript instance of its own class it builds"):
+            source = "export class Money {\n  doubled(): Money {\n    const copy = new Money();\n    copy._cents = 2;\n    return copy;\n  }\n}\n"
+            expect(_hits("hide-inner-details", source, "money.ts")).to(equal([]))
+
+        with it("should still flag a TypeScript parameter typed as another class"):
+            source = "export class Money {\n  add(order: Order): number {\n    return order._cents;\n  }\n}\n"
+            expect(_hits("hide-inner-details", source, "money.ts")).to(have_len(1))
+
         with it("should be the one rule that reports the reach"):
             reaching = practice_from_source("class Cart:\n    def total(self, order) -> int:\n        return sum(order._lines)\n")
             asking = practice_from_source("class Cart:\n    def total(self, order) -> int:\n        return sum(order.lines)\n")
@@ -358,6 +450,36 @@ with description("the Clean Engineering graph rules"):
             doc = '        """{text}\n\n        One.\n        Two.\n        Three.\n        Four.\n        """\n        return ""\n'
             source = "class Commands:\n    def push(self) -> str:\n" + doc.format(text="Push.") + "\n    def switch(self) -> str:\n" + doc.format(text="Switch.")
             expect(_hits("eliminate-duplication", source)).to(equal([]))
+
+        with it("should accept two one-expression bodies that read alike"):
+            source = (
+                "class FrontMatter:\n    def of_file(self, path) -> str:\n"
+                "        return path.read_text(encoding='utf-8') if path.is_file() and path.suffix == '.md' else ''\n\n\n"
+                "class Schema:\n    def loaded(self, path) -> str:\n"
+                "        return path.read_text(encoding='utf-8') if path.is_file() and path.suffix == '.md' else ''\n"
+            )
+            expect(_hits("eliminate-duplication", source)).to(equal([]))
+
+        with it("should flag a four-statement near copy and accept two three-statement bodies that differ in their one job"):
+            three = (
+                "class Daemon:\n    def pin_from(self, checkout) -> str:\n        self.home.install(checkout, CONNECT_SCRIPT)\n"
+                "        self.home.pin(checkout)\n        return self._status(self.restart())\n\n"
+                "    def serve_checkout(self, checkout) -> str:\n        self.home.install(checkout, CONNECT_SCRIPT)\n"
+                "        self.home.serve_from(checkout)\n        return self._status(self.restart())\n"
+            )
+            four = three.replace("        self.home.pin(checkout)\n", "        self.home.pin(checkout)\n        self.home.forget(checkout)\n").replace(
+                "        self.home.serve_from(checkout)\n", "        self.home.serve_from(checkout)\n        self.home.forget(checkout)\n"
+            )
+            expect([len(_hits("eliminate-duplication", four)), len(_hits("eliminate-duplication", three))]).to(equal([1, 0]))
+
+        with it("should flag a copied body and accept two classes that each configure their base with literal values"):
+            configured = "(Pattern):\n    def __init__(self) -> None:\n        super().__init__(\n            format='typescript',\n            default_workspace_folder='harness',\n        )\n"
+            copied = "(Pattern):\n    def __init__(self, folder) -> None:\n        super().__init__(\n            format='typescript',\n            default_workspace_folder=folder,\n        )\n"
+            assert_rule_pair(
+                "eliminate-duplication",
+                "class WebAccess" + copied + "\n\nclass ClaudeMod" + copied,
+                "class WebAccess" + configured + "\n\nclass ClaudeMod" + configured,
+            )
 
         with it("should accept two operations of different shape"):
             other = "\nclass Names:\n    def joined(self, people):\n        names = []\n        for person in people:\n            names.append(person.name.title())\n        names.sort()\n        return ', '.join(names)\n"

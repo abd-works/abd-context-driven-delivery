@@ -1,186 +1,19 @@
 /**
  * Explorer tree: epic → sub-epic → screen → story → scenario → step.
- * A screen sits on the epic when that epic has no sub-epic.
+ * The UX map writes the tree into the mockup page (#story-explorer-tree): where each screen sits, which stories and
+ * scenarios it holds, and the keys that open each screen. This module only draws it.
  * The current screen's epic, sub-epic, and screen start expanded.
  */
 
-export function epicKey(name) {
-  return `epic:${name}`;
-}
-
-export function subEpicKey(epic, name) {
-  return `subepic:${epic}/${name}`;
-}
-
-export function screenKey(name, epic = "", sub = "") {
-  return epic ? `screen:${epic}/${sub}/${name}` : `screen:${name}`;
-}
-
-export function storyKey(screen, story) {
-  return `story:${screen}/${story}`;
-}
-
-export function scenarioKey(screen, story, scenario) {
-  return `scenario:${screen}/${story}/${scenario}`;
-}
-
-export function storyNamesOnScreen(screenEl) {
-  const raw =
-    screenEl.getAttribute("data-stories") ||
-    screenEl.getAttribute("data-for-story") ||
-    "";
-  return raw
-    .split(",")
-    .map((name) => name.trim())
-    .filter(Boolean);
-}
-
 /**
- * @param {Element[]} screenEls
- * @param {{ title?: string, story?: { name?: string, scenarios?: object[] } }[]} catalog
+ * The tree the mockup page carries: `{ nodes, screenKeys }`.
+ * A page with no tree, or a tree that is not JSON, raises: the page was not rendered from a UX map.
+ * @param {ParentNode} root
  */
-export function buildScreenNodes(screenEls, catalog) {
-  return screenEls.map((el) => {
-    const name =
-      el.getAttribute("data-slug") ||
-      el.querySelector("h2")?.textContent?.trim() ||
-      "";
-    const stories = storyNamesOnScreen(el).map((storyName) => {
-      const storyIndex = catalog.findIndex(
-        (entry) => entry.title === storyName || entry.story?.name === storyName,
-      );
-      const entry = storyIndex >= 0 ? catalog[storyIndex] : null;
-      const scenarios = (entry?.story?.scenarios ?? []).map((sc, scenarioIndex) => ({
-        name: sc.name,
-        scenarioIndex,
-        steps: (sc.steps ?? []).map((step) => ({
-          kind: step.kind,
-          label: step.label,
-        })),
-      }));
-      return { name: storyName, storyIndex, scenarios };
-    });
-    return { name, stories };
-  });
-}
-
-/**
- * Place screens under the story-map outline.
- * A group with a name is a sub-epic. A group without one hangs its screens on the epic.
- * Groups with no matching screen are left off the tree.
- * @param {{ name: string, stories?: object[] }[]} screens
- * @param {{ name: string, groups?: { name?: string, stories?: string[] }[], stories?: string[] }[]} outline
- */
-export function nestScreens(screens, outline) {
-  const screenNodes = screens.map(toScreenNode);
-  if (!outline?.length) return screenNodes;
-  const epics = [];
-  for (const epic of outline) {
-    const children = [];
-    for (const group of epic.groups || []) {
-      const placed = placeScreens(screenNodes, group.stories || [], epic.name, group.name || "");
-      if (!placed.length) continue;
-      if (group.name) {
-        children.push({
-          kind: "subepic",
-          name: group.name,
-          key: subEpicKey(epic.name, group.name),
-          children: placed,
-        });
-      } else {
-        children.push(...placed);
-      }
-    }
-    if (epic.stories?.length) {
-      children.push(...placeScreens(screenNodes, epic.stories, epic.name, ""));
-    }
-    if (!children.length) continue;
-    epics.push({
-      kind: "epic",
-      name: epic.name,
-      key: epicKey(epic.name),
-      children,
-    });
-  }
-  return epics.length ? epics : screenNodes;
-}
-
-/** Keys to open so the named screen is visible: epic, sub-epic, and the screen. */
-export function keysForCurrentScreen(nodes, screenName) {
-  let match = null;
-  function walk(node, trail) {
-    if (match || !node || node.kind === "step") return;
-    const next = node.key ? [...trail, node.key] : trail;
-    if (node.kind === "screen" && node.name === screenName) {
-      match = next;
-      return;
-    }
-    for (const child of node.children || []) walk(child, next);
-  }
-  for (const node of nodes || []) walk(node, []);
-  return match || [];
-}
-
-function toScreenNode(screen) {
-  return {
-    kind: "screen",
-    name: screen.name,
-    key: screenKey(screen.name),
-    children: (screen.stories || []).map((story) => storyToNode(screen.name, story)),
-  };
-}
-
-function storyToNode(screenName, story) {
-  return {
-    kind: "story",
-    name: story.name,
-    screenName,
-    key: storyKey(screenName, story.name),
-    storyIndex: story.storyIndex ?? -1,
-    children: (story.scenarios || []).map((scenario, index) => {
-      const key = scenarioKey(screenName, story.name, scenario.name);
-      return {
-        kind: "scenario",
-        name: scenario.name,
-        screenName,
-        key,
-        storyName: story.name,
-        storyIndex: story.storyIndex ?? -1,
-        scenarioIndex: scenario.scenarioIndex ?? index,
-        children: (scenario.steps || []).map((step) => ({
-          kind: "step",
-          screenName,
-          stepKind: step.kind,
-          label: step.label,
-          storyIndex: story.storyIndex ?? -1,
-          scenarioIndex: scenario.scenarioIndex ?? index,
-          scenarioKey: key,
-        })),
-      };
-    }),
-  };
-}
-
-function placeScreens(screenNodes, storyNames, epicName, subName) {
-  const order = new Map(storyNames.map((name, index) => [name, index]));
-  const placed = [];
-  for (const screen of screenNodes) {
-    const stories = (screen.children || [])
-      .filter((story) => order.has(story.name))
-      .sort((a, b) => order.get(a.name) - order.get(b.name));
-    if (!stories.length) continue;
-    placed.push({
-      rank: Math.min(...stories.map((story) => order.get(story.name))),
-      node: {
-        kind: "screen",
-        name: screen.name,
-        key: screenKey(screen.name, epicName, subName),
-        children: stories,
-      },
-    });
-  }
-  placed.sort((a, b) => a.rank - b.rank);
-  return placed.map((item) => item.node);
+export function readExplorerTree(root) {
+  const el = root.querySelector("#story-explorer-tree");
+  if (!el) throw new Error("This mockup carries no #story-explorer-tree; render the UX map to HTML again.");
+  return JSON.parse(el.textContent);
 }
 
 function twistButton(expanded, key, onToggle, onSelect) {
@@ -235,24 +68,14 @@ const KIND_LABEL = {
   step: "Step",
 };
 
-const DOMAIN_NOUNS = [
-  "My Paradise",
-  "Mavenir shopping cart",
-  "Apple Pay",
-  "Mavenir",
-  "Cognito",
-  "Vouchera",
-  "Persona",
-  "Twilio",
-  "Zendesk",
-  "MSISDN",
-  "Customer",
-  "User",
-];
-
-function appendNouns(fragment, text) {
+// Underline the domain terms the model gives a step's screen (step.domainTerms); the page decides none itself.
+function appendNouns(fragment, text, terms) {
+  if (!terms.length) {
+    fragment.appendChild(document.createTextNode(text));
+    return;
+  }
   const pattern = new RegExp(
-    DOMAIN_NOUNS.map((noun) => noun.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"),
+    terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"),
     "gi",
   );
   let cursor = 0;
@@ -270,20 +93,20 @@ function appendNouns(fragment, text) {
   if (cursor < text.length) fragment.appendChild(document.createTextNode(text.slice(cursor)));
 }
 
-function stepLabel(label) {
+function stepLabel(label, terms) {
   const fragment = document.createDocumentFragment();
   const marked = /\+\+([^+]+)\+\+/g;
   let cursor = 0;
   let match = marked.exec(label);
   while (match) {
-    if (match.index > cursor) appendNouns(fragment, label.slice(cursor, match.index));
+    if (match.index > cursor) appendNouns(fragment, label.slice(cursor, match.index), terms);
     const noun = document.createElement("u");
     noun.textContent = match[1];
     fragment.appendChild(noun);
     cursor = match.index + match[0].length;
     match = marked.exec(label);
   }
-  if (cursor < label.length) appendNouns(fragment, label.slice(cursor));
+  if (cursor < label.length) appendNouns(fragment, label.slice(cursor), terms);
   return fragment;
 }
 
@@ -341,13 +164,12 @@ export function scrollExplorerToScreen(container, screenName) {
 
 /**
  * @param {HTMLElement} container
- * @param {{ nodes?: object[], screens?: object[], outline?: object[], expanded: Set<string>, currentScreen?: string, currentStory?: string, currentScenario?: string, currentStep?: { kind?: string, label?: string }, scrollToCurrentScreen?: boolean }} model
- * @param {{ onToggle: (key: string) => void, onScreen: (name: string) => void, onStory: (storyIndex: number, name: string) => void, onScenario: (storyIndex: number, scenarioIndex: number, key: string) => void }} handlers
+ * @param {{ nodes: object[], expanded: Set<string>, currentScreen?: string, currentStory?: string, currentScenario?: string, currentStep?: { kind?: string, label?: string }, scrollToCurrentScreen?: boolean }} model
+ * @param {{ onToggle: (key: string) => void, onScreen: (name: string) => void, onStory: (storyName: string) => void, onScenario: (storyName: string, scenarioIndex: number, key: string) => void }} handlers
  */
 export function renderScreenTree(container, model, handlers) {
   container.innerHTML = "";
-  const nodes = model.nodes || nestScreens(model.screens || [], model.outline || []);
-  for (const node of nodes) container.appendChild(renderBranch(node, model, handlers, false, ""));
+  for (const node of model.nodes) container.appendChild(renderBranch(node, model, handlers, false, ""));
   if (model.scrollToCurrentScreen && model.currentScreen) {
     scrollExplorerToScreen(container, model.currentScreen);
   }
@@ -369,10 +191,8 @@ function renderBranch(node, model, handlers, activeScenario, owningScreen) {
   li.appendChild(
     labelButton(node.name, `${node.kind}-label`, node.kind, () => {
       if (!open) handlers.onToggle(node.key);
-      if (node.kind === "story") handlers.onStory(node.storyIndex ?? -1, node.name);
-      if (node.kind === "scenario") {
-        handlers.onScenario(node.storyIndex ?? -1, node.scenarioIndex ?? -1, node.key);
-      }
+      if (node.kind === "story") handlers.onStory(node.name);
+      if (node.kind === "scenario") handlers.onScenario(node.storyName, node.scenarioIndex, node.key);
       selectScreen();
     }),
   );
@@ -404,7 +224,7 @@ function renderStep(step, model, handlers, activeScenario, owningScreen) {
   if (screenName) stepLi.dataset.owningScreen = screenName;
   stepLi.tabIndex = 0;
   stepLi.addEventListener("click", () => {
-    handlers.onScenario?.(step.storyIndex ?? -1, step.scenarioIndex ?? -1, step.scenarioKey);
+    handlers.onScenario?.(step.storyName, step.scenarioIndex, step.scenarioKey);
     if (screenName) handlers.onScreen?.(screenName);
   });
   const kind = document.createElement("span");
@@ -413,7 +233,7 @@ function renderStep(step, model, handlers, activeScenario, owningScreen) {
   kind.textContent = step.stepKind;
   stepLi.appendChild(kind);
   stepLi.appendChild(document.createTextNode(" "));
-  stepLi.appendChild(stepLabel(step.label));
+  stepLi.appendChild(stepLabel(step.label, step.domainTerms || []));
   const current = model.currentStep;
   if (
     activeScenario &&

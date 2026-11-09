@@ -16,11 +16,12 @@ file: space/kanban/story_test.py
 from __future__ import annotations
 
 import importlib.util
-import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any, Callable, Protocol
+
+from harness.annotations.name import Name
 
 GIVEN, WHEN, THEN = "given", "when", "then"
 # Mamba runs the classes and functions of a group in the order of their names, so each name starts with its place.
@@ -116,7 +117,7 @@ def load_shared(spec_file: str, sub_epic_slug: str) -> SharedStories:
     """The SharedStories of `{sub_epic_slug}.story.shared.py` beside spec_file. Its name holds dots and dashes, so it
     is loaded from its path rather than imported by name."""
     path = Path(spec_file).resolve().with_name(f"{sub_epic_slug}.story.shared.py")
-    module_spec = importlib.util.spec_from_file_location(f"{_slug(sub_epic_slug)}_story_shared", path)
+    module_spec = importlib.util.spec_from_file_location(f"{Name(sub_epic_slug).title_snake}_story_shared", path)
     module: ModuleType = importlib.util.module_from_spec(module_spec)
     module_spec.loader.exec_module(module)
     return module.shared_stories
@@ -133,8 +134,8 @@ def replay(shared: SharedStories, tier: Tier, left_out: dict[str, str] | None = 
     for index, story in enumerate(shared.stories):
         scenarios = [scenario for scenario in shared.scenarios if scenario.story == story and scenario.name not in skipped]
         if scenarios:
-            name = _ordered(index, f"Story_{_slug(story)}")
-            groups[name] = _group(name, f"{story} ({tier.name})", {_ordered(place, f"Scenario_{_slug(scenario.name)}"): _scenario_group(scenario, tier, place) for place, scenario in enumerate(scenarios)})
+            name = _ordered(index, f"Story_{Name(story).title_snake}")
+            groups[name] = _group(name, f"{story} ({tier.name})", {_ordered(place, f"Scenario_{Name(scenario.name).title_snake}"): _scenario_group(scenario, tier, place) for place, scenario in enumerate(scenarios)})
     return groups
 
 
@@ -268,8 +269,8 @@ def _scenario_group(scenario: Scenario, tier: Tier, place: int) -> type:
     for order, index in enumerate(thens):
         step = scenario.steps[index]
         label = f"Then {step.text}" if order == 0 or scenario.steps[index - 1].kind != THEN else step.text
-        members[_ordered(order, _slug(step.text))] = _example(label, outcomes, index)
-    return _group(_ordered(place, f"Scenario_{_slug(scenario.name)}"), scenario.name, members)
+        members[_ordered(order, Name(step.text).title_snake or "step")] = _example(label, outcomes, index)
+    return _group(_ordered(place, f"Scenario_{Name(scenario.name).title_snake}"), scenario.name, members)
 
 
 class StepFailed(AssertionError):
@@ -304,7 +305,3 @@ def _group(class_name: str, description: str, members: dict[str, Any]) -> type:
 
 def _ordered(place: int, name: str) -> str:
     return f"{place:0{ORDER_DIGITS}d}__{name}"
-
-
-def _slug(value: str) -> str:
-    return re.sub(r"[^0-9a-z]+", "_", value.strip().lower()).strip("_") or "step"

@@ -233,10 +233,10 @@ Sessions, a session, and its log
 	// `no-chat` when none is known
 ----
 + line(line: str): None
-+ validation(practice: PracticeSessionOutput, violations: list[str]): None
-+ action(action: str, paths: list[Path], practices: list[PracticeSessionOutput]): None
++ validation(worked: FidelitySessionOutput, violations: list[str]): None
++ action(action: str, paths: list[Path], worked: list[FidelitySessionOutput]): None
 	// names the paths and what the practices it worked on were working at, with the injected rules
-+ guidance_action(action: str, practices: list[PracticeSessionOutput]): None
++ guidance_action(action: str, worked: list[FidelitySessionOutput]): None
 	// GuidanceAction logs each action this way, with the workpath and each practice's folder as its paths
 + tool(tool_name: str, tool_input: dict): None
 	// the MCP host logs each tool call this way
@@ -326,8 +326,8 @@ Sessions, a session, and its log
 + fidelities: GuidanceCollection
 + enabled: bool
 	// data field
-+ working_fidelity: str
-+ working_format: str
++ working: FidelitySessionOutput | None
+	// what the fidelity the practice was made at has in the session, the one that fidelity holds; none at no fidelity
 + folder: Path
 	// the root chosen in session.json, else the folder config.json names, else the guidance's default folder
 + output_root: Path
@@ -358,6 +358,10 @@ Sessions, a session, and its log
 
 + FidelitySessionOutput(practice: PracticeSessionOutput, fidelity: FidelityGuidance)
 ------
++ practice: PracticeSessionOutput
+	// a log line names its name and folder
++ fidelity: FidelityGuidance
+	// a log line names its name and the format it works in
 + reports_folder: Path
 + root: Path
 	// the fidelity's own root when session.json names one, else the practice's output root
@@ -553,7 +557,7 @@ it should return the log lines for that loop number
 #### that calls validate
 
 ```
--> session.log.by(chat).validation(session.practice(name), violations)
+-> session.log.by(chat).validation(session.practice(name).fidelities[fidelity].session_output, violations)
 it should log that practice and that fidelity
   -> expect(session.log.path).to contain the practice and the fidelity
 it should log the rule, the synopsis, and the correction
@@ -576,7 +580,7 @@ it should leave session.log unchanged
 it should hold that practice's guidance in memory
   -> expect(session.practice(name).guidance).to be a PracticeGuidance
 it should be the one practice the session's graph holds
-  -> expect(session.graph.every_practice[name]).to be session.practice(name).guidance
+  -> expect(session.graph.practices.held[name]).to be session.practice(name).guidance
 it should be the same practice the next call in the session works with
   -> expect(next call's session.practice(name).guidance).to be session.practice(name).guidance
 it should return that same practice on the next ask

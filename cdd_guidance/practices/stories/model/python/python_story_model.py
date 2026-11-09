@@ -4,113 +4,68 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Optional
+from typing import List
 
-from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, WrittenBlock
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError, example_names_of, flat_steps
-from cdd_guidance.practices.stories.model.python.nodes import PythonEpic, PythonStory, quote
-from cdd_guidance.practices.stories.model.python.story_reader import PythonStoryReader
-from cdd_guidance.practices.stories.model.story_model import Background, Epic, Scenario, Step, Story
+from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON
+from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
+from cdd_guidance.practices.stories.model.python.nodes import PythonEpic, PythonStory
+from cdd_guidance.practices.stories.model.python.story_file import PythonStoryFile
+from cdd_guidance.practices.stories.model.story_file import flat_steps
+from cdd_guidance.practices.stories.model.story_model import Background, Epic, Story
+from cdd_guidance.practices.stories.model.story_writing import StoryWriting, background_examples_line, example_names_of, story_description
 
-_VERBS = {"Given": "given", "When": "when", "Then": "then", "But": "but_", "And": "and_"}
 
+class PythonStoryWriting(StoryWriting):
+    """How Python writes stories: `with story(...)`, `with scenario(...)`, and `with given(...)` blocks, the
+    scenarios back to back, and the story's description and background as comments."""
 
-class PythonStoryModel(CodeStoryModel):
-    LEAF_EXTENSION = "_story.test.py"
-    story_test_suffix = LEAF_EXTENSION
-    epic_type = PythonEpic
-    story_type = PythonStory
-    language = PYTHON
+    file_name_template = "{snake}_story.test.py"
     scenario_indent = "        "
     scenario_gap: List[str] = []
-
-    def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
-        return sorted(p for p in tree if p.endswith(self.LEAF_EXTENSION))
-
-    def load(self, external: Dict[str, str]) -> "PythonStoryModel":
-        if not isinstance(external, dict):
-            raise CodeStoryModelError("Python story map parse expects a path->content dict")
-        self.epics.clear()
-        for path in self._ordered_paths(external):
-            content = external[path]
-            if not path.endswith(self.LEAF_EXTENSION):
-                continue
-            parts = path.strip("/").split("/")
-            if parts and parts[0] == self.tests_root:
-                parts = parts[1:]
-            if self.take_sub_epic_file(parts, content, path):
-                continue
-            if len(parts) < 4:
-                continue
-            epic_slug = parts[0]
-            story_slug = parts[-2]
-            sub_slugs = parts[1:-2]
-            if not sub_slugs:
-                continue
-            epic = self.epic_for(epic_slug)
-            sub = self.sub_epic_for(epic, sub_slugs)
-            sub.append_story(self.story_type.load(content, story_slug))
-        return self
-
-    def read_code(self, content: str, stories: List[Story], path: str) -> Optional[WrittenBlock]:
-        return PythonStoryReader(self.language, content).read(stories, path)
-
-    def file_name(self, epic: Epic) -> str:
-        return f"{epic.snake()}_story.test.py"
+    quote_mark = '"'
+    no_scenarios = ["        pass"]
+    empty_block = ["pass"]
+    placeholder = "pass"
+    scenario_opening = "{indent}with scenario({name}):"
+    step_opening = "{indent}with {verb}({text}):"
+    and_opening = "{indent}with {verb}({text}):"
+    and_verbs = ("and_", "but_")
+    verbs = {"Given": "given", "When": "when", "Then": "then", "But": "but_", "And": "and_"}
+    default_verb = "then"
 
     def file_header(self, epic: Epic, parent: str) -> List[str]:
         names = example_names_of(list(epic.stories))
         example_import = [f"from examples import {', '.join(names)}", ""] if names else []
-        return [
-            "from __future__ import annotations",
-            "",
-            "from story_test import and_, background, given, scenario, story, then, when",
-            *example_import,
-            "",
-            f"# Epic: {epic.name}",
-            f"# Orders: {epic.order_path()}",
-            "",
-        ]
+        heading = [self.language.comment(f"Epic: {epic.name}"), self.language.comment(f"Orders: {epic.order_path()}"), ""]
+        return ["from __future__ import annotations", "", "from story_test import and_, background, given, scenario, story, then, when", *example_import, "", *heading]
 
-    def verb(self, step: Step) -> str:
-        return _VERBS.get(step.keyword, "then")
-
-    def story_open(self, story: Story) -> List[str]:
-        lines: List[str] = [f"# Story: {story.name}", *self.description_lines(story, "# ")]
+    def story_open(self, story: "Story") -> List[str]:
+        lines = [self.language.comment(f"Story: {story.name}"), *story_description(story, "# ")]
         if story.domain_terms:
-            lines.append("# Domain terms: " + ", ".join(story.domain_terms))
-        example_line = self.story_type.background_example_line(story, "# ")
-        if example_line:
-            lines.append(example_line)
-        return lines + [f'with story("{quote(story.name)}"):']
+            lines.append(self.language.comment("Domain terms: " + ", ".join(story.domain_terms)))
+        return lines + background_examples_line(story, "# ") + [f"with story({self.quoted(story.name)}):"]
 
-    def story_background_lines(self, background: Background) -> List[str]:
+    def story_background_lines(self, background: "Background") -> List[str]:
         scope = background.name if re.fullmatch(r"\w+", background.name or "") else "each"
-        lines = [f"    with background.{scope}:"]
+        lines = [f"{self.language.indent}with background.{scope}:"]
         for step in background.steps:
-            lines.extend(self.step_lines((step, "given", []), "        "))
+            lines.extend(self.step_lines((step, "given", []), self.language.indent * 2))
         return lines
 
-    def no_scenarios_lines(self) -> List[str]:
-        return ["        pass"]
-
-    def scenario_open(self, scenario: Scenario, indent: str) -> List[str]:
-        return [f'{indent}with scenario("{quote(scenario.name)}"):']
-
-    def scenario_background_lines(self, background: Background, indent: str) -> List[str]:
-        lines = [f"{indent}# background: {background.name}"]
+    def scenario_background_lines(self, background: "Background", indent: str) -> List[str]:
+        lines = [f"{indent}{self.language.comment('background: ' + background.name)}"]
         for step in flat_steps(background.steps):
-            lines.append(f"{indent}# background-step: {step.keyword} | {step.text}")
+            lines.append(f"{indent}{self.language.comment(f'background-step: {step.keyword} | {step.text}')}")
         return lines
 
-    def step_open(self, verb: str, step: Step, indent: str) -> str:
-        return f'{indent}with {verb}("{quote(step.text)}"):'
 
-    def and_open(self, step: Step, indent: str) -> str:
-        return f'{indent}with {"but_" if step.keyword == "But" else "and_"}("{quote(step.text)}"):'
+class PythonStoryModel(CodeStoryModel):
+    LEAF_EXTENSION = "_story.test.py"
+    story_file_suffixes = (LEAF_EXTENSION,)
+    epic_type = PythonEpic
+    story_type = PythonStory
+    language = PYTHON
+    writing_type = PythonStoryWriting
 
-    def step_placeholder(self) -> str:
-        return "pass"
-
-    def empty_block(self) -> List[str]:
-        return ["pass"]
+    def story_file(self, content: str) -> PythonStoryFile:
+        return PythonStoryFile(self.language, content)

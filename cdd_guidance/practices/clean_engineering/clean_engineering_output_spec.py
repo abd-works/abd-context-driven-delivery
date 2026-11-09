@@ -40,4 +40,4 @@ with description("a clean engineering practice writing its artifact"):
             self.practice = CleanEngineering(fidelity="model", format="markdown")
 
         with it("should read the diagram's source with a markdown model of the toolset's own, not the one the practice renders markdown with"):
-            expect(self.practice.drawio.source is self.practice._live_adapter("markdown")).to(equal(False))
+            expect(self.practice.drawio.source is self.practice.formats.adapter("markdown")).to(equal(False))

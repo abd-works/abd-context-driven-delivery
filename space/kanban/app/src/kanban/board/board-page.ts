@@ -17,7 +17,7 @@ import type { Send } from './board-api'
 import { BoardClient } from './board-client'
 import { BoardLayoutClient } from './board-layout-client'
 import { BoardReader } from './board-reader'
-import { BoardStore } from './board-store'
+import { BoardStore } from '../shared/board-store'
 import { BuildClient } from './build-client'
 import { SidePanelClient } from './side-panel-client'
 
@@ -60,8 +60,14 @@ export class BoardPage {
     this.build = new BuildClient(this.store, this.api)
   }
 
+  // The board as last read, made once for that read and again only when the store holds a new read, since the views
+  // read it many times in one render.
+  private shown: BoardClient | null = null
+
   get board(): BoardClient {
-    return new BoardClient(this.store.state.board ?? NOT_READ_YET, this)
+    const read = this.store.state.board ?? NOT_READ_YET
+    if (this.shown?.read !== read) this.shown = new BoardClient(read, this)
+    return this.shown
   }
 
   async reloadOpen(): Promise<void> {

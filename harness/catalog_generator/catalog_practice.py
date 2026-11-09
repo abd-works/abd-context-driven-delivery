@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 from functools import cached_property
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,7 @@ from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import NoCatalog
 from harness.installation.files import FileInstallation
 from harness.installation.ide_layout import IdeLayout
+from harness.markdown.format import Format
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 # The IDE whose skill names the catalog shows as slash commands.
@@ -63,17 +65,19 @@ class CatalogPractice:
         )
 
     @classmethod
+    def of_practices(cls, practices: Iterable[PracticeGuidance]) -> list[CatalogPractice]:
+        """The catalog's view of each of practices, in their order: each keeps its place among them, and all share one
+        skill install, made once here. A reader that holds these, such as a checkout's session board, makes them once."""
+        skills = cls.skill_install()
+        catalogue = tuple(practices)
+        return [cls(practice, skills, position, catalogue) for position, practice in enumerate(catalogue)]
+
+    @classmethod
     def load_all(cls) -> list[CatalogPractice]:
         """Every practice in the practice catalogue with a fidelity on the board, unless annotated ``@noCatalog``, in the
         order each practice's catalog card gives. Each keeps its place in the catalogue, the order the approach's grids
         list the practices in, and all share one skill install."""
-        skills = cls.skill_install()
-        catalogue = tuple(PracticeCatalogue.create_all())
-        practices = [
-            cls(practice, skills, position, catalogue)
-            for position, practice in enumerate(catalogue)
-            if not NoCatalog.annotates(type(practice))
-        ]
+        practices = [practice for practice in cls.of_practices(PracticeCatalogue.create_all()) if not NoCatalog.annotates(type(practice.practice))]
         shown = [practice for practice in practices if practice.on_board]
         return sorted(shown, key=lambda practice: (practice.order, practice.display_name))
 
@@ -183,9 +187,14 @@ class CatalogPractice:
         return Path(self.practice.module_dir) / EXAMPLES_FOLDER
 
     def language_of(self, path: Path) -> str | None:
-        """The language an example file's code is in: the format of this practice, else of another practice of its
-        catalog, that reads it; none when no practice reads it."""
-        return self.practice.format_reading_with(path, self._catalogue)
+        """The language the catalog shows a file of this practice's in, an example or a template: the format of this
+        practice, else of another practice of its catalog, that reads it; else a format a person picks, such as html
+        or markdown, that its extension names; none for any other file."""
+        read = self.practice.formats.reading_with(path, self._catalogue)
+        if read is not None:
+            return read
+        named = Format.from_extension(path.suffix)
+        return named.name if named.group in Format.GROUPS else None
 
     def copy_examples_into(self, out_root: Path) -> None:
         """Copy the practice's example files into the catalog's ``examples/{practice}`` folder, where its fidelity

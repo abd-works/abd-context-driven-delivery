@@ -4,14 +4,14 @@ from __future__ import annotations
 import re
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
+    MODULE_FUNCTION_HOLDER,
     Module,
     OoadClass,
 )
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import ClassHead
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
-from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
+from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
 from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
 
 _CLASS_RE = re.compile(
@@ -110,6 +110,7 @@ class CFamilyParse:
             self._prepend_constructors(oclass, body)
             oclass.properties = self._fields_from_body(oclass, body)
             self._derive_member_relationships(oclass)
+            self._load_body_facts(oclass)
             module.classes.append(oclass)
             class_order += 1
 
@@ -137,9 +138,10 @@ class CFamilyParse:
         top_ops = self._top_level_functions()
         if not top_ops:
             return
-        holder = self.class_type(name="_module", sequential_order=len(module.classes) + 1, line=1)
+        holder = self.class_type(name=MODULE_FUNCTION_HOLDER, sequential_order=len(module.classes) + 1, line=1)
         holder.end_line = 1
         holder.operations = top_ops
+        self._load_body_facts(holder)
         module.classes.append(holder)
 
     def _top_level_functions(self) -> list[Operation]:
@@ -223,6 +225,8 @@ class CFamilyParse:
         return ops
 
     def _operation_from_body(self, op: Operation, body: str) -> Operation:
+        """The operation with the statements inside its braces as its body, the operations they call, and the notes
+        its `//` comments give it."""
         code_only = "\n".join(
             line for line in body.splitlines() if not line.strip().startswith("//")
         )
@@ -241,18 +245,19 @@ class CFamilyParse:
         ]
         for note in notes:
             op.add_invariant(note)
-        op.callees = callees
-        op.line_count = max(1, len([line for line in body.splitlines() if line.strip()]))
-        op.body_fingerprint = operation_body_fingerprint(body)
-        op.body = CodeBody(body, self.language)
-        op.load_brace_body_facts(body)
+        op.take_brace_body(body, callees)
         return op
+
+    def _load_body_facts(self, oclass: OoadClass) -> None:
+        """Measure each operation's body once its class holds it, so the operation reads its owner itself."""
+        for operation in oclass.operations:
+            operation.load_brace_body_facts()
 
     def _apply_method_end_line(self, op: Operation, class_body: str, search_from: int) -> None:
         brace_open = class_body.find("{", search_from)
         if brace_open < 0:
             return
-        close_idx = SourceText(class_body).closing_bracket(brace_open)
+        close_idx = BracketStructure(class_body).closing_bracket(brace_open)
         if close_idx is not None:
             op.end_line = self._line_at(self._text, self._body_start + close_idx)
 
@@ -261,11 +266,11 @@ class CFamilyParse:
             return []
         params: list[str] = []
         for part in split_top_level(raw):
-            default_at = SourceText(part).top_level_index("=")
+            default_at = BracketStructure(part).top_level_index("=")
             if default_at >= 0:
                 part = part[:default_at].strip()
             part = re.sub(r"^\s*(public|private|protected|final|readonly)\s+", "", part)
-            hint_at = SourceText(part).top_level_index(":")
+            hint_at = BracketStructure(part).top_level_index(":")
             if hint_at >= 0:
                 name_part, type_hint = part[:hint_at], part[hint_at + 1 :]
                 name = name_part.strip().split()[-1]
@@ -350,7 +355,7 @@ class CFamilyParse:
     def _brace_body(self, text: str, open_index: int) -> tuple[str | None, int]:
         """The text inside the first `{` at or after open_index and the `}` that closes it, with where it starts."""
         brace = text.find("{", open_index)
-        body = SourceText(text).braced(brace) if brace >= 0 else None
+        body = BracketStructure(text).braced(brace) if brace >= 0 else None
         return (body, brace + 1) if body is not None else (None, -1)
 
     def _line_at(self, text: str, index: int) -> int:

@@ -4,10 +4,10 @@ from __future__ import annotations
 import re
 from typing import List, Optional
 
-from cdd_guidance.practices.clean_engineering.model.code_body import WrittenBlock
-from cdd_guidance.practices.stories.model.brace_story_reader import BraceStoryReader
-from cdd_guidance.practices.stories.model.code_story_model import CodeScenario, CodeStoryModel, StepClause, example_names_of
-from cdd_guidance.practices.stories.model.story_model import Background, Scenario, Step, Story
+from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
+from cdd_guidance.practices.stories.model.code_story_model import CodeScenario, CodeStory, CodeStoryModel, unescaped
+from cdd_guidance.practices.stories.model.story_model import Background, Epic, Story
+from cdd_guidance.practices.stories.model.story_writing import StoryWriting, background_examples_line, example_names_of, story_description
 
 
 class BraceScenario(CodeScenario):
@@ -42,7 +42,7 @@ class BraceScenario(CodeScenario):
 
     @classmethod
     def calls_in(cls, body: str) -> List[tuple]:
-        return [(match.group("kw").lstrip("."), unescape(match.group("text"))) for match in cls._CALL.finditer(body)]
+        return [(match.group("kw").lstrip("."), unescaped(match.group("text"))) for match in cls._CALL.finditer(body)]
 
     @classmethod
     def scenario_blocks(cls, content: str) -> List[tuple]:
@@ -87,113 +87,79 @@ class BraceScenario(CodeScenario):
                 return True
         return False
 
+
+class BraceStory(CodeStory):
+    """A story read from a brace-language story file: TypeScript and JavaScript read it the same way."""
+
+    scenario_type = BraceScenario
+    _STORY_START = re.compile(r"(?=/\*\*\s*\n \* Story:)")
+    _STORY_MARK = re.compile(r"\*\s*Story:")
+    _NAME = re.compile(r"\*\s*Story:\s*(?P<name>.+)")
+    _CALL_NAME = re.compile(r"(?i)(?:shareStory|story)\(\s*(['\"])(?P<name>(?:\\.|(?!\1).)*)\1")
+
     @classmethod
-    def example_names(cls, content: str) -> List[str]:
-        names: List[str] = []
-        for match in cls._IMPORT.finditer(content):
-            for part in match.group("names").split(","):
-                name = part.strip().split(" as ")[-1].strip()
-                if name and name not in names:
-                    names.append(name)
-        for match in re.finditer(r"examples:\s*(.+)", content):
-            for part in match.group(1).split(","):
-                name = part.strip()
-                if name and name not in names:
-                    names.append(name)
-        return names
+    def name_in(cls, content: str) -> Optional[str]:
+        """The name the story's comment gives, else the name its story call is made with."""
+        call = cls._CALL_NAME.search(content)
+        return super().name_in(content) or (call.group("name") if call else None)
 
 
 
 
-def unescape(value: str) -> str:
-    return value.replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
 
-
-def quoted(value: str) -> str:
-    escaped = value.replace("\\", "\\\\").replace("'", "\\'")
-    return f"'{escaped}'"
-
-
-class BraceStoryModel(CodeStoryModel):
-    """A story tree in a brace language. TypeScript and JavaScript spell every block the same way."""
+class BraceStoryWriting(StoryWriting):
+    """How TypeScript and JavaScript write stories: `story(...)`, `scenario(...)`, and `given(...)` calls whose
+    callbacks hold the code, a step repeating its phase chained onto the one before it. The two differ only in the line
+    that imports the story-test helpers (`story_test_import`)."""
 
     statement_end = ";"
+    story_closing = ["});"]
+    no_scenarios = ["  // TODO: add main-flow scenario"]
+    placeholder = "// TODO: implement step"
+    scenario_opening = "{indent}scenario({name}, ({{ given, when, then }}) => {{"
+    scenario_closing = "{indent}}});"
+    step_opening = "{indent}{verb}({text}, {callback}"
+    step_closing = "{indent}}})"
+    and_opening = "{indent}  {verb}({text}, {callback}"
+    and_closing = "{indent}  }})"
+    and_verbs = (".and", ".but")
+    and_body_depth = 2
+    chains_repeated_phase = True
 
-    def read_code(self, content: str, stories: List[Story], path: str) -> Optional[WrittenBlock]:
-        return BraceStoryReader(self.language, content, unescape).read(stories, path)
+    def file_header(self, epic: Epic, parent: str) -> List[str]:
+        names = example_names_of(list(epic.stories))
+        example_import = [f"import {{ {', '.join(names)} }} from \"./examples\"{self.statement_end}"] if names else []
+        return ["/**", f" * Epic: {epic.name}", f" * Orders: {epic.order_path()}", " */", "", self.story_test_import(parent), *example_import, ""]
 
-    def clauses(self, steps: List[Step]) -> List[StepClause]:
-        """A step repeating the previous step's phase continues that clause, so the
-        fluent surface chains it rather than opening a second given/when/then."""
-        clauses: List[StepClause] = []
-        for step in steps:
-            if clauses and step.step_type == clauses[-1][0].step_type:
-                clauses[-1][2].append(step)
-                continue
-            clauses.append((step, self._lead_verb(step, step.keyword.lower()), []))
-        return clauses
+    def story_test_import(self, parent: str) -> str:
+        """The line that imports the story-test helpers into a story file written under parent."""
+        raise NotImplementedError(f"{type(self).__name__} must import its story-test helpers")
 
-    def story_open(self, story: Story) -> List[str]:
-        lines: List[str] = ["/**", f" * Story: {story.name}", *self.description_lines(story, " * ")]
-        lines.extend([" */", ""])
-        example_line = self.story_type.background_example_line(story, "// ")
-        if example_line:
-            lines.append(example_line)
-        return lines + [f"story({quoted(story.name)}, () => {{"]
+    def story_open(self, story: "Story") -> List[str]:
+        lines = ["/**", f" * Story: {story.name}", *story_description(story, " * "), " */", ""]
+        return lines + background_examples_line(story, "// ") + [f"story({self.quoted(story.name)}, () => {{"]
 
-    def story_close(self) -> List[str]:
-        return ["});"]
-
-    def story_background_lines(self, background: Background) -> List[str]:
+    def story_background_lines(self, background: "Background") -> List[str]:
         scope = background.name if re.fullmatch(r"\w+", background.name or "") else "each"
-        lines = [f"  background('{scope}', ({{ given }}) => {{"]
+        lines = [f"  background({self.quoted(scope)}, ({{ given }}) => {{"]
         for step in background.steps:
             if step.keyword.lower() == "given":
                 lines.extend(self.step_lines((step, "given", []), "    "))
-        return lines + ["  });"]
+        return lines + [f"  }}){self.statement_end}"]
 
-    def no_scenarios_lines(self) -> List[str]:
-        return ["  // TODO: add main-flow scenario"]
-
-    def scenario_open(self, scenario: Scenario, indent: str) -> List[str]:
-        return [f"{indent}scenario({quoted(scenario.name)}, ({{ given, when, then }}) => {{"]
-
-    def scenario_close(self, indent: str) -> List[str]:
-        return [f"{indent}}});"]
-
-    def scenario_background_lines(self, background: Background, indent: str) -> List[str]:
+    def scenario_background_lines(self, background: "Background", indent: str) -> List[str]:
         scope = background.name if re.fullmatch(r"\w+", background.name or "") else "background"
-        lines = [f"{indent}background('{scope}', ({{ given }}) => {{"]
+        lines = [f"{indent}background({self.quoted(scope)}, ({{ given }}) => {{"]
         for lead, _verb, continuations in self.clauses(background.steps):
-            lines.extend(self.step_lines((lead, self._lead_verb(lead, "given"), continuations), indent + self.language.indent))
+            verb = lead.keyword.lower() if lead.keyword in ("And", "But") else "given"
+            lines.extend(self.step_lines((lead, verb, continuations), indent + self.language.indent))
         return lines + [f"{indent}}});"]
 
-    def step_open(self, verb: str, step: Step, indent: str) -> str:
-        return f"{indent}{verb}({quoted(step.text)}, {self._callback(step)}"
 
-    def step_close(self, indent: str) -> str:
-        return f"{indent}}})"
+class BraceStoryModel(CodeStoryModel):
+    """A story tree in a brace language, whose story files BraceStoryFile reads."""
 
-    def and_open(self, step: Step, indent: str) -> str:
-        chain = ".but" if step.keyword == "But" else ".and"
-        return f"{indent}  {chain}({quoted(step.text)}, {self._callback(step)}"
+    writing_type = BraceStoryWriting
 
-    def and_body_indent(self, indent: str) -> str:
-        return indent + self.language.indent * 2
-
-    def and_close(self, indent: str) -> str:
-        return f"{indent}  }})"
-
-    def step_placeholder(self) -> str:
-        return self.language.comment("TODO: implement step")
-
-    def _callback(self, step: Step) -> str:
-        """The step's callback opening; async when its body awaits."""
-        return "async () => {" if step.body.mentions("await") else "() => {"
-
-    def _lead_verb(self, step: Step, fallback: str) -> str:
-        if step.keyword == "But":
-            return "but"
-        if step.keyword == "And":
-            return "and"
-        return fallback
+    def story_file(self, content: str) -> BraceStoryFile:
+        return BraceStoryFile(self.language, content)

@@ -9,7 +9,8 @@ from cdd_guidance.practices.stories.model.story_model import Background, Step, S
 
 
 class JavaScenario(CodeScenario):
-    _SCENARIO = re.compile(r"SCENARIO:\s*(.+)")
+    _SCENARIO = re.compile(r"SCENARIO:\s*(?P<name>.+)")
+    _EXAMPLES_LINE = re.compile(r"EXAMPLES:\s*(.+)")
 
     @classmethod
     def calls_in(cls, body: str) -> List[tuple]:
@@ -19,15 +20,6 @@ class JavaScenario(CodeScenario):
             if match:
                 calls.append((match.group(1), match.group(2).strip()))
         return calls
-
-    @classmethod
-    def scenario_blocks(cls, content: str) -> List[tuple]:
-        matches = list(cls._SCENARIO.finditer(content))
-        blocks = []
-        for index, match in enumerate(matches):
-            end = matches[index + 1].start() if index + 1 < len(matches) else len(content)
-            blocks.append((match.group(1).strip(), content[match.end():end]))
-        return blocks
 
     @classmethod
     def backgrounds_in(cls, content: str) -> List[Background]:
@@ -59,16 +51,6 @@ class JavaScenario(CodeScenario):
                 ]
         return found
 
-    @classmethod
-    def example_names(cls, content: str) -> List[str]:
-        names: List[str] = []
-        for match in re.finditer(r"EXAMPLES:\s*(.+)", content):
-            for part in match.group(1).split(","):
-                name = part.strip()
-                if name and name not in names:
-                    names.append(name)
-        return names
-
     def lines(self) -> List[str]:
         """This scenario as the comment lines a Java story test lists it in."""
         lines = [f" * SCENARIO: {self.name}"]
@@ -90,19 +72,7 @@ class JavaScenario(CodeScenario):
 class JavaStory(CodeStory):
     scenario_type = JavaScenario
 
-    @classmethod
-    def load_all(cls, content: str) -> List["JavaStory"]:
-        chunks = re.split(r"(?=/\*\* Story:)", content)
-        stories = [cls.load(chunk, "") for chunk in chunks if "Story:" in chunk]
-        return stories or [cls.load(content, "")]
-
-    @classmethod
-    def load(cls, content: str, story_slug: str) -> "JavaStory":
-        name_match = re.search(r"Story:\s*(.+)", content)
-        story = cls(cls.name_read(name_match.group(1) if name_match else None, story_slug), 1)
-        story.read_description(content)
-        story.fill(content)
-        return story
+    _STORY_START = re.compile(r"(?=/\*\* Story:)")
 
 
 class JavaEpic(CodeEpic):

@@ -8,6 +8,7 @@ in the buckets of its few smallest run hashes, and only bodies that share a buck
 from __future__ import annotations
 
 import re
+import zlib
 from typing import TYPE_CHECKING, Iterator
 
 if TYPE_CHECKING:
@@ -16,6 +17,12 @@ if TYPE_CHECKING:
 # A body of fewer tokens is a guard or a delegation; two such bodies look alike without being a copy worth a function.
 # Tokens, not lines, measure it, because an operation's lines count its docstring.
 MIN_TOKENS = 24
+# An operation of fewer lines, its head included, is one expression; two that read alike are an idiom, not a copy worth a
+# function. The exact-copy check counts an operation's lines against the same floor.
+MIN_LINES = 3
+# A near copy shares most of at least this many statements. Two shorter bodies that differ in one call are each one's
+# own job said in the same words, such as two three-step operations that differ in the step that is their job.
+MIN_STATEMENTS = 4
 # The share of three-token runs two bodies must have in common to be one body written twice.
 MIN_SHARED = 0.7
 _RUN = 3
@@ -25,6 +32,7 @@ _SKETCH = 8
 _MAX_BUCKET = 40
 _TOKEN = re.compile(r"[A-Za-z_]\w*|\d+|\S")
 _COMMENT_LINE = re.compile(r"^\s*(#|//).*$", re.M)
+_DOCSTRING = re.compile(r'"""[\s\S]*?"""|' + r"'''[\s\S]*?'''")
 
 
 class NearCopies:
@@ -65,9 +73,13 @@ class NearCopies:
 
 
 def _runs_of(operation: "Node") -> frozenset[int]:
-    """The hashes of the body's three-token runs, comments left out; none for a short body or one the node lacks."""
-    text = str(getattr(getattr(operation, "body", None), "text", "") or "")
-    tokens = _TOKEN.findall(_COMMENT_LINE.sub("", text))
-    if len(tokens) < MIN_TOKENS:
+    """The checksums of the body's three-token runs, comments left out; none for a body under the token or line floor.
+    The body is the text the operation saves with the graph, and a checksum, never ``hash``, which Python salts per
+    process, places each body in the same buckets in every process that checks the graph."""
+    code = _COMMENT_LINE.sub("", _DOCSTRING.sub("", str(operation.get_fact("body_text") or "")))
+    tokens = _TOKEN.findall(code)
+    statements = sum(1 for line in code.splitlines() if line.strip())
+    if len(tokens) < MIN_TOKENS or statements + 1 < MIN_LINES or statements < MIN_STATEMENTS:
         return frozenset()
-    return frozenset(hash(tuple(tokens[start : start + _RUN])) for start in range(len(tokens) - _RUN + 1))
+    runs = (" ".join(tokens[start : start + _RUN]) for start in range(len(tokens) - _RUN + 1))
+    return frozenset(zlib.crc32(run.encode("utf-8")) for run in runs)

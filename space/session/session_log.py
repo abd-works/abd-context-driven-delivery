@@ -13,7 +13,7 @@ from harness.agent_tools.chat_pointer import NO_CHAT, ChatPointer
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
     from harness.guidance.rule import RulesCollection
-    from space.session.practice_session_output import FidelitySessionOutput, PracticeSessionOutput
+    from space.session.practice_session_output import FidelitySessionOutput
     from space.session.session import Session
 
 LOG_FILE = "session.log"
@@ -27,8 +27,6 @@ _TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 # The verb of the line a tool call writes first, naming the tool: every line that call writes follows it.
 _TOOL_VERB = "tool"
 _LOOP_MARKER = re.compile(r"---\s+(\d+)(?:\s|$)")
-# The arguments of a tool call that name a file or folder the call worked on.
-_TOOL_INPUT_PATH_KEYS = ("path", "file_path", "target_directory", "working_directory", "transcript_path", "agent_transcript_path")
 
 
 class LoopNotFoundError(LookupError):
@@ -224,6 +222,11 @@ class SessionLog:
         """Every line of session.log, oldest first; none before anything is logged."""
         return [LogEntry(line) for line in self._lines() if line.strip()]
 
+    def latest(self, *verbs: str, stage: str = "") -> LogEntry | None:
+        """The latest line recording one of verbs, such as a ticket's latest move; with stage, the latest of them that
+        names stage. None when the log has no such line."""
+        return next((entry for entry in reversed(self.entries) if entry.verb in verbs and entry.stage == (stage or entry.stage)), None)
+
     def _lines(self) -> list[str]:
         log = self.path
         if log is None or not log.is_file():
@@ -309,13 +312,6 @@ class SessionLog:
             raise LoopNotFoundError("no loop in session.log; run mark-loop first")
         return chosen
 
-    def paths_named_by(self, tool_input: dict) -> list[Path]:
-        """The files and folders the arguments of a tool call name, each once."""
-        raw_paths = tool_input.get("paths")
-        listed = raw_paths if isinstance(raw_paths, list) else []
-        tokens = [str(tool_input.get(key) or "").strip() for key in _TOOL_INPUT_PATH_KEYS] + [str(item).strip() for item in listed]
-        return [Path(token) for token in dict.fromkeys(token for token in tokens if token)]
-
     def instructions(self) -> str:
         """How an agent keeps this log: what every line points at, how loops are marked and read, and where the
         session's files go."""
@@ -344,46 +340,46 @@ class ChatLog:
         self._log.record(f"{line} {self._chat}")
         self._log.injected_rules.clear()
 
-    def validation(self, practice: PracticeSessionOutput | FidelitySessionOutput, violations: list[str]) -> None:
-        """Log a validate of practice at its working fidelity, with each violation's synopsis; no violations is a
-        validate that passed."""
+    def validation(self, worked: FidelitySessionOutput, violations: list[str]) -> None:
+        """Log a validate of the fidelity worked, as its practice and its name, with each violation's synopsis; no
+        violations is a validate that passed."""
         detail = " ".join(violations)
-        self.line(f"validate {type(practice.guidance).__name__} {practice.working_fidelity} {detail}".rstrip())
+        self.line(f"validate {type(worked.practice.guidance).__name__} {worked.fidelity.name} {detail}".rstrip())
 
-    def action(self, action: str, paths: list[Path], practices: list[PracticeSessionOutput | FidelitySessionOutput] | None = None) -> None:
-        """Log action with the paths it worked on and what each practice it worked on was working at."""
+    def action(self, action: str, paths: list[Path], worked: list[FidelitySessionOutput] | None = None) -> None:
+        """Log action with the paths it worked on and, for each fidelity it worked at, its practice, its name, and the
+        format it worked in."""
         if self._log.path is None:
             return
-        worked_on = list(practices or [])
+        worked_on = list(worked or [])
         parts = (
             action,
             ", ".join(str(path) for path in paths),
-            ", ".join(entry.name for entry in worked_on),
-            ", ".join(entry.working_fidelity for entry in worked_on if entry.working_fidelity),
-            ", ".join(entry.working_format for entry in worked_on if entry.working_format),
+            ", ".join(entry.practice.name for entry in worked_on),
+            ", ".join(entry.fidelity.name for entry in worked_on),
+            ", ".join(entry.fidelity.format for entry in worked_on if entry.fidelity.format),
             self._log.injected_rules.text,
             str(self._chat),
         )
         self._log.record(" ".join(part for part in parts if part))
         self._log.injected_rules.clear()
 
-    def guidance_action(self, action: str, practices: list[PracticeSessionOutput | FidelitySessionOutput]) -> None:
-        """Log a guidance action on practices, with the session's workpath and each practice's folder as the paths it
-        worked on."""
+    def guidance_action(self, action: str, worked: list[FidelitySessionOutput]) -> None:
+        """Log a guidance action on the fidelities worked, with the session's workpath and each one's practice's folder
+        as the paths it worked on."""
         workpath = self._log.session.workpath
         work = [Path(workpath).resolve()] if workpath is not None else []
-        folders = [practice.folder for practice in practices]
-        self.action(action, list(dict.fromkeys([*work, *folders])), practices)
+        folders = [entry.practice.folder for entry in worked]
+        self.action(action, list(dict.fromkeys([*work, *folders])), worked)
 
-    def tool(self, tool_name: str, tool_input: dict | None = None) -> None:
-        """Append a ``tool …`` line for a tool call, with the paths its arguments name."""
+    def tool(self, tool_name: str, paths: list[str] | None = None) -> None:
+        """Append a ``tool …`` line for a tool call, with the paths its arguments name (``ToolCall.named_paths``)."""
         name = (tool_name or "").strip()
         if self._log.path is None or not name:
             return
         parts = [_TOOL_VERB, name]
-        paths = self._log.paths_named_by(tool_input or {})
         if paths:
-            parts.append(", ".join(str(path) for path in paths))
+            parts.append(", ".join(str(Path(path)) for path in paths))
         rules = self._log.injected_rules.text
         if rules:
             parts.append(rules)

@@ -8,11 +8,12 @@ from harness.graph.graph import Graph, Node
 
 KEY_SEPARATOR = " › "
 
-# The Stories node types a link of each kind can hold; a background is a scenario a story runs first.
+# The Stories node types a link of each kind can hold; a background is a scenario a story runs first, and the Stories
+# graph types each step by its phase.
 _NODE_TYPES = {
     "Story": ("Story",),
     "Scenario": ("Scenario", "Background"),
-    "Step": ("Step",),
+    "Step": ("Step", "Given", "When", "Then"),
 }
 
 
@@ -48,27 +49,29 @@ class StoryLink:
 
     def names(self, node: Node) -> bool:
         """True when this link holds node, or names a node with node's key, such as a copy drawn on another graph."""
-        return node is self.node or (node.semantic_type() in _NODE_TYPES[self.kind] and key_of(node) == self.key)
+        return node is self.node or (node.type in _NODE_TYPES[self.kind] and key_of(node) == self.key)
 
     def _candidates(self, graph: Graph) -> Iterator[Node]:
         """The Stories nodes of this link's kind on graph; none while graph reads no Stories."""
         from cdd_guidance.practices.stories.stories import Stories
 
-        stories = graph.loaded(Stories)
+        stories = graph.practices.loaded(Stories)
         if stories is None:
             return
         for node_type in _NODE_TYPES[self.kind]:
-            yield from stories.in_graph.nodes(node_type)
+            yield from stories.reading.in_graph.nodes(node_type)
 
 
 def key_of(node: Node) -> str:
-    """The key a screen lists a Stories node by: the story's name, then its scenario's, then the step's text."""
-    kind = node.semantic_type()
-    if kind == "Story":
-        return node.name
-    if kind == "Step":
+    """The key a screen lists a Stories node by: the story's name, then its scenario's, then the step's text. It reads
+    the node's type, its saved facts, and the graph's edges, so a Stories node read back from a saved graph has the key
+    the story object it was read from has."""
+    kind = node.type
+    if kind in _NODE_TYPES["Step"]:
         scenario = _ancestor(node, _NODE_TYPES["Scenario"])
-        parts = [_story_name(scenario), getattr(scenario, "name", ""), getattr(node, "text", "") or node.name]
+        parts = [_story_name(scenario), scenario.name if scenario is not None else "", node.get_fact("text") or node.name]
+    elif kind == "Story":
+        return node.name
     else:
         parts = [_story_name(node), node.name]
     return KEY_SEPARATOR.join(part for part in parts if part)
@@ -80,7 +83,14 @@ def _story_name(node: Optional[Node]) -> str:
 
 
 def _ancestor(node: Node, kinds: tuple) -> Optional[Node]:
-    current = node.parent
-    while current is not None and current.semantic_type() not in kinds:
-        current = current.parent
+    current = _parent(node)
+    while current is not None and current.type not in kinds:
+        current = _parent(current)
     return current
+
+
+def _parent(node: Node) -> Optional[Node]:
+    """The node above node: the parent its tree gives it, else the one a direct edge of its graph hangs it under."""
+    if node.parent is not None:
+        return node.parent
+    return node.graph.direct_parent(node) if node.practice is not None else None

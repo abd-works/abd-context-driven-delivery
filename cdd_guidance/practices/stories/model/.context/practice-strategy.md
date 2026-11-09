@@ -16,9 +16,9 @@
 
 - **A format stops where its file stops.** Draw.io and Miro story maps stop at stories and still read increments. A code folder continues through scenarios, steps, and their code. A draw.io UX map stops at regions; markdown UX carries only the scope and the context.
 
-- **Formats that share a file shape share a base.** Diagram story formats extend `DiagramStoryModel` and the diagram node (`place`, `add`, `stretch`, `role`); draw.io and Miro add only how a node is written and matched. Code languages extend `CodeStoryModel` and override only the spelling their language writes differently; TypeScript and JavaScript share `BraceStoryModel`.
+- **Formats that share a file shape share a base.** Diagram story formats extend `DiagramStoryModel` and the diagram node (`place`, `add`, `stretch`, `role`); draw.io and Miro add only how a node is written and matched. Code languages extend `CodeStoryModel`, which holds the *StoryWriting* of its language; a language's writing gives as data what it spells differently, and TypeScript and JavaScript share `BraceStoryModel` and `BraceStoryWriting`.
 
-- **A format reads a whole file in `parse`.** Clean Engineering, Stories, and UX each read a file's text in `parse`, with the node that owns the lines reading them (a sketch module reads its class cards, a class its members) or a reader class beside the format (`StoryReader`) when the reading takes several steps; the UX JSON nodes each read their own record (`from_record`).
+- **A format reads a whole file in `parse`.** Clean Engineering, Stories, and UX each read a file's text in `parse`, with the node that owns the lines reading them (a sketch module reads its class cards, a class its members) or, for a code story, the story file finding its blocks (`StoryFile`) and each story reading its own block (`CodeStory.read_code`); the UX JSON nodes each read their own record (`from_record`).
 
 ## How to write the model context
 

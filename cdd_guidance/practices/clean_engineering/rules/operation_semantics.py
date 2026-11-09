@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
+from cdd_guidance.practices.clean_engineering.rules.class_graph import ClassGraph
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -51,8 +52,10 @@ class KeepOperationsSingleResponsibility(ProductionCodeRule):
 
 
 class ErrorsOutOfExistence(ProductionCodeRule):
-    """Ordinary empty/absent cases should not raise. A raise of a failure the program declares, given what was asked
-    for (``raise UnknownPractice(key, known)``), reports a broken call and passes. A spec helper raises on a missing
+    """Ordinary empty/absent cases should not raise a builtin failure. A raise of a failure the program declares
+    (``raise UnknownPractice(key, known)``, ``raise CommitPathsRequiredError()``) is a named refusal of a broken call
+    and passes, so this rule never asks for a quiet result where ``domain-exception-carries-context`` asks for a named
+    error. A spec helper raises on a missing
     value to fail its example, so only production code is judged."""
 
     slug = "errors-out-of-existence"
@@ -77,12 +80,15 @@ class StateChangeReturnsRecordOrNamedFailure(ProductionCodeRule):
 
 
 class DomainExceptionCarriesContext(ProductionCodeRule):
+    """A failure raised with no message must name the rule it rejects. A failure the program declares, whose own
+    constructor gives its base the message, carries that context however it is raised."""
+
     slug = "domain-exception-carries-context"
     node_types = ("Operation",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         exception = node.get_fact("exception_without_message", "")
-        if exception:
+        if exception and not context.index(ClassGraph).gives_own_message(exception):
             return [f"Operation '{node.name}' raises {exception} without context; name the rejected rule."]
         if node.get_fact("generic_exception_message"):
             return [f"Operation '{node.name}' raises a generic message; carry domain context."]

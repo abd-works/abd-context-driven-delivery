@@ -57,6 +57,24 @@ with description("a class as DDD reads it"):
         expect((tactical.inferred_kind(set()), tactical.name_says("ValueObject"))).to(equal(("ValueObject", True)))
 
 
+with description("a DDD class"):
+    with before.each:
+        self.entity = Entity("ShoppingCart")
+        self.entity.stereotypes = ["Aggregate Root", "Entity"]
+
+    with it("should hold one reading of its building block, asked again for each question"):
+        expect(self.entity.tactical).to(be(self.entity.tactical))
+
+    with it("should read its own stereotypes through that reading"):
+        expect(self.entity.tactical.kind()).to(equal("EntityRoot"))
+
+    with it("should make its aggregate's root of itself when its stereotypes mark it the root"):
+        aggregate = Aggregate("cart")
+        aggregate.take_class(self.entity)
+        aggregate.take_root_from_classes()
+        expect(aggregate.root).to(be(self.entity))
+
+
 with description("a bounded context on a graph"):
     with before.each:
         self.graph = Graph()
@@ -75,8 +93,8 @@ with description("a bounded context on a graph"):
 
     with it("should record the aggregate and belongsTo"):
         practice = self.graph.practice("ddd")
-        aggregates = [(edge.parent.name, edge.child.name) for edge in practice.in_graph.edges("aggregates")]
-        belongs = [(edge.parent.name, edge.child.name) for edge in practice.in_graph.edges("belongsTo")]
+        aggregates = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edges("aggregates")]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edges("belongsTo")]
         expect(aggregates).to(contain(("orders", "account")))
         expect(belongs).to(contain(("account", "orders"), ("Account", "account")))
 

@@ -10,13 +10,18 @@ keeps; nothing is read from disk again.
 from __future__ import annotations
 
 import re
+import zlib
+from functools import cached_property
 from typing import TYPE_CHECKING, Callable, Optional
+from pathlib import PurePosixPath
 
 from harness.graph.graph import Node
 
-from cdd_guidance.practices.stories.model.source_location import SourceLocation
+from cdd_guidance.practices.stories.model.story_map_files import source_at
 
 if TYPE_CHECKING:
+    from harness.graph.graph import Source
+
     from cdd_guidance.practices.stories.model.story_model import StoryModel
 
 _EXPORT_CONST = re.compile(r"export const (\w+)")
@@ -69,6 +74,10 @@ def _java_imports(text: str) -> list[tuple[str, str]]:
     return found
 
 
+_FUNCTION_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b")
+_IDENTIFIER = re.compile(r"\w+")
+_MEMBER_READ = re.compile(r"\.(\w+)")
+
 _EVIDENCE_LINE = re.compile(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)")
 
 
@@ -80,6 +89,38 @@ def _opening_docblock(lines: list[str]) -> str:
     if start == -1 or end == -1 or "Story:" in text[start:end]:
         return ""
     return text[start:end]
+
+
+def example_source_file(story_test: str, imported_modules: dict[str, str], name: str) -> str:
+    """The file the example called name comes from, named from the project like story_test: the module story_test
+    imports it from, with story_test's own extension and, for a relative import, resolved against story_test's folder;
+    else story_test itself, which declares the example."""
+    module = imported_modules.get(name)
+    if module is None:
+        return story_test
+    suffix = PurePosixPath(story_test).suffix
+    if not module.startswith("."):
+        return module + suffix
+    parts: list[str] = list(PurePosixPath(story_test).parent.parts)
+    for part in PurePosixPath(module).parts:
+        if part == "..":
+            parts = parts[:-1]
+        elif part != ".":
+            parts.append(part)
+    return "/".join(parts) + suffix
+
+
+def imported_example_files(story_test: str, text: str) -> list[str]:
+    """The files story_test imports names from by a relative import, named from the project: where its examples can
+    come from."""
+    imported = _imported_modules(text)
+    return sorted({example_source_file(story_test, imported, name) for name, module in imported.items() if module.startswith(".")})
+
+
+def step_node_id(kind: str, file: str, line: int, name: str) -> str:
+    """A step's graph id: its kind, file, line, and a checksum of its name. A checksum, never ``hash``: Python salts
+    ``hash`` per process, and a step must keep its id in the worker that refreshes the graph and in the server."""
+    return f"stories:{kind}:{file}:{line}:{zlib.crc32(name.encode('utf-8')) & 0xFFFFFF}"
 
 
 def story_file_facts(text: str) -> dict:
@@ -106,7 +147,7 @@ class StoryRecording:
     def __init__(self, story_map: "StoryModel", practice, on_node: Optional[Callable[[str], None]]) -> None:
         self.story_map = story_map
         self.practice = practice
-        self.graph = practice.graph
+        self.graph = practice.reading.graph
         self.on_node = on_node
         self.story_at = 0
         self.story_total = len(story_map.every_story())
@@ -114,43 +155,82 @@ class StoryRecording:
 
     def write(self) -> None:
         for epic in self.story_map.epics:
-            epic.record(self, self.practice.in_graph.root, True)
+            epic.record(self, self.practice.reading.in_graph.root)
 
     def announce(self, story) -> None:
         self.story_at += 1
         if self.on_node is not None:
             self.on_node(f"{self.story_at}/{self.story_total} · {story.name}")
 
-    def add(self, node_id: str, name: str, semantic: str, file: str, span: tuple[int, int], story_object, facts=None) -> Node:
-        """The story object added as the graph node node_id, called name, of type semantic, at span in file, with the
-        facts it does not hold itself; the node already called node_id when two objects share it."""
-        if not self.practice.in_graph.holds(node_id):
-            story_object.name = name
-            story_object.type = semantic
-        node = self.practice.in_graph.add(story_object, node_id, file or ".", span[0], span[1])
+    def add(self, story_object, node_id: str, at: "Source", facts=None) -> Node:
+        """story_object added as the graph node node_id, called by its recorded name and of its recorded type, at the
+        lines at names, with the facts it does not hold itself; the node already called node_id when two objects
+        share it."""
+        if not self.practice.reading.in_graph.holds(node_id):
+            story_object.name = story_object.recorded_name
+            story_object.type = story_object.recorded_type
+        node = self.practice.reading.in_graph.add(story_object, node_id, at.file or ".", at.start_line, at.end_line or at.start_line)
+        self._align(node)
         for key, value in (facts or {}).items():
             node.set_fact(key, value)
         return node
 
+    def _align(self, node: Node) -> None:
+        """Move node onto the lines that declare it, since the map read it by a nearby line: a step sits on its label's
+        line; a scenario, story, or background runs to the close of its call; an example sits on its export."""
+        if node.type in {"Step", "Given", "When", "Then"}:
+            node.source.align_to_label(node.name)
+        elif node.type in {"Scenario", "Story", "Background"}:
+            node.source.widen_to_call_close()
+        elif node.type == "Example":
+            node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
+
     def text_of(self, file: str) -> str:
         return self.story_map.source_texts.get(file, "") if file else ""
+
+
+    @cached_property
+    def _function_sources(self) -> dict[str, str]:
+        """Each declared ``function name`` in the TypeScript the story map was read from, mapped to the first file's
+        text that declares it."""
+        sources: dict[str, str] = {}
+        for file, text in sorted(self.story_map.source_texts.items()):
+            if file.endswith(".ts"):
+                for name in _FUNCTION_DECLARATION.findall(text):
+                    sources.setdefault(name, text)
+        return sources
 
     def facts_of(self, file: str) -> dict:
         return story_file_facts(self.text_of(file))
 
-    def name_span(self, file: str, name: str, folder: str) -> tuple[str, int, int]:
-        """The file and line that name name; the folder alone when no line of file does."""
-        line = next((index for index, text in enumerate(self.text_of(file).splitlines(), start=1) if name and name in text), None)
-        return (file, line, line) if line is not None else (folder or ".", 0, 0)
+    def example_facts(self, file: str, name: str) -> dict:
+        """The facts of the example called name that story file declares or imports. They save with the graph, so a
+        reader in any process has them:
 
-    def span_of(self, node, file: str, fallback_text: str = "") -> tuple[int, int]:
-        """The lines node was read from, else the next line of file that holds its text."""
-        source = getattr(node, "source", None)
-        if source is not None and getattr(source, "line", None):
-            start = int(source.line or 1)
-            return start, int(getattr(source, "end_line", None) or start)
-        line = self._next_line(file, fallback_text or getattr(node, "name", ""))
-        return line, line
+        - ``source_names`` and ``source_reads``: every identifier, and every name read as a member (``.name``), in the
+          first TypeScript file the map was read from that declares ``function name``, so an example is linked to the
+          classes it shows and the properties it reads;
+        - ``export_names``: the names exported by the file the example comes from, when that is another file the map
+          read (an examples module the story test imports); otherwise the story file's own apply."""
+        text = self._function_sources.get(name, "")
+        facts = {"source_names": sorted(set(_IDENTIFIER.findall(text))), "source_reads": sorted(set(_MEMBER_READ.findall(text)))}
+        source = example_source_file(file, story_file_facts(self.text_of(file))["imported_modules"], name)
+        if source != file and self.text_of(source):
+            facts["export_names"] = _EXPORT_CONST.findall(self.text_of(source))
+        return facts
+
+    def name_span(self, file: str, name: str, folder: str) -> "Source":
+        """The line of file that names name; the folder alone when no line of file does."""
+        line = next((index for index, text in enumerate(self.text_of(file).splitlines(), start=1) if name and name in text), None)
+        return source_at(file, line) if line is not None else source_at(folder or ".")
+
+    def span_of(self, node, file: str, fallback_text: str = "") -> "Source":
+        """The lines of file node was read from, when its reader named them; else the next line of file that holds its
+        text."""
+        if node.has_source_file and node.source.start_line:
+            return source_at(file, node.source.start_line, node.source.end_line or node.source.start_line)
+        line = self._next_line(file, fallback_text or node.name)
+        return source_at(file, line)
 
     def _next_line(self, file: str, text: str) -> int:
         lines = self.text_of(file).splitlines()
@@ -165,15 +245,15 @@ class StoryRecording:
                 return index + 1
         return 1
 
-    def place(self, node, file: str, span: tuple[int, int]) -> None:
-        """Name file and span on a node that names no file yet."""
+    def place(self, node, at: "Source") -> None:
+        """Name the file and lines at gives on a node that names no file yet."""
         if not file_of(node):
-            node.source = SourceLocation(file or ".", span[0], span[1])
+            node.source = source_at(at.file or ".", at.start_line, at.end_line)
 
 
 def file_of(node) -> str:
     """The file the node was read from; empty while it only holds the placeholder a new node starts with."""
-    if not getattr(node, "has_source_file", False):
+    if not node.has_source_file:
         return ""
     return str(node.source.file).replace("\\", "/")
 

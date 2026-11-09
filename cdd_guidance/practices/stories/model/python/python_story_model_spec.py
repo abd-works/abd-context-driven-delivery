@@ -96,3 +96,28 @@ with description("a Python runnable-story Story Map") as self:
             expect(lambda: PythonStoryModel().parse("not a tree")).to(
                 raise_error(CodeStoryModelError)
             )
+
+    with context("that holds a story file whose story keeps code between its scenarios"):
+        with before.each:
+            self.parsed = PythonStoryModel().parse({
+                "tests/checkout/checkout_story.test.py": (
+                    "from story_test import given, scenario, story\n"
+                    "\n"
+                    "# Epic: Checkout\n"
+                    "\n"
+                    "# Story: Pay by card\n"
+                    'with story("Pay by card"):\n'
+                    "    card = Card()\n"
+                    '    with scenario("the card is charged"):\n'
+                    '        with given("a basket"):\n'
+                    "            pass\n"
+                )
+            })
+
+        with context("with the story renamed and the map written again"):
+            with before.each:
+                self.parsed.epics[0].stories[0].name = "Pay with a card"
+                self.written = PythonStoryModel().render(self.parsed)
+
+            with it("should keep the code the story shares between its scenarios"):
+                expect(self.written["tests/checkout/checkout_story.test.py"]).to(contain("    card = Card()"))

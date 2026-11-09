@@ -1,6 +1,6 @@
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
 import type { FidelityGuidanceData } from '@cdd/space/kanban/board'
-import type { FidelityProgressClientGenerated } from '@cdd/space/kanban/fidelity-progress'
+import type { FidelityProgressClientGenerated, FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import { TicketClientGenerated, type ActionStatesData, type ReportRuleData, type TicketData, type ViolationData } from '@cdd/space/kanban/ticket'
 import { PracticeSessionOutputClientGenerated } from '@cdd/space/session/practice-session-output'
 import { SessionClientGenerated } from '@cdd/space/session/session'
@@ -51,10 +51,15 @@ export class TicketClient extends TicketClientGenerated {
     return this.progress.filter(progress => progress.state === 'violations').map(progress => progress.fidelity.slug)
   }
 
-  // Its progress on every fidelity the board requires, in stage order, each answering its own tools.
+  // Its progress on every fidelity the board requires, in stage order, each answering its own tools: made once for the
+  // progress it was read with, and again only when one of its own tools has brought the ticket a new reading.
   get fidelityProgress(): FidelityProgressClient[] {
-    return this.progress.map(progress => new FidelityProgressClient(progress, this))
+    const read = this.progress
+    if (this.heldProgress?.read !== read) this.heldProgress = { read, clients: read.map(progress => new FidelityProgressClient(progress, this)) }
+    return this.heldProgress.clients
   }
+
+  private heldProgress: { read: FidelityProgressData[]; clients: FidelityProgressClient[] } | null = null
 
   // Its progress on the fidelities of a stage whose practices its session works on, in the order the stage requires them.
   progressIn(stage: ColumnClient): FidelityProgressClient[] {
@@ -81,10 +86,6 @@ export class TicketClient extends TicketClientGenerated {
   workIn(stage: ColumnClient): WorkStanding | undefined {
     const work = this.stageWork.find(entry => entry.stage.name === stage.name)
     return work && { actions: work.actions, hasViolations: work.has_violations, violationCount: work.violation_count, allowedActions: work.allowed_actions, commands: work.commands }
-  }
-
-  hasViolationsIn(stage: ColumnClient): boolean {
-    return this.progress.some(progress => progress.state === 'violations' && progress.stage.name === stage.name)
   }
 
   get standing(): string {

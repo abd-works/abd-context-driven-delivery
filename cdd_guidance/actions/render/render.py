@@ -29,13 +29,13 @@ class Render(GuidanceAction):
         source: the format content is already in. Use sketch for a sketch file. Otherwise markdown, python, typescript, java, javascript, json, or drawio. md is markdown. Omit source when content is already the current format."""
         self._work_on(guidance)
 
+        # each hands over the fidelity this action works at on each listed practice, and that fidelity renders.
         def on(item):
             if isinstance(item, str):
                 return item
-            practice = self.practice_of(item)
             if paths:
-                return practice.render_files(format, paths, source, fidelity=self.fidelity_of(item))
-            return practice.render_at(self.fidelity_of(item), format, content, source)
+                return item.render_files(format, paths, source)
+            return item.render(format, content, source)
 
         converted = self.each(on)
         tools(self.act_quickly)

@@ -1,7 +1,7 @@
 import type { EngineInterface } from 'claude-code'
 
 import type { FidelityFilesJson } from '../../types'
-import { BRAND } from '../brand'
+import { BRAND } from '../shared/brand'
 import { openInDrawio } from './drawio-viewer-client'
 import { closeFiles, isDiagram, showFile, validateAgain } from './fidelity-files-client'
 

@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
-import { BRAND } from '../brand'
+import { BRAND } from '../shared/brand'
 import type { ChatBarDraw } from './chat-bar-view'
 import { activateSession, closeSession, createSession, pickSession } from './session-client'
 import { cancelClose, cancelSwitch, toggleLeaving, toggleOpening } from './session-dialogs-client'
@@ -26,7 +26,7 @@ function ChoicesView(elements: ElementTable, heading: string, choices: Choice[])
   )
 }
 
-// One choice the Ticket offers for leaving a session, by the word Ticket.leave reads: handoff, commit, push, merge.
+// One choice the Ticket offers for leaving a session, by the word TicketCheckout.leave reads: handoff, commit, push, merge.
 function leavingChoice($: EngineInterface, prefix: string, chosen: string[], word: string, label: string): Choice {
   return { key: `${prefix}-${word}`, label, isChosen: chosen.includes(word), onPress: () => toggleLeaving($, word) }
 }

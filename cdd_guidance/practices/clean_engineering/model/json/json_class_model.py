@@ -8,14 +8,11 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
+    UnreadableSource,
 )
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-
-
-class JsonParseError(ValueError):
-    pass
 
 
 class JsonProperty(Property):
@@ -88,10 +85,7 @@ class JsonOoadClass(OoadClass):
 
 
 class JsonModule(Module):
-    def load_class(self, source: OoadClass) -> JsonOoadClass:
-        loaded = JsonOoadClass(name=source.name, sequential_order=source.sequential_order)
-        loaded.update_self(source)
-        return loaded
+    class_type = JsonOoadClass
 
     @classmethod
     def from_record(cls, record: dict, sequential_order: int) -> "JsonModule":
@@ -119,16 +113,13 @@ class JsonModule(Module):
 
 
 class JsonCleanEngineeringModel(CleanEngineeringModel):
-    def load_module(self, source: Module) -> JsonModule:
-        loaded = JsonModule(name=source.name, sequential_order=source.sequential_order)
-        loaded.update_self(source)
-        return loaded
+    module_type = JsonModule
 
     def parse(self, text: str) -> "JsonCleanEngineeringModel":
         try:
             data = json.loads(text)
         except json.JSONDecodeError as exc:
-            raise JsonParseError(f"Invalid JSON: {exc}") from exc
+            raise UnreadableSource(f"Invalid JSON: {exc}") from exc
         model = self
         model.name = data.get("name", "")
         model.modules = []
@@ -142,7 +133,7 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
             if module.classes:
                 model.modules.append(module)
         else:
-            raise JsonParseError("JSON must contain a 'modules' or 'classes' key")
+            raise UnreadableSource("JSON must contain a 'modules' or 'classes' key")
         return model
 
     def render(self, canonical: Optional[CleanEngineeringModel] = None) -> str:

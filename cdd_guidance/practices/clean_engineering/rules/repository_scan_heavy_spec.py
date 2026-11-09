@@ -18,7 +18,11 @@ from expects import be_above, equal, expect
 from mamba import before, description, it
 
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+from cdd_guidance.practices.clean_engineering.model.operation import CONSTRUCTOR_NAMES
+from cdd_guidance.practices.ddd.ddd import Ddd
+from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS
 from harness.graph.graph import Graph
 
 _SCANNED = ["cdd_guidance/practices", "harness"]
@@ -29,6 +33,11 @@ _TEMPLATE = re.compile(r"(^|/)templates/")
 _EXAMPLE = re.compile(r"(^|/)(_examples|catalog-examples|fixtures)/")
 # A file a message names, such as the two files of a file cycle: `'order.py'`.
 _NAMED_FILE = re.compile(r"'([\w.\-/]+\.(?:py|ts|tsx|js|jsx|java))'")
+_PLAIN_JAVASCRIPT = re.compile(r"\.(?:m?js|jsx)$")
+# The folder an extension's message says the class it extends comes from: `from 'ddd/model'`.
+_EXTENDED_HOME = re.compile(r"from '([^']+)' with")
+_COPIED_FIELDS = re.compile(r"copies the fields \[([^\]]*)\]")
+_COMPARISON_DUNDERS = frozenset({"__eq__", "__ne__", "__lt__", "__le__", "__gt__", "__ge__"})
 
 
 class RepositoryScan:
@@ -37,11 +46,38 @@ class RepositoryScan:
 
     def __init__(self) -> None:
         graph = Graph()
-        graph.load_files(str(_REPO), [graph.practice_of(CleanEngineering).key], _SCANNED)
+        practices = [graph.practices.of(kind) for kind in (CleanEngineering, Ddd, Bdd)]
+        graph.load_files(str(_REPO), [practice.key for practice in practices], _SCANNED)
+        self.clean, self.ddd, self.bdd = (practice.reading.in_graph for practice in practices)
         self.hits: list[tuple[str, list[str]]] = []
-        for node in graph.practice_of(CleanEngineering).in_graph.nodes():
+        for node in self.clean.nodes():
             for slug in node.rules.failed_slugs:
                 self.hits.append((slug, self._files_of(node)))
+
+    def failing(self, in_graph, slug: str) -> list[tuple[object, str]]:
+        """Each node of one practice that fails the rule slug, with each message it got."""
+        return [
+            (node, violation.message)
+            for node in in_graph.nodes()
+            for violation in node.rules.violations
+            if violation.rule == slug
+        ]
+
+    def blocks_in_harness(self) -> list[str]:
+        """Each DDD building block read from the framework's production code outside an example, as `kind: file`. The
+        framework has no bounded context and no class with a DDD stereotype, so a block there is one guessed from a
+        class's name."""
+        return sorted(
+            f"{kind}: {node.source.file}"
+            for kind in BUILDING_BLOCK_KINDS
+            for node in self.ddd.nodes(kind)
+            for file in [(node.source.file or "").replace("\\", "/")]
+            if file.startswith("harness/") and not _EXAMPLE.search(file)
+        )
+
+    def developed_spec_files(self) -> set[str]:
+        """The files of the specs BDD read as finished tests."""
+        return {spec.source.file for spec in self.bdd.nodes("Spec") if spec.get_fact("developed", False)}
 
     def _files_of(self, node) -> list[str]:
         own = (node.source.file or "").replace("\\", "/")
@@ -71,3 +107,54 @@ with description("the Clean Engineering graph rules on this repository") as self
 
     with it("should find no hit in an example, a catalog example, or a fixture"):
         expect(self.scan.landing_in(_EXAMPLE)).to(equal([]))
+
+    with it("should judge no parameter of plain JavaScript, which has no type syntax"):
+        typed = [file for node, _message in self.scan.failing(self.scan.clean, "use-typed-signatures") for file in [node.source.file or ""] if _PLAIN_JAVASCRIPT.search(file)]
+        expect(typed).to(equal([]))
+
+    with it("should find no extension kept in a package nested under the domain it extends"):
+        nested = [
+            node.source.file
+            for node, message in self.scan.failing(self.scan.clean, "extensions-live-with-the-domain")
+            for home in _EXTENDED_HOME.findall(message)
+            if (node.source.file or "").replace("\\", "/").startswith(home.rstrip("/") + "/")
+        ]
+        expect(nested).to(equal([]))
+
+    with it("should ask no constructor to return a record"):
+        constructors = [node.name for node, _message in self.scan.failing(self.scan.clean, "state-change-returns-record-or-named-failure") if node.name in CONSTRUCTOR_NAMES]
+        expect(constructors).to(equal([]))
+
+    with it("should find no near copy of a body shorter than three lines"):
+        short = [
+            node.name
+            for node, message in self.scan.failing(self.scan.clean, "eliminate-duplication")
+            if "nearly duplicates" in message and node.get_fact("line_count", 0) < 3
+        ]
+        expect(short).to(equal([]))
+
+    with it("should find no copy of another class's fields shorter than three fields"):
+        few = [
+            message
+            for _node, message in self.scan.failing(self.scan.clean, "do-not-invent-parallel-object-models")
+            for copied in _COPIED_FIELDS.findall(message)
+            if len([field for field in copied.split(",") if field.strip()]) < 3
+        ]
+        expect(few).to(equal([]))
+
+    with it("should find no reach into private state in a comparison dunder"):
+        reaching = [node.name for node, _message in self.scan.failing(self.scan.clean, "hide-inner-details") if node.name in _COMPARISON_DUNDERS]
+        expect(reaching).to(equal([]))
+
+    with it("should read no DDD building block from the framework, which no bounded context or stereotype marks as a domain"):
+        expect(self.scan.blocks_in_harness()).to(equal([]))
+
+    with it("should judge no finished spec by the rules of a behavior sketch"):
+        finished = self.scan.developed_spec_files()
+        judged = sorted(
+            f"{slug}: {node.source.file}"
+            for slug in ("no-implementation", "framework-syntax")
+            for node, _message in self.scan.failing(self.scan.bdd, slug)
+            if node.source.file in finished
+        )
+        expect(judged).to(equal([]))

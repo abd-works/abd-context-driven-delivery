@@ -70,54 +70,43 @@ def marked_intent(stereotypes: List[str], intent: str) -> str:
     return f"{marks} {intent}".strip() if marks else intent
 
 
-@dataclass
-class DocumentedIntent:
-    """A doc comment read into what it says about its class: the module path its `Module:` line names, the stereotypes
-    its first line marks, the intent the rest of it says, and the dependencies it lists last, each a `---<<label>>-->
+class DocComment:
+    """<<Value Object>> A class's doc comment as written: the module path its `Module:` line names, the stereotypes its
+    first line marks, the intent the rest of it says, and the dependencies it lists last, each a `---<<label>>-->
     Target` line with its details under it. Code has no other place for where a class is kept apart from its file, or
-    for the facts a dependency names beside its label."""
+    for the facts a dependency names beside its label. It holds the comment's text, reads what it says into a class,
+    and is written from one."""
 
-    stereotypes: List[str] = field(default_factory=list)
-    intent: str = ""
-    module_path: List[str] = field(default_factory=list)
-    dependencies: List[Relationship] = field(default_factory=list)
-
-    @classmethod
-    def of(cls, oclass: "OoadClass", marked: bool) -> "DocumentedIntent":
-        """What oclass's doc comment says: its stereotypes too when marked, for a language that has no decorators, and
-        only the dependencies that name details, since a plain dependency shows in code as the call that makes it."""
-        detailed = [item for item in oclass.dependencies if item.details]
-        return cls(list(oclass.stereotypes) if marked else [], oclass.intent, list(oclass.module_path), detailed)
-
-    @classmethod
-    def read(cls, doc: str) -> "DocumentedIntent":
-        lines = doc.strip().splitlines()
-        module_path: List[str] = []
-        if lines and lines[0].startswith(MODULE_LINE):
-            module_path = module_path_in(lines.pop(0)[len(MODULE_LINE):])
-        first_dependency = next((index for index, line in enumerate(lines) if Relationship.read_line(line)), len(lines))
-        dependencies = Relationship.read_lines(lines[first_dependency:])
-        text = "\n".join(lines[:first_dependency]).strip()
-        first, _, rest = text.partition("\n")
-        marks = marks_in(first)
-        if not marks:
-            return cls([], text, module_path, dependencies)
-        return cls(marks, "\n".join(part for part in (without_marks(first), rest.strip()) if part), module_path, dependencies)
-
-    def describe(self, oclass: "OoadClass") -> None:
-        """Give oclass what this doc comment says beside its stereotypes: its intent, its module path, and its
-        dependencies."""
-        oclass.intent = self.intent
-        oclass.module_path = list(self.module_path)
-        oclass.dependencies = list(self.dependencies)
+    def __init__(self, text: str = "") -> None:
+        self._lines = text.strip().splitlines()
 
     def text(self) -> str:
-        """The doc comment: the module path line, the marked intent, then each dependency's lines."""
-        lines = [f"{MODULE_LINE} {joined_module_path(self.module_path)}"] if self.module_path else []
-        marked = marked_intent(self.stereotypes, self.intent)
-        lines.extend([marked] if marked else [])
-        lines.extend(line.strip() for item in self.dependencies for line in item.lines())
-        return "\n".join(lines)
+        return "\n".join(self._lines)
+
+    @property
+    def stereotypes(self) -> List[str]:
+        """The stereotypes the comment's first line marks."""
+        return marks_in(self._said().partition("\n")[0])
+
+    def describe(self, oclass: "OoadClass") -> None:
+        """Give oclass what the comment says beside its stereotypes: its intent, its module path, and its
+        dependencies."""
+        said = self._said()
+        first, _, rest = said.partition("\n")
+        oclass.intent = "\n".join(part for part in (without_marks(first), rest.strip()) if part) if marks_in(first) else said
+        oclass.module_path = self._module_path()
+        oclass.dependencies = Relationship.split_off(self._after_module_line())[1]
+
+    def _said(self) -> str:
+        """The text between the module path line and the dependencies."""
+        return "\n".join(Relationship.split_off(self._after_module_line())[0]).strip()
+
+    def _module_path(self) -> List[str]:
+        first = self._lines[0] if self._lines else ""
+        return module_path_in(first[len(MODULE_LINE):]) if first.startswith(MODULE_LINE) else []
+
+    def _after_module_line(self) -> List[str]:
+        return self._lines[1:] if self._lines and self._lines[0].startswith(MODULE_LINE) else list(self._lines)
 
 
 @dataclass
@@ -125,7 +114,7 @@ class ClassHead:
     """What sits above a class declaration in brace-language source: its doc comment and the stereotypes its decorators
     and comment lines carry. A blank line, or any other code, ends the head."""
 
-    documented: DocumentedIntent = field(default_factory=DocumentedIntent)
+    documented: DocComment = field(default_factory=DocComment)
     stereotypes: List[str] = field(default_factory=list)
     # The bases a `// implements A, B` comment names, for a language with no `implements` of its own.
     implemented: List[str] = field(default_factory=list)
@@ -152,7 +141,7 @@ class ClassHead:
         while "/**" not in lines[start]:
             start -= 1
         body = "\n".join(lines[start : end + 1]).split("/**", 1)[1].rsplit("*/", 1)[0]
-        self.documented = DocumentedIntent.read("\n".join(part.strip().lstrip("*").strip() for part in body.splitlines()))
+        self.documented = DocComment("\n".join(part.strip().lstrip("*").strip() for part in body.splitlines()))
         self.stereotypes[:0] = self.documented.stereotypes
         return start
 

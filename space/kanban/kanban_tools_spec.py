@@ -8,14 +8,16 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
-from expects import be_false, be_true, contain, equal, expect, match, raise_error, start_with
+from expects import be_false, be_true, contain, equal, expect, have_key, match, raise_error, start_with
 from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
+from harness.catalog_generator.catalog_practice import CatalogPractice  # noqa: E402
 from harness.chat.chat import Chat  # noqa: E402
 from harness.installation.data_class import DataClass, data_of  # noqa: E402
 from space.kanban.backlog_item import BacklogItem  # noqa: E402
@@ -25,8 +27,9 @@ from space.kanban.report import ReportRule  # noqa: E402
 from space.kanban.session_board_examples import saved_graph, saved_practice  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
-from space.repo.repo import Branch  # noqa: E402
-from space.kanban.board import FidelityNotFoundError, NotAStageError, PracticeNotFoundError  # noqa: E402
+from space.repo.repo import Branch, Repo  # noqa: E402
+from space.kanban.board import FidelityNotFoundError, NotAStageError  # noqa: E402
+from space.session.sessions import PracticeNotFoundError  # noqa: E402
 from space.session.file_manager import PathOutsideRootsError  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 from space.session import Sessions  # noqa: E402
@@ -652,9 +655,14 @@ with description("the board tools") as self:
             stories = self.project.call("board.show")["practices"][0]
             expect((stories["key"], stories["short_name"], stories["colour"])).to(equal(("stories", "Stories", "#6BCB77")))
 
-        with it("should list each practice's fidelities by their slugs"):
+        # The board sends each fidelity once: in its own list, with its practice, which a tile finds it by.
+        with it("should name each fidelity's practice beside the fidelity"):
+            shown = next(entry for entry in self.project.call("board.show")["fidelities"] if entry["fidelity"]["slug"] == "stories-story-map")
+            expect(shown["practice"]).to(equal({"key": "stories"}))
+
+        with it("should send no second list of a practice's fidelities"):
             stories = self.project.call("board.show")["practices"][0]
-            expect(stories["fidelities"]).to(contain("stories-story-map"))
+            expect(stories).not_to(have_key("fidelities"))
 
         # (S) Person --> Open Help
         with context("that opens help on a fidelity"):
@@ -682,6 +690,22 @@ with description("the board tools") as self:
 
             with it("should name no fidelity on a practice's help"):
                 expect((self.help["fidelity"], self.help["stage"])).to(equal((None, None)))
+
+        # The catalog's view of the board's practices names their pages and skills; the process makes it once for the
+        # checkout, though every call makes a new board.
+        with context("that is asked for its help and shown several times"):
+            with before.each:
+                with patch.object(CatalogPractice, "skill_install", wraps=CatalogPractice.skill_install) as made:
+                    self.helps = [self.project.call("board.help", practice="stories"), self.project.call("board.help", practice="ux")]
+                    self.project.call("board.show")
+                    self.project.call("fidelity-progress.help", ticket="pet-visits", fidelity="stories-story-map")
+                self.made = made.call_count
+
+            with it("should make the skill install its catalog pages are named with once"):
+                expect(self.made).to(equal(1))
+
+            with it("should still link each practice's own page"):
+                expect([help["href"].rsplit("/", 1)[-1] for help in self.helps]).to(equal(["stories.html", "ux.html"]))
 
         with context("that opens help on a practice the board does not have"):
             with it("should refuse it, naming the practice"):
@@ -741,7 +765,7 @@ with description("the board tools") as self:
             # One fidelity object per session: the progress's fidelity is the one an action on the ticket's session works with.
             with it("should give each progress the fidelity its ticket's session holds"):
                 ticket = Ticket.load("pet-visits", project=self.project.root)
-                expect(ticket.progress_of("stories-story-map").fidelity is ticket.session.practices["stories"].fidelities["story_map"]).to(be_true)
+                expect(ticket.work.progress_of("stories-story-map").fidelity is ticket.session.practices["stories"].fidelities["story_map"]).to(be_true)
 
             with it("should give the board the ticket's session.json"):
                 expect(self.project.ticket_json("pet-visits")["session"]["session_file"]).to(equal(".sessions/pet-visits/session.json"))
@@ -1098,6 +1122,20 @@ with description("the board tools") as self:
         with it("should say a ticket has no branch yet"):
             expect(self.project.call("ticket.branch", ticket="sign-up")["exists"]).to(be_false)
 
+        # A ticket's checkout holds its own branch, made once with the ticket however many of its answers ask for it:
+        # what opening it offers asks both whether its branch exists and where its worktree is.
+        with context("whose opening and leaving choices are asked for twice"):
+            with before.each:
+                with patch.object(Repo, "branch_named", autospec=True, side_effect=Repo.branch_named) as made:
+                    self.answers = [self.project.call(tool, ticket="sign-up") for tool in ("ticket.open_choices", "ticket.leave_choices") * 2]
+                self.own_branches_made = sum(1 for call in made.call_args_list if call.args[1] == "sign-up")
+
+            with it("should make the ticket's own branch once for each ticket the calls read"):
+                expect(self.own_branches_made).to(equal(4))
+
+            with it("should give the same answers each time"):
+                expect(self.answers[2:]).to(equal(self.answers[:2]))
+
         with it("should name no worktree for a ticket that has none"):
             expect(self.project.ticket_json("sign-up")["worktree"]).to(equal(""))
 
@@ -1165,7 +1203,7 @@ with description("the board tools") as self:
             with it("should offer to close it with a handoff and a commit and push of main"):
                 expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "choices": ["handoff", "commit", "push"], "chosen": ["handoff", "commit", "push"]}))
 
-            # Ticket.leave never merges the default branch, so leaving offers no merge a person could pick for nothing.
+            # TicketCheckout.leave never merges the default branch, so leaving offers no merge a person could pick for nothing.
             with it("should offer to leave it for another with a handoff and a commit and push of main, and no merge"):
                 expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "main", "choices": ["handoff", "commit", "push"], "chosen": ["handoff", "commit", "push"]}))
 

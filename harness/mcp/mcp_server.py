@@ -26,6 +26,7 @@ from harness.installation.destination import ServerInstallation, SkippedTool, Sk
 from harness.installation.data_class import data_of
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.installer import Installer
+from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.annotations.annotation import Destination, Annotation
 from harness.mcp.cdd_home import CddHome
@@ -78,14 +79,12 @@ class McpStandupFailed(Exception):
         self.cause = cause
 
 
-class McpConfigUnreadable(Exception):
+class McpConfigUnreadable(JsonFileUnreadable):
     """An IDE config file that cdd edits exists but is not readable JSON. cdd leaves it as it is rather than write over
     whatever else it holds."""
 
-    def __init__(self, path: Path, cause: BaseException) -> None:
-        super().__init__(f"{path} is not readable JSON ({cause}); fix or remove it, then install again")
-        self.path = path
-        self.cause = cause
+    def message(self, path: Path, cause: Exception) -> str:
+        return f"{path} is not readable JSON ({cause}); fix or remove it, then install again"
 
 
 class ToolNotEnrolled(LookupError):
@@ -168,27 +167,24 @@ class McpInstallation(ServerInstallation):
             return
         if self.layout.is_claude_code or self._user_level:
             manifest = self._merged_with_other_servers(dest, manifest)
-        dest.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        self._ide_config(dest).write(manifest)
         self.track_write(dest)
 
     def allow_cdd_tools(self, settings: Path) -> None:
         """Let Claude Code call every ``cdd`` tool without a prompt. The user's settings file
         holds their own permissions too, so add the one entry and never track the file for clean."""
+        settings_file = self._ide_config(settings)
         try:
-            data = self._config_json(settings, {})
+            data = settings_file.read()
         except McpConfigUnreadable as unreadable:
             logger.warning("Claude Code will ask before every cdd tool call: %s", unreadable)
-            return
-        if not isinstance(data, dict):
-            logger.warning("Claude Code will ask before every cdd tool call: %s does not hold a JSON object", settings)
             return
         permissions = data.setdefault("permissions", {})
         allow = permissions.setdefault("allow", [])
         if CLAUDE_TOOLS_PERMISSION in allow:
             return
         allow.append(CLAUDE_TOOLS_PERMISSION)
-        settings.parent.mkdir(parents=True, exist_ok=True)
-        settings.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        settings_file.write(data)
 
     def drop_project_cdd_server(self) -> None:
         """A ``cdd`` entry in the project's ``.mcp.json`` outranks the user-level host in Claude
@@ -202,19 +198,20 @@ class McpInstallation(ServerInstallation):
             self._drop_cdd_entry(self.layout.user_mcp_config, "user's", remove_when_empty=False)
 
     def _drop_cdd_entry(self, config: Path, whose: str, *, remove_when_empty: bool) -> None:
+        config_file = self._ide_config(config)
         try:
-            data = self._config_json(config, None)
+            data = config_file.read()
         except McpConfigUnreadable as unreadable:
             logger.warning("a cdd entry in the %s config may still outrank the cdd plugin: %s", whose, unreadable)
             return
-        servers = data.get(self.layout.mcp_servers_key) if isinstance(data, dict) else None
+        servers = data.get(self.layout.mcp_servers_key)
         if not isinstance(servers, dict) or "cdd" not in servers:
             return
         del servers["cdd"]
         if remove_when_empty and not servers and len(data) == 1:
             config.unlink()
             return
-        config.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        config_file.write(data)
 
     def _claude_plugin_server(self) -> dict[str, Any]:
         """The cdd server as the cdd plugin declares it: Claude Code fills in ``${CLAUDE_PROJECT_DIR}`` with the chat's
@@ -239,32 +236,27 @@ class McpInstallation(ServerInstallation):
         """Rewriting ``~/.claude.json`` makes Claude Code reconnect cdd in every open chat, so an entry already in
         place is left alone. An unreadable config has no entry in place; writing it then fails by name."""
         try:
-            existing = self._config_json(dest, {})
+            existing = self._ide_config(dest).read()
         except McpConfigUnreadable:
             return False
         key = next(iter(manifest))
-        servers = existing.get(key) if isinstance(existing, dict) else None
+        servers = existing.get(key)
         return isinstance(servers, dict) and servers.get("cdd") == manifest[key]["cdd"]
 
     def _merged_with_other_servers(self, dest: Path, manifest: dict[str, Any]) -> dict[str, Any]:
         """The MCP config is shared with other servers (and, in ``~/.claude.json``, the IDE's own
         state); replace only ``cdd``. A config that cannot be read raises ``McpConfigUnreadable``, because writing it
         anyway would drop every other server it names."""
-        existing = self._config_json(dest, {})
-        merged = dict(existing) if isinstance(existing, dict) else {}
+        merged = self._ide_config(dest).read()
         key = next(iter(manifest))
         servers = merged.get(key)
         merged[key] = {**(servers if isinstance(servers, dict) else {}), **manifest[key]}
         return merged
 
-    def _config_json(self, path: Path, missing: Any) -> Any:
-        """The JSON in ``path``, or ``missing`` when there is no such file."""
-        if not path.is_file():
-            return missing
-        try:
-            return json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            raise McpConfigUnreadable(path, error) from error
+    def _ide_config(self, path: Path) -> JsonFile:
+        """An IDE config file cdd edits: one JSON object, empty when there is none; one cdd cannot read raises
+        *McpConfigUnreadable*, so cdd never writes over what else it holds."""
+        return JsonFile(path, McpConfigUnreadable)
 
     def _project_root(self) -> Path:
         path = Path(self.path)
@@ -439,19 +431,16 @@ class McpServer:
         return bool(name) and _LEGAL_MCP_NAME.fullmatch(name) is not None
 
     def resolve_call_name(self, name: str) -> str:
-        """Map Cursor's underscore tool id (`slug_op`) back to the enrolled `slug.op`."""
+        """The enrolled name a client's spelling of a tool names, such as Cursor's ``slug_op`` for ``slug.op``: each
+        tool says whether a spelling names it (``AgentTool.is_called``), the one rule a rules hook uses too; name itself
+        when nothing enrolled answers to it."""
         if name in self._tools or name in self._prompts:
             return name
-        as_dots = name.replace("_", ".")
-        if as_dots in self._tools or as_dots in self._prompts:
-            return as_dots
         for builtin in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL):
-            if name == builtin.replace(".", "_", 1):
+            if AgentTool.spelled(name) == AgentTool.spelled(builtin):
                 return builtin
-        for enrolled in (*self._tools, *self._prompts):
-            if enrolled.replace(".", "_") == name or enrolled.replace(".", "_", 1) == name:
-                return enrolled
-        return name
+        enrolled = (*self._tools.items(), *self._prompts.items())
+        return next((published for published, tool in enrolled if tool.is_called(name)), name)
 
     def enrolled(self, name: str) -> AgentTool | None:
         """The tool or instructions published as name, or under the name a client spelled it; none when not published."""
@@ -476,17 +465,18 @@ class McpServer:
 
     def answer_tool(self, mcp_name: str, call: ToolCall) -> object:
         """Answer call with the tool published as mcp_name."""
-        resolved = self.resolve_call_name(mcp_name)
-        if resolved not in self._tools:
-            raise ToolNotEnrolled(resolved)
-        return self._tools[resolved].answer(call)
+        return self._answer_from(self._tools, mcp_name, call)
 
     def answer_prompt(self, mcp_name: str, call: ToolCall) -> object:
         """Answer call with the instructions published as mcp_name, expanded for it."""
+        return self._answer_from(self._prompts, mcp_name, call)
+
+    def _answer_from(self, published: dict[str, AgentTool], mcp_name: str, call: ToolCall) -> object:
+        """Answer call with what published holds under mcp_name, or under the name a client spelled it."""
         resolved = self.resolve_call_name(mcp_name)
-        if resolved not in self._prompts:
+        if resolved not in published:
             raise ToolNotEnrolled(resolved)
-        return self._prompts[resolved].answer(call)
+        return published[resolved].answer(call)
 
 
 class _ProjectNamedOnly:

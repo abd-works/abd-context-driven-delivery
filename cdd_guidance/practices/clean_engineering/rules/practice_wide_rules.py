@@ -116,10 +116,12 @@ class DeepModule(PracticeGraphRule):
             (module for module in context.nodes("Module") if module.source.file),
             key=lambda module: -len(module.source.file),
         )
+        graph_classes = context.index(ClassGraph)
         classes: dict[str, list[str]] = {}
-        for node in context.nodes("OoadClass"):
+        for node in graph_classes.classes:
             owner = _owning_module(node.source.file, modules)
-            if owner is not None and node.name != "_module" and not is_test_code(node.source.file):
+            # A private record, such as a parser's `_Section`, is neither seam nor hidden design: it is not counted.
+            if owner is not None and not (node.name.startswith("_") and not graph_classes.has_behavior(node)):
                 classes.setdefault(owner.node_id, []).append(node.name)
         importers = _importers_by_name(context, modules)
         hits: list[tuple[str, str]] = []
@@ -160,7 +162,7 @@ def _importers_by_name(context: "RuleCheckContext", modules: list["Node"]) -> di
         importer = _owning_module(f"{folder.source.file}/", modules)
         for name in folder.get_fact("imported_names", []) or []:
             importers.setdefault(name, set()).add(importer.source.file if importer else "")
-    root = context.practice.in_graph.root
+    root = context.practice.reading.in_graph.root
     outside = root.get_fact("imported_names_outside") if root.has_fact("imported_names_outside") else {}
     for name, folders in outside.items():
         importers.setdefault(name, set()).update(folders)
@@ -171,7 +173,8 @@ class ExtensionsLiveWithTheDomain(ProductionCodeRule):
     """A class that joins one of its own package's types with the class of another package it is named after extends
     that other package's domain, so it belongs beside the class it extends: kept in the base package, it makes the base
     package depend on every domain it is extended for. `GraphEpic(Epic, Node)` in the framework that declares `Node`
-    is the case; in the package that declares `Epic` it is where it belongs."""
+    is the case; in the package that declares `Epic`, or a package nested under it (`ddd/model/markdown` under
+    `ddd/model`), it is where it belongs."""
 
     slug = "extensions-live-with-the-domain"
     node_types = ("OoadClass",)
@@ -179,17 +182,29 @@ class ExtensionsLiveWithTheDomain(ProductionCodeRule):
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         classes = context.index(ClassGraph)
         own_folder = _parent_folder(node.source.file or "")
-        homes = {base: {_parent_folder(declared.source.file or "") for declared in classes.by_name.get(base, [])} for base in classes.bases_of(node)}
+        homes = {base: {_parent_folder(declared.source.file or "") for declared in classes.named(base)} for base in classes.bases_of(node)}
         own = [base for base, folders in homes.items() if own_folder in folders]
-        # The domain class an extension extends is the one it is named after: `GraphEpic` extends `Epic`.
-        extended = [base for base, folders in homes.items() if folders and own_folder not in folders and node.name.endswith(base)]
-        if not own or not extended:
+        extended = _extended_domain_bases(node.name, homes, own_folder)
+        if not own or not extended or self._builds_on(own, homes[extended[0]], classes):
             return []
         home = sorted(homes[extended[0]])[0]
         return [
             f"Class '{node.name}' extends {', '.join(extended)} from '{home}' with this package's {', '.join(own)}: "
             f"it is an extension of '{home}' and belongs there, so this package does not depend on it."
         ]
+
+
+    def _builds_on(self, own: list[str], home: set[str], classes: ClassGraph) -> bool:
+        """True when a base of the class's own package already derives from a class of the package it extends: the
+        package is a format built on that one (`DrawIOClass(DiagramClass)`), and the class is where it belongs, since
+        moving it would make the base package import its format."""
+        return any(
+            _parent_folder(declared.source.file or "") in home
+            for base in own
+            for node in classes.named(base)
+            for parent in classes.bases_of(node)
+            for declared in classes.named(parent)
+        )
 
 
 class SourceParses(PracticeGraphRule):
@@ -204,6 +219,16 @@ class SourceParses(PracticeGraphRule):
             f"Source file {entry}; fix it so its classes can be checked."
             for entry in node.get_fact("unreadable_sources", []) or []
         ]
+
+
+def _extended_domain_bases(name: str, homes: dict[str, set[str]], own_folder: str) -> list[str]:
+    """The bases a class named name extends from another package's domain: the ones it is named after (`GraphEpic`
+    extends `Epic`), declared in a package that is neither the class's own nor one it is nested under."""
+    return [
+        base
+        for base, folders in homes.items()
+        if folders and not any(_is_under(own_folder, folder) for folder in folders) and name.endswith(base)
+    ]
 
 
 def _folders(context: "RuleCheckContext") -> list["Node"]:

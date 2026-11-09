@@ -2,7 +2,7 @@ import type { FidelityGuidanceData } from '@cdd/space/kanban/board'
 import type { FormatChoiceData } from '@cdd/space/kanban/ticket'
 
 import type { BoardPage } from '../board/board-page'
-import type { Tile } from '../board/board-store'
+import type { Tile } from '../shared/board-store'
 import type { ColumnClient } from '../board/column-client'
 import type { TicketClient } from './ticket-client'
 import { startingPicks } from './tile-formats'

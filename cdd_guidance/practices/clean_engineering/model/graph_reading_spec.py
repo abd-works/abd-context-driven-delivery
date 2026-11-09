@@ -5,6 +5,7 @@ from expects import be_true, equal, expect, have_key
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.rules.class_graph import ClassGraph
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_files
 
 _CART = (
@@ -16,7 +17,7 @@ _CART = (
 
 def _targets(fixture, kind: str, source_name: str) -> list[str]:
     """The names of the nodes an edge of kind leads to from the node called source_name."""
-    return sorted(edge.child.name for edge in fixture.practice.in_graph.edges(kind) if edge.parent.name == source_name)
+    return sorted(edge.child.name for edge in fixture.practice.reading.in_graph.edges(kind) if edge.parent.name == source_name)
 
 
 with description("Clean Engineering reading code into its graph"):
@@ -63,10 +64,10 @@ with description("Clean Engineering reading code into its graph"):
             self.fixture = practice_from_files(
                 {"shop/till.py": "class Till:\n    def charge(self, amount: int, note: str) -> None:\n        pass\n"}
             )
-            self.charge = next(node for node in self.fixture.practice.in_graph.nodes("Operation") if node.name == "charge")
+            self.charge = next(node for node in self.fixture.practice.reading.in_graph.nodes("Operation") if node.name == "charge")
 
         with it("should link each parameter through hasParameter, in the order the operation declares them"):
-            expect([edge.child.name for edge in self.fixture.practice.graph.edges_from("hasParameter", self.charge)]).to(
+            expect([edge.child.name for edge in self.fixture.practice.reading.graph.edges_from("hasParameter", self.charge)]).to(
                 equal(["amount", "note"])
             )
 
@@ -93,10 +94,39 @@ with description("Clean Engineering reading code into its graph"):
                     "shop/_helpers.py": "# _ holds nothing public\n",
                 }
             )
-            self.shop = next(node for node in self.fixture.practice.in_graph.nodes("Module") if node.name == "shop")
+            self.shop = next(node for node in self.fixture.practice.reading.in_graph.nodes("Module") if node.name == "shop")
 
         with it("should read the documentation from the module the file was parsed into"):
             expect(self.shop.get_fact("public_source_internal")).to(equal("heading"))
 
         with it("should count only its public files"):
             expect(self.shop.get_fact("public_source_files")).to(equal(1))
+
+    with context("with a module whose other public file does not parse, read by a load of one edited file"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "shop/.context/module-context.md": "# Shop\n",
+                    "shop/cart.py": _CART,
+                    "shop/broken.py": "class Broken(:\n    pass\n",
+                }
+            )
+            self.fixture.read_only(["shop/cart.py"])
+            self.shop = next(node for node in self.fixture.practice.reading.in_graph.nodes("Module") if node.name == "shop")
+
+        with it("should keep the file that does not parse on its module, as a load of the whole folder does"):
+            expect([kept.split(":")[0] for kept in self.shop.get_fact("unreadable_sources") or []]).to(equal(["shop/broken.py"]))
+
+    with context("with a class read again by a refresh"):
+        with before.all:
+            self.fixture = practice_from_files({"shop/cart.py": _CART, "shop/till.py": "class Till:\n    pass\n"})
+            self.index = self.fixture.practice.reading.code_index
+            self.index.classes_named("Cart")
+            self.fixture.practice.reading.graph.refresh([str(self.fixture.root / "shop/cart.py")])
+            self.cart = next(node for node in self.fixture.practice.reading.in_graph.nodes("OoadClass") if node.name == "Cart")
+
+        with it("should name the class the refresh read, not the one it replaced"):
+            expect(self.index.classes_named("Cart")).to(equal([self.cart]))
+
+        with it("should be the index the class rules ask"):
+            expect(ClassGraph(self.fixture.context).named("Till")).to(equal(self.index.classes_named("Till")))

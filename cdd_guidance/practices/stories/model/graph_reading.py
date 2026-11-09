@@ -9,33 +9,77 @@ from functools import cached_property
 from pathlib import Path
 
 from harness.graph.skipped_folders import scanned_files
-from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.practice_reading import PracticeReading
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
-_FUNCTION_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b")
+_STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
+# A story map's epic is recorded as an Epic, or as a SubEpic under another epic; a map built on a graph without being
+# recorded calls every epic an Epic.
+_EPIC_TYPES = frozenset({"Epic", "SubEpic"})
 
 
-def align_story_node(node) -> None:
-    """A step sits on its label's line; a scenario, story, or background runs to the close of its call; an example
-    sits on its export."""
-    if node.type in {"Step", "Given", "When", "Then"}:
-        node.source.align_to_label(node.name)
-    elif node.type in {"Scenario", "Story", "Background"}:
-        node.source.widen_to_call_close()
-    elif node.type == "Example":
-        node.source.align_to_example_export(node.practice.in_graph.source_root, node.name)
+class StoriesReading(PracticeReading):
+    """How Stories takes part in the graph: it reads the story tests under its root, through the TypeScript format
+    Stories holds, or the story maps there when there are none, with edited files only what they touch; writes the
+    story map onto its graph; and links each step to the Clean Engineering operations it calls and each example to the
+    classes and properties it shows, so it reads after Clean Engineering."""
 
+    reads_after = ("clean_engineering",)
+    source_ordered_types = frozenset({"Background", "Scenario", "Step", "Story"})
+    # A step is recorded as the Given, When, or Then it is, while the schema keeps every step's rules on Step (its
+    # given, when, and then types are each a Step), so each carries Step's rules; its check says which kind it judges.
+    rule_types = {
+        "SubEpic": ("Epic", "StoryNode"),
+        "Epic": ("StoryNode",),
+        "Story": ("StoryNode",),
+        "Given": ("Step",),
+        "When": ("Step",),
+        "Then": ("Step",),
+    }
 
-class StoriesReading:
-    """One read of the Stories practice's working copy: the story tests under its root, through the TypeScript format
-    Stories holds, or the story maps there when there are none; with edited files, only what they touch."""
+    recorded_map = None
+    """The story map this practice last wrote onto its graph, whose nodes its links start from."""
 
-    def __init__(self, practice: PracticeGuidance) -> None:
-        self.practice = practice
-        self.graph = practice.graph
-        self.root = Path(practice.in_graph.source_root)
+    @cached_property
+    def story_tree(self) -> "StoryTree":
+        """The story map as this practice's graph holds it, read through its edges and saved facts: what every reader of
+        Stories' nodes asks for an epic's stories, a story's scenarios, or a scenario's steps."""
+        return StoryTree(self)
 
-    def story_map(self):
+    @property
+    def root(self) -> Path:
+        """The folder the practice reads its story tests and story maps from."""
+        return Path(self.in_graph.source_root)
+
+    @property
+    def object_model(self) -> PracticeReading | None:
+        """The part of the Clean Engineering practice the graph that holds Stories reads beside it, whose operations its
+        steps call and whose classes its examples show; none when the graph reads none."""
+        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+
+        loaded = self.graph.practices.loaded(CleanEngineering) if self.graph is not None else None
+        return loaded.reading if loaded is not None else None
+
+    @property
+    def domain_model(self) -> PracticeReading | None:
+        """The part of the DDD practice the graph that holds Stories reads beside it, whose aggregates its scenarios
+        name; none when the graph reads none."""
+        from cdd_guidance.practices.ddd.ddd import Ddd
+
+        loaded = self.graph.practices.loaded(Ddd) if self.graph is not None else None
+        return loaded.reading if loaded is not None else None
+
+    def read_working_copy(self) -> None:
+        """Read the story tests, or the story maps when there are none, write the story map onto its graph, and link
+        each step to the operations it calls and each example to the classes and properties it shows."""
+        self.recorded_map = self._story_map()
+        self.graph.report_progress("stories · record")
+        self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+        clean = self.object_model
+        if clean is not None:
+            StoryLinks(self, clean, self.story_tree).link()
+
+    def _story_map(self):
         model = self._story_tests()
         if model.epics:
             return model
@@ -50,12 +94,12 @@ class StoriesReading:
             self.graph.report_progress(f"stories · {index}/{len(sources)} · {relative}")
             files[relative] = path.read_text(encoding="utf-8")
         self.graph.report_progress("stories · parse")
-        return self.practice.typescript_stories.parse(files, on_file=lambda detail: self.graph.report_progress(f"stories · parse · {detail}"))
+        return self.practice.formats.adapter("typescript").parse(files, on_file=lambda detail: self.graph.report_progress(f"stories · parse · {detail}"))
 
     def _story_maps(self):
         """The story maps under the practice's root; with edited files, only the story maps among them."""
         on_file = lambda detail: self.graph.report_progress(f"stories · markdown · {detail}")  # noqa: E731
-        edited = self.graph.edited_files()
+        edited = self.graph.scope.edited_files
         if edited is None:
             return self.practice.read_folder(self.root, on_file=on_file)
         return self.practice.read_files(edited, self.root, on_file=on_file)
@@ -63,28 +107,69 @@ class StoriesReading:
     def _typescript_files(self) -> list[Path]:
         """TypeScript under the root; with edited files, each whole story folder that holds one. A story reads its
         examples and steps from sibling files, so one edited file needs its story's other files."""
-        edited = self.graph.edited_files()
+        edited = self.graph.scope.edited_files
         if edited is not None and not any(path.suffix.lower() in {".ts", ".tsx"} for path in edited):
             return []
         found = scanned_files(self.root, {".ts", ".tsx"})
         if edited is None:
             return found
-        reader = self.practice.typescript_stories
+        reader = self.practice.formats.adapter("typescript")
         stories = {path.parent for path in found if reader.is_story_file(path.as_posix())}
         stories = {story for story in stories if any(story == file.parent or story in file.parents for file in edited)}
         return [path for path in found if path in edited or any(story in path.parents for story in stories)]
 
 
+class StoryTree:
+    """The story map as the graph holds it: each epic's sub-epics and stories, each story's scenarios, each scenario's
+    steps, and the epic above any of them, read through the edges Stories records and the facts each node saves. It
+    answers the same for the objects a read parsed and for the plain nodes of a graph opened from its save, so every
+    reader of Stories' nodes, in this practice or another, asks it rather than a parsed object's attributes."""
+
+    def __init__(self, stories: PracticeReading) -> None:
+        self.stories = stories
+
+    def epic_of(self, node):
+        """The epic of the story map whose tree holds node, the outermost found up the graph's own edges; none for a
+        node under no epic."""
+        epic = None
+        above = self.stories.graph.direct_parent(node)
+        while above is not None:
+            epic = above if above.type in _EPIC_TYPES else epic
+            above = self.stories.graph.direct_parent(above)
+        return epic
+
+    def sub_epics(self, epic) -> list:
+        """The sub-epics directly under epic, in the order the map lists them."""
+        return self._below(epic, "decomposedInto", _EPIC_TYPES)
+
+    def stories_under(self, epic) -> list:
+        """The stories directly under epic or a sub-epic, in the order the map lists them."""
+        return self._below(epic, "decomposedInto", {"Story"})
+
+    def scenarios(self, story) -> list:
+        """The story's scenarios, in the order its story test or map lists them."""
+        return self._below(story, "scenarios", {"Scenario"})
+
+    def steps(self, scenario) -> list:
+        """The scenario's own steps, without the steps chained onto them, in order."""
+        return [edge.child for edge in self.stories.graph.edges_from("steps", scenario)]
+
+    def _below(self, parent, kind: str, node_types) -> list:
+        return [edge.child for edge in self.stories.graph.edges_from(kind, parent) if edge.child.type in node_types]
+
+
 class StoryLinks:
     """The edges between the Stories practice and Clean Engineering: a step invokes the operations it calls, an epic
     uses the modules those operations sit in, and an example demonstrates the classes it names and retrieves the
-    properties it reads. Each is read from the text of the files the story map Stories recorded was read from."""
+    properties it reads. Each is read from the facts every step and example saves with the graph (its body's text, the
+    names its source holds) and from the graph's own edges, never from the parsed object behind a node: a refresh in a
+    worker process holds the steps and examples it did not read again as plain nodes, and links them the same way."""
 
-    def __init__(self, stories: PracticeGuidance, clean: PracticeGuidance) -> None:
+    def __init__(self, stories: PracticeReading, clean: PracticeReading, tree: "StoryTree") -> None:
         self.stories = stories
         self.clean = clean
+        self.tree = tree
         self.graph = stories.graph
-        self.texts: dict[str, str] = stories.recorded_map.source_texts
 
     @cached_property
     def operations(self) -> dict[str, list]:
@@ -105,20 +190,19 @@ class StoryLinks:
         return self.stories.in_graph.nodes("Example")
 
     def link(self) -> None:
-        steps = [node for node in self.stories.in_graph.nodes() if node.type in {"Step", "Given", "When", "Then"}]
+        steps = [node for node in self.stories.in_graph.nodes() if node.type in _STEP_TYPES]
         for index, step in enumerate(steps, start=1):
             self.graph.report_progress(f"stories · steps · {index}/{len(steps)} · {step.name}")
             self._link_step(step)
-        sources = self._function_sources()
         for index, example in enumerate(self.examples, start=1):
             self.graph.report_progress(f"stories · examples · {index}/{len(self.examples)} · {example.name}")
-            self._link_example(example, sources.get(example.name, ""))
+            self._link_example(example)
 
     def _link_step(self, step) -> None:
         body = self._step_body(step)
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [operation for name in called for operation in self.operations.get(name, ())]
-        epic = self._epic_for(step) if matched else None
+        epic = self.tree.epic_of(step) if matched else None
         for operation in matched:
             self.graph.link("invokes", step, operation, "relationship")
             self.graph.link("invokedBy", operation, step, "relationship")
@@ -131,20 +215,22 @@ class StoryLinks:
                 if re.search(rf"\b{re.escape(example.name)}\b", body):
                     self.graph.link("observes", step, example, "relationship")
 
-    def _link_example(self, example, text: str) -> None:
+    def _link_example(self, example) -> None:
+        names = set(example.get_fact("source_names") or [])
+        reads = set(example.get_fact("source_reads") or [])
         for class_node in self.clean.in_graph.nodes("OoadClass"):
-            if re.search(rf"\b{re.escape(class_node.name)}\b", text):
+            if class_node.name in names:
                 self.graph.link("demonstrates", example, class_node, "grouped")
                 self.graph.link("demonstrates", class_node, example, "grouped")
                 self.graph.link("demonstratedThrough", class_node, example, "relationship")
         for prop in self.clean.in_graph.nodes("Property"):
-            if re.search(rf"\.{re.escape(prop.name)}\b", text):
+            if prop.name in reads:
                 self.graph.link("retrievedUsing", example, prop, "relationship")
                 self.graph.link("retrievedUsing", prop, example, "relationship")
 
     def _step_body(self, step) -> str:
         """The step's own text and the body its story test gives it."""
-        return f"{step.name}\n{step.body.text}"
+        return f"{step.name}\n{step.get_fact('body_text') or ''}"
 
     def _module_of(self, operation):
         """The Clean Engineering module that holds the operation: the nearest module above it in the graph."""
@@ -152,24 +238,3 @@ class StoryLinks:
         while owner is not None and owner not in self.modules:
             owner = self.graph.direct_parent(owner)
         return owner
-
-    def _function_sources(self) -> dict[str, str]:
-        """Each declared ``function name`` in the TypeScript the story map was read from, mapped to the first file's
-        text that declares it."""
-        sources: dict[str, str] = {}
-        for file, text in sorted(self.texts.items()):
-            if not file.endswith(".ts"):
-                continue
-            for name in _FUNCTION_DECLARATION.findall(text):
-                sources.setdefault(name, text)
-        return sources
-
-    def _epic_for(self, step):
-        """The top-level epic whose tree holds the step; None for a step on no epic."""
-        from cdd_guidance.practices.stories.model.story_model import Epic
-
-        node = step.parent
-        while node is not None and not (isinstance(node, Epic) and not isinstance(node.parent, Epic)):
-            node = node.parent
-        return node
-

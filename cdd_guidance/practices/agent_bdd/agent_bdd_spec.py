@@ -131,6 +131,11 @@ with description("a toolset run request") as self:
         with it("should be refused"):
             expect(lambda: ToolsetInvoke.for_toolset("pkg:Tool", self.project.root, tool="scan", action="generate")).to(raise_error(ValueError))
 
+    with context("that names an action the toolset does not have"):
+        with it("should be refused when the run is made, naming the action"):
+            request = {"toolset": "cdd_guidance.actions.sketch.sketch:Sketch", "action": "draw", "session": "checkout-flow"}
+            expect(lambda: ToolsetInvoke.create(request, self.project.root)).to(raise_error(AgentHarnessError, "unknown action 'draw'"))
+
     with context("that names a session the project does not have"):
         with it("should fail naming that session"):
             request = {"toolset": "cdd_guidance.actions.sketch.sketch:Sketch", "action": "sketch", "session": "billing"}

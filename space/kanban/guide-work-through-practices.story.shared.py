@@ -201,7 +201,7 @@ def _(s):
 
     @s.when("the Person opens help on the story_map fidelity")
     def _(world):
-        world.help = world.data_of(world.Ticket.load(BILLING_REPORT.name).progress_of(STORY_MAP).help())
+        world.help = world.data_of(world.Ticket.load(BILLING_REPORT.name).work.progress_of(STORY_MAP).help())
 
     @s.then("a side panel shows story_map's overview, guidance, and rules such as verb-noun-format")
     def _(world):
@@ -251,7 +251,7 @@ def _(s):
 
     @s.when("the Person opens help on the ddd model fidelity")
     def _(world):
-        world.help = world.data_of(world.Ticket.load(BILLING_REPORT.name).progress_of("ddd-model").help())
+        world.help = world.data_of(world.Ticket.load(BILLING_REPORT.name).work.progress_of("ddd-model").help())
 
     @s.then("its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/fidelities/ddd-model.html")
     def _(world):
@@ -296,7 +296,7 @@ def _(s):
     def _(world):
         ticket = world.Ticket.load(CHECKOUT_FLOW.name)
         world.before = world.data_of(ticket)
-        world.report = world.data_of(ticket.progress_of(world.before["next"]["fidelity"]["slug"]).report())
+        world.report = world.data_of(ticket.work.progress_of(world.before["next"]["fidelity"]["slug"]).report())
 
     @s.then("Run next read Run next: review violations")
     def _(world):
@@ -321,7 +321,7 @@ def _(s):
     @s.when("the Person runs billing-report's next step")
     def _(world):
         ticket = world.Ticket.load(BILLING_REPORT.name)
-        world.reviewed = world.data_of(ticket.progress_of(world.data_of(ticket)["next"]["fidelity"]["slug"]).finish_review())
+        world.reviewed = world.data_of(ticket.work.progress_of(world.data_of(ticket)["next"]["fidelity"]["slug"]).finish_review())
 
     @s.then("billing-report's story_map marks Review ✓")
     def _(world):

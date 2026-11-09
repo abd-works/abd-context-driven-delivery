@@ -17,7 +17,7 @@ from cdd_guidance.practices.ux.model.ux_map import ScreenNotOnMap, UxMap
 
 
 def edge_pairs(graph, kind):
-    return [(edge.parent.name, edge.child.name) for edge in graph.practice("ux").in_graph.edges(kind)]
+    return [(edge.parent.name, edge.child.name) for edge in graph.practice("ux").reading.in_graph.edges(kind)]
 
 
 with description("a UxMap"):
@@ -62,8 +62,8 @@ with description("a ux map on a graph"):
 
     with it("should record screens and belongsTo"):
         practice = self.graph.practice("ux")
-        screens = [(edge.parent.name, edge.child.name) for edge in practice.in_graph.edges("screens")]
-        belongs = [(edge.parent.name, edge.child.name) for edge in practice.in_graph.edges("belongsTo")]
+        screens = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edges("screens")]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edges("belongsTo")]
         expect(screens).to(contain(("UxMap", "Catalog")))
         expect(belongs).to(contain(("Catalog", "UxMap")))
 
@@ -140,7 +140,7 @@ with description("a UxMap copied into a format"):
         expect(self.copy.practice).to(equal(None))
 
     with it("should leave the source's graph holding the source's map alone"):
-        expect(len(self.graph.practice("ux").in_graph.nodes("UxMap"))).to(equal(1))
+        expect(len(self.graph.practice("ux").reading.in_graph.nodes("UxMap"))).to(equal(1))
 
     with it("should keep the stories each screen shows by key"):
         expect([screen.story_keys for screen in self.copy.screens]).to(equal([screen.story_keys for screen in self.source.screens]))

@@ -208,6 +208,12 @@ Start from the aggregates already named at **bounded_context**. Read Clean Engin
 
 **Work one bounded context and one aggregate at a time.** Begin at the root, work inward through the members it owns, then outward through its dependencies. Classify every class: `<<Aggregate Root>> <<Entity>>` for the root, `<<Entity>>` for an owned thing with its own identity, `<<Value Object>>` for a thing that is only its values, `<<Repository>>` for the collection.
 
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough domain-model index for a **partition** pass or first cut — under each bounded context, its aggregates, each with its root, the entities and value objects it owns, the repository that keeps it, and the domain operations the source names. No fields, invariants, or dependency arcs yet.
+
 #### Rules
 
 ```yaml
@@ -288,6 +294,12 @@ Ask whether creating this thing needs more than the root can do alone, which rul
 
 **Load with the identity already in hand** when wrapping live code. Do not assume a browser session. Load once and reuse the variable. A cart has no identity outside its prospect — reach it through the owner, not `cartRepository().current()`.
 
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough building-block index for a **partition** pass or first cut — under each aggregate, the factories, specifications, domain services, domain events, and interfaces to other systems the source calls for, each with the implementation pattern the source implies. No code yet.
+
 #### Rules
 
 ```yaml
@@ -299,7 +311,7 @@ Whenever you add factories, specifications, domain services, or domain events; p
 
 If this change will not stay here, follow `practices/ddd/ddd-model.mdc`.
 
-- **`every-class-carries-ddd-stereotype`** — Every domain class carries its stereotype (`<<Factory>>`, `<<Specification>>`, `<<Domain Service>>`, `<<Domain Event>>`, plus the model's). In code a decorator or naming convention carries it. A bare class leaves the reader guessing which pattern applies.
+- **`every-class-carries-ddd-stereotype`** — Every domain class carries its stereotype (`<<Factory>>`, `<<Specification>>`, `<<Domain Service>>`, `<<Domain Event>>`, plus the model's). In code a decorator carries it, or, in a folder a bounded context covers, a naming convention. A bare class leaves the reader guessing which pattern applies.
 - **`factory-is-complex-creation`** — Factory only when valid creation needs subtype choice, several rules, or outside collaborators. Ordinary creation stays on the repository's `create` so callers have one obvious way to create it.
 - **`service-is-homeless`** — Domain Service is a rare doer only when the operation cannot sit on one domain object. Not SOA: do not invent `FooService` to park verbs.
 - **`domain-events-past-tense`** — Past-tense domain name; name the publishing root, trigger, consumers, and required payload. Events are facts needed outside the aggregate, not a notification for every mutation.

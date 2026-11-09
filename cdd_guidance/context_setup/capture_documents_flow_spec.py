@@ -102,6 +102,68 @@ with description("documents captured into an index"):
             expect(Path(self.embedded.index_path).resolve()).to(equal((self.root / _FOLDER / "rag").resolve()))
 
 
+_OPTIONS = re.compile(r"Options: (.+)")
+
+
+def _partitioned(word: str, project: Path) -> str:
+    """The partition's reply to a call naming word as its one guidance, or the error it raised."""
+    try:
+        return _answered(Partition(), "partition", {"guidance": [word], "paths": [_FOLDER]}, project)
+    except Exception as failure:  # noqa: BLE001 - the error is what the example reads
+        return f"raised {type(failure).__name__}: {failure}"
+
+
+# The agent offers the user exactly the words the recipe lists and passes the choice to partition, so each must partition.
+with description("the indexers a capture recipe offers"):
+    with before.all:
+        self.throwaway = ThrowawayProject()
+        recipe = _answered(ContextSetup(), "capture_from_documents", {"folder_path": _FOLDER}, self.throwaway.root)
+        self.offered = [word.strip() for word in _OPTIONS.search(recipe).group(1).split("|")]
+        self.replies = {word: _partitioned(word, self.throwaway.root) for word in self.offered}
+
+    with after.all:
+        self.throwaway.close()
+
+    with it("should offer every practice partition indexes by"):
+        expect(self.offered).to(equal(["stories", "ddd", "ux", "clean-engineering", "bdd"]))
+
+    with it("should offer only words partition accepts"):
+        expect([word for word, reply in self.replies.items() if reply.startswith("raised")]).to(equal([]))
+
+
+# embed requires out_path; a step that leaves it out fails the MCP call or leaves the agent guessing where the index goes.
+with description("a live-app capture recipe answered with only the application's folder"):
+    with before.all:
+        self.throwaway = ThrowawayProject()
+        self.recipe = _answered(ContextSetup(), "capture_from_live_app", {"repo_path": "app"}, self.throwaway.root)
+        self.embeds = re.findall(r"context_index\.embed\(([^)]*)\)", self.recipe)
+
+    with after.all:
+        self.throwaway.close()
+
+    with it("should tell the agent to embed what it captured"):
+        expect(self.embeds).not_to(equal([]))
+
+    with it("should name where each embed writes its index"):
+        expect([call for call in self.embeds if "out_path=" not in call]).to(equal([]))
+
+
+with description("an index embedded from a capture's extraction overview"):
+    with before.all:
+        self.throwaway = ThrowawayProject()
+        overview = self.throwaway.root / "capture" / "extraction-overview.md"
+        overview.parent.mkdir(parents=True)
+        overview.write_text("# Extraction overview\n\n## Checkout page\n\nA pay button.\n", encoding="utf-8")
+        embed = {"segments_paths": ["capture/extraction-overview.md"], "out_path": "capture/rag"}
+        self.embedded = _answered(ContextIndex(FakeEmbeddingProvider()), "embed", embed, self.throwaway.root)
+
+    with after.all:
+        self.throwaway.close()
+
+    with it("should index the overview as one markdown file"):
+        expect(self.embedded.segment_count).to(equal(1))
+
+
 with description("a partition answered with only its guidance"):
     with before.all:
         self.throwaway = ThrowawayProject()

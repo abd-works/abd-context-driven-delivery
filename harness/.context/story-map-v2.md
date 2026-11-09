@@ -690,7 +690,7 @@ Requested (2026-11-06, as the Session Board does): the chat bar sends Fix and Fi
 
 #### (S) Person --> [Review Session Fidelity](../chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/review-fidelity/review_fidelity_story.test.ts)
 
-Observed: pressing the button on review records the person's approval through `fidelity-progress.finish_review`, which refuses it until the fidelity's latest Validate passed (`fidelity-client.ts` `reviewFidelity`).
+Observed: pressing the button on review records the person's approval through `fidelity-progress.finish_review`, which refuses it until the fidelity's latest Validate passed (`chat-bar-client.ts` `reviewFidelity`).
 
 ### (E) Integrate Practice Content Editor Apps In Chat Bar
 
@@ -1257,7 +1257,7 @@ Observed: a story step and a BDD observation each get an `invokes` edge to the o
 
 ### (S) Knowledge Graph --> Link Examples To Classes And Steps
 
-Observed: an example that demonstrates a class, a then step that observes an example, and an example retrieved using a property each get their relationship edge in both directions (`schema_edges.py` `sync_schema_edges`, `graph_spec.py` "with an example that demonstrates a class", "with a then step that observes an example").
+Observed: an example that demonstrates a class, a then step that observes an example, and an example retrieved using a property each get their relationship edge in both directions (`schema_edges.py` `SchemaEdges.sync`, `graph_spec.py` "with an example that demonstrates a class", "with a then step that observes an example").
 
 ### (S) Knowledge Graph --> Place Story Nodes On Their Source Lines
 
@@ -1328,7 +1328,7 @@ Inferred: the Executive and Engineering buttons switch the page and editor betwe
 ## (E) Filter Graph In Graph App
 ### (S) Person --> Filter By Practice
 
-Observed: choosing practices selects every node type, connector and rule those practices hold, and adding another practice keeps the first practice's choices (`App.tsx` `practiceSelection`, `app.test.tsx` "should select every node, connector, and rule for the practice", "should keep the first practice filters when another practice is added").
+Observed: choosing practices selects every node type, connector and rule those practices hold, and adding another practice keeps the first practice's choices (`Graph.filter_choices`, which `App.tsx` `offerChoices` asks, `app.test.tsx` "should select every node, connector, and rule for the practice", "should keep the first practice filters when another practice is added").
 
 ### (S) Person --> Filter By Node Type
 

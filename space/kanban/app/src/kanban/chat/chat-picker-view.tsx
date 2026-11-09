@@ -1,4 +1,4 @@
-import { useBoard } from '../board/board-context'
+import { useBoard } from '../shared/board-context'
 
 export function ChatPickerView() {
   const { page, state } = useBoard()

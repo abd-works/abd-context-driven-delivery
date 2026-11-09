@@ -11,14 +11,6 @@ from harness.graph.violation import Violation
 from cdd_guidance.actions.validate.report_files import ReportFiles
 
 
-class PathsNotFoundError(FileNotFoundError):
-    """Raised when validate is named a path that is not there, or not under the session's root, where the graph reads."""
-
-    def __init__(self, unreadable: list[str], project: Path, session_root: Path) -> None:
-        named = "; ".join(f"{path}, read from {project}" for path in unreadable)
-        super().__init__(f"validate found no file under the session's root {session_root} at {named}. Name paths from the project's root, or absolute.")
-
-
 class CheckedGraph:
     """The graph a validate call checks: built from just the files the call names, or from the folders its fidelities
     have written when it names none, and written beside the call's report; or the saved graph or node lists the call
@@ -67,6 +59,12 @@ class CheckedGraph:
             found = [violation for violation in found if violation.is_under(self.prefixes)]
         return [violation for violation in found if violation.location not in self.unchecked_files]
 
+    @property
+    def held_beside(self) -> list[str]:
+        """The folders of the other files the session's graph held when this call checked its files, which a rule over a
+        whole practice compared them with; none for a graph this call did not build."""
+        return self._checked.held_beside if self._checked is not None else []
+
     def save_at(self, destination: Path) -> None:
         """Keep the graph this call checked at destination, beside a report, so the report's violations stay on their
         nodes: the graph it built, the session's saved graph, or the graph files it was named, read as one saved graph."""
@@ -112,15 +110,16 @@ class CheckedGraph:
 
     def _built_at(self, destination: Path) -> Path:
         """Refresh the session's graph with the edited files, read as they are now, keep the nodes read from them as this
-        call's graph, and write it at destination for the report; the saved graph stays as it is. The refresh and the
-        nodes it keeps are one change to the graph (``graph.refreshed``), so another call's refresh never comes between
-        them, and each call writes its own file, so calls running at once never read each other's report graph.
+        call's graph, written at destination for the report; the saved graph stays as it is. The refresh and the nodes
+        it keeps are one change to the graph (``graph.refreshed``), so another call's refresh never comes between them,
+        and each call writes its own file, so calls running at once never read each other's report graph. For a chat's
+        call the graph's worker writes the file, so the server answering chats never serialises the nodes; this call
+        reads back only the nodes of the files it names.
 
         The session's graph holds every practice, because one builds on another (DDD building blocks come from the
         clean engineering classes); the report keeps only the listed guidance's practice."""
-        self._checked = self.session.graph.refreshed(self.prefixes, self._call)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(self._checked.text, encoding="utf-8")
+        self.session.graph.refreshed(self.prefixes, destination, self._call)
+        self._checked = SavedGraph.from_file(destination)
         return destination
 
     def _prefixes(self, edited: list[str] | None) -> list[str]:
@@ -132,15 +131,10 @@ class CheckedGraph:
     def _from_session_root(self, paths: list[str] | None) -> list[str]:
         """Each named path as graph node files record it, relative to the session's root.
 
-        A relative path is read from the project's checkout, where the agent works and every path it sees starts. A
-        path that is not there, or not under the session's root, is refused: the graph would be built from nothing,
-        and its empty report would read as a clean validate."""
-        root = self.session.work_root
-        named = [(item, self.session.path_named(item)) for item in paths or []]
-        unreadable = [item for item, path in named if not path.exists() or not self._under_root(path)]
-        if unreadable:
-            raise PathsNotFoundError(unreadable, self.session.repo_path, root)
-        return [path.relative_to(root).as_posix() for _, path in named]
+        A relative path is read from the project's checkout, where the agent works and every path it sees starts. The
+        session's files refuse a path that is not there, or not under the session's root: the graph would be built
+        from nothing, and its empty report would read as a clean validate."""
+        return [self.session.session_files.from_root(item) for item in paths or []]
 
     def _other_format_files(self) -> set[str]:
         """The declared files of every format validate does not check, as graph node files record them."""
@@ -152,7 +146,7 @@ class CheckedGraph:
             for path in paths
             if "{" not in path
         ]
-        return {path.relative_to(self.session.work_root).as_posix() for path in others if self.session.work_root in path.parents}
+        return {path.relative_to(self.session.work_root).as_posix() for path in others if self.session.session_files.in_root(path)}
 
     def _written_outputs(self) -> list[str]:
         """The folders holding what each listed fidelity declares in its checked format and has already written. The
@@ -160,8 +154,4 @@ class CheckedGraph:
         declared = [path for fidelity, checked in zip(self._fidelities, self._formats) for path in fidelity.output_paths().get(checked, [])]
         found = [self.session.path_named(path) for path in declared if "{" not in path]
         folders = {path.parent if path.is_file() else path for path in found if path.exists()}
-        return sorted(str(folder) for folder in folders if self._under_root(folder))
-
-    def _under_root(self, path: Path) -> bool:
-        root = self.session.work_root
-        return path == root or root in path.parents
+        return sorted(str(folder) for folder in folders if self.session.session_files.in_root(folder))

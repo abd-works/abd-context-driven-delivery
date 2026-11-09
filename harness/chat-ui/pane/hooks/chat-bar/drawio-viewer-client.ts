@@ -1,7 +1,7 @@
 import type { EngineInterface } from 'claude-code'
 
 import { after } from '../board-chat/board'
-import { reasonOf } from '../failure'
+import { reasonOf } from '../shared/failure'
 
 // The draw.io viewer in tools/drawio_viewer serves the real draw.io editor on this port, and its Save writes the file
 // back. A diagram opens there in the person's browser, with no message to the chat.

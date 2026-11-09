@@ -10,7 +10,7 @@ import { GraphView } from './graph/GraphView';
 import { childrenOf, isRule, ruleHits, selectionForRule, type GraphSelection, type TreeItem } from './graph/graph-selection';
 import { SourceView, type SourceRule } from './source/SourceView';
 import { normalizeInventoryBundle } from './inventory-bundle';
-import { overlayPathLabel } from './overlay-labels';
+import { overlayPathLabel } from './labels/overlay-labels';
 import type { ViolationFocus } from './source/violation-prompt';
 
 const LAST_FOLDER = 'cdd-graph-folder';

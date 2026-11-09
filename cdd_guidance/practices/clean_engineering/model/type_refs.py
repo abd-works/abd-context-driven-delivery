@@ -5,7 +5,13 @@ from __future__ import annotations
 import re
 from typing import List
 
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
+from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
+
+
+
+def name_with_type(name: str, type_hint: str) -> str:
+    """A member as a model line writes it: `total: int`, or its name alone when it has no type."""
+    return f"{name}: {type_hint}" if type_hint else name
 
 
 def is_primitive_type(type_name: str) -> bool:
@@ -35,7 +41,7 @@ def is_primitive_type(type_name: str) -> bool:
 
 def split_top_level(text: str) -> List[str]:
     """The comma-separated parts of a parameter list, keeping commas inside brackets or generics; blanks dropped."""
-    starts = [0] + [index + 1 for index in SourceText(text).top_level_indexes(",")]
+    starts = [0] + [index + 1 for index in BracketStructure(text).top_level_indexes(",")]
     ends = [index - 1 for index in starts[1:]] + [len(text)]
     return [text[start:end].strip() for start, end in zip(starts, ends) if text[start:end].strip()]
 

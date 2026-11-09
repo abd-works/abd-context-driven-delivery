@@ -221,6 +221,8 @@ class ToolsetMembers:
     (``ToolsetMembers.of``) and they are walked once."""
 
     _HELD_AS: ClassVar[str] = "_toolset_members"
+    # The members every toolset has that are its tools and mode, never collections it holds.
+    COLLECTION_SKIP: ClassVar[frozenset[str]] = frozenset({"tools", "operations", "instructions", "mode"})
 
     def __init__(self, owner: type) -> None:
         self._owner = owner
@@ -267,6 +269,52 @@ class ToolsetMembers:
 
     def is_rules(self, member: Any) -> bool:
         return annotation_kinds.annotated_for(InstallDestination.RULE, member)
+
+    @functools.cached_property
+    def toolset_collection_names(self) -> list[str]:
+        """The members annotated as toolset collections, such as a practice's fidelities, read once for the class."""
+        return [name for name, member in self.every if name not in self.COLLECTION_SKIP and ToolSetCollectionAnnotation.annotates(member)]
+
+    @functools.cached_property
+    def collection_names(self) -> list[str]:
+        """The members that can hold a collection of tools: those its annotations make tools or rules, and those whose
+        return type is a toolset collection or a toolset; read once for the class, since its members' annotations are
+        fixed once it is imported."""
+        return [
+            name
+            for name, member in self.every
+            if name not in self.COLLECTION_SKIP
+            and (self.is_tool(member) or self.is_rules(member) or self._is_collection_type(self._return_type(member)))
+        ]
+
+    def collections_on(self, instance: Any) -> list[tuple[str, Any]]:
+        """Each of those members that holds a collection of tools on instance, an instance of this class, by name."""
+        held = ((name, getattr(instance, name, None)) for name in self.collection_names)
+        return [(name, value) for name, value in held if value is not instance and self._is_tool_collection(value)]
+
+    def _return_type(self, member: Any) -> Any:
+        """The type member says it returns, its name resolved in the module that defines it, else the class's."""
+        annotation = getattr(member, "__annotations__", {}).get("return")
+        if not isinstance(annotation, str):
+            return annotation
+        resolved = getattr(member, "__globals__", {}).get(annotation)
+        module = sys.modules.get(self._owner.__module__)
+        if resolved is None and module is not None:
+            resolved = getattr(module, annotation, None)
+        return resolved
+
+    def _is_collection_type(self, annotation: Any) -> bool:
+        if not isinstance(annotation, type):
+            return False
+        return issubclass(annotation, ToolSetCollection) or self._is_toolset_class(annotation)
+
+    def _is_tool_collection(self, value: Any) -> bool:
+        if value is None:
+            return False
+        return isinstance(value, ToolSetCollection) or self._is_toolset_class(type(value))
+
+    def _is_toolset_class(self, owner: type) -> bool:
+        return ToolSetCollectionAnnotation.annotates(owner) or AgentToolSetAnnotation.annotates(owner)
 
     def declared(self, name: str) -> Any:
         """The attribute name as the nearest class in the class order defines it, before Python resolves it."""
@@ -506,7 +554,6 @@ class AgentToolSet(AgentToolSetOrigin):
     """What making or reading a toolset raises when its code cannot be loaded, such as a module that does not import or
     a constructor that needs more than configuration gives it. A server that loads every toolset skips one that raises
     these, names it, and serves the rest."""
-    _COLLECTION_SKIP = frozenset({"tools", "operations", "instructions", "mode"})
 
     @property
     def mode(self) -> ExpansionMode:
@@ -560,14 +607,9 @@ class AgentToolSet(AgentToolSetOrigin):
 
     @property
     def toolset_collections(self) -> list[Any]:
-        found: list[Any] = []
-        for name, member in self._members.every:
-            if name in self._COLLECTION_SKIP or not ToolSetCollectionAnnotation.annotates(member):
-                continue
-            value = getattr(self, name, None)
-            if value is not None and value is not self:
-                found.append(value)
-        return found
+        """The toolset collections this toolset holds now, each a member annotated as one."""
+        held = (getattr(self, name, None) for name in self._members.toolset_collection_names)
+        return [value for value in held if value is not None and value is not self]
 
     def child_toolsets(self):
         for collection in self.toolset_collections:
@@ -678,7 +720,7 @@ class AgentToolSet(AgentToolSetOrigin):
 
     def _discover_collection_tools(self) -> dict[str, AgentTool]:
         found: dict[str, AgentTool] = {}
-        for _key, collection in self._collections_on(self):
+        for _key, collection in self._members.collections_on(self):
             found.update(self._rehost_collection_tools(collection, prefix=""))
         for key, collection in self._nested_tool_collections():
             found.update(self._rehost_collection_tools(collection, prefix=f"{key}."))
@@ -689,7 +731,7 @@ class AgentToolSet(AgentToolSetOrigin):
             (key, bag)
             for collection in self.toolset_collections
             for key, child in getattr(collection, "entries", {}).items()
-            for _name, bag in self._collections_on(child)
+            for _name, bag in ToolsetMembers.of(type(child)).collections_on(child)
         ]
 
     def _rehost_collection_tools(self, collection: Any, prefix: str) -> dict[str, AgentTool]:
@@ -703,42 +745,6 @@ class AgentToolSet(AgentToolSetOrigin):
                 toolset=self,
             )
         return found
-
-    def _collections_on(self, instance: Any) -> list[tuple[str, Any]]:
-        if instance is None:
-            return []
-        members = ToolsetMembers.of(type(instance))
-        found: list[tuple[str, Any]] = []
-        for name, member in members.every:
-            if name in self._COLLECTION_SKIP:
-                continue
-            annotated = members.is_tool(member) or members.is_rules(member)
-            if not annotated and not self._is_collection_type(self._return_type(member, type(instance))):
-                continue
-            value = getattr(instance, name, None)
-            if value is not instance and self._is_tool_collection(value):
-                found.append((name, value))
-        return found
-
-    def _return_type(self, member: Any, owner: type) -> Any:
-        annotation = getattr(member, "__annotations__", {}).get("return")
-        if not isinstance(annotation, str):
-            return annotation
-        resolved = getattr(member, "__globals__", {}).get(annotation)
-        module = sys.modules.get(owner.__module__)
-        if resolved is None and module is not None:
-            resolved = getattr(module, annotation, None)
-        return resolved
-
-    def _is_collection_type(self, annotation: Any) -> bool:
-        if not isinstance(annotation, type):
-            return False
-        return issubclass(annotation, ToolSetCollection) or ToolSetCollectionAnnotation.annotates(annotation) or AgentToolSetAnnotation.annotates(annotation)
-
-    def _is_tool_collection(self, value: Any) -> bool:
-        if value is None:
-            return False
-        return isinstance(value, ToolSetCollection) or ToolSetCollectionAnnotation.annotates(type(value)) or AgentToolSetAnnotation.annotates(type(value))
 
 
 class ToolSubjectLoader:
@@ -892,6 +898,19 @@ class AgentTool(AgentToolDestination):
             return self.slug
         return f"{self.slug}.{self.name}"
 
+    def is_called(self, called: str) -> bool:
+        """Whether called, the name a client sent, names this tool: its MCP name as published (``generate.generate``),
+        or as an IDE spells it, with any ``mcp__{server}__`` prefix Claude Code adds, in any case, and with dots and
+        hyphens written as underscores (``generate_generate``, ``fidelity_progress_files``). The server resolves a call
+        and a rules hook recognises its own action's tool by this one rule, so the two never disagree on a name."""
+        return bool(called) and self.spelled(called) == self.spelled(self.mcp_name)
+
+    @classmethod
+    def spelled(cls, name: str) -> str:
+        """name as every client spelling of it compares: without an ``mcp__{server}__`` prefix, case folded, with dots and
+        hyphens as underscores."""
+        return name.rsplit("__", 1)[-1].casefold().replace(".", "_").replace("-", "_")
+
     def invoke_line(self) -> str:
         """The ``Use MCP tool:`` line a skill or command ends with, naming the tool and the parameters it takes."""
         try:
@@ -957,12 +976,7 @@ class AgentTool(AgentToolDestination):
         session = self.toolset.session_for(call)
         if session is None:
             return
-        logged_args = {
-            key: value
-            for key, value in call.arguments.items()
-            if isinstance(value, (str, int, float, bool, list))
-        }
-        session.log.by(call.chat).tool(self.mcp_name, logged_args)
+        session.log.by(call.chat).tool(self.mcp_name, call.named_paths)
 
     @property
     def kind(self) -> str:
@@ -1065,18 +1079,9 @@ class AgentInstructions(AgentTool):
         """What this operation's recipe says, read once from the callable it holds."""
         return RecipeSource(self.callable)
 
-    @property
-    def result_template(self) -> str:
-        source = self.recipe_source
-        result_template = source.result_template
-        if not result_template and source.only_defers_to_parent:
-            parent = self.parent_recipe()
-            result_template = parent[0].recipe_source.result_template if parent is not None else ""
-        return result_template or f"Instructions for {self.callable.__name__}"
-
     def expand(self, arguments: dict[str, Any]) -> ExpansionResult:
-        """The recipe expanded for one call's arguments: its instructions, the tools it names, and its result line,
-        with every placeholder filled."""
+        """The recipe expanded for one call's arguments: its instructions, the tools it names, and its result line, what
+        the recipe returned for those arguments, with every placeholder filled."""
         expansion = RecipeExpansion(self, arguments).run()
         values = self.parameter_schema.with_defaults(arguments)
         placeholders = RecipePlaceholders(values, set(self.parameter_schema.names), self.toolset)
@@ -1085,7 +1090,7 @@ class AgentInstructions(AgentTool):
         return ExpansionResult(
             instructions=self._with_sub_agent_preamble(instructions),
             tools=expansion.tools,
-            result=placeholders.filled(self.result_template),
+            result=placeholders.filled(expansion.result or f"Instructions for {self.callable.__name__}"),
         )
 
     def members_of(self, target: Any) -> ToolsetMembers:

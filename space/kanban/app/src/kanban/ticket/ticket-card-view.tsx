@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { DragEvent, MouseEvent, RefObject } from 'react'
 
-import { ageOf } from '../board/board-brand'
-import { useBoard } from '../board/board-context'
+import { ageOf } from '../shared/board-brand'
+import { useBoard } from '../shared/board-context'
 import type { ColumnClient } from '../board/column-client'
-import { SessionActionIcon } from '../board/icons'
+import { SessionActionIcon } from '../shared/icons'
 import { FileViewsView } from './file-views-view'
 import type { TicketClient } from './ticket-client'
 import { TileView } from './tile-view'
@@ -77,7 +77,7 @@ function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
       <div className="ticket-meta">{ageOf(state.now, ticket.lastActivity)}</div>
       <SegmentsView ticket={ticket} stage={stage} onSkill={setSkill} />
       {skill ? <div className="card-skill">{skill}</div> : null}
-      {ticket.hasViolationsIn(stage) ? (
+      {ticket.workIn(stage)?.hasViolations ? (
         <button className="violations-link card-violations" onClick={withoutSelecting(() => page.panels.openReport(ticket, null))}>
           violations
         </button>

@@ -1,6 +1,6 @@
 # Stories relationships that cross a practice
 
-Stories records its links to Clean Engineering after both practices are read onto the graph: `Stories.link_to_other_practices` runs `link_steps_and_examples` (`practices/stories/model/graph_reading.py`) when the graph holds both practices. Links to UX screens come from the schema fields the graph records when both nodes are on it (`harness/graph/schema_edges.py`). `owns` and `scopes` stay inside Stories.
+Stories records its links to Clean Engineering once both practices are read onto the graph: Stories reads after Clean Engineering, and its reading part (*StoriesReading*, `practices/stories/model/graph_reading.py`) links its steps and examples (*StoryLinks*, holding the reading's *StoryTree*) at the end of its read when the graph holds both practices. Every reader of Stories' nodes, in Stories or another practice (UX's explorer tree and story links), reads the story map's shape through *StoryTree* (`practice.reading.story_tree`): an epic's sub-epics and stories, a story's scenarios, a scenario's steps, and the epic above a node, from the graph's edges and saved facts, so a graph opened from its save reads as a fresh build does. Links to UX screens come from the schema fields the graph records when both nodes are on it (`harness/graph/schema_edges.py`). `owns` and `scopes` stay inside Stories.
 
 | Kind | From | To | When |
 |------|------|-----|------|

@@ -8,6 +8,8 @@ import ast
 import builtins
 import re
 
+from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
+
 _CATCH = re.compile(r"\bcatch\s*(?:\([^)]*\))?\s*\{")
 _PY_EXCEPT = re.compile(r"\bexcept\s*(?::|\([^)]*\)\s*:)")
 _STRING = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`')
@@ -74,6 +76,10 @@ _ARGUMENT_NAME = re.compile(r"(?<![\w.$])([A-Za-z_$][\w$]*)\b(?!\s*\()")
 _DECLARED_LOCAL = re.compile(r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)")
 _SCRIPT_VALUES = frozenset({"true", "false", "null", "undefined", "typeof", "instanceof", "as", "void", "await", "new"})
 _WIRED_PEER_FIELDS = frozenset({"repository", "repo"})
+# The dunders Python calls with another object of the same class as the operand: comparison and arithmetic.
+_PEER_OPERAND_DUNDERS = frozenset(
+    {"__eq__", "__ne__", "__lt__", "__le__", "__gt__", "__ge__", "__add__", "__sub__", "__or__", "__and__"}
+)
 _CATCH_ALL_TYPES = frozenset({"Exception", "BaseException"})
 _IO_CALL = re.compile(
     r"\b(?:open|read|write|save|fetch|load|store|send|post|put|delete|upload|download|print)\w*\s*\(",
@@ -92,13 +98,23 @@ _EDGE_RAISE_BRACE = re.compile(
     re.MULTILINE | re.DOTALL,
 )
 # What a raise names: `UnknownPractice(key, known)` names the failure `UnknownPractice` and gives it what was asked for.
-_RAISED_WITH_CONTEXT = re.compile(r"^\s*(?:new\s+)?([A-Z]\w*)\s*\(\s*[^)\s]")
-# The failures a language gives every program; raising one on an empty value says nothing about the domain.
+_RAISED_CLASS = re.compile(r"^\s*(?:new\s+)?([A-Z]\w*)\b")
+# The failures a language gives every program for an ordinary bad value; raising one on an empty value says nothing
+# about the domain. A failure of the world outside the program, such as a connection closing (`OSError`, `EOFError`),
+# is no empty case the program could define away, so it is not one of them.
 _BUILTIN_FAILURES = frozenset(
-    {name for name in dir(builtins) if isinstance(getattr(builtins, name), type) and issubclass(getattr(builtins, name), BaseException)}
+    {
+        name
+        for name in dir(builtins)
+        if isinstance(getattr(builtins, name), type)
+        and issubclass(getattr(builtins, name), BaseException)
+        and not issubclass(getattr(builtins, name), (OSError, EOFError))
+    }
     | {"Error", "RangeError", "ReferenceError", "IllegalArgumentException", "IllegalStateException", "RuntimeException"}
 )
-_EDGE_RAISE_MESSAGE = re.compile(r"raise\s+\w*(?:Error|Exception)\([^)]*(?:empty|not found|missing|none)", re.I)
+# A docstring or a comment: text about the code, which the raise measures leave out.
+_DOC_OR_COMMENT = re.compile(r'"""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\'|^\s*(?:#|//).*$', re.M)
+_EDGE_RAISE_MESSAGE = re.compile(r"raise\s+(\w*(?:Error|Exception))\([^)]*(?:empty|not found|missing|none)", re.I)
 _EDGE_GUARD = re.compile(r"if\s+(?:not\s+|len\s*\([^)]*\)\s*==\s*0)")
 _EMPTY_EXCEPTION = re.compile(r"raise\s+(\w+(?:Error|Exception))\s*\(\s*([\"']?)\s*\2\s*\)")
 _GENERIC_EXCEPTION = re.compile(r"raise\s+\w+(?:Error|Exception)\s*\(\s*f?[\"'](?:error|failed|invalid)[\"']\s*\)", re.I)
@@ -136,51 +152,12 @@ class SourceText:
 
     def __init__(self, text: str) -> None:
         self._text = text
+        # Which bracket closes which in the text, for the measures that read its blocks.
+        self._brackets = BracketStructure(text)
 
     @property
     def text(self) -> str:
         return self._text
-
-    def closing_bracket(self, open_at: int, opener: str = "{", closer: str = "}") -> int | None:
-        """The index of the bracket that closes the one at open_at; None when the text never closes it. Every reader
-        of brace-language code asks this one matcher."""
-        depth = 0
-        for index in range(open_at, len(self._text)):
-            if self._text[index] == opener:
-                depth += 1
-            elif self._text[index] == closer:
-                depth -= 1
-                if depth == 0:
-                    return index
-        return None
-
-    def top_level_indexes(self, mark: str) -> list[int]:
-        """Each place mark sits outside every bracket pair, generics included: a `,` between parameters and not one
-        inside `Map<K, V>`, a default's `=` and not one inside a destructuring pattern `{ a = 1 }`. An arrow's `>` closes
-        no bracket, and the `=` of an arrow `=>` is no mark."""
-        found: list[int] = []
-        depth = 0
-        text = self._text
-        for index, char in enumerate(text):
-            if char in "<([{":
-                depth += 1
-            elif char in ")]}" or (char == ">" and text[index - 1 : index] != "="):
-                depth = max(0, depth - 1)
-            elif char == mark and depth == 0 and text[index + 1 : index + 2] != ">":
-                found.append(index)
-        return found
-
-    def top_level_index(self, mark: str) -> int:
-        """The first place mark sits outside every bracket pair; -1 when it sits at none."""
-        return next(iter(self.top_level_indexes(mark)), -1)
-
-    def braced(self, open_at: int) -> str | None:
-        """The text inside the `{` at open_at and the `}` that closes it; None when open_at is no `{` or nothing
-        closes it."""
-        if open_at >= len(self._text) or self._text[open_at] != "{":
-            return None
-        close = self.closing_bracket(open_at)
-        return self._text[open_at + 1 : close] if close is not None else None
 
     def control_flow_depth(self) -> int:
         """The deepest nesting of if/for/while, by indentation or by control-flow braces, whichever is deeper."""
@@ -206,7 +183,7 @@ class SourceText:
     def swallows_exceptions(self) -> bool:
         """An empty catch, or one that hands back a fallback value without throwing again."""
         for match in _CATCH.finditer(self._text):
-            catch_body = self.braced(match.end() - 1)
+            catch_body = self._brackets.braced(match.end() - 1)
             if catch_body is None:
                 continue
             stripped = catch_body.strip()
@@ -219,14 +196,17 @@ class SourceText:
         code = _REGEXP_LITERAL.sub('""', _STRING.sub('""', self._text))
         return [raw for raw in _NUMBER.findall(code) if float(raw) not in _SAFE_NUMBERS]
 
-    def reaches_peer_private(self) -> bool:
+    def reaches_peer_private(self, own_objects: frozenset[str] = frozenset(), own_members: frozenset[str] = frozenset()) -> bool:
         """True when the body reads a ``_`` member of another object: ``order._lines``, not ``this._lines``,
         ``cls._registry``, or a dunder such as ``other.__dict__``. Copying a field from a peer into the same field of
-        this object, and the repository a peer is wired to, are not reaches."""
+        this object, and the repository a peer is wired to, are not reaches. Neither is a member of another object of
+        the class the body belongs to, since privacy is per class: own_objects names the objects of that class the body
+        holds, and own_members the members that class declares."""
         code = _STRING.sub('""', self._text)
+        own = _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS | own_objects
         for match in _PEER_PRIVATE_FIELD.finditer(code):
             receiver, member = match.group(1), match.group(2)
-            if receiver in _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS or _is_dunder(member) or member.lstrip("_") in _WIRED_PEER_FIELDS:
+            if receiver in own or member in own_members or _is_dunder(member) or member.lstrip("_") in _WIRED_PEER_FIELDS:
                 continue
             if self._copies_same_field(receiver, member.lstrip("_")):
                 continue
@@ -237,9 +217,9 @@ class SourceText:
         """The classes this brace-language constructor body builds with `new` that a caller cannot hand it, each with
         its line, read as ``PythonFunctionBody.built_collaborators`` reads Python: a class it throws, the default it
         builds for a parameter (``repo ?? new Repo()``, ``repo || new Repo()``), and a part it builds from its own state
-        (``this``, its parameters, its locals, or constants) are left out."""
+        (``this``, its parameters, its locals, constants, or classes it names) are left out."""
         code = _STRING.sub('""', self._text)
-        unquoted = SourceText(code)
+        unquoted = BracketStructure(code)
         owned = parameter_names | _OWN_RECEIVERS | set(_DECLARED_LOCAL.findall(code)) | _SCRIPT_VALUES
         found: list[tuple[str, int]] = []
         for match in _NEW_CLASS.finditer(code):
@@ -247,10 +227,15 @@ class SourceText:
                 continue
             close = unquoted.closing_bracket(match.end() - 1, "(", ")")
             arguments = code[match.end() : close if close is not None else len(code)]
-            if arguments.strip() and all(name in owned or name.isupper() for name in _ARGUMENT_NAME.findall(arguments)):
+            if arguments.strip() and all(name in owned or name[:1].isupper() for name in _ARGUMENT_NAME.findall(arguments)):
                 continue
             found.append((match.group(1), start_line + code.count("\n", 0, match.start())))
         return found
+
+    def locals_built_of(self, class_name: str) -> frozenset[str]:
+        """Each local a brace-language body declares as a new object of the class: ``const copy = new Money()``."""
+        built = rf"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*new\s+{re.escape(class_name)}\b"
+        return frozenset(re.findall(built, self._text))
 
     def mixes_io_and_domain(self) -> bool:
         """A body long enough to mean something that calls both I/O and a domain calculation."""
@@ -260,20 +245,27 @@ class SourceText:
         return bool(_IO_CALL.search(self._text) and _DOMAIN_CALL.search(self._text))
 
     def raises_on_empty(self) -> bool:
-        """True when the body raises on an empty or missing value. A raise of a failure the program declares, given
-        what was asked for, such as ``raise UnknownPractice(key, known)`` when no practice has the key, reports a broken
-        call rather than an ordinary empty case, so it is left out."""
+        """True when the body raises a builtin failure on an empty or missing value. A raise of a failure the program
+        declares, such as ``raise UnknownPractice(key, known)`` when no practice has the key or
+        ``raise CommitPathsRequiredError()`` when a required argument is missing, is a named refusal of a broken call
+        rather than an ordinary empty case, so it is left out; whether it carries enough context is
+        ``domain-exception-carries-context``'s question."""
+        code = self._code()
         for pattern in (_EDGE_RAISE, _EDGE_RAISE_BRACE):
-            if any(not _names_broken_call(match.group(1)) for match in pattern.finditer(self._text)):
+            if any(not _names_declared_failure(match.group(1)) for match in pattern.finditer(code)):
                 return True
-        return bool(_EDGE_RAISE_MESSAGE.search(self._text) and _EDGE_GUARD.search(self._text))
+        return self._raises_builtin_with_message()
 
     def exception_without_message(self) -> str:
-        found = _EMPTY_EXCEPTION.search(self._text)
+        found = _EMPTY_EXCEPTION.search(self._code())
         return found.group(1) if found else ""
 
     def generic_exception_message(self) -> bool:
-        return bool(_GENERIC_EXCEPTION.search(self._text))
+        return bool(_GENERIC_EXCEPTION.search(self._code()))
+
+    def _code(self) -> str:
+        """The text without its docstrings and comments, so a raise a docstring shows as an example raises nothing."""
+        return _DOC_OR_COMMENT.sub("", self._text)
 
     def mutates_without_record(self) -> bool:
         text = self._text
@@ -342,19 +334,14 @@ class SourceText:
             return True
         if not head.endswith(")"):
             return False
-        opening = self._matching_open_paren(head)
+        opening = BracketStructure(head).opening_bracket(len(head) - 1)
         return opening >= 0 and _CONTROL_CONDITION.search(head[:opening]) is not None
 
-    def _matching_open_paren(self, head: str) -> int:
-        depth = 0
-        for index in range(len(head) - 1, -1, -1):
-            if head[index] == ")":
-                depth += 1
-            elif head[index] == "(":
-                depth -= 1
-                if depth == 0:
-                    return index
-        return -1
+    def _raises_builtin_with_message(self) -> bool:
+        """A builtin failure raised under an empty-value guard whose message says what is empty or missing."""
+        code = self._code()
+        message = _EDGE_RAISE_MESSAGE.search(code)
+        return bool(message and not _names_declared_failure(message.group(1)) and _EDGE_GUARD.search(code))
 
     def _returns_fallback(self, catch_body: str) -> bool:
         return _THROW.search(catch_body) is None and _FALLBACK_RETURN.search(catch_body) is not None
@@ -366,27 +353,54 @@ class SourceText:
 
 
 class PythonFunctionBody:
-    """A Python function read from its syntax tree, and what the rules measure in it."""
+    """A Python function read from its syntax tree, and what the rules measure in it. A method keeps the class that
+    declares it, since what counts as reaching another object's private state depends on that class; a module function
+    has none. It holds the objects of its own class it reads, read from the tree."""
 
-    def __init__(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+    def __init__(self, node: ast.FunctionDef | ast.AsyncFunctionDef, owner: ast.ClassDef | None) -> None:
         self._node = node
+        self._own = OwnObjects(node, owner)
 
     def control_flow_depth(self) -> int:
         return self._deepest_block(self._node.body, 0)
 
+    def decorated(self, name: str) -> bool:
+        """True when a decorator with no arguments of that name marks the function: `@property`, `@classmethod`."""
+        return any(isinstance(decorator, ast.Name) and decorator.id == name for decorator in self._node.decorator_list)
+
+    def parameters(self) -> list[str]:
+        """Each parameter as `name: type`, without the receiver: `self`, and `cls` for a classmethod."""
+        receivers = {"self", "cls"} if self.decorated("classmethod") else {"self"}
+        return [
+            f"{arg.arg}: {ast.unparse(arg.annotation)}" if arg.annotation is not None else arg.arg
+            for arg in [*self._node.args.args, *self._node.args.kwonlyargs]
+            if arg.arg not in receivers
+        ]
+
+    def callees(self) -> list[str]:
+        """The name of each function or member the function calls, in the order the tree holds them."""
+        called = [child.func for child in ast.walk(self._node) if isinstance(child, ast.Call)]
+        return [func.id if isinstance(func, ast.Name) else func.attr for func in called if isinstance(func, (ast.Name, ast.Attribute))]
+
+    def body_text(self, source: str) -> str:
+        """The statements as written in source, with the comments above them; the docstring stays the description."""
+        node = self._node
+        statements = node.body[1:] if ast.get_docstring(node) is not None else node.body
+        if not statements:
+            return ""
+        if statements[0].lineno == node.lineno:
+            return "\n".join(ast.get_source_segment(source, stmt) or "" for stmt in statements)
+        lines = source.split("\n")
+        boundary = node.body[0].end_lineno if statements is not node.body else node.lineno
+        start = statements[0].lineno
+        while start - 1 > boundary and lines[start - 2].strip().startswith("#"):
+            start -= 1
+        return "\n".join(lines[start - 1 : node.end_lineno])
+
     def except_flags(self) -> tuple[bool, bool]:
-        """(catches everything, swallows a failure). A bare ``except`` catches everything. So does ``except Exception``
-        that never raises again: it returns or substitutes a fallback for every failure, the broken invariant included."""
-        bare = False
-        swallow = False
-        for child in ast.walk(self._node):
-            if not isinstance(child, ast.ExceptHandler):
-                continue
-            reraises = any(isinstance(inner, ast.Raise) for inner in ast.walk(child))
-            catch_all = child.type is None or (self._catches_every_exception(child.type) and not reraises)
-            bare = bare or catch_all
-            swallow = swallow or self._handler_ignores(child.body) or (catch_all and not reraises)
-        return bare, swallow
+        """(catches everything, swallows a failure), over every ``except`` clause of the function."""
+        clauses = [CatchClause(child) for child in ast.walk(self._node) if isinstance(child, ast.ExceptHandler)]
+        return any(clause.catches_everything() for clause in clauses), any(clause.swallows() for clause in clauses)
 
     def unnamed_numbers(self) -> list[str]:
         return [
@@ -400,82 +414,24 @@ class PythonFunctionBody:
 
     def reaches_peer_private(self) -> bool:
         """True when the function reads a ``_`` member of another object, as ``SourceText.reaches_peer_private`` reads a
-        brace-language body: not of itself (``self``, or its class in a classmethod), not a dunder, not the repository
-        a peer is wired to, and not a field it copies into the same field of this object."""
-        own = _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS | self._own_class_parameter()
+        brace-language body: not of itself (``self``, or its class in a classmethod), not of another object of its own
+        class (privacy in Python is per class), not a member its own class declares, not a dunder, not the repository a
+        peer is wired to, and not a field it copies into the same field of this object."""
+        own = _OWN_RECEIVERS | _OWN_CLASS_RECEIVERS | self._own.names()
+        members = self._own.members()
         for child in ast.walk(self._node):
             if not (isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name)):
                 continue
-            if child.value.id in own or not child.attr.startswith("_") or _is_dunder(child.attr):
+            if child.value.id in own or not child.attr.startswith("_") or _is_dunder(child.attr) or child.attr in members:
                 continue
             if child.attr.lstrip("_") in _WIRED_PEER_FIELDS or self._copies_same_field(child.value.id, child.attr):
                 continue
             return True
         return False
 
-    def _own_class_parameter(self) -> frozenset[str]:
-        """The first parameter of a classmethod, its own class whatever it is called."""
-        decorators = {decorator.id for decorator in self._node.decorator_list if isinstance(decorator, ast.Name)}
-        arguments = self._node.args.args
-        return frozenset({arguments[0].arg}) if "classmethod" in decorators and arguments else frozenset()
-
     def built_collaborators(self) -> list[tuple[str, int]]:
-        """The classes this constructor builds that a caller cannot hand it, each with its line.
-
-        A class it raises is a failure, not a collaborator. One it builds as the default of a parameter a caller may
-        pass (``repo if repo is not None else Repo()``, ``repo or Repo()``, a default in the signature) can be swapped.
-        One it builds from its own state, that is from itself, its parameters, values it computes from them, or
-        constants, is a part it owns. What is left is built from nothing, or from something outside the object, such
-        as a global or a call that reaches the environment, and the caller can never replace it."""
-        replaceable = self._raised_or_defaulted()
-        owned = self._owned_names()
-        return [
-            (child.func.id, child.lineno)
-            for stmt in self._node.body
-            for child in ast.walk(stmt)
-            if isinstance(child, ast.Call)
-            and isinstance(child.func, ast.Name)
-            and child.func.id[:1].isupper()
-            and id(child) not in replaceable
-            and not _built_from(child, owned)
-        ]
-
-    def _parameter_names(self) -> set[str]:
-        arguments = self._node.args
-        named = arguments.posonlyargs + arguments.args + arguments.kwonlyargs
-        extra = [item for item in (arguments.vararg, arguments.kwarg) if item is not None]
-        return {item.arg for item in named + extra}
-
-    def _owned_names(self) -> set[str]:
-        """Itself, its parameters, and every name its body assigns: what the constructor holds or computes."""
-        stored = {
-            child.id
-            for stmt in self._node.body
-            for child in ast.walk(stmt)
-            if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store)
-        }
-        return self._parameter_names() | stored
-
-    def _raised_or_defaulted(self) -> set[int]:
-        """The constructions a caller can replace, and the failures it raises, by node identity."""
-        parameters = self._parameter_names() - {"self"}
-        found: set[int] = set()
-        for stmt in self._node.body:
-            for child in ast.walk(stmt):
-                if isinstance(child, ast.Raise) and isinstance(child.exc, ast.Call):
-                    found.add(id(child.exc))
-                elif isinstance(child, ast.IfExp) and {_name_of(child.body), _name_of(child.orelse)} & parameters:
-                    # `repo if repo is not None else Repo()`: the parameter, or the default built in its place.
-                    found.update(id(branch) for branch in (child.body, child.orelse) if isinstance(branch, ast.Call))
-                elif isinstance(child, ast.BoolOp) and isinstance(child.op, ast.Or) and _name_of(child.values[0]) in parameters:
-                    # `repo or Repo()`.
-                    found.update(id(value) for value in child.values[1:] if isinstance(value, ast.Call))
-                elif isinstance(child, ast.If) and _absent_parameter(child.test) in parameters:
-                    # `if repo is None: repo = Repo()`.
-                    found.update(
-                        id(inner.value) for inner in child.body if isinstance(inner, ast.Assign) and isinstance(inner.value, ast.Call)
-                    )
-        return found
+        """The classes this constructor builds that a caller cannot hand it, each with its line."""
+        return Constructions(self._node).collaborators()
 
     def packed_parameters(self) -> dict[str, int]:
         """Each parameter that carries several values, with how many: a tuple the body unpacks (``x, y = rest``), and a
@@ -525,22 +481,190 @@ class PythonFunctionBody:
                 return True
         return False
 
+
+class CatchClause:
+    """One ``except`` clause of a Python function: what it catches, and whether it hands the failure on, by raising it
+    again or by keeping it on its own object for a later call or another thread to raise or report, or drops it."""
+
+    def __init__(self, handler: ast.ExceptHandler) -> None:
+        self._handler = handler
+
+    def catches_everything(self) -> bool:
+        """A bare ``except`` catches everything. So does ``except Exception`` that never hands the failure on: it
+        returns or substitutes a fallback for every failure, the broken invariant included."""
+        caught = self._handler.type
+        return caught is None or (self._catches_every_exception(caught) and not self._hands_on())
+
+    def swallows(self) -> bool:
+        """An empty handler, or one that catches everything and hands nothing on."""
+        return self._ignores() or (self.catches_everything() and not self._hands_on())
+
+    def _hands_on(self) -> bool:
+        return any(isinstance(inner, ast.Raise) for inner in ast.walk(self._handler)) or self._keeps_on_object()
+
+    def _keeps_on_object(self) -> bool:
+        """True when the handler keeps the failure it caught on its own object: ``self._error = error``,
+        ``self.thread_errors.append(f"stdout: {error}")``."""
+        caught = self._handler.name
+        return bool(caught) and any(
+            isinstance(name, ast.Name) and name.id == caught for kept in self._kept_on_self() for name in ast.walk(kept)
+        )
+
+    def _kept_on_self(self) -> list[ast.AST]:
+        """What the handler stores on its own object: the value it sets on ``self``, and each call it makes on a member
+        of ``self``."""
+        kept: list[ast.AST] = []
+        for inner in ast.walk(self._handler):
+            if isinstance(inner, ast.Assign) and any(self._on_self(target) for target in inner.targets):
+                kept.append(inner.value)
+            elif isinstance(inner, ast.Call) and self._on_self(inner.func):
+                kept.append(inner)
+        return kept
+
+    @staticmethod
+    def _on_self(expression: ast.expr) -> bool:
+        """True for a member reached from ``self``: ``self._error``, ``self.thread_errors.append``."""
+        reached = expression
+        while isinstance(reached, ast.Attribute):
+            reached = reached.value
+        return reached is not expression and isinstance(reached, ast.Name) and reached.id == "self"
+
     def _catches_every_exception(self, caught: ast.expr) -> bool:
         if isinstance(caught, ast.Tuple):
             return any(self._catches_every_exception(element) for element in caught.elts)
         return isinstance(caught, ast.Name) and caught.id in _CATCH_ALL_TYPES
 
-    def _handler_ignores(self, body: list[ast.stmt]) -> bool:
+    def _ignores(self) -> bool:
         """An empty handler, or one that only says ``pass`` or ``...``."""
         return all(
             isinstance(stmt, ast.Pass) or (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant))
-            for stmt in body
+            for stmt in self._handler.body
         )
 
 
-def _names_broken_call(raised: str) -> bool:
-    """A raise of a failure the program declares, given the value it could not use: `UnknownPractice(key, known)`."""
-    named = _RAISED_WITH_CONTEXT.match(raised)
+class Constructions:
+    """The objects a Python constructor builds, and which of them its caller cannot hand it.
+
+    A class it raises is a failure, not a collaborator. One it builds as the default of a parameter a caller may pass
+    (``repo if repo is not None else Repo()``, ``repo or Repo()``, a default in the signature) can be swapped. One it
+    builds from its own state, that is from itself, its parameters, values it computes from them, or constants, is a
+    part it owns. What is left is built from nothing, or from something outside the object, such as a global or a call
+    that reaches the environment, and the caller can never replace it."""
+
+    def __init__(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        self._node = node
+        arguments = node.args
+        named = arguments.posonlyargs + arguments.args + arguments.kwonlyargs
+        extra = [item for item in (arguments.vararg, arguments.kwarg) if item is not None]
+        self._parameters = {item.arg for item in named + extra}
+        # The parameters a caller may pass, whose defaults it can replace.
+        self._given = self._parameters - {"self"}
+
+    def collaborators(self) -> list[tuple[str, int]]:
+        """The classes it builds that a caller cannot hand it, each with its line."""
+        replaceable = self._raised_or_defaulted()
+        owned = self._owned_names()
+        return [
+            (child.func.id, child.lineno)
+            for stmt in self._node.body
+            for child in ast.walk(stmt)
+            if isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Name)
+            and child.func.id[:1].isupper()
+            and id(child) not in replaceable
+            and not self._built_from(child, owned)
+        ]
+
+    def _owned_names(self) -> set[str]:
+        """Itself, its parameters, and every name its body assigns: what the constructor holds or computes."""
+        stored = {
+            child.id
+            for stmt in self._node.body
+            for child in ast.walk(stmt)
+            if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store)
+        }
+        return self._parameters | stored
+
+    def _raised_or_defaulted(self) -> set[int]:
+        """The constructions a caller can replace, and the failures it raises, by node identity."""
+        return {
+            id(built)
+            for stmt in self._node.body
+            for child in ast.walk(stmt)
+            for built in self._replaceable_in(child)
+            if isinstance(built, ast.Call)
+        }
+
+    def _replaceable_in(self, child: ast.AST) -> list:
+        """What a node builds that its caller can replace: the failure a raise builds, or the default built in place of
+        a parameter the caller may pass."""
+        if isinstance(child, ast.Raise):
+            return [child.exc]
+        if isinstance(child, ast.IfExp):
+            return self._defaulted_branches(child)
+        if isinstance(child, ast.BoolOp):
+            return self._defaulted_alternatives(child)
+        if isinstance(child, ast.If):
+            return self._defaults_assigned(child)
+        return []
+
+    def _defaulted_branches(self, choice: ast.IfExp) -> list:
+        """`repo if repo is not None else Repo()`: the parameter, or the default built in its place."""
+        return [choice.body, choice.orelse] if {_name_of(choice.body), _name_of(choice.orelse)} & self._given else []
+
+    def _defaulted_alternatives(self, either: ast.BoolOp) -> list:
+        """`repo or Repo()`: the defaults after a parameter."""
+        return either.values[1:] if isinstance(either.op, ast.Or) and _name_of(either.values[0]) in self._given else []
+
+    def _defaults_assigned(self, test: ast.If) -> list:
+        """`if repo is None: repo = Repo()`: the values a missing parameter's branch assigns."""
+        if self._absent_parameter(test.test) not in self._given:
+            return []
+        return [inner.value for inner in test.body if isinstance(inner, ast.Assign)]
+
+    def _built_from(self, construction: ast.Call, owned: set[str]) -> bool:
+        """A construction given only what the constructor owns: every name its arguments read is one the constructor
+        holds or computes, a constant or a class named with a capital that it does not call (the failure a file reports,
+        ``JsonFile(self.path, HooksFileUnreadable)``), or a builtin; a function or class it calls is judged on its own,
+        and a class whose operation it calls (``Path.cwd()``) reaches outside the object. A construction given nothing
+        has no tie to its owner."""
+        arguments = [*construction.args, *(keyword.value for keyword in construction.keywords)]
+        nodes = [child for argument in arguments for child in ast.walk(argument)]
+        calls = [child.func for child in nodes if isinstance(child, ast.Call)]
+        called = {id(func) for func in calls}
+        # A class whose operation the argument calls, such as `Path` in `Path.cwd()`, is no constant.
+        receivers = {id(func.value) for func in calls if isinstance(func, ast.Attribute)}
+        known = owned | self._bound_in(nodes)
+        read = [child for child in nodes if isinstance(child, ast.Name) and id(child) not in called]
+        return bool(arguments) and all(self._names_owned_value(name, known, id(name) in receivers) for name in read)
+
+    @staticmethod
+    def _names_owned_value(name: ast.Name, known: set[str], called_on: bool) -> bool:
+        """True for a name the constructor holds, a builtin, or a constant or class it names without calling."""
+        return name.id in known or hasattr(builtins, name.id) or (name.id[:1].isupper() and not called_on)
+
+    @staticmethod
+    def _bound_in(nodes: list[ast.AST]) -> set[str]:
+        """The names a comprehension or a lambda inside the arguments binds itself."""
+        bound = {child.id for child in nodes if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store)}
+        return bound | {child.arg for child in nodes if isinstance(child, ast.arg)}
+
+    @staticmethod
+    def _absent_parameter(test: ast.expr) -> str:
+        """The name a test asks is missing, `x is None` or `not x`; empty for any other test."""
+        if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
+            return _name_of(test.operand)
+        if isinstance(test, ast.Compare) and len(test.ops) == 1 and isinstance(test.ops[0], ast.Is):
+            compared = test.comparators[0]
+            if isinstance(compared, ast.Constant) and compared.value is None:
+                return _name_of(test.left)
+        return ""
+
+
+def _names_declared_failure(raised: str) -> bool:
+    """A raise of a failure the program declares rather than one its language gives every program:
+    `UnknownPractice(key, known)`, `CommitPathsRequiredError()`; not `ValueError("missing")`."""
+    named = _RAISED_CLASS.match(raised)
     return named is not None and named.group(1) not in _BUILTIN_FAILURES
 
 
@@ -549,34 +673,99 @@ def _name_of(expression: ast.expr) -> str:
     return expression.id if isinstance(expression, ast.Name) else ""
 
 
-def _absent_parameter(test: ast.expr) -> str:
-    """The name a test asks is missing, `x is None` or `not x`; empty for any other test."""
-    if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
-        return _name_of(test.operand)
-    if isinstance(test, ast.Compare) and len(test.ops) == 1 and isinstance(test.ops[0], ast.Is):
-        compared = test.comparators[0]
-        if isinstance(compared, ast.Constant) and compared.value is None:
-            return _name_of(test.left)
-    return ""
+class OwnObjects:
+    """The objects of its own class a Python function reads. Privacy in Python is per class, so reading a ``_`` member of
+    any of them is reading the class's own state.
 
+    It holds them by name: a classmethod's first parameter, the class's own name, a parameter typed as the class, the
+    other operand of a comparison or arithmetic dunder such as ``__eq__``, a local it builds from the class (``cls()``,
+    ``Plan()``, ``cls.read(...)``, ``type(self)()``), and the loop name over a field the class declares as holding
+    objects of the class (``epics: list['Epic']``). And it knows the private members the class declares, so a read of
+    one of them off a local, a loop name, or a copy of itself (``node = self``, ``moved = copy.copy(self)``) is a read
+    of another object of the class. A module function has no class, so none."""
 
-def _built_from(construction: ast.Call, owned: set[str]) -> bool:
-    """A construction given only what the constructor owns: every name its arguments read is one the constructor holds
-    or computes, a constant spelled in capitals, or a builtin; a function or class it calls is judged on its own. A
-    construction given nothing has no tie to its owner."""
-    arguments = [*construction.args, *(keyword.value for keyword in construction.keywords)]
-    if not arguments:
-        return False
-    nodes = [child for argument in arguments for child in ast.walk(argument)]
-    # A comprehension's or a lambda's own names are bound inside the argument.
-    bound = {child.id for child in nodes if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store)}
-    bound |= {child.arg for child in nodes if isinstance(child, ast.arg)}
-    called = {id(child.func) for child in nodes if isinstance(child, ast.Call)}
-    return all(
-        child.id in owned or child.id in bound or child.id.isupper() or hasattr(builtins, child.id)
-        for child in nodes
-        if isinstance(child, ast.Name) and id(child) not in called
-    )
+    def __init__(self, node: ast.FunctionDef | ast.AsyncFunctionDef, owner: ast.ClassDef | None) -> None:
+        self._node = node
+        self._owner = owner
+
+    def names(self) -> frozenset[str]:
+        if self._owner is None:
+            return frozenset()
+        names = self._parameters() | self._bound_in_body()
+        names.add(self._owner.name)
+        names.discard("")
+        return frozenset(names)
+
+    def members(self) -> frozenset[str]:
+        """The ``_`` members the class declares: its operations, its class fields, and the fields its operations set
+        on ``self``."""
+        if self._owner is None:
+            return frozenset()
+        declared = {item.name for item in self._owner.body if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        declared |= {_name_of(target) for item in self._owner.body for target in self._targets(item)}
+        declared |= {self._self_field(target) for child in ast.walk(self._owner) for target in self._targets(child)}
+        return frozenset(name for name in declared if name.startswith("_"))
+
+    def _parameters(self) -> set[str]:
+        arguments = self._node.args.posonlyargs + self._node.args.args + self._node.args.kwonlyargs
+        if self._node.name in _PEER_OPERAND_DUNDERS:
+            return {argument.arg for argument in arguments}
+        typed = {argument.arg for argument in arguments if self._names_class(argument.annotation)}
+        decorators = {decorator.id for decorator in self._node.decorator_list if isinstance(decorator, ast.Name)}
+        if "classmethod" in decorators and self._node.args.args:
+            typed.add(self._node.args.args[0].arg)
+        return typed
+
+    def _bound_in_body(self) -> set[str]:
+        own_fields = self._fields_holding_class()
+        names: set[str] = set()
+        for child in ast.walk(self._node):
+            if isinstance(child, ast.Assign) and self._builds_class(child.value):
+                names.update(target.id for target in child.targets if isinstance(target, ast.Name))
+            elif isinstance(child, (ast.For, ast.comprehension)) and self._self_field(child.iter) in own_fields:
+                names.add(_name_of(child.target))
+        return names
+
+    def _names_class(self, annotation: ast.expr | None) -> bool:
+        """True when a type annotation names the class: ``Plan``, ``'Plan'``, ``Plan | None``, ``list['Plan']``."""
+        named = rf"\b{re.escape(self._owner.name)}\b"
+        return annotation is not None and re.search(named, ast.unparse(annotation)) is not None
+
+    def _builds_class(self, value: ast.expr) -> bool:
+        """True when a value is an object the class makes: a call of the class, of ``cls``, of ``type(self)``, or of a
+        factory on the class (``Plan.read(...)``, ``cls.read(...)``)."""
+        if not isinstance(value, ast.Call):
+            return False
+        called = value.func
+        if isinstance(called, ast.Attribute):
+            called = called.value
+        if isinstance(called, ast.Call):
+            return _name_of(called.func) == "type"
+        return _name_of(called) in {self._owner.name, "cls"}
+
+    def _fields_holding_class(self) -> set[str]:
+        """The fields the class declares as holding objects of the class itself, at class level or as ``self.x: T``."""
+        fields = {
+            _name_of(child.target) or self._self_field(child.target)
+            for child in ast.walk(self._owner)
+            if isinstance(child, ast.AnnAssign) and self._names_class(child.annotation)
+        }
+        fields.discard("")
+        return fields
+
+    @staticmethod
+    def _self_field(expression: ast.expr) -> str:
+        """The field an expression reads off ``self`` (``self.epics``); empty for anything else."""
+        if isinstance(expression, ast.Attribute) and _name_of(expression.value) == "self":
+            return expression.attr
+        return ""
+
+    @staticmethod
+    def _targets(statement: ast.AST) -> list[ast.expr]:
+        """What an assignment statement assigns to; none for any other node."""
+        if isinstance(statement, ast.Assign):
+            return statement.targets
+        return [statement.target] if isinstance(statement, (ast.AnnAssign, ast.AugAssign)) else []
 
 
 def _is_dunder(member: str) -> bool:

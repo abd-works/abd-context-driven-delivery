@@ -25,9 +25,10 @@ from space.session.throwaway_project import ThrowawayProject
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
-import harness.guidance.guidance as guidance_module
+import space.session.practice_session_output as session_output_module
 from harness.graph.saved_graph import SavedGraph
-from cdd_guidance.actions.validate.checked_graph import CheckedGraph, PathsNotFoundError
+from cdd_guidance.actions.validate.checked_graph import CheckedGraph
+from space.session.session_files import NamedPathNotFoundError
 from cdd_guidance.actions.validate.validate import Validate
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
@@ -275,6 +276,13 @@ with description("a validate action on practice guidance") as self:
             with it("should name its violations on that line"):
                 expect(self.validate_lines[-1]).to(contain(" graph-rule "))
 
+        # The line names the fidelity worked at, which the log reads from that fidelity's own session output.
+        with context("that has been validated at a fidelity after the first"):
+            with it("should name that fidelity on its validate line"):
+                self.action.validate(guidance=["stories-scenarios"], paths=["board/.context/story-map.md"])
+                lines = [line for line in (self.session / "session.log").read_text(encoding="utf-8").splitlines() if " validate " in line]
+                expect(lines[-1]).to(contain(" validate Stories scenarios"))
+
         # A board command names its ticket's session, which need not be the session open in the chat that runs it.
         with context("in a session the command names that is not the open one"):
             with before.each:
@@ -388,17 +396,28 @@ with description("a validate action on practice guidance") as self:
                 report = self.action.validate(guidance=["stories-story-map"], paths=[str(self.folder / "board/.context/story-map.md")])
                 expect(report).to(contain("Boarding Stuff"))
 
+            # The graph reads only under the session's root, so a file of the project outside it would be checked as
+            # nothing.
+            with context("that is named a file of the project outside the session's root"):
+                with before.each:
+                    (self.folder / "outside.md").write_text("# Outside\n", encoding="utf-8")
+
+                with it("should refuse it, naming the session's root"):
+                    expect(lambda: self.action.validate(guidance=["stories-story-map"], paths=["outside.md"])).to(
+                        raise_error(NamedPathNotFoundError, contain(f"under the session's root {(self.folder / 'board').resolve()} at outside.md"))
+                    )
+
         # A graph built from nothing reports no violations, which reads as a clean validate.
         with context("that is named by a path that is not there"):
             with it("should refuse, naming the path and the root it was read from"):
                 expect(lambda: self.action.validate(guidance=["stories-story-map"], paths=["board/.context/missing.md"])).to(
-                    raise_error(PathsNotFoundError, contain(f"board/.context/missing.md, read from {self.folder}"))
+                    raise_error(NamedPathNotFoundError, contain(f"board/.context/missing.md, read from {self.folder}"))
                 )
 
             with it("should save no report"):
                 try:
                     self.action.validate(guidance=["stories-story-map"], paths=["board/.context/missing.md"])
-                except PathsNotFoundError:
+                except NamedPathNotFoundError:
                     pass
                 expect((self.session / "validation-reports").exists()).to(equal(False))
 
@@ -420,9 +439,9 @@ with description("a validate action on practice guidance") as self:
             expect(report).to(contain("verb-noun-format"))
             expect(report).to(contain(f"[{_STORY_FILE}]("))
 
-        with it("should report the framework-syntax violation on the edited spec"):
+        with it("should report the observable-behavior violation on the edited spec"):
             report = self.action.validate(guidance=["bdd-development"], paths=[_SPEC_FILE])
-            expect(report).to(contain("framework-syntax"))
+            expect(report).to(contain("observable-behavior"))
             expect(report).to(contain(f"[{_SPEC_FILE}]("))
 
         with it("should report only the violations of the guidance's own practice"):
@@ -452,7 +471,16 @@ with description("a validate action on practice guidance") as self:
             with it("should report to each call the violations of the file it checks"):
                 expect(self.failures).to(equal([]))
                 expect(self.reports["ddd-tactics"]).to(contain("private-method-naming"))
-                expect(self.reports["bdd-development"]).to(contain("framework-syntax"))
+                expect(self.reports["bdd-development"]).to(contain("observable-behavior"))
+
+        # A rule over a whole practice compares the files a validate names with every file the session's graph holds, so
+        # two validates of one file found other hits as other chats loaded other files; the report names those files.
+        with context("after another validate refreshed other files into the session's graph"):
+            with it("should name the folders of the files the graph held beside those it checked"):
+                self.action.validate(guidance=["bdd-development"], paths=[_SPEC_FILE])
+                report = self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
+                expect(report).to(contain("The session's graph also held"))
+                expect(report).to(contain(f"- `{'/'.join(Path(_SPEC_FILE).parent.parts[:2])}`"))
 
         # Calls running at once would each read the graph the last one wrote.
         with it("should write no graph that every call in the session shares"):
@@ -510,14 +538,14 @@ with description("a validate action on practice guidance") as self:
         # A report's name is dated to the second, so a second call in that second would write over the first's report.
         with context("that is validated twice in the same second"):
             with before.each:
-                self.clock = guidance_module.datetime
-                guidance_module.datetime = _ClockAtOneSecond
+                self.clock = session_output_module.datetime
+                session_output_module.datetime = _ClockAtOneSecond
                 self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
                 self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
                 self.reports = sorted((self.session / "validation-reports").glob("ddd-tactics-*.md"))
 
             with after.each:
-                guidance_module.datetime = self.clock
+                session_output_module.datetime = self.clock
 
             with it("should save a report for each call"):
                 expect(len(self.reports)).to(equal(2))

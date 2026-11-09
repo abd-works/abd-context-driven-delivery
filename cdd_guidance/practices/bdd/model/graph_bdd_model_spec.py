@@ -14,6 +14,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from harness.graph.graph import Graph  # noqa: E402
+from harness.graph.saved_graph import SavedGraph  # noqa: E402
 
 from cdd_guidance.practices.bdd.bdd import Bdd  # noqa: E402
 
@@ -65,17 +66,17 @@ with description("a saved graph of a spec and the code it tests"):
         graph = Graph()
         graph.load_files(str(self.folder), ["bdd", "clean_engineering"], ["src"])
         self.clean = graph.practice("clean_engineering")
-        self.saved = graph.saved().text
+        self.saved = SavedGraph.from_graph(graph).text
 
     with after.all:
         shutil.rmtree(self.folder, ignore_errors=True)
 
     with context("with a Clean Engineering model beside the code"):
         with it("should give the code's operation the model's interactions"):
-            expect(self.clean.described_member("Cart", "add").callees).to(equal(["Ledger.record"]))
+            expect(self.clean.reading.model_documents.described_member("Cart", "add").callees).to(equal(["Ledger.record"]))
 
         with it("should keep every member the model describes, the ones with no code too"):
-            expect(self.clean.described_member("Ledger", "record").return_type).to(equal("str"))
+            expect(self.clean.reading.model_documents.described_member("Ledger", "record").return_type).to(equal("str"))
 
         with it("should save no copy of the model's members beside the code's nodes"):
             root_facts = json.loads(self.saved)["practices"]["clean_engineering"]["root_facts"]

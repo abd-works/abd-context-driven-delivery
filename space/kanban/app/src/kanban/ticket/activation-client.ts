@@ -1,5 +1,5 @@
 import type { BoardPage } from '../board/board-page'
-import type { Activation } from '../board/board-store'
+import type { Activation } from '../shared/board-store'
 import type { TicketClient } from './ticket-client'
 
 const LEFT_STEPS: Record<string, string> = { handoff: 'handoff written', commit: 'committed', push: 'pushed', merge: 'merged to main' }

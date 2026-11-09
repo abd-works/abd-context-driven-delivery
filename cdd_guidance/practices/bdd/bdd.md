@@ -111,10 +111,10 @@ Whenever you write or reshape describe / that / with / it-should specs, or code 
 - **`usage-order-behaviors`** — Order describes, contexts, and examples as a **usage story** or operational sequence (what happens first → next). Do not order by implementation layer, package, or internal type. In usage order a missing step is obvious; ordered by layer, nobody can tell what is not covered.
 - **`describe-is-subject-not-internal`** — A `describe` is a domain subject, state, or observable condition — never a manager, hub, runner, service, or other internal (`SessionLog`, `ToolsetRunner`, …). A spec named after a class has to be rewritten when that class is replaced, even though the behavior did not change.
 - **`describe-is-plain-english`** — Full English phrases (e.g. "an action that is annotated with log", "an action that is not annotated"). Never symbol/mechanism names (`"@log marker"`) as the subject.
-- **`shared-describe-subject`** — Keep **one** outermost `describe` per domain subject. When two top-level describes share the same opening phrase and only diverge in a trailing qualifier (`registered for deploy` vs `with mcp-published operations`, `context guidance registered for` vs `context guidance with`, `a context tool module with fidelity sections` vs `with fidelities and assembly`), that divergence is a **branch** — promote the shared phrase to the single describe and nest each qualifier as a sibling `with` / `that` context. Do not repeat the shared setup string in a second top-level describe.
+- **`shared-describe-subject`** — Keep **one** outermost `describe` per domain subject. When two top-level describes share the same opening phrase and only diverge in a trailing qualifier (`registered for deploy` vs `with mcp-published operations`, `context guidance registered for` vs `context guidance with`, `a context tool module with fidelity sections` vs `with fidelities and assembly`), that divergence is a **branch** — promote the shared phrase to the single describe and nest each qualifier as a sibling `with` / `that` context. Do not repeat the shared setup string in a second top-level describe; scan the spec file for repeated top-level `describe` prefixes before adding another subject line.
 - **`state-not-when`** — Never name a nested state with `when`. Use `that …` for events/conditions on the subject and `with …` for standing conditions. Ask: what event or condition must already be true for this observation?
 - **`nest-by-enabling-events`** — Each nested `that` / `with` must be a real precondition or event required for the nested `it should` — not a test-file grouping convenience.
-- **`context-setup-expresses-state`** — Any `before.each`, `before.all`, or Arrange nested directly under a `that`/`with` must establish the state named in that label. Read label and setup together: if the label says the subject is annotated, configured, or classified a certain way, the setup must make that true — not merely boot the host, wire paths, or call a factory. Put host boot, browser launch, and construction plumbing in a parent context whose label says the host is started, loaded, or running (`that is hosted on…`, `that the server has started…`).
+- **`context-setup-expresses-state`** — Any `before.each`, `before.all`, or Arrange nested directly under a `that`/`with` must establish the state named in that label. Read label and setup together: if the label says the subject is annotated, configured, or classified a certain way, the setup must make that true — not merely boot the host, wire paths, or call a factory. Put host boot, browser launch, and construction plumbing in a parent context whose label says the host is started, loaded, or running (`that is hosted on…`, `that the server has started…`). At development fidelity `before.each` is the Arrange step, and the same holds.
 - **`full-surface-coverage`** — Full coverage means the behavior tree is complete — every observable outcome has an `it should` in the right branch. Walk the describe/`that`/`with` tree for missing subjects, states, and outcomes; do not add one `it` per public method just because the member exists.
 - **`scan-fixture-pair`** — A mechanical mistake spec checks the failing example and its repaired example against one rule with the rule examples in that practice's `rules/rule_examples.py`: `assert_rule_pair` (Clean Engineering), `assert_bdd_source_pair` (BDD), `assert_ddd_example_pair` (DDD), or `assert_stories_example_pair` (Stories). The rule examples run the same graph rule validate runs, so the spec cannot pass while validate fails; a checker the spec writes for itself drifts from the rule.
 
@@ -145,6 +145,12 @@ Define BDD signatures — describe/it names for every observation, no test bodie
 
 Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
 
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough behavior index for a **partition** pass or first cut — the subjects under test, each with its plain-English `describe` name, the `that` and `with` states the source describes, and the `it should` observations under each. Names only: no `BDD: SIGNATURE` bodies yet.
+
 #### Rules
 
 ```yaml
@@ -156,12 +162,8 @@ Whenever you name or re-nest describe/it signatures, change code that relies on 
 
 If this change will not stay here, follow `practices/bdd.mdc`.
 
-- **`state-not-when`** — Nest by the state or condition that enables an observation, never by a `when` trigger.
-- **`nest-by-enabling-events`** — Sub-groupings are conditions that unlock further behavior, not implementation steps.
-- **`context-setup-expresses-state`** — Setup under a label must establish that label's state, not unrelated host boot.
-- **`shared-describe-subject`** — Same rule as shared rules (above); at behavior fidelity, scan the spec file for repeated top-level `describe` prefixes before adding another subject line.
-- **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup.
-- **`framework-syntax`** — Refer to [`cdd_guidance/references/language-tools.md`](../../references/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
+- **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup. The rule judges a spec still at behavior fidelity: once development has replaced every `BDD: SIGNATURE` marker with a test body that asserts, the spec is a finished test and its bodies belong there.
+- **`framework-syntax`** — Refer to [`cdd_guidance/references/language-tools.md`](../../references/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs. Mark each signature with `BDD: SIGNATURE` until development replaces it; a finished spec carries none.
 
 **Pass:**
 ```typescript
@@ -212,6 +214,12 @@ Ask which public operation on the subject under test each observation exercises,
 - Store graphs on observations in the BDD model: fenced blocks in `templates/bdd-sketch.md`, round-tripped through `practices/bdd/model` (same call-graph conversion as stories and clean engineering).
 
 Fill the **realization** section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`) — call-graph comments or structured `realization` data beside each `BDD: SIGNATURE` until **development** replaces them with real Arrange / Act / Assert.
+
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough realization index for a **partition** pass or first cut — under each `it should` observation of the behavior index, the domain operations it calls, in the order the observation runs them. No call-graph detail beyond the operation names yet.
 
 #### Rules
 
@@ -287,6 +295,12 @@ When generating or satisfying against a module that already exists, check the be
 
 Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behavior` above). Split unrelated expects. Shared construction → `beforeEach` / factory at three sibling dupes.
 
+#### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut, not full generation at this fidelity), follow this subsection. Do not use the Guidance or Rules below.
+
+Rough development index for a **partition** pass or first cut — the spec files the behavior index becomes, each with the subject it describes and the production module it tests. No test bodies yet.
+
 #### Rules
 
 ```yaml
@@ -305,7 +319,6 @@ If this change will not stay here, follow `practices/bdd/bdd-behavior.mdc`.
 - **`one-assertion-per-test`** — One outcome per `it` — two outcomes in one test and a failure does not tell you which behavior broke.
 - **`layer-isolation`** — Mock only at architecture boundaries; never the subject under test. Mocking the subject tests the mock, not your code.
 - **`context-sharing`** — Shared construction in `beforeEach` / factory at three sibling dupes. Repeated setup in every test hides what actually differs between them.
-- **`context-setup-expresses-state`** — Same rule as behavior (above). At development fidelity, `before.each` is Arrange: it must express the parent context's named state, not smuggle host boot under a domain classification branch.
 - **`oo-api-design`** — Ask-don't-tell: construct fully; own state on the object; operations on the closest domain concept. Tests that assemble state through getters or pass setup bags couple to how you built it, not what it does.
 - **`honors-documented-surface-contracts`** — Public API must match documented surface contracts; if a spec fights the contract, fix the spec.
 

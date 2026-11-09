@@ -16,35 +16,36 @@ function changesOf(was: TicketClient, ticket: TicketClient): string[] {
   return [...moved, ...done]
 }
 
-// One read of the board, with what the page works out from it. Each read is a new client, built from the store.
+// One read of the board, with what the page works out from it. Each read is a new client, built from the store, and
+// it makes its practices and columns once, at the first ask, since the views ask for them many times in one render.
 export class BoardClient extends BoardClientGenerated {
+  private heldPractices: PracticeClient[] | null = null
+  private heldColumns: ColumnClient[] | null = null
+
   constructor(
-    data: BoardData,
+    readonly read: BoardData,
     private readonly page: BoardPage,
   ) {
-    super(page.api, data)
+    super(page.api, read)
   }
 
   get shownPractices(): PracticeClient[] {
-    return this.practices.map(practice => new PracticeClient(practice))
-  }
-
-  // The practice a fidelity belongs to, found among the fidelities Python lists for each practice.
-  practiceOf(slug: string): PracticeClient | undefined {
-    return this.shownPractices.find(practice => practice.has(slug))
+    this.heldPractices ??= this.practices.map(practice => new PracticeClient(practice, this.fidelities.filter(shown => shown.practice.key === practice.key)))
+    return this.heldPractices
   }
 
   practiceNamed(key: string): PracticeClient | undefined {
     return this.shownPractices.find(practice => practice.key === key)
   }
 
-  // A fidelity as its tile names it: the label and the skill's slash command Python sends for it.
+  // A fidelity as its tile names it: its practice, its label, and its skill's slash command, as Python sends it.
   fidelityShown(slug: string): BoardFidelityData | undefined {
     return this.fidelities.find(shown => shown.fidelity.slug === slug)
   }
 
   get shownColumns(): ColumnClient[] {
-    return this.columns.map(column => new ColumnClient(column, this.page))
+    this.heldColumns ??= this.columns.map(column => new ColumnClient(column, this.page))
+    return this.heldColumns
   }
 
   get stages(): ColumnClient[] {

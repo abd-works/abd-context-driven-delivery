@@ -57,8 +57,12 @@ class InstallChannels:
     installation of each server channel registered with the Installer. Each tracks the files it writes in the install
     record."""
 
-    def __init__(self, installer: Installer, servers: Iterable[type[ServerInstallation]]) -> None:
+    def __init__(self, installer: Installer, servers: Iterable[type[ServerInstallation]], *, installing: bool = False) -> None:
         layout, path, repo = installer.layout, installer.path, installer.repo
+        # Whether these are the installations of an install that is running, rather than ones made to read a folder
+        # an earlier install wrote; and the toolsets the install deployed, by their references.
+        self.installing = installing
+        self.deployed: list[str] = []
         self.servers = [kind(layout, path, repo=repo) for kind in servers]
         self.language_adapters = LanguageAdapterInstallation(layout, path, repo=repo)
         self._files = {
@@ -121,8 +125,6 @@ class Installer:
         self.diagnostics = InstallDiagnostics(self.path, self.layout)
         self.toolsets = RepositoryToolsets(self.repo)
         self._channels: InstallChannels | None = None
-        self._installing = False
-        self._deployed_toolsets: list[str] = []
         self.diagnosis: list[str] = []
 
     @classmethod
@@ -171,8 +173,7 @@ class Installer:
         items = self._repository_toolsets() if toolsets is None else list(toolsets)
         if not Installer._servers:
             raise ServersNotRegistered()
-        channels = self._channels = InstallChannels(self, Installer._servers)
-        self._installing = True
+        channels = self._channels = InstallChannels(self, Installer._servers, installing=True)
         self._install_all(items)
         for toolset in (self, *channels.toolsets):
             self._install_toolset(toolset)
@@ -214,9 +215,9 @@ class Installer:
                 raise ToolsetInstallFailed(item, error) from error
 
     def _install_toolset(self, toolset: Any) -> None:
-        if toolset.registration_name not in self._deployed_toolsets:
-            self._deployed_toolsets.append(toolset.registration_name)
         channels = self._channels_of_run()
+        if toolset.registration_name not in channels.deployed:
+            channels.deployed.append(toolset.registration_name)
         for tool in toolset.tools.values():
             for installation in channels.for_tool(tool):
                 installation.install(tool)
@@ -260,7 +261,7 @@ class Installer:
         skills = self.path / "skills"
         if not skills.is_dir():
             return []
-        enrolled = set(self._published().get(InstallDestination.MCP, []))
+        enrolled = set(self._channels_of_run().published.get(InstallDestination.MCP, []))
         removed: list[str] = []
         for path in skills.rglob("SKILL.md"):
             names = AgentTool.invoked_names(path.read_text(encoding="utf-8"))
@@ -303,32 +304,14 @@ class Installer:
     def diagnose_after_install(self) -> list[str]:
         """Record install-channel diagnostics only; guidance probes use ``/guidance-diagnostics``."""
         report = self.diagnose_install()
-        color = next((line for line in report.splitlines() if line in {"green", "yellow", "red"}), "green")
-        self.diagnostics.record_install(self._deployed_channels(), report, color)
+        self.diagnostics.record_run(self._channels_of_run(), report)
         return [report]
 
     @agent_instructions
     def diagnose_install(self) -> str:
         """Compare this install with the last diagnostics.json entry and report counts, or what changed."""
-        color, compared = self.diagnostics.compared(self._deployed_channels())
-        body = f"{compared}\n{self._runtime_status_report()}"
-        if color != "red":
-            return f"{color}\n{body}"
-        return f"!\n{color}\n{body}\n{self.diagnose_instructions()}"
-
-    def _deployed_channels(self) -> dict[str, list[str]]:
-        return self.diagnostics.channels_in_folder(self._deployed_toolsets, self._published())
-
-    def _published(self) -> dict[str, list[str]]:
-        """What each server channel published: in an install, what this run enrolled; outside one, what the folder holds,
-        or, for a channel whose names live outside the folder, such as MCP, what the last install recorded."""
-        published = self._channels_of_run().published
-        if self._installing:
-            return published
-        return {channel: names or self.diagnostics.installed_items(channel) for channel, names in published.items()}
-
-    def _runtime_status_report(self) -> str:
-        return "\n".join(line for server in self._channels_of_run().servers for line in server.status())
+        color, body = self.diagnostics.diagnosed(self._channels_of_run())
+        return f"{color}\n{body}" if color != "red" else f"!\n{color}\n{body}\n{self.diagnose_instructions()}"
 
     def _last_or_default_folder(self, last: str | None) -> Path:
         if last and Path(last).exists() and not is_temporary(Path(last)):

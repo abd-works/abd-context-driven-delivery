@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 from functools import cache
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Callable
@@ -21,6 +22,8 @@ if TYPE_CHECKING:
     from space.session.session import Session
 
 _OUTPUT_PATTERN_MARKS = {"*", "{"}
+# Report and handoff names end with the time they were made, written so names sort by time.
+REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
 
 
 class PracticeRootInContextError(ValueError):
@@ -111,22 +114,6 @@ class PracticeSessionOutput:
         return self
 
     @property
-    def _current_fidelity(self) -> FidelityGuidance | None:
-        return self._guidance.fidelities.current
-
-    @property
-    def working_fidelity(self) -> str:
-        """The name of the fidelity this practice was made at, such as story_map; empty when it has none. An action that
-        works at another fidelity logs that fidelity's FidelitySessionOutput instead."""
-        current = self._current_fidelity
-        return str(current.name) if current is not None else ""
-
-    @property
-    def working_format(self) -> str:
-        """The format this practice works in, such as drawio: the fidelity it was made at's; empty when it has none."""
-        return self._guidance.format or ""
-
-    @property
     def chosen_outputs(self) -> dict:
         """What session.json's ``outputs`` keeps for this practice: the root a person chose, and under each fidelity's
         name what that fidelity keeps for itself."""
@@ -208,34 +195,18 @@ class FidelitySessionOutput:
     def _session(self) -> Session:
         return self._practice.session
 
-    # A line an action logs names what it worked on: a practice's name, its folder, and the fidelity and format it
-    # worked at. An action working at this fidelity hands the log this object, which answers as its practice's
-    # PracticeSessionOutput does, at this fidelity rather than at the one the practice was made at.
+    # A line an action logs names what it worked on: the practice's name and folder, which the practice answers, and
+    # the fidelity and the format it worked at, which the fidelity answers. An action hands the log this object.
 
     @property
-    def name(self) -> str:
-        """Its practice's name, such as stories, which a log line names."""
-        return self._practice.name
+    def practice(self) -> PracticeSessionOutput:
+        """What its practice has in the session."""
+        return self._practice
 
     @property
-    def guidance(self) -> PracticeGuidance:
-        """Its practice: the session's one instance of it."""
-        return self._practice.guidance
-
-    @property
-    def folder(self) -> Path:
-        """The folder its practice writes its code under."""
-        return self._practice.folder
-
-    @property
-    def working_fidelity(self) -> str:
-        """This fidelity's name, such as scenarios."""
-        return self._fidelity.name
-
-    @property
-    def working_format(self) -> str:
-        """The format this fidelity works in, such as drawio."""
-        return self._fidelity.format or ""
+    def fidelity(self) -> FidelityGuidance:
+        """The fidelity, which holds its name and the format it works in."""
+        return self._fidelity
 
     @property
     def is_enabled(self) -> bool:
@@ -245,6 +216,18 @@ class FidelitySessionOutput:
     @property
     def reports_folder(self) -> Path:
         return self._session.reports_folder
+
+    def reports(self) -> list[Path]:
+        """This fidelity's validation reports in the session, oldest first: report names end with their date, which
+        sorts by time."""
+        folder = self.reports_folder
+        return sorted(folder.glob(f"{self._fidelity.slug}-*.md")) if folder.is_dir() else []
+
+    def new_report_path(self) -> Path:
+        """Where a validation report of this fidelity made now is saved in the session."""
+        folder = self.reports_folder
+        folder.mkdir(parents=True, exist_ok=True)
+        return folder / f"{self._fidelity.slug}-{datetime.now(timezone.utc).strftime(REPORT_DATE_FORMAT)}.md"
 
     @property
     def _chosen(self) -> dict:

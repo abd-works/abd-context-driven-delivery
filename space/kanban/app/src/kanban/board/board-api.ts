@@ -1,4 +1,4 @@
-import type { BoardStore } from './board-store'
+import type { BoardStore } from '../shared/board-store'
 
 const BOARD_HEADER = 'X-CDD-Board'
 const API_ROOT = '/api'

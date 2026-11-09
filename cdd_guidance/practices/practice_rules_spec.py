@@ -14,7 +14,7 @@ from mamba import description, it
 
 import cdd_guidance.practices  # noqa: F401  (registers the practices)
 from harness.graph.schema_rules import PracticeSchema
-from harness.guidance.guidance import rules_in
+from harness.guidance.practice_reading import rules_in
 from harness.guidance.practice_catalogue import PracticeCatalogue
 
 
@@ -22,7 +22,7 @@ def _unlisted(practice) -> list[str]:
     """Each of the practice's own rules, with each node type its check judges that the practice's schema does not list
     the rule on."""
     listed = PracticeSchema(practice).applicable
-    own = rules_in(f"{practice.package}.rules")
+    own = rules_in(f"{practice.reading.package}.rules")
     return sorted(
         f"{practice.key}: {slug} on {node_type}"
         for slug, rule in own.items()
@@ -37,3 +37,14 @@ with description("the graph rules of every practice CDD ships"):
 
     with it("should list each rule on every node type its check judges, so validate runs it there"):
         expect([gap for practice in PracticeCatalogue.create_all() for gap in _unlisted(practice)]).to(equal([]))
+
+
+with description("the fidelities of every practice CDD ships"):
+    with it("should each give a Scaffold, which a partition at that fidelity indexes by"):
+        missing = sorted(
+            f"{practice.key}: {fidelity.name}"
+            for practice in PracticeCatalogue.create_all()
+            for fidelity in practice.fidelities
+            if not fidelity.scaffold
+        )
+        expect(missing).to(equal([]))

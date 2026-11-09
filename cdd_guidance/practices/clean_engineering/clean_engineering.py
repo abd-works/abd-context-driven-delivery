@@ -18,11 +18,14 @@ from harness.guidance.guidance import PracticeGuidance
 
 
 @agent_toolset
-class CleanEngineering(GraphReading, PracticeGuidance):
+class CleanEngineering(PracticeGuidance):
     """# Instructions"""
 
     # Its section of a sketch is the one its sketch format reads, held as that one lens.
     sketch_lens = SketchCleanEngineeringModel.lens
+    # In the knowledge graph: Clean Engineering's modules, classes, and members, and its rules. The draw.io layout rules
+    # check a rendered diagram through the Draw.io toolset's scan, not the graph.
+    reading_type = GraphReading
     SHORT_NAME = "CE"
     COLOUR = "#4FC3F7"
 
@@ -62,20 +65,6 @@ class CleanEngineering(GraphReading, PracticeGuidance):
             },
         )
         self._drawio: Drawio | None = None
-
-    # In the knowledge graph: Clean Engineering's modules, classes, and members, and its rules. The draw.io layout rules
-    # check a rendered diagram through the Draw.io toolset's scan, not the graph.
-    class_types = ("OoadClass",)
-    member_types = ("Operation", "Property")
-    class_node_type = "OoadClass"
-    anchor_types = {
-        "module": "Module",
-        "class": "OoadClass",
-        "property": "Property",
-        "operation": "Operation",
-        "parameter": "Parameter",
-        "package": "Package",
-    }
 
     @property
     def drawio(self) -> Drawio:

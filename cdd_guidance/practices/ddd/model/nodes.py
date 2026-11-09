@@ -22,6 +22,10 @@ from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
 # The `# Title` line of a bounded context's `.context/bounded-context.md`: the context's name.
 _CONTEXT_TITLE = re.compile(r"^\s*#\s+(.+?)\s*$", re.M)
+# A `Local → Remote` line of a bounded context's file: a context mapping, each side naming an aggregate.
+_CONTEXT_ARROW = re.compile(r"^[\s\-*>]*(.+?)\s*→\s*(.+?)\s*$")
+# `Context · Aggregate · Entity`: the parts of a target as DDD's notations write it, the outermost first.
+TARGET_SEGMENT = re.compile(r"[·•]")
 
 # A module's path: the labels of the contexts that hold it, then its own name, as Clean Engineering nests modules.
 _PATH = "/"
@@ -87,14 +91,24 @@ class InvariantObject(DomainNode, Property):
         self.stereotype = "invariant"
 
 
-class Entity(DomainNode, OoadClass):
+class DomainClass(DomainNode, OoadClass):
+    """A class of the DDD model: a Clean Engineering class that is one of the domain's building blocks, made with its
+    name, its order, and its intent. It holds its *TacticalClass*, the one reading of which building block its
+    stereotypes make it."""
+
+    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
+        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
+        self.tactical = TacticalClass(self)
+
+
+class Entity(DomainClass):
     """Identity that stays the same when its values change."""
 
     _semantic_type_name = "Entity"
     _belongs = {("InvariantObject", "Entity")}
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
+        super().__init__(name, sequential_order, **kwargs)
         self.identity = []
         self.is_root = False
         self.aggregate = None
@@ -116,32 +130,26 @@ class Entity(DomainNode, OoadClass):
         return self.invariant_object_type(sequential_order=len(self.invariant_objects))
 
 
-class ValueObject(DomainNode, OoadClass):
+class ValueObject(DomainClass):
     """No write operations and no setters: a change makes a new value."""
 
     _semantic_type_name = "ValueObject"
 
-    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
-
-class Repository(DomainNode, OoadClass):
+class Repository(DomainClass):
     """A collection. Operations are any of create, read, update, delete, and search."""
 
     _semantic_type_name = "Repository"
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
+        super().__init__(name, sequential_order, **kwargs)
         self.accesses = None
 
 
-class DomainService(DomainNode, OoadClass):
+class DomainService(DomainClass):
     """No state. An operation here is one no domain object can perform."""
 
     _semantic_type_name = "DomainService"
-
-    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
 
 class DomainEvent(DomainNode, Property):
@@ -163,18 +171,12 @@ class DomainEvent(DomainNode, Property):
         return f"{self.name}: emitted by {producer}; consumed by {consumers}"
 
 
-class Specification(DomainNode, OoadClass):
+class Specification(DomainClass):
     _semantic_type_name = "Specification"
 
-    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
-
-class Factory(DomainNode, OoadClass):
+class Factory(DomainClass):
     _semantic_type_name = "Factory"
-
-    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
 
 class Aggregate(DomainNode, Module):
@@ -243,7 +245,7 @@ class Aggregate(DomainNode, Module):
 
     def take_root_from_classes(self) -> None:
         """Once its classes are read, make the one marked <<Aggregate Root>> its root."""
-        root = next((item for item in self.classes if isinstance(item, Entity) and TacticalClass(item).kind() == "EntityRoot"), None)
+        root = next((item for item in self.classes if isinstance(item, Entity) and item.tactical.kind() == "EntityRoot"), None)
         if root is not None:
             self.take_root(root)
 
@@ -253,6 +255,31 @@ class Aggregate(DomainNode, Module):
             written = module.load_class(oclass)
             written.translate_from(oclass)
             module.classes.append(written)
+
+
+class ContextMapping(DomainNode):
+    """How one bounded context maps to another: a `Local → Remote` line its `.context/bounded-context.md` lists, on
+    the line it sits on (its sequential order). Each side names an aggregate, alone or after the context that holds it
+    (`Sales · cart`); the two sides are saved with the graph, so a reader of a graph opened from its save has them."""
+
+    _semantic_type_name = "ContextMapping"
+    graph_facts = ("local", "remote")
+
+    def __init__(self, local: str = "", remote: str = "", line: int = 0) -> None:
+        super().__init__(f"{local} → {remote}", line)
+        self.local = local
+        self.remote = remote
+
+    @property
+    def aggregate_names(self) -> dict[str, str]:
+        """The aggregate each side names, by its side (`local`, `remote`): the last part of what the side writes."""
+        return {side: TARGET_SEGMENT.split(written)[-1].strip() for side, written in (("local", self.local), ("remote", self.remote))}
+
+
+def _context_mappings_in(text: str) -> list[ContextMapping]:
+    """Each `Local → Remote` line of a bounded context's file, as the mapping it lists."""
+    found = ((index, _CONTEXT_ARROW.match(line.strip())) for index, line in enumerate(text.splitlines(), start=1))
+    return [ContextMapping(match.group(1).strip(), match.group(2).strip(), index) for index, match in found if match is not None]
 
 
 class BoundedContext(DomainNode, Module):
@@ -275,6 +302,7 @@ class BoundedContext(DomainNode, Module):
         self.contexts = ModelChildren(self, "contexts")
         self.aggregates = ModelChildren(self, "aggregates")
         self.context_file_lines = 1
+        self.mappings: list[ContextMapping] = []
 
     @property
     def label(self) -> str:
@@ -283,11 +311,13 @@ class BoundedContext(DomainNode, Module):
 
     def load_context_folder(self, folder: Path) -> None:
         """Read the folder that holds this context in code: its name is the title of `.context/bounded-context.md`,
-        else the folder's own name, and it owns the facts every code folder carries."""
+        else the folder's own name, its context mappings are the `Local → Remote` lines that file lists, and it owns
+        the facts every code folder carries."""
         text = (folder / ".context" / "bounded-context.md").read_text(encoding="utf-8")
         title = _CONTEXT_TITLE.search(text)
         self.name = title.group(1).strip() if title else folder.name
         self.context_file_lines = max(1, text.count("\n") if text.endswith("\n") else text.count("\n") + 1)
+        self.mappings = _context_mappings_in(text)
         self.load_folder_facts(folder)
 
     def append_context(self, context: "BoundedContext") -> None:
@@ -502,19 +532,20 @@ def _place_of(module: Module, oclass: OoadClass) -> list[str]:
 def _grouped(unplaced: list[tuple[str, OoadClass]]):
     """Classes with no place: each root, or each class nobody composes, opens an aggregate; the rest join it. A class
     the business keeps in its own repository is an aggregate root."""
-    names = {oclass.name: oclass for _context, oclass in unplaced}
+    # Each class read once as DDD reads it, by the name a property's type or a repository's name gives it.
+    tactical_by_name = {oclass.name: TacticalClass(oclass) for _context, oclass in unplaced}
     owner: dict[str, str] = {}
     for _context, oclass in unplaced:
-        tactical = TacticalClass(oclass)
+        tactical = tactical_by_name[oclass.name]
         for prop in oclass.properties:
             for target in pascal_type_names(prop.type_hint or ""):
-                if target in names and target != oclass.name and TacticalClass(names[target]).kind() != "EntityRoot":
+                if target in tactical_by_name and target != oclass.name and tactical_by_name[target].kind() != "EntityRoot":
                     owner.setdefault(target, oclass.name)
-        root = names.get(tactical.kept_root_name)
+        root = tactical_by_name.get(tactical.kept_root_name)
         if root is not None:
-            owner.setdefault(oclass.name, root.name)
-            if not TacticalClass(root).stereotypes:
-                root.stereotypes = ["Aggregate Root", "Entity", *root.stereotypes]
+            owner.setdefault(oclass.name, root.oclass.name)
+            if not root.stereotypes:
+                root.oclass.stereotypes = ["Aggregate Root", "Entity", *root.oclass.stereotypes]
     for context, oclass in unplaced:
         top = oclass.name
         seen = set()

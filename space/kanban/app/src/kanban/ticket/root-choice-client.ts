@@ -1,6 +1,6 @@
 import type { BacklogItemClient } from '../backlog-item/backlog-item-client'
 import type { BoardPage } from '../board/board-page'
-import type { RootChoice } from '../board/board-store'
+import type { RootChoice } from '../shared/board-store'
 import type { TicketClient } from './ticket-client'
 
 // Browsing for the ticket's own root rather than one practice's.

@@ -140,6 +140,20 @@ with description("a guidance action"):
         expect(len(listed)).to(equal(1))
         expect(type(listed[0]).__name__).to(equal("CleanEngineering"))
 
+    # A word no practice answers to is a typo or a name of the agent's own; the error must say which slugs there are.
+    with context("with a listed word that is no practice's or fidelity's slug"):
+        with it("should say no practice or fidelity has that slug"):
+            from harness.guidance_actions import GuidanceAction
+
+            action = GuidanceAction()
+            expect(lambda: action._work_on(["clean_engineering"])).to(raise_error(ValueError, contain("no practice or fidelity has the slug 'clean_engineering'")))
+
+        with it("should list the slugs there are"):
+            from harness.guidance_actions import GuidanceAction
+
+            action = GuidanceAction()
+            expect(lambda: action._work_on(["cdd"])).to(raise_error(ValueError, contain("clean-engineering-model")))
+
     with it("should run the passed operation on each Guidance when guidance is a list"):
         from harness.guidance_actions import GuidanceAction
 
@@ -203,7 +217,7 @@ with description("a guidance action"):
             from harness.guidance_actions import GuidanceAction
 
             action = GuidanceAction().for_call(_call("stories-scenarios", self.project))
-            expect(action.listed()[0].graph).to(be(action.session.graph))
+            expect(action.listed()[0].reading.graph).to(be(action.session.graph))
 
         with context("with a call on another project"):
             with before.each:
@@ -453,13 +467,47 @@ with description("a guidance action that wrote files"):
 
     with it("should refresh its session's graph with those files"):
         graph = self.session.graph
-        classes = graph.practice("clean_engineering").in_graph.nodes("OoadClass")
+        classes = graph.practice("clean_engineering").reading.in_graph.nodes("OoadClass")
         expect([node.name for node in classes]).to(equal(["Order"]))
 
     with it("should work on the graph its session holds"):
         from harness.guidance_actions import GuidanceAction
 
         expect(GuidanceAction(session=self.session).graph).to(be(self.session.graph))
+
+
+class _RecordingGraph:
+    """A session's graph that records the call each refresh was made for, which says where the build runs."""
+
+    def __init__(self) -> None:
+        self.refreshed_for: list = []
+
+    def refresh(self, paths, call) -> None:
+        self.refreshed_for.append(call)
+
+
+class _SessionWithGraph:
+    """A session with no practices turned on, whose graph records each refresh."""
+
+    def __init__(self) -> None:
+        self.graph = _RecordingGraph()
+        self.practices: dict = {}
+
+
+with description("an action started inside another that wrote files"):
+    with before.each:
+        from harness.agent_tools.tool_call import ToolCall
+        from cdd_guidance.actions.generate.generate import Generate
+
+        self.session = _SessionWithGraph()
+        self.call = ToolCall(answers_a_chat=True)
+        outer = Generate(session=self.session, call=self.call)
+        outer._work_on("a plan in prose")
+        outer._validate().wrote(["order.py"])
+
+    # A call the server answers for a chat builds the graph in a worker; the inner action must hand on that same call.
+    with it("should refresh the graph for the call the outer action was made for"):
+        expect(self.session.graph.refreshed_for).to(equal([self.call]))
 
 
 with description("two calls in one session on two fidelities of the same practice"):

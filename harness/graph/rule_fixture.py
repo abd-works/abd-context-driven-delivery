@@ -24,14 +24,14 @@ class RuleFixture:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
         graph = Graph()
-        practice = graph.practice_of(practice_class)
+        practice = graph.practices.of(practice_class)
         read = [practice, *([practice.extended] if practice.extended is not None else [])]
         graph.load_working_copy(str(self.root), {each.key: str(self.root) for each in read}, force=True)
         self.practice = practice
 
     def read_only(self, paths: list[str]) -> None:
         """Read again only the files or folders at paths, as a load of the files being edited does."""
-        self.practice.graph.load_files(str(self.root), [self.practice.key], paths)
+        self.practice.reading.graph.load_files(str(self.root), [self.practice.key], paths)
 
     @property
     def context(self) -> RuleCheckContext:
@@ -44,32 +44,30 @@ class RuleFixture:
 
 
 class SchemaRuleRun:
-    """One rule run over one practice's nodes the way the graph runs it in validate: the practice's schema says which
-    node types carry the rule, so a hit on a node whose type does not list the rule is dropped, and a check runs only
-    on the nodes whose rules say it runs there. A rule the schema never applies finds nothing, so its spec fails."""
+    """One rule's findings over one practice's nodes, as the graph's own check records them when validate runs it
+    (``InGraph.check``): the practice's schema says which node types carry the rule, a check runs only on the nodes
+    whose rules say it runs there, and a node another practice's class covers skips that practice's checks. The check
+    runs every rule the practice checks, so the nodes a spec adds after the load are checked as a load checks its own;
+    a finding is kept once. A rule the practice does not check, or the schema never applies, finds nothing, so its
+    spec fails."""
 
     def __init__(self, rule, context: RuleCheckContext) -> None:
         self.rule = rule
         self.context = context
 
     def hits(self) -> list[str]:
-        """Each message the rule reports over the whole practice on a node that carries it, then on each node whose
-        rules run it."""
-        slug, context = self.rule.slug, self.context
-        messages = [message for node_id, message in self.rule.check_practice(context) if self._carries(context.node(node_id))]
-        for node in context.nodes():
-            entry = node.rules.entries.get(slug)
-            if entry is not None and entry.runs:
-                messages.extend(self.rule.check(node, context))
-        return messages
+        """Each message the rule recorded, node by node, after the graph has checked the practice."""
+        self.context.practice.reading.in_graph.rule_run.check()
+        return [message for node in self.context.nodes() for message in self._recorded_on(node)]
 
     def node_hits(self, node) -> list[str]:
-        """The messages the rule reports on node alone, when node's rules run it."""
-        entry = node.rules.entries.get(self.rule.slug)
-        return list(self.rule.check(node, self.context)) if entry is not None and entry.runs else []
+        """The messages the rule recorded on node alone, after the graph has checked the practice."""
+        self.context.practice.reading.in_graph.rule_run.check()
+        return self._recorded_on(node)
 
-    def _carries(self, node) -> bool:
-        return node is not None and self.rule.slug in node.rules.slugs
+    def _recorded_on(self, node) -> list[str]:
+        entry = node.rules.entries.get(self.rule.slug)
+        return [violation.message for violation in getattr(entry, "violations", [])]
 
 
 class RulePair:

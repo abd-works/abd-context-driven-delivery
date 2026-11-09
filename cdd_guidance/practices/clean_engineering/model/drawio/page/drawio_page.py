@@ -172,10 +172,17 @@ def share_inheritance_trunk(first: ET.Element, second: ET.Element) -> bool:
     )
 
 
+def style_value(style: str, key: str) -> str:
+    """The value a Draw.io style string sets for key, such as `0.3` for `exitX` in `exitX=0.3;`; empty when it sets
+    none. Every reader of a cell's style asks this one reader."""
+    match = re.search(f'(?:^|;){re.escape(key)}=([^;]*)', style)
+    return match.group(1) if match else ''
+
+
 def style_number(style: str, key: str) -> float | None:
     """A number set in a Draw.io style string, such as `exitX=0.3`."""
-    match = re.search(f'(?:^|;){key}=(-?[0-9.]+)', style)
-    return float(match.group(1)) if match else None
+    match = re.fullmatch(r'-?[0-9.]+', style_value(style, key))
+    return float(match.group(0)) if match else None
 
 
 def anchor_point(style: str, box: Geometry, end: str) -> Point:

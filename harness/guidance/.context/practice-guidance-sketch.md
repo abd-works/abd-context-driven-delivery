@@ -112,11 +112,11 @@ clean-engineering-model (Skill)
                       -> listed
                            -> AgentToolSet.instantiate
                                 -> CleanEngineering fidelity="model"
-                      -> each Guidance
-                           -> CleanEngineering.render_files format="drawio" paths
-                                -> fidelities.current
-                                     -> // default_format python unless constructor format was passed
-                                -> formats[source or self.format].parse content
+                      -> each Guidance, handed over as the fidelity the action works at on it
+                           -> FidelityGuidance.render_files format="drawio" paths
+                                -> practice_guidance.rendered RenderRequest(fidelity=self)
+                                     -> // the request's source, else the format the fidelity works in
+                                -> formats[source or fidelity.format].parse content
                                      -> python.parse content
                                           -> CleanEngineeringModel
                                 -> formats[format].render model
@@ -130,10 +130,10 @@ bdd-behavior (Skill)
   // no model/{format}/ on BDD — companion supplies render
   -> render (Skill)
        -> Render.render guidance format paths
-            -> Bdd.render_files format paths
-                 -> fidelities.current.clean_engineering
+            -> FidelityGuidance.render_files format paths   // a Bdd fidelity
+                 -> RenderRequest.companion   // the fidelity's clean_engineering
                       // null → skip (no conversion)
-                      -> practice_guidance.render format content
+                      -> companion.practice_guidance._render request at the companion fidelity
                            -> // same CleanEngineering loop as above
 
 =========

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from harness.agent_tools.chat_pointer import ChatPointer
+from harness.agent_tools.tool_call import ToolCall
 
 _SESSION_PROBE_NAME = "guidance-probe"
 # How many of the log's last lines the report shows, enough to see the lines the probe's actions wrote.
@@ -52,9 +53,9 @@ class SessionProbe:
         transcript = session.session_path / "chats" / "guidance-probe.md"
         transcript.parent.mkdir(parents=True, exist_ok=True)
         transcript.write_text("guidance diagnostics probe\n", encoding="utf-8")
-        chat = ChatPointer("guidance-probe", transcript, "1")
-        Generate(session, chat).generate(["bdd"])
-        Validate(session, chat).validate(["bdd"])
+        call = ToolCall(chat=ChatPointer("guidance-probe", transcript, "1"))
+        Generate(session, call).generate(["bdd"])
+        Validate(session, call).validate(["bdd"])
         return session, transcript
 
     def _report(self, session, transcript: Path) -> dict[str, Any]:
@@ -74,8 +75,8 @@ class SessionProbe:
         return {"color": "green", "report": report, "checks": checks, "tail": tail}
 
     def _log_text(self, session) -> str:
-        log = session.log.path
-        return log.read_text(encoding="utf-8") if log.is_file() else ""
+        """The session's log as its lines read, through the log, which is the one reader of its file."""
+        return "\n".join(entry.text for entry in session.log.entries)
 
     def _marks_loops(self, session) -> bool:
         session.log.by(None).next_loop()

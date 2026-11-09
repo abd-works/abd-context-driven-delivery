@@ -25,7 +25,7 @@ from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
     names_call_io_and_domain,
 )
 from cdd_guidance.practices.clean_engineering.model.property import InvariantHolder
-from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
+from cdd_guidance.practices.clean_engineering.model.type_refs import name_with_type, split_top_level
 
 # `save(cart: Cart, note: str = ""): Receipt` as a model line writes an operation.
 _SIGNATURE = re.compile(r"^(_?\w+)\s*\((.*)\)\s*(?::\s*(.+))?$")
@@ -33,11 +33,14 @@ _SIGNATURE = re.compile(r"^(_?\w+)\s*\((.*)\)\s*(?::\s*(.+))?$")
 
 # The names a constructor goes by: Python's and the C-family languages'.
 CONSTRUCTOR_NAMES = frozenset({"__init__", "constructor"})
+# The operations that build their object, Python's `__new__` with the constructors. One can only build the object or
+# refuse the call; it has no quiet result to return instead.
+_BUILDING_NAMES = CONSTRUCTOR_NAMES | {"__new__"}
 
 
 class Parameter(OoadNode):
     _semantic_type_name = "Parameter"
-    graph_facts = ("type_hint", "operation_name", "property_setter")
+    graph_facts = ("type_hint", "operation_name", "property_setter", "in_typed_language")
 
     def __init__(self, name: str, sequential_order: int = 0, type_hint: str = "") -> None:
         super().__init__(name, sequential_order)
@@ -51,6 +54,13 @@ class Parameter(OoadNode):
         return self.operation.name if self.operation is not None else ""
 
     @property
+    def in_typed_language(self) -> bool:
+        """True when the operation that declares it is written in a language with a syntax for a parameter's type;
+        plain JavaScript has none. A parameter no code operation holds, such as one read from a model document, is
+        judged as typed."""
+        return self.operation is None or self.operation.declares_types
+
+    @property
     def property_setter(self) -> bool:
         """True for the one parameter of a property's setter."""
         operation = self.operation
@@ -62,9 +72,7 @@ class Parameter(OoadNode):
         return type(self)(self.name, self.sequential_order, self.type_hint)
 
     def save(self) -> str:
-        if self.type_hint:
-            return f"{self.name}: {self.type_hint}"
-        return self.name
+        return name_with_type(self.name, self.type_hint)
 
     def __str__(self) -> str:
         return self.save()
@@ -81,11 +89,20 @@ class Parameter(OoadNode):
 
 class Operation(InvariantHolder, OoadNode):
     _semantic_type_name = "Operation"
+    # Whether the language the operation is written in has a syntax for a parameter's type. Plain JavaScript's
+    # operation says it has none; every other language, and a model document, has one.
+    declares_types = True
 
     @property
     def is_constructor(self) -> bool:
         """True for the operation that builds its class: `__init__` or `constructor`."""
         return self.name in CONSTRUCTOR_NAMES
+
+    @property
+    def body_text(self) -> str:
+        """The statements of its body. They save with the graph, so a rule that compares bodies reads the same text from
+        an operation read now and from one read back from a saved graph."""
+        return self.body.text
     graph_facts = (
         "line_count",
         "max_control_flow_depth",
@@ -110,6 +127,9 @@ class Operation(InvariantHolder, OoadNode):
         "bold_invariant_lines",
         "owner",
         "packed_parameters",
+        "return_type",
+        "value_type",
+        "body_text",
     )
 
     def __init__(
@@ -138,6 +158,8 @@ class Operation(InvariantHolder, OoadNode):
         self.span = SourceText("")
         self.constructed_types: list[tuple[str, int]] = []
         self._is_property = False
+        # The class that declares it, once kept (keep_owner).
+        self._declared_by = ""
         # A property's setter, such as Python's `@total.setter`; a getter is `is_property`.
         self.is_setter = False
         self.is_static = False
@@ -194,9 +216,9 @@ class Operation(InvariantHolder, OoadNode):
         """The type a reader of this operation gets back: its return type, which is a getter's property type."""
         return self.return_type
 
-    def _link(self, child, kind: str) -> None:
+    def attach(self, child, kind: str) -> None:
         """A parameter it takes keeps it as the operation that declares it."""
-        super()._link(child, kind)
+        super().attach(child, kind)
         if isinstance(child, Parameter):
             child.operation = self
 
@@ -204,7 +226,12 @@ class Operation(InvariantHolder, OoadNode):
     def owner(self) -> str:
         """The name of the class that declares this operation; ``_module`` for a module function; empty before a class holds it."""
         parent = self.parent
-        return parent.name if isinstance(parent, OoadNode) and parent.declares(self) else ""
+        return parent.name if isinstance(parent, OoadNode) and parent.declares(self) else self._declared_by
+
+    def keep_owner(self) -> None:
+        """Keep the class that declares this operation as its owner from now on: a graph's tree may hang it under a group
+        of its class's members, and its owner, which saves with the graph, stays the class."""
+        self._declared_by = self.owner
 
     @property
     def parameters(self) -> List[Parameter]:
@@ -265,6 +292,10 @@ class Operation(InvariantHolder, OoadNode):
             return start, start + self.line_count - 1
         return start, start
 
+    def take_body(self, text: str, language) -> None:
+        """Keep the statements its parser read, in the language they are written in, as its body."""
+        self.body = CodeBody(text, language)
+
     def take_lines(self, lines: List[str]) -> None:
         """Keep the lines of its file this operation spans."""
         start, end = self.source_lines
@@ -277,26 +308,15 @@ class Operation(InvariantHolder, OoadNode):
             self.body_fingerprint = _span_fingerprint(span.text)
         self.io_and_domain_callees = self._delegates_io_and_domain()
         self.io_and_domain = span.mixes_io_and_domain()
-        self.raises_on_empty = span.raises_on_empty()
+        self.raises_on_empty = self.name not in _BUILDING_NAMES and span.raises_on_empty()
         self.exception_without_message = span.exception_without_message()
         self.generic_exception_message = span.generic_exception_message()
-        self.mutates_without_record = span.mutates_without_record()
+        # A constructor sets up the object it builds and cannot return a record, so it is not a state change to report.
+        self.mutates_without_record = not self.is_constructor and span.mutates_without_record()
         self.prose_comment = span.has_prose_comment()
         bullets = span.markdown_bullet_lines()
         self.bold_interaction_lines = bullets.get("bold_interaction_lines", [])
         self.bold_invariant_lines = bullets.get("bold_invariant_lines", [])
-
-    def load_brace_body_facts(self, body: str) -> None:
-        """Fill the facts the rules measure on a brace-language method body (inside its `{` … `}`)."""
-        measured = SourceText(body)
-        parameter_names = frozenset(p.name for p in self.parameters if p.name)
-        self.max_control_flow_depth = measured.control_flow_depth()
-        self.has_bare_catch = measured.has_bare_catch()
-        self.swallows_exceptions = measured.swallows_exceptions()
-        self.unnamed_literal_numbers = measured.unnamed_numbers()
-        self.peer_private_access = measured.reaches_peer_private()
-        if self.is_constructor:
-            self.constructed_types = measured.built_collaborators(parameter_names, self.line or 1)
 
     def _delegates_io_and_domain(self) -> bool:
         """A long operation that calls both I/O and domain calculations does two jobs, even when it only delegates."""

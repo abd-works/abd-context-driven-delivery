@@ -35,6 +35,7 @@ class JavaScriptProperty(CodeProperty):
 
 class JavaScriptOperation(CodeOperation):
     language = JAVASCRIPT
+    declares_types = False
 
     def signature(self, contract: bool) -> List[str]:
         doc = self.doc_text()

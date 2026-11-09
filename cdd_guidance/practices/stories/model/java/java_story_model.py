@@ -2,71 +2,41 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+import re
+from typing import List
 
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError
-from cdd_guidance.practices.stories.model.java.nodes import JavaEpic, JavaScenario, JavaStory
-from cdd_guidance.practices.stories.model.story_model import Epic, Story
+from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
+from cdd_guidance.practices.stories.model.java.nodes import JavaEpic, JavaStory
+from cdd_guidance.practices.stories.model.story_model import Story
+from cdd_guidance.practices.stories.model.story_writing import StoryWriting, background_examples_line, story_description
 
 
-class JavaStoryModel(CodeStoryModel):
-    LEAF_EXTENSION = "Story.java"
-    epic_type = JavaEpic
-    story_type = JavaStory
+class JavaStoryWriting(StoryWriting):
+    """How Java writes stories: each story is a doc comment of names and steps, with no code, so there is no body to
+    carry."""
 
-    def file_name(self, epic: Epic) -> str:
-        return f"{epic.pascal()}Story.java"
+    file_name_template = "{pascal}Story.java"
+    heading_template = ["// Epic: {name}", "// Orders: {orders}", ""]
 
-    def file_header(self, epic: Epic, parent: str) -> List[str]:
-        return [f"// Epic: {epic.name}", f"// Orders: {epic.order_path()}", ""]
-
-    def story_lines(self, story: Story) -> List[str]:
-        """A Java story is a doc comment: names and steps, no code, so there is no body to carry."""
-        lines = [f"/** Story: {story.name}", *self.description_lines(story, " * ")]
-        example_line = self.story_type.background_example_line(story, " * ")
-        if example_line:
-            lines.append(example_line)
+    def story_lines(self, story: "Story") -> List[str]:
+        lines = [f"/** Story: {story.name}", *story_description(story, " * "), *background_examples_line(story, " * ")]
         for background in story.backgrounds:
             lines.append(f" * BACKGROUND: {background.name}")
             for step in background.steps:
                 if step.keyword != "Given":
                     continue
                 lines.append(f" * GIVEN: {step.text}")
-                for extra in step.ands:
-                    lines.append(f" * {extra.keyword.upper()}: {extra.text}")
+                lines.extend(f" * {extra.keyword.upper()}: {extra.text}" for extra in step.ands)
         for scenario in story.scenarios:
             lines.extend(scenario.lines())
-        lines.append(" */")
-        return lines
+        return lines + [" */"]
 
-    def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
-        return sorted(
-            p
-            for p in tree
-            if p.endswith(self.LEAF_EXTENSION) and not p.endswith("Helper.java")
-        )
 
-    def load(self, external: Dict[str, str]) -> "JavaStoryModel":
-        if not isinstance(external, dict):
-            raise CodeStoryModelError("Java story map parse expects a path->content dict")
-        self.epics.clear()
-        for path in self._ordered_paths(external):
-            content = external[path]
-            if not path.endswith(self.LEAF_EXTENSION) or path.endswith("Helper.java"):
-                continue
-            if "Spec" in path.split("/")[-1]:
-                continue
-            parts = path.strip("/").split("/")
-            if parts and parts[0] == self.tests_root:
-                parts = parts[1:]
-            if self.take_sub_epic_file(parts, content, path):
-                continue
-            if len(parts) < 4:
-                continue
-            epic_slug, story_slug, sub_slugs = parts[0], parts[-2], parts[1:-2]
-            if not sub_slugs:
-                continue
-            epic = self.epic_for(epic_slug)
-            sub = self.sub_epic_for(epic, sub_slugs)
-            sub.append_story(self.story_type.load(content, story_slug))
-        return self
+class JavaStoryModel(CodeStoryModel):
+    LEAF_EXTENSION = "Story.java"
+    story_file_suffixes = (LEAF_EXTENSION,)
+    # A spec beside the story files names itself a spec; a helper does not end like a story file at all.
+    not_story_paths = re.compile(r"Spec[^/]*$")
+    epic_type = JavaEpic
+    story_type = JavaStory
+    writing_type = JavaStoryWriting

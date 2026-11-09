@@ -16,6 +16,7 @@ from cdd_guidance.practices.ddd.ddd import Ddd  # noqa: E402
 from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
 from cdd_guidance.practices.ux.ux import Ux  # noqa: E402
 from harness.catalog_generator.catalog_practice import CatalogPractice  # noqa: E402
+from space.session.sessions import BoardPractices  # noqa: E402
 from harness.guidance.guidance import FidelityGuidance  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
 from space.kanban.board import Board, Card, ColumnNotFoundError, Help  # noqa: E402
@@ -70,7 +71,7 @@ with description("a board") as self:
     # (S) Board App --> Display Board
     with context("with Stories, DDD, and UX chosen"):
         with before.each:
-            self.board = Board(Repo(SessionsFolder().project), [Stories(), Ddd(), Ux()])
+            self.board = Board(Repo(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
             self.discovery = self.board.column("Discovery")
 
         with it("should have the columns Backlog, Discovery, Specification, Implementation, and Complete, in that order"):
@@ -84,7 +85,7 @@ with description("a board") as self:
 
     with context("with BDD chosen"):
         with before.each:
-            self.board = Board(Repo(SessionsFolder().project), [Bdd()])
+            self.board = Board(Repo(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Bdd()])))
 
         with it("should have behavior as Discovery's work required"):
             expect([fidelity.name for fidelity in self.board.column("Discovery").work_required]).to(equal(["behavior"]))
@@ -113,6 +114,15 @@ with description("a board") as self:
 
         with it("should share its practices with every other board of the same checkout, which makes them once"):
             expect(Board.load(self.project).practices[0]).to(be(self.board.practices[0]))
+
+        with it("should ask the one view of its practices the checkout holds, which every board read shares"):
+            expect(Board.load(self.project).catalogued_practices).to(be(self.board.catalogued_practices))
+
+        with it("should find a session's instance of a practice through that view, by its class"):
+            from space.session import Sessions
+
+            stories = Sessions(self.project).current().practices["stories"].guidance
+            expect(self.board.catalogued_practices.of(type(stories)).practice).to(be(self.board.practices[0]))
 
         with it("should hold practices of its own, not the ones a session works with"):
             from space.session import Sessions
@@ -146,7 +156,7 @@ with description("a board") as self:
 
     with context("with no session saved as open"):
         with it("should have no active ticket, since main is not on the board"):
-            expect(Board(Repo(SessionsFolder().project), [Stories()]).active).to(be_none)
+            expect(Board(Repo(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Stories()]))).active).to(be_none)
 
     # (S) Board App --> Display Ticket Card, Display Backlog Items As Tickets
     with context("with a sessions folder of work sessions, closed sessions, default, backlog items, and archived sessions"):
@@ -159,7 +169,7 @@ with description("a board") as self:
             sessions.backlog_item("returns-and-refunds.md", "Returns and refunds")
             sessions.folder("_archive/old-spike")
             sessions.current("pet-visits")
-            self.board = Board(Repo(sessions.project), [Stories(), Ddd(), Ux()])
+            self.board = Board(Repo(sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
         with it("should show every work session as a ticket"):
             expect(names(self.board.tickets)).to(equal(["pet-visits", "sign-up", "browse-pets"]))
@@ -220,40 +230,16 @@ with description("a board") as self:
     with context("with help open on a fidelity the catalog has no page for"):
         with before.each:
             stories = Stories()
-            board = Board(Repo(SessionsFolder().project), [stories])
-            self.help = Help(stories, FidelityGuidance("unpublished", "discovery"), None, board.catalogued(stories))
+            board = Board(Repo(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([stories])))
+            self.help = Help(stories, FidelityGuidance("unpublished", "discovery"), None, board.catalogued_practices.of(Stories))
 
         with it("should link to its practice's page on the forge"):
             expect(self.help.href).to(equal("https://forge.abdworks.net/abd-context-driven-delivery/context-tools/stories.html"))
 
-    # (S) Person --> Open Help: the catalog's view of a practice names its pages; one is made per practice on a board.
-    with context("asked for help on its practices several times"):
-        with before.each:
-            self.made = []
-            original = CatalogPractice.skill_install
-            self.original = original
-
-            def counted() -> object:
-                self.made.append(1)
-                return original()
-
-            CatalogPractice.skill_install = staticmethod(counted)
-            board = Board(Repo(SessionsFolder().project), [Stories(), Ux()])
-            self.helps = [board.help("stories"), board.help("ux"), board.help("stories")]
-
-        with after.each:
-            CatalogPractice.skill_install = staticmethod(self.original)
-
-        with it("should make the skill install its catalog pages are named with once"):
-            expect(len(self.made)).to(equal(1))
-
-        with it("should still link each practice's own page"):
-            expect([help.href.rsplit("/", 1)[-1] for help in self.helps]).to(equal(["stories.html", "ux.html", "stories.html"]))
-
     # (S) Board App --> Display Board: a tile shows the fidelity's label and its skill, which Python names.
     with context("sent with UX chosen"):
         with before.each:
-            self.sent = data_of(Board(Repo(SessionsFolder().project), [Ux()]))["fidelities"]
+            self.sent = data_of(Board(Repo(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Ux()]))))["fidelities"]
 
         with it("should send each fidelity's label as the catalog names it"):
             expect([fidelity["label"] for fidelity in self.sent]).to(equal(["information-architecture", "mockup", "front-end-code"]))
@@ -269,7 +255,7 @@ with description("a board") as self:
         with before.each:
             self.sessions = SessionsFolder()
             (self.sessions.root / "_board.json").write_text(json.dumps({"pinned": ["pet-visits"]}), encoding="utf-8")
-            self.board = Board(Repo(self.sessions.project), [Stories()])
+            self.board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories()])))
 
         with context("that a person sets a stage's limit"):
             with before.each:
@@ -288,7 +274,7 @@ with description("a backlog item") as self:
         with before.each:
             self.sessions = SessionsFolder()
             self.item_path = self.sessions.backlog_item("returns-and-refunds.md", "Returns and refunds")
-            self.board = Board(Repo(self.sessions.project), [Stories(), Ddd(), Ux()])
+            self.board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
         with it("should be in the Backlog"):
             expect(self.board.backlog_items[0].column.name).to(equal("Backlog"))
@@ -331,7 +317,7 @@ with description("a backlog item") as self:
             (folder / "gift-cards.md").write_text("# Gift cards\n\nSell them at the till.\n", encoding="utf-8")
             (folder / "session.log").write_text("2026-10-31T01:00:00Z generate /work stories story_map markdown stories no-chat\n", encoding="utf-8")
             (folder / "session.json").write_text(json.dumps({"name": "gift-cards", "title": "Gift cards"}), encoding="utf-8")
-            self.board = Board(Repo(self.sessions.project), [Stories(), Ddd(), Ux()])
+            self.board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
         with it("should be in the Backlog under the heading of that file"):
             expect([item.title for item in self.board.backlog_items]).to(equal(["Gift cards"]))
@@ -356,9 +342,9 @@ with description("a backlog item") as self:
             self.sessions = SessionsFolder()
             folder = self.sessions.session("pet-visits", "move Specification", title="Pet visits")
             (folder / "pet-visits.md").write_text("# Pet visits\n\nBook a vet visit online.\n", encoding="utf-8")
-            board = Board(Repo(self.sessions.project), [Stories(), Ddd(), Ux()])
+            board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
             board.ticket("pet-visits").move_to("Backlog")
-            self.board = Board(Repo(self.sessions.project), [Stories(), Ddd(), Ux()])
+            self.board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
         with it("should be in the Backlog"):
             expect([item.title for item in self.board.backlog_items]).to(equal(["Pet visits"]))
@@ -393,7 +379,7 @@ def board_with(lines: list):
     sessions = SessionsFolder()
     sessions.session("pawplace", title="PawPlace")
     sessions.session("pet-visits", *lines, title="Pet visits", scope="feature", parent="pawplace")
-    return sessions.root, Board(Repo(sessions.project), [Stories(), Ddd(), Ux()])
+    return sessions.root, Board(Repo(sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
 
 def ticket_with(lines: list):
@@ -485,15 +471,15 @@ with description("a ticket") as self:
             # (S) Person --> Send Action To Stage Practices: a stage head's bar shows the stage's work taken together.
             with it("should show Validate in progress across Discovery while one of its fidelities is validated"):
                 ticket = ticket_with(self.lines)
-                expect(data_of(ticket.work_in(ticket.column).action_states)["validate"]).to(equal("in_progress"))
+                expect(data_of(ticket.work.in_stage(ticket.column).action_states)["validate"]).to(equal("in_progress"))
 
             with it("should show Generate done across Discovery only once every fidelity is generated"):
                 ticket = ticket_with(self.lines)
-                expect(data_of(ticket.work_in(ticket.column).action_states)["generate"]).to(equal("in_progress"))
+                expect(data_of(ticket.work.in_stage(ticket.column).action_states)["generate"]).to(equal("in_progress"))
 
             with it("should allow across Discovery only the actions every fidelity allows"):
                 ticket = ticket_with(self.lines)
-                expect(ticket.work_in(ticket.column).allowed_actions).not_to(contain("validate"))
+                expect(ticket.work.in_stage(ticket.column).allowed_actions).not_to(contain("validate"))
 
         with context("that was reviewed before its validate passed"):
             with before.each:

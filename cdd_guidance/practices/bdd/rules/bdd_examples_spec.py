@@ -58,6 +58,10 @@ with description("BDD example specs"):
                 _spec('with description("a cart"):', '    with it("should total zero"):', "        # BDD: SIGNATURE", "        pass"),
             )
 
+        with it("should not ask a finished spec, which asserts and carries no marker, for a signature marker"):
+            source = _spec('with description("a cart"):', '    with it("should total zero"):', "        expect(cart.total()).to(equal(0))")
+            expect(_failing(source, "framework-syntax")).to(equal([]))
+
     with context("describe-is-subject-not-internal"):
         with it("should flag a describe named after an internal type and accept a domain subject"):
             assert_bdd_source_pair(
@@ -91,8 +95,34 @@ with description("BDD example specs"):
         with it("should flag a behavior-fidelity it that holds a test body and accept a signature"):
             assert_bdd_source_pair(
                 "no-implementation",
-                _spec('with description("a cart"):', '    with it("should total zero"):', "        expect(cart.total()).to(equal(0))"),
+                _spec(
+                    'with description("a cart"):',
+                    '    with it("should total zero"):',
+                    "        expect(cart.total()).to(equal(0))",
+                    '    with it("should count zero"):',
+                    "        # BDD: SIGNATURE",
+                    "        pass",
+                ),
                 _spec('with description("a cart"):', '    with it("should total zero"):', "        # BDD: SIGNATURE", "        pass"),
+            )
+
+        with it("should not judge a finished spec, which asserts and carries no signature marker"):
+            source = _spec(
+                'with description("a cart"):',
+                '    with context("with one lamp"):',
+                "        with before.each:",
+                "            self.cart = None",
+                '        with it("should total the lamp"):',
+                "            expect(cart.total()).to(equal(1))",
+            )
+            expect(_failing(source, "no-implementation")).to(equal([]))
+
+        with it("should judge a spec whose comment marks a signature and not one that holds the marker in a sample"):
+            body = ['    with it("should total zero"):', "        expect(cart.total()).to(equal(0))"]
+            assert_bdd_source_pair(
+                "no-implementation",
+                _spec('with description("a cart"):', *body, '    with it("should count zero"):', "        pass  # BDD: SIGNATURE"),
+                _spec('_SAMPLE = """\\nwith it("x"):\\n    pass  # BDD: SIGNATURE\\n"""', "", 'with description("a cart"):', *body),
             )
 
         with it("should flag a context whose setup runs shared setup, on that context alone"):
@@ -113,6 +143,9 @@ with description("BDD example specs"):
                 '    with context("with one lamp"):',
                 '        with it("should total the lamp"):',
                 "            expect(cart.total()).to(equal(1))",
+                '        with it("should count the lamp"):',
+                "            # BDD: SIGNATURE",
+                "            pass",
             )
             expect(_failing(source, "no-implementation")).to(equal(["Observation"]))
 

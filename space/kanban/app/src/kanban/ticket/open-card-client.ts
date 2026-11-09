@@ -1,7 +1,7 @@
 import type { FidelityGuidanceData } from '@cdd/space/kanban/board'
 
 import type { BoardPage } from '../board/board-page'
-import type { Tile } from '../board/board-store'
+import type { Tile } from '../shared/board-store'
 import type { ColumnClient } from '../board/column-client'
 import type { TicketClient } from './ticket-client'
 import { cellPlace } from './tile-client'
@@ -64,7 +64,7 @@ export class OpenCardClient {
   dropPractice(ticket: string, practice: string): void {
     const remaining = (tile: Tile): Tile | null => {
       if (tile.ticket.name !== ticket) return tile
-      const fidelities = tile.fidelities.filter(fidelity => this.page.board.practiceOf(fidelity.slug)?.key !== practice)
+      const fidelities = tile.fidelities.filter(fidelity => this.page.board.fidelityShown(fidelity.slug)?.practice.key !== practice)
       return fidelities.length ? { ...tile, fidelities } : null
     }
     this.store.change(state => ({ tiles: state.tiles.map(remaining).filter((tile): tile is Tile => tile !== null) }))

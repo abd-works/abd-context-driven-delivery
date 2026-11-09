@@ -61,7 +61,7 @@ with story("Add Backlog Item"):
             # Person -> BacklogItem.start(path='src/visits')
             # BacklogItem -> Ticket.create('Gift cards', 'feature', '', 'src/visits')
             # Ticket -> Sessions.create('gift-cards', <repo>/src/visits, title, scope, parent)
-            # BacklogItem -> Ticket.record('backlog .sessions/_backlog/gift-cards.md')
+            # BacklogItem -> TicketWork.record('backlog .sessions/_backlog/gift-cards.md')
             # BacklogItem -> Session.keep_file(gift-cards.md)
             # BacklogItem <- Ticket gift-cards
             pass
@@ -78,7 +78,7 @@ with story("Add Backlog Item"):
         with when("the Person starts Returns and refunds on the whole repository"):
             # Person -> BacklogItem.start(scope='feature')
             # BacklogItem -> Ticket.create('Returns and refunds', 'feature', '', '')
-            # BacklogItem -> Ticket.record('backlog <path of returns-and-refunds.md>')
+            # BacklogItem -> TicketWork.record('backlog <path of returns-and-refunds.md>')
             # BacklogItem -> Session.keep_file(returns-and-refunds.md)
             pass
         with then("the [ticket](../../../.context/kanban-model.md#ticket--card) returns-and-refunds is In progress in Discovery"):

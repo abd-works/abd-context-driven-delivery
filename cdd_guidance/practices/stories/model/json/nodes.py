@@ -38,7 +38,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from cdd_guidance.practices.stories.model.source_location import SourceLocation
+from cdd_guidance.practices.stories.model.story_map_files import source_at
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
     Epic,
@@ -147,14 +147,13 @@ class JsonIncrement(Increment):
         return payload
 
     @classmethod
-    def from_record(cls, record: Dict[str, Any], stories: Dict[str, Story]) -> "JsonIncrement":
-        """The increment a record lists, delivering the map's own story for each name it gives; stories holds the
-        map's stories by name."""
+    def from_record(cls, record: Dict[str, Any], story_map: "StoryModel") -> "JsonIncrement":
+        """The increment a record lists, delivering story_map's own story for each name it gives."""
         named = [item.get("name") if isinstance(item, dict) else str(item) for item in record.get("stories", [])]
         increment = cls(
             name=record["name"],
             sequential_order=int(record.get("sequentialOrder", 0)),
-            stories=[stories[name] for name in named if name in stories],
+            stories=story_map.stories_named(named),
         )
         increment.outcome = str(record.get("outcome", "") or "")
         increment.decision_prompt = str(record.get("decisionPrompt", "") or "")
@@ -182,12 +181,8 @@ class JsonScenario(Scenario):
         return payload
 
     @classmethod
-    def from_record(cls, record: Dict[str, Any], story_name: str) -> "JsonScenario":
-        scenario = cls(
-            name=record.get("name", "Scenario"),
-            sequential_order=int(record.get("sequentialOrder", 0)),
-            story_name=story_name,
-        )
+    def from_record(cls, record: Dict[str, Any]) -> "JsonScenario":
+        scenario = cls(record.get("name", "Scenario"), int(record.get("sequentialOrder", 0)))
         scenario.is_outline = bool(record.get("isOutline", False))
         scenario.steps = JsonStep.all_from(record)
         _take_examples(scenario.examples, record)
@@ -236,7 +231,7 @@ class JsonStory(Story):
         for background in record.get("backgrounds") or []:
             story.backgrounds.append(JsonBackground.from_record(background, len(story.backgrounds) + 1))
         for scenario in record.get("scenarios", []):
-            story.scenarios.append(JsonScenario.from_record(scenario, story.name))
+            story.scenarios.append(JsonScenario.from_record(scenario))
         return story
 
 
@@ -303,16 +298,8 @@ class JsonStoryModel(StoryModel):
         self._guard_schema(payload)
         self.epics = [JsonEpic.from_record(record) for record in payload.get("epics", [])]
         _take_examples(self.examples, payload)
-        stories = {story.name: story for story in self.every_story()}
-        self.increments = [JsonIncrement.from_record(record, stories) for record in payload.get("increments", [])]
+        self.increments = [JsonIncrement.from_record(record, self) for record in payload.get("increments", [])]
         return self
-
-    def attach_source_locations(self, file_name: str) -> None:
-        """Stamp a single SourceLocation (the JSON file) onto every node."""
-        loc = SourceLocation(file_name, 0)
-        for epic in self.epics:
-            epic.source = loc
-            epic._stamp_source(loc)
 
     @classmethod
     def from_workspace(cls, root: Path) -> Optional["JsonStoryModel"]:
@@ -327,8 +314,8 @@ class JsonStoryModel(StoryModel):
         except JsonParseError as err:
             raise JsonParseError(f"{json_path}: {err}") from err
         story_map.source_texts[json_path.name] = text
-        story_map.attach_source_locations(json_path.name)
-        story_map.source = SourceLocation(json_path.name, 1)
+        story_map.place_in(json_path.name)
+        story_map.source = source_at(json_path.name, 1)
         return story_map
 
     def _guard_schema(self, payload: Any) -> None:

@@ -81,6 +81,13 @@ with description("a code example"):
             source = _examples({"acceptance_tests.ts": "export class Customer {}\n"}) / "acceptance_tests.ts"
             expect(ExampleFile(source, stories).panel_html()).to(contain('data-language="typescript"'))
 
+    # The fidelity page's figure and the approach panel name a code example's language the same way.
+    with context("shown on a fidelity page"):
+        with it("should label its code with the language the approach panel opens it in"):
+            stories = next(practice for practice in CatalogPractice.load_all() if practice.key == "stories")
+            source = _examples({"scenarios.py": "class Customer:\n    pass\n"}) / "scenarios.py"
+            expect(ExampleFile(source, stories).figure_html).to(contain('<div class="skill-code-lang">python</div>'))
+
     with context("that no practice's format reads"):
         with it("should open as plain text"):
             stories = next(practice for practice in CatalogPractice.load_all() if practice.key == "stories")

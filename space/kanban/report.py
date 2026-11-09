@@ -137,7 +137,7 @@ class ReportFile:
         """The latest report of fidelity in the session its practice works in that has its result, else its latest;
         none when it has none. Validate saves a report before the agent judges it, so a report with no judgment and no
         saved graph yet does not hide an earlier one that has its result."""
-        own = [cls(path, fidelity) for path in fidelity.reports()]
+        own = [cls(path, fidelity) for path in fidelity.session_output.reports()]
         with_result = [report for report in own if report.has_result]
         return (with_result or own or [None])[-1]
 
@@ -248,8 +248,8 @@ class ReportFile:
 
     def _scanned_rules(self) -> set[str]:
         """The rules a scanner checks now, with the overlays the graph was saved with; a saved graph keeps the hits of a
-        scanner deleted since it was saved."""
-        return set(self._checked_graph.checks_of(self._practice))
+        scanner deleted since it was saved. The session's graph answers, with the patterns it already holds."""
+        return set(self._session.graph.applied_patterns.checks_of(self._practice, self._checked_graph.overlays))
 
     def _judged_rules(self, text: str) -> list[ReportRule]:
         """Each rule the judgment fails, once however many judged files fail it, with its findings at the judged files' lines."""

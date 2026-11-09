@@ -148,6 +148,9 @@ The stdin JSON for one firing. Handlers read it through the named properties; it
 + received_in(checkout: Path): HookPayload
 	// itself when it already names the checkout that received it
 + edited_path(): str
+	// the file Cursor's file-edit event names, else the first path its tool call names (`ToolCall.named_paths`)
++ invoked_tool: str
+	// the tool the agent called: the one an IDE's MCP wrapper, such as `CallMcpTool`, names in its input, else the event's own tool
 	// file_path, path, or uri; else the path inside tool_input
 
 ## HookResult                                                     <!-- Md -->

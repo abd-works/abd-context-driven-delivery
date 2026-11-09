@@ -142,12 +142,24 @@ class HookPayload(Mapping[str, Any]):
         return self.hook_event_name in self._EDIT_EVENTS or self.tool_name in self._EDIT_TOOLS
 
     def edited_path(self) -> str:
+        """The file the event says the agent edited: the one Cursor's file-edit event names, else the first its tool
+        call names."""
         for key in ("file_path", "path", "uri"):
             value = self._fields.get(key)
             if isinstance(value, str) and value.strip():
                 return value
-        tool_input = self.tool_input
-        return str(tool_input.get("path") or tool_input.get("file_path") or tool_input.get("target_notebook") or "")
+        return next(iter(self.call.named_paths), "")
+
+    @property
+    def invoked_tool(self) -> str:
+        """The tool the agent called: the one an IDE's MCP wrapper, such as Cursor's ``CallMcpTool``, names in its input,
+        else the event's own tool."""
+        name = self.tool_name
+        nested = self.tool_input.get("toolName") or self.tool_input.get("tool_name") or self.tool_input.get("name")
+        if not isinstance(nested, str) or not nested.strip():
+            return name
+        wrapped = "mcp" in name.lower() or name in {"CallMcpTool", "call_mcp_tool"}
+        return nested.strip() if wrapped or "." in nested or "-" in nested else name
 
 
 # A toast that names its source writes it before this arrow, such as `generate → rules : stories scenarios`, so the

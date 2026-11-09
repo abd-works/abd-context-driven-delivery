@@ -1,21 +1,21 @@
 """How DDD takes part in the graph: its bounded contexts come from the folders that hold ``.context/bounded-context.md``,
 its aggregates from the folders that hold domain classes, and its building blocks from the classes Clean Engineering
-read, each seen through the DDD stereotype its declaration or name gives it."""
+read, each seen through the DDD stereotype its declaration gives it, or, in a folder that holds a domain, its name."""
 
 from __future__ import annotations
 
 import os
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from harness.graph.graph import Node
-from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext
-from cdd_guidance.practices.ddd.model.stereotypes import KIND_OF_STEREOTYPE, TacticalClass, root_kept_by
+from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS, KIND_OF_STEREOTYPE, TacticalClass, kind_named_by, marks_another_system, root_kept_by
 
 _FOREIGN_KEY = re.compile(r"//\s*foreign\s+(\w+)")
 _DERIVE_PREFIX = re.compile(r"^derive\w*", re.IGNORECASE)
@@ -32,6 +32,8 @@ _UI_METHODS = frozenset({"open", "isshowing", "close", "show", "hide", "select"}
 _SCREEN_NAME = re.compile(r"^(Select|Screen|Dialog|Modal|View|Page)\w*$")
 # Every kind of building block a class can be, by its stereotype or its name.
 _BLOCK_KINDS = frozenset(kind for _stereotype, kind in KIND_OF_STEREOTYPE)
+# A React screen module, whose classes present the domain rather than belong to it.
+_SCREEN_MODULE = ".tsx"
 
 
 class BuildingBlock(Node):
@@ -120,35 +122,54 @@ class BuildingBlock(Node):
         return [op for op in self.ooad_class.operations if op.name and not op.name.startswith("_")]
 
 
-class DddReading:
-    """One read of a working copy into the graph that holds the DDD practice: the bounded contexts its folders mark,
-    the aggregates its folders hold, and a building block for each class the Clean Engineering practice it extends
-    read."""
+class DddReading(PracticeReading):
+    """How DDD takes part in the graph: it reads, after the Clean Engineering practice it extends, the bounded contexts
+    its folders mark, the aggregates its folders hold, and a building block for each class Clean Engineering read; and
+    it checks its own graph rules with Clean Engineering's."""
 
-    def __init__(self, practice: PracticeGuidance) -> None:
-        self.practice = practice
-        self.graph = practice.graph
-        self.root = Path(practice.in_graph.source_root)
+    reads_after = ("clean_engineering",)
+    class_types = (*BUILDING_BLOCK_KINDS, "Aggregate", "DomainEvent")
 
-    def read(self) -> None:
-        """Read the practice's folder; a folder not written yet, such as a session's code root, holds no contexts."""
+    @property
+    def root(self) -> Path:
+        """The folder the practice reads its bounded contexts and aggregates from."""
+        return Path(self.in_graph.source_root)
+
+    def own_graph_checks(self) -> dict:
+        """DDD's own graph rules, then the rules of the practice it extends, whose part it holds."""
+        extended = self.practice.extended
+        return {**super().own_graph_checks(), **(extended.reading.graph_checks if extended is not None else {})}
+
+    def read_working_copy(self) -> None:
+        """Read the practice's folder; a folder not written yet, such as a session's code root, holds no contexts.
+        Bounded contexts come from the folders that hold ``.context/bounded-context.md``, aggregates from the folders
+        that hold domain classes, and building blocks from the classes Clean Engineering read, each seen through the DDD
+        stereotype its declaration or name gives it."""
         if not self.root.is_dir():
             return
         with schema_sync_paused():
             self.graph.report_progress("ddd · bounded contexts")
-            contexts = self._contexts()
-            for folder, members in sorted(self._members_by_folder().items()):
-                self._aggregate(folder, members, _context_for(folder, contexts) or self.practice.in_graph.root)
+            marked = self._bounded_contexts()
+            contexts = self._contexts(marked)
+            members = self._members_by_folder(contexts if marked else {})
+            for folder, held in sorted(members.items()):
+                context = _context_for(folder, contexts) or self.in_graph.root
+                aggregate = self._aggregate(folder, held, context) if held else self.in_graph.node(_aggregate_id(folder))
+                if aggregate is not None:
+                    held_classes = self.practice.extended.reading.in_graph.nodes("OoadClass")
+                    aggregate.set_fact("bare_classes", _bare_classes(folder, self.in_graph.nodes(), held_classes))
             self._link_blocks()
+            _map_contexts(self, marked, contexts)
 
-    def _contexts(self) -> dict[str, Node]:
-        """Each bounded context by its folder, under the context of the folder around it."""
-        found = self._bounded_contexts() or [(".", self._unmarked_context(), ".")]
+    def _contexts(self, marked: list[tuple]) -> dict[str, Node]:
+        """Each bounded context by its folder, under the context of the folder around it: the marked ones, else the
+        whole folder's."""
+        found = marked or [(".", self._unmarked_context(), ".")]
         contexts: dict[str, Node] = {}
         for rel, context, markdown in found:
-            node = self.practice.in_graph.add(context, f"ddd:BoundedContext:{rel}:{context.name}", markdown, 1, context.context_file_lines)
-            parent = _context_for(str(Path(rel).parent).replace("\\", "/"), contexts) if rel != "." else None
-            self.graph.link("owns", parent or self.practice.in_graph.root, node)
+            node = self.in_graph.add(context, f"ddd:BoundedContext:{rel}:{context.name}", markdown, 1, context.context_file_lines)
+            parent = _context_for(_folder_of(rel), contexts) if rel != "." else None
+            self.graph.link("owns", parent or self.in_graph.root, node)
             if parent is not None:
                 self.graph.link("belongsTo", node, parent, "relationship")
             contexts[rel] = node
@@ -164,48 +185,55 @@ class DddReading:
             if not marker.is_file():
                 continue
             folder = Path(dirpath)
-            context = BoundedContext(sequential_order=1, graph=self.graph)
+            context = BoundedContext(sequential_order=1)
             context.load_context_folder(folder)
-            found.append(("." if folder == self.root else folder.relative_to(self.root).as_posix(), context, marker.relative_to(self.root).as_posix()))
+            found.append(("." if folder == self.root else _posix_from(folder, self.root), context, _posix_from(marker, self.root)))
         return sorted(found, key=lambda item: item[0])
 
     def _unmarked_context(self) -> BoundedContext:
         """The one bounded context of a folder where no folder marks a context: the whole folder."""
-        context = BoundedContext("bounded context", 1, graph=self.graph)
+        context = BoundedContext("bounded context", 1)
         context.load_folder_facts(self.root)
         return context
 
-    def _members_by_folder(self) -> dict[str, list[tuple[TacticalClass, str]]]:
-        """The classes the Clean Engineering practice read now that DDD names a building block, by folder, each with its
-        kind. A refresh reads only the files it names, and the building blocks of every other class stay as DDD built
-        them before; a class's kind still reads every class's name, so a root is named by its repository whichever file
-        holds the repository."""
+    def _members_by_folder(self, marked_contexts: dict[str, Node]) -> dict[str, list[tuple[TacticalClass, str]]]:
+        """The production classes the Clean Engineering practice read now, by folder, each building block among them
+        with its kind; a folder whose classes read now are none of them holds an empty list. A class's DDD stereotype
+        always names its kind. Its name names one only in a folder that holds a domain: one a marked bounded context
+        covers (one of marked_contexts), or one where a class carries a DDD stereotype; elsewhere a name such as
+        `AgentOperation` or `MarkdownRepository` says nothing about the business. A refresh reads only the files it
+        names, and the building blocks of every other class stay as DDD built them before; whether a folder holds a
+        domain, and which root a repository names, both read every class Clean Engineering holds, restored ones too,
+        so a root is named by its repository whichever file holds the repository."""
         clean = self.practice.extended
         if clean is None:
             return {}
-        names = {cls.name for cls in clean.in_graph.nodes("OoadClass")}
+        every = clean.reading.in_graph.nodes("OoadClass")
+        names = {cls.name for cls in every}
+        modelled = _modelled_folders(every)
         members: dict[str, list[tuple[TacticalClass, str]]] = {}
-        for cls in clean.in_graph.nodes_read_now("OoadClass"):
-            folder = str(Path(cls.source.file).parent).replace("\\", "/")
-            tactical = TacticalClass(cls)
-            kind = tactical.inferred_kind(names)
+        for cls in clean.reading.in_graph.nodes_read_now("OoadClass"):
             # A class in a spec, a test folder, or test support is never a domain building block, whatever its name.
-            if kind is not None and not is_test_code(cls.source.file):
-                members.setdefault(folder, []).append((tactical, kind))
+            if is_test_code(cls.source.file):
+                continue
+            folder = _folder_of(cls.source.file)
+            block = _block_of(TacticalClass(cls), names, folder in modelled or _context_for(folder, marked_contexts) is not None)
+            members.setdefault(folder, []).extend([block] if block else [])
         return members
 
-    def _aggregate(self, folder: str, members: list[tuple[TacticalClass, str]], context: Node) -> None:
-        aggregate = Aggregate(Path(folder).name, 1, graph=self.graph)
+    def _aggregate(self, folder: str, members: list[tuple[TacticalClass, str]], context: Node) -> Node:
+        aggregate = Aggregate(Path(folder).name, 1)
         aggregate.load_folder_facts(self.root / folder)
-        node = self.practice.in_graph.add(aggregate, f"ddd:Aggregate:{folder}", folder, 1, 1)
+        node = self.in_graph.add(aggregate, _aggregate_id(folder), folder, 1, 1)
         self.graph.link("owns", context, node)
         self.graph.link("belongsTo", node, context, "relationship")
         for tactical, kind in members:
             self._block(node, tactical, kind)
+        return node
 
     def _block(self, aggregate: Node, tactical: TacticalClass, kind: str) -> None:
         source = tactical.oclass.source
-        block = self.practice.in_graph.add(BuildingBlock(self.practice, tactical, kind), f"ddd:{kind}:{source.file}:{tactical.oclass.name}", source.file, source.start_line, source.end_line)
+        block = self.in_graph.add(BuildingBlock(self.practice, tactical, kind), f"ddd:{kind}:{source.file}:{tactical.oclass.name}", source.file, source.start_line, source.end_line)
         self.graph.link("root" if kind == "EntityRoot" else "owns", aggregate, block)
         self.graph.link("belongsTo", block, aggregate, "relationship")
 
@@ -215,7 +243,7 @@ class DddReading:
         which it names with a ``// foreign Name`` comment. Both read only a block's name and its lines, which a block
         read back from a saved graph holds too, so a refreshed root is linked again to the blocks no file in the
         refresh holds."""
-        blocks = [node for node in self.practice.in_graph.nodes() if node.type in _BLOCK_KINDS]
+        blocks = [node for node in self.in_graph.nodes() if node.type in _BLOCK_KINDS]
         by_name = {block.name: block for block in blocks}
         for block in blocks:
             if block.type == "Repository":
@@ -228,6 +256,50 @@ class DddReading:
                         self.graph.link("associates", block, by_name[other], "relationship")
 
 
+def _bare_classes(folder: str, ddd_nodes: list[Node], classes: list[Node]) -> list[str]:
+    """The production classes in folder that are no building block DDD holds there: the classes its aggregate's rule
+    reports, by name. Sorted, so a refresh that restores some classes and reads others gives the fact a fresh build
+    gives."""
+    blocks = {block.name for block in ddd_nodes if block.type in _BLOCK_KINDS and _folder_of(block.source.file) == folder}
+    return sorted(cls.name for cls in classes if _folder_of(cls.source.file) == folder and cls.name not in blocks and _is_domain_class(cls))
+
+
+def _modelled_folders(classes: list[Node]) -> set[str]:
+    """The folders where a class carries a DDD stereotype, which says the folder holds a domain."""
+    return {_folder_of(cls.source.file) for cls in classes if kind_named_by(cls.get_fact("stereotypes") or [])}
+
+
+def _block_of(tactical: TacticalClass, names: set[str], in_domain: bool) -> tuple[TacticalClass, str] | None:
+    """The class with the building-block kind it is: its stereotype's, or in a folder that holds a domain the one
+    its name says; none for a class that is no building block."""
+    kind = tactical.inferred_kind(names) if in_domain else tactical.kind()
+    return (tactical, kind) if kind is not None else None
+
+
+def _is_domain_class(cls: Node) -> bool:
+    """A production class of the domain: not a private one (`_module`, which holds a file's functions, or a helper
+    named with `_`), not test code, not a React screen module's, and not one marked as another system's."""
+    file = cls.source.file
+    return not (
+        cls.name.startswith("_") or is_test_code(file) or file.lower().endswith(_SCREEN_MODULE) or marks_another_system(cls.get_fact("stereotypes") or [])
+    )
+
+
+def _folder_of(file: str) -> str:
+    """The folder that holds file, from the practice's root, with forward slashes: `.` for a file at the root."""
+    return str(PurePosixPath(file.replace("\\", "/")).parent)
+
+
+def _posix_from(path: Path, root: Path) -> str:
+    """path as a path from root, with forward slashes."""
+    return path.relative_to(root).as_posix()
+
+
+def _aggregate_id(folder: str) -> str:
+    """The graph's id of the aggregate a folder holds."""
+    return f"ddd:Aggregate:{folder}"
+
+
 def _context_for(folder: str, contexts: dict[str, Node]) -> Node | None:
     """The innermost bounded context whose folder holds folder; the whole folder's context when one marks it."""
     best = ""
@@ -236,3 +308,20 @@ def _context_for(folder: str, contexts: dict[str, Node]) -> Node | None:
             if candidate == "." or len(candidate) > len(best):
                 best = candidate
     return contexts.get(best) or contexts.get(".")
+
+
+def _map_contexts(reading: "DddReading", marked: list[tuple], contexts: dict[str, Node]) -> None:
+    """Each context mapping a bounded context's file lists, under that context, and linked to the aggregates its two
+    sides name. A refresh reads every context's file again, so the mappings of a graph opened from its save are the ones
+    its files list now."""
+    aggregates: dict[str, Node] = {}
+    for aggregate in reading.in_graph.nodes("Aggregate"):
+        aggregates.setdefault(aggregate.name, aggregate)
+    for rel, context, markdown in marked:
+        for mapping in context.mappings:
+            line = mapping.sequential_order
+            node = reading.in_graph.add(mapping, f"ddd:ContextMapping:{markdown}:{line}", markdown, line, line)
+            reading.graph.link("mappedTo", contexts[rel], node)
+            for side, name in mapping.aggregate_names.items():
+                if name in aggregates:
+                    reading.graph.link(side, node, aggregates[name], "relationship")

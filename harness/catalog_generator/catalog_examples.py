@@ -21,9 +21,11 @@ if TYPE_CHECKING:
     from harness.catalog_generator.catalog_practice import CatalogPractice
 
 EXAMPLES_FOLDER = "catalog-examples"
-_MARKDOWN_SUFFIXES = (".md", ".markdown")
-_HTML_SUFFIXES = (".html", ".htm")
-_DRAWIO_SUFFIXES = (".drawio", ".dio")
+# The formats an example is shown by kind in, rather than as its source: prose as HTML, a page in a frame, a diagram in
+# the draw.io viewer. Format names a file's format from its extension.
+_MARKDOWN = Format("markdown")
+_HTML = Format("html")
+_DRAWIO = Format("drawio")
 _IMAGE_MIME = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
@@ -124,6 +126,11 @@ class ExampleFile:
         return self.path.suffix.lower()
 
     @property
+    def format(self) -> Format:
+        """The format the file's extension names, such as markdown for ``.md``."""
+        return Format.from_extension(self.suffix)
+
+    @property
     def is_image(self) -> bool:
         return self.suffix in _IMAGE_MIME
 
@@ -142,14 +149,14 @@ class ExampleFile:
     def panel_html(self, *, editor_id: str = "catalog-monaco", catalog_href: Path | str | None = None) -> str:
         """The example inside an approach panel. ``catalog_href`` is where a project's staged picture sits in the
         catalog; a practice's own picture sits under ``examples/{practice}``."""
-        if self.suffix in _DRAWIO_SUFFIXES:
+        if self.format == _DRAWIO:
             return DrawioDiagram.load(self.path).panel_html
-        if self.suffix in _HTML_SUFFIXES:
+        if self.format == _HTML:
             return self._scrolled_page_html()
         if self.is_image:
             return self._panel_image_html(catalog_href)
         text = self.path.read_text(encoding="utf-8")
-        if self.suffix in _MARKDOWN_SUFFIXES:
+        if self.format == _MARKDOWN:
             return f'<div class="skill-md-preview">{ExampleMarkdown(text).html}</div>'
         return MonacoViewer(
             text,
@@ -173,7 +180,7 @@ class ExampleFile:
                 "</figure>"
             )
         text = self.path.read_text(encoding="utf-8")
-        if self.suffix in _MARKDOWN_SUFFIXES:
+        if self.format == _MARKDOWN:
             return f'{_BACK_TO_APPROACH}<div class="skill-md-preview">{ExampleMarkdown(text).html}</div>'
         viewer = MonacoViewer(text, self._language, _STAGE_PAGE_MONACO_SCRIPT, folds=SourceFolds(text).acceptance_test)
         return _BACK_TO_APPROACH + viewer.html
@@ -183,18 +190,18 @@ class ExampleFile:
         return self._practice.language_of(self.path) or "plaintext"
 
     def _figure_inner(self, name: str) -> str:
-        if self.suffix in _MARKDOWN_SUFFIXES:
+        if self.format == _MARKDOWN:
             return f'<div class="skill-md-preview">{ExampleMarkdown(self.path.read_text(encoding="utf-8")).html}</div>'
-        if self.suffix in _HTML_SUFFIXES:
+        if self.format == _HTML:
             page = html.escape(self.path.read_text(encoding="utf-8"), quote=True)
             return f'<iframe class="catalog-example__frame" title="{name}" sandbox="" srcdoc="{page}"></iframe>'
-        if self.suffix in _DRAWIO_SUFFIXES:
+        if self.format == _DRAWIO:
             viewer = html.escape(DrawioDiagram.load(self.path).viewer_url(with_toolbar=True), quote=True)
             return f'<iframe class="catalog-drawio-frame" title="{name}" loading="lazy" src="{viewer}"></iframe>'
         if self.is_image:
             payload = base64.b64encode(self.path.read_bytes()).decode("ascii")
             return f'<img class="catalog-example__image" alt="{name}" src="data:{_IMAGE_MIME[self.suffix]};base64,{payload}">'
-        language = html.escape(self.suffix.lstrip(".") or "text")
+        language = html.escape(self._language)
         source = html.escape(self.path.read_text(encoding="utf-8"))
         return (
             '<div class="skill-code-preview">'
@@ -332,16 +339,17 @@ class CatalogFidelity:
 
     def _display_order(self, path: Path) -> tuple[int, str]:
         """Prose, then code, then diagrams, as ``Format.file_order`` orders a fidelity's files; pictures after them."""
-        return Format.from_extension(path.suffix.lower()).file_order, path.name
+        return ExampleFile(path, self.practice).format.file_order, path.name
 
     def _preferred(self, group: list[Path]) -> list[Path]:
-        pictures = [path for path in group if ExampleFile(path, self.practice).is_image]
+        files = [ExampleFile(path, self.practice) for path in group]
+        pictures = [file.path for file in files if file.is_image]
         if pictures:
             return pictures
-        diagrams = [path for path in group if path.suffix.lower() in _DRAWIO_SUFFIXES]
+        diagrams = [file.path for file in files if file.format == _DRAWIO]
         if diagrams:
             return diagrams
-        return [path for path in group if path.suffix.lower() not in _MARKDOWN_SUFFIXES] or group
+        return [file.path for file in files if file.format != _MARKDOWN] or group
 
 
 @dataclass(frozen=True)

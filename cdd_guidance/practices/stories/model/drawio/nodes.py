@@ -19,7 +19,7 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramStoryModel,
 )
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks
-from cdd_guidance.practices.stories.model.source_location import path_from
+from cdd_guidance.practices.stories.model.story_map_files import path_from
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel, StoryType
 
 
@@ -110,6 +110,10 @@ class DrawIOStory(DiagramStory):
 
 
 class DrawIOEpic(DiagramEpic):
+    # A draw.io epic starts at the map's margin, its sub-epics after the stories it holds itself.
+    first_x = DiagramEpic.left_margin
+    epic_spacing = DiagramEpic.gap
+    story_pitch = DrawIOStory.pitch
     shaping_row_y = 200
     estimate_gap = 15
     estimate_row_y = DiagramEpic.row_y - 20
@@ -147,27 +151,6 @@ class DrawIOEpic(DiagramEpic):
         if not isinstance(self.parent, Epic):
             return self.row_y
         return self._sub_epic_bar_y(self.depth)
-
-    @property
-    def x(self) -> int:
-        parent = self.parent
-        if isinstance(parent, Epic):
-            origin = parent.x + len(parent.stories) * DrawIOStory.pitch
-            siblings = parent.epics
-            offset = origin
-            for sibling in siblings:
-                if sibling is self:
-                    return offset
-                offset += sibling.width
-            return offset
-        offset = self.left_margin
-        if parent is None:
-            return offset
-        for epic in parent.epics:
-            if epic is self:
-                return offset
-            offset += epic.width + self.gap
-        return offset
 
     @property
     def style(self) -> str:
@@ -407,8 +390,7 @@ class DrawIOStoryModel(DiagramStoryModel):
         text = path.read_text(encoding="utf-8")
         loaded = cls().load(text)
         loaded.source_texts[file] = text
-        for epic in loaded.epics:
-            epic.place_in(file)
+        loaded.place_in(file)
         return loaded
 
     def load(self, text: str) -> "DrawIOStoryModel":
@@ -601,7 +583,6 @@ class DrawIOStoryModel(DiagramStoryModel):
         tree = root_el if root_el.tag == "mxGraphModel" else root_el.find(".//mxGraphModel")
         if tree is None:
             raise DrawIOParseError("No mxGraphModel found")
-        stories = {story.name: story for story in self.every_story()}
         lanes: Dict[str, List[Story]] = {}
         names: Dict[str, str] = {}
         # Cells are read in document order, so a lane's stories may come before its label.
@@ -614,9 +595,7 @@ class DrawIOStoryModel(DiagramStoryModel):
                 names[parts[1]] = cell.attrib.get("value", "").strip()
                 lanes.setdefault(parts[1], [])
             elif style.startswith("increment-story;") and len(parts) >= 3:
-                story = stories.get(cell.attrib.get("value", "").strip())
-                if story is not None:
-                    lanes.setdefault(parts[1], []).append(story)
+                lanes.setdefault(parts[1], []).extend(self.stories_named([cell.attrib.get("value", "").strip()]))
         self.increments = [
             DrawIOIncrement(names[slug], order, lanes[slug]) for order, slug in enumerate((slug for slug in lanes if slug in names), start=1)
         ]

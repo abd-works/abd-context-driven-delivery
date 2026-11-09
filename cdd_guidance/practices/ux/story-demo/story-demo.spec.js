@@ -405,3 +405,26 @@ describe("scenario session values", () => {
     assert.equal(used.id, "factory");
   });
 });
+
+describe("a story demo control read from the mockup page", () => {
+  function element(steps) {
+    return {
+      getAttribute: (name) => ({ "data-story-steps": steps, "data-name": "Pay" })[name] ?? null,
+      textContent: "Pay",
+      tagName: "BUTTON",
+    };
+  }
+
+  describe("whose story steps the UX map wrote", () => {
+    it("should hold those steps", () => {
+      const control = StoryDemoControl.fromElement(element('[{"kind":"when","label":"the customer pays"}]'));
+      assert.deepEqual(control.story_steps, [{ kind: "when", label: "the customer pays" }]);
+    });
+  });
+
+  describe("whose story steps are not JSON", () => {
+    it("should refuse them rather than show the control with no steps", () => {
+      assert.throws(() => StoryDemoControl.fromElement(element("[not json")), SyntaxError);
+    });
+  });
+});

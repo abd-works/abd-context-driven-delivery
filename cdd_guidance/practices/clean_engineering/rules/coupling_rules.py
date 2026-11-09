@@ -11,6 +11,7 @@ from cdd_guidance.practices.clean_engineering.rules.production_code_rule import 
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import is_interface_name
 from cdd_guidance.practices.clean_engineering.model.graph_reading import parameters_of
+from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
 from cdd_guidance.practices.clean_engineering.rules.class_graph import ClassGraph, names_in
 
 if TYPE_CHECKING:
@@ -23,6 +24,8 @@ _COPIED_SHARE = 0.75
 _NAME_COPY = re.compile(r"^_*(?P<owner>[a-z]\w*?)(?:_name|_slug|Name|Slug)$")
 _KEYED_COLLECTIONS = frozenset({"dict", "Dict", "Mapping", "MutableMapping", "Record", "Map"})
 _STRING_KEYS = frozenset({"str", "string"})
+# The fields a class is named by. Only a class that has a name can have its name copied.
+_NAMING_FIELDS = frozenset({"name", "slug", "title", "key", "label"})
 
 
 class HideInnerDetails(ProductionCodeRule):
@@ -81,7 +84,8 @@ class DoNotInventParallelObjectModels(PracticeGraphRule):
 
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
         classes = context.index(ClassGraph)
-        fields = {node.node_id: classes.fields(node) for node in classes.classes}
+        # A mixin's annotations declare what the class it is mixed into holds, so it holds no model of its own.
+        fields = {node.node_id: {} if classes.is_mixin(node) else classes.fields(node) for node in classes.classes}
         holders: dict[str, list["Node"]] = {}
         for node in classes.classes:
             for field in fields[node.node_id]:
@@ -107,8 +111,9 @@ def _copied_fields(node: "Node", holders: dict[str, list["Node"]], fields: dict[
         theirs = set(fields[other_id])
         if other is node or _related(node, other) or (len(own), node.node_id) > (len(theirs), other_id):
             continue
-        shared = own & theirs
-        if (other.source.file == node.source.file and own == theirs) or _copies(shared, own, theirs):
+        # A field copies another only with the same type: three common names, such as `result`, are no copied model.
+        shared = {field for field in own & theirs if fields[node.node_id][field] == fields[other_id][field]}
+        if _copies(shared, own, theirs):
             return [
                 f"Class '{node.name}' copies the fields {sorted(shared)} of '{other.name}'. "
                 "Use one canonical model type."
@@ -134,7 +139,7 @@ def _copied_references(node: "Node", classes: ClassGraph, fields: dict[str, str]
     for field, hint in fields.items():
         named = _NAME_COPY.match(field) if named_copies else None
         owner = _class_named(named.group("owner"), classes) if named else ""
-        if owner and owner != node.name:
+        if owner and owner != node.name and _has_name(owner, classes):
             hits.append(
                 f"Class '{node.name}' holds '{field}', a name copy of a '{owner}'; hold the {owner} itself."
             )
@@ -149,21 +154,47 @@ def _copied_references(node: "Node", classes: ClassGraph, fields: dict[str, str]
 
 
 def _member_keyed_by_name(field: str, hint: str, classes: ClassGraph) -> str:
-    """`fidelity_states: dict[str, str]` names a member class and keys a dict of one value each by name."""
+    """`fidelity_states: dict[str, str]` names a member class and keys a dict of one value each by name. A dict keyed by
+    anything but a string, such as `dict[int, str]` keyed by `id()`, is keyed by no name."""
     mentioned = names_in(hint)
-    if not mentioned & _KEYED_COLLECTIONS or not mentioned & _STRING_KEYS:
+    if not mentioned & _KEYED_COLLECTIONS or _key_type(hint) not in _STRING_KEYS:
         return ""
     words = _words(field)
     for length in range(len(words) - 1, 0, -1):
         member = _class_named("_".join(words[:length]), classes)
-        if member and member not in mentioned:
+        if member and member not in mentioned and _holds_value(member, words[length:], classes):
             return member
     return ""
 
 
+def _has_name(owner: str, classes: ClassGraph) -> bool:
+    """True when the class is named by a field of its own, such as `name` or `title`, which a copy could repeat."""
+    return any(_NAMING_FIELDS & {field.lstrip("_") for field in classes.fields(node)} for node in classes.named(owner))
+
+
+def _holds_value(member: str, value_words: list[str], classes: ClassGraph) -> bool:
+    """True when the member class holds the value the dict keeps for each one: `fidelity_states` copies a `Fidelity`'s
+    `state`. A dict whose values the member does not hold, such as each file's text by its path, copies nothing of it."""
+    value = "_".join(value_words)
+    wanted = {value, value.removesuffix("s"), f"{value}s"}
+    return any(
+        wanted & {field.lstrip("_") for field in classes.fields(node)} or wanted & {operation.name for operation in classes.operations(node)}
+        for node in classes.named(member)
+    )
+
+
+def _key_type(hint: str) -> str:
+    """The first type argument of a keyed collection, its key: `str` for `dict[str, int]` or `Record<string, X>`."""
+    opened = re.search(r"[\[<]", hint)
+    if opened is None:
+        return ""
+    arguments = split_top_level(hint[opened.end() :].rstrip("]> "))
+    return arguments[0].strip() if arguments else ""
+
+
 def _class_named(snake: str, classes: ClassGraph) -> str:
     pascal = "".join(word.capitalize() for word in _words(snake))
-    return pascal if pascal in classes.by_name else ""
+    return pascal if bool(classes.named(pascal)) else ""
 
 
 def _words(name: str) -> list[str]:
@@ -212,7 +243,7 @@ def _sole_forward(operation: "Node") -> str:
     """The callee of an operation whose body is one statement making one call on a collaborator: a parameter
     (``cart.subtotal()``) or a field (``self._cart.subtotal()``)."""
     callees = {callee for callee in operation.get_fact("callees", []) or [] if callee}
-    body = getattr(getattr(operation, "body", None), "text", "") or ""
+    body = operation.get_fact("body_text") or ""
     statements = [line for line in body.splitlines() if line.strip() and not line.strip().startswith(("#", "//"))]
     if len(callees) != 1 or len(statements) != 1:
         return ""

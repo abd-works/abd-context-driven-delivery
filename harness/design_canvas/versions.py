@@ -10,11 +10,12 @@ that release.
 
 from __future__ import annotations
 
-import json
 import re
 import shutil
 from pathlib import Path
 from typing import Dict, List, Optional
+
+from harness.installation.json_file import JsonFile
 
 # The folder a release keeps its canvas in, under the release's own folder (``.sessions/<release>/``).
 DESIGN_CANVAS_FOLDER = "design-canvas"
@@ -28,10 +29,10 @@ class PublishedVersion(Exception):
 class CanvasVersions:
     """The versions of the canvas kept under *root* (for example ``.sessions/<session>/design-canvas``)."""
 
-    record_name = "versions.json"
-
     def __init__(self, root: str | Path) -> None:
         self.root = Path(root)
+        # Each published version's canvas link, by version folder name, in the order they were published.
+        self._record = JsonFile(self.root / "versions.json")
 
     @classmethod
     def in_session_folder(cls, session_folder: str | Path) -> CanvasVersions:
@@ -76,7 +77,7 @@ class CanvasVersions:
         target = self.root / name
         self.folder(number).rename(target)
         links = {(name if key == self.folder(number).name else key): url for key, url in self.links().items()}
-        self._write(links)
+        self._record.write(links)
         return target
 
     def working(self) -> int:
@@ -99,8 +100,7 @@ class CanvasVersions:
 
     def links(self) -> Dict[str, str]:
         """Each published version's canvas link, by version folder name."""
-        record = self.root / self.record_name
-        return json.loads(record.read_text(encoding="utf-8")) if record.is_file() else {}
+        return self._record.read()
 
     def link(self, number: int) -> Optional[str]:
         return self.links().get(self.folder(number).name)
@@ -108,7 +108,4 @@ class CanvasVersions:
     def record_link(self, number: int, url: str) -> None:
         links = self.links()
         links[self.folder(number).name] = url
-        self._write(links)
-
-    def _write(self, links: Dict[str, str]) -> None:
-        (self.root / self.record_name).write_text(json.dumps(links, indent=1), encoding="utf-8")
+        self._record.write(links)

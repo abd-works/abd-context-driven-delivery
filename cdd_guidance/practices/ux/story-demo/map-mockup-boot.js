@@ -1,8 +1,8 @@
 function mountMapMockup(options = {}) {
   const toast = document.querySelector("#toast");
-  const tree = document.querySelector("#explorer-tree");
+  const explorer = document.querySelector("#explorer-tree");
   const frame = document.querySelector("#story-demo-frame");
-  const screenCatalog = JSON.parse(document.querySelector("#screen-stories").textContent);
+  const tree = readExplorerTree(document);
   const expanded = new Set();
   let openScreen = null;
   const startScreen = options.startScreen || "Create Account";
@@ -19,19 +19,16 @@ function mountMapMockup(options = {}) {
     flash._t = setTimeout(() => toast.classList.remove("show"), 1600);
   }
 
-  const storyOutline = JSON.parse(document.querySelector("#story-outline").textContent);
-
   function paintTree({ scrollToCurrentScreen = false } = {}) {
     const name = document.querySelector("#mockup .screen.current")?.getAttribute("data-slug") || "";
-    const nodes = nestScreens(screenCatalog, storyOutline);
     if (name && openScreen !== name) {
       openScreen = name;
-      for (const key of keysForCurrentScreen(nodes, name)) expanded.add(key);
+      for (const key of tree.screenKeys[name] || []) expanded.add(key);
     }
     renderScreenTree(
-      tree,
+      explorer,
       {
-        nodes,
+        nodes: tree.nodes,
         expanded,
         currentScreen: name,
         scrollToCurrentScreen,

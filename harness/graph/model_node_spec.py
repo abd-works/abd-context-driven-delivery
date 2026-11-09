@@ -59,7 +59,7 @@ with description("a model object built without a graph"):
             self.graph = Graph()
             self.screen = Screen("Catalog", 0)
             self.screen.append_region(self.region)
-            self.screen.join(self.graph.practice_of(Ux))
+            self.screen.join(self.graph.practices.of(Ux))
 
         with it("should join that practice's graph with its parts"):
             expect(self.region.graph).to(be(self.graph))
@@ -81,7 +81,7 @@ with description("a model object built on a graph and moved to another"):
         expect(self.graph.node(self.region.node_id)).to(be(self.region))
 
     with it("should leave the practice it was built in"):
-        expect(self.own_practice.in_graph.holds(self.region.node_id)).to(equal(False))
+        expect(self.own_practice.reading.in_graph.holds(self.region.node_id)).to(equal(False))
 
     with context("that has the same name as a node already on the owner's graph"):
         with before.each:
@@ -98,7 +98,7 @@ with description("a model object's practice"):
         self.screen = Screen("Catalog", 0, graph=self.graph)
 
     with it("should be the graph's practice of the class its model names"):
-        expect(self.screen.practice).to(be(self.graph.practice_of(Ux)))
+        expect(self.screen.practice).to(be(self.graph.practices.of(Ux)))
 
 
 with description("an owner that refers to objects it does not own"):
@@ -112,7 +112,7 @@ with description("an owner that refers to objects it does not own"):
         self.increment.stories.append(self.story)
         self.story_map.append_increment(self.increment)
         self.graph = Graph()
-        self.story_map.join(self.graph.practice_of(Stories))
+        self.story_map.join(self.graph.practices.of(Stories))
 
     with it("should keep a references list"):
         expect(isinstance(self.increment.stories, ModelReferences)).to(equal(True))

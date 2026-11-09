@@ -176,7 +176,7 @@ with description("a Scenario") as self:
         "that has been translated from another Scenario of the same semantic type"
     ):
         with before.each:
-            source = Scenario("Original name", 1, story_name="My Story")
+            source = Scenario("Original name", 1)
             source.steps = [
                 fixture.given("a funded Account DDA-001", 1),
                 fixture.when("the Treasurer submits a Transfer", 2),
@@ -194,11 +194,10 @@ with description("a Scenario") as self:
 
         with it(
             "should carry every field from the source "
-            "(name, sequentialOrder, storyName, steps, isOutline, examples, background, evidence)"
+            "(name, sequentialOrder, steps, isOutline, examples, background, evidence)"
         ):
             expect(self.target.name).to(equal("Original name"))
             expect(self.target.sequential_order).to(equal(1))
-            expect(self.target.story_name).to(equal("My Story"))
             expect(self.target.steps[0].text).to(equal("a funded Account DDA-001"))
             expect(self.target.steps[1].text).to(equal("the Treasurer submits a Transfer"))
             expect(self.target.steps[2].text).to(equal("a Confirmation Number is returned"))
@@ -266,8 +265,8 @@ with description("a Scenario") as self:
             self.scenario = scenario
 
         with context("the continuation clause"):
-            with it("should carry isContinuation true"):
-                expect(self.cont_clause.is_continuation).to(be_true)
+            with it("should be a continuation"):
+                expect(self.cont_clause.continuation).to(be_true)
 
             with it('should preserve the "And " prefix verbatim in text'):
                 expect(self.cont_clause.text).to(
@@ -286,8 +285,8 @@ with description("a Scenario") as self:
             self.scenario = scenario
 
         with context("the continuation clause"):
-            with it("should carry isContinuation true"):
-                expect(self.but_clause.is_continuation).to(be_true)
+            with it("should be a continuation"):
+                expect(self.but_clause.continuation).to(be_true)
 
             with it('should preserve the "But " prefix verbatim in text'):
                 expect(self.but_clause.text).to(
@@ -843,6 +842,13 @@ with description("a StoryModel being translated from another StoryModel") as sel
         expect(self.target.increments[0].name).to(equal("Increment 1"))
 
 
+def _source_showing(text: str):
+    """A source in no file whose text is the code a node was read from, as the schema's evidence reads it."""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(file="", start_line=0, end_line=0, text=text)
+
+
 with description("a story map on a graph") as self:
     with before.each:
         self.graph = Graph()
@@ -873,7 +879,7 @@ with description("a story map on a graph") as self:
         practice = self.graph.practice("stories")
         pairs = [
             (edge.parent.name, edge.child.name)
-            for edge in practice.in_graph.edges("decomposedInto")
+            for edge in practice.reading.in_graph.edges("decomposedInto")
         ]
         expect(pairs).to(contain(
             ("Onboard A Customer", "Authenticate User"),
@@ -884,9 +890,9 @@ with description("a story map on a graph") as self:
         practice = self.graph.practice("stories")
         scenario_pairs = [
             (edge.parent.name, edge.child.name)
-            for edge in practice.in_graph.edges("scenarios")
+            for edge in practice.reading.in_graph.edges("scenarios")
         ]
-        step_names = [edge.child.name for edge in practice.in_graph.edges("steps")]
+        step_names = [edge.child.name for edge in practice.reading.in_graph.edges("steps")]
         expect(scenario_pairs).to(contain(("Create Account", "Create account")))
         expect(step_names).to(contain("the User creates their account", "the account is unconfirmed"))
 
@@ -894,7 +900,7 @@ with description("a story map on a graph") as self:
         practice = self.graph.practice("stories")
         pairs = [
             (edge.parent.name, edge.child.name)
-            for edge in practice.in_graph.edges("belongsTo")
+            for edge in practice.reading.in_graph.edges("belongsTo")
         ]
         expect(pairs).to(contain(
             ("Authenticate User", "Onboard A Customer"),
@@ -907,7 +913,7 @@ with description("a story map on a graph") as self:
         self.scenario.steps[0].ands = [continued]
         pairs = [
             (edge.parent.name, edge.child.name)
-            for edge in self.graph.practice("stories").in_graph.edges("ands")
+            for edge in self.graph.practice("stories").reading.in_graph.edges("ands")
         ]
         expect(pairs).to(contain(("the User creates their account", "the email is saved")))
 
@@ -916,14 +922,14 @@ with description("a story map on a graph") as self:
         from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, OoadClass
         from cdd_guidance.practices.clean_engineering.model.operation import Operation
         from cdd_guidance.practices.clean_engineering.model.property import Property
-        from cdd_guidance.practices.stories.model.source_location import SourceLocation
         from cdd_guidance.practices.ux.model.nodes import Screen
 
-        self.scenario.steps[0].source = SourceLocation("", text="await accountCredentials.register()")
-        self.scenario.steps[1].source = SourceLocation("", text="expect(emailedValidationCode.code)")
+        # The schema reads a node's evidence from the text its source holds; these stand in for the code read.
+        self.scenario.steps[0].source = _source_showing("await accountCredentials.register()")
+        self.scenario.steps[1].source = _source_showing("expect(emailedValidationCode.code)")
         self.scenario.examples["emailedValidationCode"] = "code"
         example = self.scenario.examples["emailedValidationCode"]
-        example.source = SourceLocation("", text="function emailedValidationCode(): AccountCredentials {\n  return account.token\n}")
+        example.source = _source_showing("function emailedValidationCode(): AccountCredentials {\n  return account.token\n}")
         module = Module("account-credentials", 0, graph=self.graph)
         account = OoadClass("AccountCredentials", 0)
         module.classes.append(account)
@@ -934,18 +940,18 @@ with description("a story map on a graph") as self:
 
         stories = self.graph.practice("stories")
         clean = self.graph.practice("clean_engineering")
-        invokes = [(edge.parent.name, edge.child.name) for edge in stories.in_graph.edges("invokes")]
-        observes = [(edge.parent.name, edge.child.name) for edge in stories.in_graph.edges("observes")]
-        demonstrates = [(edge.parent.name, edge.child.name) for edge in stories.in_graph.edges("demonstrates")]
-        retrieved = [(edge.parent.name, edge.child.name) for edge in stories.in_graph.edges("retrievedUsing")]
-        uses = [(edge.parent.name, edge.child.name) for edge in stories.in_graph.edges("uses")]
-        shown = [(edge.parent.name, edge.child.name) for edge in stories.in_graph.edges("shownOn")]
-        specified = [(edge.parent.name, edge.child.name) for edge in stories.in_graph.edges("specifiedBy")]
+        invokes = [(edge.parent.name, edge.child.name) for edge in stories.reading.in_graph.edges("invokes")]
+        observes = [(edge.parent.name, edge.child.name) for edge in stories.reading.in_graph.edges("observes")]
+        demonstrates = [(edge.parent.name, edge.child.name) for edge in stories.reading.in_graph.edges("demonstrates")]
+        retrieved = [(edge.parent.name, edge.child.name) for edge in stories.reading.in_graph.edges("retrievedUsing")]
+        uses = [(edge.parent.name, edge.child.name) for edge in stories.reading.in_graph.edges("uses")]
+        shown = [(edge.parent.name, edge.child.name) for edge in stories.reading.in_graph.edges("shownOn")]
+        specified = [(edge.parent.name, edge.child.name) for edge in stories.reading.in_graph.edges("specifiedBy")]
         expect(invokes).to(contain(("the User creates their account", "register")))
-        expect([(edge.parent.name, edge.child.name) for edge in clean.in_graph.edges("invokedBy")]).to(contain(("register", "the User creates their account")))
+        expect([(edge.parent.name, edge.child.name) for edge in clean.reading.in_graph.edges("invokedBy")]).to(contain(("register", "the User creates their account")))
         expect(observes).to(contain(("the account is unconfirmed", "emailedValidationCode")))
         expect(demonstrates).to(contain(("emailedValidationCode", "AccountCredentials")))
-        expect([(edge.parent.name, edge.child.name) for edge in clean.in_graph.edges("demonstratedThrough")]).to(contain(("AccountCredentials", "emailedValidationCode")))
+        expect([(edge.parent.name, edge.child.name) for edge in clean.reading.in_graph.edges("demonstratedThrough")]).to(contain(("AccountCredentials", "emailedValidationCode")))
         expect(retrieved).to(contain(("emailedValidationCode", "token")))
         expect(uses).to(contain(("Onboard A Customer", "account-credentials")))
         expect(shown).to(contain(("Create Account", "Create Account")))
@@ -983,7 +989,62 @@ with description("Story name opening") as self:
         def _story(name, kind):
             node = Node(Graph().practice("stories"), "Story", f"stories:Story:{name}", name, Source(".", 1, 1))
             node.set_fact("opening_class", kind)
+            node.practice.reading.in_graph.hold(node)
             return SchemaRuleRun(VerbNounFormat(), RuleCheckContext(node.practice, None)).node_hits(node)
 
         expect(_story("Carry Plan From Marketing Link", "unlisted")).to(equal([]))
         expect(_story("Customer Login", "actor-noun")).to(have_len(1))
+
+
+def _nested_map() -> StoryModel:
+    """Shop > Checkout > Pay, with Pay By Card under Pay and Browse Catalog on Shop itself."""
+    story_map = StoryModel()
+    shop = Epic("Shop", 1)
+    checkout = Epic("Checkout", 1)
+    pay = Epic("Pay", 1)
+    pay.append_story(Story("Pay By Card", 1))
+    checkout.append_epic(pay)
+    shop.append_epic(checkout)
+    shop.append_story(Story("Browse Catalog", 1))
+    story_map.append_epic(shop)
+    return story_map
+
+
+with description("an epic tree") as self:
+    with before.each:
+        self.story_map = _nested_map()
+        self.shop = self.story_map.epics[0]
+        self.pay = self.shop.epics[0].epics[0]
+
+    with it("should give a story the epic of the map it sits under"):
+        expect(self.pay.stories[0].top_epic).to(be(self.shop))
+
+    with it("should give a sub-epic the epic of the map it sits under"):
+        expect(self.pay.top_epic).to(be(self.shop))
+
+    with it("should give an epic with sub-epics its innermost sub-epics as its leaf epics"):
+        expect(self.shop.leaf_epics()).to(equal([self.pay]))
+
+    with it("should give a story under no epic no top epic"):
+        expect(Story("Loose").top_epic).to(be(None))
+
+
+with description("a story map asked for the stories a thin slice names") as self:
+    with before.each:
+        self.story_map = _nested_map()
+
+    with it("should give its own stories in the order the names give them"):
+        named = self.story_map.stories_named(["Pay By Card", "Browse Catalog"])
+        expect([story.name for story in named]).to(equal(["Pay By Card", "Browse Catalog"]))
+
+    with it("should give its own story objects"):
+        pay_by_card = next(story for story in self.story_map.every_story() if story.name == "Pay By Card")
+        expect(self.story_map.stories_named(["Pay By Card"])[0]).to(be(pay_by_card))
+
+    with it("should leave out a name no story has"):
+        expect(self.story_map.stories_named(["Refund Order"])).to(equal([]))
+
+
+with description("a scenario that belongs to a story") as self:
+    with it("should keep no story name of its own, since its story is its parent"):
+        expect(hasattr(Scenario("Happy path"), "story_name")).to(be_false)

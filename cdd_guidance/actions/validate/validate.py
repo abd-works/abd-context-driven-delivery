@@ -24,8 +24,8 @@ _LOGGED_VIOLATIONS = 40
 class Validate(GuidanceAction):
     """Validate artifacts for provided context tools."""
 
-    def __init__(self, session=None, chat=None, call=None) -> None:
-        super().__init__(session, chat, call)
+    def __init__(self, session=None, call=None) -> None:
+        super().__init__(session, call)
         # What this call checks, made by each validate; the cdd server makes a new action for each call.
         self._graph: CheckedGraph | None = None
         self._reports: ReportFiles | None = None
@@ -117,10 +117,10 @@ class Validate(GuidanceAction):
         self._log_graph_validation(violations)
         guidance = [self.at_fidelity(item) for item in self.listed() if not isinstance(item, str)]
         sources =[str(path.resolve()) for path in self._graph.files]
-        return ValidationReport(self.session, guidance).of_graph(violations, sources)
+        return ValidationReport(self.session, guidance).of_graph(violations, sources, self._graph.held_beside)
 
     def _log_graph_validation(self, violations: list) -> None:
-        if self._guidance_text is not None or not violations:
+        if self.work.text is not None or not violations:
             return
         synopsis = [
             f"graph-rule {violation.rule} {violation.location}:{violation.line or ''}"
@@ -128,8 +128,8 @@ class Validate(GuidanceAction):
         ]
         if len(violations) > _LOGGED_VIOLATIONS:
             synopsis.append(f"graph-rule … and {len(violations) - _LOGGED_VIOLATIONS} more")
-        for practice in self._listed_practices():
-            self.log.validation(practice, synopsis)
+        for worked in self._worked_fidelities():
+            self.log.validation(worked, synopsis)
         # This line is the call's validate line; the session board reads the latest one, so no clean line may follow.
         self._logged_session_action = "validate"
 
@@ -141,10 +141,10 @@ class Validate(GuidanceAction):
         self._log_validation_to_session()
 
     def _log_validation_to_session(self) -> None:
-        if self._guidance_text is not None:
+        if self.work.text is not None:
             return
-        for practice in self._listed_practices():
-            self.log.validation(practice, [])
+        for worked in self._worked_fidelities():
+            self.log.validation(worked, [])
 
     @noDeploy
     @mcp

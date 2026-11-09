@@ -35,7 +35,7 @@ with description("pattern overlays"):
         graph = Graph()
         graph.open(Path("."))
         practice = graph.practice("ddd")
-        root = practice.in_graph.root
+        root = practice.reading.in_graph.root
         child = Node(
             practice,
             "Aggregate",
@@ -43,9 +43,9 @@ with description("pattern overlays"):
             "account",
             Source("src/account.ts", 1, 10),
         )
-        child.practice.in_graph.hold(child)
+        child.practice.reading.in_graph.hold(child)
         graph.record(EdgeType("owns", 2, "direct"), root, child)
-        practice.in_graph.rebuild_tree()
+        practice.reading.in_graph.rebuild_tree()
         expect(len(root.children)).to(equal(1))
         expect(root.children[0].node_id).to(equal(child.node_id))
 
@@ -56,10 +56,10 @@ with description("pattern overlays"):
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
         data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
-        names = {node.type for node in graph.practice("ddd").in_graph.nodes()}
+        names = {node.type for node in graph.practice("ddd").reading.in_graph.nodes()}
         expect("NodeRoot" in names).to(equal(True))
         expect("ClientRoot" in names).to(equal(True))
-        story_types = {node.type for node in graph.practice("stories").in_graph.nodes()}
+        story_types = {node.type for node in graph.practice("stories").reading.in_graph.nodes()}
         expect("StoryShared" in story_types).to(equal(True))
 
     with it("should load the full source file for a lern domain node"):
@@ -69,7 +69,7 @@ with description("pattern overlays"):
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
         data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
-        domain_nodes = [node for node in graph.practice("ddd").in_graph.nodes() if node.type == "NodeRoot"]
+        domain_nodes = [node for node in graph.practice("ddd").reading.in_graph.nodes() if node.type == "NodeRoot"]
         expect(len(domain_nodes) > 0).to(equal(True))
         node = domain_nodes[0]
         expect(node.source.end_line > 1).to(equal(True))
@@ -82,7 +82,7 @@ with description("pattern overlays"):
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
         data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
-        ddd_tree = data_of(graph.practice("ddd").in_graph.root.serialize())
+        ddd_tree = data_of(graph.practice("ddd").reading.in_graph.root.serialize())
 
         def walk(node):
             yield node

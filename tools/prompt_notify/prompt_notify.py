@@ -9,7 +9,6 @@ Off when the class is annotated ``@Hooks(disabled=True)``.
 
 from __future__ import annotations
 
-import json
 import re
 import shutil
 import sys
@@ -22,17 +21,19 @@ from typing import ClassVar
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.annotations.name import Name
 from harness.installation.destination import noCatalog
+from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.annotations.annotation import Toast
 from harness.hooks.hook_server import TOAST_ARROW, HookPayload, HookServer, rules_toast
 from harness.hooks.hooks import hook
+from harness.installation.ide_layout import IdeLayout
 from space.session.session_log import LogTimestamp
 
 TOAST_NOTICE = ".cursor/prompt-notify-toast.json"
 IDE_TOAST_EXTENSION = "cdd.prompt-notify-0.0.1"
 _SKIP_BEGIN_FALLBACK = frozenset({"open_workspace", "end", "begin"})
 _SAME_BURST_SECONDS = 2
-_SKILL_DIRS = ("/.cursor/skills/", "/.claude/skills/")
-_RULE_DIRS = ("/.cursor/rules/", "/.claude/rules/")
+# The installed guidance whose path a tool call's input can name for a toast.
+_TOASTED_KINDS = ("skill", "rule")
 
 
 @noCatalog
@@ -98,7 +99,7 @@ class PromptNotify:
     def detect_echo(
         self, payload: HookPayload, toolsets: list | None = None
     ) -> tuple[str, str] | None:
-        invoked = self._mcp_tool_name(payload)
+        invoked = payload.invoked_tool
         if not invoked:
             return None
         searched = self._walk_toolsets(
@@ -111,7 +112,7 @@ class PromptNotify:
         return None
 
     def detect(self, payload: HookPayload) -> tuple[str, str] | None:
-        action_names = {self._mcp_tool_name(payload), payload.tool_name}
+        action_names = {payload.invoked_tool, payload.tool_name}
         return self._catalog_match(self._haystacks(payload), action_names)
 
     @cached_property
@@ -162,20 +163,17 @@ class PromptNotify:
         self, haystacks: list[str], action_names: set[str]
     ) -> tuple[str, str] | None:
         for hay in haystacks:
-            posix = hay.replace("\\", "/").lower()
-            in_skills = any(folder in posix for folder in _SKILL_DIRS)
+            installed = IdeLayout.installed_guidance_kind(hay)
             for token, kind in self.catalog:
                 if not self._token_in(hay, token):
                     continue
                 if kind == "action" and hay not in action_names:
                     continue
-                if kind == "rule" and in_skills:
+                if kind == "rule" and installed == "skill":
                     # Rule tokens join folder and file (bdd-bdd-behavior); a skill path's
                     # nested folders can spell the same token without being a rule.
                     continue
-                if "/rules/" in hay.replace("\\", "/").lower():
-                    return "rule", token
-                return kind, token
+                return ("rule" if installed == "rule" else kind), token
         return None
 
     def _echo_on_toolset(self, invoked: str, toolset) -> tuple[str, str] | None:
@@ -218,36 +216,13 @@ class PromptNotify:
     def _compact(self, text: str) -> str:
         return Name(text).kebab
 
-    def _mcp_tool_name(self, payload: HookPayload) -> str:
-        name = payload.tool_name
-        inp = payload.tool_input
-        nested = inp.get("toolName") or inp.get("tool_name") or inp.get("name")
-        if isinstance(nested, str) and nested.strip():
-            if "mcp" in name.lower() or name in {"CallMcpTool", "call_mcp_tool"}:
-                return nested.strip()
-            if "." in nested or "-" in nested:
-                return nested.strip()
-        return name
-
-    def _paths(self, payload: HookPayload) -> list[str]:
-        inp = payload.tool_input
-        found: list[str] = []
-        for key in ("path", "file_path", "command"):
-            value = inp.get(key)
-            if isinstance(value, str) and value.strip():
-                found.append(value)
-        return found
-
     def _haystacks(self, payload: HookPayload) -> list[str]:
-        values = [self._mcp_tool_name(payload), payload.tool_name]
-        for path in self._paths(payload):
-            if self._skill_or_rule_path(path):
-                values.append(path)
-        return [item for item in values if item]
-
-    def _skill_or_rule_path(self, path: str) -> bool:
-        posix = path.replace("\\", "/").lower()
-        return any(folder in posix for folder in _SKILL_DIRS + _RULE_DIRS)
+        """The tool the call invokes, and each installed skill or rule its input names: a path the call names
+        (``ToolCall.named_paths``), or a shell command that reads one."""
+        command = payload.tool_input.get("command")
+        named = [*payload.call.named_paths, *([command] if isinstance(command, str) else [])]
+        installed = [path for path in named if IdeLayout.installed_guidance_kind(path) in _TOASTED_KINDS]
+        return [item for item in (payload.invoked_tool, payload.tool_name, *installed) if item]
 
     def _token_in(self, hay: str, token: str) -> bool:
         compacted_hay = f"-{self._compact(hay)}-"
@@ -309,13 +284,11 @@ class ToastFile:
 
     def __init__(self, folder: Path) -> None:
         self.path = Path(folder) / TOAST_NOTICE
+        self._file = JsonFile(self.path)
 
     def show(self, message: str, now: datetime) -> Path:
         """Write message as this folder's toast, joined with the toast already there when it is from the same burst."""
-        notice = {"message": self._joined_with_previous(message, now), "at": str(LogTimestamp(now))}
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(notice, ensure_ascii=False) + "\n", encoding="utf-8")
-        return self.path
+        return self._file.write({"message": self._joined_with_previous(message, now), "at": str(LogTimestamp(now))})
 
     def _joined_with_previous(self, message: str, now: datetime) -> str:
         previous = self._previous()
@@ -328,14 +301,11 @@ class ToastFile:
         return self._join_arrow_toasts(earlier, message)
 
     def _previous(self) -> dict:
-        """The toast shown here last; none when there is none or it was torn by a write still in progress."""
-        if not self.path.is_file():
-            return {}
+        """The toast shown here last; none when there is none, or none readable."""
         try:
-            previous = json.loads(self.path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
+            return self._file.read()
+        except JsonFileUnreadable:
             return {}
-        return previous if isinstance(previous, dict) else {}
 
     def _time_of(self, stamp: str) -> datetime | None:
         try:

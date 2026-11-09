@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Iterable, Optional
 
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
@@ -12,27 +12,6 @@ from .collections import ContentTypes, NavComponents, Transitions
 from .nodes import ContentType, Control, Interaction, NavComponent, Region, Screen, StoryDemoControl, Transition, UxContext
 from .reference_paths import ReferencePaths
 from .ux_node import UxNode
-
-
-def _top_epic(story):
-    epic = None
-    current = story.parent
-    while current is not None and current.semantic_type() == "Epic":
-        epic, current = current, current.parent
-    return epic
-
-
-def _epic_outline(epic, shown: List) -> dict:
-    """An epic's outline entry: a group for each sub-epic, at any depth, that holds a shown story."""
-    groups: List[dict] = []
-    pending = list(epic.epics)
-    while pending:
-        sub_epic = pending.pop(0)
-        stories = [story.name for story in sub_epic.stories if story in shown]
-        if stories:
-            groups.append({"name": sub_epic.name, "stories": stories})
-        pending[:0] = sub_epic.epics
-    return {"name": epic.name, "groups": groups, "stories": [story.name for story in epic.stories if story in shown]}
 
 
 class ScreenNotOnMap(KeyError):
@@ -73,7 +52,7 @@ class UxMap(UxNode):
         self.content_types = ContentTypes(self)
         self.nav_components = NavComponents(self)
         self.context = UxContext()
-        self._link(self.context, "context")
+        self.attach(self.context, "context")
 
     @classmethod
     def create(cls, name: str | Graph = "UxMap", sequential_order: int = 0, graph: Graph | None = None) -> "UxMap":
@@ -196,16 +175,3 @@ class UxMap(UxNode):
             if screen.name == name:
                 return screen
         raise ScreenNotOnMap(name)
-
-    def story_outline(self) -> List[dict]:
-        """The story map above the stories this map's screens show, for the story explorer to place screens under:
-        each epic in the order its screens first show it, with ``groups`` for its sub-epics and ``stories`` for the
-        stories on the epic itself, each in story-map order. Only stories on the map's graph have an epic to place
-        them under, so with no story map on the graph the outline is empty and the explorer lists the screens flat."""
-        shown = [story for screen in self.screens for story in screen.shows]
-        epics: List = []
-        for story in shown:
-            epic = _top_epic(story)
-            if epic is not None and epic not in epics:
-                epics.append(epic)
-        return [_epic_outline(epic, shown) for epic in epics]

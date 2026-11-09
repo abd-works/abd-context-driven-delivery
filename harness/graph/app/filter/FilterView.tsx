@@ -1,5 +1,5 @@
 import type { FilterSelection } from './filter-selection';
-import { overlayCatalogLabel, overlayPathLabel } from '../overlay-labels';
+import { overlayCatalogLabel, overlayPathLabel } from '../labels/overlay-labels';
 
 type FilterViewProps = {
   open: boolean;

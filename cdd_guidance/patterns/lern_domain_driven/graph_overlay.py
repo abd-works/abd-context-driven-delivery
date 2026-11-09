@@ -1,6 +1,7 @@
 """How the LERN pattern takes part in the graph: on top of the practices it adds each aggregate's tier files (its node
-root, client root, routes, JSON store, and views), the behavior and story test files, and the context mappings a bounded
-context lists, wired with the pattern schema's relationship kinds and carrying the facts the pattern's rules read."""
+root, client root, routes, JSON store, and views) and the behavior and story test files, wired with the pattern schema's
+relationship kinds and carrying the facts the pattern's rules read. The context mappings a bounded context lists are
+DDD's own nodes, which DDD's reading makes."""
 
 from __future__ import annotations
 
@@ -14,7 +15,6 @@ from harness.graph.skipped_folders import scanned_files
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import AggregateFolder, TierFile
 
 _VIEW_EXPORT = re.compile(r"export\s+function\s+(\w+View)\s*\(")
-_CONTEXT_ARROW = re.compile(r"^[\s\-*>]*(.+?)\s*→\s*(.+?)\s*$")
 _VIEW_SKIP_SUFFIXES = ("-form", "-fields", "-banner", "-messages", "-footer", "-loaded", "-client")
 _TIER_FILES = (("{slug}-node.ts", "NodeRoot"), ("{slug}-client.tsx", "ClientRoot"), ("{slug}-routes.ts", "Route"), ("{slug}.json", "JsonStore"))
 _BEHAVIOR_TIERS = {
@@ -31,7 +31,7 @@ class LernOverlay(GraphOverlay):
     direct_kinds = frozenset(
         {
             "owns", "root", "entityRoot", "nodeRoot", "clientRoot", "nodeRepository", "repository", "route", "view",
-            "views", "mappedTo", "local", "remote", "jsonStore", "hosts", "interacts", "calls", "writes", "stores",
+            "views", "jsonStore", "hosts", "interacts", "calls", "writes", "stores",
             "writtenBy", "belongsTo",
         }
     )
@@ -58,15 +58,14 @@ class _LernReading:
         from cdd_guidance.practices.stories.stories import Stories
 
         self._behaviors()
-        ddd = self.graph.loaded(Ddd)
-        self.stories = self.graph.loaded(Stories)
+        ddd = self.graph.practices.loaded(Ddd)
+        self.stories = self.graph.practices.loaded(Stories)
         if ddd is None or self.stories is None:
             return
         self.ddd = ddd
         self.setup_text = self.overlay.pattern.test_setup_text(self.root)
-        self._context_mappings()
         self._tier_folders()
-        aggregates = {node.source.file.replace("\\", "/"): node for node in self.ddd.in_graph.nodes("Aggregate")}
+        aggregates = {node.source.file.replace("\\", "/"): node for node in self.ddd.reading.in_graph.nodes("Aggregate")}
         for folder, aggregate in sorted(aggregates.items()):
             self._aggregate(folder, aggregate)
         self._story_files()
@@ -75,7 +74,7 @@ class _LernReading:
         """LERN behavior files on the BDD practice, each carrying the facts its tier rules read."""
         from cdd_guidance.practices.bdd.bdd import Bdd
 
-        bdd = self.graph.loaded(Bdd)
+        bdd = self.graph.practices.loaded(Bdd)
         if bdd is None:
             return
         for file in scanned_files(self.root):
@@ -91,8 +90,8 @@ class _LernReading:
         for file in scanned_files(self.root):
             folder = file.parent.relative_to(self.root).as_posix()
             is_tier_file = file.name in (f"{file.parent.name}-routes.ts", f"{file.parent.name}-node.ts")
-            if is_tier_file and folder.startswith("src/") and not self.ddd.in_graph.holds(f"ddd:Aggregate:{folder}"):
-                self.ddd.in_graph.add_named("Aggregate", f"ddd:Aggregate:{folder}", file.parent.name, Source(folder, 1, 1, self.ddd.in_graph.source_root))
+            if is_tier_file and folder.startswith("src/") and not self.ddd.reading.in_graph.holds(f"ddd:Aggregate:{folder}"):
+                self.ddd.reading.in_graph.add_named("Aggregate", f"ddd:Aggregate:{folder}", file.parent.name, Source(folder, 1, 1, self.ddd.reading.in_graph.source_root))
 
     def _aggregate(self, folder: str, aggregate: Node) -> None:
         slug = Path(folder).name
@@ -100,8 +99,8 @@ class _LernReading:
         for tier in tiers.values():
             self._link("owns", aggregate, tier)
         self._other_node_files(folder, slug, aggregate)
-        roots = [node for node in self.ddd.in_graph.nodes("EntityRoot") if self._folder_of(node.source.file) == folder]
-        repositories = [node for node in self.ddd.in_graph.nodes("Repository") if self._folder_of(node.source.file) == folder]
+        roots = [node for node in self.ddd.reading.in_graph.nodes("EntityRoot") if self._folder_of(node.source.file) == folder]
+        repositories = [node for node in self.ddd.reading.in_graph.nodes("Repository") if self._folder_of(node.source.file) == folder]
         self._tier_facts(folder, aggregate, tiers, repositories)
         self._link_tiers(tiers, roots, repositories)
         views = self._views(folder, slug, aggregate, tiers.get("ClientRoot"), repositories[0] if repositories else None)
@@ -166,35 +165,6 @@ class _LernReading:
                 self._link("nodeRepository", view, repository)
         return views
 
-    def _context_mappings(self) -> None:
-        """Each ``Local → Remote`` line a bounded context's file lists, mapped to the aggregates it names."""
-        for context in self.ddd.in_graph.nodes("BoundedContext"):
-            markdown = context.source.file
-            path = self.root / markdown if markdown and markdown != "." else None
-            if path is None or not path.is_file():
-                continue
-            for index, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-                match = _CONTEXT_ARROW.match(line.strip())
-                map_id = f"ddd:ContextMapping:{markdown}:{index}"
-                if match is None or self.ddd.in_graph.holds(map_id):
-                    continue
-                left, right = match.group(1).strip(), match.group(2).strip()
-                mapping = self.ddd.in_graph.add_named("ContextMapping", map_id, f"{left} → {right}", Source(markdown, index, index, self.ddd.in_graph.source_root))
-                self._link("mappedTo", context, mapping)
-                for kind, label in (("local", left), ("remote", right)):
-                    aggregate = self._aggregate_named(label)
-                    if aggregate is not None:
-                        self._link(kind, mapping, aggregate)
-
-    def _aggregate_named(self, label: str) -> Node | None:
-        label = label.strip()
-        aggregates = self.ddd.in_graph.nodes("Aggregate")
-        for node in aggregates:
-            if node.name == label or label.endswith(f"· {node.name}") or label.endswith(f"·{node.name}"):
-                return node
-        tail = label.split("·")[-1].strip() if "·" in label else label
-        return next((node for node in aggregates if node.name == tail), None)
-
     def _story_files(self) -> None:
         stories = self.stories
         for file in scanned_files(self.root):
@@ -212,7 +182,7 @@ class _LernReading:
     def _parent_story_scope(self, relative: str) -> Node | None:
         """The innermost epic of the stories whose folder holds the file; else the epic named for the file's folder."""
         rel = relative.replace("\\", "/")
-        epics = [node for node in self.stories.in_graph.nodes() if node.type in {"Epic", "SubEpic"}]
+        epics = [node for node in self.stories.reading.in_graph.nodes() if node.type in {"Epic", "SubEpic"}]
         holding = [
             (len(self._folder_of(node.source.file)), node)
             for node in epics
@@ -225,12 +195,12 @@ class _LernReading:
 
     def _file_node(self, practice, relative: str, semantic: str, name: str = "") -> Node:
         """The node for one tier file of practice, made the first time a tier names it."""
-        graph = practice.graph
+        graph = practice.reading.graph
         node_id = f"{practice.key}:{semantic}:{relative}"
         existing = graph.node(node_id)
         if existing is not None:
             return existing
-        return practice.in_graph.add_named(semantic, node_id, name or Path(relative).stem, Source.whole_file(relative, practice.in_graph.source_root))
+        return practice.reading.in_graph.add_named(semantic, node_id, name or Path(relative).stem, Source.whole_file(relative, practice.reading.in_graph.source_root))
 
     def _is_view_file(self, filename: str, slug: str) -> bool:
         if filename == f"{slug}-client.tsx" or not filename.endswith(".tsx"):

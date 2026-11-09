@@ -42,6 +42,15 @@ with description("a path classifier for prompt audit"):
         with it("should label it agent"):
             expect(pl.LoggedFile(str(_AGENT)).kind).to(equal("agent"))
 
+    # Every IDE's install folders are known in one place, IdeLayout, so a Claude Code install is classified as Cursor's is.
+    with context("that receives a rule a Claude Code install wrote"):
+        with it("should label it rule"):
+            expect(pl.LoggedFile(str(_REPO_ROOT / ".claude" / "rules" / "coding.md")).kind).to(equal("rule"))
+
+    with context("that receives a skill a Claude Code install wrote"):
+        with it("should label it skill"):
+            expect(pl.LoggedFile(str(_REPO_ROOT / ".claude" / "skills" / "actions-generate" / "notes.md")).kind).to(equal("skill"))
+
     with context("that receives an ordinary source file"):
         with it("should label it file"):
             expect(pl.LoggedFile(str(_REPO_ROOT / "pyproject.toml")).kind).to(equal("file"))

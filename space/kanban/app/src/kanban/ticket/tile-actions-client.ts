@@ -1,8 +1,8 @@
 import type { FormatChoiceData } from '@cdd/space/kanban/ticket'
 
-import { ACTION_STANDINGS, countOf, STEP_FAILED } from '../board/board-brand'
+import { ACTION_STANDINGS, countOf, STEP_FAILED } from '../shared/board-brand'
 import type { BoardPage } from '../board/board-page'
-import type { Tile } from '../board/board-store'
+import type { Tile } from '../shared/board-store'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 import type { TicketClient, WorkStanding } from './ticket-client'
 import { headPlace } from './tile-client'

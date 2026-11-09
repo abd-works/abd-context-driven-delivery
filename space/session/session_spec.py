@@ -76,7 +76,7 @@ with description("a session"):
                 expect(self.event().session.practice("stories").guidance).to(be_a(PracticeGuidance))
 
             with it("should open the session's graph, which holds that practice"):
-                expect(self.event().session.graph.every_practice["stories"]).to(be(self.event().session.practice("stories").guidance))
+                expect(self.event().session.graph.practices.held["stories"]).to(be(self.event().session.practice("stories").guidance))
 
             with it("should open the same graph on the next call in that session"):
                 expect(self.event().session.graph).to(be(self.event().session.graph))
@@ -306,6 +306,24 @@ with description("a session"):
             Sessions(self.repo).switch("alpha", self.work)
             expect(Sessions(self.called).current().mark_loop(ToolCall())).to(equal("3"))
 
+    # A ticket's moves and marks are lines of its session's log, which the log answers rather than its readers scanning it.
+    with context("whose log records moves and marks on the board's stages"):
+        with before.each:
+            self.repo = Path(tempfile.mkdtemp())
+            Sessions(self.repo).switch("alpha", self.repo)
+            self.log = Sessions(self.repo).current().log
+            for line in ("move Discovery", "done Discovery", "move Specification", "in-progress Specification"):
+                self.log.record(line)
+
+        with it("should answer the latest line of a verb"):
+            expect(self.log.latest("move").stage).to(equal("Specification"))
+
+        with it("should answer the latest line of several verbs that names a stage"):
+            expect(self.log.latest("move", "done", "in-progress", stage="Discovery").verb).to(equal("done"))
+
+        with it("should answer none for a verb the log has no line of"):
+            expect(self.log.latest("review")).to(equal(None))
+
     # (E) Record Session Log
     # (S) Session --> Record Session Error
     with context("that logs an error"):
@@ -469,7 +487,7 @@ with description("a session"):
 
         with context("with the practice it worked on"):
             with it("should name the practice graph root"):
-                self.chat_log.action("sketch", [self.edited], [self.session.practice("bdd")])
+                self.chat_log.action("sketch", [self.edited], [self.session.practice("bdd").fidelities["behavior"].session_output])
                 log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
                 expect("bdd" in log).to(equal(True))
 
@@ -603,7 +621,7 @@ with description("an action"):
     # (S) Session --> Record Validation Run
     with context("that calls validate"):
         with before.each:
-            self.practice = self.session.practice("bdd")
+            self.practice = self.session.practice("bdd").fidelities["behavior"].session_output
 
         with context("with a practice and a fidelity"):
             with it("should log that practice and that fidelity"):
@@ -712,10 +730,10 @@ with description("a practice"):
             expect(isinstance(self.opened.guidance, PracticeGuidance)).to(equal(True))
 
         with it("should be the one practice the session's graph holds"):
-            expect(self.session.graph.every_practice["bdd"]).to(be(self.opened.guidance))
+            expect(self.session.graph.practices.held["bdd"]).to(be(self.opened.guidance))
 
         with it("should know the session's graph"):
-            expect(self.opened.guidance.graph).to(be(self.session.graph))
+            expect(self.opened.guidance.reading.graph).to(be(self.session.graph))
 
         with it("should be the same practice the next call in the session works with"):
             expect(Sessions.of_project(self.called).current().practice("bdd").guidance).to(be(self.opened.guidance))
@@ -724,7 +742,7 @@ with description("a practice"):
             expect(self.session.practice("ddd").guidance.extended).to(be(self.session.practice("clean_engineering").guidance))
 
         with it("should open its graph on its workpath"):
-            expect(self.opened.guidance.in_graph.source_root).to(equal(str(self.work.resolve())))
+            expect(self.opened.guidance.reading.in_graph.source_root).to(equal(str(self.work.resolve())))
 
         with it("should be the same graph on the next call in the session"):
             expect(Sessions.of_project(self.called).current().graph).to(be(self.session.graph))
@@ -740,8 +758,8 @@ with description("a practice"):
 
             with it("should hold the saved nodes when another process first opens the session"):
                 reopened = Sessions(self.repo).current().graph
-                practice = reopened.every_practice["clean_engineering"]
-                expect([node.name for node in practice.in_graph.nodes()]).to(contain("Order"))
+                practice = reopened.practices.held["clean_engineering"]
+                expect([node.name for node in practice.reading.in_graph.nodes()]).to(contain("Order"))
 
         with it("should return that same practice on the next ask"):
             expect(self.session.practice("bdd") is self.opened).to(equal(True))
@@ -779,6 +797,18 @@ with description("a practice"):
             with it("should put each format's file under the practice's root folder"):
                 outputs = self.fidelity.output_paths()
                 expect(outputs["markdown"]).to(equal([(self.work / ".context" / "story-map.md").resolve().as_posix()]))
+
+            with context("whose validation reports its session output keeps"):
+                with it("should save a new report in the session's reports folder"):
+                    expect(self.fidelity.session_output.new_report_path().parent).to(equal(self.session.reports_folder))
+
+                with it("should name a new report by the fidelity's slug"):
+                    expect(self.fidelity.session_output.new_report_path().name).to(contain("stories-story-map-"))
+
+                with it("should list the reports saved there"):
+                    saved = self.fidelity.session_output.new_report_path()
+                    saved.write_text("# report\n", encoding="utf-8")
+                    expect(self.fidelity.session_output.reports()).to(equal([saved]))
 
             with context("whose file is written"):
                 with it("should be read by the session's file manager, though the practice's own folder is elsewhere"):

@@ -48,15 +48,9 @@ export class StoryDemoControl extends Control {
   /** Hydrate from UX-emitted HTML (`data-bound-field`, `data-story-steps`). */
   static fromElement(el) {
     if (!el) return null;
-    let storySteps = [];
+    // The steps are the list the UX map wrote; one that does not read back is a defect to show, not hide.
     const rawSteps = el.getAttribute("data-story-steps");
-    if (rawSteps) {
-      try {
-        storySteps = JSON.parse(rawSteps);
-      } catch {
-        storySteps = [];
-      }
-    }
+    const storySteps = rawSteps ? JSON.parse(rawSteps) : [];
     const control = new StoryDemoControl({
       name: el.getAttribute("data-name") || el.textContent?.trim() || "",
       controlType: el.tagName === "BUTTON" ? "button" : el.getAttribute("data-type") || "",

@@ -5,7 +5,7 @@ import type { FileEntryData, ReportData } from '@cdd/space/kanban/fidelity-progr
 import type { FileTextData } from '@cdd/space/session/session'
 
 import type { FidelityFilesJson } from '../../types'
-import { reasonOf } from '../failure'
+import { reasonOf } from '../shared/failure'
 import { callTool, currentChatBar } from './chat-bar-client'
 import { runAction, type FidelityProgressClient } from './fidelity-progress-client'
 
