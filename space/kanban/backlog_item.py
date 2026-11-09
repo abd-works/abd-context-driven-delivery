@@ -144,4 +144,5 @@ class BacklogItem(Card):
 
     def _ticket_opened(self, scope: str, path: str) -> Ticket:
         ticket = self._board.open_ticket(self.title, scope, "", path)
-        return ticket.record(f"backlog {self._path}")
+        ticket.work.record(f"backlog {self._path}")
+        return ticket

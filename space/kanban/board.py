@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, ClassVar
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.catalog_generator.catalog_examples import CatalogFidelity
-from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.chat.chat import Chat
 from harness.diagnostics.server_health import ServerHealth
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
@@ -23,9 +22,10 @@ from space.kanban.board_app import BOARD_APP_PORTS
 from space.repo.repo import Repo
 from space.session.session_log import LogTimestamp
 from space.session.session import MAIN_SESSION_NAME
-from space.session.sessions import Sessions
+from space.session.sessions import BoardPractices, Sessions
 
 if TYPE_CHECKING:
+    from harness.catalog_generator.catalog_practice import CatalogPractice
     from space.kanban.backlog_item import BacklogItem
     from space.kanban.ticket import Ticket
     from space.repo.repo import Branch
@@ -58,16 +58,6 @@ class NotAStageError(ValueError):
         super().__init__(f"{stage!r} is not a stage a ticket can be moved into")
 
 
-class PracticeNotFoundError(LookupError):
-    """Raised when a caller names a practice, such as clean_engineering, that the board or ticket does not have. It
-    names the practice and what was searched for it."""
-
-    def __init__(self, practice: str, within: str) -> None:
-        self.practice = practice
-        self.within = within
-        super().__init__(f"no practice named {practice!r} on {within}")
-
-
 class FidelityNotFoundError(LookupError):
     """Raised when a caller names a fidelity, such as stories-story-map, that a ticket or practice does not have. It
     names the fidelity and the ticket or practice searched, so a caller can say which request was refused."""
@@ -92,14 +82,15 @@ class Board:
     _ticket_kind: ClassVar[type[Ticket]]
     _backlog_item_kind: ClassVar[type[BacklogItem]]
 
-    def __init__(self, repo: Repo, practices: list[CatalogPractice]) -> None:
+    def __init__(self, repo: Repo, practices: BoardPractices) -> None:
         self._repo = repo
         # The sessions of the board's repository, as this process holds them: each one a ticket, and which is open.
         self._sessions = Sessions.of_project(repo.root)
         # The catalog's view of each practice the board works through, which names its pages and its fidelities' skills,
-        # held for the checkout by its sessions, since a board is made for every call.
-        self._catalogued = list(practices)
-        self._columns = self._build_columns()
+        # held for the checkout by its sessions, since a board is made for every call. Its stages and tickets ask it.
+        self.catalogued_practices = practices
+        self._stages = [Stage(stage, self) for stage in STAGES]
+        self._columns: list[Column] = [Backlog(self), *self._stages, Complete(self)]
         self._reads = BoardReads(self)
 
     @classmethod
@@ -159,7 +150,7 @@ class Board:
     @data_field
     def practices(self) -> list[PracticeGuidance]:
         """The practices every ticket works through, in the order the board shows them, each with its name and colour."""
-        return [catalogued.practice for catalogued in self._catalogued]
+        return [catalogued.practice for catalogued in self.catalogued_practices.catalogued]
 
     @property
     @data_field
@@ -167,20 +158,24 @@ class Board:
         return list(self._columns)
 
     @property
+    def stages(self) -> list[Stage]:
+        """The columns work moves through, Discovery to Implementation, in order."""
+        return list(self._stages)
+
+    def stage(self, name: str) -> Stage:
+        """The stage called name, such as Discovery; refuses any other column with ``NotAStageError``."""
+        found = next((stage for stage in self._stages if stage.name == name), None)
+        if found is None:
+            raise NotAStageError(name)
+        return found
+
+    @property
     @data_field
     def fidelities(self) -> list[BoardFidelity]:
         """Every fidelity of the board's practices with its practice, its label, and its skill's slash command, as the
         catalog names them, so a tile shows them without taking the fidelity's slug apart. The board sends each
         fidelity once, here."""
-        return [BoardFidelity(catalogued, shown) for catalogued in self._catalogued for shown in catalogued.shown_fidelities]
-
-    def catalogued(self, practice: PracticeGuidance) -> CatalogPractice:
-        """The catalog's view of practice, the board's own or a ticket's session's instance of it, which names its pages
-        and its fidelities' skills; one for each practice class the board works through."""
-        found = next((catalogued for catalogued in self._catalogued if type(catalogued.practice) is type(practice)), None)
-        if found is None:
-            raise PracticeNotFoundError(practice.key, "the board")
-        return found
+        return [BoardFidelity(catalogued, shown) for catalogued in self.catalogued_practices.catalogued for shown in catalogued.shown_fidelities]
 
     @property
     def chats(self) -> list[Chat]:
@@ -229,7 +224,7 @@ class Board:
     def open_tickets(self) -> list[Ticket]:
         """The tickets a person can switch to, in the board's column order: each in a stage, so neither a backlog item
         nor a closed ticket. Sent by their names, since their columns send them."""
-        return [card for column in self._columns if isinstance(column, Stage) for card in column.cards]
+        return [card for stage in self._stages for card in stage.cards]
 
     @property
     @data_field
@@ -279,23 +274,8 @@ class Board:
     @noSessionLog
     def help(self, practice: str) -> Help:
         """Return the overview, guidance, and shared rules of the board's practice named practice, such as stories or clean_engineering, with its page on the forge. A fidelity's help comes from its progress on a ticket: fidelity-progress.help."""
-        found = self.practice(practice)
-        return Help(found, None, None, self.catalogued(found))
-
-    def works_through(self, practice: PracticeGuidance) -> bool:
-        """Whether practice, the board's own or a ticket's session's instance of it, is one the board's tickets work
-        through."""
-        return any(type(chosen.practice) is type(practice) for chosen in self._catalogued)
-
-    def practice(self, key: str) -> PracticeGuidance:
-        """The board's practice whose folder name is key, such as clean_engineering."""
-        found = next((entry for entry in self.practices if entry.key == key), None)
-        if found is None:
-            raise PracticeNotFoundError(key, "the board")
-        return found
-
-    def _build_columns(self) -> list[Column]:
-        return [Backlog(self), *(Stage(stage, self) for stage in STAGES), Complete(self)]
+        found = self.catalogued_practices.keyed(practice)
+        return Help(found.practice, None, None, found)
 
 
 class BoardReads:
@@ -401,10 +381,7 @@ class Stage(Column):
     @tool_subject
     def load(cls, stage: str, *, project: Path | str) -> Stage:
         """The stage named stage, such as Discovery, on the board of project."""
-        found = Board.load(project).column(stage)
-        if not isinstance(found, Stage):
-            raise NotAStageError(stage)
-        return found
+        return Board.load(project).stage(stage)
 
     @property
     def steps(self) -> list[str]:
@@ -444,7 +421,7 @@ class Stage(Column):
     def requires(self, fidelity: FidelityGuidance) -> bool:
         """Whether fidelity's work is done in this stage, whichever session holds it: it is a fidelity of a practice the
         board works through, and its approach stage is this stage's."""
-        return fidelity.approach_stage is self._approach and self._board.works_through(fidelity.practice_guidance)
+        return fidelity.approach_stage is self._approach and self._board.catalogued_practices.works_through(type(fidelity.practice_guidance))
 
     @property
     def next_stage(self) -> Stage | None:

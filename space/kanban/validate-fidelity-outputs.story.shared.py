@@ -64,7 +64,7 @@ def _(s):
     def _(world):
         world.project.seed_session(PET_VISITS.with_log(generated("stories", "story_map")))
         world.session = world.sessions.load(world.project.sessions / PET_VISITS.name)
-        world.stories = world.session.practice("stories").working
+        world.stories = world.session.practice("stories").fidelities["story_map"].session_output
         world.ticket = world.Ticket.load(PET_VISITS.name)
 
     @s.when("Claude Code validates the story map and finds no graph-rule violation")
@@ -184,7 +184,7 @@ def _(s):
 
     @s.when("the Person opens checkout-flow's story_map report")
     def _(world):
-        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).progress_of(STORY_MAP).report())
+        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).work.progress_of(STORY_MAP).report())
 
     @s.then("the report panel shows .sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md")
     def _(world):
@@ -220,7 +220,7 @@ def _(s):
 
     @s.when("the Person opens the story_map report")
     def _(world):
-        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).progress_of(STORY_MAP).report())
+        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).work.progress_of(STORY_MAP).report())
 
     @s.then("the report panel shows the report's text")
     def _(world):
@@ -239,7 +239,7 @@ def _(s):
 
     @s.when("the Person opens the story_map report")
     def _(world):
-        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).progress_of(STORY_MAP).report())
+        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).work.progress_of(STORY_MAP).report())
 
     @s.then("the report panel shows the report's text")
     def _(world):

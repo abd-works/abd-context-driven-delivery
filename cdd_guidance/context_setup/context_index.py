@@ -114,14 +114,6 @@ class SegmentIndex:
         entries = [dataclasses.asdict(segment) for segment in self.segments]
         (self.folder / self._ENTRIES).write_text(json.dumps(entries, indent=2), encoding="utf-8")
 
-class SegmentNotFound(FileNotFoundError):
-    """Raised when embed is named a segment file that is not there; embedding it as empty text would index nothing
-    under its name and leave the search silently wrong."""
-
-    def __init__(self, path: Path) -> None:
-        super().__init__(f"no segment file at {path.as_posix()}; name it from the project's root, or absolute")
-        self.path = path
-
 # ── Embedding provider protocol (injectable for tests) ───────────────────────
 
 class EmbeddingProvider(Protocol):
@@ -171,10 +163,11 @@ class ContextIndex:
         run in process does."""
         return self._session.path_named(named) if self._session is not None else Path(named)
 
-    def _segment_text(self, file: Path) -> str:
-        if not file.is_file():
-            raise SegmentNotFound(file)
-        return file.read_text(encoding="utf-8")
+    def _segment_named(self, named: str) -> Path:
+        """The segment file named, which the session's files refuse when it is not there: embedding it as empty text
+        would index nothing under its name and leave the search silently wrong. Read as given when the index works in no
+        session, as one run in process does."""
+        return self._session.session_files.existing(named) if self._session is not None else Path(named)
 
     def _get_provider(self) -> EmbeddingProvider:
         if self._provider is None:
@@ -194,8 +187,8 @@ class ContextIndex:
         Returns EmbedResult with index_path, segment_count, and views_covered."""
         out_dir = self._path_named(out_path)
         out_dir.mkdir(parents=True, exist_ok=True)
-        files = [self._path_named(segment_path) for segment_path in segments_paths]
-        texts = [self._segment_text(file) for file in files]
+        files = [self._segment_named(segment_path) for segment_path in segments_paths]
+        texts = [file.read_text(encoding="utf-8") for file in files]
         if not texts:
             return EmbedResult(index_path=str(out_dir), segment_count=0, views_covered=[])
         segments = [IndexedSegment.of_file(file, text) for file, text in zip(files, texts)]

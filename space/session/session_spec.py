@@ -306,6 +306,24 @@ with description("a session"):
             Sessions(self.repo).switch("alpha", self.work)
             expect(Sessions(self.called).current().mark_loop(ToolCall())).to(equal("3"))
 
+    # A ticket's moves and marks are lines of its session's log, which the log answers rather than its readers scanning it.
+    with context("whose log records moves and marks on the board's stages"):
+        with before.each:
+            self.repo = Path(tempfile.mkdtemp())
+            Sessions(self.repo).switch("alpha", self.repo)
+            self.log = Sessions(self.repo).current().log
+            for line in ("move Discovery", "done Discovery", "move Specification", "in-progress Specification"):
+                self.log.record(line)
+
+        with it("should answer the latest line of a verb"):
+            expect(self.log.latest("move").stage).to(equal("Specification"))
+
+        with it("should answer the latest line of several verbs that names a stage"):
+            expect(self.log.latest("move", "done", "in-progress", stage="Discovery").verb).to(equal("done"))
+
+        with it("should answer none for a verb the log has no line of"):
+            expect(self.log.latest("review")).to(equal(None))
+
     # (E) Record Session Log
     # (S) Session --> Record Session Error
     with context("that logs an error"):
@@ -469,7 +487,7 @@ with description("a session"):
 
         with context("with the practice it worked on"):
             with it("should name the practice graph root"):
-                self.chat_log.action("sketch", [self.edited], [self.session.practice("bdd").working])
+                self.chat_log.action("sketch", [self.edited], [self.session.practice("bdd").fidelities["behavior"].session_output])
                 log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
                 expect("bdd" in log).to(equal(True))
 
@@ -603,7 +621,7 @@ with description("an action"):
     # (S) Session --> Record Validation Run
     with context("that calls validate"):
         with before.each:
-            self.practice = self.session.practice("bdd").working
+            self.practice = self.session.practice("bdd").fidelities["behavior"].session_output
 
         with context("with a practice and a fidelity"):
             with it("should log that practice and that fidelity"):

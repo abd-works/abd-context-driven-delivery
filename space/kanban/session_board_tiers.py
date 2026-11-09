@@ -206,6 +206,11 @@ class TicketHandle:
     def session(self) -> SessionHandle:
         return SessionHandle(self._cdd, self)
 
+    @property
+    def work(self) -> TicketHandle:
+        """Its work, as the domain's ``Ticket.work`` answers it: a fidelity's progress on it is that progress's tools."""
+        return TicketHandle(self._cdd, self.name)
+
     def progress_of(self, slug: str) -> FidelityProgressHandle:
         if slug not in [progress["fidelity"]["slug"] for progress in self.data()["progress"]]:
             raise FidelityNotFoundError(slug, f"ticket {self.name!r}")

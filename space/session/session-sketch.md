@@ -557,7 +557,7 @@ it should return the log lines for that loop number
 #### that calls validate
 
 ```
--> session.log.by(chat).validation(session.practice(name).working, violations)
+-> session.log.by(chat).validation(session.practice(name).fidelities[fidelity].session_output, violations)
 it should log that practice and that fidelity
   -> expect(session.log.path).to contain the practice and the fidelity
 it should log the rule, the synopsis, and the correction
