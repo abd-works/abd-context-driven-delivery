@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import tempfile
 import time
 from contextvars import ContextVar
 from pathlib import Path
@@ -48,12 +49,16 @@ with description("the agent bdd practice"):
             expect(_secret_loaded_after("import agent_bdd.agent_bdd")).to(equal("False"))
 
     with context("that runs an agent for a spec"):
+        # The secrets file is each checkout's own and often absent, so the spec writes one and loads it.
         with it("should load the agent's secrets"):
-            statement = (
-                "from pathlib import Path\nfrom cdd_guidance.practices.agent_bdd.agent import agent\n"
-                "with agent(Path('.'), Path('.agent_bdd_sessions/conf-spec.json'), in_chat=True):\n    pass"
-            )
-            expect(_secret_loaded_after(statement)).to(equal("True"))
+            with tempfile.TemporaryDirectory() as folder:
+                secrets = Path(folder) / ".secrets"
+                secrets.write_text("CURSOR_API_KEY=spec-key\n", encoding="utf-8")
+                statement = (
+                    "from pathlib import Path\nfrom cdd_guidance.practices.agent_bdd.conf import AgentBddConf\n"
+                    f"AgentBddConf(Path({str(secrets)!r})).load_secrets()"
+                )
+                expect(_secret_loaded_after(statement)).to(equal("True"))
 
 
 with description("an agent spec file"):

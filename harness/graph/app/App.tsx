@@ -48,6 +48,8 @@ export function App() {
   const [activeRule, setActiveRule] = useState('');
   const [violation, setViolation] = useState<ViolationFocus | null>(null);
   const [source, setSource] = useState<NodeSourceData | null>(null);
+  // Why the source pane shows no source for the selected node: the graph holds none, or reading it failed.
+  const [sourceNote, setSourceNote] = useState('');
   const loadGeneration = useRef(0);
   const loadingRef = useRef(false);
   loadingRef.current = loading;
@@ -159,8 +161,16 @@ export function App() {
     setSelectedId(selection.nodeId);
     setActiveRule(selection.rule ?? '');
     setViolation(selection.violation ?? null);
-    const opened = await graphs.source(selection.nodeId);
-    setSource(opened?.text != null && opened.file != null ? opened : null);
+    setSourceNote('');
+    try {
+      const opened = await graphs.source(selection.nodeId);
+      const shown = opened?.text != null && opened.file != null ? opened : null;
+      setSource(shown);
+      if (!shown) setSourceNote('The graph holds no source for this node. Load the folder again if it should.');
+    } catch (cause) {
+      setSource(null);
+      setSourceNote(`The source did not open: ${cause instanceof Error ? cause.message : String(cause)}`);
+    }
   }
 
   async function applyOverlays(overlays: string[]) {
@@ -351,6 +361,7 @@ export function App() {
           />
           <SourceView
             source={source}
+            note={sourceNote}
             violation={violation}
             rules={rulesOn(findNode(trees, selectedId))}
             activeRule={activeRule}

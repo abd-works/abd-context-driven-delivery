@@ -35,10 +35,10 @@ class TicketCheckout:
 
     @property
     def work_branch(self) -> Branch:
-        """The branch the ticket's work is on: its own branch while it is checked out, else the default branch while the
-        checkout is on it, as for a session with no branch of its own. Any other branch checked out is not the ticket's,
-        so its own branch comes back not checked out."""
-        if self.branch.is_checked_out:
+        """The branch the ticket's work is on: its own branch while it is checked out, in the repository or in its own
+        worktree, else the default branch while the repository has it checked out, as for a session with no branch of
+        its own. Any other branch checked out is not the ticket's, so its own branch comes back not checked out."""
+        if self.branch.is_checked_out or self.branch.worktree is not None:
             return self.branch
         default = self._repo.branch_named(self._repo.default_branch)
         return default if default.is_checked_out else self.branch
@@ -61,7 +61,9 @@ class TicketCheckout:
     @property
     def leave_choices(self) -> LeaveChoices:
         """What leaving the ticket for another can do with its work now, a merge included."""
-        return LeaveChoices(self._checked_out_work_branch, merges=True)
+        branch = self._checked_out_work_branch
+        # A branch open in its own worktree cannot be merged and deleted from here; its worktree is closed first.
+        return LeaveChoices(branch, merges=branch is not None and branch.is_checked_out)
 
     @property
     def close_choices(self) -> LeaveChoices:
@@ -75,9 +77,10 @@ class TicketCheckout:
 
     @property
     def _checked_out_work_branch(self) -> Branch | None:
-        """The branch the ticket's work is on while it is checked out, which leaving acts on; none otherwise."""
+        """The branch the ticket's work is on while a checkout has it, the repository or its own worktree, which leaving
+        acts on; none otherwise."""
         branch = self.work_branch
-        return branch if branch.is_checked_out else None
+        return branch if branch.is_checked_out or branch.worktree is not None else None
 
     def open(self, opening: list[str]) -> None:
         """Create what opening names for the ticket: its own branch, checked out, and its own worktree."""
@@ -93,18 +96,32 @@ class TicketCheckout:
         self._ticket.board.reread()
 
     def leave(self, leaving: list[str]) -> None:
-        """Do what leaving names with the ticket's work: write a handoff for its session, then commit, push, and merge
-        the branch its work is on. Those three only while that branch is checked out, because they act on whatever is
-        checked out. Work on the default branch is committed and pushed there; it has no branch to merge and no
-        worktree to remove."""
+        """Do what leaving names with the ticket's work: write a handoff for its session, then save the work."""
+        self.write_handoff(leaving)
+        self.save_work(leaving)
+
+    def write_handoff(self, leaving: list[str]) -> None:
+        """Write a handoff for the ticket's session when leaving names one."""
         if LEAVE_HANDOFF in leaving:
             self._ticket.session.handoffs.write(LeavingHandoff(self._ticket).document)
+
+    def save_work(self, leaving: list[str]) -> None:
+        """Commit, push, and merge the branch the ticket's work is on, as leaving names, in the checkout that has it:
+        the repository, or the ticket's own worktree. Nothing while no checkout has it, because those steps act on
+        whatever is checked out. Work on the default branch is committed and pushed there; it has no branch to merge and
+        no worktree to remove."""
+        if not set(leaving) & {LEAVE_COMMIT, LEAVE_PUSH, LEAVE_MERGE}:
+            return
         branch = self._checked_out_work_branch
         if branch is None:
             return
+        # Checked out in the repository itself, else in the ticket's own worktree.
+        checkout = self._repo if branch.is_checked_out else branch.worktree.repository
         if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
-            self._repo.push_commit(f"{self._ticket.name}: leave session", sync_remote=LEAVE_PUSH in leaving)
-        if LEAVE_MERGE in leaving and not branch.is_default:
+            checkout.commit([str(checkout.root)], f"{self._ticket.name}: leave session", untracked=True)
+        if LEAVE_PUSH in leaving:
+            checkout.push_upstream()
+        if LEAVE_MERGE in leaving and branch.is_checked_out and not branch.is_default:
             self._repo.close_branch(branch.name)
 
 

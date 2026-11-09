@@ -277,6 +277,14 @@ with description("a guidance action"):
             action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio {self.session_word}", self.project))
             expect(action.listed()[0].fidelities["story_map"].format).to(equal("drawio"))
 
+        # A stage Run lists the formats its chips stand for; each fidelity writes the first of them it offers.
+        with it("should give each fidelity the first listed format it writes"):
+            from harness.guidance_actions import GuidanceAction
+
+            action = GuidanceAction().for_call(_call(f"stories-story-map bdd-behavior format=markdown,python {self.session_word}", self.project))
+            story_map, behavior = action.listed()
+            expect((story_map.fidelities["story_map"].format, behavior.fidelities["behavior"].format)).to(equal(("markdown", "python")))
+
         with it("should leave the format of the practice's other fidelities as it was"):
             from harness.guidance_actions import GuidanceAction
 

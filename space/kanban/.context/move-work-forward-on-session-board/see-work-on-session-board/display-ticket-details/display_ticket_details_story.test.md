@@ -49,3 +49,9 @@
 *Given* billing-report's card shows a segment for the story_map [fidelity](../../../kanban-model.md#fidelityguidance)
 *When* the Person opens billing-report's story_map segment
 *Then* billing-report's card is expanded with the story_map tile's action bar open
+
+#### Scenario: Name the board's own project
+
+*Given* the session board runs in board-sandbox
+*When* the details show a ticket
+*Then* their corner names board-sandbox

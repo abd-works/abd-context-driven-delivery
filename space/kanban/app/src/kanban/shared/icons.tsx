@@ -52,8 +52,10 @@ export function FileViewIcon({ mode }: { mode: string }) {
   return <ShapeIcon shape={FILE_VIEW_SHAPES[mode] ?? ''} size={14} />
 }
 
-// What a card does for its session: run the next step, hand off, split into child tickets, and activate or close it.
+// What a card does for its session: run the next step, hand off, split into child tickets, open its chat, and activate
+// or close it.
 const SESSION_ACTION_SHAPES: Record<string, string> = {
+  chat: 'M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z',
   next: 'M4.5 3v10l8-5z',
   handoff: 'M2.5 8h9M8.5 4.5L12 8l-3.5 3.5M13.5 3v10',
   split: 'M2.5 8h4M6.5 8L10 4.5h3.5M6.5 8l3.5 3.5h3.5',

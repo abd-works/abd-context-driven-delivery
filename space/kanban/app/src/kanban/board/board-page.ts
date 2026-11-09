@@ -109,7 +109,8 @@ export class BoardPage {
   }
 
   openNewTicket(): Promise<void> {
-    return this.chat.fill('Open a new ticket with ticket.create, titled: ')
+    const session = this.board.activeTicket?.session.session_file
+    return this.chat.fill(`Open a new ticket with ticket.create${session ? ` session=${session}` : ''}, titled: `)
   }
 
   start(): () => void {

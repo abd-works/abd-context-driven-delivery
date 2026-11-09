@@ -18,19 +18,21 @@ export type SourceRule = {
 
 type SourceViewProps = {
   source: NodeSourceData | null;
+  // Why there is no source to show for a selected node; empty while no node is selected.
+  note?: string;
   violation: ViolationFocus | null;
   rules: SourceRule[];
   activeRule: string;
   onSelectRule?: (name: string) => void;
 };
 
-export function SourceView({ source, violation, rules = [], activeRule = '', onSelectRule = () => undefined }: SourceViewProps) {
+export function SourceView({ source, note = '', violation, rules = [], activeRule = '', onSelectRule = () => undefined }: SourceViewProps) {
   return (
     <div className="panel" data-testid="source-file">
       {source ? (
         <SourceEditor source={source} violation={violation} rules={rules} activeRule={activeRule} onSelectRule={onSelectRule} />
       ) : (
-        <p className="empty-state">Select a node</p>
+        <p className="empty-state">{note || 'Select a node'}</p>
       )}
     </div>
   );

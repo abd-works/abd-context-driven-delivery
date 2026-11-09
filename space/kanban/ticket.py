@@ -105,7 +105,7 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def work_branch(self) -> Branch:
-        """Return the branch ticket's work is on, which leaving ticket commits and pushes: its own branch while it is checked out, else the default branch while the checkout is on it, as for a session with no branch of its own. Any other branch checked out is not ticket's, so its own branch comes back not checked out and leaving commits nothing."""
+        """Return the branch ticket's work is on, which leaving ticket commits and pushes: its own branch while it is checked out, in the repository or in its own worktree, else the default branch while the repository has it checked out, as for a session with no branch of its own. Any other branch checked out is not ticket's, so its own branch comes back not checked out and leaving commits nothing."""
         return self.checkout.work_branch
 
     @property
@@ -313,9 +313,25 @@ class Ticket(Card):
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
         """Close ticket: its session ends, its folder moves to _complete/, and it shows in Complete. leaving names what to do with its work first: handoff, commit, push, merge."""
-        self.checkout.leave(leaving or [])
+        chosen = leaving or []
+        self.checkout.write_handoff(chosen)
         self._session.close()
-        return self._board.ticket_of(self._session.move_to_closed())
+        closed = self._board.ticket_of(self._session.move_to_closed())
+        # The work is saved after the folder moves, so the move is committed with it.
+        self.checkout.save_work(chosen)
+        self._return_to_default_branch(chosen)
+        return closed
+
+    def _return_to_default_branch(self, leaving: list[str]) -> None:
+        """A closed ticket's own branch leaves the repository's checkout once its work is committed, so the next
+        session does not start on it. Uncommitted work keeps it checked out, so nothing is carried to the default branch."""
+        if not (LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving):
+            return
+        own = self.checkout.branch
+        if not own.is_checked_out:
+            return
+        repo = self._board.repo
+        repo.branch_named(repo.default_branch).check_out()
 
     @mcp
     @agent_tool

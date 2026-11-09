@@ -232,7 +232,7 @@ describe('Write Ticket Handoff', () => {
     const { page } = await board.page()
     const chat = await board.connectChat(page)
     await ticketOn(page, ACTIVE).fillHandoff()
-    expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: 'Write a handoff for ticket checkout-flow with /space-session-handoff-session.' }])
+    expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: 'Write a handoff for ticket checkout-flow with /space-session-handoff-session session=.sessions/checkout-flow/session.json' }])
   })
 })
 
@@ -246,7 +246,7 @@ describe('Close Active Session', () => {
 
   it('should send the close session command to the chat', async () => {
     const { chat } = await closed()
-    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/space:session:close-session' }])
+    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/space:session:close-session session=.sessions/checkout-flow/session.json' }])
   })
 
   it('should leave the ticket in its column', async () => {
@@ -296,7 +296,7 @@ describe('Open Ticket Chat', () => {
     }
 
     it("should send the ticket's command to the ticket's chat", async () => {
-      expect(await (await closedWithoutClicking()).checkIn()).toEqual([{ kind: 'command', text: '/space:session:close-session' }])
+      expect(await (await closedWithoutClicking()).checkIn()).toEqual([{ kind: 'command', text: '/space:session:close-session session=.sessions/checkout-flow/session.json' }])
     })
   })
 
@@ -338,15 +338,34 @@ describe('Open Ticket Chat', () => {
     })
   })
 
+  // A press only selects: it opens no worktree and no chat, and with no chat on the ticket nothing is sent until one is.
+  describe("with no chat working on the ticket and none picked", () => {
+    it('should open no worktree and no chat on a press', async () => {
+      const { page } = await board.page()
+      const opened: string[] = []
+      page.openLink = link => opened.push(link)
+      await ticketOn(page, ACTIVE).choose()
+      expect([ticketOn(page, ACTIVE).worktree, opened]).toEqual(['', []])
+    })
+
+    it("should send none of the ticket's commands and ask for its chat", async () => {
+      const { page, asked } = await board.page()
+      await board.chat('chat-1').checkIn()
+      await page.chat.refresh()
+      await ticketOn(page, ACTIVE).fillHandoff()
+      expect([asked.filter(request => request.path.endsWith('/send')), page.store.state.toasts.at(-1)?.text]).toEqual([[], 'No chat works on checkout-flow yet: open its chat from its card, or pick one in the chat list.'])
+    })
+  })
+
   // The app opens a new session on a folder from a claude://code/new link; the person confirms the folder and sends.
-  describe("with no chat working in the ticket's worktree", () => {
+  describe("with no chat working in the ticket's worktree, and its chat opened", () => {
     async function clicked(times = 1) {
       const { page } = await board.page()
       const opened: string[] = []
       page.openLink = link => opened.push(link)
       const worktree = board.openWorktree(ACTIVE)
       await page.reader.refresh()
-      for (let click = 0; click < times; click++) await ticketOn(page, ACTIVE).choose()
+      for (let click = 0; click < times; click++) await ticketOn(page, ACTIVE).openChat()
       return { worktree, opened }
     }
 
@@ -366,7 +385,7 @@ describe('Open Ticket Chat', () => {
       page.openLink = () => undefined
       board.openWorktree(ACTIVE)
       await page.reader.refresh()
-      await ticketOn(page, ACTIVE).choose()
+      await ticketOn(page, ACTIVE).openChat()
       expect(page.chat.isOpeningFor(ACTIVE)).toBe(true)
     })
 
@@ -380,7 +399,7 @@ describe('Open Ticket Chat', () => {
       const { page } = await board.page()
       const opened: string[] = []
       page.openLink = link => opened.push(link)
-      await ticketOn(page, ACTIVE).choose()
+      await ticketOn(page, ACTIVE).openChat()
       return { page, opened }
     }
 
@@ -401,7 +420,7 @@ describe('Open Ticket Chat', () => {
       const { page } = await board.page()
       const opened: string[] = []
       page.openLink = link => opened.push(link)
-      await page.board.tickets.find(ticket => ticket.name === 'shipped-work')!.choose()
+      await page.board.tickets.find(ticket => ticket.name === 'shipped-work')!.openChat()
       expect(opened).toEqual([])
     })
   })

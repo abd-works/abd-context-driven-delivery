@@ -316,6 +316,43 @@ def _(s):
         expect_active(world.data_of(world.Board.load().show()), None)
 
 
+@shared_stories.scenario("Close Active Session", "Commit the closed session's folder and return to main")
+def _(s):
+    @s.given("checkout-flow is the active ticket, on its own branch, with its session folder tracked")
+    def _(world):
+        seed_checkout_flow_open_on_its_pushed_branch(world.project)
+        # The fixture's checkout ignores .sessions/; a project that tracks it sees the folder move in git.
+        world.project.seed_file(".gitignore", "")
+
+    @s.when("the Person closes checkout-flow, committing and pushing")
+    def _(world):
+        world.Ticket.load(CHECKOUT_FLOW.name).close(leaving=["commit", "push"])
+
+    @s.then("nothing is left uncommitted")
+    def _(world):
+        expect(world.project.git("status", "--porcelain").strip()).to(equal(""))
+
+    @s.and_("the checkout is back on main")
+    def _(world):
+        expect(world.project.git("branch", "--show-current").strip()).to(equal("main"))
+
+
+@shared_stories.scenario("Close Active Session", "Offer to commit a branch open in its worktree")
+def _(s):
+    @s.given("checkout-flow is the active ticket, its branch open in its own worktree")
+    def _(world):
+        seed_checkout_flow_open_on_main(world.project)
+        world.Ticket.load(CHECKOUT_FLOW.name).open_worktree()
+
+    @s.when("the Person closes checkout-flow")
+    def _(world):
+        world.choices = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).close_choices())
+
+    @s.then("the close dialog offers a handoff, and to commit and push checkout-flow")
+    def _(world):
+        expect((world.choices["branch"], world.choices["choices"])).to(equal((CHECKOUT_FLOW.name, ["handoff", "commit", "push"])))
+
+
 @shared_stories.scenario("Close Active Session", "Close a session whose work is on main")
 def _(s):
     @s.given("checkout-flow is the active ticket, its work on main")

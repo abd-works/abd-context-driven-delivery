@@ -27,8 +27,9 @@ export class ChatClient {
     private readonly openLink: (link: string) => void,
   ) {}
 
+  // A chat is connected to send to; which one is decided per send: the ticket's own, else the one a person picked.
   get canSend(): boolean {
-    return this.store.state.targetChat !== null
+    return this.store.state.chats.length > 0
   }
 
   private get target(): ChatData | undefined {
@@ -36,13 +37,13 @@ export class ChatClient {
     return chats.find(chat => chat.id === targetChat)
   }
 
-  // The chat a person picked while it is connected, else the first connected one, because with none chosen every
-  // button that sends to a chat is off. The pick is remembered, so a chat that reconnects is chosen again.
+  // The chat a person picked while it is connected, and none otherwise: the list reorders as chats work, so its first
+  // chat is whichever was busy last. The pick is remembered, so a chat that reconnects is chosen again.
   async refresh(): Promise<void> {
     const chats = await ChatClientGenerated.list(this.api)
     if (!chats) return
     const { pickedChat } = this.store.state
-    const picked = chats.find(chat => chat.id === pickedChat) ?? chats[0]
+    const picked = chats.find(chat => chat.id === pickedChat)
     this.store.change({ chats, targetChat: picked?.id ?? null })
     await this.readMessages()
   }
@@ -76,6 +77,14 @@ export class ChatClient {
     }
     this.openLink(newChatLink(ticket, worktree))
     this.store.toast(`Confirm the folder and send in the Claude app to start the chat of ${ticket}`)
+  }
+
+  get hasPicked(): boolean {
+    return this.store.state.targetChat !== null
+  }
+
+  ask(question: string): void {
+    this.store.toast(question)
   }
 
   choose(chat: string): void {
@@ -143,6 +152,10 @@ export class ChatClient {
   }
 
   private async send(kind: CommandKind, text: string, sent: string): Promise<void> {
+    if (!this.store.state.targetChat) {
+      if (this.canSend) this.store.toast('Pick the chat to send to in the chat list first.')
+      return
+    }
     await this.actOnTarget(async chat => {
       const isSent = await chat.send(kind, text)
       if (isSent) this.store.toast(sent)
@@ -168,12 +181,24 @@ export class TicketChat {
     return !this.found && this.chats.isOpeningFor(this.ticket)
   }
 
+  // A ticket's commands go to its own chat, else to the chat a person picked; with neither, the person is asked for one
+  // rather than the command reaching an unrelated chat.
   command(text: string): Promise<void> {
+    if (this.isWithoutChat) return this.askForChat()
     return this.chats.command(text, this.found)
   }
 
   fill(text: string): Promise<void> {
+    if (this.isWithoutChat) return this.askForChat()
     return this.chats.fill(text, this.found)
+  }
+
+  private get isWithoutChat(): boolean {
+    return !this.found && !this.chats.hasPicked
+  }
+
+  private async askForChat(): Promise<void> {
+    this.chats.ask(`No chat works on ${this.ticket} yet: open its chat from its card, or pick one in the chat list.`)
   }
 
   beginOpening(): boolean {

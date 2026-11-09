@@ -12,11 +12,25 @@ import type { BoardPage } from './board-page'
 import { useDragGrip } from './drag-grip'
 import { SidePanelsView } from './side-panels-view'
 
+// A server that is down answers with whatever its process printed, often a whole Python traceback, whose last line names
+// the exception; the band shows that one line and keeps the rest behind Details.
+export function headlineOf(failure: string): string {
+  const lines = failure.split('\n').map(line => line.trim()).filter(Boolean)
+  return (lines[0]?.startsWith('Traceback') ? lines.at(-1) : lines[0]) ?? ''
+}
+
 function ServerBandView({ failure, hasBoard }: { failure: string; hasBoard: boolean }) {
   const consequence = hasBoard ? 'this board may be out of date. It reads again every two seconds' : 'there is no board to show yet. It tries again every two seconds'
+  const headline = headlineOf(failure)
   return (
     <div className="band band-failure" role="alert">
-      cdd is not connected, so {consequence} · {failure}
+      cdd is not connected, so {consequence} · {headline}
+      {headline !== failure.trim() ? (
+        <details className="band-details">
+          <summary>Details</summary>
+          <pre>{failure}</pre>
+        </details>
+      ) : null}
     </div>
   )
 }

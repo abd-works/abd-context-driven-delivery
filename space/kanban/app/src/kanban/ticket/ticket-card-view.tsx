@@ -69,6 +69,9 @@ function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
       <div className="ticket-title-line">
         <div className="ticket-title">{ticket.title}</div>
         {ticket.chat.isOpening ? <span className="progress-wheel" role="status" title="Opening its chat in the Claude app" aria-label="Opening its chat" /> : null}
+        {ticket.canOpenChat && !ticket.chat.isOpening ? (
+          <SessionActionView action="chat" label={`Open the chat of ${ticket.title}`} hint="Open its chat: its worktree and a new chat in the Claude app" isOff={false} onPress={() => ticket.openChat()} />
+        ) : null}
         <SplitActionView ticket={ticket} />
       </div>
       <div className="ticket-meta">{ageOf(state.now, ticket.lastActivity)}</div>
@@ -192,7 +195,7 @@ export function TicketCardView({ ticket, spot }: { ticket: TicketClient; spot: C
       draggable={isDraggable}
       onDragStart={dragStarted}
       onDragEnd={dragEnded}
-      onClick={() => void ticket.choose()}
+      onClick={() => ticket.choose()}
       style={{ borderColor: borderColorOf(ticket, isSelected), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}
     >
       {/* Chrome starts no drag on a button, and this one covers the card, so it carries the card's drag. */}

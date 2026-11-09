@@ -58,3 +58,16 @@
 *Given* the [ticket](../../../kanban-model.md#ticket--card) billing-report has the story_map [fidelity](../../../kanban-model.md#fidelityguidance) generated and validated with no violations
 *When* a review of stories-story-map is written to billing-report's [session log](../../../kanban-model.md#session)
 *Then* a toast says stories-story-map done on billing-report
+
+#### Scenario: Show a server failure on one line
+
+*Given* the cdd server answers with a Python traceback
+*When* the session board draws its server band
+*Then* the band shows the traceback's exception line
+*And* the whole traceback is behind Details
+
+#### Scenario: Say a slow call is still running
+
+*Given* the cdd server is busy
+*When* a ticket call has run for eight seconds
+*Then* a toast says the board is still waiting on it
