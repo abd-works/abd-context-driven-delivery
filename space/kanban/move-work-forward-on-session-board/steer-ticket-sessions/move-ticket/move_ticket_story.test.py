@@ -25,7 +25,7 @@ with story("Move Ticket"):
         with when("the Person moves ready-to-move on"):
             # Person -> Ticket.move_next()
             # Ticket -> Stage.next_stage <- Specification
-            # Ticket -> Ticket.record('move Specification')
+            # Ticket -> TicketWork.record('move Specification')
             # Board page -> Board.show()
             pass
         with then("ready-to-move is In progress in Specification and selected"):
@@ -38,8 +38,8 @@ with story("Move Ticket"):
             pass
         with when("the Person moves move-me into Implementation's Done"):
             # Person -> Ticket.move_to('Implementation', done=True)
-            # Ticket -> Ticket.record('move Implementation')
-            # Ticket -> Ticket.record('done Implementation')
+            # Ticket -> TicketWork.record('move Implementation')
+            # Ticket -> TicketWork.record('done Implementation')
             pass
         with then("move-me shows in Implementation's Done and is selected"):
             pass
@@ -50,8 +50,8 @@ with story("Move Ticket"):
         with when("the Person moves second-spec back"):
             # Person -> Ticket.move_previous()
             # Ticket -> Stage.previous_stage <- Discovery
-            # Ticket -> Ticket.record('move Discovery')
-            # Ticket -> Ticket.record('done Discovery')
+            # Ticket -> TicketWork.record('move Discovery')
+            # Ticket -> TicketWork.record('done Discovery')
             pass
         with then("second-spec shows in Discovery's Done"):
             pass
@@ -97,8 +97,8 @@ with story("Move Ticket"):
         with when("the Person moves shipped-work back"):
             # Person -> Ticket.move_previous()
             # Ticket -> Session.reopen()
-            # Ticket -> Ticket.record('move Implementation')
-            # Ticket -> Ticket.record('done Implementation')
+            # Ticket -> TicketWork.record('move Implementation')
+            # Ticket -> TicketWork.record('done Implementation')
             pass
         with then("shipped-work shows in Implementation's Done"):
             pass

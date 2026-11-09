@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from harness.agent_tools.agent_tools import agent_toolset
 
-from cdd_guidance.patterns.domain_driven_stack import DomainDrivenStack
+from cdd_guidance.patterns.domain_driven_stack.domain_driven_stack import DomainDrivenStack
 
 
 @agent_toolset

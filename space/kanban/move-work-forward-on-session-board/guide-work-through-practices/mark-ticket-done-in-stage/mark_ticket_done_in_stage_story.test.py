@@ -18,7 +18,7 @@ with story("Mark Ticket Done In Stage"):
         with when("the Person marks pet-visits done in Discovery"):
             # Person -> Ticket.move_next()
             # Ticket -> Ticket.is_done <- false
-            # Ticket -> Ticket.record('done Discovery')
+            # Ticket -> TicketWork.record('done Discovery')
             pass
         with then("pet-visits shows in Discovery's Done"):
             pass
@@ -32,7 +32,7 @@ with story("Mark Ticket Done In Stage"):
             pass
         with when("the Person moves ready-to-move back into Discovery's In progress"):
             # Person -> Ticket.move_to('Discovery')
-            # Ticket -> Ticket.record('in-progress Discovery')
+            # Ticket -> TicketWork.record('in-progress Discovery')
             pass
         with then("ready-to-move shows In progress in Discovery"):
             pass

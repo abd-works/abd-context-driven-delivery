@@ -46,7 +46,7 @@ with story("Activate Ticket"):
             pass
         with when("the Person activates billing-report with Create handoff chosen"):
             # Person -> Ticket.activate(leaving=['handoff'], opening=[])
-            # Ticket -> active Ticket.leave(['handoff'])
+            # Ticket -> active TicketCheckout.leave(['handoff'])
             # Ticket -> Handoffs.write(LeavingHandoff(checkout-flow).document)
             pass
         with then("checkout-flow's session folder holds a handoff"):

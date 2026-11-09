@@ -23,7 +23,7 @@ story('Review Fidelity', CHAT_BAR, () => {
       await scene.ui.press({ key: 'next-action' })
     })
     // ChatBarView press -> reviewFidelity($, fidelity) -> $.mcp.call('fidelity-progress.finish_review', { ticket: 'checkout-flow', fidelity: 'ux-mockup' }) -> FidelityProgress.finish_review()
-    // Ticket -> Ticket.record('review UX mockup')
+    // Ticket -> TicketWork.record('review UX mockup')
     then('the UX dot shows reviewed', async ($, on, scene) => {
       await expectStates(scene.ui, { 'ux-mockup': '✓ done' })
       expect(called(scene.world, 'fidelity-progress.finish_review')).toEqual({ ticket: 'checkout-flow', fidelity: 'ux-mockup' })

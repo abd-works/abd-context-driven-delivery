@@ -8,7 +8,9 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.chat.chat import Chat
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
+from harness.guidance.stages import GENERATE, RENDER, REVIEW, VALIDATE
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.markdown.format import Format
 from harness.mcp.mcp_server import mcp
@@ -20,14 +22,11 @@ from space.kanban.board import (
     Column,
     FidelityNotFoundError,
     Help,
-    NotAStageError,
     Stage,
 )
-from harness.chat.chat import Chat
-from harness.guidance.stages import GENERATE, RENDER, REVIEW, VALIDATE
 from space.kanban.format_choice import FormatChoice
-from space.kanban.leaving_handoff import LeavingHandoff
 from space.kanban.report import Report, ReportFile
+from space.kanban.ticket_checkout import LeaveChoices, OpenChoices, TicketCheckout
 from space.repo.repo import Branch
 from space.session import Session
 from space.session.session_log import LogEntry
@@ -42,12 +41,6 @@ MARKED_DONE = "done"
 MARKED_IN_PROGRESS = "in-progress"
 # The actions that check or convert a fidelity's output, so they wait until there is some.
 ONCE_THERE_IS_OUTPUT = (VALIDATE, REVIEW, RENDER)
-LEAVE_COMMIT = "commit"
-LEAVE_PUSH = "push"
-LEAVE_MERGE = "merge"
-LEAVE_HANDOFF = "handoff"
-OPEN_BRANCH = "branch"
-OPEN_WORKTREE = "worktree"
 
 
 class TicketNotFoundError(LookupError):
@@ -63,17 +56,19 @@ class TicketNotFoundError(LookupError):
 class Ticket(Card):
     """Show one work session as a unit of delivery and move it through the stages."""
 
-    # It works with three objects: its session, which holds its folders, practices, and files; its progress, one per
-    # fidelity the board requires; and the board it sits on. Callers reach those through it rather than through copies
-    # of their fields.
+    # It works with its session, which holds its folders, practices, and files, and the board it sits on, and holds
+    # three parts made once: its work (its progress on each fidelity the board requires), its checkout (its branch and
+    # worktree), and its stage marks (the moves and marks a person made). Callers reach those through it.
     # Never moves to another column by itself: a person moves it, and the move is written to its session log.
     # The board is read after every cdd call, so these tools stay out of the session log; a move writes its own line.
+    # Its tools and data fields stay on it, so their published names do not change (.context/cdr/0004).
 
     def __init__(self, session: Session, board: Board) -> None:
         super().__init__(board)
         self._session = session
-        # Its progress as last read from its session's log; none until asked for, and none again once a line is written.
-        self._progress_read: list[FidelityProgress] | None = None
+        self.work = TicketWork(self)
+        self.checkout = TicketCheckout(self)
+        self.marks = StageMarks(self)
 
     @classmethod
     @tool_subject
@@ -104,19 +99,14 @@ class Ticket(Card):
     @noSessionLog
     def branch(self) -> Branch:
         """Return ticket's own branch, named as the ticket: whether the repository has it yet, so activating ticket offers to create only what is missing, and whether it is checked out, so leaving ticket can commit, push, and merge its work."""
-        return self._board.repo.branch_named(self.name)
+        return self.checkout.branch
 
     @mcp
     @agent_tool
     @noSessionLog
     def work_branch(self) -> Branch:
         """Return the branch ticket's work is on, which leaving ticket commits and pushes: its own branch while it is checked out, else the default branch while the checkout is on it, as for a session with no branch of its own. Any other branch checked out is not ticket's, so its own branch comes back not checked out and leaving commits nothing."""
-        own = self.branch()
-        if own.is_checked_out:
-            return own
-        repo = self._board.repo
-        default = repo.branch_named(repo.default_branch)
-        return default if default.is_checked_out else own
+        return self.checkout.work_branch
 
     @property
     def title(self) -> str:
@@ -133,34 +123,7 @@ class Ticket(Card):
     def progress(self) -> list[FidelityProgress]:
         """One per fidelity the board requires, in stage order, each naming its fidelity; read from the session log once
         per ticket read, with the latest report's judgment able to fail a validate the log shows passing."""
-        return list(self._progress)
-
-    @property
-    def _progress(self) -> list[FidelityProgress]:
-        if self._progress_read is None:
-            entries = self._session.log.entries
-            self._progress_read = [FidelityProgress.from_log(fidelity, stage, entries, self) for stage in self._stages for fidelity in self._required_in(stage)]
-        return self._progress_read
-
-    def record(self, line: str) -> Ticket:
-        """Write line to its session's log; its progress is read from the log again next time it is asked for."""
-        self._session.log.record(line)
-        self._progress_read = None
-        return self
-
-    def _required_in(self, stage: Stage) -> list[FidelityGuidance]:
-        """Every fidelity stage requires, in practice order, as this ticket's session holds it: one object per fidelity
-        in a session, which finds its own files and reports there and is the one an action on it works with."""
-        return [fidelity for practice in self._session.practices.values() for fidelity in practice.fidelities if stage.requires(fidelity)]
-
-    def progress_of(self, slug: str) -> FidelityProgress:
-        """The progress of the fidelity slug names, such as stories-story-map. Only that fidelity's progress is read,
-        because a tool that names one fidelity needs no other's reports."""
-        found = next(((fidelity, stage) for stage in self._stages for fidelity in self._required_in(stage) if fidelity.slug == slug), None)
-        if found is None:
-            raise FidelityNotFoundError(slug, f"ticket {self.name!r}")
-        fidelity, stage = found
-        return FidelityProgress.from_log(fidelity, stage, self._session.log.entries, self)
+        return list(self.work.progress)
 
     @property
     @data_field(reference=True)
@@ -169,11 +132,8 @@ class Ticket(Card):
         its name, since the column sends the ticket."""
         if self._session.is_closed:
             return self._board.column(COMPLETE_COLUMN)
-        moved = self._moved_into()
-        if moved is not None:
-            return moved
-        worked = [progress.stage for progress in self._enabled_progress if progress.done_actions]
-        return worked[0] if worked else self._stages[0]
+        worked = [progress.stage for progress in self.work.enabled if progress.done_actions]
+        return self.marks.moved_into or (worked[0] if worked else self._board.stages[0])
 
     @property
     @data_field
@@ -193,7 +153,7 @@ class Ticket(Card):
         """The columns besides the stages a person can drop it on. The Backlog takes any ticket, which keeps its whole
         folder there. Complete takes one from Implementation's Done, or the active ticket through its Close dialog,
         because closing it asks what to do with its work."""
-        final = self._stages[-1]
+        final = self._board.stages[-1]
         closes = not self.is_closed and (self.is_active or (self.column is final and self.is_done))
         return [BACKLOG_COLUMN, *([COMPLETE_COLUMN] if closes else [])]
 
@@ -204,10 +164,10 @@ class Ticket(Card):
         column = self.column
         if not isinstance(column, Stage):
             return False
-        marked = self._latest_mark(column)
+        marked = self.marks.latest_in(column)
         if marked is not None:
             return marked == MARKED_DONE
-        return all(progress.is_done for progress in self._enabled_progress if progress.stage is column)
+        return all(progress.is_done for progress in self.work.enabled if progress.stage is column)
 
     @property
     @data_field(key="next", reference=True)
@@ -216,10 +176,11 @@ class Ticket(Card):
         builds on it; none when it is done in its stage or Complete. Sent by its ticket and fidelity, since progress sends
         it."""
         column = self.column
-        if self.is_done or column not in self._stages:
+        stages = self._board.stages
+        if self.is_done or column not in stages:
             return None
-        reached = self._stages[: self._stages.index(column) + 1]
-        return next((progress for progress in self._enabled_progress if progress.stage in reached and not progress.is_done), None)
+        reached = stages[: stages.index(column) + 1]
+        return next((progress for progress in self.work.enabled if progress.stage in reached and not progress.is_done), None)
 
     @property
     @data_field
@@ -227,7 +188,7 @@ class Ticket(Card):
         """What the agent is told about this ticket in its system prompt while it is the active one: the ticket, its
         column, its next fidelity or that its stage waits for a person, and the steps every fidelity goes through."""
         upcoming = self.next_fidelity
-        steps = self._stages[0].steps
+        steps = self._board.stages[0].steps
         following = f"Its next guidance is {upcoming.fidelity.slug}. " if upcoming else "Its stage is done and waits for a person to move it. "
         return (
             f'CDD session board: you are working on ticket {self.name} ("{self.title}"), in {self.column.name}. '
@@ -243,8 +204,7 @@ class Ticket(Card):
     @data_field
     def worktree(self) -> str:
         """The folder of the ticket's own worktree, where its chat works; empty while it has none."""
-        found = self._board.worktrees.get(self.branch())
-        return str(found.path) if found else ""
+        return self.checkout.worktree
 
     @property
     @data_field(key="working_chat", reference=True)
@@ -252,34 +212,20 @@ class Ticket(Card):
         """The connected chat working on the ticket, which every command the board sends for it goes to, sent by its id as
         working_chat: the one working in its worktree or a folder inside it, else one whose mod names no folder and that
         is titled by the ticket's name, as the board titles the chat it opens for it. None while no chat works on it."""
-        worktree = self.worktree
-        chats = self._board.chats
-        working = next((chat for chat in chats if worktree and chat.folder and Path(chat.folder).resolve().is_relative_to(Path(worktree).resolve())), None)
-        return working or next((chat for chat in chats if not chat.folder and chat.name == self.name), None)
+        return self.checkout.chat
 
     @property
     @data_field
     def stage_work(self) -> list[StageWork]:
         """Its work in each stage taken together, in stage order: what a stage head's action bar shows and acts on."""
-        return [self.work_in(stage) for stage in self._stages]
-
-    def work_in(self, stage: Stage) -> StageWork:
-        """Its work in stage: the progress of every fidelity stage requires whose practice its session works on."""
-        return StageWork(self, stage, [progress for progress in self._enabled_progress if progress.stage is stage])
-
-    def action_command(self, action: str, fidelities: list[FidelityGuidance]) -> str:
-        """The command that runs action on fidelities in this ticket's session, one command for them all so the chat
-        works on them in one turn. It names the session, because the chat that runs it can have another session open,
-        and no format, so the action works in the format each fidelity keeps in that session."""
-        named = " ".join(fidelity.slug for fidelity in fidelities)
-        return f"/actions-{action} {named} session={self._session.session_file_from_project}"
+        return [self.work.in_stage(stage) for stage in self._board.stages]
 
     @mcp
     @agent_tool
     @noSessionLog
     def format_choices(self, fidelities: list[str]) -> list[FormatChoice]:
         """Return the format chips of an action bar on ticket over fidelities, slugs such as stories-story-map: each group of formats they offer, the format each fidelity uses from it, how many offer it and have a file in it already, and whether the bar opens with it picked."""
-        read = [(progress.fidelity, progress.files()) for progress in (self.progress_of(slug) for slug in fidelities)]
+        read = [(progress.fidelity, progress.files()) for progress in (self.work.progress_of(slug) for slug in fidelities)]
         return FormatChoice.offered_by(read)
 
     @mcp
@@ -287,26 +233,21 @@ class Ticket(Card):
     @noSessionLog
     def close_choices(self) -> LeaveChoices:
         """Return what closing ticket can do with its work, each chosen at first: a handoff always, and a commit and a push of the branch its work is on while that branch is checked out, which branch names. Closing never merges."""
-        return LeaveChoices(self._checked_out_work_branch(), merges=False)
+        return self.checkout.close_choices
 
     @mcp
     @agent_tool
     @noSessionLog
     def leave_choices(self) -> LeaveChoices:
         """Return what leaving ticket for another can do with its work now, in the order leave does it: a handoff always; a commit and a push of the branch its work is on while that branch is checked out, which branch names; and a merge of that branch while it is the ticket's own, not the default branch. Each is chosen at first but the merge, which waits for the person."""
-        return LeaveChoices(self._checked_out_work_branch(), merges=True)
+        return self.checkout.leave_choices
 
     @mcp
     @agent_tool
     @noSessionLog
     def open_choices(self) -> OpenChoices:
         """Return what opening ticket can create for it now, each chosen at first: its own branch while the repository has none, and its own worktree while it has none."""
-        return OpenChoices(self.branch(), self.worktree)
-
-    def _checked_out_work_branch(self) -> Branch | None:
-        """The branch the ticket's work is on while it is checked out, which leaving acts on; none otherwise."""
-        branch = self.work_branch()
-        return branch if branch.is_checked_out else None
+        return self.checkout.open_choices
 
     @mcp
     @agent_tool
@@ -315,12 +256,8 @@ class Ticket(Card):
         """Make ticket the current session. leaving names what to do with the active ticket's work first: handoff, commit, push, merge. opening names what to create for ticket: branch, worktree."""
         active = self._board.active
         if active is not None and active.name != self.name:
-            active.leave(leaving or [])
-        repo = self._board.repo
-        if OPEN_BRANCH in (opening or []):
-            repo.switch_branch(self.name)
-        if OPEN_WORKTREE in (opening or []):
-            repo.switch_worktree(self.name)
+            active.checkout.leave(leaving or [])
+        self.checkout.open(opening or [])
         self._board.sessions.switch(self.name)
         return self
 
@@ -329,28 +266,8 @@ class Ticket(Card):
     @noSessionLog
     def open_worktree(self) -> Ticket:
         """Open ticket's own worktree beside the repository, creating its branch when missing: the folder its chat works in, named as its worktree. The open session is left as it is."""
-        self.branch().open_in_worktree()
-        # The board lists worktrees once per read, so it forgets them and lists the new one next time.
-        self._board.reread()
+        self.checkout.open_worktree()
         return self
-
-    def leave(self, leaving: list[str]) -> None:
-        """Do what leaving names with the ticket's work: write a handoff for its session, then commit, push, and merge
-        the branch its work is on. Those three only while that branch is checked out, because they act on whatever is
-        checked out. Work on the default branch is committed and pushed there; it has no branch to merge and no
-        worktree to remove."""
-        if not leaving:
-            return
-        if LEAVE_HANDOFF in leaving:
-            self._session.handoffs.write(LeavingHandoff(self).document)
-        branch = self.work_branch()
-        if not branch.is_checked_out:
-            return
-        repo = self._board.repo
-        if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
-            repo.push_commit(f"{self.name}: leave session", sync_remote=LEAVE_PUSH in leaving)
-        if LEAVE_MERGE in leaving and not branch.is_default:
-            repo.close_branch(branch.name)
 
     @mcp
     @agent_tool
@@ -361,9 +278,9 @@ class Ticket(Card):
         if not isinstance(column, Stage):
             return self
         if not self.is_done:
-            return self._mark(MARKED_DONE, column)
+            return self.marks.mark(MARKED_DONE, column)
         following = column.next_stage
-        return self._enter(following) if following else self.close()
+        return self.marks.enter(following) if following else self.close()
 
     @mcp
     @agent_tool
@@ -372,13 +289,13 @@ class Ticket(Card):
         """Move ticket back: from Done to its stage's In progress, from In progress to the previous column's Done. Out of Complete it reopens in Implementation; out of Discovery it goes to the Backlog with its work."""
         column = self.column
         if not isinstance(column, Stage):
-            return self._reopen()
+            reopened, final = self._board.ticket_of(self._session.reopen()), self._board.stages[-1]
+            reopened.marks.enter(final)
+            return reopened.marks.mark(MARKED_DONE, final)
         if self.is_done:
-            return self._mark(MARKED_IN_PROGRESS, column)
+            return self.marks.mark(MARKED_IN_PROGRESS, column)
         earlier = column.previous_stage
-        if earlier is None:
-            return self._return_to_backlog()
-        return self._enter(earlier)._mark(MARKED_DONE, earlier)
+        return self.marks.place(earlier, MARKED_DONE) if earlier else self._return_to_backlog()
 
     @mcp
     @agent_tool
@@ -387,19 +304,16 @@ class Ticket(Card):
         """Move ticket straight into stage's In progress, or its Done when done is true, whatever its work; dragging a card does this. Out of Complete it reopens first. Into the Backlog, from any column, it becomes a backlog item that keeps its whole folder."""
         if stage == BACKLOG_COLUMN:
             return self._return_to_backlog()
-        target = next((column for column in self._stages if column.name == stage), None)
-        if target is None:
-            raise NotAStageError(stage)
+        target = self._board.stage(stage)
         moved = self if isinstance(self.column, Stage) else self._board.ticket_of(self._session.reopen())
-        entered = moved if moved.column is target else moved._enter(target)
-        return entered._mark(MARKED_DONE if done else MARKED_IN_PROGRESS, target)
+        return moved.marks.place(target, MARKED_DONE if done else MARKED_IN_PROGRESS)
 
     @mcp
     @agent_tool
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
         """Close ticket: its session ends, its folder moves to _complete/, and it shows in Complete. leaving names what to do with its work first: handoff, commit, push, merge."""
-        self.leave(leaving or [])
+        self.checkout.leave(leaving or [])
         self._session.close()
         return self._board.ticket_of(self._session.move_to_closed())
 
@@ -420,12 +334,6 @@ class Ticket(Card):
         reports = [entry.report() for entry in self.progress if entry.has_violations and entry.stage is column]
         return Report.from_reports(self._session.from_project(self._session.reports_folder), reports)
 
-    def _reopen(self) -> Ticket:
-        """Back out of Complete into Implementation's Done: its session reopens."""
-        reopened = self._board.ticket_of(self._session.reopen())
-        final = self._stages[-1]
-        return reopened._enter(final)._mark(MARKED_DONE, final)
-
     def _return_to_backlog(self) -> BacklogItem:
         """Into the Backlog from any column: its session closes and its whole folder becomes a backlog item, so starting
         the item brings the ticket back with its work."""
@@ -435,31 +343,94 @@ class Ticket(Card):
         item.write_if_missing(kept_in_backlog.title)
         return item
 
-    @property
-    def _stages(self) -> list[Stage]:
-        return [column for column in self._board.columns if isinstance(column, Stage)]
+
+class TicketWork:
+    """*TicketWork* is a ticket's progress on each fidelity the board requires whose practice its session holds, in
+    stage order: read from its session's log once per ticket read, and read again after the ticket writes a line."""
+
+    def __init__(self, ticket: Ticket) -> None:
+        self._ticket = ticket
+        # Its progress as last read from its session's log; none until asked for, and none again once a line is written.
+        self._read: list[FidelityProgress] | None = None
+
+    @cached_property
+    def _required(self) -> list[tuple[Stage, FidelityGuidance]]:
+        """Each fidelity a stage requires, as this ticket's session holds it, with its stage: one object per fidelity in
+        a session, which finds its own files and reports there and is the one an action on it works with."""
+        fidelities = [fidelity for practice in self._ticket.session.practices.values() for fidelity in practice.fidelities]
+        return [(stage, fidelity) for stage in self._ticket.board.stages for fidelity in fidelities if stage.requires(fidelity)]
 
     @property
-    def _enabled_progress(self) -> list[FidelityProgress]:
+    def progress(self) -> list[FidelityProgress]:
+        if self._read is None:
+            entries = self._ticket.session.log.entries
+            self._read = [FidelityProgress.from_log(fidelity, stage, entries, self._ticket) for stage, fidelity in self._required]
+        return self._read
+
+    @property
+    def enabled(self) -> list[FidelityProgress]:
+        """The progress of the fidelities whose practice the ticket's session works on."""
         return [entry for entry in self.progress if entry.is_enabled]
 
-    def _moved_into(self) -> Stage | None:
-        moves = [entry.stage for entry in self._session.log.entries if entry.verb == MOVED_INTO and entry.stage]
-        return next((stage for stage in self._stages if moves and stage.name == moves[-1]), None)
+    def progress_of(self, slug: str) -> FidelityProgress:
+        """The progress of the fidelity slug names, such as stories-story-map. Only that fidelity's progress is read,
+        because a tool that names one fidelity needs no other's reports."""
+        found = next(((stage, fidelity) for stage, fidelity in self._required if fidelity.slug == slug), None)
+        if found is None:
+            raise FidelityNotFoundError(slug, f"ticket {self._ticket.name!r}")
+        stage, fidelity = found
+        return FidelityProgress.from_log(fidelity, stage, self._ticket.session.log.entries, self._ticket)
 
-    def _latest_mark(self, stage: Stage) -> str | None:
+    def in_stage(self, stage: Stage) -> StageWork:
+        """Its work in stage: the progress of every fidelity stage requires whose practice its session works on."""
+        return StageWork(self._ticket, stage, [progress for progress in self.enabled if progress.stage is stage])
+
+    def command(self, action: str, fidelities: list[FidelityGuidance]) -> str:
+        """The command that runs action on fidelities in the ticket's session, one command for them all so the chat
+        works on them in one turn. It names the session, because the chat that runs it can have another session open,
+        and no format, so the action works in the format each fidelity keeps in that session."""
+        named = " ".join(fidelity.slug for fidelity in fidelities)
+        return f"/actions-{action} {named} session={self._ticket.session.session_file_from_project}"
+
+    def record(self, line: str) -> None:
+        """Write line to the ticket's session log; its progress is read from the log again next time it is asked for."""
+        self._ticket.session.log.record(line)
+        self._read = None
+
+
+class StageMarks:
+    """*StageMarks* are the moves and marks a person made on one ticket's stages, as its session's log answers them: the
+    stage it was last moved into, and in a stage whether it was last marked done or in progress since entering it. A
+    move or mark is a line written through the ticket's work, whose progress is read again after it."""
+
+    def __init__(self, ticket: Ticket) -> None:
+        self._ticket = ticket
+
+    @property
+    def moved_into(self) -> Stage | None:
+        """The stage of the ticket's latest move; none before a person has moved it."""
+        moved = self._ticket.session.log.latest(MOVED_INTO)
+        return next((stage for stage in self._ticket.board.stages if moved is not None and stage.name == moved.stage), None)
+
+    def latest_in(self, stage: Stage) -> str | None:
         """The latest mark a person made in stage since entering it; none when they have made none."""
-        latest = None
-        for entry in self._session.log.entries:
-            if entry.stage == stage.name and entry.verb in (MOVED_INTO, MARKED_DONE, MARKED_IN_PROGRESS):
-                latest = None if entry.verb == MOVED_INTO else entry.verb
-        return latest
+        latest = self._ticket.session.log.latest(MOVED_INTO, MARKED_DONE, MARKED_IN_PROGRESS, stage=stage.name)
+        return latest.verb if latest is not None and latest.verb != MOVED_INTO else None
 
-    def _mark(self, mark: str, stage: Stage) -> Ticket:
-        return self.record(f"{mark} {stage.name}")
+    def enter(self, stage: Stage) -> Ticket:
+        """Move the ticket into stage's In progress."""
+        return self.mark(MOVED_INTO, stage)
 
-    def _enter(self, stage: Stage) -> Ticket:
-        return self.record(f"{MOVED_INTO} {stage.name}")
+    def mark(self, mark: str, stage: Stage) -> Ticket:
+        """Mark the ticket done or in progress in stage."""
+        self._ticket.work.record(f"{mark} {stage.name}")
+        return self._ticket
+
+    def place(self, stage: Stage, mark: str) -> Ticket:
+        """Put the ticket in stage, entering it first unless it is there, then mark it there."""
+        if self._ticket.column is not stage:
+            self.enter(stage)
+        return self.mark(mark, stage)
 
 
 @identity("ticket", "fidelity")
@@ -501,7 +472,7 @@ class FidelityProgress:
     def load(cls, ticket: str, fidelity: str, *, project: Path | str) -> FidelityProgress:
         """The progress of fidelity, a slug such as stories-story-map, on the ticket named ticket on the board of
         project."""
-        return Ticket.load(ticket, project=project).progress_of(fidelity)
+        return Ticket.load(ticket, project=project).work.progress_of(fidelity)
 
     @property
     @data_field(reference=True)
@@ -569,7 +540,7 @@ class FidelityProgress:
         """The command that runs action on this fidelity in its ticket's session. It names the session, because the
         chat that runs it can have another session open, and no format, so the action works in the format the fidelity
         keeps in that session."""
-        return self._ticket.action_command(action, [self._fidelity])
+        return self._ticket.work.command(action, [self._fidelity])
 
     @property
     @data_field
@@ -643,8 +614,8 @@ class FidelityProgress:
     @noSessionLog
     def finish_review(self) -> FidelityProgress:
         """Record that a person has reviewed and approved this fidelity: a review line in its ticket's session log. A review counts until the fidelity is validated again, and a fidelity whose actions are all done is done in its stage."""
-        ticket = self._ticket.record(f"{REVIEW} {self._practice.key} {self._fidelity.name}")
-        return next(progress for progress in ticket.progress if progress.fidelity is self._fidelity)
+        self._ticket.work.record(f"{REVIEW} {self._practice.key} {self._fidelity.name}")
+        return next(progress for progress in self._ticket.progress if progress.fidelity is self._fidelity)
 
     @mcp
     @agent_tool
@@ -659,7 +630,7 @@ class FidelityProgress:
     @noSessionLog
     def help(self) -> Help:
         """Return the overview, guidance, and rules of this fidelity, with its stage and its page on the forge."""
-        return Help(self._practice, self._fidelity, self._stage, self._ticket.board.catalogued(self._practice))
+        return Help(self._practice, self._fidelity, self._stage, self._ticket.board.catalogued_practices.of(type(self._practice)))
 
     @mcp
     @agent_tool
@@ -681,59 +652,6 @@ class FidelityProgress:
             return False
         latest = self.latest_report
         return latest is not None and latest.is_judged_failing
-
-
-class LeaveChoices:
-    """What leaving a ticket can do with its work now, closing it or switching to another: a handoff always, a commit
-    and a push of the branch its work is on while that branch is checked out, since those steps act on whatever is
-    checked out, and, when switching, a merge of that branch while it is not the default branch, which has nothing to
-    merge into. Closing never merges. ``Ticket.leave`` does exactly these, so a dialog offers only what will be done."""
-
-    def __init__(self, branch: Branch | None, *, merges: bool) -> None:
-        self._branch = branch
-        self._merges = merges
-
-    @property
-    @data_field
-    def branch(self) -> str:
-        """The branch leaving commits, pushes, and merges; empty when nothing checked out is the ticket's."""
-        return self._branch.name if self._branch is not None else ""
-
-    @property
-    @data_field
-    def choices(self) -> list[str]:
-        """Each choice leaving offers now, in the order leave does them."""
-        if self._branch is None:
-            return [LEAVE_HANDOFF]
-        merge = [LEAVE_MERGE] if self._merges and not self._branch.is_default else []
-        return [LEAVE_HANDOFF, LEAVE_COMMIT, LEAVE_PUSH, *merge]
-
-    @property
-    @data_field
-    def chosen(self) -> list[str]:
-        """The choices a person starts with chosen: every one offered but the merge, which waits for them."""
-        return [choice for choice in self.choices if choice != LEAVE_MERGE]
-
-
-class OpenChoices:
-    """What opening a ticket can create for it now: its own branch while the repository has none, and its own worktree
-    while it has none. ``Ticket.activate`` creates each one chosen."""
-
-    def __init__(self, branch: Branch, worktree: str) -> None:
-        self._branch = branch
-        self._worktree = worktree
-
-    @property
-    @data_field
-    def has_branch(self) -> bool:
-        """Whether the ticket's own branch is in the repository already."""
-        return self._branch.exists
-
-    @property
-    @data_field
-    def choices(self) -> list[str]:
-        """Each choice opening offers now, all chosen at first."""
-        return [*([] if self.has_branch else [OPEN_BRANCH]), *([] if self._worktree else [OPEN_WORKTREE])]
 
 
 class ActionStates:
@@ -813,7 +731,7 @@ class StageWork:
     def commands(self) -> dict[str, str]:
         """The command a chat runs for each action its stage offers, naming every one of its fidelities."""
         fidelities = [progress.fidelity for progress in self._progress]
-        return {action: self._ticket.action_command(action, fidelities) for action in self._stage.actions}
+        return {action: self._ticket.work.command(action, fidelities) for action in self._stage.actions}
 
     @property
     @data_field

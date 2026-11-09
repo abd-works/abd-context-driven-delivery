@@ -11,14 +11,6 @@ from harness.graph.violation import Violation
 from cdd_guidance.actions.validate.report_files import ReportFiles
 
 
-class PathsNotFoundError(FileNotFoundError):
-    """Raised when validate is named a path that is not there, or not under the session's root, where the graph reads."""
-
-    def __init__(self, unreadable: list[str], project: Path, session_root: Path) -> None:
-        named = "; ".join(f"{path}, read from {project}" for path in unreadable)
-        super().__init__(f"validate found no file under the session's root {session_root} at {named}. Name paths from the project's root, or absolute.")
-
-
 class CheckedGraph:
     """The graph a validate call checks: built from just the files the call names, or from the folders its fidelities
     have written when it names none, and written beside the call's report; or the saved graph or node lists the call
@@ -132,15 +124,10 @@ class CheckedGraph:
     def _from_session_root(self, paths: list[str] | None) -> list[str]:
         """Each named path as graph node files record it, relative to the session's root.
 
-        A relative path is read from the project's checkout, where the agent works and every path it sees starts. A
-        path that is not there, or not under the session's root, is refused: the graph would be built from nothing,
-        and its empty report would read as a clean validate."""
-        root = self.session.work_root
-        named = [(item, self.session.path_named(item)) for item in paths or []]
-        unreadable = [item for item, path in named if not path.exists() or not self._under_root(path)]
-        if unreadable:
-            raise PathsNotFoundError(unreadable, self.session.repo_path, root)
-        return [path.relative_to(root).as_posix() for _, path in named]
+        A relative path is read from the project's checkout, where the agent works and every path it sees starts. The
+        session's files refuse a path that is not there, or not under the session's root: the graph would be built
+        from nothing, and its empty report would read as a clean validate."""
+        return [self.session.session_files.from_root(item) for item in paths or []]
 
     def _other_format_files(self) -> set[str]:
         """The declared files of every format validate does not check, as graph node files record them."""
@@ -152,7 +139,7 @@ class CheckedGraph:
             for path in paths
             if "{" not in path
         ]
-        return {path.relative_to(self.session.work_root).as_posix() for path in others if self.session.work_root in path.parents}
+        return {path.relative_to(self.session.work_root).as_posix() for path in others if self.session.session_files.in_root(path)}
 
     def _written_outputs(self) -> list[str]:
         """The folders holding what each listed fidelity declares in its checked format and has already written. The
@@ -160,8 +147,4 @@ class CheckedGraph:
         declared = [path for fidelity, checked in zip(self._fidelities, self._formats) for path in fidelity.output_paths().get(checked, [])]
         found = [self.session.path_named(path) for path in declared if "{" not in path]
         folders = {path.parent if path.is_file() else path for path in found if path.exists()}
-        return sorted(str(folder) for folder in folders if self._under_root(folder))
-
-    def _under_root(self, path: Path) -> bool:
-        root = self.session.work_root
-        return path == root or root in path.parents
+        return sorted(str(folder) for folder in folders if self.session.session_files.in_root(folder))
