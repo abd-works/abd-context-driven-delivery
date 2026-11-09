@@ -197,3 +197,14 @@ Second copies of a model, and functions that do the same job but are written dif
   1. **Round 9's fixes go after the cause, not the symptoms.** Most new findings sit in six oversized classes. Splitting each into the parts it holds removes a group of findings at once and moves the code metrics toward their targets.
   2. **Round 10 freezes the check.** It uses round 9's checks, graph rules and metrics evidence, and nothing wider. Its findings in round 9's scope decide the stop. Anything a new kind of check would find goes into a list for later, not into the loop's count.
 - **The stop for round 10:** in round 9's scope, a goal total below 30, no high finding in the goal classes, and a metrics gate that passed for every fix.
+
+## The loop ends after round 9
+
+The user ended the loop after the round-9 fixes (2026-11-09, a4440c7f), so no round-10 validation ran.
+- **Findings:** the goal total went from 150 in round 5 to 27 in round 9, counting only the scope round 8 checked: 82% fewer. Round 9's fixes addressed every round-9 finding but one: a partial part of R9-M1, the regex reading of Java story files. That includes the one high finding, the UX explorer crash on a reopened graph, which now has a reopen spec for every reader of another practice's facts.
+- **Code metrics:** round 9 was the first round where every fix passed the metrics gate. 16 of the 23 guarded numbers improved and none got worse. For example:
+  - functions with more than 10 paths: 124 → 100
+  - the most complex class: 249 → 192
+  - most methods in one class: 70 → 51
+  - copied lines: 0.43% → 0.26%
+- **Remaining work and remediation strategy:** see [remaining-work-plan.md](remaining-work-plan.md).

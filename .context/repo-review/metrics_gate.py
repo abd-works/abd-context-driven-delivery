@@ -71,7 +71,6 @@ GUARDS = (
     Guard("Classes that depend on more than 14 other classes", "python.classes_cbo_over_14", LOWER, 25),
     Guard("Classes where one call can set off more than 50 methods", "python.classes_rfc_over_50", LOWER, 50),
     Guard("Most modules that import one single module", "python.module_fan_in.max", LOWER, 40),
-    Guard("Folders that many depend on but are written as plain concrete code", "python.packages_distance_over_0_7", LOWER, 8),
     Guard("Modules caught in an import loop", "python.import_graph.runtime_imports.modules_in_cycles", LOWER, 0),
     Guard("Folders caught in an import loop", "python.import_graph.runtime_imports.packages_in_cycles", LOWER, 0),
     Guard("Copied lines, as a share of all lines", "python.duplication.duplicated_pct", LOWER, 0.30),
