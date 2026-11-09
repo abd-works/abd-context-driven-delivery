@@ -13,7 +13,7 @@ from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.stages import GENERATE, RENDER, REVIEW, VALIDATE
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.markdown.format import Format
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_server import long_call, mcp
 from space.kanban.board import (
     BACKLOG_COLUMN,
     COMPLETE_COLUMN,
@@ -249,6 +249,7 @@ class Ticket(Card):
         """Return what opening ticket can create for it now, each chosen at first: its own branch while the repository has none, and its own worktree while it has none."""
         return self.checkout.open_choices
 
+    @long_call
     @mcp
     @agent_tool
     @noSessionLog
@@ -268,6 +269,7 @@ class Ticket(Card):
             return
         self.checkout.leave(leaving)
 
+    @long_call
     @mcp
     @agent_tool
     @noSessionLog
@@ -315,6 +317,7 @@ class Ticket(Card):
         moved = self if isinstance(self.column, Stage) else self._board.ticket_of(self._session.reopen())
         return moved.marks.place(target, MARKED_DONE if done else MARKED_IN_PROGRESS)
 
+    @long_call
     @mcp
     @agent_tool
     @noSessionLog
