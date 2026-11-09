@@ -96,8 +96,9 @@ describe('Choose Action And Formats', () => {
       expect((await markdownChip())?.count).toBe('1 of 2')
     })
 
-    it('should say so in its hint', async () => {
-      expect((await markdownChip())?.hint).toBe('markdown: 1 of 2 done')
+    // The other fidelity has not made its default format yet, so the chip opens picked for it.
+    it('should say so in its hint, picked for the fidelity that has not made it', async () => {
+      expect((await markdownChip())?.hint).toBe('markdown: 1 of 2 done, selected')
     })
   })
 
@@ -122,7 +123,7 @@ describe('Choose Action And Formats', () => {
 
   it('should keep Run off with no chat connected', async () => {
     const { page, ticket } = await activeTicketPage()
-    page.store.change({ targetChat: null })
+    page.store.change({ chats: [], targetChat: null })
     await page.tiles.open(spot(page), true)
     expect(page.tileActions.barOf(ticket, barAt(page)!).runOff).toBe(true)
   })
