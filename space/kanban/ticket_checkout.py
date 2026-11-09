@@ -124,6 +124,15 @@ class TicketCheckout:
         if LEAVE_MERGE in leaving and branch.is_checked_out and not branch.is_default:
             self._repo.close_branch(branch.name)
 
+    def return_to_default_branch(self, leaving: list[str]) -> None:
+        """A closed ticket's own branch leaves the repository's checkout once its work is committed, so the next
+        session does not start on it. Uncommitted work keeps it checked out, so nothing is carried to the default branch."""
+        if not (LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving):
+            return
+        if not self.branch.is_checked_out:
+            return
+        self._repo.branch_named(self._repo.default_branch).check_out()
+
 
 class LeaveChoices:
     """What leaving a ticket can do with its work now, closing it or switching to another: a handoff always, a commit

@@ -319,19 +319,8 @@ class Ticket(Card):
         closed = self._board.ticket_of(self._session.move_to_closed())
         # The work is saved after the folder moves, so the move is committed with it.
         self.checkout.save_work(chosen)
-        self._return_to_default_branch(chosen)
+        self.checkout.return_to_default_branch(chosen)
         return closed
-
-    def _return_to_default_branch(self, leaving: list[str]) -> None:
-        """A closed ticket's own branch leaves the repository's checkout once its work is committed, so the next
-        session does not start on it. Uncommitted work keeps it checked out, so nothing is carried to the default branch."""
-        if not (LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving):
-            return
-        own = self.checkout.branch
-        if not own.is_checked_out:
-            return
-        repo = self._board.repo
-        repo.branch_named(repo.default_branch).check_out()
 
     @mcp
     @agent_tool
