@@ -7,6 +7,7 @@ its routes, and the routes that join the two. One connection carries every call.
 
 from __future__ import annotations
 
+import functools
 import inspect
 import json
 import os
@@ -189,22 +190,24 @@ class _FieldHint:
 
 
 class _DataShape:
-    """A class whose annotated properties are its data, typed in TypeScript as `{Class}Data`."""
+    """A class whose annotated properties are its data, typed in TypeScript as `{Class}Data`. The toolset file that
+    writes it holds one for each class (``TypeScriptToolset.shape_of``), so its fields are read once; it writes its own
+    type and the reference other data sends it by, typing each field as that file types a hint."""
 
-    def __init__(self, shape: type, names: Mapping[str, Any]) -> None:
+    def __init__(self, shape: type, owner: TypeScriptToolset) -> None:
         self._shape = shape
-        self._names = names
+        self._owner = owner
 
     @property
     def name(self) -> str:
         """A class's data is named after it, so `Ticket` sends `TicketData`."""
         return f"{self._shape.__name__}Data"
 
-    @property
+    @functools.cached_property
     def fields(self) -> dict[str, object]:
-        """Each field's type by its name in the data. A field only some kinds of a class have, such as a stage's WIP
-        limit on a column, is optional, so one type holds every kind. The names resolve the types a module imports only
-        for type checking."""
+        """Each field's type by its name in the data, read once. A field only some kinds of a class have, such as a
+        stage's WIP limit on a column, is optional, so one type holds every kind. The peer toolsets' classes resolve the
+        types a module imports only for type checking."""
         fields = {key: self.field_hint(field) for key, field in DataClass.of(self._shape).fields.items()}
         for sub in self._subclasses(self._shape):
             for key, field in DataClass.of(sub).fields.items():
@@ -213,15 +216,33 @@ class _DataShape:
 
     def field_hint(self, field: property) -> object:
         getter = field.fget
-        hint = get_type_hints(getter, globalns=getter.__globals__, localns=dict(self._names), include_extras=True)["return"]
+        hint = get_type_hints(getter, globalns=getter.__globals__, localns=dict(self._owner.peer_classes), include_extras=True)["return"]
         return Annotated[hint, _REFERENCE] if DataClass.of(self._shape).sends_by_identity(field) else hint
+
+    def lines(self) -> list[str]:
+        """Its `export type` declaration, one line for each field."""
+        return [f"export type {self.name} = {{", *(self._field_line(name, hint) for name, hint in self.fields.items()), "}", ""]
+
+    @property
+    def reference(self) -> str:
+        """The identity fields alone, such as `{ name: string }` for a column: what a field that names one of its
+        objects sends, as `DataClass.reference` sends it."""
+        fields = DataClass.of(self._shape).fields
+        named = [f"{name}: {self._owner.identity_type(self.field_hint(fields[name]))}" for name in DataClass.of(self._shape).identity]
+        return f"{{ {'; '.join(named)} }}"
+
+    def _field_line(self, name: str, hint: object) -> str:
+        if get_origin(hint) is NotRequired:
+            return f"  {name}?: {self._owner.hint_type(get_args(hint)[0])}"
+        return f"  {name}: {self._owner.hint_type(hint)}"
 
     def _subclasses(self, cls: type) -> list[type]:
         return [found for sub in cls.__subclasses__() for found in (sub, *self._subclasses(sub))]
 
 
-class TypeScriptOperation:
-    """One MCP tool, as the server adapter, the browser adapter, and the route between them each write it."""
+class AdapterMethod:
+    """The method that calls one MCP tool, as the server adapter, the browser adapter, and the route between them each
+    write it."""
 
     def __init__(self, tool: AgentTool, owner: TypeScriptToolset) -> None:
         self._owner = owner
@@ -312,6 +333,8 @@ class TypeScriptToolset:
         self._folder = PurePosixPath(folder.as_posix())
         self._peers = peers
         self._shapes: dict[str, type] = {}
+        # Each class's data shape, made once, by the class.
+        self._data_shapes: dict[type, _DataShape] = {}
         self._imports: set[tuple[str, str]] = set()
         self.name = type(toolset).__name__
         self.slug = toolset.slug
@@ -335,7 +358,7 @@ class TypeScriptToolset:
 
     @property
     def data_name(self) -> str:
-        return self._shape(self._data_shape).name if self._data_shape else f"{self.name}Data"
+        return self.shape_of(self._data_shape).name if self._data_shape else f"{self.name}Data"
 
     @property
     def _routes_name(self) -> str:
@@ -354,7 +377,7 @@ class TypeScriptToolset:
 
     def render(self) -> dict[PurePosixPath, str]:
         # The operations come first: writing them is what names the imports and nested shapes the files need.
-        operations = [TypeScriptOperation(tool, self) for tool in self._tools]
+        operations = [AdapterMethod(tool, self) for tool in self._tools]
         identity = self._identity_name()
         if len(identity) != len(self.identity_fields):
             raise MissingIdentityError(self.name)
@@ -397,31 +420,28 @@ class TypeScriptToolset:
         root = self._data_shape
         if root is None:
             return [f"export type {self.data_name} = {_OPEN_DATA}", ""]
-        self._shapes[self._shape(root).name] = root
+        self._shapes[self.shape_of(root).name] = root
         lines: list[str] = []
         written: set[str] = set()
         while unwritten := [name for name in self._shapes if name not in written]:
             for name in unwritten:
                 written.add(name)
-                lines.extend(self._shape_lines(self._shapes[name]))
+                lines.extend(self.shape_of(self._shapes[name]).lines())
         return lines
 
-    def _shape_lines(self, shape: type) -> list[str]:
-        fields = [self._field_line(name, hint) for name, hint in self._shape(shape).fields.items()]
-        return [f"export type {self._shape(shape).name} = {{", *fields, "}", ""]
+    def shape_of(self, shape: type) -> _DataShape:
+        """The data shape of shape, a class whose annotated properties are its data, made once for this file."""
+        if shape not in self._data_shapes:
+            self._data_shapes[shape] = _DataShape(shape, self)
+        return self._data_shapes[shape]
 
-    def _shape(self, shape: type) -> _DataShape:
-        return _DataShape(shape, self.peer_classes)
-
-    def _field_line(self, name: str, hint: object) -> str:
-        if get_origin(hint) is NotRequired:
-            return f"  {name}?: {self._hint_type(get_args(hint)[0])}"
-        return f"  {name}: {self._hint_type(hint)}"
-
-    def _hint_type(self, hint: object) -> str:
-        if _FieldHint(hint).is_reference:
-            return self._reference_type(_FieldHint(hint).unwrapped)
-        hint = _FieldHint(hint).unwrapped
+    def hint_type(self, hint: object) -> str:
+        """The TypeScript type of a field's or an answer's hint, as this file writes it: a peer toolset's data by its
+        name, imported; a nested data shape written beside this toolset's own."""
+        field = _FieldHint(hint)
+        if field.is_reference:
+            return self._reference_type(field.unwrapped)
+        hint = field.unwrapped
         peer = self._peer_named_by(hint)
         if peer is not None:
             return self._peer_data(peer)
@@ -431,11 +451,11 @@ class TypeScriptToolset:
         if origin is Literal:
             return " | ".join(json.dumps(word).replace('"', "'") for word in get_args(hint))
         if origin in (Union, types.UnionType):
-            return " | ".join(self._hint_type(option) for option in get_args(hint))
+            return " | ".join(self.hint_type(option) for option in get_args(hint))
         if origin is list:
-            return _TypeText(self._hint_type(get_args(hint)[0])).as_list
+            return _TypeText(self.hint_type(get_args(hint)[0])).as_list
         if origin is dict:
-            return f"Record<string, {self._hint_type(get_args(hint)[1])}>"
+            return f"Record<string, {self.hint_type(get_args(hint)[1])}>"
         return _SCALAR_TYPES.get(hint, "unknown")
 
     def _reference_type(self, hint: object) -> str:
@@ -447,21 +467,18 @@ class TypeScriptToolset:
             return _TypeText(self._reference_type(get_args(hint)[0])).as_list
         if hint is type(None):
             return "null"
-        fields = DataClass.of(hint).fields
-        shape = self._shape(hint)
-        named = [f"{name}: {self._identity_type(shape.field_hint(fields[name]))}" for name in DataClass.of(hint).identity]
-        return f"{{ {'; '.join(named)} }}"
+        return self.shape_of(hint).reference
 
-    def _identity_type(self, hint: object) -> str:
+    def identity_type(self, hint: object) -> str:
         """An identity field's type: an object with an identity of its own is named by that identity alone, as
         `DataClass.reference` sends it, such as a progress's fidelity as `{ slug: string }`."""
         held = _FieldHint(hint).unwrapped
         if isinstance(held, type) and DataClass.of(held).identity:
             return self._reference_type(held)
-        return self._hint_type(hint)
+        return self.hint_type(hint)
 
     def _shape_reference(self, shape: type) -> str:
-        name = self._shape(shape).name
+        name = self.shape_of(shape).name
         for peer in self._peers.values():
             if peer._data_shape is shape:
                 if peer is not self:
@@ -510,14 +527,14 @@ class TypeScriptToolset:
         ]
 
     def data_fields(self) -> dict[str, object]:
-        return self._shape(self._data_shape).fields if self._data_shape else {}
+        return self.shape_of(self._data_shape).fields if self._data_shape else {}
 
     def _getter(self, name: str, hint: object) -> list[str]:
         optional = get_origin(hint) is NotRequired
-        shown = self._hint_type(get_args(hint)[0] if optional else hint)
+        shown = self.hint_type(get_args(hint)[0] if optional else hint)
         return ["", f"  get {Name(name).camel}(): {shown}{' | undefined' if optional else ''} {{", f"    return this.#read().{name}", "  }"]
 
-    def _adapter_class(self, operations: list[TypeScriptOperation], identity: tuple[str, ...]) -> list[str]:
+    def _adapter_class(self, operations: list[AdapterMethod], identity: tuple[str, ...]) -> list[str]:
         held = "".join(f", {Name(name).camel}: string" for name in identity)
         return [
             f"export class {self.adapter_name} extends {self.name} {{",
@@ -548,7 +565,7 @@ class TypeScriptToolset:
             "  }",
         ]
 
-    def _client_class(self, operations: list[TypeScriptOperation], identity: tuple[str, ...]) -> list[str]:
+    def _client_class(self, operations: list[AdapterMethod], identity: tuple[str, ...]) -> list[str]:
         held = "".join(f", {Name(name).camel}: string = state?.{self._identity_path(field)} ?? ''" for name, field in zip(identity, self.identity_fields))
         return [
             f"export class {self.client_name} extends {self.name} {{",
@@ -565,7 +582,7 @@ class TypeScriptToolset:
     def _identity_path(self, field: str) -> str:
         """Where the data holds the value of identity field: the field itself, or, for a field holding an object named
         by one field of its own, that field inside it (`ticket?.name`)."""
-        held = _FieldHint(self._shape(type(self.toolset)).fields.get(field)).unwrapped if self._data_shape else None
+        held = _FieldHint(self.shape_of(type(self.toolset)).fields.get(field)).unwrapped if self._data_shape else None
         named = DataClass.of(held).identity if isinstance(held, type) else ()
         return f"{field}?.{named[0]}" if len(named) == 1 else field
 
@@ -581,7 +598,7 @@ class TypeScriptToolset:
             "  }",
         ]
 
-    def _routes(self, operations: list[TypeScriptOperation]) -> list[str]:
+    def _routes(self, operations: list[AdapterMethod]) -> list[str]:
         """One route for each tool, so the browser adapter and the server adapter meet at a path neither side writes."""
         return [f"export const {self._routes_name}: CddRoute[] = [", *[line for operation in operations for line in operation.route_lines()], "]"]
 
@@ -597,7 +614,7 @@ class TypeScriptToolset:
 
     def result_of(self, tool: AgentTool) -> str:
         """The TypeScript type of what tool answers, typed from its return hint the way a data field is typed."""
-        return self._hint_type(self._return_hint(tool.callable))
+        return self.hint_type(self._return_hint(tool.callable))
 
     def _return_hint(self, function: Any) -> object:
         """function's return hint, resolved in its module with the peer toolsets' classes, which a module may import
@@ -622,7 +639,7 @@ class TypeScriptToolset:
 class TypeScriptViews:
     """Starting-point React views of one object: never a finished page, always composed or copied by the application."""
 
-    def __init__(self, owner: TypeScriptToolset, operations: list[TypeScriptOperation]) -> None:
+    def __init__(self, owner: TypeScriptToolset, operations: list[AdapterMethod]) -> None:
         self._owner = owner
         self._operations = operations
         self._fields = owner.data_fields()
@@ -728,21 +745,21 @@ class TypeScriptViews:
             return f"value as {PublishedSchema(schema).typescript_type}"
         return f"{variable}.{Name(name).camel}" if name in self._fields else "undefined"
 
-    def _operation(self, operation: TypeScriptOperation, variable: str) -> str:
+    def _operation(self, operation: AdapterMethod, variable: str) -> str:
         form = self._form(operation, f"{self._values(operation)} => {variable}.{operation.name}({self._sent(operation)})")
         return f"{{operations.{operation.name} ? operations.{operation.name}({variable}) : {form}}}"
 
-    def _form(self, operation: TypeScriptOperation, run: str) -> str:
+    def _form(self, operation: AdapterMethod, run: str) -> str:
         shows = "" if operation.returns_itself else " showsResult"
         return f"<OperationForm label=\"{operation.label}\" inputs={{{self._inputs(operation)}}}{shows} onRun={{{run}}} />"
 
-    def _values(self, operation: TypeScriptOperation) -> str:
+    def _values(self, operation: AdapterMethod) -> str:
         return "values" if operation.properties else "()"
 
-    def _sent(self, operation: TypeScriptOperation) -> str:
+    def _sent(self, operation: AdapterMethod) -> str:
         return ", ".join(f"values.{name} as {PublishedSchema(schema).typescript_type}" for name, schema in operation.properties.items())
 
-    def _inputs(self, operation: TypeScriptOperation) -> str:
+    def _inputs(self, operation: AdapterMethod) -> str:
         inputs = [
             f"{{ name: '{name}', label: '{_PythonName(name).label}', kind: '{PublishedSchema(schema).input_kind}', isRequired: {'true' if name in operation.required else 'false'} }}"
             for name, schema in operation.properties.items()
@@ -768,11 +785,11 @@ class TypeScriptViews:
             "}",
         ]
 
-    def _creator(self, operation: TypeScriptOperation) -> str:
+    def _creator(self, operation: AdapterMethod) -> str:
         call = f"{self._owner.client_name}.{operation.name}(api{', ' if operation.properties else ''}{self._sent(operation)})"
         return self._form(operation, f"async {self._values(operation)} => {{ const created = await {call}; if (created) onCreated?.(created); return created }}")
 
-    def _edit_of(self, field: str) -> tuple[TypeScriptOperation, str] | None:
+    def _edit_of(self, field: str) -> tuple[AdapterMethod, str] | None:
         """The operation that changes a field, and the argument carrying the new value, when it can be saved alone."""
         for operation in self._operations:
             if not operation.returns_itself:
@@ -782,7 +799,7 @@ class TypeScriptViews:
                 return operation, argument
         return None
 
-    def _argument_for(self, operation: TypeScriptOperation, field: str) -> str | None:
+    def _argument_for(self, operation: AdapterMethod, field: str) -> str | None:
         if field in operation.properties:
             return field
         if field in operation.annotated_edits and len(operation.properties) == 1:

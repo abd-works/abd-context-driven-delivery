@@ -7,6 +7,7 @@ from typing import Any
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.guidance import SketchLens
+from harness.guidance.practice_reading import PracticeReading
 
 from cdd_guidance.practices.ux.model.ux_node import UxNode
 
@@ -20,11 +21,30 @@ class UxOutsideSession(ValueError):
     own to render the JavaScript through."""
 
 
+class UxReading(PracticeReading):
+    """How UX takes part in the graph: it checks its screen rules on the UX maps put on a graph and offers the explorer
+    the node types a UX map is made of. A working-copy load reads no UX files yet."""
+
+    node_types = (
+        "UxMap",
+        "Screen",
+        "Region",
+        "Control",
+        "StoryDemoControl",
+        "Interaction",
+        "Transition",
+        "ContentType",
+        "NavComponent",
+        "UxContext",
+    )
+
+
 @agent_toolset
 class Ux(PracticeGuidance):
     """# Instructions"""
 
     sketch_lens = SketchLens(("ux:", "user experience:"))
+    reading_type = UxReading
     SHORT_NAME = "UX"
     COLOUR = "#E84393"
 
@@ -56,21 +76,6 @@ class Ux(PracticeGuidance):
                 "claude_design": ("cdd_guidance.practices.ux.model.claude_design.nodes", "ClaudeDesignUxMap"),
             },
         )
-
-    # In the knowledge graph: UX checks its screen rules on the UX maps put on a graph and offers the explorer the node
-    # types a UX map is made of. A working-copy load reads no UX files yet.
-    node_types = (
-        "UxMap",
-        "Screen",
-        "Region",
-        "Control",
-        "StoryDemoControl",
-        "Interaction",
-        "Transition",
-        "ContentType",
-        "NavComponent",
-        "UxContext",
-    )
 
     @agent_tool
     def ensure_javascript(self, practice: str, source_format: str, content: Any) -> dict:

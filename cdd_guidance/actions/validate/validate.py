@@ -120,7 +120,7 @@ class Validate(GuidanceAction):
         return ValidationReport(self.session, guidance).of_graph(violations, sources, self._graph.held_beside)
 
     def _log_graph_validation(self, violations: list) -> None:
-        if self._guidance_text is not None or not violations:
+        if self.work.text is not None or not violations:
             return
         synopsis = [
             f"graph-rule {violation.rule} {violation.location}:{violation.line or ''}"
@@ -141,7 +141,7 @@ class Validate(GuidanceAction):
         self._log_validation_to_session()
 
     def _log_validation_to_session(self) -> None:
-        if self._guidance_text is not None:
+        if self.work.text is not None:
             return
         for worked in self._worked_fidelities():
             self.log.validation(worked, [])

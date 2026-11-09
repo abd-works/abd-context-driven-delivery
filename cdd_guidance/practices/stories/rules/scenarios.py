@@ -193,7 +193,7 @@ class GivenNamesComplexStateRootFirst(PracticeGraphRule):
 def _owned_parts(context: RuleCheckContext) -> dict[str, str]:
     """Each entity and value object an aggregate in the DDD model owns, mapped to the name of that aggregate's root."""
     graph = context.graph
-    ddd = context.practice.domain_model
+    ddd = context.practice.reading.domain_model
     if ddd is None:
         return {}
     owned: dict[str, str] = {}

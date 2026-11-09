@@ -733,7 +733,7 @@ with description("a practice"):
             expect(self.session.graph.practices.held["bdd"]).to(be(self.opened.guidance))
 
         with it("should know the session's graph"):
-            expect(self.opened.guidance.graph).to(be(self.session.graph))
+            expect(self.opened.guidance.reading.graph).to(be(self.session.graph))
 
         with it("should be the same practice the next call in the session works with"):
             expect(Sessions.of_project(self.called).current().practice("bdd").guidance).to(be(self.opened.guidance))
@@ -742,7 +742,7 @@ with description("a practice"):
             expect(self.session.practice("ddd").guidance.extended).to(be(self.session.practice("clean_engineering").guidance))
 
         with it("should open its graph on its workpath"):
-            expect(self.opened.guidance.in_graph.source_root).to(equal(str(self.work.resolve())))
+            expect(self.opened.guidance.reading.in_graph.source_root).to(equal(str(self.work.resolve())))
 
         with it("should be the same graph on the next call in the session"):
             expect(Sessions.of_project(self.called).current().graph).to(be(self.session.graph))
@@ -759,7 +759,7 @@ with description("a practice"):
             with it("should hold the saved nodes when another process first opens the session"):
                 reopened = Sessions(self.repo).current().graph
                 practice = reopened.practices.held["clean_engineering"]
-                expect([node.name for node in practice.in_graph.nodes()]).to(contain("Order"))
+                expect([node.name for node in practice.reading.in_graph.nodes()]).to(contain("Order"))
 
         with it("should return that same practice on the next ask"):
             expect(self.session.practice("bdd") is self.opened).to(equal(True))
@@ -797,6 +797,18 @@ with description("a practice"):
             with it("should put each format's file under the practice's root folder"):
                 outputs = self.fidelity.output_paths()
                 expect(outputs["markdown"]).to(equal([(self.work / ".context" / "story-map.md").resolve().as_posix()]))
+
+            with context("whose validation reports its session output keeps"):
+                with it("should save a new report in the session's reports folder"):
+                    expect(self.fidelity.session_output.new_report_path().parent).to(equal(self.session.reports_folder))
+
+                with it("should name a new report by the fidelity's slug"):
+                    expect(self.fidelity.session_output.new_report_path().name).to(contain("stories-story-map-"))
+
+                with it("should list the reports saved there"):
+                    saved = self.fidelity.session_output.new_report_path()
+                    saved.write_text("# report\n", encoding="utf-8")
+                    expect(self.fidelity.session_output.reports()).to(equal([saved]))
 
             with context("whose file is written"):
                 with it("should be read by the session's file manager, though the practice's own folder is elsewhere"):

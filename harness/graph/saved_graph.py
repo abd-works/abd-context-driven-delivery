@@ -122,13 +122,13 @@ class SavedPractice:
     def from_practice(cls, practice: PracticeGuidance, files: list[str] | None = None) -> SavedPractice:
         """The practice as the graph that holds it has it now; with files, only its nodes read from them (each a file
         or folder from its source root) and the edges that join two of them or one of them to the practice's root."""
-        graph = practice.graph
-        nodes = [node for node in practice.in_graph.nodes() if _read_from(node, files)]
-        edges = [edge for edge in practice.in_graph.edges() if _joins_kept(edge, files)]
+        graph = practice.reading.graph
+        nodes = [node for node in practice.reading.in_graph.nodes() if _read_from(node, files)]
+        edges = [edge for edge in practice.reading.in_graph.edges() if _joins_kept(edge, files)]
         return cls(
             practice.key,
-            practice.in_graph.source_root,
-            practice.in_graph.root.facts,
+            practice.reading.in_graph.source_root,
+            practice.reading.in_graph.root.facts,
             [SavedNode(node.node_id, node.name, node.type, node.practice.key, node.source.file, node.source.start_line, node.source.end_line, node.stage, node.facts) for node in nodes],
             [SavedEdge.from_edge(edge) for edge in edges],
             [violation for node in nodes for violation in node.rules.violations],
@@ -430,7 +430,7 @@ def _records(violations: list[Violation] | None) -> list[dict]:
 
 def _folders_beside(graph: Graph, files: list[str]) -> list[str]:
     """The folders, two levels deep, of the files graph holds a node of besides files."""
-    held = (node for practice in graph.practices.opened.values() for node in practice.in_graph.nodes())
+    held = (node for practice in graph.practices.opened.values() for node in practice.reading.in_graph.nodes())
     beside = {PurePosixPath(node.source.file.replace("\\", "/")).parent for node in held if node.source.file not in ("", ".") and not _read_from(node, files)}
     return sorted({"/".join(folder.parts[:2]) or "." for folder in beside})
 

@@ -32,7 +32,7 @@ def checks(practice, *patterns):
     """The graph rules practice checks in a graph that applies patterns."""
     graph = Graph()
     graph.overlays = PatternOverlays(list(patterns)).paths
-    return graph.practice(practice).checks()
+    return graph.practice(practice).reading.checks()
 
 
 def behavior_file(text, node_type):

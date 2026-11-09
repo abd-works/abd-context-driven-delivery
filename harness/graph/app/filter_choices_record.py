@@ -58,7 +58,7 @@ class FixtureGraph:
             self._fill(self.graph.practice(key), held, fixture["edges_of_type"])
 
     def _fill(self, practice, held: dict[str, Any], edges_of_type: dict[str, list[str]]) -> None:
-        part = practice.in_graph
+        part = practice.reading.in_graph
         part.rule_run.schema_with = lambda overlays, schema=FixtureSchema(practice, list(held["rules"])): schema
         nodes = {node_type: part.add_named(node_type, f"{practice.key}:{node_type}", node_type.lower(), Source("fixture", 1, 1)) for node_type in held["node_types"]}
         for kind in held["edge_types"]:

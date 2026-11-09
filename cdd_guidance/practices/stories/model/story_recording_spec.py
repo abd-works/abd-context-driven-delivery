@@ -50,19 +50,19 @@ with description("a story map recorded on a graph"):
         self.practice = practice
 
     with it("should emit Given, When, and Then node types"):
-        expect(self.practice.in_graph.node_types).to(contain("Given", "When", "Then"))
+        expect(self.practice.reading.in_graph.node_types).to(contain("Given", "When", "Then"))
 
     with it("should attach step payload with phase and concepts"):
-        when_nodes = self.practice.in_graph.nodes("When")
+        when_nodes = self.practice.reading.in_graph.nodes("When")
         expect(len(when_nodes)).to(equal(1))
         expect(when_nodes[0].get_fact("phase")).to(equal("when"))
         expect(when_nodes[0].get_fact("concepts")).to(contain("Cart"))
 
     with it("should wire scenario steps edges"):
-        scenario = self.practice.in_graph.nodes("Scenario")[0]
+        scenario = self.practice.reading.in_graph.nodes("Scenario")[0]
         steps = [
             edge.child
-            for edge in self.practice.in_graph.edges("steps")
+            for edge in self.practice.reading.in_graph.edges("steps")
             if edge.parent is scenario
         ]
         expect(len(steps)).to(equal(3))
@@ -90,8 +90,8 @@ with description("a merged story map whose two maps each hold a story a story te
         self.tmp.cleanup()
 
     with it("should record the story test's scenario under both stories"):
-        scenario = self.practice.in_graph.nodes("Scenario")[0]
-        stories = [edge.parent for edge in self.practice.in_graph.edges("scenarios") if edge.child is scenario]
+        scenario = self.practice.reading.in_graph.nodes("Scenario")[0]
+        stories = [edge.parent for edge in self.practice.reading.in_graph.edges("scenarios") if edge.child is scenario]
         expect(len(stories)).to(equal(2))
 
 
@@ -108,7 +108,7 @@ def _imports_of(root: Path, file: str, text: str) -> dict:
     graph.open(Path(str(root)))
     practice = graph.practice("stories")
     model.record(practice)
-    return practice.in_graph.nodes("Story")[0].get_fact("imported_modules")
+    return practice.reading.in_graph.nodes("Story")[0].get_fact("imported_modules")
 
 
 with description("a story read from a story test that imports its examples"):

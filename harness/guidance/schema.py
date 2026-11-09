@@ -47,7 +47,8 @@ class SchemaType:
 
 
 class Schema:
-    """The types one schema file declares, keyed by their schema key, in the order written."""
+    """The types one schema file declares, keyed by their schema key, in the order written, and the file's own text,
+    which tells an action the shape its output conforms to. A practice holds the one its ``model/schema.yaml`` holds."""
 
     def __init__(self, text: str) -> None:
         self.types: dict[str, SchemaType] = {}
@@ -58,15 +59,42 @@ class Schema:
         """The schema at ``path``; an empty schema when there is no file. Each file is read once per process."""
         return _loaded(Path(path))
 
+    def guide(self) -> str:
+        """What tells an action to conform its output to this schema; none for an empty schema."""
+        if not self.text:
+            return ""
+        return f"Guide this action so the output conforms to this schema.\n\n{self.text}"
+
     def fidelities(self) -> dict[str, str]:
         """Each type key mapped to the fidelity that creates it, for the types that name one."""
         return {key: kind.fidelity for key, kind in self.types.items() if kind.fidelity}
+
+    def node_fidelities(self, order: list[str]) -> dict[str, list[str]]:
+        """Each type key with the fidelity that creates it and every one after it in order, the fidelities of the
+        practice from lowest to highest: a node a low fidelity creates also belongs to the higher ones, which build it
+        out rather than replace it. A type whose fidelity is not in order is left out."""
+        created = self.fidelities()
+        return {node: order[order.index(fidelity):] for node, fidelity in created.items() if fidelity in order}
+
+    def fidelity_errors(self, declared: list[str]) -> list[str]:
+        """What is wrong between this schema and declared, the fidelities of its practice: a schema with no node
+        fidelity, or a node fidelity that is none of them. Empty when they agree."""
+        created = self.fidelities()
+        if not created:
+            return ["schema defines no node fidelity entries"]
+        known = sorted(declared)
+        return [
+            f"{node} maps to fidelity {fidelity!r}, which is not under ## Fidelities (have {known!r})"
+            for node, fidelity in sorted(created.items()) if fidelity not in known
+        ]
 
     def rules(self) -> dict[str, tuple[str, ...]]:
         """Each type key mapped to the rule slugs its ``rules:`` block lists, for the types that have one."""
         return {key: tuple(kind.rules) for key, kind in self.types.items() if kind.rules}
 
     def _read(self, text: str) -> None:
+        """Read text into its types, keeping the text itself, which tells an action the shape to conform to."""
+        self.text = text.strip()
         current: SchemaType | None = None
         block = ""
         block_indent = -1

@@ -1470,3 +1470,70 @@ with description("a tool's MCP invoke line"):
 
         tool = next(iter(AgentToolSet.instantiate(CarStory).tools.values()))
         expect(AgentTool.invoked_names(tool.invoke_line())).to(equal([tool.mcp_name]))
+
+
+@agent_toolset
+class FidelityProgress:
+    """A toolset whose slug holds a hyphen, as fidelity-progress does."""
+
+    @mcp
+    @_tool
+    def files(self) -> str:
+        """The files a fidelity declares."""
+        return ""
+
+
+with description("a published tool asked whether a client's spelling names it"):
+    with before.each:
+        self.tool = AgentToolSet.instantiate(FidelityProgress).tools["files"]
+
+    with it("should be published under its toolset's slug and its own name"):
+        expect(self.tool.mcp_name).to(equal("fidelity-progress.files"))
+
+    with it("should answer to its MCP name"):
+        expect(self.tool.is_called("fidelity-progress.files")).to(be_true)
+
+    with it("should answer to the underscore spelling Cursor sends"):
+        expect(self.tool.is_called("fidelity-progress_files")).to(be_true)
+
+    with it("should answer to its name with the hyphen written as an underscore"):
+        expect(self.tool.is_called("fidelity_progress_files")).to(be_true)
+
+    with it("should answer to the name a Claude Code hook gives it"):
+        expect(self.tool.is_called("mcp__cdd__fidelity-progress_files")).to(be_true)
+
+    with it("should answer in any case"):
+        expect(self.tool.is_called("Fidelity-Progress_Files")).to(be_true)
+
+    with it("should not answer to another tool's name"):
+        expect(self.tool.is_called("fidelity-progress.report")).to(equal(False))
+
+    with context("that a server has enrolled"):
+        with before.each:
+            from harness.mcp.mcp_server import McpServer
+
+            self.server = McpServer(repo=Path(__file__).resolve().parents[2])
+            self.server.enroll(self.tool)
+
+        with it("should be the tool a call spelled with the hyphen as an underscore reaches"):
+            expect(self.server.resolve_call_name("fidelity_progress_files")).to(equal("fidelity-progress.files"))
+
+        with it("should be the tool a call spelled in another case reaches"):
+            expect(self.server.resolve_call_name("Fidelity-Progress_Files")).to(equal("fidelity-progress.files"))
+
+
+with description("the members of a practice's class asked which of them hold collections of tools"):
+    with before.each:
+        from cdd_guidance.practices.stories.stories import Stories
+
+        self.stories = Stories()
+        self.members = ToolsetMembers.of(Stories)
+
+    with it("should find its shared rules on a practice of that class"):
+        expect([name for name, _held in self.members.collections_on(self.stories)]).to(equal(["rules"]))
+
+    with it("should name its fidelities as the toolset collection it holds"):
+        expect(self.members.toolset_collection_names).to(equal(["fidelities"]))
+
+    with it("should read which members can hold them once for the class"):
+        expect(self.members.collection_names).to(be(ToolsetMembers.of(type(self.stories)).collection_names))

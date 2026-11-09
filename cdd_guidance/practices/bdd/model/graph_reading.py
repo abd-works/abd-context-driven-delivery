@@ -7,7 +7,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from harness.annotations.name import Name
-from harness.graph.graph import Graph, Node
+from harness.graph.graph import Node
+from harness.guidance.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
 
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
@@ -16,35 +17,34 @@ from cdd_guidance.practices.clean_engineering.model.production_code import is_sp
 _BEHAVIOR_EDGES = {"Description": "descriptions", "Context": "contexts", "Observation": "observations"}
 
 
-class BddGraphReading:
-    """BDD's operations over the graph it is read in: reading each spec file's describe tree, then linking each
-    observation to the code it drives."""
+class BddGraphReading(PracticeReading):
+    """How BDD takes part in the graph: it reads each spec file's describe tree, after Clean Engineering's code, then
+    links each observation to the code it drives."""
 
-    graph: Graph
+    reads_after = ("clean_engineering",)
+    node_types = ("Spec", "Description", "Context", "Observation")
 
     def read_working_copy(self) -> None:
         """Each spec file's language model reads its describe tree, whose spec, descriptions, contexts, and observations
-        are added to its graph as they are."""
+        are added to its graph as they are; then each observation is linked to the operations and properties of the
+        code it drives, when the graph reads Clean Engineering too."""
         root = Path(self.in_graph.source_root)
-        specs = [file for file in self.graph.scope.source_files(root, self.readable_suffixes) if is_spec_file(file.name)]
+        specs = [file for file in self.graph.scope.source_files(root, self.practice.formats.suffixes) if is_spec_file(file.name)]
         with schema_sync_paused():
             for index, file in enumerate(specs, start=1):
                 relative = file.relative_to(root).as_posix()
                 self.graph.report_progress(f"bdd · specs · {index}/{len(specs)} · {relative}")
                 self._add_spec(file, relative)
-
-    def link_to_other_practices(self) -> None:
-        """Link each observation to the operations and properties of the code it drives, when the graph reads Clean
-        Engineering too."""
-        clean = self.clean_engineering_practice
+        clean = self.clean_engineering_reading
         if clean is not None:
             ObservationLinks(self, clean).link()
 
     @property
-    def clean_engineering_practice(self) -> CleanEngineering | None:
-        """The Clean Engineering practice the graph this practice is read in reads too: the code each observation
-        drives; none when the graph reads no Clean Engineering."""
-        return self.graph.practices.loaded(CleanEngineering) if self.graph is not None else None
+    def clean_engineering_reading(self) -> PracticeReading | None:
+        """The part of the Clean Engineering practice the graph this practice is read in reads too: the code each
+        observation drives; none when the graph reads no Clean Engineering."""
+        clean = self.graph.practices.loaded(CleanEngineering) if self.graph is not None else None
+        return clean.reading if clean is not None else None
 
     def _add_spec(self, file: Path, relative: str) -> None:
         """The spec file's describe tree, each node at its own lines with the facts its span holds, read by the model of
@@ -53,7 +53,7 @@ class BddGraphReading:
             text = file.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             return
-        spec = self.format_for(file).parse_code(text)
+        spec = self.practice.formats.for_file(file).parse_code(text)
         spec.load_source_facts(text)
         lines = text.splitlines()
         behavior = spec.behavior_nodes()
@@ -76,7 +76,7 @@ class ObservationLinks:
     recorded what its lines reach when its spec was read, so linking reads no file. A name matches only code in the
     spec's own language family, Python or script, and never a spec or a test helper."""
 
-    def __init__(self, bdd: BddGraphReading, clean: CleanEngineering) -> None:
+    def __init__(self, bdd: BddGraphReading, clean: PracticeReading) -> None:
         self.bdd = bdd
         self.clean = clean
         self.graph = bdd.graph

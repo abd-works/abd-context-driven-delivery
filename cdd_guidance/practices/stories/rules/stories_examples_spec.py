@@ -18,7 +18,7 @@ _EXAMPLES = _REPO / "cdd_guidance/practices/stories/model/typescript/_examples"
 with description("a Stories rule example") as self:
     with context("that holds a story test with a scenario"):
         with before.each:
-            self.graph = stories_fixture(_EXAMPLES / "plain-english-gwt-steps" / "faulty").practice.in_graph
+            self.graph = stories_fixture(_EXAMPLES / "plain-english-gwt-steps" / "faulty").practice.reading.in_graph
 
         with it("should read the scenario the story test names, as a build reads it"):
             expect([node.name for node in self.graph.nodes("Scenario")]).to(equal(["a customer submits an order"]))

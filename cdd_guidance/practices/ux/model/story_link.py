@@ -59,7 +59,7 @@ class StoryLink:
         if stories is None:
             return
         for node_type in _NODE_TYPES[self.kind]:
-            yield from stories.in_graph.nodes(node_type)
+            yield from stories.reading.in_graph.nodes(node_type)
 
 
 def key_of(node: Node) -> str:
