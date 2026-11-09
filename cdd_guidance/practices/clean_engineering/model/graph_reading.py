@@ -101,7 +101,7 @@ class ModelDocuments:
         """Read the documents of the folders in scope. A refresh reads only some documents, so the models the others
         describe stay; a whole load reads them all again."""
         graph = self._practice.graph
-        if graph.edited_files() is None or not self._read:
+        if graph.scope.edited_files is None or not self._read:
             self._models = {}
         self._read = True
         for file in self._files():
@@ -125,8 +125,8 @@ class ModelDocuments:
         """Each scoped folder's and each of its parents' ``.context/*-model.md``, up to the root, as the graph's scope
         names them. ``.context`` is a skipped folder, so the code scan never reaches them."""
         graph = self._practice.graph
-        edited = graph.edited_files()
-        folders = self._every_folder() if edited is None else {self._root, *(graph.scope_folders() or [])}
+        edited = graph.scope.edited_files
+        folders = self._every_folder() if edited is None else {self._root, *(graph.scope.folders or [])}
         named = {path for path in (edited or []) if path.name.endswith("-model.md")}
         return sorted({model for folder in folders for model in (folder / ".context").glob("*-model.md")} | named)
 

@@ -580,7 +580,7 @@ it should leave session.log unchanged
 it should hold that practice's guidance in memory
   -> expect(session.practice(name).guidance).to be a PracticeGuidance
 it should be the one practice the session's graph holds
-  -> expect(session.graph.every_practice[name]).to be session.practice(name).guidance
+  -> expect(session.graph.practices.held[name]).to be session.practice(name).guidance
 it should be the same practice the next call in the session works with
   -> expect(next call's session.practice(name).guidance).to be session.practice(name).guidance
 it should return that same practice on the next ask

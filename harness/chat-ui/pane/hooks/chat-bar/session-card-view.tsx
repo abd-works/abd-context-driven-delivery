@@ -1,7 +1,7 @@
 import type { EngineInterface } from 'claude-code'
 
-import { BRAND } from '../brand'
-import { GlyphButtonView } from '../glyph-button-view'
+import { BRAND } from '../shared/brand'
+import { GlyphButtonView } from '../shared/glyph-button-view'
 import type { ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
 import { openFiles } from './fidelity-files-client'

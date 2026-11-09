@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { KindMark } from '../kind-mark';
+import { KindMark } from '../labels/kind-mark';
 import type { ExplorerEntryData } from '@cdd/harness/graph/graph';
 import { childrenOf, isRule, ruleHits, selectionForRule, type GraphSelection, type TreeItem } from './graph-selection';
 import { queryProgress } from './query-progress';

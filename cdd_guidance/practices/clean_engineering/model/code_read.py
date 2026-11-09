@@ -43,7 +43,7 @@ class CodeRead:
         self._root = Path(practice.in_graph.source_root)
         practice.graph.report_progress("clean_engineering · folders")
         self._folders = CodeFolders(practice)
-        self._files = practice.graph.source_files(self._root, practice.readable_suffixes)
+        self._files = practice.graph.scope.source_files(self._root, practice.readable_suffixes)
         # The module of each file this read tried, by its resolved path; none for a file that does not parse.
         self._tried: dict[Path, Module | None] = {}
         self._modules: dict[Path, Module] = {}
@@ -147,7 +147,7 @@ class OutsideScope:
         return names
 
     def _files(self) -> list[Path]:
-        if self._graph.edited_files() is None:
+        if self._graph.scope.edited_files is None:
             return []
         held = {node.source.file for kind in ("Module", "Package") for node in self._in_graph.nodes(kind)}
         return [
@@ -259,7 +259,7 @@ class CodeFolders:
         self._in_graph = practice.in_graph
         self._root = Path(self._in_graph.source_root)
         self._suffixes = practice.readable_suffixes
-        self._modules: dict[str, Module] = self._found(self._graph.scope_folders())
+        self._modules: dict[str, Module] = self._found(self._graph.scope.folders)
         self._nodes: "dict[str, Node]" = {}
         self._imports: dict[str, list[str]] = {relative: [] for relative in self._modules}
 

@@ -33,8 +33,8 @@ with description("a graph"):
             )
             root = self.practice.in_graph.root
             root.children.extend([self.failure, self.register])
-            self.graph.filter.select_rules(["limit-operation-parameters"])
-            self.graph.filter.select_violations()
+            self.graph.explorer.filter.rules = ["limit-operation-parameters"]
+            self.graph.explorer.filter.select_violations()
 
         with it("should list the failed rule on the failing operation"):
             expect(self.failure.failed_rules).to(equal(["limit-operation-parameters"]))
@@ -63,14 +63,14 @@ with description("a graph"):
             root = self.practice.in_graph.root
             root.children.extend([self.module, self.class_node, self.other])
             self.graph.record(EdgeType("owns", 2, "direct"), self.module, self.class_node)
-            self.graph.filter.select_relationships(["owns"])
+            self.graph.explorer.filter.select_relationships(["owns"])
 
         with it("should keep the stage from the query on the node"):
             expect(self.class_node.stage).to(equal("implementation"))
 
         with it("should give the edge the child node's stage"):
             edge = self.practice.in_graph.edges("owns")[0]
-            expect(edge.stage).to(equal("implementation"))
+            expect(edge.child.stage).to(equal("implementation"))
 
         with it("should return the nodes on the selected edge"):
             import json

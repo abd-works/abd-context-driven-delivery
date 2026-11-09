@@ -66,8 +66,8 @@ with description("rule categories"):
 
         with context("with violations of the parameter rule"):
             with before.each:
-                self.graph.filter.select_rules(["limit-operation-parameters"])
-                self.graph.filter.select_violations()
+                self.graph.explorer.filter.rules = ["limit-operation-parameters"]
+                self.graph.explorer.filter.select_violations()
 
             with it("should attach the violation on the serialized operation"):
                 rule = rule_on(data_of(self.failure.serialize()), "limit-operation-parameters")

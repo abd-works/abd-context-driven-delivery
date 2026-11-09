@@ -89,7 +89,7 @@ with description("a screen that shows stories"):
         with context("that joins a graph the story map is on"):
             with before.each:
                 self.graph = Graph()
-                self.screen.join(self.graph.practice_of(Ux))
+                self.screen.join(self.graph.practices.of(Ux))
                 self.story_map, self.story, _scenario = story_map_on(self.graph)
 
             with it("should show the story once it is on the graph"):

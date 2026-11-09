@@ -27,7 +27,7 @@ class BddGraphReading:
         """Each spec file's language model reads its describe tree, whose spec, descriptions, contexts, and observations
         are added to its graph as they are."""
         root = Path(self.in_graph.source_root)
-        specs = [file for file in self.graph.source_files(root, self.readable_suffixes) if is_spec_file(file.name)]
+        specs = [file for file in self.graph.scope.source_files(root, self.readable_suffixes) if is_spec_file(file.name)]
         with schema_sync_paused():
             for index, file in enumerate(specs, start=1):
                 relative = file.relative_to(root).as_posix()
@@ -45,7 +45,7 @@ class BddGraphReading:
     def clean_engineering_practice(self) -> CleanEngineering | None:
         """The Clean Engineering practice the graph this practice is read in reads too: the code each observation
         drives; none when the graph reads no Clean Engineering."""
-        return self.graph.loaded(CleanEngineering) if self.graph is not None else None
+        return self.graph.practices.loaded(CleanEngineering) if self.graph is not None else None
 
     def _add_spec(self, file: Path, relative: str) -> None:
         """The spec file's describe tree, each node at its own lines with the facts its span holds, read by the model of

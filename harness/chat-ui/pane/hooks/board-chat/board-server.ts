@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
-import { reasonOf } from '../failure'
+import { reasonOf } from '../shared/failure'
 import { refreshHealth } from '../health/server-health-client'
 import { after, boardUrl } from './board'
 

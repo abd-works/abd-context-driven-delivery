@@ -58,8 +58,8 @@ class _LernReading:
         from cdd_guidance.practices.stories.stories import Stories
 
         self._behaviors()
-        ddd = self.graph.loaded(Ddd)
-        self.stories = self.graph.loaded(Stories)
+        ddd = self.graph.practices.loaded(Ddd)
+        self.stories = self.graph.practices.loaded(Stories)
         if ddd is None or self.stories is None:
             return
         self.ddd = ddd
@@ -75,7 +75,7 @@ class _LernReading:
         """LERN behavior files on the BDD practice, each carrying the facts its tier rules read."""
         from cdd_guidance.practices.bdd.bdd import Bdd
 
-        bdd = self.graph.loaded(Bdd)
+        bdd = self.graph.practices.loaded(Bdd)
         if bdd is None:
             return
         for file in scanned_files(self.root):

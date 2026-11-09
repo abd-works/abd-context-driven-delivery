@@ -2,8 +2,8 @@ import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
 import { colourOf, detailsOf, headlineOf, installLineOf, partsOf } from './server-health-wording'
 import type { EngineInterface } from 'claude-code'
 
-import { BRAND } from '../brand'
-import { GlyphButtonView } from '../glyph-button-view'
+import { BRAND } from '../shared/brand'
+import { GlyphButtonView } from '../shared/glyph-button-view'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 

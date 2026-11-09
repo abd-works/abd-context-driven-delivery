@@ -14,7 +14,7 @@ class WebDomainAccessOverlay(GraphOverlay):
     def read(self, graph: Graph) -> None:
         from cdd_guidance.practices.ddd.ddd import Ddd
 
-        ddd = graph.loaded(Ddd)
+        ddd = graph.practices.loaded(Ddd)
         if not graph.folder or ddd is None:
             return
         root = Path(graph.folder)

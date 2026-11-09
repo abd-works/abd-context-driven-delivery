@@ -52,7 +52,7 @@ class UxMap(UxNode):
         self.content_types = ContentTypes(self)
         self.nav_components = NavComponents(self)
         self.context = UxContext()
-        self._link(self.context, "context")
+        self.attach(self.context, "context")
 
     @classmethod
     def create(cls, name: str | Graph = "UxMap", sequential_order: int = 0, graph: Graph | None = None) -> "UxMap":

@@ -76,7 +76,7 @@ with description("a session"):
                 expect(self.event().session.practice("stories").guidance).to(be_a(PracticeGuidance))
 
             with it("should open the session's graph, which holds that practice"):
-                expect(self.event().session.graph.every_practice["stories"]).to(be(self.event().session.practice("stories").guidance))
+                expect(self.event().session.graph.practices.held["stories"]).to(be(self.event().session.practice("stories").guidance))
 
             with it("should open the same graph on the next call in that session"):
                 expect(self.event().session.graph).to(be(self.event().session.graph))
@@ -730,7 +730,7 @@ with description("a practice"):
             expect(isinstance(self.opened.guidance, PracticeGuidance)).to(equal(True))
 
         with it("should be the one practice the session's graph holds"):
-            expect(self.session.graph.every_practice["bdd"]).to(be(self.opened.guidance))
+            expect(self.session.graph.practices.held["bdd"]).to(be(self.opened.guidance))
 
         with it("should know the session's graph"):
             expect(self.opened.guidance.graph).to(be(self.session.graph))
@@ -758,7 +758,7 @@ with description("a practice"):
 
             with it("should hold the saved nodes when another process first opens the session"):
                 reopened = Sessions(self.repo).current().graph
-                practice = reopened.every_practice["clean_engineering"]
+                practice = reopened.practices.held["clean_engineering"]
                 expect([node.name for node in practice.in_graph.nodes()]).to(contain("Order"))
 
         with it("should return that same practice on the next ask"):

@@ -98,7 +98,7 @@ with description("an example graph"):
 
             with it("should leave nothing chosen for the next filter"):
                 data_of(self.graph.filter_choices(["clean_engineering"], ["Operation"]))
-                expect(self.graph.filter.practices).to(equal([]))
+                expect(self.graph.explorer.filter.practices).to(equal([]))
 
         with context("with no practice chosen in the filter"):
             with it("should offer every node type the loaded practices hold"):
