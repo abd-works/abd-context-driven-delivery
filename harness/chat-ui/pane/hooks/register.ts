@@ -6,6 +6,7 @@ import { readName } from './board-chat/chat-name'
 import { openedBoard } from './board-chat/board-server'
 import { currentChatBar, refreshChatBar } from './chat-bar/chat-bar-client'
 import { ChatBarView } from './chat-bar/chat-bar-view'
+import { checkChatFolder, currentChatFolder } from './chat-bar/chat-folder-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
 import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
 import { FidelityFilesView } from './chat-bar/fidelity-files-view'
@@ -45,6 +46,7 @@ async function readActive($: EngineInterface): Promise<void> {
   await refreshChatBar($)
   const chatBar = await currentChatBar($)
   if (chatBar.problem) return
+  await checkChatFolder($, chatBar)
   // The system prompt is cached; when the active session's summary changes, it is composed again next turn.
   if (chatBar.statusLine !== shownStatus) await $.ui.invalidate('prompt.section')
   shownStatus = chatBar.statusLine
@@ -108,6 +110,7 @@ export const register: Register = on => {
       chatBar: await currentChatBar($),
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
+      folder: await currentChatFolder($),
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
       width: e.props.bodyColumns,
     })
@@ -117,7 +120,7 @@ export const register: Register = on => {
   on('ui.render', { component: 'Pane', requestId: FILES_PANE }, async ($, e) => FidelityFilesView($, $.ui.resolve(e), await currentFidelityFiles($)))
 
   on('ui.close', { id: FILES_PANE }, async ($, e, next) => {
-    if (e.origin === 'person') await forgetFiles($)
+    if (e.origin.kind === 'person') await forgetFiles($)
     return next(e)
   })
 

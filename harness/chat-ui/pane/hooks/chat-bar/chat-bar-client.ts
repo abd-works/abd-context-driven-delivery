@@ -49,6 +49,11 @@ export class ChatBarClient {
     return this.ticket?.session.session_file ?? ''
   }
 
+  // The active ticket's own worktree, where the chat bar moves this chat; empty while it has none.
+  get worktree(): string {
+    return this.ticket?.worktree ?? ''
+  }
+
   get title(): string {
     return this.ticket?.title ?? ''
   }

@@ -40,6 +40,10 @@ export type ActionPickerJson = { isOpen: boolean; chosenAction: string | null }
 // isOutOfDate: a report's saved graph is in a shape the graph no longer reads, so the tab offers Validate again.
 export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: string | null }[]; shown: string | null; isOutOfDate: boolean } | null
 
+// Where this chat works (its session root) and where the active session's work is (its ticket's worktree, else the
+// main checkout), so the band can say when they differ.
+export type ChatFolderJson = { current: string; expected: string }
+
 declare module 'claude-code' {
   interface PluginState {
     'cdd-board': {
@@ -52,6 +56,7 @@ declare module 'claude-code' {
       actionPicker: ActionPickerJson
       fidelityFiles: FidelityFilesJson
       shownStage: string | null
+      chatFolder: ChatFolderJson
     }
   }
 }

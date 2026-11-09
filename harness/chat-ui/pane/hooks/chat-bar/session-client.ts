@@ -4,6 +4,7 @@ import type { LeaveChoicesData, OpenChoicesData, TicketData } from '@cdd/space/k
 
 import { reasonOf } from '../shared/failure'
 import { callTool, currentChatBar, refreshChatBar, type ChatBarClient } from './chat-bar-client'
+import { followSession } from './chat-folder-client'
 import { cancelClose, cancelSwitch, currentChatBarView, showClose, showSwitch } from './session-dialogs-client'
 
 // The person's moves between sessions: open one, create one, close the active one. Each is one ticket tool; the
@@ -26,7 +27,10 @@ export async function activateSession($: EngineInterface, sessionName: string): 
   }
   await cancelSwitch($)
   await refreshChatBar($)
-  return currentChatBar($)
+  const after = await currentChatBar($)
+  // The chat bar's switch moves this chat to the new session's worktree, so its branch and files follow CDD.
+  await followSession($, after)
+  return after
 }
 
 // Picking a session opens the activation dialog on it, with what leaving the active session and opening this one can
@@ -78,5 +82,7 @@ export async function closeSession($: EngineInterface, chatBar: ChatBarClient): 
   await cancelClose($)
   await refreshChatBar($)
   const after = await currentChatBar($)
+  // With the session closed, the chat goes back to the main checkout, which closing returned to the default branch.
+  await followSession($, after)
   return after.hasSession ? after : null
 }
