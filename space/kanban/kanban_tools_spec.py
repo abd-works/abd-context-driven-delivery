@@ -26,7 +26,6 @@ from harness.graph.violation import Violation  # noqa: E402
 from space.kanban.report import ReportRule  # noqa: E402
 from space.kanban.session_board_examples import saved_graph, saved_practice  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
-from space.kanban.ticket_checkout import LeaveRefused
 from space.kanban.ticket import Ticket  # noqa: E402
 from space.repo.repo import Branch, Repo  # noqa: E402
 from space.kanban.board import FidelityNotFoundError, NotAStageError  # noqa: E402
@@ -1161,10 +1160,11 @@ with description("the board tools") as self:
             with it("should offer to delete that worktree when leaving the ticket"):
                 expect(self.project.call("ticket.leave_choices", ticket="sign-up")["choices"]).to(equal(["handoff", "commit", "push", "merge", "delete_branch", "delete_worktree"]))
 
-            # git cannot merge or delete a branch still checked out in its worktree.
-            with it("should refuse to merge its branch while its worktree stays"):
+            # git deletes no branch a worktree has checked out, so deleting the branch takes its worktree with it.
+            with it("should delete its worktree when leaving deletes its branch"):
                 self.project.call("ticket.activate", ticket="sign-up")
-                expect(lambda: self.project.call("ticket.activate", ticket="pet-visits", leaving=["merge"])).to(raise_error(LeaveRefused))
+                self.project.call("ticket.activate", ticket="pet-visits", leaving=["delete_branch"])
+                expect(self.opened.exists()).to(be_false)
 
             with it("should check out the ticket's branch there"):
                 branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=self.opened, check=True, capture_output=True, text=True)

@@ -15,6 +15,8 @@ import { cancelClose, cancelSwitch, currentChatBarView, showClose, showSwitch } 
 const LEFT_STEPS: Record<string, string> = { handoff: 'handoff written', commit: 'committed', push: 'pushed', merge: 'merged to main', delete_branch: 'branch deleted', delete_worktree: 'worktree deleted' }
 // Deleting the worktree this chat works in would leave the chat in a folder that is gone, so it moves out first.
 const DELETE_WORKTREE = 'delete_worktree'
+// Deleting a branch deletes the worktree that has it checked out, so the chat moves out for it too.
+const DELETE_BRANCH = 'delete_branch'
 
 // ticket.close refused to close the session. reason is the server's own text.
 export class CloseRefused {
@@ -24,7 +26,7 @@ export class CloseRefused {
 // Deleting a worktree the chat still works in fails halfway, so the chat moves out first and nothing runs until it has.
 // Answers why it could not, or '' when the chat is out or nothing deletes a worktree.
 async function leftWorktreeFor($: EngineInterface, leaving: string[]): Promise<string> {
-  return leaving.includes(DELETE_WORKTREE) ? moveToMainCheckout($) : ''
+  return leaving.includes(DELETE_WORKTREE) || leaving.includes(DELETE_BRANCH) ? moveToMainCheckout($) : ''
 }
 
 export async function activateSession($: EngineInterface, sessionName: string): Promise<ChatBarClient> {

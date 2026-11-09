@@ -34,15 +34,6 @@ def own_worktree_of(branch: Branch) -> Worktree | None:
     return None if branch.is_checked_out else branch.worktree
 
 
-class LeaveRefused(ValueError):
-    """Leaving cannot do what it was asked with the ticket's branch, such as merge it while its worktree still has it
-    checked out, which git refuses."""
-
-    def __init__(self, branch: str, reason: str) -> None:
-        super().__init__(f"{branch}: {reason}")
-        self.branch = branch
-
-
 class TicketCheckout:
     """*TicketCheckout* is where one ticket's work sits in git: its own branch, the worktree that branch is open in, and
     the chat working there. It answers what opening and leaving the ticket can do now and does it, so a dialog offers
@@ -205,16 +196,14 @@ class TicketCheckout:
             checkout.push_upstream()
 
     def _delete_worktree(self, branch: Branch, leaving: list[str]) -> None:
-        """Remove the branch's own worktree folder; the branch stays. git merges or deletes a branch only once no
-        worktree has it checked out, so a merge asked for while the worktree stays is refused."""
+        """Remove the branch's own worktree folder, its work committed and pushed there, when leaving names
+        delete_worktree or delete_branch: git deletes no branch a worktree has checked out, so deleting the branch takes
+        its worktree with it. A merge needs neither, since the default branch's checkout merges it."""
         worktree = own_worktree_of(branch)
-        if worktree is None:
+        if worktree is None or not {LEAVE_DELETE_WORKTREE, LEAVE_DELETE_BRANCH} & set(leaving):
             return
-        if LEAVE_DELETE_WORKTREE in leaving:
-            worktree.close(f"{self._ticket.name}: leave session")
-            self._ticket.board.reread()
-        elif {LEAVE_MERGE, LEAVE_DELETE_BRANCH} & set(leaving):
-            raise LeaveRefused(branch.name, "its worktree still has it checked out; delete the worktree too")
+        worktree.close(f"{self._ticket.name}: leave session")
+        self._ticket.board.reread()
 
     def _merge(self, branch: Branch, leaving: list[str]) -> None:
         """Merge the branch into the default branch and push it when leaving names merge; delete it, here and on
