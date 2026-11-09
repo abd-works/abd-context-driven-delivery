@@ -98,8 +98,12 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
+    // A press on the health mark reads the board and the server again, and shows the card with the diagnostics open.
     const actions = {
-      toggleCard: () => toggleCard($),
+      toggleCard: async () => {
+        await Promise.all([readActive($), refreshHealth($), openDetails($)])
+        await toggleCard($)
+      },
       openDetails: () => openDetails($),
       hideDetails: () => hideDetails($),
       reconnect: () => reconnect($, () => readActive($)),

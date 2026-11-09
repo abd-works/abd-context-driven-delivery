@@ -178,6 +178,8 @@ class TicketCheckout:
         ticket's own worktree; work on the default branch is committed and pushed there. Then do what leaving names with
         the ticket's own branch, checked out or not: delete its worktree, merge it into the default branch, or merge and
         delete it."""
+        if not set(leaving) & {LEAVE_COMMIT, LEAVE_PUSH, *LEAVE_BRANCH_STEPS}:
+            return
         branch = self._checked_out_work_branch
         if branch is not None:
             self._commit_and_push(branch, leaving)
