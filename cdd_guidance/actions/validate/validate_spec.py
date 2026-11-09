@@ -25,7 +25,7 @@ from space.session.throwaway_project import ThrowawayProject
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
-import harness.guidance.guidance as guidance_module
+import space.session.practice_session_output as session_output_module
 from harness.graph.saved_graph import SavedGraph
 from cdd_guidance.actions.validate.checked_graph import CheckedGraph
 from space.session.session_files import NamedPathNotFoundError
@@ -538,14 +538,14 @@ with description("a validate action on practice guidance") as self:
         # A report's name is dated to the second, so a second call in that second would write over the first's report.
         with context("that is validated twice in the same second"):
             with before.each:
-                self.clock = guidance_module.datetime
-                guidance_module.datetime = _ClockAtOneSecond
+                self.clock = session_output_module.datetime
+                session_output_module.datetime = _ClockAtOneSecond
                 self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
                 self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
                 self.reports = sorted((self.session / "validation-reports").glob("ddd-tactics-*.md"))
 
             with after.each:
-                guidance_module.datetime = self.clock
+                session_output_module.datetime = self.clock
 
             with it("should save a report for each call"):
                 expect(len(self.reports)).to(equal(2))

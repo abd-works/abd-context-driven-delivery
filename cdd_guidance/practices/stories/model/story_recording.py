@@ -145,7 +145,7 @@ class StoryRecording:
     def __init__(self, story_map: "StoryModel", practice, on_node: Optional[Callable[[str], None]]) -> None:
         self.story_map = story_map
         self.practice = practice
-        self.graph = practice.graph
+        self.graph = practice.reading.graph
         self.on_node = on_node
         self.story_at = 0
         self.story_total = len(story_map.every_story())
@@ -153,7 +153,7 @@ class StoryRecording:
 
     def write(self) -> None:
         for epic in self.story_map.epics:
-            epic.record(self, self.practice.in_graph.root)
+            epic.record(self, self.practice.reading.in_graph.root)
 
     def announce(self, story) -> None:
         self.story_at += 1
@@ -164,13 +164,24 @@ class StoryRecording:
         """story_object added as the graph node node_id, called by its recorded name and of its recorded type, at the
         lines at names, with the facts it does not hold itself; the node already called node_id when two objects
         share it."""
-        if not self.practice.in_graph.holds(node_id):
+        if not self.practice.reading.in_graph.holds(node_id):
             story_object.name = story_object.recorded_name
             story_object.type = story_object.recorded_type
-        node = self.practice.in_graph.add(story_object, node_id, at.file or ".", at.line, at.end_line or at.line)
+        node = self.practice.reading.in_graph.add(story_object, node_id, at.file or ".", at.line, at.end_line or at.line)
+        self._align(node)
         for key, value in (facts or {}).items():
             node.set_fact(key, value)
         return node
+
+    def _align(self, node: Node) -> None:
+        """Move node onto the lines that declare it, since the map read it by a nearby line: a step sits on its label's
+        line; a scenario, story, or background runs to the close of its call; an example sits on its export."""
+        if node.type in {"Step", "Given", "When", "Then"}:
+            node.source.align_to_label(node.name)
+        elif node.type in {"Scenario", "Story", "Background"}:
+            node.source.widen_to_call_close()
+        elif node.type == "Example":
+            node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
 
     def text_of(self, file: str) -> str:
         return self.story_map.source_texts.get(file, "") if file else ""

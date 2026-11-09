@@ -431,19 +431,16 @@ class McpServer:
         return bool(name) and _LEGAL_MCP_NAME.fullmatch(name) is not None
 
     def resolve_call_name(self, name: str) -> str:
-        """Map Cursor's underscore tool id (`slug_op`) back to the enrolled `slug.op`."""
+        """The enrolled name a client's spelling of a tool names, such as Cursor's ``slug_op`` for ``slug.op``: each
+        tool says whether a spelling names it (``AgentTool.is_called``), the one rule a rules hook uses too; name itself
+        when nothing enrolled answers to it."""
         if name in self._tools or name in self._prompts:
             return name
-        as_dots = name.replace("_", ".")
-        if as_dots in self._tools or as_dots in self._prompts:
-            return as_dots
         for builtin in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL):
-            if name == builtin.replace(".", "_", 1):
+            if AgentTool.spelled(name) == AgentTool.spelled(builtin):
                 return builtin
-        for enrolled in (*self._tools, *self._prompts):
-            if enrolled.replace(".", "_") == name or enrolled.replace(".", "_", 1) == name:
-                return enrolled
-        return name
+        enrolled = (*self._tools.items(), *self._prompts.items())
+        return next((published for published, tool in enrolled if tool.is_called(name)), name)
 
     def enrolled(self, name: str) -> AgentTool | None:
         """The tool or instructions published as name, or under the name a client spelled it; none when not published."""

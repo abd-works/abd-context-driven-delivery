@@ -93,8 +93,8 @@ with description("a bounded context on a graph"):
 
     with it("should record the aggregate and belongsTo"):
         practice = self.graph.practice("ddd")
-        aggregates = [(edge.parent.name, edge.child.name) for edge in practice.in_graph.edges("aggregates")]
-        belongs = [(edge.parent.name, edge.child.name) for edge in practice.in_graph.edges("belongsTo")]
+        aggregates = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edges("aggregates")]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edges("belongsTo")]
         expect(aggregates).to(contain(("orders", "account")))
         expect(belongs).to(contain(("account", "orders"), ("Account", "account")))
 

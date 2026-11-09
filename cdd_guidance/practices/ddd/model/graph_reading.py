@@ -9,13 +9,13 @@ import re
 from pathlib import Path, PurePosixPath
 
 from harness.graph.graph import Node
-from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext
-from cdd_guidance.practices.ddd.model.stereotypes import KIND_OF_STEREOTYPE, TacticalClass, kind_named_by, marks_another_system, root_kept_by
+from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS, KIND_OF_STEREOTYPE, TacticalClass, kind_named_by, marks_another_system, root_kept_by
 
 _FOREIGN_KEY = re.compile(r"//\s*foreign\s+(\w+)")
 _DERIVE_PREFIX = re.compile(r"^derive\w*", re.IGNORECASE)
@@ -122,18 +122,29 @@ class BuildingBlock(Node):
         return [op for op in self.ooad_class.operations if op.name and not op.name.startswith("_")]
 
 
-class DddReading:
-    """One read of a working copy into the graph that holds the DDD practice: the bounded contexts its folders mark,
-    the aggregates its folders hold, and a building block for each class the Clean Engineering practice it extends
-    read."""
+class DddReading(PracticeReading):
+    """How DDD takes part in the graph: it reads, after the Clean Engineering practice it extends, the bounded contexts
+    its folders mark, the aggregates its folders hold, and a building block for each class Clean Engineering read; and
+    it checks its own graph rules with Clean Engineering's."""
 
-    def __init__(self, practice: PracticeGuidance) -> None:
-        self.practice = practice
-        self.graph = practice.graph
-        self.root = Path(practice.in_graph.source_root)
+    reads_after = ("clean_engineering",)
+    class_types = (*BUILDING_BLOCK_KINDS, "Aggregate", "DomainEvent")
 
-    def read(self) -> None:
-        """Read the practice's folder; a folder not written yet, such as a session's code root, holds no contexts."""
+    @property
+    def root(self) -> Path:
+        """The folder the practice reads its bounded contexts and aggregates from."""
+        return Path(self.in_graph.source_root)
+
+    def own_graph_checks(self) -> dict:
+        """DDD's own graph rules, then the rules of the practice it extends, whose part it holds."""
+        extended = self.practice.extended
+        return {**super().own_graph_checks(), **(extended.reading.graph_checks if extended is not None else {})}
+
+    def read_working_copy(self) -> None:
+        """Read the practice's folder; a folder not written yet, such as a session's code root, holds no contexts.
+        Bounded contexts come from the folders that hold ``.context/bounded-context.md``, aggregates from the folders
+        that hold domain classes, and building blocks from the classes Clean Engineering read, each seen through the DDD
+        stereotype its declaration or name gives it."""
         if not self.root.is_dir():
             return
         with schema_sync_paused():
@@ -142,11 +153,11 @@ class DddReading:
             contexts = self._contexts(marked)
             members = self._members_by_folder(contexts if marked else {})
             for folder, held in sorted(members.items()):
-                context = _context_for(folder, contexts) or self.practice.in_graph.root
-                aggregate = self._aggregate(folder, held, context) if held else self.practice.in_graph.node(_aggregate_id(folder))
+                context = _context_for(folder, contexts) or self.in_graph.root
+                aggregate = self._aggregate(folder, held, context) if held else self.in_graph.node(_aggregate_id(folder))
                 if aggregate is not None:
-                    held_classes = self.practice.extended.in_graph.nodes("OoadClass")
-                    aggregate.set_fact("bare_classes", _bare_classes(folder, self.practice.in_graph.nodes(), held_classes))
+                    held_classes = self.practice.extended.reading.in_graph.nodes("OoadClass")
+                    aggregate.set_fact("bare_classes", _bare_classes(folder, self.in_graph.nodes(), held_classes))
             self._link_blocks()
 
     def _contexts(self, marked: list[tuple]) -> dict[str, Node]:
@@ -155,9 +166,9 @@ class DddReading:
         found = marked or [(".", self._unmarked_context(), ".")]
         contexts: dict[str, Node] = {}
         for rel, context, markdown in found:
-            node = self.practice.in_graph.add(context, f"ddd:BoundedContext:{rel}:{context.name}", markdown, 1, context.context_file_lines)
+            node = self.in_graph.add(context, f"ddd:BoundedContext:{rel}:{context.name}", markdown, 1, context.context_file_lines)
             parent = _context_for(_folder_of(rel), contexts) if rel != "." else None
-            self.graph.link("owns", parent or self.practice.in_graph.root, node)
+            self.graph.link("owns", parent or self.in_graph.root, node)
             if parent is not None:
                 self.graph.link("belongsTo", node, parent, "relationship")
             contexts[rel] = node
@@ -196,11 +207,11 @@ class DddReading:
         clean = self.practice.extended
         if clean is None:
             return {}
-        every = clean.in_graph.nodes("OoadClass")
+        every = clean.reading.in_graph.nodes("OoadClass")
         names = {cls.name for cls in every}
         modelled = _modelled_folders(every)
         members: dict[str, list[tuple[TacticalClass, str]]] = {}
-        for cls in clean.in_graph.nodes_read_now("OoadClass"):
+        for cls in clean.reading.in_graph.nodes_read_now("OoadClass"):
             # A class in a spec, a test folder, or test support is never a domain building block, whatever its name.
             if is_test_code(cls.source.file):
                 continue
@@ -212,7 +223,7 @@ class DddReading:
     def _aggregate(self, folder: str, members: list[tuple[TacticalClass, str]], context: Node) -> Node:
         aggregate = Aggregate(Path(folder).name, 1)
         aggregate.load_folder_facts(self.root / folder)
-        node = self.practice.in_graph.add(aggregate, _aggregate_id(folder), folder, 1, 1)
+        node = self.in_graph.add(aggregate, _aggregate_id(folder), folder, 1, 1)
         self.graph.link("owns", context, node)
         self.graph.link("belongsTo", node, context, "relationship")
         for tactical, kind in members:
@@ -221,7 +232,7 @@ class DddReading:
 
     def _block(self, aggregate: Node, tactical: TacticalClass, kind: str) -> None:
         source = tactical.oclass.source
-        block = self.practice.in_graph.add(BuildingBlock(self.practice, tactical, kind), f"ddd:{kind}:{source.file}:{tactical.oclass.name}", source.file, source.start_line, source.end_line)
+        block = self.in_graph.add(BuildingBlock(self.practice, tactical, kind), f"ddd:{kind}:{source.file}:{tactical.oclass.name}", source.file, source.start_line, source.end_line)
         self.graph.link("root" if kind == "EntityRoot" else "owns", aggregate, block)
         self.graph.link("belongsTo", block, aggregate, "relationship")
 
@@ -231,7 +242,7 @@ class DddReading:
         which it names with a ``// foreign Name`` comment. Both read only a block's name and its lines, which a block
         read back from a saved graph holds too, so a refreshed root is linked again to the blocks no file in the
         refresh holds."""
-        blocks = [node for node in self.practice.in_graph.nodes() if node.type in _BLOCK_KINDS]
+        blocks = [node for node in self.in_graph.nodes() if node.type in _BLOCK_KINDS]
         by_name = {block.name: block for block in blocks}
         for block in blocks:
             if block.type == "Repository":

@@ -35,8 +35,8 @@ class GraphBddModel(BddModel):
         graph.restored_from(SavedGraph.from_text(text))
         self._graph = graph
         bdd = graph.practices.of(self.practice_kind())
-        self._clean = bdd.clean_engineering_practice
-        for spec in sorted(bdd.in_graph.nodes("Spec"), key=lambda node: node.source.file):
+        self._clean = bdd.reading.clean_engineering_reading
+        for spec in sorted(bdd.reading.in_graph.nodes("Spec"), key=lambda node: node.source.file):
             for saved in self._in_file_order(graph.edges_from("descriptions", spec)):
                 self._read_block(saved, self.add_description(saved.name))
         return self

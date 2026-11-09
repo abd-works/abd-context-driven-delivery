@@ -11,7 +11,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from harness.graph.graph import Graph, Node
+from harness.graph.graph import Node
+from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 
@@ -21,14 +23,26 @@ from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
 
-class GraphReading:
-    """Clean Engineering's operations over the graph it is read in: reading the code, then the model documents. Every
-    practice that links to the code asks its code index; a realization asks its model documents."""
+class GraphReading(PracticeReading):
+    """How Clean Engineering takes part in the graph: it reads the code, then the model documents. Its classes are the
+    classes the source view opens and folds, their operations and properties the members it opens a call to, and its
+    checks run on each class as a whole. Every practice that links to the code asks its code index; a realization asks
+    its model documents."""
 
-    graph: Graph
+    class_types = ("OoadClass",)
+    member_types = ("Operation", "Property")
+    class_node_type = "OoadClass"
+    anchor_types = {
+        "module": "Module",
+        "class": "OoadClass",
+        "property": "Property",
+        "operation": "Operation",
+        "parameter": "Parameter",
+        "package": "Package",
+    }
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, practice: PracticeGuidance) -> None:
+        super().__init__(practice)
         self.code_index = CodeIndex(self)
         self.model_documents = ModelDocuments(self)
 
@@ -46,8 +60,8 @@ class CodeIndex:
     each read, the first time a reader asks, so the type linking, every rule, and every practice that links to the code
     ask one index, and a graph read back from its saved file answers from the nodes it restored."""
 
-    def __init__(self, practice: GraphReading) -> None:
-        self._practice = practice
+    def __init__(self, reading: GraphReading) -> None:
+        self._reading = reading
         self._classes: dict[str, list[Node]] | None = None
         self._members: dict[str, list[Node]] | None = None
 
@@ -67,13 +81,13 @@ class CodeIndex:
     def members_named(self, name: str) -> list[Node]:
         """The operations and properties called name, each class's operation before its property."""
         if self._members is None:
-            in_graph = self._practice.in_graph
+            in_graph = self._reading.in_graph
             self._members = self._indexed([*in_graph.nodes("Operation"), *in_graph.nodes("Property")])
         return self._members.get(name, [])
 
     def _class_index(self) -> dict[str, list[Node]]:
         if self._classes is None:
-            self._classes = self._indexed(sorted(self._practice.in_graph.nodes("OoadClass"), key=lambda node: node.node_id))
+            self._classes = self._indexed(sorted(self._reading.in_graph.nodes("OoadClass"), key=lambda node: node.node_id))
         return self._classes
 
     @staticmethod
@@ -89,10 +103,10 @@ class ModelDocuments:
     path from the source root. A realization follows an interaction into a class the load left out through them,
     without a second copy of the class among the code's nodes."""
 
-    def __init__(self, practice: GraphReading) -> None:
-        self._practice = practice
+    def __init__(self, reading: GraphReading) -> None:
+        self._reading = reading
         # The format the practice's model documents are written in, which reads each into the class model it describes.
-        self._format: type[CleanEngineeringModel] = practice.model_document_format
+        self._format: type[CleanEngineeringModel] = reading.practice.model_document_format
         self._models: dict[str, CleanEngineeringModel] = {}
         # Whether the documents have been read for the graph the practice is in.
         self._read = False
@@ -100,7 +114,7 @@ class ModelDocuments:
     def read(self) -> None:
         """Read the documents of the folders in scope. A refresh reads only some documents, so the models the others
         describe stay; a whole load reads them all again."""
-        graph = self._practice.graph
+        graph = self._reading.graph
         if graph.scope.edited_files is None or not self._read:
             self._models = {}
         self._read = True
@@ -119,12 +133,12 @@ class ModelDocuments:
 
     @property
     def _root(self) -> Path:
-        return Path(self._practice.in_graph.source_root)
+        return Path(self._reading.in_graph.source_root)
 
     def _files(self) -> list[Path]:
         """Each scoped folder's and each of its parents' ``.context/*-model.md``, up to the root, as the graph's scope
         names them. ``.context`` is a skipped folder, so the code scan never reaches them."""
-        graph = self._practice.graph
+        graph = self._reading.graph
         edited = graph.scope.edited_files
         folders = self._every_folder() if edited is None else {self._root, *(graph.scope.folders or [])}
         named = {path for path in (edited or []) if path.name.endswith("-model.md")}

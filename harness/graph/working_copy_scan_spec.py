@@ -95,15 +95,15 @@ def _working_copy() -> Path:
 
 
 def _story_nodes(graph: Graph, name: str) -> list:
-    return [node for node in graph.practice("stories").in_graph.nodes() if node.name == name]
+    return [node for node in graph.practice("stories").reading.in_graph.nodes() if node.name == name]
 
 
 def _class_names(graph: Graph) -> list[str]:
-    return sorted(node.name for node in graph.practice("clean_engineering").in_graph.nodes("OoadClass"))
+    return sorted(node.name for node in graph.practice("clean_engineering").reading.in_graph.nodes("OoadClass"))
 
 
 def _module_names(graph: Graph) -> list[str]:
-    return sorted(node.name for node in graph.practice("clean_engineering").in_graph.nodes("Module"))
+    return sorted(node.name for node in graph.practice("clean_engineering").reading.in_graph.nodes("Module"))
 
 
 with description("a working copy scan") as self:
@@ -266,5 +266,5 @@ with description("a working copy scan") as self:
                 os.chdir(cwd)
 
         with it("should resolve the root against the folder"):
-            source_root = Path(self.relative.practice("clean_engineering").in_graph.source_root)
+            source_root = Path(self.relative.practice("clean_engineering").reading.in_graph.source_root)
             expect(source_root).to(equal((self.root / "src").resolve()))

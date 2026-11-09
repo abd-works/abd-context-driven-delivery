@@ -55,27 +55,27 @@ class _CountingReads(Graph):
 
 
 def _nodes(graph: Graph) -> list[tuple]:
-    found = graph.practice("clean_engineering").in_graph.nodes()
+    found = graph.practice("clean_engineering").reading.in_graph.nodes()
     return sorted((node.node_id, node.type, node.source.file, node.source.start_line, node.source.end_line) for node in found)
 
 
 def _violations(graph: Graph) -> list[tuple]:
-    found = graph.practice("clean_engineering").in_graph.nodes()
+    found = graph.practice("clean_engineering").reading.in_graph.nodes()
     return sorted((violation.rule, violation.node_id, violation.line, violation.message) for node in found for violation in node.rules.violations)
 
 
 def _ddd_nodes(graph: Graph) -> list[tuple]:
     """DDD's building blocks: the type and the class of each."""
     blocks = ("EntityRoot", "Entity", "ValueObject", "Repository", "DomainService", "Factory", "Specification")
-    return sorted((node.type, node.name) for node in graph.practice("ddd").in_graph.nodes() if node.type in blocks)
+    return sorted((node.type, node.name) for node in graph.practice("ddd").reading.in_graph.nodes() if node.type in blocks)
 
 
 def _ddd_edges(graph: Graph) -> list[tuple]:
-    return sorted((edge.kind, edge.parent.node_id, edge.child.node_id) for edge in graph.practice("ddd").in_graph.edges())
+    return sorted((edge.kind, edge.parent.node_id, edge.child.node_id) for edge in graph.practice("ddd").reading.in_graph.edges())
 
 
 def _class_names(graph: Graph) -> list[str]:
-    return sorted(node.name for node in graph.practice("clean_engineering").in_graph.nodes("OoadClass"))
+    return sorted(node.name for node in graph.practice("clean_engineering").reading.in_graph.nodes("OoadClass"))
 
 
 class _CountingTakes(Graph):
@@ -117,7 +117,7 @@ class _SerialisedHere:
 
 def _practice_state(graph: Graph, key: str) -> dict:
     """One practice's nodes where they sit with their facts, its edges, and its violations, as a build leaves them."""
-    part = graph.practice(key).in_graph
+    part = graph.practice(key).reading.in_graph
     found = part.nodes()
     return {
         "nodes": sorted((node.node_id, node.type, node.source.file, node.source.start_line, node.source.end_line, _facts(node)) for node in found),

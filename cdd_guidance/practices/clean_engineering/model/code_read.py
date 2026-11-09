@@ -38,12 +38,12 @@ class CodeRead:
     that do not parse, with the reason. Made for each read, so nothing one read finds stays on the practice for the
     next. It holds the folders the read takes and the class nodes it adds."""
 
-    def __init__(self, practice: "GraphReading") -> None:
-        self._practice = practice
-        self._root = Path(practice.in_graph.source_root)
-        practice.graph.report_progress("clean_engineering · folders")
-        self._folders = CodeFolders(practice)
-        self._files = practice.graph.scope.source_files(self._root, practice.readable_suffixes)
+    def __init__(self, reading: "GraphReading") -> None:
+        self._reading = reading
+        self._root = Path(reading.in_graph.source_root)
+        reading.graph.report_progress("clean_engineering · folders")
+        self._folders = CodeFolders(reading)
+        self._files = reading.graph.scope.source_files(self._root, reading.practice.formats.suffixes)
         # The module of each file this read tried, by its resolved path; none for a file that does not parse.
         self._tried: dict[Path, Module | None] = {}
         self._modules: dict[Path, Module] = {}
@@ -53,7 +53,7 @@ class CodeRead:
         """Parse the files, add the folders, classes, and members they hold, then link the types and the folders."""
         self._parse()
         self._record_public_sources()
-        classes = ClassNodes(self._practice, self._class_names())
+        classes = ClassNodes(self._reading, self._class_names())
         self._folders.add()
         for file, module in self._modules.items():
             relative = file.relative_to(self._root).as_posix()
@@ -68,12 +68,12 @@ class CodeRead:
     def _class_names(self) -> set[str]:
         """The classes the parsed files declare, and those the files an edited-file scope leaves out declare."""
         parsed = {cls.name for module in self._modules.values() for cls in module.classes}
-        return parsed | OutsideScope(self._practice, self._files).class_names()
+        return parsed | OutsideScope(self._reading, self._files).class_names()
 
     def _parse(self) -> None:
         for index, file in enumerate(self._files, start=1):
             relative = file.relative_to(self._root).as_posix()
-            self._practice.graph.report_progress(f"clean_engineering · classes · {index}/{len(self._files)} · {relative}")
+            self._reading.graph.report_progress(f"clean_engineering · classes · {index}/{len(self._files)} · {relative}")
             module = self._module_of(file)
             if module is not None:
                 self._modules[file] = module
@@ -89,7 +89,7 @@ class CodeRead:
         """The file's module, read by its language's class model from the practice's formats, with its source facts
         loaded. A file that does not parse is kept with the reason, so the source-parses rule reports it."""
         try:
-            module = self._practice.format_for(file).parse(file.read_text(encoding="utf-8")).file_module()
+            module = self._reading.practice.formats.for_file(file).parse(file.read_text(encoding="utf-8")).file_module()
         except (OSError, UnicodeDecodeError) as error:
             self._unreadable[file] = f"cannot be read: {error}"
             return None
@@ -116,11 +116,11 @@ class OutsideScope:
     parse did, and a refresh would then link and check what a fresh build does not. A whole load leaves nothing out.
     """
 
-    def __init__(self, practice: "GraphReading", parsed: list[Path]) -> None:
-        self._graph = practice.graph
-        self._in_graph = practice.in_graph
-        self._root = Path(practice.in_graph.source_root)
-        self._suffixes = practice.readable_suffixes
+    def __init__(self, reading: "GraphReading", parsed: list[Path]) -> None:
+        self._graph = reading.graph
+        self._in_graph = reading.in_graph
+        self._root = Path(reading.in_graph.source_root)
+        self._suffixes = reading.practice.formats.suffixes
         self._parsed = set(parsed)
         # The module folder that holds each folder read, by the folder; empty for one in no module.
         self._owners: dict[Path, str] = {}
@@ -170,10 +170,10 @@ class ClassNodes:
     """The classes one read adds to the graph, with their properties, operations, and parameters, and the class names a
     type hint may name, so the read links each member to the classes its type names once every class is added."""
 
-    def __init__(self, practice: "GraphReading", class_names: set[str]) -> None:
-        self._graph = practice.graph
-        self._in_graph = practice.in_graph
-        self._index = practice.code_index
+    def __init__(self, reading: "GraphReading", class_names: set[str]) -> None:
+        self._graph = reading.graph
+        self._in_graph = reading.in_graph
+        self._index = reading.code_index
         self._class_names = class_names
 
     def add(self, relative: str, folder: "Node", cls) -> None:
@@ -254,11 +254,11 @@ class CodeFolders:
     is added as, and what its production files import. A module owns a module card (``.context/module-context.md``);
     any other folder with source is a package. With an edited-file scope, only the folders holding those files."""
 
-    def __init__(self, practice: "GraphReading") -> None:
-        self._graph = practice.graph
-        self._in_graph = practice.in_graph
+    def __init__(self, reading: "GraphReading") -> None:
+        self._graph = reading.graph
+        self._in_graph = reading.in_graph
         self._root = Path(self._in_graph.source_root)
-        self._suffixes = practice.readable_suffixes
+        self._suffixes = reading.practice.formats.suffixes
         self._modules: dict[str, Module] = self._found(self._graph.scope.folders)
         self._nodes: "dict[str, Node]" = {}
         self._imports: dict[str, list[str]] = {relative: [] for relative in self._modules}

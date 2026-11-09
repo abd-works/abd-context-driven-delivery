@@ -56,26 +56,26 @@ class GraphPractices:
     def part_of(self, practice: PracticeGuidance) -> PracticeNodes:
         """practice's part of the graph, where its nodes and edges are kept; ``UnknownPractice`` for a practice another
         graph holds, so no graph records an edge in a practice it does not hold."""
-        if practice.graph is not self._graph:
+        if practice.reading.graph is not self._graph:
             raise UnknownPractice(practice.key, tuple(self.held))
-        return practice.in_graph
+        return practice.reading.in_graph
 
     def choose(self, roots: dict[PracticeGuidance, Path]) -> None:
         """Read each practice of roots from its root; the next load reads only those."""
         for practice in self.held.values():
-            practice.in_graph.source_root_path = roots.get(practice)
+            practice.reading.in_graph.source_root_path = roots.get(practice)
         self.chosen = list(roots)
 
     @property
     def roots_by_key(self) -> dict[str, Path]:
         """Each chosen practice's root by its key, as a saved graph and a build order keep it."""
-        return {practice.key: practice.in_graph.source_root_path for practice in self.chosen}
+        return {practice.key: practice.reading.in_graph.source_root_path for practice in self.chosen}
 
     def open_chosen(self) -> None:
         """Forget every node and open each chosen practice on its root, holding its root node alone."""
         self._close_all()
         for practice in self.chosen:
-            self._open(practice, practice.in_graph.source_root_path)
+            self._open(practice, practice.reading.in_graph.source_root_path)
 
     def reopen(self, saved: SavedGraph, folder: Path) -> None:
         """Choose and hold every practice saved keeps of those the graph holds, each on the source root it was saved
@@ -93,9 +93,9 @@ class GraphPractices:
         for practice, record in kept.items():
             report_progress(f"Loading saved {practice.key} nodes")
             self._open(practice, record.root_in(folder))
-            practice.in_graph.restore.nodes(record)
+            practice.reading.in_graph.restore.nodes(record)
         for practice, record in kept.items():
-            practice.in_graph.restore.links(record)
+            practice.reading.in_graph.restore.links(record)
         self.rebuild_trees()
 
     def take(self, changes: GraphChanges) -> None:
@@ -104,22 +104,22 @@ class GraphPractices:
         worker's whole answer says, without reading it back."""
         changed = {self.held[key]: record for key, record in changes.practices.items() if key in self.held and not record.is_empty}
         for practice, record in changed.items():
-            practice.in_graph.restore.changes(record)
+            practice.reading.in_graph.restore.changes(record)
         for practice, record in changed.items():
-            practice.in_graph.restore.links(record)
+            practice.reading.in_graph.restore.links(record)
         for practice in changed:
-            practice.in_graph.put_in_source_order()
-            practice.in_graph.rebuild_tree()
+            practice.reading.in_graph.put_in_source_order()
+            practice.reading.in_graph.rebuild_tree()
 
     def forget(self, files: list[Path]) -> None:
         """Drop the nodes read from files in every open practice, every edge that joins one of them, and every rule's
         findings, so a refresh reads those files again from nothing."""
         dropped: set[int] = set()
         for practice in self.opened.values():
-            dropped |= practice.in_graph.forget_files(files)
+            dropped |= practice.reading.in_graph.forget_files(files)
         for practice in self.opened.values():
-            practice.in_graph.drop_edges(lambda edge: id(edge.parent) in dropped or id(edge.child) in dropped)
-            practice.in_graph.renew_rules()
+            practice.reading.in_graph.drop_edges(lambda edge: id(edge.parent) in dropped or id(edge.child) in dropped)
+            practice.reading.in_graph.renew_rules()
 
     def in_reading_order(self) -> list[PracticeGuidance]:
         """The open practices, each after the practices it reads while it reads its own."""
@@ -128,7 +128,7 @@ class GraphPractices:
         def place(practice: PracticeGuidance) -> None:
             if practice in ordered:
                 return
-            for earlier in practice.reads_after:
+            for earlier in practice.reading.reads_after:
                 if earlier in self.opened:
                     place(self.opened[earlier])
             ordered.append(practice)
@@ -141,26 +141,26 @@ class GraphPractices:
         """Put every open practice's nodes in source order, as a fresh build reads them, and run its graph rules: a rule
         that reports the first of two nodes then reports the same node whichever build read them."""
         for practice in self.opened.values():
-            practice.in_graph.put_in_source_order()
+            practice.reading.in_graph.put_in_source_order()
         for practice in self.opened.values():
-            practice.in_graph.rule_run.check()
+            practice.reading.in_graph.rule_run.check()
 
     def rebuild_trees(self) -> None:
         for practice in self.opened.values():
-            practice.in_graph.rebuild_tree()
+            practice.reading.in_graph.rebuild_tree()
 
     def _opened(self, practice: PracticeGuidance) -> PracticeGuidance:
         """practice, opened in the graph on the folder it last loaded the first time it is asked for."""
         if practice.key not in self.opened:
-            self._open(practice, practice.in_graph.source_root_path or self._graph.scope.folder)
+            self._open(practice, practice.reading.in_graph.source_root_path or self._graph.scope.folder)
         return practice
 
     def _open(self, practice: PracticeGuidance, root: Path | None) -> None:
         self.opened[practice.key] = practice
-        practice.in_graph.open(root)
+        practice.reading.in_graph.open(root)
 
     def _close_all(self) -> None:
         """Forget every practice's nodes and edges, so a load reads them again from nothing."""
         self.opened = {}
         for practice in self.held.values():
-            practice.in_graph.close()
+            practice.reading.in_graph.close()

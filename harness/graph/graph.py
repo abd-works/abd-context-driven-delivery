@@ -357,7 +357,7 @@ class Filter:
 
     def _node_types_of(self, key: str) -> list[str]:
         practice = self.graph.practices.opened.get(key)
-        return list(practice.in_graph.node_types) if practice is not None else []
+        return list(practice.reading.in_graph.node_types) if practice is not None else []
 
     def _available_node_types(self) -> list[str]:
         found: list[str] = []
@@ -374,11 +374,11 @@ class Filter:
             practice = self.graph.practices.opened.get(name)
             if practice is None:
                 continue
-            ordered = sorted(practice.in_graph.edge_index.types.values(), key=lambda edge_type: edge_type.order)
+            ordered = sorted(practice.reading.in_graph.edge_index.types.values(), key=lambda edge_type: edge_type.order)
             for edge_type in ordered:
                 if edge_type.kind in found or not edge_type.is_offered:
                     continue
-                edges = practice.in_graph.edges(edge_type.kind)
+                edges = practice.reading.in_graph.edges(edge_type.kind)
                 if any(edge.parent.type in types or edge.child.type in types for edge in edges):
                     found.append(edge_type.kind)
         return found
@@ -389,7 +389,7 @@ class Filter:
         for name in self._scope():
             practice = self.graph.practices.opened.get(name)
             if practice is not None:
-                found.update(practice.in_graph.rule_run.rule_labels_for(types))
+                found.update(practice.reading.in_graph.rule_run.rule_labels_for(types))
         return sorted(found)
 
     def _fill_from_nodes(self) -> None:
@@ -463,7 +463,7 @@ class Filter:
 
     def _on_relationship(self, node: Node) -> bool:
         for kind in self.relationships:
-            for edge in node.practice.in_graph.edges(kind):
+            for edge in node.practice.reading.in_graph.edges(kind):
                 if edge.parent is node or edge.child is node:
                     return True
         return False
@@ -509,8 +509,8 @@ class Node:
     def set_fact(self, key: str, value) -> None:
         """Record one fact on this node for rules to read; facts save with the graph."""
         self.data[key] = value
-        if self.practice is not None and self.practice.in_graph is not None:
-            self.practice.in_graph.changed()
+        if self.practice is not None and self.practice.reading.in_graph is not None:
+            self.practice.reading.in_graph.changed()
 
     def get_fact(self, key: str, default=None):
         """This node's fact, else the nearest ancestor's: a fact a whole file owns lives once, on the file's top node. A
@@ -551,12 +551,12 @@ class Node:
     @property
     def graph(self) -> Graph:
         """The graph that holds this node: its practice's."""
-        return self.practice.graph
+        return self.practice.reading.graph
 
     @property
     def schema(self):
         """This node's practice's schema, with its graph's pattern overlays applied."""
-        return self.practice.in_graph.rule_run.schema
+        return self.practice.reading.in_graph.rule_run.schema
 
     @property
     def fidelity(self) -> FidelityGuidance | None:
@@ -573,7 +573,7 @@ class Node:
     def rule_checks(self) -> dict:
         """The checks this node's rules can run, by slug: its practice's own, and those of the practice it extends and
         of each pattern overlay its graph applies."""
-        return dict(self.practice.checks())
+        return dict(self.practice.reading.checks())
 
     def applying_rule_types(self) -> set[str]:
         """The node types whose checks apply to this node: its own, and the type of the extended practice it is
@@ -611,7 +611,7 @@ class Node:
         file = self.source.file or ""
         if file in {"", "."}:
             return "graph" if self.type in {"Module", "Package"} else None
-        return self.practice.format_reading_with(Path(file), self.graph.practices.held.values()) or "graph"
+        return self.practice.formats.reading_with(Path(file), self.graph.practices.held.values()) or "graph"
 
     @property
     def failed_rules(self) -> list[str]:
@@ -625,8 +625,7 @@ class Node:
     def place(self, file: str, start_line: int, end_line: int) -> None:
         """Put this node at its lines in file, under its practice's source root. A node its practice's reader found by
         a nearby line, such as a story's step, moves onto the lines that declare it."""
-        self.source = Source(file, start_line, end_line, self.practice.in_graph.source_root)
-        self.practice.align_node(self)
+        self.source = Source(file, start_line, end_line, self.practice.reading.in_graph.source_root)
 
     def populate(self, parent: Node | None = None) -> None:
         if parent is not None:
@@ -637,7 +636,7 @@ class Node:
             return
         self._populated = True
         # A kind no one filters by, the belongsTo back-edge and scopes, is no part of the explorer tree.
-        types = sorted((edge_type for edge_type in self.practice.in_graph.edge_index.types.values() if edge_type.is_offered), key=lambda edge_type: edge_type.order)
+        types = sorted((edge_type for edge_type in self.practice.reading.in_graph.edge_index.types.values() if edge_type.is_offered), key=lambda edge_type: edge_type.order)
         for edge_type in types:
             for edge in self._edges_in_source_order(edge_type.kind):
                 edge.child.populate(self if edge.display == "direct" else self._holder_for(edge.kind))
@@ -665,7 +664,7 @@ class Node:
         return placed
 
     def _follows_source(self, edge: Edge) -> bool:
-        return edge.child.type in edge.child.practice.source_ordered_types
+        return edge.child.type in edge.child.practice.reading.source_ordered_types
 
     def _source_position(self, edge: Edge) -> tuple:
         source = edge.child.source
@@ -787,9 +786,9 @@ class GraphExplorer:
     def _source_members(self) -> list[NodeSource]:
         """Every class, operation, and property the open practices hold, each with the class it belongs to."""
         declared = list(self.graph.practices.opened.values())
-        classes = {node_type for practice in declared for node_type in practice.class_types}
-        members = {node_type for practice in declared for node_type in practice.member_types}
-        found = (node for practice in declared for node in practice.in_graph.nodes() if node.type in classes | members)
+        classes = {node_type for practice in declared for node_type in practice.reading.class_types}
+        members = {node_type for practice in declared for node_type in practice.reading.member_types}
+        found = (node for practice in declared for node in practice.reading.in_graph.nodes() if node.type in classes | members)
         return [NodeSource(node, owner="" if node.type in classes else str(node.get_fact("owner", "") or "")) for node in found]
 
     def return_nodes(self, request: dict) -> list[FilteredNode]:
@@ -798,7 +797,7 @@ class GraphExplorer:
         found: list[FilteredNode] = []
         seen: set[int] = set()
         for practice in self.graph.practices.opened.values():
-            wanted.collect(practice.in_graph.root, [], found, seen)
+            wanted.collect(practice.reading.in_graph.root, [], found, seen)
         return found
 
     def explorer_trees(self, request: dict) -> list[ExplorerEntry]:
@@ -807,14 +806,14 @@ class GraphExplorer:
         wanted = self.filter.narrowed_by(request)
         opened = self.graph.practices.opened
         named = [opened[key] for key in wanted.practices if key in opened] if wanted.practices else list(opened.values())
-        return [tree for practice in named if (tree := practice.in_graph.root.serialize().kept_by(wanted)) is not None]
+        return [tree for practice in named if (tree := practice.reading.in_graph.root.serialize().kept_by(wanted)) is not None]
 
 
 class PracticeNodes:
     """One practice's part of the graph that holds it: the root node its explorer tree starts from, the folder its
     source is read from, and its nodes by type and by id. The graph makes one for each practice it holds, keeps it, and
-    gives it to the practice (``practice.in_graph``), so code holding a practice asks it for its nodes
-    (``stories.in_graph.nodes("Story")``) instead of handing the practice back to the graph on every call. It holds
+    gives it to the practice (``practice.reading.in_graph``), so code holding a practice asks it for its nodes
+    (``stories.reading.in_graph.nodes("Story")``) instead of handing the practice back to the graph on every call. It holds
     three parts of its own, each made once: its edges, indexed by kind (``edge_index``), the run of its graph rules
     (``rule_run``), and what it takes back from saved records (``restore``)."""
 
@@ -1049,7 +1048,7 @@ class PracticeNodes:
 
 class PracticeRuleRun:
     """The graph rules one practice runs in the graph that holds it, which its part of the graph makes once and keeps
-    (``practice.in_graph.rule_run``): the practice's schema with the graph's pattern overlays, made once for each set of
+    (``practice.reading.in_graph.rule_run``): the practice's schema with the graph's pattern overlays, made once for each set of
     overlays, which says the node types each rule applies to; the checks it runs, its own and those the overlays add;
     and the run itself, which records each violation on the node it was found on."""
 
@@ -1091,10 +1090,10 @@ class PracticeRuleRun:
 
     def check(self) -> None:
         """Run every graph rule the practice checks, over the whole practice, then node by node, and record each
-        violation on the node it was found on. A practice names the rules it checks itself (``practice.checks()``),
+        violation on the node it was found on. A practice names the rules it checks itself (``practice.reading.checks()``),
         with those the graph's pattern overlays add; which of them apply to one node, the node says (``node.rules``)."""
         practice = self._part.practice
-        checks = list(practice.checks().values())
+        checks = list(practice.reading.checks().values())
         if not checks:
             return
         context = RuleCheckContext(practice, self._part.source_root_path)
@@ -1136,20 +1135,20 @@ class PracticeRuleRun:
         file."""
         found = []
         for other in self._part.graph.practices.opened.values():
-            class_type = other.class_node_type
+            class_type = other.reading.class_node_type
             if other is self._part.practice or not class_type:
                 continue
             spans: dict[str, list[tuple[int, int]]] = {}
-            for node in other.in_graph.nodes(class_type):
+            for node in other.reading.in_graph.nodes(class_type):
                 if node.source.file:
                     spans.setdefault(node.source.file.replace("\\", "/"), []).append((node.source.start_line, node.source.end_line))
-            found.append((frozenset(other.checks()), spans))
+            found.append((frozenset(other.reading.checks()), spans))
         return found
 
 
 class PracticeRestore:
     """What one practice takes back from saved records, which its part of the graph makes once and keeps
-    (``practice.in_graph.restore``): a saved graph's practice when a graph is opened from it or holds a worker's whole
+    (``practice.reading.in_graph.restore``): a saved graph's practice when a graph is opened from it or holds a worker's whole
     answer, or the changes a worker answers for a refresh. Nodes come back first, as plain nodes holding their saved
     facts at the lines they were saved at; the edges and violations come back once every practice's nodes are back,
     since an edge may join another practice's node."""
@@ -1213,7 +1212,8 @@ def _inside(node: Node, spans: dict[str, list[tuple[int, int]]]) -> bool:
 
 def _release(node: Node) -> None:
     """Take node out of the practice that holds it, in whichever graph that is, so another practice can take it."""
-    part = getattr(getattr(node, "practice", None), "in_graph", None)
+    practice = getattr(node, "practice", None)
+    part = practice.reading.in_graph if practice is not None else None
     if isinstance(part, PracticeNodes):
         part.release(node)
 
@@ -1226,7 +1226,7 @@ class Graph:
     The graph holds its practices (``graph.practices``): the PracticeGuidance objects it is given, each of which knows
     this graph, so a node's practice is one of them (``node.practice``). It gives each practice its part of the graph, a
     *PracticeNodes* made once and kept, which holds the practice's nodes, edges, and root
-    (``practice.in_graph.nodes("Story")``); the graph aggregates those parts. A session gives its graph the session's own
+    (``practice.reading.in_graph.nodes("Story")``); the graph aggregates those parts. A session gives its graph the session's own
     practices, the same objects its actions work with; a graph no session holds makes a set of its own from the
     catalogue; a model object made apart from any graph joins one when a graph adopts it. The graph changes only when a
     call asks: ``load_working_copy`` and ``load_files`` read a folder or files, and ``refresh`` reads again exactly the
@@ -1238,8 +1238,7 @@ class Graph:
         self.build = GraphBuild(self)
         held = list(PracticeCatalogue.create_all(fidelity=None) if practices is None else practices)
         for practice in held:
-            practice.graph = self
-            practice.in_graph = PracticeNodes(self, practice)
+            practice.reading.held_in(self, PracticeNodes(self, practice))
         self.practices = GraphPractices(self, held)
         # The scope of the load or refresh the graph last made: its folder, and the files it was limited to.
         self.scope = LoadScope(None)
@@ -1311,7 +1310,7 @@ class Graph:
 
     def node(self, node_id: str) -> Node | None:
         """The node called node_id, in whichever practice holds it; none when no practice does."""
-        found = (practice.in_graph.node(node_id) for practice in self.practices.held.values())
+        found = (practice.reading.in_graph.node(node_id) for practice in self.practices.held.values())
         return next((node for node in found if node is not None), None)
 
     def link(self, kind: str, parent: Node, child: Node, display: Display = "direct") -> None:

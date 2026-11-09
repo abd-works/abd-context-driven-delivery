@@ -11,7 +11,7 @@ for _cat in ("cdd_guidance/practices", "tools"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_a, be_true, equal, expect, raise_error
+from expects import be_a, be_true, equal, expect, have_key, raise_error
 from mamba import context, description, it
 
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
@@ -161,4 +161,4 @@ with description("a Ddd practice made in a set with the Clean Engineering practi
 
         practices = {type(item).__name__: item for item in PracticeCatalogue.create_all(fidelity=None)}
         practices["Ddd"].render("markdown", "## Cart\n\n------\n+ total: int\n----\n", source="markdown")
-        expect("markdown" in vars(practices["Ddd"].extended).get("_live_adapters", {})).to(be_true)
+        expect(practices["Ddd"].extended.formats._made).to(have_key("markdown"))

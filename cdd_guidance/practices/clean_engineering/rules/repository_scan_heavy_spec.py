@@ -48,7 +48,7 @@ class RepositoryScan:
         graph = Graph()
         practices = [graph.practices.of(kind) for kind in (CleanEngineering, Ddd, Bdd)]
         graph.load_files(str(_REPO), [practice.key for practice in practices], _SCANNED)
-        self.clean, self.ddd, self.bdd = (practice.in_graph for practice in practices)
+        self.clean, self.ddd, self.bdd = (practice.reading.in_graph for practice in practices)
         self.hits: list[tuple[str, list[str]]] = []
         for node in self.clean.nodes():
             for slug in node.rules.failed_slugs:

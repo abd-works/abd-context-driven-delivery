@@ -387,10 +387,7 @@ class GraphBuild:
             return
         practices = graph.practices.in_reading_order()
         for practice in practices:
-            practice.in_graph.offer_node_types(practice.node_types)
-            practice.read_working_copy()
-        for practice in practices:
-            practice.link_to_other_practices()
+            practice.reading.read()
         for overlay in graph.applied_patterns.graph_overlays:
             overlay.read(graph)
         self._offer_overlay_types()
@@ -401,7 +398,7 @@ class GraphBuild:
         overlays = self.graph.applied_patterns.graph_overlays
         if overlays:
             for practice in self.graph.practices.opened.values():
-                practice.in_graph.rule_run.offer_overlay_types(overlays)
+                practice.reading.in_graph.rule_run.offer_overlay_types(overlays)
 
     def _registering_modules(self) -> list[str]:
         """The modules that define the practices the graph holds and the patterns it applies; importing them registers

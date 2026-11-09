@@ -15,6 +15,8 @@ from expects import be, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from cdd_guidance.practices.stories.stories import Stories
+from harness.guidance.practice_formats import RenderRequest
+from harness.markdown.format import Format
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.installation.ide_layout import IdeLayout
@@ -128,7 +130,7 @@ with description("Stories"):
                 story_map.parent.mkdir(parents=True)
                 story_map.write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
                 self.stories.work_in(Session(Sessions(self.root)).practice("stories"))
-                self.model = self.stories.read_paths("tests", "python")
+                self.model = self.stories.formats.read("tests", RenderRequest(Format("markdown"), source=Format("python")))
 
             with after.each:
                 import shutil
@@ -143,9 +145,10 @@ with description("Stories"):
 
         with context("that works in no session, so it has no project to name paths from"):
             with it("should refuse to read story tests by a relative path rather than read them from the host's own folder"):
-                from cdd_guidance.practices.stories.stories import PracticeOutsideSession
+                from cdd_guidance.practices.stories.stories_formats import PracticeOutsideSession
 
-                expect(lambda: Stories(fidelity="story_map").read_paths("tests", "python")).to(
+                request = RenderRequest(Format("markdown"), source=Format("python"))
+                expect(lambda: Stories(fidelity="story_map").formats.read("tests", request)).to(
                     raise_error(PracticeOutsideSession)
                 )
 
@@ -154,7 +157,7 @@ with description("Stories"):
         with it("should use the same adapter class the story model package defines"):
             from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
 
-            expect(Stories()._format_adapter("markdown")).to(equal(MarkdownStoryModel))
+            expect(Stories().formats.adapter_class("markdown")).to(equal(MarkdownStoryModel))
 
     with context("that is constructed with fidelity acceptance_tests"):
         with it("should default format to python"):

@@ -86,7 +86,7 @@ def _order_aggregate(graph: Graph) -> None:
 
     def add(kind: str, name: str) -> Node:
         node = Node(ddd, kind, f"ddd:{kind}:order:{name}", name, Source("order", 1, 1))
-        node.practice.in_graph.hold(node)
+        node.practice.reading.in_graph.hold(node)
         return node
 
     aggregate = add("Aggregate", "order")

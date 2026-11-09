@@ -206,7 +206,7 @@ class ModelNode(Node):
         since a detached object belongs to no graph until a practice adopts it (``join``)."""
         if self.practice is None:
             raise ModelDetached(self)
-        return self.practice.graph
+        return self.practice.reading.graph
 
     @property
     def has_source_file(self) -> bool:
@@ -254,7 +254,7 @@ class ModelNode(Node):
         """Drop the edge of kind from this object to child, and the belongsTo edge back from child."""
         if not isinstance(child, ModelNode) or self.practice is None:
             return
-        self.practice.in_graph.drop_edges(lambda edge: (edge.parent is self and edge.child is child and edge.kind == kind)
+        self.practice.reading.in_graph.drop_edges(lambda edge: (edge.parent is self and edge.child is child and edge.kind == kind)
             or (edge.parent is child and edge.child is self and edge.kind == "belongsTo"),)
 
     def refer(self, target, kind: str) -> None:
@@ -273,11 +273,11 @@ class ModelNode(Node):
         members = {id(node) for node in subtree}
         carried = []
         for held in {id(node.practice): node.practice for node in subtree if node.practice is not None}.values():
-            carried.extend(held.in_graph.drop_edges(lambda edge: id(edge.parent) in members and id(edge.child) in members))
+            carried.extend(held.reading.in_graph.drop_edges(lambda edge: id(edge.parent) in members and id(edge.child) in members))
         with schema_sync_paused():
             for node in subtree:
                 node._move_to(practice)
-        graph = practice.graph
+        graph = practice.reading.graph
         for edge in carried:
             graph.record(edge.type, edge.parent, edge.child)
         for node in subtree:
@@ -295,11 +295,11 @@ class ModelNode(Node):
     def _move_to(self, practice) -> None:
         if self.practice is practice:
             return
-        unnamed = not self.node_id or practice.in_graph.holds(self.node_id)
-        node_id = practice.in_graph.unused_node_id(self.type, self.name) if unnamed else self.node_id
+        unnamed = not self.node_id or practice.reading.in_graph.holds(self.node_id)
+        node_id = practice.reading.in_graph.unused_node_id(self.type, self.name) if unnamed else self.node_id
         # add places a parsed node at its lines; a bound object keeps the source it already has, whatever its kind.
         source = self.source
-        practice.in_graph.add(self, node_id, NO_SOURCE_FILE, 1, 1)
+        practice.reading.in_graph.add(self, node_id, NO_SOURCE_FILE, 1, 1)
         self.source = source
 
     def subtree(self) -> list["ModelNode"]:
@@ -333,7 +333,8 @@ class ModelNode(Node):
     def _sync_schema_edges(self) -> None:
         if _SCHEMA_SYNC_PAUSED[0] > 0:
             return
-        graph = getattr(getattr(self, "practice", None), "graph", None)
+        practice = getattr(self, "practice", None)
+        graph = practice.reading.graph if practice is not None else None
         if graph is not None:
             graph.schema_edges.sync()
 

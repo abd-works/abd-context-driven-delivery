@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from harness.annotations.class_folder import class_folder
-from harness.guidance.guidance import rules_in
+from harness.guidance.practice_reading import rules_in
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
@@ -120,7 +120,7 @@ class PatternOverlays:
         saved graph was saved with, by slug: its own, then those each pattern adds to it. Each pattern is the one this
         object made, so asking again makes none."""
         patterns = self.patterns if overlays is None else self._patterns_at(self._paths_of(overlays))
-        merged = dict(practice.graph_checks())
+        merged = dict(practice.reading.graph_checks)
         for pattern in patterns:
             merged.update(pattern.graph_overlay.rules_for(practice))
         return merged

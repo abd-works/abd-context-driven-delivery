@@ -160,7 +160,8 @@ class ClassGraph:
 def _code_index_of(practice) -> CodeIndex:
     """The code index of the Clean Engineering practice whose rules run: the practice itself, or the one a practice
     that holds its rules, such as DDD, extends."""
-    return practice.code_index if isinstance(practice, GraphReading) else practice.extended.code_index
+    reading = practice.reading
+    return reading.code_index if isinstance(reading, GraphReading) else practice.extended.reading.code_index
 
 
 def _is_production_class(node: "Node") -> bool:

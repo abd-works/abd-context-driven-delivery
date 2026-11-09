@@ -390,8 +390,8 @@ with description("a clean engineering model on a graph"):
 
     with it("should record participants and belongsTo"):
         practice = self.graph.practice("clean_engineering")
-        participants = [(edge.parent.name, edge.child.name) for edge in practice.in_graph.edges("participants")]
-        belongs = [(edge.parent.name, edge.child.name) for edge in practice.in_graph.edges("belongsTo")]
+        participants = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edges("participants")]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edges("belongsTo")]
         expect(participants).to(contain(("orders", "Order"), ("Order", "place")))
         expect(belongs).to(contain(("Order", "orders"), ("place", "Order")))
 
@@ -449,10 +449,10 @@ with description("a model of each format translating another model"):
         cart = OoadClass("Cart", 1)
         cart.intent = "Holds the lines."
         source.modules[0].classes = [cart]
-        self.formats = CleanEngineering().formats
+        formats = CleanEngineering().formats
         self.translated = {}
-        for key, format_type in self.formats.items():
-            model = format_type()
+        for key in formats:
+            model = formats.adapter_class(key)()
             model.translate_from(source)
             self.translated[key] = model
 

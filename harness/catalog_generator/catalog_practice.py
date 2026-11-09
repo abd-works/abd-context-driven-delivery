@@ -190,7 +190,7 @@ class CatalogPractice:
         """The language the catalog shows a file of this practice's in, an example or a template: the format of this
         practice, else of another practice of its catalog, that reads it; else a format a person picks, such as html
         or markdown, that its extension names; none for any other file."""
-        read = self.practice.format_reading_with(path, self._catalogue)
+        read = self.practice.formats.reading_with(path, self._catalogue)
         if read is not None:
             return read
         named = Format.from_extension(path.suffix)
