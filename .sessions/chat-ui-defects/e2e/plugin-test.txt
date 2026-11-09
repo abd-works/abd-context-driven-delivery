@@ -1,0 +1,116 @@
+
+hooks\register.test.ts:
+(pass) should report the port the Kanban app answers on [374.67ms]
+(pass) should report no Kanban app port [466.98ms]
+(pass) should report the port the graph app answers on [1925.32ms]
+(pass) should report no graph app port [748.46ms]
+(pass) should report the hook server is not running [322.87ms]
+(pass) connected draws one check mark until it is pinned [208.34ms]
+(pass) the expanded band reveals itself on hover [151.14ms]
+(pass) connected shows all five parts with the count of loaded tools [137.01ms]
+(pass) a part shows its name only while the pointer is over it [121.32ms]
+(pass) connected has no heading above the five parts [118.83ms]
+(pass) a second press on the icon collapses the band [109.95ms]
+(pass) a lost server shows Disconnected [103.62ms]
+(pass) a server from another checkout shows Tools missing with the count [91.84ms]
+(pass) Reconnect that succeeds reads the active ticket again [115.78ms]
+(pass) Reconnect on a server still lost shows the try it is on [89.24ms]
+(pass) Details lists the failing tool, the error and the fix [103.99ms]
+(pass) the health band yields to a survey [83.10ms]
+(pass) should send the chat id with a cdd tool call [71.00ms]
+(pass) should send another tool its own arguments only [82.49ms]
+
+test\cdd-stub.test.ts:
+(pass) should refuse an operation Python does not have [12.80ms]
+(pass) should refuse an argument the operation does not take [0.91ms]
+(pass) should answer an operation Python has [1.23ms]
+
+test\move-work-forward-from-chat-bar\check-cdd-server-health\display-server-health-mark\display_server_health_mark_story.test.ts:
+(pass) Display Server Health Mark › Show the connected mark [2111.85ms]
+(pass) Display Server Health Mark › Show the disconnected mark [916.63ms]
+(pass) Display Server Health Mark › Show the tools missing mark [542.57ms]
+
+test\move-work-forward-from-chat-bar\check-cdd-server-health\open-server-health-panel\open_server_health_panel_story.test.ts:
+(pass) Open Server Health Panel › Show every part running on one line [2083.81ms]
+(pass) Open Server Health Panel › Pin the panel open [831.56ms]
+(pass) Open Server Health Panel › Say what is wrong when cdd is down [682.99ms]
+
+test\move-work-forward-from-chat-bar\check-cdd-server-health\reconnect-cdd-server\reconnect_cdd_server_story.test.ts:
+(pass) Reconnect CDD Server › Reconnect and read the session again [2209.68ms]
+(pass) Reconnect CDD Server › Stop after three tries [964.61ms]
+
+test\move-work-forward-from-chat-bar\check-cdd-server-health\reinstall-cdd-tools\reinstall_cdd_tools_story.test.ts:
+(pass) Reinstall CDD Tools › Install the missing tools [2165.23ms]
+(pass) Reinstall CDD Tools › Show why the install failed [802.29ms]
+
+test\move-work-forward-from-chat-bar\guide-work-through-practices\choose-fidelity-action\choose_fidelity_action_story.test.ts:
+(pass) Choose Fidelity Action › Pick another action for the fidelity [2581.85ms]
+(pass) Choose Fidelity Action › Drop a picked action when another fidelity is selected [593.87ms]
+
+test\move-work-forward-from-chat-bar\guide-work-through-practices\display-stage-fidelities\display_stage_fidelities_story.test.ts:
+(pass) Display Stage Fidelities › Show an earlier stage's fidelities [2261.19ms]
+
+test\move-work-forward-from-chat-bar\guide-work-through-practices\invoke-next-fidelity-action\invoke_next_fidelity_action_story.test.ts:
+(pass) Invoke Next Fidelity Action › Run the next action on the selected fidelity [2047.86ms]
+(pass) Invoke Next Fidelity Action › Generate in the stage's default format [722.78ms]
+(pass) Invoke Next Fidelity Action › Keep the action button on a done fidelity [596.32ms]
+(pass) Invoke Next Fidelity Action › Show the next action before it runs [297.05ms]
+
+test\move-work-forward-from-chat-bar\guide-work-through-practices\list-session-files\list_session_files_story.test.ts:
+(pass) List Session Files › Open a tab per file of the selected fidelity [2323.67ms]
+
+test\move-work-forward-from-chat-bar\guide-work-through-practices\move-session-to-next-stage\move_session_to_next_stage_story.test.ts:
+(pass) Move Session To Next Stage › Move on once every fidelity is reviewed [2078.72ms]
+(pass) Move Session To Next Stage › Keep acting on fidelities until the stage is reviewed [982.74ms]
+
+test\move-work-forward-from-chat-bar\guide-work-through-practices\review-fidelity\review_fidelity_story.test.ts:
+(pass) Review Fidelity › Review a fidelity after a clean validate [2373.73ms]
+(pass) Review Fidelity › Refuse a review before a clean validate [802.55ms]
+
+test\move-work-forward-from-chat-bar\guide-work-through-practices\view-fidelity-files\view_fidelity_files_story.test.ts:
+(pass) View Fidelity Files › Read a file into its tab [2074.28ms]
+(pass) View Fidelity Files › Open the files beside the chat, never in it [986.30ms]
+(pass) View Fidelity Files › Open a diagram in the draw.io editor [376.36ms]
+(pass) View Fidelity Files › Refuse a file outside the session's roots [311.95ms]
+(pass) View Fidelity Files › Read the violations from their count [211.13ms]
+
+test\move-work-forward-from-chat-bar\see-work-in-chat-bar\display-fidelity-progress\display_fidelity_progress_story.test.ts:
+(pass) Display Fidelity Progress › Shade each dot by its progress [2288.70ms]
+(pass) Display Fidelity Progress › Show a violation count in red [594.42ms]
+
+test\move-work-forward-from-chat-bar\see-work-in-chat-bar\display-session-card\display_session_card_story.test.ts:
+(pass) Display Session Card › Lay the session card over the strip [2318.63ms]
+(pass) Display Session Card › List each folder once [877.94ms]
+(pass) Display Session Card › Pick a fidelity from anywhere on its line [331.02ms]
+(pass) Display Session Card › Close the pinned session card [239.25ms]
+(pass) Display Session Card › Show the card while the pointer is on the session name [181.79ms]
+(pass) Display Session Card › Stack the health panel on the card [176.55ms]
+
+test\move-work-forward-from-chat-bar\see-work-in-chat-bar\display-stage-strip\display_stage_strip_story.test.ts:
+(pass) Display Stage Strip › Show the active session as one line [1015.42ms]
+(pass) Display Stage Strip › Redraw after the agent moves the session [383.81ms]
+
+test\move-work-forward-from-chat-bar\see-work-in-chat-bar\select-fidelity\select_fidelity_story.test.ts:
+(pass) Select Fidelity › A dot selects its fidelity and sends nothing to the chat [1132.32ms]
+
+test\move-work-forward-from-chat-bar\steer-sessions\close-active-session\close_active_session_story.test.ts:
+(pass) Close Active Session › Close the session with its work committed [1264.03ms]
+(pass) Close Active Session › Close a session whose work is on main [354.41ms]
+(pass) Close Active Session › Choose what closing does [303.98ms]
+(pass) Close Active Session › Close a session whose branch is not checked out [205.18ms]
+
+test\move-work-forward-from-chat-bar\steer-sessions\create-new-session\create_new_session_story.test.ts:
+(pass) Create New Session › Name a new session from the session list [1031.71ms]
+
+test\move-work-forward-from-chat-bar\steer-sessions\open-session\open_session_story.test.ts:
+(pass) Open Session › Open a session from the list [983.13ms]
+(pass) Open Session › Choose what switching does [556.09ms]
+(pass) Open Session › List the sessions with their stages [282.81ms]
+
+test\move-work-forward-from-chat-bar\steer-sessions\write-session-handoff\write_session_handoff_story.test.ts:
+(pass) Write Session Handoff › Ask the chat to write a handoff [851.98ms]
+
+ 69 pass
+ 0 fail
+Ran 69 tests across 21 files. [5.73s]
+exit=0
