@@ -82,11 +82,14 @@ async function askAgentToMove($: EngineInterface, folder: string): Promise<void>
   if (answer.drop !== undefined) throw new Error(answer.drop || 'the chat did not take the request')
 }
 
-// Moves this chat to the folder the active session's work is in, as /cd does when the person types it.
+// Moves this chat to the folder the active session's work is in, as /cd does when the person types it. The desktop app
+// moves the chat only after the agent's turn ends, so the band is read again once the chat is there, not before.
 export async function followSession($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
   await checkChatFolder($, chatBar)
   const { expected, isElsewhere } = await currentChatFolder($)
   if (!isElsewhere) return
-  if (await moveChatTo($, expected)) $.ui.toast(`Moving this chat to ${expected}${chatBar.sessionName ? `, for ${chatBar.sessionName}` : ''}`)
+  if (!(await moveChatTo($, expected))) return
+  $.ui.toast(`Moving this chat to ${expected}${chatBar.sessionName ? `, for ${chatBar.sessionName}` : ''}`)
+  if (!(await arrivedIn($, expected))) await showFailure($, `This chat is still not in ${expected} after ${MOVE_WAIT_MILLISECONDS / 1000} seconds`)
   await checkChatFolder($, chatBar)
 }
