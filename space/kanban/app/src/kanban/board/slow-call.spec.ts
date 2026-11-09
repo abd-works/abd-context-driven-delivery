@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { BoardApi } from './board-api'
-import { BoardStore } from './board-store'
+import { BoardStore } from '../shared/board-store'
 
 // A call the cdd server is too busy to answer says so, so a dialog that waits on it does not look as if nothing happened.
 describe('Show A Slow Call', () => {
