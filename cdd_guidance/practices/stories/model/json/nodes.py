@@ -38,7 +38,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from cdd_guidance.practices.stories.model.source_location import SourceLocation
+from cdd_guidance.practices.stories.model.story_map_files import source_at
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
     Epic,
@@ -315,7 +315,7 @@ class JsonStoryModel(StoryModel):
             raise JsonParseError(f"{json_path}: {err}") from err
         story_map.source_texts[json_path.name] = text
         story_map.place_in(json_path.name)
-        story_map.source = SourceLocation(json_path.name, 1)
+        story_map.source = source_at(json_path.name, 1)
         return story_map
 
     def _guard_schema(self, payload: Any) -> None:

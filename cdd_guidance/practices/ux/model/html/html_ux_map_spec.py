@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from expects import contain, equal, expect, raise_error
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
 _REPO = Path(__file__).resolve().parents[5]
 if str(_REPO) not in sys.path:
@@ -20,6 +20,17 @@ from cdd_guidance.practices.ux.model.ux_map_spec_fixture import OrderingMap, out
 
 def explorer_tree_in(page):
     return json.loads(re.search(r'<script id="story-explorer-tree" type="application/json">(.*?)</script>', page).group(1))
+
+
+_STORY_TESTS = _REPO / "cdd_guidance/practices/stories/model/_examples/actual/from-typescript/to-typescript/tests/onboard-a-customer/create-customer"
+
+
+def render_showing_first_story(graph):
+    """The ordering map on graph, its Cart screen showing the first story the graph's Stories holds, as HTML."""
+    story = graph.practice("stories").reading.in_graph.nodes("Story")[0]
+    ux_map = OrderingMap().build(UxMap.create(graph))
+    ux_map.find_screen("Cart").show_story(story.name)
+    return HtmlUxMap.create().render(ux_map)
 
 
 def ordering_story_map(graph):
@@ -97,9 +108,9 @@ with description("a UX map written as an HTML mockup"):
                 "kind": "scenario", "name": "pay with a saved card", "screenName": "cart",
                 "key": "scenario:cart/Check Out/pay with a saved card", "storyName": "Check Out", "scenarioIndex": 0,
                 "children": [
-                    {"kind": "step", "screenName": "cart", "stepKind": "given", "label": "a saved card",
+                    {"kind": "step", "screenName": "cart", "stepKind": "given", "label": "a saved card", "domainTerms": [],
                      "storyName": "Check Out", "scenarioIndex": 0, "scenarioKey": "scenario:cart/Check Out/pay with a saved card"},
-                    {"kind": "step", "screenName": "cart", "stepKind": "when", "label": "the customer pays",
+                    {"kind": "step", "screenName": "cart", "stepKind": "when", "label": "the customer pays", "domainTerms": [],
                      "storyName": "Check Out", "scenarioIndex": 0, "scenarioKey": "scenario:cart/Check Out/pay with a saved card"},
                 ],
             }]))
@@ -111,6 +122,50 @@ with description("a UX map written as an HTML mockup"):
 
         with it("should leave a screen that shows no story on the map off the tree"):
             expect("cart-saved" in explorer_tree_in(self.rendered)["screenKeys"]).to(equal(False))
+
+        # Which words are the domain's terms is the model's to say; the page only marks the terms it is given.
+        with context("whose screen names its domain terms"):
+            with before.each:
+                self.source.find_screen("Cart").attach_domain_term("saved card")
+                self.rendered = HtmlUxMap.create().render(self.source)
+
+            with it("should give each step the domain terms of the screen it is on"):
+                cart = explorer_tree_in(self.rendered)["nodes"][0]["children"][1]
+                steps = cart["children"][0]["children"][0]["children"]
+                expect([step["domainTerms"] for step in steps]).to(equal([["saved card"], ["saved card"]]))
+
+            with it("should leave no list of one project's nouns in the explorer's script"):
+                script = (_REPO / "cdd_guidance/practices/ux/story-demo/screen-tree.js").read_text(encoding="utf-8")
+                expect("Mavenir" in script).to(equal(False))
+
+    # A graph opened from its save holds Stories' nodes as plain nodes, with only their saved facts and edges.
+    with context("with a story map read from story tests, on a graph opened again from its save"):
+        with before.all:
+            import shutil
+            import tempfile
+
+            from harness.graph.graph import Graph
+
+            self.working_copy = Path(tempfile.mkdtemp())
+            shutil.copytree(_STORY_TESTS, self.working_copy / "tests" / "onboard-a-customer" / "create-customer")
+            fresh = Graph()
+            fresh.load_working_copy(str(self.working_copy), {"stories": "."})
+            fresh.save_json()
+            reopened = Graph()
+            reopened.open_saved(self.working_copy)
+            self.fresh_tree = explorer_tree_in(render_showing_first_story(fresh))
+            self.reopened_tree = explorer_tree_in(render_showing_first_story(reopened))
+
+        with after.all:
+            import shutil
+
+            shutil.rmtree(self.working_copy, ignore_errors=True)
+
+        with it("should place the screen under the epic of the story it shows"):
+            expect([node["key"] for node in self.reopened_tree["nodes"]]).to(equal(["epic:Onboard A Customer"]))
+
+        with it("should write the explorer tree a fresh build of the graph writes"):
+            expect(self.reopened_tree).to(equal(self.fresh_tree))
 
     with context("that is read back"):
         with before.each:

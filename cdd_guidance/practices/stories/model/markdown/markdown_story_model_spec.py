@@ -16,6 +16,7 @@ from expects import equal, have_len, be_true, be_false, expect, raise_error
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
 from cdd_guidance.practices.stories.model.story_model import Scenario, StepType
 from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.markdown.scenario_file import ScenarioFileReading
 from cdd_guidance.practices.stories.model.markdown.nodes import (
     MarkdownParseError,
     MarkdownScenario,
@@ -464,7 +465,7 @@ cart.checkout()
 
 *Then* the receipt is visible
 """
-        scenarios = MarkdownScenario.from_text(text, "pay/cart_story.test.md")[0].scenarios
+        scenarios = ScenarioFileReading(text, "pay/cart_story.test.md", MarkdownScenario).read()[0].scenarios
         when = scenarios[0].steps_in(StepType.WHEN)[0]
         expect(when.call_graph[1].text).to(equal("paymentGateway.charge(amount)"))
         story = MarkdownStory("")
@@ -513,3 +514,20 @@ with description("a Markdown story map rendered in a workspace") as self:
             parsed = MarkdownStoryModel().parse(self.text)
             names = [story.name for story in parsed.epics[0].epics[0].stories]
             expect(names).to(equal(["Select Sim", "Activate Sim"]))
+
+
+# Where a read is in the text belongs to the reading made for it, so the format that read a map holds none of it.
+_READ_PLACES = {"_file", "_raw_line", "_line_number", "_current_epic", "_sub_epic_stack", "_current_story", "_story_map", "_current_outline_story"}
+
+with description("a Markdown story map format that has read a map"):
+    with context("in heading notation"):
+        with it("should hold no place in the text it read"):
+            markdown = MarkdownStoryModel()
+            markdown.parse("# Place Order\n## Pay\n- Pay With Card\n", "map.md")
+            expect(sorted(name for name in vars(markdown) if name in _READ_PLACES)).to(equal([]))
+
+    with context("in outline notation"):
+        with it("should hold no place in the text it read"):
+            markdown = MarkdownStoryModel()
+            markdown.parse("# (E) Place Order\n## (S) Customer --> Pay With Card\n", "map.md")
+            expect(sorted(name for name in vars(markdown) if name in _READ_PLACES)).to(equal([]))

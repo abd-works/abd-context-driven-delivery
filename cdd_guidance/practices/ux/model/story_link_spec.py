@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from expects import be, contain, equal, expect
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
 _REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
@@ -14,7 +14,10 @@ from harness.graph.graph import Graph
 
 from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, Story, StoryModel
 from cdd_guidance.practices.ux.model.nodes import Screen
+from cdd_guidance.practices.ux.model.story_link import key_of
 from cdd_guidance.practices.ux.ux import Ux
+
+_STORY_TESTS = _REPO / "cdd_guidance/practices/stories/model/_examples/actual/from-typescript/to-typescript/tests/onboard-a-customer/create-customer"
 
 
 def edge_pairs(graph, practice, kind):
@@ -97,6 +100,41 @@ with description("a screen that shows stories"):
 
             with it("should record the story shown on the screen"):
                 expect(edge_pairs(self.graph, "stories", "shownOn")).to(contain(("Browse Product Catalog", "Catalog")))
+
+    # A graph opened from its save holds Stories' nodes as plain nodes, with only their saved facts and edges.
+    with context("with a story map read from story tests, on a graph opened again from its save"):
+        with before.all:
+            import shutil
+            import tempfile
+
+            self.working_copy = Path(tempfile.mkdtemp())
+            shutil.copytree(_STORY_TESTS, self.working_copy / "tests" / "onboard-a-customer" / "create-customer")
+            fresh = Graph()
+            fresh.load_working_copy(str(self.working_copy), {"stories": "."})
+            fresh.save_json()
+            stories = fresh.practice("stories")
+            self.scenario = stories.reading.in_graph.nodes("Scenario")[0]
+            self.step = stories.reading.story_tree.steps(self.scenario)[0]
+            self.keys = (key_of(self.scenario), key_of(self.step))
+            self.reopened = Graph()
+            self.reopened.open_saved(self.working_copy)
+            self.screen = Screen("Catalog", 0, graph=self.reopened)
+            self.screen.show_scenario(self.keys[0])
+            self.screen.show_step(self.keys[1])
+
+        with after.all:
+            import shutil
+
+            shutil.rmtree(self.working_copy, ignore_errors=True)
+
+        with it("should hold the scenario it names by the key a fresh build gives it"):
+            expect([node.node_id for node in self.screen.shows_scenarios]).to(equal([self.scenario.node_id]))
+
+        with it("should hold the step it names by the key a fresh build gives it"):
+            expect([node.node_id for node in self.screen.shows_steps]).to(equal([self.step.node_id]))
+
+        with it("should write the keys a fresh build writes"):
+            expect((self.screen.scenario_keys, self.screen.step_keys)).to(equal(([self.keys[0]], [self.keys[1]])))
 
     with context("with a copy of the story map drawn on another graph"):
         with before.each:

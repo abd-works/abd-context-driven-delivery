@@ -21,6 +21,7 @@ from cdd_guidance.practices.ddd.model.nodes import (
     BoundedContextMap,
     DomainEvent,
     Integration,
+    TARGET_SEGMENT,
 )
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in, without_marks
 from cdd_guidance.practices.ddd.model.stereotypes import kind_named_by, plain_class_name
@@ -33,8 +34,6 @@ _MODULE = "**Module:**"
 _INTEGRATIONS = "Integrations:"
 # `*Group*`: the heading a sketch grouped the following aggregates under.
 _GROUP = re.compile(r"^\*([^*].*?)\*$")
-# `→ Context · Aggregate · Entity (by Identity)`: the parts of an integration's target as an arc's line writes them.
-_TARGET_SEGMENT = re.compile(r"[·•]")
 _ARROWS = ("→", "->")
 _HELD_BY = "(by"
 # `integrate:` is the sketch's word for the integration field.
@@ -120,7 +119,7 @@ class MarkdownIntegration(Integration, MarkdownDomainNode):
         named = integration.plain_name(named)
         for arrow in _ARROWS:
             named = named.removeprefix(arrow).strip()
-        parts = [part.strip() for part in _TARGET_SEGMENT.split(named) if part.strip()]
+        parts = [part.strip() for part in TARGET_SEGMENT.split(named) if part.strip()]
         if len(parts) == 1:
             parts = ["", "", parts[0]]
         integration.context, integration.aggregate, integration.entity = (parts + ["", "", ""])[:3]

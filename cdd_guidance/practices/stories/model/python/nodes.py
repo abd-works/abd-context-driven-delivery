@@ -35,10 +35,6 @@ class PythonScenario(CodeScenario):
         return [background]
 
 
-def quote(value: str) -> str:
-    return value.replace("\\", "\\\\").replace('"', '\\"')
-
-
 class PythonStory(CodeStory):
     scenario_type = PythonScenario
     description_mark = r"^#\s*"

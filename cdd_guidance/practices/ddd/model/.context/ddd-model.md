@@ -90,7 +90,8 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 + aggregate_named(name: str): Aggregate
 	// this context's aggregate called name, opened the first time in this context's aggregate_type
 + load_context_folder(folder: Path): None
-	// the name is the title of .context/bounded-context.md, else the folder's name
+	// the name is the title of .context/bounded-context.md, else the folder's name; its mappings are that file's `Local → Remote` lines
++ mappings: list[ContextMapping]
 + load_bounded_contexts(): None
 	// while has_more_bounded_context: append_context(load_next_bounded_context())
 + load_aggregates(): None
@@ -202,7 +203,21 @@ toolkit folder whose `MarkdownRepository` or `AgentOperation` only ends like a b
 Each aggregate keeps the production classes in its folder that are no building block as its `bare_classes` fact,
 leaving out test code, React screen modules, and classes marked as another system's;
 `every-class-carries-ddd-stereotype` reports them. Each repository accesses the root its name says it keeps, and each
-root associates with every other root its lines name with `// foreign Name`.
+root associates with every other root its lines name with `// foreign Name`. Each *ContextMapping* a bounded context's
+file lists sits under that context and is linked to the aggregates its sides name.
+
+## ContextMapping : DomainNode
+
+How one bounded context maps to another: a `Local → Remote` line its `.context/bounded-context.md` lists, on the line it
+sits on. *DddReading* adds each under its context (`mappedTo`) and links it to the aggregates its sides name (`local`,
+`remote`), whether or not a pattern is applied; the LERN overlay reads none of the context's file.
+
++ ContextMapping(local: str, remote: str, line: int)
+------
++ local, remote: str
+	// saved facts: each side as the line writes it, alone or after its context (`Sales · cart`)
++ aggregate_names: dict[str, str]
+	// the aggregate each side names: the last `·` part
 
 ## DomainClass : OoadClass
 

@@ -251,8 +251,7 @@ with description("a story read from a TypeScript story file") as self:
             "  });\n"
             "});\n"
         )
-        self.story = TypeScriptStoryModel.story_type.load_all(text)[0]
-        self.story.read_code(BraceStoryFile(TYPESCRIPT, text).story_blocks()[0], [])
+        self.story = BraceStoryFile(TYPESCRIPT, text).stories(TypeScriptStoryModel.story_type, "pay.ts")[0][0]
 
     with it("should keep the line that opens its block"):
         expect(self.story.written.heading).to(equal(["story('Pay by card', () => {"]))
@@ -262,3 +261,34 @@ with description("a story read from a TypeScript story file") as self:
 
     with it("should give its scenario's step the body its block holds"):
         expect(self.story.scenarios[0].steps[0].body.text.strip()).to(equal("basket.add(item);"))
+
+
+# A story file is read once: each story is made from its own block, so a story whose comment names it differently from
+# its call still keeps the code it was written with, and sits on the lines of its block.
+with description("a TypeScript story file whose story comment names the story differently from its call") as self:
+    with before.each:
+        text = (
+            'import { scenario, story } from "story-test";\n'
+            "\n"
+            "/**\n"
+            " * Story: Pay\n"
+            " */\n"
+            "story('Pay by card', () => {\n"
+            "  scenario('the card is charged', ({ given }) => {\n"
+            "    given('a basket', () => {\n"
+            "      basket.add(item);\n"
+            "    });\n"
+            "  });\n"
+            "});\n"
+        )
+        self.path = "tests/shop/pay_story.test.ts"
+        self.story = TypeScriptStoryModel().parse({self.path: text}).every_story()[0]
+
+    with it("should take the name its comment gives"):
+        expect(self.story.name).to(equal("Pay"))
+
+    with it("should keep the code it was written with"):
+        expect(self.story.written is not None).to(be_true)
+
+    with it("should sit on the lines of its story call"):
+        expect((self.story.source.file, self.story.source.start_line, self.story.source.end_line)).to(equal((self.path, 6, 12)))

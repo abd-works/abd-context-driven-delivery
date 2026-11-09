@@ -9,7 +9,22 @@ from pathlib import Path, PurePosixPath
 from typing import Iterator, List, Optional
 
 from harness.annotations.name import Name
+from harness.graph.graph import Source
 from harness.graph.skipped_folders import skips_folder
+
+
+def source_at(file: str, start: int = 0, end: int | None = None) -> Source:
+    """Where a story node sits: its file and its first and last line, 0 while the line is not known; one line when no
+    last line is given."""
+    return Source(file, start, start if end is None else end)
+
+
+def path_from(base: Path, path: Path) -> str:
+    """*path* as a path from *base*, the way a node names its file; its bare name when it sits outside *base*."""
+    resolved = Path(path).resolve()
+    if base != resolved and base not in resolved.parents:
+        return resolved.name
+    return resolved.relative_to(base).as_posix()
 
 STORY_MAP_SUFFIXES = (".md", ".drawio")
 # Documents go in a folder's `.context` while code sits straight in the folder, so a story map may sit in either.

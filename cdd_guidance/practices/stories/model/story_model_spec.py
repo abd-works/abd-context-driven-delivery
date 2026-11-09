@@ -842,6 +842,13 @@ with description("a StoryModel being translated from another StoryModel") as sel
         expect(self.target.increments[0].name).to(equal("Increment 1"))
 
 
+def _source_showing(text: str):
+    """A source in no file whose text is the code a node was read from, as the schema's evidence reads it."""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(file="", start_line=0, end_line=0, text=text)
+
+
 with description("a story map on a graph") as self:
     with before.each:
         self.graph = Graph()
@@ -915,14 +922,14 @@ with description("a story map on a graph") as self:
         from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, OoadClass
         from cdd_guidance.practices.clean_engineering.model.operation import Operation
         from cdd_guidance.practices.clean_engineering.model.property import Property
-        from cdd_guidance.practices.stories.model.source_location import SourceLocation
         from cdd_guidance.practices.ux.model.nodes import Screen
 
-        self.scenario.steps[0].source = SourceLocation("", text="await accountCredentials.register()")
-        self.scenario.steps[1].source = SourceLocation("", text="expect(emailedValidationCode.code)")
+        # The schema reads a node's evidence from the text its source holds; these stand in for the code read.
+        self.scenario.steps[0].source = _source_showing("await accountCredentials.register()")
+        self.scenario.steps[1].source = _source_showing("expect(emailedValidationCode.code)")
         self.scenario.examples["emailedValidationCode"] = "code"
         example = self.scenario.examples["emailedValidationCode"]
-        example.source = SourceLocation("", text="function emailedValidationCode(): AccountCredentials {\n  return account.token\n}")
+        example.source = _source_showing("function emailedValidationCode(): AccountCredentials {\n  return account.token\n}")
         module = Module("account-credentials", 0, graph=self.graph)
         account = OoadClass("AccountCredentials", 0)
         module.classes.append(account)

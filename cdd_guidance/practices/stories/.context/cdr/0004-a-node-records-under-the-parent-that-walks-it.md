@@ -4,7 +4,7 @@
 
 ## Decision
 
-`StoryRecording.add(story_object, node_id, at, facts)` reads the node's graph name and type from the object (`recorded_name`, `recorded_type`) and its lines from one *SourceLocation*, instead of being handed the name, type, file, and span as separate values.
+`StoryRecording.add(story_object, node_id, at, facts)` reads the node's graph name and type from the object (`recorded_name`, `recorded_type`) and its lines from one *Source* (the graph's; Stories' own location class is gone), instead of being handed the name, type, file, and span as separate values.
 
 Each `record` keeps receiving the graph node of the parent that walks it: `Epic.record(recording, parent)`, `Story.record(recording, parent)`, `Background.record(recording, file, parent)`, `Scenario.record(recording, file, parent, scoped)`, `Step.record(recording, file, parent)`, `Example.record(recording, scenario, at)`. An epic no longer takes a `top` flag (it asks `is_sub_epic`), and a step no longer takes its edge kind (an `ands` step's parent is a step).
 

@@ -9,9 +9,19 @@ from pathlib import Path
 from typing import Dict
 
 from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT
-from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel
+from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel, BraceStoryWriting
 from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptEpic, JavaScriptStory
-from cdd_guidance.practices.stories.model.story_model import Epic
+
+
+class JavaScriptStoryWriting(BraceStoryWriting):
+    """How JavaScript writes stories: a story file imports the story-test helpers from the tests root, relative to
+    its own folder."""
+
+    file_name_template = "{snake}_story.test.js"
+
+    def story_test_import(self, parent: str) -> str:
+        relative = "../" * parent.count("/") + "story-test.js"
+        return f'import {{ background, scenario, story }} from "{relative}";'
 
 
 class JavaScriptStoryModel(BraceStoryModel):
@@ -20,18 +30,13 @@ class JavaScriptStoryModel(BraceStoryModel):
     epic_type = JavaScriptEpic
     story_type = JavaScriptStory
     language = JAVASCRIPT
+    writing_type = JavaScriptStoryWriting
 
     def save(self) -> Dict[str, str]:
         # WHY: a tree read from JavaScript already brings its own story-test helper; only a new tree needs the seed.
         seed = {} if self.read_from_code() else {f"{self.tests_root}/story-test.js": _story_test_js()}
         return self.write_epics(seed)
 
-    def file_name(self, epic: Epic) -> str:
-        return f"{epic.snake()}_story.test.js"
-
-    def story_test_import(self, parent: str) -> str:
-        relative = "../" * parent.count("/") + "story-test.js"
-        return f'import {{ background, scenario, story }} from "{relative}";'
 
 
 def _story_test_js() -> str:

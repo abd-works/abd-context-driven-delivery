@@ -13,6 +13,9 @@ from harness.guidance.practice_reading import PracticeReading
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 _STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
+# A story map's epic is recorded as an Epic, or as a SubEpic under another epic; a map built on a graph without being
+# recorded calls every epic an Epic.
+_EPIC_TYPES = frozenset({"Epic", "SubEpic"})
 
 
 class StoriesReading(PracticeReading):
@@ -36,6 +39,12 @@ class StoriesReading(PracticeReading):
 
     recorded_map = None
     """The story map this practice last wrote onto its graph, whose nodes its links start from."""
+
+    @cached_property
+    def story_tree(self) -> "StoryTree":
+        """The story map as this practice's graph holds it, read through its edges and saved facts: what every reader of
+        Stories' nodes asks for an epic's stories, a story's scenarios, or a scenario's steps."""
+        return StoryTree(self)
 
     @property
     def root(self) -> Path:
@@ -68,7 +77,7 @@ class StoriesReading(PracticeReading):
         self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
         clean = self.object_model
         if clean is not None:
-            StoryLinks(self, clean).link()
+            StoryLinks(self, clean, self.story_tree).link()
 
     def _story_map(self):
         model = self._story_tests()
@@ -110,6 +119,45 @@ class StoriesReading(PracticeReading):
         return [path for path in found if path in edited or any(story in path.parents for story in stories)]
 
 
+class StoryTree:
+    """The story map as the graph holds it: each epic's sub-epics and stories, each story's scenarios, each scenario's
+    steps, and the epic above any of them, read through the edges Stories records and the facts each node saves. It
+    answers the same for the objects a read parsed and for the plain nodes of a graph opened from its save, so every
+    reader of Stories' nodes, in this practice or another, asks it rather than a parsed object's attributes."""
+
+    def __init__(self, stories: PracticeReading) -> None:
+        self.stories = stories
+
+    def epic_of(self, node):
+        """The epic of the story map whose tree holds node, the outermost found up the graph's own edges; none for a
+        node under no epic."""
+        epic = None
+        above = self.stories.graph.direct_parent(node)
+        while above is not None:
+            epic = above if above.type in _EPIC_TYPES else epic
+            above = self.stories.graph.direct_parent(above)
+        return epic
+
+    def sub_epics(self, epic) -> list:
+        """The sub-epics directly under epic, in the order the map lists them."""
+        return self._below(epic, "decomposedInto", _EPIC_TYPES)
+
+    def stories_under(self, epic) -> list:
+        """The stories directly under epic or a sub-epic, in the order the map lists them."""
+        return self._below(epic, "decomposedInto", {"Story"})
+
+    def scenarios(self, story) -> list:
+        """The story's scenarios, in the order its story test or map lists them."""
+        return self._below(story, "scenarios", {"Scenario"})
+
+    def steps(self, scenario) -> list:
+        """The scenario's own steps, without the steps chained onto them, in order."""
+        return [edge.child for edge in self.stories.graph.edges_from("steps", scenario)]
+
+    def _below(self, parent, kind: str, node_types) -> list:
+        return [edge.child for edge in self.stories.graph.edges_from(kind, parent) if edge.child.type in node_types]
+
+
 class StoryLinks:
     """The edges between the Stories practice and Clean Engineering: a step invokes the operations it calls, an epic
     uses the modules those operations sit in, and an example demonstrates the classes it names and retrieves the
@@ -117,9 +165,10 @@ class StoryLinks:
     names its source holds) and from the graph's own edges, never from the parsed object behind a node: a refresh in a
     worker process holds the steps and examples it did not read again as plain nodes, and links them the same way."""
 
-    def __init__(self, stories: PracticeReading, clean: PracticeReading) -> None:
+    def __init__(self, stories: PracticeReading, clean: PracticeReading, tree: "StoryTree") -> None:
         self.stories = stories
         self.clean = clean
+        self.tree = tree
         self.graph = stories.graph
 
     @cached_property
@@ -153,7 +202,7 @@ class StoryLinks:
         body = self._step_body(step)
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [operation for name in called for operation in self.operations.get(name, ())]
-        epic = self._epic_for(step) if matched else None
+        epic = self.tree.epic_of(step) if matched else None
         for operation in matched:
             self.graph.link("invokes", step, operation, "relationship")
             self.graph.link("invokedBy", operation, step, "relationship")
@@ -189,10 +238,3 @@ class StoryLinks:
         while owner is not None and owner not in self.modules:
             owner = self.graph.direct_parent(owner)
         return owner
-
-    def _epic_for(self, step):
-        """The top-level epic whose tree holds the step, found up the graph's own edges; None for a step on no epic."""
-        node = self.graph.direct_parent(step)
-        while node is not None and node.type != "Epic":
-            node = self.graph.direct_parent(node)
-        return node

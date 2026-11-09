@@ -23,13 +23,13 @@ render writes another map in this language and parse reads a tree into a new map
 from __future__ import annotations
 
 import re
-import textwrap
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
 
 from harness.annotations.name import Name
 from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock, WrittenKey
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
     Epic,
@@ -41,7 +41,9 @@ from cdd_guidance.practices.stories.model.story_model import (
     StoryModel,
     StoryType,
 )
-from cdd_guidance.practices.stories.model.story_file import CodeBlock, flat_steps, paired, read_step_code
+from cdd_guidance.practices.stories.model.story_map_files import source_at
+from cdd_guidance.practices.stories.model.story_file import CodeBlock, flat_steps, read_step_code
+from cdd_guidance.practices.stories.model.story_writing import StoryWriting, as_read
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.story_file import StoryFile
@@ -49,20 +51,6 @@ if TYPE_CHECKING:
 
 class CodeStoryModelError(Exception):
     """Raised when a folder tree is not a valid code story map."""
-
-
-StepClause = Tuple[Step, str, List[Step]]
-# One step, the verb it opens with, and the steps a language chains onto it.
-
-
-def example_names_of(stories: List[Story]) -> List[str]:
-    names: List[str] = []
-    for story in stories:
-        for scenario in story.scenarios:
-            for name in scenario.examples:
-                if name not in names:
-                    names.append(name)
-    return names
 
 
 def _quoted_name_line(content: str, name: str) -> int:
@@ -103,19 +91,6 @@ def _names_listed(lines: List[str]) -> List[str]:
 def unescaped(value: str) -> str:
     """A quoted name or step text as it reads once its escapes are taken out: the one unescape every language uses."""
     return value.replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
-
-
-def as_read(written: Optional[WrittenBlock], language: CodeLanguage, key: WrittenKey) -> Optional[WrittenBlock]:
-    """The lines a node was read with, while it is still in this language with the same key; otherwise None."""
-    return written if written is not None and written.is_in(language, key) else None
-
-
-def joined(lines: List[str], child: List[str], raw: bool, gap: List[str]) -> List[str]:
-    """A child's lines after its parent's. A raw child brings the blank lines above it; a generic one gets the
-    language's gap, unless it is the first thing inside its parent or a blank line is already there."""
-    if raw or not lines or not lines[-1].strip():
-        return lines + child
-    return lines + gap + child
 
 
 class CodeStoryNode:
@@ -301,6 +276,13 @@ class CodeStory(Story, CodeStoryNode):
             self.evidence = [part.strip() for part in evidence.group(1).split(",") if part.strip()]
 
     @classmethod
+    def example_imports(cls, content: str) -> str:
+        """The lines of a story file that import its examples, which every story in the file reads its example names
+        from."""
+        pattern = cls.scenario_type._IMPORT
+        return "\n".join(match.group(0) for match in pattern.finditer(content)) if pattern is not None else ""
+
+    @classmethod
     def name_read(cls, found: Optional[str]) -> str:
         """The story's name as its story test wrote it. Every language reads a name this one way, so a story test's
         scenarios find the story of the same name on the map."""
@@ -320,24 +302,33 @@ class CodeStory(Story, CodeStoryNode):
         return stories or [cls.load(content)]
 
     @classmethod
-    def load(cls, content: str) -> "CodeStory":
-        """The story the text of one story holds: its name, its description, then its backgrounds and scenarios."""
+    def load(cls, content: str, scenario_blocks: Optional[List[CodeBlock]] = None) -> "CodeStory":
+        """The story the text of one story holds: its name, its description, then its backgrounds and scenarios, one
+        for each of scenario_blocks when its story file found them, else as the text writes them."""
         story = cls(cls.name_read(cls.name_in(content)), 1)
         story.read_description(content)
-        story.fill(content)
+        story.fill(content, scenario_blocks)
         return story
 
-    def read_code(self, block: CodeBlock, lead: List[str]) -> None:
+    @classmethod
+    def from_block(cls, block: CodeBlock, lead: List[str], text: str) -> "CodeStory":
+        """The story one block of a story file holds, read from its text (the file's example imports, the comment above
+        the block, and the block) with one scenario for each scenario block in it, and its code read from the block."""
+        scenarios = block.scenarios()
+        story = cls.load(text, scenarios)
+        story.read_code(block, lead, scenarios)
+        return story
+
+    def read_code(self, block: CodeBlock, lead: List[str], scenarios: List[CodeBlock]) -> None:
         """This story's code from the block it was written as: each background's step bodies, the code that is no
         background or scenario (`setup`), the block's own lines (`written`), and each scenario's code from its block."""
-        scenarios = block.scenarios()
         backgrounds = block.backgrounds(scenarios)
         for background, item in zip(self.backgrounds, backgrounds):
             read_step_code(background, item.steps(scenarios))
         written = block.written(lead)
         written.inside, leads, written.closing = block.split_inside(scenarios)
         self.setup = block.setup([*backgrounds, *scenarios])
-        for scenario, item, scenario_lead in paired(self.scenarios, scenarios, leads):
+        for scenario, item, scenario_lead in zip(self.scenarios, scenarios, leads):
             scenario.read_code(item, scenario_lead)
         written.key = self.code_key
         self.written = written
@@ -346,18 +337,6 @@ class CodeStory(Story, CodeStoryNode):
         scenario = self.scenario_type(name=name, sequential_order=len(self.scenarios) + 1)
         scenario.read(body, example_names)
         self.scenarios.append(scenario)
-
-    @staticmethod
-    def background_example_line(story: Story, prefix: str) -> str:
-        import json
-
-        if not story.backgrounds or not story.backgrounds[0].examples:
-            return ""
-        payload = {
-            name: example.cells()
-            for name, example in story.backgrounds[0].examples.items()
-        }
-        return f"{prefix}background-examples: {json.dumps(payload, ensure_ascii=False)}"
 
     def _take_background_examples(self, content: str) -> None:
         import json
@@ -371,7 +350,13 @@ class CodeStory(Story, CodeStoryNode):
         for name, cells in payload.items():
             self.backgrounds[0].examples[name] = cells if isinstance(cells, dict) else name
 
-    def fill(self, content: str) -> None:
+    def _scenario_texts(self, content: str, scenario_blocks: Optional[List[CodeBlock]]) -> List[tuple]:
+        """(name, body) of each scenario: of each scenario block its story file found, else as the text writes them."""
+        if scenario_blocks is None:
+            return type(self).scenario_type.scenario_blocks(content)
+        return [(item.name, item.body_text) for item in scenario_blocks]
+
+    def fill(self, content: str, scenario_blocks: Optional[List[CodeBlock]] = None) -> None:
         scenario_type = type(self).scenario_type
         examples = scenario_type.example_names(content)
         backgrounds = scenario_type.backgrounds_in(content)
@@ -381,7 +366,7 @@ class CodeStory(Story, CodeStoryNode):
                     background.examples[name] = name
         self.backgrounds = backgrounds
         self._take_background_examples(content)
-        for name, body in scenario_type.scenario_blocks(content):
+        for name, body in self._scenario_texts(content, scenario_blocks):
             self.add_scenario(name, body, examples)
         if self.backgrounds and self.backgrounds[0].examples:
             for scenario in self.scenarios:
@@ -418,11 +403,15 @@ class CodeEpic(Epic, CodeStoryNode):
 
 
 class CodeStoryModel(StoryModel):
-    """Source-tree story map. The epics and stories are the story map. load and save are the files."""
+    """Source-tree story map. The epics and stories are the story map: this model keeps the layout of the story files
+    under the tests root (load, save), and the code a render adopts from the tree already on disk. How its language
+    writes each story file is the writing it holds (`writing`), beside the reader of its story files (`story_file`)."""
 
     epic_type = CodeEpic
     story_type = CodeStory
     increment_type = CodeIncrement
+    writing_type: type = StoryWriting
+    """How this language writes its story files; the model makes one, with its language, the first time it writes."""
     story_file_suffixes: Tuple[str, ...] = ()
     """How a story file in this language ends, such as ``_story.test.py``; the first is the one this language writes.
     Empty for a language with no story files."""
@@ -484,13 +473,12 @@ class CodeStoryModel(StoryModel):
         """source in this language, with this model's settings; an empty map when source is None."""
         return type(self)(source, tests_root=self._tests_root)
 
-    # -- The one story render. A language model overrides only the spelling operations further down.
-
     language: Optional[CodeLanguage] = None
-    scenario_indent = "  "
-    scenario_gap = [""]
-    # The blank lines a language writes between two generic scenarios; Python writes them back to back.
-    statement_end = ""
+
+    @cached_property
+    def writing(self) -> StoryWriting:
+        """How this model's language writes its story files, made once."""
+        return self.writing_type(self.language)
 
     def write_epics(self, files: Dict[str, str]) -> Dict[str, str]:
         """Every epic's folders and sub-epic files, added to files. A top-level epic is always a folder, so the
@@ -507,140 +495,14 @@ class CodeStoryModel(StoryModel):
         nodes = [node for epic in self.every_epic() for node in (epic, *epic.stories)]
         return any(node.written is not None and node.written.language is self.language for node in nodes)
 
-    def story_text(self, story: Story) -> str:
-        return "\n".join(self.story_lines(story) + [""])
-
-    def story_lines(self, story: Story) -> List[str]:
-        """Read in this language and unchanged: every line as read. Each scenario decides for itself."""
-        written = as_read(story.written, self.language, story.code_key)
-        lines = written.lead + written.heading + written.inside if written is not None else self._story_head(story)
-        lines = self._scenarios_after(lines, story)
-        if written is not None:
-            return lines + written.closing + written.close
-        return lines + ([] if story.scenarios else self.no_scenarios_lines()) + self.story_close()
-
-    def _scenarios_after(self, lines: List[str], story: Story) -> List[str]:
-        opened = len(lines)
-        for scenario in story.scenarios:
-            gap = [] if len(lines) == opened else self.scenario_gap
-            lines = joined(lines, self._scenario_lines(scenario, self.scenario_indent), self._is_as_read(scenario), gap)
-        return lines
-
-    def _scenario_lines(self, scenario: Scenario, indent: str) -> List[str]:
-        """Read in this language and unchanged: every line as read. Otherwise the generic spelling, bodies kept."""
-        written = as_read(scenario.written, self.language, scenario.code_key)
-        if written is not None:
-            return written.lead + written.heading + written.inside + written.closing + written.close
-        inner = indent + self.language.indent
-        lines = self.scenario_open(scenario, indent) + scenario.setup.lines_in(self.language, inner, "")
-        for background in scenario.backgrounds:
-            lines.extend(self.scenario_background_lines(background, inner))
-        if scenario.examples:
-            lines.extend(self._examples_lines(scenario, inner))
-        for clause in self.clauses(scenario.steps):
-            lines.extend(self.step_lines(clause, inner))
-        if not scenario.steps and scenario.setup.is_empty:
-            lines.extend(f"{inner}{line}" for line in self.empty_block())
-        return lines + self.scenario_close(indent)
-
-    def step_lines(self, clause: "StepClause", indent: str) -> List[str]:
-        """One step and the steps chained onto it, each with its body. A body not written yet gets the placeholder."""
-        step, verb, continuations = clause
-        lines = [self.step_open(verb, step, indent)] + self._body_lines(step, indent + self.language.indent)
-        lines.extend(line for line in [self.step_close(indent)] if line is not None)
-        for extra in [*step.ands, *continuations]:
-            lines.append(self.and_open(extra, indent))
-            lines.extend(self._body_lines(extra, self.and_body_indent(indent)))
-            lines.extend(line for line in [self.and_close(indent)] if line is not None)
-        lines[-1] += self.statement_end
-        return lines
-
-    def _body_lines(self, step: Step, indent: str) -> List[str]:
-        """The step's body; an empty one carries the realization call graph as comments above the placeholder."""
-        scaffold: List[str] = []
-        if step.body.is_empty and step.call_graph:
-            graph = textwrap.dedent(step.call_graph.block()).splitlines()
-            scaffold = [f"{indent}{self.language.comment(line)}" for line in graph]
-        return scaffold + step.body.lines_in(self.language, indent, self.step_placeholder())
-
-    def clauses(self, steps: List[Step]) -> List["StepClause"]:
-        """(step, the verb it opens with, steps chained onto it). Each language decides what chains."""
-        return [(step, self.verb(step), []) for step in steps]
-
-    def verb(self, step: Step) -> str:
-        return step.keyword.lower()
-
-    def description_lines(self, story: Story, prefix: str) -> List[str]:
-        """The story's actor and, when it is not a user story, its kind, as the lines of its comment; the outline
-        notations name a kind the same way, only when it is not user."""
-        lines: List[str] = []
-        actor = (story.actors[0] if story.actors else "").strip()
-        if actor:
-            lines.append(f"{prefix}Actor: {actor}")
-        if story.story_type is not StoryType.USER:
-            lines.append(f"{prefix}Kind: {StoryType(story.story_type).value}")
-        return lines
-
     def story_file(self, content: str) -> Optional["StoryFile"]:
         """The story file content is, as this language finds its blocks; None for a language that does not read its
         blocks, whose stories are written generically."""
         return None
 
-    def file_name(self, epic: Epic) -> str:
-        raise NotImplementedError(f"{type(self).__name__} must name its story files")
-
-    def file_header(self, epic: Epic, parent: str) -> List[str]:
-        raise NotImplementedError(f"{type(self).__name__} must spell its file header")
-
     def folder_files(self, epic: Epic, folder: str, files: Dict[str, str]) -> None:
         """Files an epic folder holds besides its sub-epics; none unless a language adds them."""
         return
-
-    def story_open(self, story: Story) -> List[str]:
-        raise NotImplementedError(f"{type(self).__name__} must spell story_open")
-
-    def story_close(self) -> List[str]:
-        return []
-
-    def story_background_lines(self, background: Background) -> List[str]:
-        return []
-
-    def no_scenarios_lines(self) -> List[str]:
-        return []
-
-    def scenario_open(self, scenario: Scenario, indent: str) -> List[str]:
-        raise NotImplementedError(f"{type(self).__name__} must spell scenario_open")
-
-    def scenario_close(self, indent: str) -> List[str]:
-        return []
-
-    def scenario_background_lines(self, background: Background, indent: str) -> List[str]:
-        return []
-
-    def _examples_lines(self, scenario: Scenario, indent: str) -> List[str]:
-        return [f"{indent}{self.language.comment('examples: ' + ', '.join(scenario.examples))}"]
-
-    def step_open(self, verb: str, step: Step, indent: str) -> str:
-        raise NotImplementedError(f"{type(self).__name__} must spell step_open")
-
-    def step_close(self, indent: str) -> Optional[str]:
-        return None
-
-    def and_open(self, step: Step, indent: str) -> str:
-        raise NotImplementedError(f"{type(self).__name__} must spell and_open")
-
-    def and_body_indent(self, indent: str) -> str:
-        return indent + self.language.indent
-
-    def and_close(self, indent: str) -> Optional[str]:
-        return None
-
-    def step_placeholder(self) -> str:
-        raise NotImplementedError(f"{type(self).__name__} must spell step_placeholder")
-
-    def empty_block(self) -> List[str]:
-        """What a scenario with nothing in it needs to stay valid code."""
-        return []
 
     def _write_epic(self, epic: Epic, parent: str, files: Dict[str, str]) -> None:
         """An epic with child epics is a folder its children write into; a sub-epic with stories is one file."""
@@ -657,27 +519,8 @@ class CodeStoryModel(StoryModel):
         """One file for a sub-epic's stories: back to the path it was read from, else named for the sub-epic."""
         if not epic.stories:
             return
-        written = as_read(epic.written, self.language, epic.name)
-        path = written.path if written is not None else f"{parent}/{self.file_name(epic)}"
-        files[path] = self._file_text(epic, parent, written)
-
-    def _file_text(self, epic: Epic, parent: str, written: Optional[WrittenBlock]) -> str:
-        """The file's code above and below its stories as read, else the file header; each story renders itself."""
-        lines = list(written.inside) if written is not None else self.file_header(epic, parent)
-        opened = len(lines)
-        for story in epic.stories:
-            gap = [] if len(lines) == opened else [""]
-            lines = joined(lines, self.story_lines(story), self._is_as_read(story), gap)
-        return "\n".join(lines + (written.closing if written is not None else [""]))
-
-    def _story_head(self, story: Story) -> List[str]:
-        lines = self.story_open(story) + story.setup.lines_in(self.language, self.language.indent, "")
-        for background in story.backgrounds:
-            lines.extend(self.story_background_lines(background))
-        return lines
-
-    def _is_as_read(self, node: Union[Story, Scenario]) -> bool:
-        return as_read(node.written, self.language, node.code_key) is not None
+        path, text = self.writing.story_file(epic, parent, as_read(epic.written, self.language, epic.name))
+        files[path] = text
 
     def _adopt_code(self, kept: "CodeStoryModel") -> None:
         """Each epic, story, background, scenario, and step without code in this language takes kept's code
@@ -782,16 +625,14 @@ class CodeStoryModel(StoryModel):
 
     def _take_stories(self, holder: Epic, content: str, source_file: str) -> None:
         """The file's stories onto the sub-epic that holds them, each with where it is and the code it was written with."""
-        from cdd_guidance.practices.stories.model.source_location import SourceLocation
-
-        stories = self.story_type.load_all(content)
-        for story in stories:
-            if source_file:
-                line = _quoted_name_line(content, story.name)
-                story.source = SourceLocation(source_file, line, line)
-            holder.append_story(story)
         code = self.story_file(content)
-        written = code.read(stories, source_file) if code is not None else None
+        read = code.stories(self.story_type, source_file) if code is not None else None
+        stories, written = read if read is not None else (self.story_type.load_all(content), None)
+        for story in stories:
+            if source_file and not story.has_source_file:
+                line = _quoted_name_line(content, story.name)
+                story.source = source_at(source_file, line)
+            holder.append_story(story)
         if written is not None:
             written.key = holder.name
             holder.written = written

@@ -89,6 +89,10 @@ class MiroEpic(DiagramEpic):
     right edge, so the nesting reads as a bar under the epic that owns it."""
 
     tighten = 10
+    # A Miro epic starts at the map's margin, its sub-epics after the stories it holds itself.
+    first_x = DiagramEpic.left_margin
+    epic_spacing = DiagramEpic.gap
+    story_pitch = MiroStory.pitch
 
     @property
     def width(self) -> int:
@@ -105,27 +109,6 @@ class MiroEpic(DiagramEpic):
         if isinstance(self.parent, Epic):
             return self._sub_epic_bar_y(self.depth)
         return self.row_y
-
-    @property
-    def x(self) -> int:
-        parent = self.parent
-        if isinstance(parent, Epic):
-            origin = parent.x + len(parent.stories) * MiroStory.pitch
-            siblings = parent.epics
-            offset = origin
-            for sibling in siblings:
-                if sibling is self:
-                    return offset
-                offset += sibling.width
-            return offset
-        offset = self.left_margin
-        if parent is None:
-            return offset
-        for epic in parent.epics:
-            if epic is self:
-                return offset
-            offset += epic.width + self.gap
-        return offset
 
     @property
     def fill(self) -> str:

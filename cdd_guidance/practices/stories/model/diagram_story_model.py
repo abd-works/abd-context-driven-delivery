@@ -10,6 +10,14 @@ from cdd_guidance.practices.stories.model.story_model import Epic, Increment, St
 class DiagramStoryNode:
     """Placement shared by a diagram epic, story, and increment."""
 
+    first_x = 0
+    """Where the first top-level epic starts: a format draws its epics from the map's margin."""
+    epic_spacing = 0
+    """The space a format leaves between two top-level epics."""
+    story_pitch = 0
+    """How far each story an epic holds itself pushes its sub-epics right; a format whose sub-epics sit after the
+    epic's own stories gives its story pitch."""
+
     def _owning_map(self) -> Optional[StoryModel]:
         node = self.parent
         while node is not None and not isinstance(node, StoryModel):
@@ -62,22 +70,23 @@ class DiagramStoryNode:
 
     @property
     def x(self) -> int:
+        """A story sits at its epic's left edge. A sub-epic sits after the epic's own stories and the sub-epics before
+        it; a top-level epic after the format's margin and the epics before it, each with the format's spacing."""
         parent = self.parent
         if isinstance(self, Story):
             return parent.x if isinstance(parent, Epic) else 0
         if isinstance(parent, Epic):
-            origin = parent.x
-            siblings = parent.epics
-        elif isinstance(parent, StoryModel):
-            origin = 0
-            siblings = parent.epics
-        else:
-            return 0
-        offset = origin
+            return self._after(parent.epics, parent.x + len(parent.stories) * self.story_pitch, 0)
+        if isinstance(parent, StoryModel):
+            return self._after(parent.epics, self.first_x, self.epic_spacing)
+        return self.first_x
+
+    def _after(self, siblings: list, offset: int, spacing: int) -> int:
+        """Where this node starts along siblings, from offset, each sibling before it taking its width and spacing."""
         for sibling in siblings:
             if sibling is self:
                 return offset
-            offset += sibling.width
+            offset += sibling.width + spacing
         return offset
 
     def place(self, side: str, destination: "DiagramStoryNode") -> None:

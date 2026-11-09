@@ -7,7 +7,29 @@ from typing import List
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 from cdd_guidance.practices.stories.model.java.nodes import JavaEpic, JavaStory
-from cdd_guidance.practices.stories.model.story_model import Epic, Story
+from cdd_guidance.practices.stories.model.story_model import Story
+from cdd_guidance.practices.stories.model.story_writing import StoryWriting, background_examples_line, story_description
+
+
+class JavaStoryWriting(StoryWriting):
+    """How Java writes stories: each story is a doc comment of names and steps, with no code, so there is no body to
+    carry."""
+
+    file_name_template = "{pascal}Story.java"
+    heading_template = ["// Epic: {name}", "// Orders: {orders}", ""]
+
+    def story_lines(self, story: "Story") -> List[str]:
+        lines = [f"/** Story: {story.name}", *story_description(story, " * "), *background_examples_line(story, " * ")]
+        for background in story.backgrounds:
+            lines.append(f" * BACKGROUND: {background.name}")
+            for step in background.steps:
+                if step.keyword != "Given":
+                    continue
+                lines.append(f" * GIVEN: {step.text}")
+                lines.extend(f" * {extra.keyword.upper()}: {extra.text}" for extra in step.ands)
+        for scenario in story.scenarios:
+            lines.extend(scenario.lines())
+        return lines + [" */"]
 
 
 class JavaStoryModel(CodeStoryModel):
@@ -17,28 +39,4 @@ class JavaStoryModel(CodeStoryModel):
     not_story_paths = re.compile(r"Spec[^/]*$")
     epic_type = JavaEpic
     story_type = JavaStory
-
-    def file_name(self, epic: Epic) -> str:
-        return f"{epic.pascal()}{self.LEAF_EXTENSION}"
-
-    def file_header(self, epic: Epic, parent: str) -> List[str]:
-        return [f"// Epic: {epic.name}", f"// Orders: {epic.order_path()}", ""]
-
-    def story_lines(self, story: Story) -> List[str]:
-        """A Java story is a doc comment: names and steps, no code, so there is no body to carry."""
-        lines = [f"/** Story: {story.name}", *self.description_lines(story, " * ")]
-        example_line = self.story_type.background_example_line(story, " * ")
-        if example_line:
-            lines.append(example_line)
-        for background in story.backgrounds:
-            lines.append(f" * BACKGROUND: {background.name}")
-            for step in background.steps:
-                if step.keyword != "Given":
-                    continue
-                lines.append(f" * GIVEN: {step.text}")
-                for extra in step.ands:
-                    lines.append(f" * {extra.keyword.upper()}: {extra.text}")
-        for scenario in story.scenarios:
-            lines.extend(scenario.lines())
-        lines.append(" */")
-        return lines
+    writing_type = JavaStoryWriting

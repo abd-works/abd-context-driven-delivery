@@ -171,6 +171,14 @@ with description("a scenario on a story graph"):
                     [f"Given {given!r} names LineItem before its aggregate root Order; open with Order, then its owned parts."]
                 ))
 
+            # The rule reads DDD's aggregates, roots, and owned parts, which a graph read back holds as plain nodes.
+            with context("that is read back from graph.json"):
+                with it("should still be told to open with the Order root"):
+                    given = "a line item for two lamps on the Order"
+                    expect(_given_hits(_read_back(_loaded(_scenario([("Given", given)]), self.graph)))).to(equal(
+                        [f"Given {given!r} names LineItem before its aggregate root Order; open with Order, then its owned parts."]
+                    ))
+
         with context("with a Given that names a shipping address and no Order"):
             with it("should be told to open with the Order root"):
                 given = "a ShippingAddress in Leeds"

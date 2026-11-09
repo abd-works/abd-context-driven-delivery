@@ -90,6 +90,14 @@ class BraceBlock:
     def body(self) -> CodeBody:
         return CodeBody(self.call.body, self.file.language)
 
+    @property
+    def body_text(self) -> str:
+        return self.call.body
+
+    @property
+    def text(self) -> str:
+        return self.file.text[self.call.start : self.call.end]
+
     def written(self, lead: List[str]) -> WrittenBlock:
         start, brace, inner_end, end = (self.file.line(index) for index in (self.call.start, self.call.brace, self.call.inner_end, self.call.end - 1))
         written = WrittenBlock(self.file.language, None, lead, self.file.lines[start : brace + 1])

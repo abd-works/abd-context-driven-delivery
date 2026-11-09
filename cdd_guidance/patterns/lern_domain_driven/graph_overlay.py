@@ -1,6 +1,7 @@
 """How the LERN pattern takes part in the graph: on top of the practices it adds each aggregate's tier files (its node
-root, client root, routes, JSON store, and views), the behavior and story test files, and the context mappings a bounded
-context lists, wired with the pattern schema's relationship kinds and carrying the facts the pattern's rules read."""
+root, client root, routes, JSON store, and views) and the behavior and story test files, wired with the pattern schema's
+relationship kinds and carrying the facts the pattern's rules read. The context mappings a bounded context lists are
+DDD's own nodes, which DDD's reading makes."""
 
 from __future__ import annotations
 
@@ -14,7 +15,6 @@ from harness.graph.skipped_folders import scanned_files
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import AggregateFolder, TierFile
 
 _VIEW_EXPORT = re.compile(r"export\s+function\s+(\w+View)\s*\(")
-_CONTEXT_ARROW = re.compile(r"^[\s\-*>]*(.+?)\s*→\s*(.+?)\s*$")
 _VIEW_SKIP_SUFFIXES = ("-form", "-fields", "-banner", "-messages", "-footer", "-loaded", "-client")
 _TIER_FILES = (("{slug}-node.ts", "NodeRoot"), ("{slug}-client.tsx", "ClientRoot"), ("{slug}-routes.ts", "Route"), ("{slug}.json", "JsonStore"))
 _BEHAVIOR_TIERS = {
@@ -31,7 +31,7 @@ class LernOverlay(GraphOverlay):
     direct_kinds = frozenset(
         {
             "owns", "root", "entityRoot", "nodeRoot", "clientRoot", "nodeRepository", "repository", "route", "view",
-            "views", "mappedTo", "local", "remote", "jsonStore", "hosts", "interacts", "calls", "writes", "stores",
+            "views", "jsonStore", "hosts", "interacts", "calls", "writes", "stores",
             "writtenBy", "belongsTo",
         }
     )
@@ -64,7 +64,6 @@ class _LernReading:
             return
         self.ddd = ddd
         self.setup_text = self.overlay.pattern.test_setup_text(self.root)
-        self._context_mappings()
         self._tier_folders()
         aggregates = {node.source.file.replace("\\", "/"): node for node in self.ddd.reading.in_graph.nodes("Aggregate")}
         for folder, aggregate in sorted(aggregates.items()):
@@ -165,35 +164,6 @@ class _LernReading:
             if repository is not None:
                 self._link("nodeRepository", view, repository)
         return views
-
-    def _context_mappings(self) -> None:
-        """Each ``Local → Remote`` line a bounded context's file lists, mapped to the aggregates it names."""
-        for context in self.ddd.reading.in_graph.nodes("BoundedContext"):
-            markdown = context.source.file
-            path = self.root / markdown if markdown and markdown != "." else None
-            if path is None or not path.is_file():
-                continue
-            for index, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-                match = _CONTEXT_ARROW.match(line.strip())
-                map_id = f"ddd:ContextMapping:{markdown}:{index}"
-                if match is None or self.ddd.reading.in_graph.holds(map_id):
-                    continue
-                left, right = match.group(1).strip(), match.group(2).strip()
-                mapping = self.ddd.reading.in_graph.add_named("ContextMapping", map_id, f"{left} → {right}", Source(markdown, index, index, self.ddd.reading.in_graph.source_root))
-                self._link("mappedTo", context, mapping)
-                for kind, label in (("local", left), ("remote", right)):
-                    aggregate = self._aggregate_named(label)
-                    if aggregate is not None:
-                        self._link(kind, mapping, aggregate)
-
-    def _aggregate_named(self, label: str) -> Node | None:
-        label = label.strip()
-        aggregates = self.ddd.reading.in_graph.nodes("Aggregate")
-        for node in aggregates:
-            if node.name == label or label.endswith(f"· {node.name}") or label.endswith(f"·{node.name}"):
-                return node
-        tail = label.split("·")[-1].strip() if "·" in label else label
-        return next((node for node in aggregates if node.name == tail), None)
 
     def _story_files(self) -> None:
         stories = self.stories

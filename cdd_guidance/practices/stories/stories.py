@@ -87,7 +87,7 @@ class Stories(PracticeGuidance):
         from project. A story test holds one Story's scenarios in its own language, and the story map says which epic
         that Story sits under, so a story test's scenarios go on the map's Story of the same name, and a story test
         with no map listed reads the map in its own folder or the nearest one above it."""
-        from cdd_guidance.practices.stories.model.source_location import path_from
+        from cdd_guidance.practices.stories.model.story_map_files import path_from
         from cdd_guidance.practices.stories.model.story_model import StoryModel
 
         project = Path(project).resolve()

@@ -159,6 +159,7 @@ class DddReading(PracticeReading):
                     held_classes = self.practice.extended.reading.in_graph.nodes("OoadClass")
                     aggregate.set_fact("bare_classes", _bare_classes(folder, self.in_graph.nodes(), held_classes))
             self._link_blocks()
+            _map_contexts(self, marked, contexts)
 
     def _contexts(self, marked: list[tuple]) -> dict[str, Node]:
         """Each bounded context by its folder, under the context of the folder around it: the marked ones, else the
@@ -186,7 +187,7 @@ class DddReading(PracticeReading):
             folder = Path(dirpath)
             context = BoundedContext(sequential_order=1)
             context.load_context_folder(folder)
-            found.append(("." if folder == self.root else folder.relative_to(self.root).as_posix(), context, marker.relative_to(self.root).as_posix()))
+            found.append(("." if folder == self.root else _posix_from(folder, self.root), context, _posix_from(marker, self.root)))
         return sorted(found, key=lambda item: item[0])
 
     def _unmarked_context(self) -> BoundedContext:
@@ -289,6 +290,11 @@ def _folder_of(file: str) -> str:
     return str(PurePosixPath(file.replace("\\", "/")).parent)
 
 
+def _posix_from(path: Path, root: Path) -> str:
+    """path as a path from root, with forward slashes."""
+    return path.relative_to(root).as_posix()
+
+
 def _aggregate_id(folder: str) -> str:
     """The graph's id of the aggregate a folder holds."""
     return f"ddd:Aggregate:{folder}"
@@ -302,3 +308,20 @@ def _context_for(folder: str, contexts: dict[str, Node]) -> Node | None:
             if candidate == "." or len(candidate) > len(best):
                 best = candidate
     return contexts.get(best) or contexts.get(".")
+
+
+def _map_contexts(reading: "DddReading", marked: list[tuple], contexts: dict[str, Node]) -> None:
+    """Each context mapping a bounded context's file lists, under that context, and linked to the aggregates its two
+    sides name. A refresh reads every context's file again, so the mappings of a graph opened from its save are the ones
+    its files list now."""
+    aggregates: dict[str, Node] = {}
+    for aggregate in reading.in_graph.nodes("Aggregate"):
+        aggregates.setdefault(aggregate.name, aggregate)
+    for rel, context, markdown in marked:
+        for mapping in context.mappings:
+            line = mapping.sequential_order
+            node = reading.in_graph.add(mapping, f"ddd:ContextMapping:{markdown}:{line}", markdown, line, line)
+            reading.graph.link("mappedTo", contexts[rel], node)
+            for side, name in mapping.aggregate_names.items():
+                if name in aggregates:
+                    reading.graph.link(side, node, aggregates[name], "relationship")

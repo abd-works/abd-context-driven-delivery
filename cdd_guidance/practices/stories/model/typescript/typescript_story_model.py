@@ -3,12 +3,27 @@
 from __future__ import annotations
 
 import re
+from functools import cached_property
 from typing import Dict, Optional
 
-from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
-from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel
+from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT, CodeLanguage
+from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel, BraceStoryWriting
 from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
 from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptEpic, TypeScriptStory, _story_test_text
+
+
+class TypeScriptStoryWriting(BraceStoryWriting):
+    """How TypeScript writes stories: a story file imports the story-test helpers from the step library folder,
+    named from the workspace root (helpers)."""
+
+    file_name_template = "{snake}_story.test.ts"
+
+    def __init__(self, language: CodeLanguage, helpers: str) -> None:
+        super().__init__(language)
+        self.helpers = helpers
+
+    def story_test_import(self, parent: str) -> str:
+        return f'import {{ scenario, story }} from "{self.helpers}";'
 
 
 class TypeScriptStoryModel(BraceStoryModel):
@@ -61,11 +76,10 @@ class TypeScriptStoryModel(BraceStoryModel):
     def copy_of(self, source: Optional[StoryModel]) -> "TypeScriptStoryModel":
         return type(self)(source, tests_root=self.tests_root, story_test_folder=self._story_test_folder)
 
-    def file_name(self, epic: Epic) -> str:
-        return f"{epic.snake()}_story.test.ts"
-
-    def story_test_import(self, parent: str) -> str:
-        return f'import {{ scenario, story }} from "{self.story_test_import_path}";'
+    @cached_property
+    def writing(self) -> TypeScriptStoryWriting:
+        """How TypeScript writes this model's story files, importing the helpers from its step library folder."""
+        return TypeScriptStoryWriting(self.language, self.story_test_import_path)
 
     def folder_files(self, epic: Epic, folder: str, files: Dict[str, str]) -> None:
         """A new epic folder starts with example aggregates; a folder read from code already has its own."""

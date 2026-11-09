@@ -7,13 +7,56 @@ import re
 from typing import List
 
 from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel, example_names_of
-from cdd_guidance.practices.stories.model.python.nodes import PythonEpic, PythonStory, quote
+from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
+from cdd_guidance.practices.stories.model.python.nodes import PythonEpic, PythonStory
 from cdd_guidance.practices.stories.model.python.story_file import PythonStoryFile
 from cdd_guidance.practices.stories.model.story_file import flat_steps
-from cdd_guidance.practices.stories.model.story_model import Background, Epic, Scenario, Step, Story
+from cdd_guidance.practices.stories.model.story_model import Background, Epic, Story
+from cdd_guidance.practices.stories.model.story_writing import StoryWriting, background_examples_line, example_names_of, story_description
 
-_VERBS = {"Given": "given", "When": "when", "Then": "then", "But": "but_", "And": "and_"}
+
+class PythonStoryWriting(StoryWriting):
+    """How Python writes stories: `with story(...)`, `with scenario(...)`, and `with given(...)` blocks, the
+    scenarios back to back, and the story's description and background as comments."""
+
+    file_name_template = "{snake}_story.test.py"
+    scenario_indent = "        "
+    scenario_gap: List[str] = []
+    quote_mark = '"'
+    no_scenarios = ["        pass"]
+    empty_block = ["pass"]
+    placeholder = "pass"
+    scenario_opening = "{indent}with scenario({name}):"
+    step_opening = "{indent}with {verb}({text}):"
+    and_opening = "{indent}with {verb}({text}):"
+    and_verbs = ("and_", "but_")
+    verbs = {"Given": "given", "When": "when", "Then": "then", "But": "but_", "And": "and_"}
+    default_verb = "then"
+
+    def file_header(self, epic: Epic, parent: str) -> List[str]:
+        names = example_names_of(list(epic.stories))
+        example_import = [f"from examples import {', '.join(names)}", ""] if names else []
+        heading = [self.language.comment(f"Epic: {epic.name}"), self.language.comment(f"Orders: {epic.order_path()}"), ""]
+        return ["from __future__ import annotations", "", "from story_test import and_, background, given, scenario, story, then, when", *example_import, "", *heading]
+
+    def story_open(self, story: "Story") -> List[str]:
+        lines = [self.language.comment(f"Story: {story.name}"), *story_description(story, "# ")]
+        if story.domain_terms:
+            lines.append(self.language.comment("Domain terms: " + ", ".join(story.domain_terms)))
+        return lines + background_examples_line(story, "# ") + [f"with story({self.quoted(story.name)}):"]
+
+    def story_background_lines(self, background: "Background") -> List[str]:
+        scope = background.name if re.fullmatch(r"\w+", background.name or "") else "each"
+        lines = [f"{self.language.indent}with background.{scope}:"]
+        for step in background.steps:
+            lines.extend(self.step_lines((step, "given", []), self.language.indent * 2))
+        return lines
+
+    def scenario_background_lines(self, background: "Background", indent: str) -> List[str]:
+        lines = [f"{indent}{self.language.comment('background: ' + background.name)}"]
+        for step in flat_steps(background.steps):
+            lines.append(f"{indent}{self.language.comment(f'background-step: {step.keyword} | {step.text}')}")
+        return lines
 
 
 class PythonStoryModel(CodeStoryModel):
@@ -22,68 +65,7 @@ class PythonStoryModel(CodeStoryModel):
     epic_type = PythonEpic
     story_type = PythonStory
     language = PYTHON
-    scenario_indent = "        "
-    scenario_gap: List[str] = []
+    writing_type = PythonStoryWriting
 
     def story_file(self, content: str) -> PythonStoryFile:
         return PythonStoryFile(self.language, content)
-
-    def file_name(self, epic: Epic) -> str:
-        return f"{epic.snake()}_story.test.py"
-
-    def file_header(self, epic: Epic, parent: str) -> List[str]:
-        names = example_names_of(list(epic.stories))
-        example_import = [f"from examples import {', '.join(names)}", ""] if names else []
-        return [
-            "from __future__ import annotations",
-            "",
-            "from story_test import and_, background, given, scenario, story, then, when",
-            *example_import,
-            "",
-            f"# Epic: {epic.name}",
-            f"# Orders: {epic.order_path()}",
-            "",
-        ]
-
-    def verb(self, step: Step) -> str:
-        return _VERBS.get(step.keyword, "then")
-
-    def story_open(self, story: Story) -> List[str]:
-        lines: List[str] = [f"# Story: {story.name}", *self.description_lines(story, "# ")]
-        if story.domain_terms:
-            lines.append("# Domain terms: " + ", ".join(story.domain_terms))
-        example_line = self.story_type.background_example_line(story, "# ")
-        if example_line:
-            lines.append(example_line)
-        return lines + [f'with story("{quote(story.name)}"):']
-
-    def story_background_lines(self, background: Background) -> List[str]:
-        scope = background.name if re.fullmatch(r"\w+", background.name or "") else "each"
-        lines = [f"    with background.{scope}:"]
-        for step in background.steps:
-            lines.extend(self.step_lines((step, "given", []), "        "))
-        return lines
-
-    def no_scenarios_lines(self) -> List[str]:
-        return ["        pass"]
-
-    def scenario_open(self, scenario: Scenario, indent: str) -> List[str]:
-        return [f'{indent}with scenario("{quote(scenario.name)}"):']
-
-    def scenario_background_lines(self, background: Background, indent: str) -> List[str]:
-        lines = [f"{indent}# background: {background.name}"]
-        for step in flat_steps(background.steps):
-            lines.append(f"{indent}# background-step: {step.keyword} | {step.text}")
-        return lines
-
-    def step_open(self, verb: str, step: Step, indent: str) -> str:
-        return f'{indent}with {verb}("{quote(step.text)}"):'
-
-    def and_open(self, step: Step, indent: str) -> str:
-        return f'{indent}with {"but_" if step.keyword == "But" else "and_"}("{quote(step.text)}"):'
-
-    def step_placeholder(self) -> str:
-        return "pass"
-
-    def empty_block(self) -> List[str]:
-        return ["pass"]

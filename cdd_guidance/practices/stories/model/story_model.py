@@ -18,7 +18,7 @@ from harness.annotations.name import Name
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock
 
-from .source_location import SourceLocation
+from .story_map_files import source_at
 from .story_recording import StoryRecording, declared_evidence, file_of, folder_of, step_node_id, step_semantic
 
 # Pairs the schema names with belongsTo. The facade does not grow a method for them.
@@ -225,7 +225,7 @@ class Example(StoryNode):
         self.value = {} if value is None else value
         self.scope = scope
 
-    def record(self, recording: StoryRecording, scenario, at: SourceLocation) -> None:
+    def record(self, recording: StoryRecording, scenario, at: "Source") -> None:
         """Add this example to the graph under scenario, the node of the scenario that uses it, at that scenario's
         lines; an example two scenarios of one file share is one node. Its graph parent is the scenario that uses it,
         not its scope, so the scenario is handed in."""
@@ -328,7 +328,7 @@ class Increment(StoryNode):
         self.outcome: str = source.outcome if source is not None else ""
         self.slicing_notes: str = source.slicing_notes if source is not None else ""
         self.decision_prompt: str = source.decision_prompt if source is not None else ""
-        self.source: Optional[SourceLocation] = source.source if source is not None else None
+        self.source: Optional["Source"] = source.source if source is not None else None
         self._stories = ModelReferences(self, "stories")
         self.stories = stories or []
 
@@ -359,7 +359,7 @@ class Step(StoryNode):
         concepts: Optional[List[str]] = None,
         values: Optional[List[str]] = None,
         actor: str = "",
-        source: Optional[SourceLocation] = None,
+        source: Optional["Source"] = None,
         name: str = "",
     ) -> None:
         origin = text if isinstance(text, Step) else None
@@ -461,7 +461,7 @@ class Step(StoryNode):
         (``ands``), then the steps chained onto it."""
         at = recording.span_of(self, file, fallback_text=self.text)
         continuations = list(self.ands)
-        node = recording.add(self, step_node_id(self.recorded_type, file, at.line, self.recorded_name), at)
+        node = recording.add(self, step_node_id(self.recorded_type, file, at.start_line, self.recorded_name), at)
         recording.graph.link("ands" if isinstance(self.parent, Step) else "steps", parent, node)
         for continuation in continuations:
             continuation.record(recording, file, node)
@@ -571,7 +571,7 @@ class Scenario(StoryNode):
         self.examples = source.examples.clone(self) if source is not None else Examples(self)
         self.is_outline: bool = source.is_outline if source is not None else False
         self.evidence: List[str] = list(source.evidence) if source is not None else []
-        self.source: Optional[SourceLocation] = source.source if source is not None else None
+        self.source: Optional["Source"] = source.source if source is not None else None
         if source is not None:
             self.take_code_from(source)
             for background in source.backgrounds:
@@ -843,12 +843,12 @@ class Epic(StoryNode):
     def place_in(self, file: str) -> None:
         """Name *file* on this epic and everything under it that names no file yet; the line stays unknown."""
         if not self.has_source_file:
-            self.source = SourceLocation(file)
+            self.source = source_at(file)
         for child in self.epics:
             child.place_in(file)
         for story in self.stories:
             if not story.has_source_file:
-                story.source = SourceLocation(file)
+                story.source = source_at(file)
 
     def _has_estimate(self) -> bool:
         if (self.estimate or "").strip():
@@ -1071,7 +1071,7 @@ class StoryModel(StoryNode):
         map does not have adds nothing."""
         for read in stories:
             for scenario in read.scenarios:
-                scenario.source = SourceLocation(file)
+                scenario.source = source_at(file)
             for story in self.every_story():
                 if story.name == read.name:
                     story.backgrounds = list(read.backgrounds)

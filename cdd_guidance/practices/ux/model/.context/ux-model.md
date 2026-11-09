@@ -289,10 +289,14 @@ map above the stories the screens show comes in the order the screens first show
 depth that hold a shown story, then the screens under each by the stories they show there, ranked by the first of those
 in story-map order. A screen whose stories sit on the epic itself hangs on the epic, and a screen can sit under several
 epics. With no story map on the map's graph, the screens are listed flat. Each screen holds its stories, their
-scenarios, and their steps, read from the story map.
+scenarios, and their steps, read from the story map through Stories' *StoryTree* (`Stories.story_tree`), which reads the
+graph's edges and saved facts, so a graph opened from its save gives the tree a fresh build gives. Each step carries its
+screen's `domain_terms` (`domainTerms`), the only words the page underlines.
 
 + ExplorerTree(screens: list[Screen])
 ------
++ story_tree: StoryTree | None
+	// the story map's tree on the graph of the stories the screens show; none when they show none on a graph
 + screens: list[ExplorerScreen]
 	// each screen by the slug the page marks it with, holding the stories it shows
 + nodes: list[dict]

@@ -22,6 +22,10 @@ from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
 # The `# Title` line of a bounded context's `.context/bounded-context.md`: the context's name.
 _CONTEXT_TITLE = re.compile(r"^\s*#\s+(.+?)\s*$", re.M)
+# A `Local → Remote` line of a bounded context's file: a context mapping, each side naming an aggregate.
+_CONTEXT_ARROW = re.compile(r"^[\s\-*>]*(.+?)\s*→\s*(.+?)\s*$")
+# `Context · Aggregate · Entity`: the parts of a target as DDD's notations write it, the outermost first.
+TARGET_SEGMENT = re.compile(r"[·•]")
 
 # A module's path: the labels of the contexts that hold it, then its own name, as Clean Engineering nests modules.
 _PATH = "/"
@@ -253,6 +257,31 @@ class Aggregate(DomainNode, Module):
             module.classes.append(written)
 
 
+class ContextMapping(DomainNode):
+    """How one bounded context maps to another: a `Local → Remote` line its `.context/bounded-context.md` lists, on
+    the line it sits on (its sequential order). Each side names an aggregate, alone or after the context that holds it
+    (`Sales · cart`); the two sides are saved with the graph, so a reader of a graph opened from its save has them."""
+
+    _semantic_type_name = "ContextMapping"
+    graph_facts = ("local", "remote")
+
+    def __init__(self, local: str = "", remote: str = "", line: int = 0) -> None:
+        super().__init__(f"{local} → {remote}", line)
+        self.local = local
+        self.remote = remote
+
+    @property
+    def aggregate_names(self) -> dict[str, str]:
+        """The aggregate each side names, by its side (`local`, `remote`): the last part of what the side writes."""
+        return {side: TARGET_SEGMENT.split(written)[-1].strip() for side, written in (("local", self.local), ("remote", self.remote))}
+
+
+def _context_mappings_in(text: str) -> list[ContextMapping]:
+    """Each `Local → Remote` line of a bounded context's file, as the mapping it lists."""
+    found = ((index, _CONTEXT_ARROW.match(line.strip())) for index, line in enumerate(text.splitlines(), start=1))
+    return [ContextMapping(match.group(1).strip(), match.group(2).strip(), index) for index, match in found if match is not None]
+
+
 class BoundedContext(DomainNode, Module):
     """A module of aggregates. A nested context is a context whose parent is a context."""
 
@@ -273,6 +302,7 @@ class BoundedContext(DomainNode, Module):
         self.contexts = ModelChildren(self, "contexts")
         self.aggregates = ModelChildren(self, "aggregates")
         self.context_file_lines = 1
+        self.mappings: list[ContextMapping] = []
 
     @property
     def label(self) -> str:
@@ -281,11 +311,13 @@ class BoundedContext(DomainNode, Module):
 
     def load_context_folder(self, folder: Path) -> None:
         """Read the folder that holds this context in code: its name is the title of `.context/bounded-context.md`,
-        else the folder's own name, and it owns the facts every code folder carries."""
+        else the folder's own name, its context mappings are the `Local → Remote` lines that file lists, and it owns
+        the facts every code folder carries."""
         text = (folder / ".context" / "bounded-context.md").read_text(encoding="utf-8")
         title = _CONTEXT_TITLE.search(text)
         self.name = title.group(1).strip() if title else folder.name
         self.context_file_lines = max(1, text.count("\n") if text.endswith("\n") else text.count("\n") + 1)
+        self.mappings = _context_mappings_in(text)
         self.load_folder_facts(folder)
 
     def append_context(self, context: "BoundedContext") -> None:

@@ -66,7 +66,15 @@ class PythonBlock:
 
     @property
     def body(self) -> CodeBody:
-        return CodeBody("\n".join(self.inside_lines), self.file.language)
+        return CodeBody(self.body_text, self.file.language)
+
+    @property
+    def body_text(self) -> str:
+        return "\n".join(self.inside_lines)
+
+    @property
+    def text(self) -> str:
+        return "\n".join(self.file.lines[self.node.lineno - 1 : self.node.end_lineno])
 
     def written(self, lead: List[str]) -> WrittenBlock:
         heading = self.file.lines[self.node.lineno - 1 : self._inside[0]]

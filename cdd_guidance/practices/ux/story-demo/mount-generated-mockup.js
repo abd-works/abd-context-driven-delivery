@@ -195,13 +195,9 @@ function paintCharacterSheet(snapshot, root) {
  */
 function itemStoryStepsFor(item, rawTemplate, value) {
   if (!rawTemplate) return [];
-  let template;
-  try {
-    template = JSON.parse(rawTemplate);
-  } catch {
-    return [];
-  }
-  if (!Array.isArray(template)) return [];
+  // The template is the step list the UX map wrote; one that does not read back is a defect to show, not hide.
+  const template = JSON.parse(rawTemplate);
+  if (!Array.isArray(template)) throw new Error(`data-item-story-steps holds no step list: ${rawTemplate}`);
   const name = value ?? item?.name ?? item?.product ?? "";
   return template.map((step) => ({
     ...step,

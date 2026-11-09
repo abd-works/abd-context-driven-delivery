@@ -68,24 +68,14 @@ const KIND_LABEL = {
   step: "Step",
 };
 
-const DOMAIN_NOUNS = [
-  "My Paradise",
-  "Mavenir shopping cart",
-  "Apple Pay",
-  "Mavenir",
-  "Cognito",
-  "Vouchera",
-  "Persona",
-  "Twilio",
-  "Zendesk",
-  "MSISDN",
-  "Customer",
-  "User",
-];
-
-function appendNouns(fragment, text) {
+// Underline the domain terms the model gives a step's screen (step.domainTerms); the page decides none itself.
+function appendNouns(fragment, text, terms) {
+  if (!terms.length) {
+    fragment.appendChild(document.createTextNode(text));
+    return;
+  }
   const pattern = new RegExp(
-    DOMAIN_NOUNS.map((noun) => noun.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"),
+    terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"),
     "gi",
   );
   let cursor = 0;
@@ -103,20 +93,20 @@ function appendNouns(fragment, text) {
   if (cursor < text.length) fragment.appendChild(document.createTextNode(text.slice(cursor)));
 }
 
-function stepLabel(label) {
+function stepLabel(label, terms) {
   const fragment = document.createDocumentFragment();
   const marked = /\+\+([^+]+)\+\+/g;
   let cursor = 0;
   let match = marked.exec(label);
   while (match) {
-    if (match.index > cursor) appendNouns(fragment, label.slice(cursor, match.index));
+    if (match.index > cursor) appendNouns(fragment, label.slice(cursor, match.index), terms);
     const noun = document.createElement("u");
     noun.textContent = match[1];
     fragment.appendChild(noun);
     cursor = match.index + match[0].length;
     match = marked.exec(label);
   }
-  if (cursor < label.length) appendNouns(fragment, label.slice(cursor));
+  if (cursor < label.length) appendNouns(fragment, label.slice(cursor), terms);
   return fragment;
 }
 
@@ -243,7 +233,7 @@ function renderStep(step, model, handlers, activeScenario, owningScreen) {
   kind.textContent = step.stepKind;
   stepLi.appendChild(kind);
   stepLi.appendChild(document.createTextNode(" "));
-  stepLi.appendChild(stepLabel(step.label));
+  stepLi.appendChild(stepLabel(step.label, step.domainTerms || []));
   const current = model.currentStep;
   if (
     activeScenario &&

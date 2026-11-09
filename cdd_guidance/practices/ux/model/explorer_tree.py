@@ -7,15 +7,22 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
+    from cdd_guidance.practices.stories.model.graph_reading import StoryTree
+
     from .nodes import Screen
 
 
 class ExplorerScreen:
     """One screen as the story explorer lists it: by the slug the mockup page marks it with, holding each story it
-    shows with that story's scenarios and their steps, read from the story map when the story is on the map's graph."""
+    shows with that story's scenarios and their steps, read from the story map when the story is on the map's graph.
+    Each is read from the story map's tree as the graph holds it (story_tree), so a graph opened from its save, whose
+    Stories nodes are plain nodes, gives the tree a fresh build gives."""
 
-    def __init__(self, screen: "Screen") -> None:
+    def __init__(self, screen: "Screen", story_tree: Optional["StoryTree"]) -> None:
         self.name = screen.slug or screen.name
+        self.story_tree = story_tree
+        # The words the screen's steps mark as the domain's own: the terms the model gives the screen.
+        self.domain_terms = list(screen.domain_terms)
         self.stories: List[tuple[Optional["Node"], dict]] = [
             (link.node, self._story_entry(link.key, link.node)) for link in screen.story_links
         ]
@@ -39,7 +46,7 @@ class ExplorerScreen:
 
     def _story_entry(self, name: str, story: Optional["Node"]) -> dict:
         key = f"story:{self.name}/{name}"
-        scenarios = [self._scenario_entry(name, index, scenario) for index, scenario in enumerate(story.scenarios)] if story is not None else []
+        scenarios = [self._scenario_entry(name, index, scenario) for index, scenario in enumerate(self.story_tree.scenarios(story))] if story is not None else []
         return {"kind": "story", "name": name, "screenName": self.name, "key": key, "children": scenarios}
 
     def _scenario_entry(self, story_name: str, index: int, scenario) -> dict:
@@ -48,13 +55,14 @@ class ExplorerScreen:
             {
                 "kind": "step",
                 "screenName": self.name,
-                "stepKind": step.step_type.value if step.step_type is not None else "",
-                "label": step.text,
+                "stepKind": step.get_fact("phase") or "",
+                "label": step.get_fact("text") or "",
+                "domainTerms": self.domain_terms,
                 "storyName": story_name,
                 "scenarioIndex": index,
                 "scenarioKey": key,
             }
-            for step in scenario.steps
+            for step in self.story_tree.steps(scenario)
         ]
         return {
             "kind": "scenario",
@@ -77,7 +85,9 @@ class ExplorerTree:
     of the first place it sits."""
 
     def __init__(self, screens: List["Screen"]) -> None:
-        self.screens = [ExplorerScreen(screen) for screen in screens]
+        shown = [link.node for screen in screens for link in screen.story_links if link.node is not None]
+        self.story_tree: Optional["StoryTree"] = shown[0].practice.reading.story_tree if shown else None
+        self.screens = [ExplorerScreen(screen, self.story_tree) for screen in screens]
         self.screen_keys: Dict[str, List[str]] = {}
         self.nodes = self._epic_entries() or self._flat_entries()
 
@@ -93,7 +103,7 @@ class ExplorerTree:
         shown = [story for screen in self.screens for story, _entry in screen.stories if story is not None]
         epics: List = []
         for story in shown:
-            epic = story.top_epic
+            epic = self.story_tree.epic_of(story)
             if epic is not None and epic not in epics:
                 epics.append(epic)
         return [entry for entry in (self._epic_entry(epic, shown) for epic in epics) if entry is not None]
@@ -101,15 +111,15 @@ class ExplorerTree:
     def _epic_entry(self, epic, shown: List["Node"]) -> Optional[dict]:
         epic_key = f"epic:{epic.name}"
         children: List[dict] = []
-        pending = list(epic.epics)
+        pending = list(self.story_tree.sub_epics(epic))
         while pending:
             sub_epic = pending.pop(0)
             sub_key = f"subepic:{epic.name}/{sub_epic.name}"
-            placed = self._placed(sub_epic.stories, shown, f"{epic.name}/{sub_epic.name}", [epic_key, sub_key])
+            placed = self._placed(self.story_tree.stories_under(sub_epic), shown, f"{epic.name}/{sub_epic.name}", [epic_key, sub_key])
             if placed:
                 children.append({"kind": "subepic", "name": sub_epic.name, "key": sub_key, "children": placed})
-            pending[:0] = sub_epic.epics
-        children.extend(self._placed(epic.stories, shown, f"{epic.name}/", [epic_key]))
+            pending[:0] = self.story_tree.sub_epics(sub_epic)
+        children.extend(self._placed(self.story_tree.stories_under(epic), shown, f"{epic.name}/", [epic_key]))
         return {"kind": "epic", "name": epic.name, "key": epic_key, "children": children} if children else None
 
     def _placed(self, stories: List["Node"], shown: List["Node"], place: str, opening: List[str]) -> List[dict]:

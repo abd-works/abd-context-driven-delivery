@@ -7,7 +7,7 @@ from expects import be, contain, equal, expect, have_len
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStoryModel
-from cdd_guidance.practices.stories.model.source_location import SourceLocation
+from cdd_guidance.practices.stories.model.markdown import nodes as markdown_nodes
 
 
 def _stories(model):
@@ -66,17 +66,17 @@ with description("a markdown story map loaded from a workspace") as self:
 
         with it("should read scenario files once for every story"):
             calls = []
-            original = MarkdownScenario.sections_in.__func__
+            original = markdown_nodes.scenario_sections_in
 
-            def counting(cls, root, *args, **kwargs):
+            def counting(root, *args, **kwargs):
                 calls.append(Path(root))
-                return original(cls, root, *args, **kwargs)
+                return original(root, *args, **kwargs)
 
-            MarkdownScenario.sections_in = classmethod(counting)
+            markdown_nodes.scenario_sections_in = counting
             try:
                 MarkdownStoryModel.from_workspace(self.root)
             finally:
-                MarkdownScenario.sections_in = classmethod(original)
+                markdown_nodes.scenario_sections_in = original
             expect(calls).to(have_len(1))
 
         with it("should report each scenario file while reading"):
@@ -102,16 +102,22 @@ with description("a markdown story map loaded from a workspace") as self:
             self.loaded = loaded
 
         with it("should give the epic the line it was read on"):
-            expect(self.loaded.epics[0].source).to(equal(SourceLocation("story-map.md", 1)))
+            expect((self.loaded.epics[0].source.file, self.loaded.epics[0].source.start_line)).to(equal(("story-map.md", 1)))
 
         with it("should give the sub-epic the line it was read on"):
-            expect(self.loaded.epics[0].epics[0].source).to(equal(SourceLocation("story-map.md", 3)))
+            expect((self.loaded.epics[0].epics[0].source.file, self.loaded.epics[0].epics[0].source.start_line)).to(equal(("story-map.md", 3)))
 
         with it("should give a story written as a heading under a sub-epic the line it was read on"):
-            expect(self.named["Pay By Card"].source).to(equal(SourceLocation("story-map.md", 5)))
+            expect((self.named["Pay By Card"].source.file, self.named["Pay By Card"].source.start_line)).to(equal(("story-map.md", 5)))
 
         with it("should give a story written as a Story heading the line it was read on"):
-            expect(self.named["Refund Order"].source).to(equal(SourceLocation("story-map.md", 7)))
+            expect((self.named["Refund Order"].source.file, self.named["Refund Order"].source.start_line)).to(equal(("story-map.md", 7)))
+
+        # One location type for a node: the one the graph keeps, so a node keeps it when the graph adds it.
+        with it("should name each place it read with the graph's Source"):
+            from harness.graph.graph import Source
+
+            expect({type(node.source) for node in [*self.loaded.epics, *self.named.values()]}).to(equal({Source}))
 
     with context("whose thin slicing sits only in a folder a scan never enters"):
         with before.each:

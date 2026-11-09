@@ -16,7 +16,7 @@ def _read_back(model_type, name: str) -> str:
     story = Story(name, 1)
     story.actors = ["Customer"]
     model = model_type()
-    return model.story_type.load_all(model.story_text(model.story_type(story)))[0].name
+    return model.story_type.load_all(model.writing.story_text(model.story_type(story)))[0].name
 
 
 with description("a story test written in each language") as self:

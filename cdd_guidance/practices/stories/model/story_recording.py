@@ -17,9 +17,11 @@ from pathlib import PurePosixPath
 
 from harness.graph.graph import Node
 
-from cdd_guidance.practices.stories.model.source_location import SourceLocation
+from cdd_guidance.practices.stories.model.story_map_files import source_at
 
 if TYPE_CHECKING:
+    from harness.graph.graph import Source
+
     from cdd_guidance.practices.stories.model.story_model import StoryModel
 
 _EXPORT_CONST = re.compile(r"export const (\w+)")
@@ -160,14 +162,14 @@ class StoryRecording:
         if self.on_node is not None:
             self.on_node(f"{self.story_at}/{self.story_total} · {story.name}")
 
-    def add(self, story_object, node_id: str, at: SourceLocation, facts=None) -> Node:
+    def add(self, story_object, node_id: str, at: "Source", facts=None) -> Node:
         """story_object added as the graph node node_id, called by its recorded name and of its recorded type, at the
         lines at names, with the facts it does not hold itself; the node already called node_id when two objects
         share it."""
         if not self.practice.reading.in_graph.holds(node_id):
             story_object.name = story_object.recorded_name
             story_object.type = story_object.recorded_type
-        node = self.practice.reading.in_graph.add(story_object, node_id, at.file or ".", at.line, at.end_line or at.line)
+        node = self.practice.reading.in_graph.add(story_object, node_id, at.file or ".", at.start_line, at.end_line or at.start_line)
         self._align(node)
         for key, value in (facts or {}).items():
             node.set_fact(key, value)
@@ -217,19 +219,18 @@ class StoryRecording:
             facts["export_names"] = _EXPORT_CONST.findall(self.text_of(source))
         return facts
 
-    def name_span(self, file: str, name: str, folder: str) -> SourceLocation:
+    def name_span(self, file: str, name: str, folder: str) -> "Source":
         """The line of file that names name; the folder alone when no line of file does."""
         line = next((index for index, text in enumerate(self.text_of(file).splitlines(), start=1) if name and name in text), None)
-        return SourceLocation(file, line, line) if line is not None else SourceLocation(folder or ".")
+        return source_at(file, line) if line is not None else source_at(folder or ".")
 
-    def span_of(self, node, file: str, fallback_text: str = "") -> SourceLocation:
-        """The lines of file node was read from, else the next line of file that holds its text."""
-        source = getattr(node, "source", None)
-        if source is not None and getattr(source, "line", None):
-            start = int(source.line or 1)
-            return SourceLocation(file, start, int(getattr(source, "end_line", None) or start))
-        line = self._next_line(file, fallback_text or getattr(node, "name", ""))
-        return SourceLocation(file, line, line)
+    def span_of(self, node, file: str, fallback_text: str = "") -> "Source":
+        """The lines of file node was read from, when its reader named them; else the next line of file that holds its
+        text."""
+        if node.has_source_file and node.source.start_line:
+            return source_at(file, node.source.start_line, node.source.end_line or node.source.start_line)
+        line = self._next_line(file, fallback_text or node.name)
+        return source_at(file, line)
 
     def _next_line(self, file: str, text: str) -> int:
         lines = self.text_of(file).splitlines()
@@ -244,15 +245,15 @@ class StoryRecording:
                 return index + 1
         return 1
 
-    def place(self, node, at: SourceLocation) -> None:
+    def place(self, node, at: "Source") -> None:
         """Name the file and lines at gives on a node that names no file yet."""
         if not file_of(node):
-            node.source = SourceLocation(at.file or ".", at.line, at.end_line)
+            node.source = source_at(at.file or ".", at.start_line, at.end_line)
 
 
 def file_of(node) -> str:
     """The file the node was read from; empty while it only holds the placeholder a new node starts with."""
-    if not getattr(node, "has_source_file", False):
+    if not node.has_source_file:
         return ""
     return str(node.source.file).replace("\\", "/")
 
