@@ -1,5 +1,5 @@
 // `claude plugin validate` holds this contract to one self-contained file, so it imports nothing. Each atom's tool
-// answer is typed as the language adapter's data where its client file reads it: ServerHealthData and BoardData.
+// answer is typed as the language adapter's data where its client file reads it: ServerHealthData and BoardOverviewData.
 
 // What the server health band keeps between draws. report is server-health.report's answer.
 export type ServerHealthJson = {
@@ -14,7 +14,7 @@ export type HealthViewJson = { areDetailsOpen: boolean }
 
 export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; error: string | null }
 
-// What the chat bar keeps between draws: board.show's answer, and the server's own text when the last call failed.
+// What the chat bar keeps between draws: board.overview's answer, and the server's own text when the last call failed.
 export type ChatBarJson = { board: object | null; problem: string | null }
 
 // Which of the chat bar's boxes is open above the line. switchTo names the session the activation dialog opens;

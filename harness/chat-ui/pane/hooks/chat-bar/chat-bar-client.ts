@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { BoardData, ColumnData, PracticeGuidanceData } from '@cdd/space/kanban/board'
+import type { BoardOverviewData, BoardPracticeData } from '@cdd/space/kanban/board'
 import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
@@ -13,28 +13,27 @@ import { StageClient, shownStageName } from './stage-client'
 
 // The chat bar: the active session's line above the prompt. Sources: harness/chat-ui/.context/story-map.md,
 // cdr/0001-stage-strip-band.md, design/StageStrip.dc.html. Every rule lives in the Python Ticket; this file shows its answers.
-const chatBar = atom({ plugin: 'cdd-board', key: 'chatBar' } as const, { board: null, problem: null } as ChatBarJson)
+const chatBar = atom({ plugin: 'cdd-board', key: 'chatBar' } as const, { board: null, problem: null } as ChatBarJson, { shape: 'chat-bar-overview' })
 
-const ticketsOf = (column: ColumnData): TicketData[] => [...(column.in_progress ?? []), ...(column.done ?? []), ...(column.tickets ?? [])]
 
 // The active session's line: health mark, session name, fidelity dots, action button, stage icons.
 export class ChatBarClient {
-  private readonly board: BoardData | null
+  private readonly board: BoardOverviewData | null
 
   constructor(
     json: ChatBarJson,
     private readonly shown: string | null,
     private readonly selected: string | null,
   ) {
-    this.board = json.board as BoardData | null
+    this.board = json.board as BoardOverviewData | null
     this.problem = json.problem
   }
 
   readonly problem: string | null
 
-  // The tickets a person can switch to, as Board.open_tickets names them, each sent whole by the column it is in.
-  get openTickets(): TicketData[] {
-    return (this.board?.open_tickets ?? []).flatMap(named => this.ticketNamed(named.name) ?? [])
+  // The tickets a person can switch to, each named in the stage it is in, as board.overview sends them.
+  get openTickets(): { name: string; stage: string }[] {
+    return (this.board?.columns ?? []).flatMap(column => column.tickets.map(ticket => ({ name: ticket.name, stage: column.name })))
   }
 
   get hasSession(): boolean {
@@ -60,7 +59,7 @@ export class ChatBarClient {
 
   // A stage icon a person picked shows that stage's fidelities; otherwise the dots show the stage the session is in.
   get shownStage(): string {
-    return this.shown && this.board?.columns.some(column => column.name === this.shown && column.work_required) ? this.shown : this.stage
+    return this.shown && this.board?.columns.some(column => column.name === this.shown && column.kind === 'stage') ? this.shown : this.stage
   }
 
   // Ticket.is_done answers whether every fidelity of the stage is reviewed, so the action button moves the session on;
@@ -131,18 +130,14 @@ export class ChatBarClient {
   }
 
   // A ticket the board's switch list names, found where its column sends it whole (harness/chat-ui/.context/cdr/0002).
-  private ticketNamed(name: string): TicketData | null {
-    return this.board?.columns.flatMap(ticketsOf).find(ticket => ticket.name === name) ?? null
-  }
-
   // A fidelity's label as the board names it, such as story-map; its slug when the board names none.
   private labelOf(slug: string): string {
     return this.board?.fidelities.find(shown => shown.fidelity.slug === slug)?.label ?? slug
   }
 
   // The practice a fidelity's progress names, as the board sends it with its colour.
-  private practiceNamed(key: string): PracticeGuidanceData | undefined {
-    return this.board?.practices.find(practice => practice.key === key)
+  private practiceNamed(key: string): BoardPracticeData | undefined {
+    return this.board?.practices.find(shown => shown.practice.key === key)
   }
 }
 
@@ -174,7 +169,7 @@ export async function callTool<T>($: EngineInterface, tool: string, args: object
   }
 }
 
-// Atom chatBar, declared in pane/types/index.d.ts and kept in this file: the last board.show answer.
+// Atom chatBar, declared in pane/types/index.d.ts and kept in this file: the last board.overview answer.
 export async function currentChatBar($: EngineInterface): Promise<ChatBarClient> {
   return new ChatBarClient(await read($, chatBar), await shownStageName($), await selectedFidelitySlug($))
 }
@@ -182,7 +177,7 @@ export async function currentChatBar($: EngineInterface): Promise<ChatBarClient>
 // A failed read keeps the last board and says why, so the bar never draws old state as if it were current.
 export async function refreshChatBar($: EngineInterface): Promise<void> {
   try {
-    const board = await callTool<BoardData>($, 'board.show', {})
+    const board = await callTool<BoardOverviewData>($, 'board.overview', {})
     await update($, chatBar, () => ({ board, problem: null }))
   } catch (failure) {
     await update($, chatBar, json => ({ ...json, problem: reasonOf(failure) }))

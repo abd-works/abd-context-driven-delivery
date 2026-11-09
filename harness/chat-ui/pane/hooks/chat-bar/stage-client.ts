@@ -1,13 +1,13 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { ColumnData } from '@cdd/space/kanban/board'
+import type { ColumnOverviewData } from '@cdd/space/kanban/board'
 
 import { clearChosenAction } from './action-picker-client'
 
 const shownStage = atom({ plugin: 'cdd-board', key: 'shownStage' } as const, null as string | null)
 
-// One glyph for each column board.show sends, standing for the canvas's icons: Backlog, Discovery (magnifier),
+// One glyph for each column board.overview sends, standing for the canvas's icons: Backlog, Discovery (magnifier),
 // Specification (document), Implementation (gear), Complete (check). A column the canvas has no icon for shows a dot.
 const STAGE_ICONS: Record<string, string> = { Backlog: '☰', Discovery: '⌕', Specification: '▤', Implementation: '⚙', Complete: '✓' }
 
@@ -20,11 +20,11 @@ const FAINT_INK = '#E5531A66'
 // A shown stage that is not the session's own gets the canvas's orange tint instead of an underline.
 const TINT = '#E5531A2E'
 
-// One column of the board as board.show sends it, placed against the active session's column: the columns before it
+// One column of the board as board.overview sends it, placed against the active session's column: the columns before it
 // are behind the session, the ones after it not yet reached.
 export class StageClient {
   constructor(
-    readonly column: ColumnData,
+    readonly column: ColumnOverviewData,
     private readonly place: number,
     private readonly sessionPlace: number,
     readonly isShown: boolean,
@@ -41,7 +41,7 @@ export class StageClient {
 
   // Only a stage requires fidelities, so the Backlog and Complete have none to show.
   get canShow(): boolean {
-    return this.column.work_required !== undefined
+    return this.column.kind === 'stage'
   }
 
   get icon(): string {

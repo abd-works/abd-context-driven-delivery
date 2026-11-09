@@ -265,6 +265,13 @@ class Board:
     @mcp
     @agent_tool
     @noSessionLog
+    def overview(self) -> BoardOverview:
+        """Return the board as a reader that draws the active session sees it, such as the chat bar: the active ticket whole, every column with its tickets by name, the stages' actions and required fidelities by slug, and the practices' colours. It stays small however many tickets the board holds, because only the active ticket sends its progress."""
+        return BoardOverview(self)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def folders(self, path: str = "") -> list[str]:
         """List the folders inside path, a folder in the repository (its top when empty), as paths from the project, for a person choosing a workpath or a practice root. Installed packages, caches, and hidden folders hold no one's work, so they are left out."""
         return sorted(entry.path for entry in self.sessions.file_manager.list(path).folders)
@@ -581,3 +588,102 @@ class BoardFidelity:
 
 # Server health probes the board where its server listens, so a chat finds the board without naming its port.
 ServerHealth.reports_kanban_app_on(BOARD_APP_PORTS.of("board"))
+
+
+class BoardOverview:
+    """*BoardOverview* is the board as a reader that draws the active session sees it, such as the chat bar, which reads
+    it every turn through MCP, whose answers are cut off past their size limit. Only the active ticket is sent whole;
+    every other ticket is named in its column, so the overview grows by a name for each ticket."""
+
+    def __init__(self, board: Board) -> None:
+        self._board = board
+
+    @property
+    @data_field
+    def project(self) -> str:
+        return self._board.project
+
+    @property
+    @data_field
+    def practices(self) -> list[BoardPractice]:
+        """The board's practices, each with the colour and short name its fidelities are drawn in."""
+        return [BoardPractice(practice) for practice in self._board.practices]
+
+    @property
+    @data_field
+    def fidelities(self) -> list[BoardFidelity]:
+        return self._board.fidelities
+
+    @property
+    @data_field
+    def columns(self) -> list[ColumnOverview]:
+        return [ColumnOverview(column) for column in self._board.columns]
+
+    @property
+    @data_field
+    def active(self) -> Ticket | None:
+        """The ticket of the session saved as open, sent whole; none while main is."""
+        return self._board.active
+
+
+class BoardPractice:
+    """A practice as the board draws it: its colour and short name, sent with the practice's key, without its
+    guidance text, which its help reads."""
+
+    def __init__(self, practice: PracticeGuidance) -> None:
+        self._practice = practice
+
+    @property
+    @data_field(reference=True)
+    def practice(self) -> PracticeGuidance:
+        return self._practice
+
+    @property
+    @data_field
+    def short_name(self) -> str:
+        return self._practice.short_name
+
+    @property
+    @data_field
+    def colour(self) -> str:
+        return self._practice.colour
+
+
+class ColumnOverview:
+    """A column as the overview sends it: its name and kind; a stage's scope, actions, and required fidelities by slug;
+    and the open tickets in it by name. Backlog and Complete hold no open ticket and run no action."""
+
+    def __init__(self, column: Column) -> None:
+        self._column = column
+        self._stage = column if isinstance(column, Stage) else None
+
+    @property
+    @data_field
+    def name(self) -> str:
+        return self._column.name
+
+    @property
+    @data_field
+    def kind(self) -> str:
+        return self._column.kind
+
+    @property
+    @data_field
+    def scope(self) -> StageScope | None:
+        return self._stage.scope if self._stage is not None else None
+
+    @property
+    @data_field
+    def actions(self) -> list[str]:
+        return self._stage.actions if self._stage is not None else []
+
+    @property
+    @data_field(reference=True)
+    def work_required(self) -> list[FidelityGuidance]:
+        return self._stage.work_required if self._stage is not None else []
+
+    @property
+    @data_field(reference=True)
+    def tickets(self) -> list[Ticket]:
+        """The open tickets in the column, by name: a stage's cards; none in Backlog or Complete."""
+        return list(self._stage.cards) if self._stage is not None else []

@@ -1272,11 +1272,40 @@ with description("the board tools") as self:
         with it("should leave the board read out of the session log"):
             expect(self.log.read_text(encoding="utf-8")).not_to(contain("board.show"))
 
+    # The chat bar reads the board every turn through MCP, whose answers are cut off past their size limit, so it reads
+    # board.overview: the active ticket whole and every other ticket by its name and column.
+    with context("with the chat bar's overview of the board"):
+        with before.each:
+            for number in range(12):
+                self.project.ticket(f"ticket-{number}", *DISCOVERY_DONE, title=f"Ticket {number}")
+            self.project.call("ticket.activate", ticket="ticket-0")
+            self.overview = self.project.call("board.overview")
+
+        with it("should send the active ticket whole, with its progress"):
+            expect((self.overview["active"]["name"], len(self.overview["active"]["progress"]) > 0)).to(equal(("ticket-0", True)))
+
+        with it("should name every open ticket in its column"):
+            named = {ticket["name"] for column in self.overview["columns"] for ticket in column["tickets"]}
+            expect(named).to(equal({f"ticket-{number}" for number in range(12)}))
+
+        with it("should send each ticket of a column by its name alone"):
+            expect({tuple(ticket) for column in self.overview["columns"] for ticket in column["tickets"]}).to(equal({("name",)}))
+
+        with it("should send each stage's work required by slug alone"):
+            discovery = next(column for column in self.overview["columns"] if column["name"] == "Discovery")
+            expect(discovery["work_required"][0]).to(equal({"slug": "stories-story-map"}))
+
+        with it("should send each practice's colour under its key"):
+            expect(sorted(self.overview["practices"][0])).to(equal(["colour", "practice", "short_name"]))
+
+        with it("should stay well inside an MCP answer with a dozen tickets"):
+            expect(len(json.dumps(self.overview)) < 40_000).to(be_true)
+
     with context("that are published through the cdd server"):
         with it("should name each tool after its object"):
             names = set(self.project.server.tools)
             expect(names).to(equal({
-                "board.show", "board.help", "board.folders", "stage.set_wip_limit",
+                "board.show", "board.overview", "board.help", "board.folders", "stage.set_wip_limit",
                 "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.leave_choices", "ticket.open_choices", "ticket.format_choices", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
                 "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",

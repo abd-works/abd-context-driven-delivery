@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { PracticeGuidanceData } from '@cdd/space/kanban/board'
+import type { BoardPracticeData } from '@cdd/space/kanban/board'
 import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
@@ -26,7 +26,7 @@ export class FidelityProgressClient {
   constructor(
     readonly progress: FidelityProgressData,
     private readonly ticket: TicketData,
-    private readonly practice: PracticeGuidanceData | undefined,
+    private readonly practice: BoardPracticeData | undefined,
     readonly isSelected: boolean,
     private readonly label: string,
   ) {}

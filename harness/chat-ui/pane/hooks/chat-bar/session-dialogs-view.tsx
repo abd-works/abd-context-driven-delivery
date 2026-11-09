@@ -38,7 +38,7 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
     <Box key="session-list" flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
       {chatBar.openTickets.map(ticket => (
         <Box key={`session-row-${ticket.name}`} flexDirection="row" gap={1}>
-          <Text color={BRAND.accent}>{stageIconOf(ticket.column.name)}</Text>
+          <Text color={BRAND.accent}>{stageIconOf(ticket.stage)}</Text>
           <Button key={`session-${ticket.name}`} plain onPress={() => pickSession($, chatBar, ticket.name)}>
             <Text color={ticket.name === chatBar.sessionName ? BRAND.accent : BRAND.text}>{ticket.name}</Text>
           </Button>
