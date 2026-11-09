@@ -325,6 +325,8 @@ class Ticket(Card):
         """Close ticket: its session ends, its folder moves to _complete/, and it shows in Complete. leaving names what to do with its work first: handoff, commit, push, merge."""
         chosen = leaving or []
         self.checkout.write_handoff(chosen)
+        # A worktree something still holds open fails to delete; deleting it first stops the close with nothing changed.
+        self.checkout.free_worktree(chosen)
         self._session.close()
         closed = self._board.ticket_of(self._session.move_to_closed())
         # The work is saved after the folder moves, so the move is committed with it.

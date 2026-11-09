@@ -4,7 +4,7 @@ import type { ActionPickerJson, ChatBarViewJson, ChatFolderJson } from '../../ty
 import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
 import { ActionButtonView, PickerView } from './action-button-view'
-import { dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
+import { askChatToFix, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
 import { followSession } from './chat-folder-client'
 import { openFiles, openReport } from './fidelity-files-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
@@ -111,9 +111,16 @@ function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBa
 // The line, left to right: health mark, session name, │, fidelity dots and the action chip, the stage path, then the
 // session's buttons, packed to the left on one row.
 function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
-  const { Box, Text } = elements
+  const { Box, Button, Text } = elements
   const { chatBar } = draw
-  if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}>{SessionNameView($, elements, draw)}</Box>
+  if (!chatBar.hasSession) {
+    return (
+      <Box key="line" flexDirection="row" gap={1} alignItems="center">
+        {SessionNameView($, elements, draw)}
+        <Button key="fix-no-session" label="Fix" onPress={() => askChatToFix($, `no session is open (${chatBar.openTickets.length} sessions listed)`)} />
+      </Box>
+    )
+  }
   return (
     <Box key="line" flexDirection="row" gap={1} flexWrap="wrap" alignItems="center">
         {SessionNameView($, elements, draw)}
@@ -143,6 +150,16 @@ function ElsewhereView($: EngineInterface, { Box, Button, Text }: ElementTable, 
   )
 }
 
+// The board did not answer, in red above the line, with Fix to send it to the chat; the next read that works clears it.
+function ProblemView($: EngineInterface, { Box, Button, Text }: ElementTable, shown: string) {
+  return (
+    <Box key="problem" flexDirection="row" gap={1} alignItems="center">
+      <Text color={BRAND.error}>{shown}</Text>
+      <Button key="fix-problem" label="Fix" variant="primary" onPress={() => askChatToFix($, shown)} />
+    </Box>
+  )
+}
+
 // An action that failed, in red above the line, until the person sends it to the chat with Fix or dismisses it with ✕.
 function FailureView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
   const { Box, Button, Text } = elements
@@ -163,7 +180,7 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
   const { chatBar } = draw
   return (
     <Box key="chat-bar" flexDirection="column" width={draw.width}>
-      {chatBar.problem ? <Text color={BRAND.error}>{`The board did not answer: ${chatBar.problem}`}</Text> : null}
+      {chatBar.problem ? ProblemView($, elements, `The board did not answer: ${chatBar.problem}`) : null}
       {FailureView($, elements, draw)}
       {draw.busy.doing ? <Text key="busy" color={BRAND.accent}>{`${draw.busy.wheel} ${draw.busy.doing}…`}</Text> : null}
       {ElsewhereView($, elements, draw)}

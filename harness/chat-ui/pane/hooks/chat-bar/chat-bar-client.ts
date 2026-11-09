@@ -203,10 +203,15 @@ export async function dismissFailure($: EngineInterface): Promise<void> {
   await update($, chatBar, json => ({ ...json, failure: null }))
 }
 
-// Fix sends the failure to this chat's agent to diagnose and fix, and clears it from the line.
+// Fix sends what the chat bar shows to this chat's agent to find its cause and fix it.
+export async function askChatToFix($: EngineInterface, shown: string): Promise<void> {
+  await $.prompt.submit({ text: `The chat bar shows this; find its cause and fix it: ${shown}`, asUser: true })
+}
+
+// Fix on a failure sends it to the chat and clears it from the line.
 export async function fixFailure($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
   if (!chatBar.failure) return
-  await $.prompt.submit({ text: `The chat bar reported this failure; find its cause and fix it: ${chatBar.failure}`, asUser: true })
+  await askChatToFix($, chatBar.failure)
   await dismissFailure($)
 }
 

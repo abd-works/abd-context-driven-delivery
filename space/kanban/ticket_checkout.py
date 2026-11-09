@@ -189,6 +189,13 @@ class TicketCheckout:
         self._delete_worktree(own, leaving)
         self._merge(own, leaving)
 
+    def free_worktree(self, leaving: list[str]) -> None:
+        """Delete the ticket's own worktree, its work committed and pushed there, when leaving names a step that needs
+        its branch free; ahead of anything else leaving changes, so a worktree held open stops it before it starts."""
+        own = self._own_branch
+        if own is not None and set(leaving) & LEAVE_BRANCH_STEPS:
+            self._delete_worktree(own, leaving)
+
     def _commit_and_push(self, branch: Branch, leaving: list[str]) -> None:
         # Checked out in the repository itself, else in the ticket's own worktree.
         checkout = self._repo if branch.is_checked_out else branch.worktree.repository
