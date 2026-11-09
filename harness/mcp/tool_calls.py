@@ -53,12 +53,12 @@ class ToolCallStopped(Exception):
 class _StillRunning:
     """The answer to a caller whose call outlived the seconds it waited."""
 
-    call: ToolCall
+    tool: str
     seconds: float
 
     @property
     def message(self) -> str:
-        tool = self.call.tool
+        tool = self.tool
         return (
             f"{tool} is still running after {self.seconds:g} seconds; it was not started again. Call {tool} "
             "again with the same arguments to get its result: an identical call waits for the run already going "
@@ -120,7 +120,7 @@ class _RunningCall:
         if not self._ended.is_set():
             self._reporter = None
             self.told_still_running = True
-            return _StillRunning(self.call, seconds)
+            return _StillRunning(self.call.tool, seconds)
         if self._failure is not None:
             raise self._failure
         return self._value

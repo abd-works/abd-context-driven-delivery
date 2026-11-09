@@ -5,10 +5,8 @@ import type { PracticeGuidanceData } from '@cdd/space/kanban/board'
 import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
-import { promptCommand } from '../chat-command'
-import { reasonOf } from '../failure'
+import { promptCommand } from '../shared/chat-command'
 import { clearChosenAction } from './action-picker-client'
-import { callTool, currentChatBar, refreshChatBar } from './chat-bar-client'
 
 const selectedFidelity = atom({ plugin: 'cdd-board', key: 'selectedFidelity' } as const, null as string | null)
 
@@ -97,11 +95,6 @@ export class FidelityProgressClient {
   }
 }
 
-// fidelity-progress.finish_review refused the review, most often because the latest Validate did not pass. reason is the server's text.
-export class ReviewRefused {
-  constructor(readonly reason: string) {}
-}
-
 // Atom selectedFidelity, declared in pane/types/index.d.ts and kept in this file.
 export function selectedFidelitySlug($: EngineInterface) {
   return read($, selectedFidelity)
@@ -118,20 +111,4 @@ export async function selectFidelity($: EngineInterface, fidelity: FidelityProgr
 // itself when that fidelity has no file in the format, so every action is one command.
 export async function runAction($: EngineInterface, fidelity: FidelityProgressClient, action: string): Promise<void> {
   await promptCommand($, fidelity.commandFor(action))
-}
-
-// Review is the person's own approval, recorded by the Python FidelityProgress, which refuses it until the latest
-// Validate passed.
-export async function reviewFidelity($: EngineInterface, fidelity: FidelityProgressClient): Promise<FidelityProgressClient | ReviewRefused> {
-  const ticket = fidelity.progress.ticket.name
-  const slug = fidelity.slug
-  try {
-    await callTool<FidelityProgressData>($, 'fidelity-progress.finish_review', { ticket, fidelity: slug })
-  } catch (failure) {
-    $.ui.toast(`${slug} not reviewed: ${reasonOf(failure)}`)
-    return new ReviewRefused(reasonOf(failure))
-  }
-  $.ui.toast(`${slug} reviewed on ${ticket}`)
-  await refreshChatBar($)
-  return (await currentChatBar($)).fidelities.find(entry => entry.slug === slug) ?? fidelity
 }

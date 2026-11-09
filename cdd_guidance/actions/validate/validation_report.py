@@ -22,8 +22,10 @@ class ValidationReport:
         self._guidance = guidance
         self._root = session.work_root.resolve()
 
-    def of_graph(self, violations: list[Violation], graph_sources: list[str] | None = None) -> str:
-        """Graph hits and AI judgment prompts in one section per rule (description under each heading)."""
+    def of_graph(self, violations: list[Violation], graph_sources: list[str] | None = None, held_beside: list[str] | None = None) -> str:
+        """Graph hits and AI judgment prompts in one section per rule (description under each heading). A graph that held
+        other files beside the checked ones names their folders: a rule over a whole practice compared the checked files
+        with them, so another validate of the same files can find other hits when the session's graph holds others."""
         grouped = Violation.by_rule(violations)
         rules = [rule for item in self._guidance for rule in item.checked_rules()]
         lines = [
@@ -36,6 +38,8 @@ class ValidationReport:
         ]
         if graph_sources:
             lines.extend(["**Graph sources:**", *(f"- `{source}`" for source in graph_sources), ""])
+        if held_beside:
+            lines.extend(["**The session's graph also held, and practice-wide rules compared against:**", *(f"- `{folder}`" for folder in held_beside), ""])
         lines.extend(["## Summary", ""])
         if not violations:
             lines.append("**No graph rule violations.** All scanned graph rules passed.")

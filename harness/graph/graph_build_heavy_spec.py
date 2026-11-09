@@ -7,8 +7,10 @@ of its own, in two ways chats build at once.
 - Five chats, each on a project of its own, build every practice's graph of ``cdd_guidance/practices`` at once; each
   asks to hear its build's progress as Claude Code does.
 - Six chats on one project refresh the one graph that project's session holds, each with files of its own, several
-  times over, as agents' validates do: every practice is loaded in it first, so each refresh restores and refreshes a
-  graph that holds every practice.
+  times over: every practice is loaded in it first, so each refresh restores and refreshes a graph that holds every
+  practice.
+- Six chats on one project validate files of their own with ``validate.validate`` and ``graph: true``, as agents do:
+  each validate refreshes the session's graph and checks the nodes of its files, which the graph's worker writes.
 
 Meanwhile a crowd of other chats, as the Session Board's open pages are, keep asking a small graph tool, and one more
 chat calls ``cdd.ping`` and that tool every half second for as long as any build runs, timing every answer."""
@@ -33,6 +35,9 @@ from harness.mcp.spec_support import SpecServer
 
 # The practices register with the catalogue when this toolset's module is imported, before the graph is made.
 _TOOLSETS = ("cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering", "harness.graph.graph:Graph")
+# A validate works in the session its call's project holds, which the sessions' toolset registers with every call.
+_VALIDATE_TOOLSETS = (*_TOOLSETS, "cdd_guidance.actions.validate.validate:Validate", "space.session.sessions:Sessions")
+_VALIDATED_GUIDANCE = "clean-engineering-code"
 _PRACTICE_KEYS = ("stories", "ddd", "ux", "clean_engineering", "bdd")
 _PRACTICES = {key: "cdd_guidance/practices" for key in _PRACTICE_KEYS}
 _PING_EVERY_SECONDS = 0.5
@@ -180,6 +185,22 @@ class RefreshesWhilePinging:
                 return f"{' '.join(files)}: {answer}"
 
 
+class ValidatesWhilePinging(RefreshesWhilePinging):
+    """Six chats on one project validate their own files with the session's graph at once, round after round, while
+    others ask the server small things: the live path agents take, whose refresh and checked nodes the graph's worker
+    writes. The graph is loaded with every practice first."""
+
+    async def _refreshed(self, validator, files: tuple[str, ...]) -> str:
+        """Whether the validate answered with its graph report: a call that outlives the seconds the server waits is
+        called again, as an agent does."""
+        arguments = {"guidance": _VALIDATED_GUIDANCE, "graph": True, "paths": list(files)}
+        while True:
+            result = await validator.call_tool("validate.validate", arguments=arguments)
+            answer = result.content[0].text
+            if _STILL_RUNNING not in answer:
+                return f"{' '.join(files)}: {'graph' in answer and not result.isError}"
+
+
 def _project(role: str) -> Path:
     return Path(tempfile.mkdtemp(prefix=f"cdd-{role}-"))
 
@@ -251,4 +272,37 @@ with description("the cdd server while several chats refresh the one graph their
         expect(len(self.probe.pinging.answers)).to(be_above(4))
 
     with it("should answer every call within two seconds while the refreshes run"):
+        expect(self.probe.pinging.slowest).to(be_below(_ANSWER_WITHIN_SECONDS))
+
+
+with description("the cdd server while several chats validate files of the one graph their session holds") as self:
+    with before.all:
+        self.server = SpecServer(_VALIDATE_TOOLSETS)
+        self.server.start()
+        self.project = _practices_copy()
+        self.probe = ValidatesWhilePinging(self.server, self.project)
+        started = time.monotonic()
+        self.probe.run()
+        pinging = self.probe.pinging
+        print(
+            f"\n{len(self.probe.refresh_results)} validates in {time.monotonic() - started:.0f} s; each took "
+            f"{statistics.median(self.probe.refresh_seconds):.1f} s at the median; {len(pinging.answers)} answers, median "
+            f"{pinging.median:.2f} s, slowest {pinging.slowest:.2f} s"
+        )
+
+    with after.all:
+        self.server.stop()
+        shutil.rmtree(self.project.parent, ignore_errors=True)
+
+    with it("should load every practice into the shared graph first"):
+        expect(self.probe.loaded).to(equal(_LOADED))
+
+    with it("should answer every validate with its graph report"):
+        expected = [f"{' '.join(files)}: True" for files in _VALIDATED for _round in range(_ROUNDS)]
+        expect(sorted(self.probe.refresh_results)).to(equal(sorted(expected)))
+
+    with it("should be asked while the validates run"):
+        expect(len(self.probe.pinging.answers)).to(be_above(4))
+
+    with it("should answer every call within two seconds while the validates run"):
         expect(self.probe.pinging.slowest).to(be_below(_ANSWER_WITHIN_SECONDS))

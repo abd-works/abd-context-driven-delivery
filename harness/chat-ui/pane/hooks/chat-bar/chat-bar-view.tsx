@@ -1,8 +1,8 @@
 import type { EngineInterface } from 'claude-code'
 
 import type { ActionPickerJson, ChatBarViewJson } from '../../types'
-import { BRAND } from '../brand'
-import { GlyphButtonView } from '../glyph-button-view'
+import { BRAND } from '../shared/brand'
+import { GlyphButtonView } from '../shared/glyph-button-view'
 import { ActionButtonView, PickerView } from './action-button-view'
 import { runHandoff, type ChatBarClient } from './chat-bar-client'
 import { openFiles, openReport } from './fidelity-files-client'

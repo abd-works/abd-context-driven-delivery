@@ -714,7 +714,7 @@ A validation report of one fidelity saved in a session folder, with the graph th
 	-> SavedGraph.from_file
 	-> SavedGraph.violations
 	-> Violation.by_rule
-	-> SavedGraph.checks_of
+	-> session.graph.applied_patterns.checks_of(practice, saved.overlays)
 	-> Judgment.from_report
 	-> Violation.in_file
 	-> Repo.path_from_top
@@ -785,6 +785,6 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## Violation
 
-`harness/graph/violation.py`: one place a rule is broken, the one shape for graph hits and judged findings. `rule`, `practice`, `location`, `line`, `message`, and `source` (the numbered `SourceLine`s around the line, once `in_file(location, file, lines_before, lines_after)` has read them) are data fields. A judged finding is `Violation(rule, message, location=..., line=...)`. A report reads the graph saved beside it through `SavedGraph.from_file` (`harness/graph/saved_graph.py`), the one reader of a saved graph document and of the node list `graph.return_nodes` answers with, groups its hits with `Violation.by_rule`, and reads the rules a scanner checks now through the saved graph, `SavedGraph.checks_of(practice)` (`harness/graph/saved_graph.py`), which asks the report's own practice with the overlays the graph was saved with.
+`harness/graph/violation.py`: one place a rule is broken, the one shape for graph hits and judged findings. `rule`, `practice`, `location`, `line`, `message`, and `source` (the numbered `SourceLine`s around the line, once `in_file(location, file, lines_before, lines_after)` has read them) are data fields. A judged finding is `Violation(rule, message, location=..., line=...)`. A report reads the graph saved beside it through `SavedGraph.from_file` (`harness/graph/saved_graph.py`), the one reader of a saved graph document and of the node list `graph.return_nodes` answers with, groups its hits with `Violation.by_rule`, and reads the rules a scanner checks now from its session's graph, `graph.applied_patterns.checks_of(practice, saved.overlays)` (`harness/graph/pattern_overlays.py`), which asks the report's own practice with the overlays the graph was saved with, through the patterns the session's graph already holds.
 
 `FileManager` and `FileEntry` (`space/session/file_manager.py`) list folders for `board.folders`, through the board's `Sessions.file_manager`, and are the entries `fidelity-progress.files` sends.

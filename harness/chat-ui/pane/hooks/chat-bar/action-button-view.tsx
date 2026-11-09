@@ -1,11 +1,12 @@
 import type { EngineInterface } from 'claude-code'
 
-import { BRAND } from '../brand'
-import { GlyphButtonView } from '../glyph-button-view'
+import { BRAND } from '../shared/brand'
+import { GlyphButtonView } from '../shared/glyph-button-view'
 import { chooseAction, clearChosenAction, toggleActionPicker } from './action-picker-client'
 import { moveNext, type ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
-import { reviewFidelity, runAction } from './fidelity-progress-client'
+import { reviewFidelity } from './chat-bar-client'
+import { runAction } from './fidelity-progress-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
