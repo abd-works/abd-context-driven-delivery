@@ -59,12 +59,12 @@ with story("Activate Ticket"):
             pass
         with and_("the checkout-flow branch is still there"):
             pass
-    with scenario("Delete the branch left once it is merged"):
+    with scenario("Delete the branch left, without merging it"):
         with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), on its own branch pushed to origin"):
             pass
         with when("the Person activates billing-report, committing, pushing, and deleting checkout-flow's branch"):
             # Person -> Ticket.activate(leaving=['commit', 'push', 'delete_branch'])
-            # TicketCheckout -> Repo.close_branch('checkout-flow')
+            # TicketCheckout -> Branch.delete(unmerged=True)
             pass
         with then("main on origin holds checkout-flow's work"):
             pass
@@ -98,7 +98,7 @@ with story("Activate Ticket"):
         with when("the Person chooses merge and confirms"):
             # Person -> Ticket.activate(['commit', 'push', 'merge'], ['branch'])
             # Ticket -> Repo.push_commit('checkout-flow: leave session', sync_remote=True)
-            # Ticket -> Repo.close_branch('checkout-flow')
+            # TicketCheckout -> Branch.land_on_default()
             # Ticket -> Repo.switch_branch('billing-report')
             # Ticket -> Sessions.switch('billing-report')
             pass

@@ -217,11 +217,15 @@ class TicketCheckout:
             raise LeaveRefused(branch.name, "its worktree still has it checked out; delete the worktree too")
 
     def _merge(self, branch: Branch, leaving: list[str]) -> None:
-        """Merge the branch into the default branch and push it; delete it too when leaving says so."""
-        if LEAVE_DELETE_BRANCH in leaving:
-            self._repo.close_branch(branch.name)
-        elif LEAVE_MERGE in leaving:
+        """Merge the branch into the default branch and push it when leaving names merge; delete it, here and on
+        origin, when leaving names delete_branch. Each is its own choice: deleting never merges."""
+        if LEAVE_MERGE in leaving:
             branch.land_on_default()
+        if LEAVE_DELETE_BRANCH in leaving:
+            # git deletes no branch the checkout is on, so the checkout goes back to the default branch first.
+            if branch.is_checked_out:
+                self._repo.branch_named(self._repo.default_branch).check_out()
+            branch.delete(unmerged=LEAVE_MERGE not in leaving)
 
     def return_to_default_branch(self, leaving: list[str]) -> None:
         """A closed ticket's own branch leaves the repository's checkout once its work is committed, so the next

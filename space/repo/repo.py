@@ -571,9 +571,10 @@ class Branch:
         repository.merge_from(self, message=f"merge {self.name} into {default}")
         repository.push_upstream()
 
-    def delete(self) -> None:
-        """Delete this merged branch here and on origin."""
-        self._repo.git.run("branch", "-d", self.name)
+    def delete(self, unmerged: bool = False) -> None:
+        """Delete this branch here and on origin. git refuses a branch not merged into the default branch unless
+        unmerged says the person chose to delete it as it is."""
+        self._repo.git.run("branch", "-D" if unmerged else "-d", self.name)
         if self._repo.has_ref(f"refs/remotes/origin/{self.name}"):
             self._repo.git.run("push", "origin", "--delete", self.name)
 
