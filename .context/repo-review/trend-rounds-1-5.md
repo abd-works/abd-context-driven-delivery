@@ -1,9 +1,11 @@
-# Validation trend, rounds 1–7
+# Validation trend, rounds 1–9
 
-**Where it stands (2026-11-08):**
-- The loop's goal total fell from 150 (round 5) to 110 (round 6), 39 (round 7) and **31** (round 8). Of round 8's 31, 21 are in old scope, under the target of 30. Two high findings in the goal classes remain, so one more fix round runs.
-- Round 7's fixes are landing now: the graph fixes and the harness-core fixes are merged. The space/tools/actions, harness-upper and practices fixes are still in progress.
-- Round 8 validates next, after a graph smoke check. It is the first round expected to run the graph check in every area since round 5.
+**Where it stands (2026-11-08, after round 9):**
+- In the scope round 8 checked, the goal total is **27**, under the target of 30. Round 5 had 150, so 82% are gone.
+- The full total rose from 31 to **56**. 29 of the 56 are new scope: the graph check ran in all six areas for the first time, and the validators used the code metrics as evidence for the first time.
+- Only 3 of round 8's findings are left. The fixes work; the rise comes from looking harder.
+- **One high finding in the goal classes keeps the loop open:** the UX explorer crash on a reopened graph, the same fault as round 8's Stories crash in a sibling reader.
+- **Round 9's fixes:** that high, the 4 regressions, and splitting the oversized classes (`Graph`, `PracticeGuidance`, `GraphReading`, `PracticeNodes`, `CodeStoryModel`, `Ticket`). Every fix must pass the metrics gate against 5f36e6a2.
 
 How many findings each validation round on `ensure-domain-orientation-refactor` produced, and how severe they were. Severity follows the same scale in every round:
 - **high:** wrong behaviour, or a second object model
@@ -109,6 +111,7 @@ The first count gave 163, because it also counted round 5's summary tables of co
 | 6 | 56 | 18 | 36 | 110 | −27% | 1 (0.9%) | 133 findings, 12 high. Shadow models −40%, duplicated functions −37%, resource orientation only −11%. See [round6-report.md](round6-report.md) |
 | 7 | 16 | 3 | 20 | 39 | −65% | 0 | 54 findings, 4 high. Mostly the AI check only, since a DDD crash in the graph worker blocked graph checks. See [round7-report.md](round7-report.md) |
 | 8 | 12 | 4 | 15 | 31 (21 old scope) | −21% (old scope −46%) | 1 | 43 findings, 4 high. The graph check ran in three areas; 10 findings are new scope. A Stories crash on a restored graph blocked the rest. See [round8-report.md](round8-report.md) |
+| 9 | 30 (9 old scope) | 3 (1) | 23 (17) | 56 (27 old scope) | +81% (old scope +29%) | 4 (6.5%) | 62 findings, 3 high. The graph check ran in all six areas; 29 goal findings are new scope. Only 3 round-8 findings are left; 20 are new findings in code that existed at round 8. All 4 regressions come from the round-8 graph hotfix, merged before the metrics gate existed. See the round9-*.md files |
 
 **Code metrics beside the findings.** [code-metrics-trend.md](code-metrics-trend.md) measures the code at each round with standard tools, and marks every number better, worse or about the same. The numbers that track bad resource orientation are:
 - classes that depend on more than 14 other classes (43 now)
@@ -181,3 +184,16 @@ Second copies of a model, and functions that do the same job but are written dif
   - the scanner false positives, which shrink the next graph check's noise
   - the remaining low findings
 - **Round 9 is expected to be the confirming round.** It needs graph checks that run in every area, and those depend on the hotfix landing.
+
+## Round 9 analysis: the fixes hold, the checks got deeper, and the loop must stop widening
+
+- **What was reported again is small.** 3 findings are left from round 8. The fix agents fix what they are given.
+- **What grew is what the check could see:**
+  - 29 goal findings are **new scope**. The graph check ran in every area for the first time, and the validators read the code metrics' offender lists for the first time. Most are concern 5: an oversized class holding jobs that should be parts it holds.
+  - 20 are **new**: code that existed at round 8, not reported then. Many are duplicates the deeper reading found, such as three classes refusing a path outside the project, or 13 `load_module` definitions.
+- **4 regressions (6.5%), all from one change:** the round-8 graph hotfix. It took `Graph` from 227 to 249 total complexity and added `Graph._take`, `PracticeChanges.between` and `GraphReading._link_types`, each a complex function. It was merged before the metrics gate existed, and the gate's later runs started from a commit that already held it, so nothing measured it.
+- **One high in the goal classes:** the UX explorer reads Stories facts that a reopened graph doesn't keep. The sibling-reader rule was in the brief and was missed again.
+- **Is the loop cycling?** By the rule above, the full total rose, so the brief must change, not just the code. The cause isn't fixes being skipped or reverted. Each round looks somewhere new, so it finds new things. Left as it is, that never ends. Two changes:
+  1. **Round 9's fixes go after the cause, not the symptoms.** Most new findings sit in six oversized classes. Splitting each into the parts it holds removes a group of findings at once and moves the code metrics toward their targets.
+  2. **Round 10 freezes the check.** It uses round 9's checks, graph rules and metrics evidence, and nothing wider. Its findings in round 9's scope decide the stop. Anything a new kind of check would find goes into a list for later, not into the loop's count.
+- **The stop for round 10:** in round 9's scope, a goal total below 30, no high finding in the goal classes, and a metrics gate that passed for every fix.
