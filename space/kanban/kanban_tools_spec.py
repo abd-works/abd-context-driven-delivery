@@ -26,6 +26,7 @@ from harness.graph.violation import Violation  # noqa: E402
 from space.kanban.report import ReportRule  # noqa: E402
 from space.kanban.session_board_examples import saved_graph, saved_practice  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
+from space.kanban.ticket_checkout import LeaveRefused
 from space.kanban.ticket import Ticket  # noqa: E402
 from space.repo.repo import Branch, Repo  # noqa: E402
 from space.kanban.board import FidelityNotFoundError, NotAStageError  # noqa: E402
@@ -1157,6 +1158,14 @@ with description("the board tools") as self:
             with it("should name the folder it opened as the ticket's worktree"):
                 expect(Path(self.project.ticket_json("sign-up")["worktree"]).resolve()).to(equal(self.opened.resolve()))
 
+            with it("should offer to delete that worktree when leaving the ticket"):
+                expect(self.project.call("ticket.leave_choices", ticket="sign-up")["choices"]).to(equal(["handoff", "commit", "push", "merge", "delete_branch", "delete_worktree"]))
+
+            # git cannot merge or delete a branch still checked out in its worktree.
+            with it("should refuse to merge its branch while its worktree stays"):
+                self.project.call("ticket.activate", ticket="sign-up")
+                expect(lambda: self.project.call("ticket.activate", ticket="pet-visits", leaving=["merge"])).to(raise_error(LeaveRefused))
+
             with it("should check out the ticket's branch there"):
                 branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=self.opened, check=True, capture_output=True, text=True)
                 expect(branch.stdout.strip()).to(equal("sign-up"))
@@ -1223,8 +1232,11 @@ with description("the board tools") as self:
             with it("should say the ticket being left is on its branch"):
                 expect(self.project.call("ticket.branch", ticket="pet-visits")["is_checked_out"]).to(be_true)
 
-            with it("should offer to leave it for another with a merge of its branch, not chosen at first"):
-                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge"], "chosen": ["handoff", "commit", "push"]}))
+            with it("should offer to leave it for another with a merge into main and a delete of its branch, neither chosen at first"):
+                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge", "delete_branch"], "chosen": ["handoff", "commit", "push"]}))
+
+            with it("should offer the same when closing it"):
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")["choices"]).to(equal(["handoff", "commit", "push", "merge", "delete_branch"]))
 
             # Its branch is checked out in this checkout already, which is that branch's worktree.
             with it("should offer nothing to create on opening it, since its branch is checked out here"):

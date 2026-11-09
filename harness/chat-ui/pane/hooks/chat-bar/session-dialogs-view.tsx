@@ -26,9 +26,27 @@ function ChoicesView(elements: ElementTable, heading: string, choices: Choice[])
   )
 }
 
-// One choice the Ticket offers for leaving a session, by the word TicketCheckout.leave reads: handoff, commit, push, merge.
-function leavingChoice($: EngineInterface, prefix: string, chosen: string[], word: string, label: string): Choice {
-  return { key: `${prefix}-${word}`, label, isChosen: chosen.includes(word), onPress: () => toggleLeaving($, word) }
+// Each choice the Ticket offers for leaving a session, by the word TicketCheckout.leave reads, as the dialog words it
+// for the branch it acts on.
+function leaveLabelOf(word: string, branch: string): string {
+  const labels: Record<string, string> = {
+    handoff: 'Create handoff',
+    commit: 'commit',
+    push: 'push',
+    merge: 'merge into main',
+    delete_branch: `delete branch ${branch}`,
+    delete_worktree: 'delete worktree',
+  }
+  return labels[word] ?? word
+}
+
+function leavingChoices($: EngineInterface, prefix: string, view: ChatBarDraw['view']): Choice[] {
+  return view.leaveChoices.map(word => ({ key: `${prefix}-${word}`, label: leaveLabelOf(word, view.leaveBranch), isChosen: view.leaving.includes(word), onPress: () => toggleLeaving($, word) }))
+}
+
+// The LEAVE line names the session being left and the branch its work is on.
+function leaveHeadingOf(session: string, branch: string): string {
+  return `LEAVE ${session}${branch ? ` on ${branch}` : ''}`
 }
 
 // The sessions a person can switch to, each after its stage's orange icon, and a field to name a new one.
@@ -55,12 +73,12 @@ export function ActivateView($: EngineInterface, elements: ElementTable, { chatB
   const { Box, Button, Text } = elements
   const switchTo = view.switchTo
   if (!switchTo) return null
-  const leaving = view.leaveChoices.map(word => leavingChoice($, 'leave', view.leaving, word, word === 'handoff' ? 'Create handoff' : word))
+  const leaving = leavingChoices($, 'leave', view)
   const opening: Choice[] = view.openChoices.map(word => ({ key: `open-${word}`, label: `create ${word}`, isChosen: view.opening.includes(word), onPress: () => toggleOpening($, word) }))
   return (
     <Box key="activate" flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.accent} backgroundColor={BRAND.raised}>
       <Text weight="semibold" color={BRAND.text}>{`Open ${switchTo}`}</Text>
-      {chatBar.sessionName ? ChoicesView(elements, 'LEAVE', leaving) : null}
+      {chatBar.sessionName ? ChoicesView(elements, leaveHeadingOf(chatBar.sessionName, view.leaveBranch), leaving) : null}
       {ChoicesView(elements, 'OPEN', opening)}
       <Box flexDirection="row" gap={1}>
         <Button key="activate-cancel" label="Cancel" onPress={() => cancelSwitch($)} />
@@ -76,11 +94,11 @@ export function CloseView($: EngineInterface, elements: ElementTable, { chatBar,
   const { Box, Button, Text } = elements
   if (!view.closing) return null
   const { branch } = view.closing
-  const choices = view.leaveChoices.map(word => leavingChoice($, 'close', view.leaving, word, word === 'handoff' ? 'Create handoff' : `${word} ${branch}`))
+  const choices = leavingChoices($, 'close', view)
   return (
     <Box key="close" flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.error} backgroundColor={BRAND.errorWash}>
       <Text weight="semibold" color={BRAND.text}>{`Close session ${chatBar.title}`}</Text>
-      {ChoicesView(elements, 'LEAVE', choices)}
+      {ChoicesView(elements, leaveHeadingOf(chatBar.sessionName, view.leaveBranch), choices)}
       {branch ? null : <Text color={BRAND.muted}>Nothing checked out is this session's, so nothing is committed.</Text>}
       <Box flexDirection="row" gap={1}>
         <Button key="close-cancel" label="Cancel" onPress={() => cancelClose($)} />

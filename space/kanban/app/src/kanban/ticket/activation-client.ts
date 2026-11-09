@@ -2,7 +2,7 @@ import type { BoardPage } from '../board/board-page'
 import type { Activation } from '../shared/board-store'
 import type { TicketClient } from './ticket-client'
 
-const LEFT_STEPS: Record<string, string> = { handoff: 'handoff written', commit: 'committed', push: 'pushed', merge: 'merged to main' }
+const LEFT_STEPS: Record<string, string> = { handoff: 'handoff written', commit: 'committed', push: 'pushed', merge: 'merged to main', delete_branch: 'branch deleted', delete_worktree: 'worktree deleted' }
 const OPENED_STEPS: Record<string, string> = { branch: 'branch created', worktree: 'worktree created' }
 
 const toggled = (chosen: string[], option: string): string[] => (chosen.includes(option) ? chosen.filter(entry => entry !== option) : [...chosen, option])

@@ -7,6 +7,7 @@ import { openedBoard } from './board-chat/board-server'
 import { currentChatBar, refreshChatBar } from './chat-bar/chat-bar-client'
 import { ChatBarView } from './chat-bar/chat-bar-view'
 import { checkChatFolder, currentChatFolder } from './chat-bar/chat-folder-client'
+import { currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
 import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
 import { FidelityFilesView } from './chat-bar/fidelity-files-view'
@@ -111,6 +112,7 @@ export const register: Register = on => {
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
       folder: await currentChatFolder($),
+      busy: await currentBusy($),
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
       width: e.props.bodyColumns,
     })

@@ -13,13 +13,33 @@ from space.repo.repo import Branch
 
 if TYPE_CHECKING:
     from space.kanban.ticket import Ticket
+    from space.repo.worktree import Worktree
 
 LEAVE_COMMIT = "commit"
 LEAVE_PUSH = "push"
 LEAVE_MERGE = "merge"
+LEAVE_DELETE_BRANCH = "delete_branch"
+LEAVE_DELETE_WORKTREE = "delete_worktree"
 LEAVE_HANDOFF = "handoff"
+# What leaving does to the branch itself, beyond saving the work on it.
+LEAVE_BRANCH_STEPS = {LEAVE_MERGE, LEAVE_DELETE_BRANCH, LEAVE_DELETE_WORKTREE}
 OPEN_BRANCH = "branch"
 OPEN_WORKTREE = "worktree"
+
+
+def own_worktree_of(branch: Branch) -> Worktree | None:
+    """The worktree beside the repository that has branch checked out; none while the repository itself has it, since
+    git lists the main checkout among its worktrees too."""
+    return None if branch.is_checked_out else branch.worktree
+
+
+class LeaveRefused(ValueError):
+    """Leaving cannot do what it was asked with the ticket's branch, such as merge it while its worktree still has it
+    checked out, which git refuses."""
+
+    def __init__(self, branch: str, reason: str) -> None:
+        super().__init__(f"{branch}: {reason}")
+        self.branch = branch
 
 
 class TicketCheckout:
@@ -60,15 +80,13 @@ class TicketCheckout:
 
     @property
     def leave_choices(self) -> LeaveChoices:
-        """What leaving the ticket for another can do with its work now, a merge included."""
-        branch = self._checked_out_work_branch
-        # A branch open in its own worktree cannot be merged and deleted from here; its worktree is closed first.
-        return LeaveChoices(branch, merges=branch is not None and branch.is_checked_out)
+        """What leaving the ticket for another can do with its work now."""
+        return LeaveChoices(self._checked_out_work_branch)
 
     @property
     def close_choices(self) -> LeaveChoices:
-        """What closing the ticket can do with its work now; closing never merges."""
-        return LeaveChoices(self._checked_out_work_branch, merges=False)
+        """What closing the ticket can do with its work now: the same as leaving it for another."""
+        return LeaveChoices(self._checked_out_work_branch)
 
     @property
     def open_choices(self) -> OpenChoices:
@@ -106,23 +124,48 @@ class TicketCheckout:
             self._ticket.session.handoffs.write(LeavingHandoff(self._ticket).document)
 
     def save_work(self, leaving: list[str]) -> None:
-        """Commit, push, and merge the branch the ticket's work is on, as leaving names, in the checkout that has it:
-        the repository, or the ticket's own worktree. Nothing while no checkout has it, because those steps act on
-        whatever is checked out. Work on the default branch is committed and pushed there; it has no branch to merge and
-        no worktree to remove."""
-        if not set(leaving) & {LEAVE_COMMIT, LEAVE_PUSH, LEAVE_MERGE}:
+        """Commit and push the branch the ticket's work is on, in the checkout that has it: the repository, or the
+        ticket's own worktree. Then do what leaving names with the branch: delete its worktree, merge it into the default
+        branch, or merge and delete it. Nothing while no checkout has it, because those steps act on whatever is checked
+        out. Work on the default branch is committed and pushed there; it has no branch to merge and no worktree to
+        remove."""
+        if not set(leaving) & {LEAVE_COMMIT, LEAVE_PUSH, *LEAVE_BRANCH_STEPS}:
             return
         branch = self._checked_out_work_branch
         if branch is None:
             return
+        self._commit_and_push(branch, leaving)
+        if branch.is_default or not set(leaving) & LEAVE_BRANCH_STEPS:
+            return
+        self._delete_worktree(branch, leaving)
+        self._merge(branch, leaving)
+
+    def _commit_and_push(self, branch: Branch, leaving: list[str]) -> None:
         # Checked out in the repository itself, else in the ticket's own worktree.
         checkout = self._repo if branch.is_checked_out else branch.worktree.repository
         if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
             checkout.commit([str(checkout.root)], f"{self._ticket.name}: leave session", untracked=True)
         if LEAVE_PUSH in leaving:
             checkout.push_upstream()
-        if LEAVE_MERGE in leaving and branch.is_checked_out and not branch.is_default:
+
+    def _delete_worktree(self, branch: Branch, leaving: list[str]) -> None:
+        """Remove the branch's own worktree folder; the branch stays. git merges or deletes a branch only once no
+        worktree has it checked out, so a merge asked for while the worktree stays is refused."""
+        worktree = own_worktree_of(branch)
+        if worktree is None:
+            return
+        if LEAVE_DELETE_WORKTREE in leaving:
+            worktree.close(f"{self._ticket.name}: leave session")
+            self._ticket.board.reread()
+        elif {LEAVE_MERGE, LEAVE_DELETE_BRANCH} & set(leaving):
+            raise LeaveRefused(branch.name, "its worktree still has it checked out; delete the worktree too")
+
+    def _merge(self, branch: Branch, leaving: list[str]) -> None:
+        """Merge the branch into the default branch and push it; delete it too when leaving says so."""
+        if LEAVE_DELETE_BRANCH in leaving:
             self._repo.close_branch(branch.name)
+        elif LEAVE_MERGE in leaving:
+            branch.land_on_default()
 
     def return_to_default_branch(self, leaving: list[str]) -> None:
         """A closed ticket's own branch leaves the repository's checkout once its work is committed, so the next
@@ -135,15 +178,14 @@ class TicketCheckout:
 
 
 class LeaveChoices:
-    """What leaving a ticket can do with its work now, closing it or switching to another: a handoff always, a commit
-    and a push of the branch its work is on while that branch is checked out, since those steps act on whatever is
-    checked out, and, when switching, a merge of that branch while it is not the default branch, which has nothing to
-    merge into. Closing never merges. ``TicketCheckout.leave`` does exactly these, so a dialog offers only what will be
-    done."""
+    """What leaving a ticket can do with its work now, closing it or switching to another: a handoff always; a commit
+    and a push of the branch its work is on while a checkout has it, since those steps act on whatever is checked out;
+    and, for the ticket's own branch, not the default branch, a merge into the default branch, a delete of the branch
+    once merged, and a delete of its worktree while it has one. ``TicketCheckout.leave`` does exactly these, so a dialog
+    offers only what will be done."""
 
-    def __init__(self, branch: Branch | None, *, merges: bool) -> None:
+    def __init__(self, branch: Branch | None) -> None:
         self._branch = branch
-        self._merges = merges
 
     @property
     @data_field
@@ -154,17 +196,20 @@ class LeaveChoices:
     @property
     @data_field
     def choices(self) -> list[str]:
-        """Each choice leaving offers now, in the order leave does them."""
+        """Each choice leaving offers now, in the order a dialog lists them."""
         if self._branch is None:
             return [LEAVE_HANDOFF]
-        merge = [LEAVE_MERGE] if self._merges and not self._branch.is_default else []
-        return [LEAVE_HANDOFF, LEAVE_COMMIT, LEAVE_PUSH, *merge]
+        if self._branch.is_default:
+            return [LEAVE_HANDOFF, LEAVE_COMMIT, LEAVE_PUSH]
+        worktree = [LEAVE_DELETE_WORKTREE] if own_worktree_of(self._branch) is not None else []
+        return [LEAVE_HANDOFF, LEAVE_COMMIT, LEAVE_PUSH, LEAVE_MERGE, LEAVE_DELETE_BRANCH, *worktree]
 
     @property
     @data_field
     def chosen(self) -> list[str]:
-        """The choices a person starts with chosen: every one offered but the merge, which waits for them."""
-        return [choice for choice in self.choices if choice != LEAVE_MERGE]
+        """The choices a person starts with chosen: a handoff, a commit and a push; what changes the branch waits for
+        them."""
+        return [choice for choice in self.choices if choice not in LEAVE_BRANCH_STEPS]
 
 
 class OpenChoices:

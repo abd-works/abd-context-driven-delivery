@@ -27,6 +27,8 @@ export type ChatBarViewJson = {
   switchTo: string | null
   closing: { branch: string | null } | null
   leaveChoices: string[]
+  // The branch leaving acts on, which the LEAVE line names; empty when nothing checked out is the session's.
+  leaveBranch: string
   leaving: string[]
   openChoices: string[]
   opening: string[]
@@ -44,6 +46,9 @@ export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: 
 // main checkout), so the band can say when they differ.
 export type ChatFolderJson = { current: string; expected: string }
 
+// What the chat bar is doing while a switch or close runs, which the band shows with a turning wheel; empty when idle.
+export type BusyJson = { doing: string; frame: number }
+
 declare module 'claude-code' {
   interface PluginState {
     'cdd-board': {
@@ -57,6 +62,7 @@ declare module 'claude-code' {
       fidelityFiles: FidelityFilesJson
       shownStage: string | null
       chatFolder: ChatFolderJson
+      busy: BusyJson
     }
   }
 }

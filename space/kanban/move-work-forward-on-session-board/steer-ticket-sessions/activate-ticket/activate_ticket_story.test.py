@@ -15,6 +15,40 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # - Commit, push, and merge into main are chosen when the session is left, and merge starts off. Observed: `Ticket.activate`, `Ticket.close`.
 # - Create Ticket Branch And Worktree: they are created when a ticket that has none is activated, and a ticket that has one is offered neither again. Observed.
 with story("Activate Ticket"):
+    with scenario("Merge the branch left into main and keep it"):
+        # Evidence: requested 2026-11-09: LEAVE offers, after push, merge to main, delete the branch, and delete the worktree, each with its existing repo operation.
+        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), on its own branch pushed to origin"):
+            pass
+        with when("the Person activates billing-report, committing, pushing, and merging checkout-flow"):
+            # Person -> Ticket.activate(leaving=['commit', 'push', 'merge'])
+            # TicketCheckout -> Branch.land_on_default()
+            pass
+        with then("main on origin holds checkout-flow's work"):
+            pass
+        with and_("the checkout-flow branch is still there"):
+            pass
+    with scenario("Delete the branch left once it is merged"):
+        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), on its own branch pushed to origin"):
+            pass
+        with when("the Person activates billing-report, committing, pushing, and deleting checkout-flow's branch"):
+            # Person -> Ticket.activate(leaving=['commit', 'push', 'delete_branch'])
+            # TicketCheckout -> Repo.close_branch('checkout-flow')
+            pass
+        with then("main on origin holds checkout-flow's work"):
+            pass
+        with and_("the checkout-flow branch is gone"):
+            pass
+    with scenario("Delete the worktree left"):
+        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), its branch open in its own worktree"):
+            pass
+        with when("the Person activates billing-report, committing, pushing, and deleting checkout-flow's worktree"):
+            # Person -> Ticket.activate(leaving=['commit', 'push', 'delete_worktree'])
+            # TicketCheckout -> Worktree.close()
+            pass
+        with then("the worktree folder is gone"):
+            pass
+        with and_("checkout-flow's work is on its branch on origin"):
+            pass
     with scenario("Switch to another ticket, committing, pushing, and merging the one left"):
         # Evidence: observed: activation-client.spec 'Activate Ticket' — 'should offer commit and push on leaving and open with merge off', 'should offer a branch to a ticket that has none', 'should say what it switches from and to', 'that a person has confirmed with merge chosen'; story-actions.spec 'should switch the session from the dialog, with merge off'.
         with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), on its own branch pushed to origin"):

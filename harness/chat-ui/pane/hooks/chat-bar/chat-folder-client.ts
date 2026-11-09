@@ -40,16 +40,28 @@ export async function checkChatFolder($: EngineInterface, chatBar: ChatBarClient
   await update($, chatFolder, () => ({ current, expected }))
 }
 
+// Moves this chat to the main checkout, before a worktree it may be working in is deleted.
+export async function moveToMainCheckout($: EngineInterface): Promise<void> {
+  const [current, main] = await Promise.all([$.session.root(), mainCheckoutOf($)])
+  if (!main || sameFolder(current, main)) return
+  await moveChatTo($, main)
+}
+
+async function moveChatTo($: EngineInterface, folder: string): Promise<boolean> {
+  try {
+    await $.command.run({ command: 'cd', args: folder })
+    return true
+  } catch (failure) {
+    $.ui.toast(`This chat did not move to ${folder}: ${reasonOf(failure)}. Run /cd ${folder}`)
+    return false
+  }
+}
+
 // Moves this chat to the folder the active session's work is in, as /cd does when the person types it.
 export async function followSession($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
   await checkChatFolder($, chatBar)
   const { expected, isElsewhere } = await currentChatFolder($)
   if (!isElsewhere) return
-  try {
-    await $.command.run({ command: 'cd', args: expected })
-    $.ui.toast(`This chat now works in ${expected}${chatBar.sessionName ? `, on ${chatBar.sessionName}` : ''}`)
-  } catch (failure) {
-    $.ui.toast(`This chat did not move to ${expected}: ${reasonOf(failure)}. Run /cd ${expected}`)
-  }
+  if (await moveChatTo($, expected)) $.ui.toast(`This chat now works in ${expected}${chatBar.sessionName ? `, on ${chatBar.sessionName}` : ''}`)
   await checkChatFolder($, chatBar)
 }

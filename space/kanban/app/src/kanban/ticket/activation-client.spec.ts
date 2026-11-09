@@ -56,10 +56,10 @@ describe('Activate Ticket', () => {
     expect(page.store.state.activation?.offeredLeaving).toEqual(['handoff', 'commit', 'push'])
   })
 
-  it('should offer a merge when the session being left works on its own branch', async () => {
+  it('should offer a merge and a delete of the branch when the session being left works on its own branch', async () => {
     const { page, chosen } = await switchingPage()
     await page.activation.start(chosen, false)
-    expect(page.store.state.activation?.offeredLeaving).toEqual(['handoff', 'commit', 'push', 'merge'])
+    expect(page.store.state.activation?.offeredLeaving).toEqual(['handoff', 'commit', 'push', 'merge', 'delete_branch'])
   })
 
   it('should leave only the handoff chosen once a person unchooses commit and push', async () => {

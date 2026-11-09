@@ -39,6 +39,8 @@ function LeaveGroupView({ open }: { open: Activation }) {
     commit: `Commit changes on ${named}`,
     push: `Push ${named} to origin`,
     merge: `Merge ${named} into main`,
+    delete_branch: `Delete branch ${named} once merged`,
+    delete_worktree: `Delete the worktree of ${named}`,
   }
   return (
     <div className="dialog-group">
