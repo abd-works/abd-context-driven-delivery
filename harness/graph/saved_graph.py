@@ -324,16 +324,12 @@ class PracticeChanges:
     def between(cls, before: SavedPractice, after: SavedPractice) -> PracticeChanges:
         nodes = RecordChanges({node.node_id: node for node in before.nodes}, {node.node_id: node for node in after.nodes})
         edges = RecordChanges({edge.key: edge for edge in before.edges}, {edge.key: edge for edge in after.edges})
-        old_hits, new_hits = before.violations_by_node, after.violations_by_node
-        # A node changed in place is given its violations again, since a node of another type carries other rules.
-        hit = {node.node_id for node in nodes.changed} | {node_id for node_id in {*old_hits, *new_hits} if _records(old_hits.get(node_id)) != _records(new_hits.get(node_id))}
-        kept = set(nodes.after)
         return cls(
             nodes.gone,
             nodes.changed,
             [*edges.gone, *edges.replaced],
             edges.changed,
-            {node_id: new_hits.get(node_id, []) for node_id in sorted(hit) if node_id in kept},
+            _violations_changed(before, after, nodes),
             after.root_facts if after.root_facts != before.root_facts else None,
         )
 
@@ -410,6 +406,15 @@ class GraphChanges:
     @property
     def text(self) -> str:
         return json.dumps({"practices": {key: changes.record for key, changes in self.practices.items()}}, separators=(",", ":"))
+
+
+def _violations_changed(before: SavedPractice, after: SavedPractice, nodes: RecordChanges) -> dict[str, list[Violation]]:
+    """Each node after holds whose violations changed, with those it has now. A node changed in place is given its
+    violations again, since a node of another type carries other rules."""
+    old_hits, new_hits = before.violations_by_node, after.violations_by_node
+    differ = {node_id for node_id in {*old_hits, *new_hits} if _records(old_hits.get(node_id)) != _records(new_hits.get(node_id))}
+    hit = {node.node_id for node in nodes.changed} | differ
+    return {node_id: new_hits.get(node_id, []) for node_id in sorted(hit) if node_id in nodes.after}
 
 
 def _violations_by_node(violations: list[Violation]) -> dict[str, list[Violation]]:
