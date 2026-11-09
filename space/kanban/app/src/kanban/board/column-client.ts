@@ -1,4 +1,7 @@
-import type { ColumnData, FidelityGuidanceData, StageScopeData } from '@cdd/space/kanban/board'
+import type { ColumnData, StageScopeData } from '@cdd/space/kanban/board'
+
+// A fidelity a stage requires, as the board names it: by its slug, since its guidance is read through its help.
+export type RequiredFidelity = NonNullable<ColumnData['work_required']>[number]
 import { StageClientGenerated, type StageData } from '@cdd/space/kanban/stage'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
@@ -53,7 +56,7 @@ export class ColumnClient {
   }
 
   // Each fidelity the stage requires, with the formats it writes and its default one.
-  get workRequired(): FidelityGuidanceData[] {
+  get workRequired(): RequiredFidelity[] {
     return this.data.work_required ?? []
   }
 

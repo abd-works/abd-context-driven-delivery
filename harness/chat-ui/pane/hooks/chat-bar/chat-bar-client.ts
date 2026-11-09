@@ -89,7 +89,7 @@ export class ChatBarClient {
     if (!ticket) return []
     return ticket.progress
       .filter(progress => progress.stage.name === this.shownStage && progress.is_enabled)
-      .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice.key), progress.fidelity.slug === this.selected))
+      .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice.key), progress.fidelity.slug === this.selected, this.labelOf(progress.fidelity.slug)))
   }
 
   // The fidelities the session card lists a folder beside: practices that write under one folder share it, so each
@@ -133,6 +133,11 @@ export class ChatBarClient {
   // A ticket the board's switch list names, found where its column sends it whole (harness/chat-ui/.context/cdr/0002).
   private ticketNamed(name: string): TicketData | null {
     return this.board?.columns.flatMap(ticketsOf).find(ticket => ticket.name === name) ?? null
+  }
+
+  // A fidelity's label as the board names it, such as story-map; its slug when the board names none.
+  private labelOf(slug: string): string {
+    return this.board?.fidelities.find(shown => shown.fidelity.slug === slug)?.label ?? slug
   }
 
   // The practice a fidelity's progress names, as the board sends it with its colour.

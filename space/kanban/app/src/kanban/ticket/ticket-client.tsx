@@ -1,5 +1,5 @@
+import type { RequiredFidelity } from '../board/column-client'
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
-import type { FidelityGuidanceData } from '@cdd/space/kanban/board'
 import type { FidelityProgressClientGenerated, FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import { TicketClientGenerated, type ActionStatesData, type ReportRuleData, type TicketData, type ViolationData } from '@cdd/space/kanban/ticket'
 import { PracticeSessionOutputClientGenerated } from '@cdd/space/session/practice-session-output'
@@ -67,7 +67,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   // Its progress on the fidelities a tile or a panel was opened over, read from this ticket as it is now.
-  progressOn(fidelities: FidelityGuidanceData[]): FidelityProgressClient[] {
+  progressOn(fidelities: RequiredFidelity[]): FidelityProgressClient[] {
     return fidelities.flatMap(fidelity => this.progressNamed(fidelity.slug) ?? [])
   }
 

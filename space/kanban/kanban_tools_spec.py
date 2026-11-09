@@ -640,11 +640,6 @@ with description("the board tools") as self:
                     refused = error.practice
                 expect(refused).to(equal("astrology"))
 
-        # (S) Person --> Choose Action And Formats
-        with it("should give each fidelity its default format"):
-            story_map = next(fidelity for fidelity in self.project.column("Discovery")["work_required"] if fidelity["slug"] == "stories-story-map")
-            expect(story_map["default_format"]).to(equal("markdown"))
-
         # (S) Board App --> Display Fidelity Progress
         with it("should show each fidelity's Generate, Validate, and Review"):
             actions = progress_in(self.project.ticket_json("pet-visits"), "stories-story-map")["actions"]
@@ -1310,14 +1305,13 @@ with description("the board tools") as self:
         with it("should send a Ticket's column by its name alone, since the column sends the ticket"):
             expect(self.project.ticket_json("pet-visits")["column"]).to(equal({"name": "Discovery"}))
 
-        with it("should send each fidelity a Stage requires as the fidelity's own data"):
-            story_map = self.project.column("Discovery")["work_required"][0]
-            sent = {key: story_map[key] for key in ("slug", "name", "outputs", "default_format")}
-            expect(sent).to(equal({"slug": "stories-story-map", "name": "story_map", "outputs": {"markdown": ".context/story-map.md", "drawio": ".context/story-map.drawio"}, "default_format": "markdown"}))
+        # board.show is read every turn by the chat bar through MCP, whose answers are cut off past their size limit, so
+        # a fidelity's guidance text, which its help call reads, is never repeated in it.
+        with it("should send each fidelity a Stage requires by its slug alone"):
+            expect(self.project.column("Discovery")["work_required"][0]).to(equal({"slug": "stories-story-map"}))
 
-        with it("should send each fidelity a Stage requires with its overview, guidance, and rules"):
-            story_map = self.project.column("Discovery")["work_required"][0]
-            expect(sorted(story_map)).to(equal(["default_format", "guidance", "name", "outputs", "overview", "rules", "slug"]))
+        with it("should send each fidelity a Ticket's progress is on by its slug alone"):
+            expect(self.project.ticket_json("pet-visits")["progress"][0]["fidelity"]).to(equal({"slug": "stories-story-map"}))
 
         with it("should send a Ticket's next fidelity by its ticket and slug alone, since its progress sends it"):
             expect(self.project.ticket_json("pet-visits")["next"]).to(equal({"ticket": {"name": "pet-visits"}, "fidelity": {"slug": "stories-story-map"}}))

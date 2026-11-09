@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { FidelityGuidanceData } from '@cdd/space/kanban/board'
+import type { RequiredFidelity } from '@src/kanban/board/column-client'
 import type { BoardPage } from '@src/kanban/board/board-page'
 import type { ColumnClient } from '@src/kanban/board/column-client'
 import { BoardOnProject, ticketOn } from 'test-utils/board-page-support'
@@ -26,10 +26,10 @@ const LATER_STAMP = '2026-11-02T10:00:00Z'
 let board: BoardOnProject
 let STAGE: ColumnClient
 // The fidelities Discovery requires, as the board sends them.
-let STORY_MAP_FIDELITY: FidelityGuidanceData
-let OTHER_FIDELITY: FidelityGuidanceData
-let THIRD_FIDELITY: FidelityGuidanceData
-let TWO_FIDELITIES: FidelityGuidanceData[]
+let STORY_MAP_FIDELITY: RequiredFidelity
+let OTHER_FIDELITY: RequiredFidelity
+let THIRD_FIDELITY: RequiredFidelity
+let TWO_FIDELITIES: RequiredFidelity[]
 
 beforeAll(async () => {
   board = await BoardOnProject.start()

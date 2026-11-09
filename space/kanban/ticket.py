@@ -486,10 +486,10 @@ class FidelityProgress:
         return self._ticket
 
     @property
-    @data_field
+    @data_field(reference=True)
     def fidelity(self) -> FidelityGuidance:
-        """The fidelity this progress is on, as its ticket's session holds it; its slug, such as stories-story-map,
-        names it."""
+        """The fidelity this progress is on, as its ticket's session holds it; sent by its slug, such as
+        stories-story-map, because its guidance text is read through its help, never with every ticket."""
         return self._fidelity
 
     @property

@@ -1,4 +1,4 @@
-import type { FidelityGuidanceData } from '@cdd/space/kanban/board'
+import type { RequiredFidelity } from '../board/column-client'
 
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../shared/board-store'
@@ -29,7 +29,7 @@ export class OpenCardClient {
   }
 
   // A press on a segment opens the card on that fidelity.
-  async openSegment(ticket: TicketClient, stage: ColumnClient, fidelity: FidelityGuidanceData): Promise<void> {
+  async openSegment(ticket: TicketClient, stage: ColumnClient, fidelity: RequiredFidelity): Promise<void> {
     if (this.store.state.openCard !== ticket.name) this.toggle(ticket)
     await this.page.tiles.open({ ticket, stage, place: cellPlace(stage.name, fidelity), fidelities: [fidelity] }, true)
   }

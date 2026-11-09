@@ -28,6 +28,7 @@ export class FidelityProgressClient {
     private readonly ticket: TicketData,
     private readonly practice: PracticeGuidanceData | undefined,
     readonly isSelected: boolean,
+    private readonly label: string,
   ) {}
 
   // The fidelity's slug, such as ux-mockup: what names its progress to the fidelity-progress tools and its guidance to
@@ -36,9 +37,9 @@ export class FidelityProgressClient {
     return this.progress.fidelity.slug
   }
 
-  // The fidelity's own name as the session card shows it, such as Scenarios or Front end code.
+  // The fidelity's own name as the session card shows it, such as Scenarios or Front end code, from the board's label.
   get name(): string {
-    const words = this.progress.fidelity.name.replace(/_/g, ' ')
+    const words = this.label.replace(/[-_]/g, ' ')
     return words.charAt(0).toUpperCase() + words.slice(1)
   }
 

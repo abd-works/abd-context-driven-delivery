@@ -1,4 +1,4 @@
-import type { FidelityGuidanceData } from '@cdd/space/kanban/board'
+import type { RequiredFidelity } from '../board/column-client'
 import type { FormatChoiceData } from '@cdd/space/kanban/ticket'
 
 import type { BoardPage } from '../board/board-page'
@@ -11,14 +11,14 @@ const DEFAULT_ACTION = 'generate'
 const HOVER_OPEN_MILLISECONDS = 500
 const HOVER_CLOSE_MILLISECONDS = 250
 
-export const cellPlace = (stage: string, fidelity: FidelityGuidanceData): string => `cell-${stage}-${fidelity.slug}`
+export const cellPlace = (stage: string, fidelity: RequiredFidelity): string => `cell-${stage}-${fidelity.slug}`
 export const headPlace = (stage: string): string => `head-${stage}`
 
 // A command names each fidelity it acts on by its slug.
-export const slugsOf = (fidelities: FidelityGuidanceData[]): string[] => fidelities.map(fidelity => fidelity.slug)
+export const slugsOf = (fidelities: RequiredFidelity[]): string[] => fidelities.map(fidelity => fidelity.slug)
 
 // Where a bar opens: on which ticket, in which stage, at which place, over which fidelities.
-export type TileSpot = { ticket: TicketClient; stage: ColumnClient; place: string; fidelities: FidelityGuidanceData[] }
+export type TileSpot = { ticket: TicketClient; stage: ColumnClient; place: string; fidelities: RequiredFidelity[] }
 
 // A bar is found by its ticket's name and its place, because each board read makes new ticket clients.
 export const isAt = (tile: Tile, ticket: string, place: string): boolean => tile.ticket.name === ticket && tile.place === place

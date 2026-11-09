@@ -413,9 +413,10 @@ class Stage(Column):
         return self._approach.actions_with_formats
 
     @property
-    @data_field
+    @data_field(reference=True)
     def work_required(self) -> list[FidelityGuidance]:
-        """Every fidelity of every chosen practice whose stage is this stage, in practice order."""
+        """Every fidelity of every chosen practice whose stage is this stage, in practice order; each sent by its slug,
+        since its guidance text is read through its help."""
         return [fidelity for practice in self._board.practices for fidelity in practice.fidelities if self.requires(fidelity)]
 
     def requires(self, fidelity: FidelityGuidance) -> bool:
