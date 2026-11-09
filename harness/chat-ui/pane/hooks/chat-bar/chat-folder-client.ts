@@ -36,7 +36,7 @@ async function workFolderOf($: EngineInterface, chatBar: ChatBarClient): Promise
 
 // Reads where the chat is and where the active session's work is, so the band can say when they differ.
 export async function checkChatFolder($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
-  const [current, expected] = await Promise.all([$.session.root(), workFolderOf($, chatBar)])
+  const [current, expected] = await Promise.all([$.session.cwd(), workFolderOf($, chatBar)])
   await update($, chatFolder, () => ({ current, expected }))
 }
 
@@ -48,7 +48,7 @@ const MOVE_CHECK_MILLISECONDS = 500
 // a chat still in the worktree holds its folder open, so the delete fails halfway. Answers why the chat is not in the
 // main checkout, or '' once it is.
 export async function moveToMainCheckout($: EngineInterface): Promise<string> {
-  const [current, main] = await Promise.all([$.session.root(), mainCheckoutOf($)])
+  const [current, main] = await Promise.all([$.session.cwd(), mainCheckoutOf($)])
   if (!main) return `git found no main checkout from ${current}`
   if (sameFolder(current, main)) return ''
   if (!(await moveChatTo($, main))) return `this chat did not move out of ${current}`
@@ -57,7 +57,7 @@ export async function moveToMainCheckout($: EngineInterface): Promise<string> {
 
 async function arrivedIn($: EngineInterface, folder: string): Promise<boolean> {
   for (let waited = 0; waited < MOVE_WAIT_MILLISECONDS; waited += MOVE_CHECK_MILLISECONDS) {
-    if (sameFolder(await $.session.root(), folder)) return true
+    if (sameFolder(await $.session.cwd(), folder)) return true
     await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
   }
   return false
