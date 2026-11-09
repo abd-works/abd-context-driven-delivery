@@ -120,10 +120,10 @@ with description("a practice's schema in a graph"):
         self.graph = Graph()
         self.practice = self.graph.practice("ddd")
         self.own_storage = set(vars(self.practice))
-        self.schema = self.practice.reading.in_graph.schema
+        self.schema = self.practice.reading.in_graph.rule_run.schema
 
     with it("should be made once, by the practice's part of the graph"):
-        expect(self.practice.reading.in_graph.schema).to(be(self.schema))
+        expect(self.practice.reading.in_graph.rule_run.schema).to(be(self.schema))
 
     with it("should leave the practice's own storage to the practice"):
         expect(set(vars(self.practice)) - self.own_storage).to(equal(set()))
@@ -131,4 +131,4 @@ with description("a practice's schema in a graph"):
     with it("should read the extended practice's schema from that practice's part of the same graph"):
         clean = self.graph.practice("clean_engineering")
         expect(self.schema.anchor_type("ValueObject")).to(equal("OoadClass"))
-        expect(clean.reading.in_graph.schema_with(())).to(be(clean.reading.in_graph.schema))
+        expect(clean.reading.in_graph.rule_run.schema_with(())).to(be(clean.reading.in_graph.rule_run.schema))

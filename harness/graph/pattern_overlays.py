@@ -81,19 +81,29 @@ class PatternOverlays:
     def apply(self, overlays: list[str] | tuple[str, ...]) -> None:
         """Apply the overlays named, each a folder or a pattern's name, in place of those applied before. The patterns
         among them are found here, once, and kept, so asking for them reads no folder."""
-        self.paths = []
+        self.paths = self._paths_of(overlays)
+        self.patterns = self._patterns_at(self.paths)
+
+    def _paths_of(self, overlays: list[str] | tuple[str, ...]) -> list[str]:
+        """The overlay root of each overlay named, once each, in order."""
+        paths: list[str] = []
         for overlay in overlays:
             text = str(overlay).strip()
             path = str(self.root_of(text)) if text else ""
-            if path and path not in self.paths:
-                self.paths.append(path)
-        self.patterns = []
-        for path in self.paths:
+            if path and path not in paths:
+                paths.append(path)
+        return paths
+
+    def _patterns_at(self, paths: list[str]) -> list[Any]:
+        """The registered pattern each overlay root is, each made once by this object."""
+        patterns: list[Any] = []
+        for path in paths:
             name = Path(path).name
             if name in self._registered and self._holds_practices(self._folder_of(name)):
                 pattern = self._pattern(name)
-                if pattern not in self.patterns:
-                    self.patterns.append(pattern)
+                if pattern not in patterns:
+                    patterns.append(pattern)
+        return patterns
 
     @property
     def graph_overlays(self) -> list[GraphOverlay]:
@@ -105,12 +115,14 @@ class PatternOverlays:
         """The overlay of every registered pattern that holds a practice, applied or not."""
         return [self._pattern(name).graph_overlay for name in self.available]
 
-    def checks_of(self, practice: Any) -> dict[str, Any]:
-        """The graph rules practice checks with these overlays applied, by slug: its own, then those each applied
-        pattern adds to it."""
+    def checks_of(self, practice: Any, overlays: list[str] | None = None) -> dict[str, Any]:
+        """The graph rules practice checks with these overlays applied, or with the overlays named, such as those a
+        saved graph was saved with, by slug: its own, then those each pattern adds to it. Each pattern is the one this
+        object made, so asking again makes none."""
+        patterns = self.patterns if overlays is None else self._patterns_at(self._paths_of(overlays))
         merged = dict(practice.reading.graph_checks)
-        for overlay in self.graph_overlays:
-            merged.update(overlay.rules_for(practice))
+        for pattern in patterns:
+            merged.update(pattern.graph_overlay.rules_for(practice))
         return merged
 
     @property

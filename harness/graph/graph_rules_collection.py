@@ -151,7 +151,7 @@ class GraphRulesCollection(RulesCollection):
         graph = self.node.graph
         if graph is None:
             return self.chosen(False, [])
-        return self.chosen(graph.filter.violations, list(graph.filter.rules))
+        return self.chosen(graph.explorer.filter.violations, list(graph.explorer.filter.rules))
 
     def chosen(self, violations_only: bool, selected: list[str]) -> list[GraphRule]:
         """Every rule; with violations_only, the violating ones, and of those only the selected slugs when any are."""

@@ -29,7 +29,7 @@ class BddGraphReading(PracticeReading):
         are added to its graph as they are; then each observation is linked to the operations and properties of the
         code it drives, when the graph reads Clean Engineering too."""
         root = Path(self.in_graph.source_root)
-        specs = [file for file in self.graph.source_files(root, self.practice.formats.suffixes) if is_spec_file(file.name)]
+        specs = [file for file in self.graph.scope.source_files(root, self.practice.formats.suffixes) if is_spec_file(file.name)]
         with schema_sync_paused():
             for index, file in enumerate(specs, start=1):
                 relative = file.relative_to(root).as_posix()
@@ -43,7 +43,7 @@ class BddGraphReading(PracticeReading):
     def clean_engineering_reading(self) -> PracticeReading | None:
         """The part of the Clean Engineering practice the graph this practice is read in reads too: the code each
         observation drives; none when the graph reads no Clean Engineering."""
-        clean = self.graph.loaded(CleanEngineering) if self.graph is not None else None
+        clean = self.graph.practices.loaded(CleanEngineering) if self.graph is not None else None
         return clean.reading if clean is not None else None
 
     def _add_spec(self, file: Path, relative: str) -> None:

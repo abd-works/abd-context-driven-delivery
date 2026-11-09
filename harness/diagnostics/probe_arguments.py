@@ -88,7 +88,9 @@ class ProbeArguments:
     def _made_arguments(self, mcp_name: str, names: set[str]) -> dict[str, Any]:
         arguments: dict[str, Any] = {"guidance": self.slugs} if "guidance" in names else {}
         if mcp_name == "render.render":
-            arguments["paths"] = [self._temp_markdown_file()]
+            # A one-heading markdown file render reads in the format it is told, so the probe checks the operation
+            # runs rather than whether a practice folder parses as that practice's current format.
+            arguments["paths"] = [self._temp_file(".md", "# Diagnostic probe\n")]
         elif mcp_name in {"document.document", "partition.index", "partition.partition", "sketch.save_sketch"}:
             arguments["paths"] = self.content_paths
         elif "paths" in names and mcp_name.startswith("sketch."):
@@ -101,7 +103,7 @@ class ProbeArguments:
         if mcp_name == "render.render":
             return {"format": "markdown", "source": "markdown", "content": ""}
         if mcp_name == "partition.verify_segment_completeness":
-            return {"segment_path": self._temp_segment_file()}
+            return {"segment_path": self._temp_file("-segment.md", "### diagnostic-probe\n\nprobe body for completeness check.\n")}
         if mcp_name in {"partition.index", "partition.partition"}:
             return {name: value for name, value in (("context", ""), ("mode", "index_only")) if name in names}
         if mcp_name == "grill-context.explore_context_files":
@@ -123,19 +125,10 @@ class ProbeArguments:
         self._created.append(path)
         return str(path)
 
-    def _temp_markdown_file(self) -> str:
-        """A one-heading markdown file render reads in the format it is told, so the probe checks the operation runs
-        rather than whether a practice folder parses as that practice's current format."""
-        handle, name = tempfile.mkstemp(suffix=".md", prefix="cdd-guidance-probe-")
-        os.write(handle, b"# Diagnostic probe\n")
-        os.close(handle)
-        path = Path(name)
-        self._created.append(path)
-        return str(path)
-
-    def _temp_segment_file(self) -> str:
-        handle, name = tempfile.mkstemp(suffix="-segment.md", prefix="cdd-guidance-probe-")
-        os.write(handle, b"### diagnostic-probe\n\nprobe body for completeness check.\n")
+    def _temp_file(self, suffix: str, text: str) -> str:
+        """A file of the probe's own holding text, named with suffix, which cleanup removes."""
+        handle, name = tempfile.mkstemp(suffix=suffix, prefix="cdd-guidance-probe-")
+        os.write(handle, text.encode("utf-8"))
         os.close(handle)
         path = Path(name)
         self._created.append(path)

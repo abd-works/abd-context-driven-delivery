@@ -283,7 +283,7 @@ class Examples(dict):
         value.scope = self.scope
         super().__setitem__(name, value)
         if isinstance(self.scope, StoryNode):
-            self.scope._link(value, "examples")
+            self.scope.attach(value, "examples")
 
     def clone(self, scope: Optional["StoryNode"] = None) -> "Examples":
         copied = type(self)(self.scope if scope is None else scope)

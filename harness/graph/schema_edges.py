@@ -10,6 +10,8 @@ named for the field.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
+from contextlib import contextmanager
 from functools import cached_property
 
 from harness.graph.edge import EdgeType
@@ -193,37 +195,67 @@ class NodeEvidence:
 
 
 class SchemaEdges:
-    """The schema relationship edges between the model objects on one graph, which the graph makes once and keeps. It
-    reads the schemas' relationship fields the first time it records an edge, and the model objects again on each
-    sync, since the graph holds other objects by then."""
+    """The schema relationship edges between the model objects on one graph, which the graph makes once and keeps
+    (``graph.schema_edges``). It reads the schemas' relationship fields the first time it records an edge, and the model
+    objects again on each sync, since the graph holds other objects by then. It syncs only while the graph is not loaded
+    from a working copy, whose practices record their own edges (``syncs``), and never while a batch of links is still
+    being made (``held``) or a sync is under way."""
 
     def __init__(self, graph) -> None:
         self.graph = graph
         self.nodes: list = []
         self._by_type: dict[str, list] = {}
+        # Whether model objects joining the graph record their schema edges; a working copy's load turns it off.
+        self.syncs = True
+        self._holds = 0
+        self._syncing = False
 
     @cached_property
     def fields(self) -> SchemaFields:
         """The relationship fields of the graph's practices and of every pattern's schemas for them."""
-        return SchemaFields.of(list(self.graph.every_practice.values()), self.graph.every_graph_overlay)
+        return SchemaFields.of(list(self.graph.practices.held.values()), self.graph.applied_patterns.every_graph_overlay)
+
+    @contextmanager
+    def held(self) -> Iterator[None]:
+        """Hold syncs until a batch of links is finished, then sync once. Each link would otherwise record every schema
+        edge again, which on a story map is quadratic in the nodes already attached."""
+        self._holds += 1
+        try:
+            yield
+        finally:
+            self._holds -= 1
+            self.sync()
 
     def sync(self) -> None:
         """Record every schema relationship edge between the model objects on the graph now."""
+        if not self.syncs or self._holds or self._syncing:
+            return
+        self._syncing = True
+        try:
+            self._read_nodes()
+            if len(self.nodes) >= 2:
+                for owner in self.nodes:
+                    self._record_from(owner)
+        finally:
+            self._syncing = False
+
+    def _read_nodes(self) -> None:
+        """The model objects on the graph now, and by type."""
         self.nodes = [
-            node for practice in self.graph.practices.values() for node in practice.reading.in_graph.nodes() if hasattr(node, "semantic_type") and hasattr(node, "subtree")
+            node for practice in self.graph.practices.opened.values() for node in practice.reading.in_graph.nodes() if hasattr(node, "semantic_type") and hasattr(node, "subtree")
         ]
         self._by_type = {}
         for node in self.nodes:
             self._by_type.setdefault(node.semantic_type(), []).append(node)
-        if len(self.nodes) < 2:
-            return
+
+    def _record_from(self, owner) -> None:
+        """Record each schema edge from owner, and each relationship its targets name back to it."""
         schema = self.fields
-        for owner in self.nodes:
-            for field in (field for field in schema.fields if field.links_from(owner)):
-                for target in self._linked_targets(field, owner):
-                    self._record(field.kind, owner, target)
-                    for inverse in schema.inverses(target.semantic_type(), owner.semantic_type(), field.kind):
-                        self._record(inverse, target, owner)
+        for field in (field for field in schema.fields if field.links_from(owner)):
+            for target in self._linked_targets(field, owner):
+                self._record(field.kind, owner, target)
+                for inverse in schema.inverses(target.semantic_type(), owner.semantic_type(), field.kind):
+                    self._record(inverse, target, owner)
 
     def _linked_targets(self, field: SchemaField, owner) -> list:
         """The nodes owner links to through field: for a field read from evidence, the targets its evidence matches;

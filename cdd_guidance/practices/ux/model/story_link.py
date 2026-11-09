@@ -55,7 +55,7 @@ class StoryLink:
         """The Stories nodes of this link's kind on graph; none while graph reads no Stories."""
         from cdd_guidance.practices.stories.stories import Stories
 
-        stories = graph.loaded(Stories)
+        stories = graph.practices.loaded(Stories)
         if stories is None:
             return
         for node_type in _NODE_TYPES[self.kind]:

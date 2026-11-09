@@ -28,13 +28,13 @@ _CHILD_EDGES = ("contexts", "observations")
 
 
 class GraphBddModel(BddModel):
-    """Reads a saved graph (`Graph.saved`, `graph.save_json`) into descriptions whose observations carry their realization."""
+    """Reads a saved graph (`SavedGraph.from_graph`, `graph.save_json`) into descriptions whose observations carry their realization."""
 
     def parse(self, text: str) -> "GraphBddModel":
         graph = Graph()
         graph.restored_from(SavedGraph.from_text(text))
         self._graph = graph
-        bdd = graph.practice_of(self.practice_kind())
+        bdd = graph.practices.of(self.practice_kind())
         self._clean = bdd.reading.clean_engineering_reading
         for spec in sorted(bdd.reading.in_graph.nodes("Spec"), key=lambda node: node.source.file):
             for saved in self._in_file_order(graph.edges_from("descriptions", spec)):

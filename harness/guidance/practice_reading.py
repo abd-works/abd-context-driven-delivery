@@ -101,4 +101,4 @@ class PracticeReading:
     def checks(self) -> dict[str, Any]:
         """The graph rules this practice checks, with those the pattern overlays its graph applies add to it, by slug;
         its own alone for a practice no graph holds."""
-        return self.in_graph.checks if self.in_graph is not None else dict(self.graph_checks)
+        return self.in_graph.rule_run.checks if self.in_graph is not None else dict(self.graph_checks)

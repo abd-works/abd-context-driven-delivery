@@ -248,8 +248,8 @@ class ReportFile:
 
     def _scanned_rules(self) -> set[str]:
         """The rules a scanner checks now, with the overlays the graph was saved with; a saved graph keeps the hits of a
-        scanner deleted since it was saved."""
-        return set(self._checked_graph.checks_of(self._practice))
+        scanner deleted since it was saved. The session's graph answers, with the patterns it already holds."""
+        return set(self._session.graph.applied_patterns.checks_of(self._practice, self._checked_graph.overlays))
 
     def _judged_rules(self, text: str) -> list[ReportRule]:
         """Each rule the judgment fails, once however many judged files fail it, with its findings at the judged files' lines."""

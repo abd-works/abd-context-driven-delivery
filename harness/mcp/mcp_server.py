@@ -465,17 +465,18 @@ class McpServer:
 
     def answer_tool(self, mcp_name: str, call: ToolCall) -> object:
         """Answer call with the tool published as mcp_name."""
-        resolved = self.resolve_call_name(mcp_name)
-        if resolved not in self._tools:
-            raise ToolNotEnrolled(resolved)
-        return self._tools[resolved].answer(call)
+        return self._answer_from(self._tools, mcp_name, call)
 
     def answer_prompt(self, mcp_name: str, call: ToolCall) -> object:
         """Answer call with the instructions published as mcp_name, expanded for it."""
+        return self._answer_from(self._prompts, mcp_name, call)
+
+    def _answer_from(self, published: dict[str, AgentTool], mcp_name: str, call: ToolCall) -> object:
+        """Answer call with what published holds under mcp_name, or under the name a client spelled it."""
         resolved = self.resolve_call_name(mcp_name)
-        if resolved not in self._prompts:
+        if resolved not in published:
             raise ToolNotEnrolled(resolved)
-        return self._prompts[resolved].answer(call)
+        return published[resolved].answer(call)
 
 
 class _ProjectNamedOnly:

@@ -1,7 +1,7 @@
 import type { EngineInterface } from 'claude-code'
 
 import type { FidelityFilesJson } from '../../types'
-import { BRAND } from '../brand'
+import { BRAND } from '../shared/brand'
 import { closeFiles, isDiagram, openInDrawio, showFile } from './fidelity-files-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>

@@ -14,6 +14,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from harness.graph.graph import Graph  # noqa: E402
+from harness.graph.saved_graph import SavedGraph  # noqa: E402
 
 from cdd_guidance.practices.bdd.bdd import Bdd  # noqa: E402
 
@@ -65,7 +66,7 @@ with description("a saved graph of a spec and the code it tests"):
         graph = Graph()
         graph.load_files(str(self.folder), ["bdd", "clean_engineering"], ["src"])
         self.clean = graph.practice("clean_engineering")
-        self.saved = graph.saved().text
+        self.saved = SavedGraph.from_graph(graph).text
 
     with after.all:
         shutil.rmtree(self.folder, ignore_errors=True)

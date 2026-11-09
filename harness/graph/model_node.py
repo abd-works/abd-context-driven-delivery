@@ -68,10 +68,10 @@ class ModelChildren(_RecordedList):
 
     def __init__(self, owner: "ModelNode", kind: str) -> None:
         super().__init__(owner, kind)
-        owner._child_lists.append(self)
+        owner.holds_parts(self)
 
     def _record(self, child) -> None:
-        self.owner._link(child, self.kind)
+        self.owner.attach(child, self.kind)
 
     def reconcile(self, sources: Iterable, load: Callable) -> None:
         """Become sources, in their order, keeping the children already held: each source is translated into the child
@@ -97,7 +97,7 @@ class ModelChildren(_RecordedList):
         )
 
     def _drop(self, child) -> None:
-        self.owner._unlink(child, self.kind)
+        self.owner.detach(child, self.kind)
 
 
 class ModelReferences(_RecordedList):
@@ -106,13 +106,13 @@ class ModelReferences(_RecordedList):
 
     def __init__(self, owner: "ModelNode", kind: str) -> None:
         super().__init__(owner, kind)
-        owner._reference_lists.append(self)
+        owner.holds_references(self)
 
     def _record(self, target) -> None:
-        self.owner._refer(target, self.kind)
+        self.owner.refer(target, self.kind)
 
     def _drop(self, target) -> None:
-        self.owner._unlink(target, self.kind)
+        self.owner.detach(target, self.kind)
 
     def record_all(self) -> None:
         """Record the edge to every object held, as on a graph the owner has just moved to."""
@@ -197,7 +197,7 @@ class ModelNode(Node):
         self.sequential_order = sequential_order
         self._ready = False
         if graph is not None:
-            self.join(graph.practice_of(type(self).practice_kind()))
+            self.join(graph.practices.of(type(self).practice_kind()))
 
 
     @property
@@ -221,7 +221,19 @@ class ModelNode(Node):
     def semantic_type(self) -> str:
         return self._semantic_type_name
 
-    def _link(self, child, kind: str) -> None:
+    def holds_parts(self, parts: ModelChildren) -> None:
+        """Keep parts, one of this object's lists of the parts it is made of, so the object records the edge to each
+        part when it joins a graph."""
+        self._child_lists.append(parts)
+
+    def holds_references(self, references: ModelReferences) -> None:
+        """Keep references, one of this object's lists of objects it refers to, so the object records the edge to each
+        when it joins a graph."""
+        self._reference_lists.append(references)
+
+    def attach(self, child, kind: str) -> None:
+        """Make child one of this object's parts, under an edge of kind: this object becomes its parent, and on a graph
+        the edge is recorded, with child joining this object's practice."""
         if not isinstance(child, ModelNode) or child is self:
             return
         child.parent = self
@@ -238,13 +250,14 @@ class ModelNode(Node):
         if (child.semantic_type(), self.semantic_type()) in type(self)._belongs:
             self.graph.record(EdgeType.from_kind("belongsTo", "relationship"), child, self)
 
-    def _unlink(self, child, kind: str) -> None:
+    def detach(self, child, kind: str) -> None:
+        """Drop the edge of kind from this object to child, and the belongsTo edge back from child."""
         if not isinstance(child, ModelNode) or self.practice is None:
             return
         self.practice.reading.in_graph.drop_edges(lambda edge: (edge.parent is self and edge.child is child and edge.kind == kind)
             or (edge.parent is child and edge.child is self and edge.kind == "belongsTo"),)
 
-    def _refer(self, target, kind: str) -> None:
+    def refer(self, target, kind: str) -> None:
         """Record a relationship edge of kind to target when both are on one graph; an owner that joins another graph
         records it there (``_join``)."""
         if not isinstance(target, ModelNode) or target is self or self.practice is None or target.practice is None:
@@ -266,7 +279,7 @@ class ModelNode(Node):
                 node._move_to(practice)
         graph = practice.reading.graph
         for edge in carried:
-            graph.record(EdgeType(edge.kind, edge.order, edge.display), edge.parent, edge.child)
+            graph.record(edge.type, edge.parent, edge.child)
         for node in subtree:
             node._record_held_edges()
 
@@ -314,7 +327,7 @@ class ModelNode(Node):
         if self.practice is None:
             yield
             return
-        with self.graph.schema_sync_held():
+        with self.graph.schema_edges.held():
             yield
 
     def _sync_schema_edges(self) -> None:
@@ -323,7 +336,7 @@ class ModelNode(Node):
         practice = getattr(self, "practice", None)
         graph = practice.reading.graph if practice is not None else None
         if graph is not None:
-            graph.sync_schema_edges()
+            graph.schema_edges.sync()
 
 
 # How many schema_sync_paused blocks are open; rebuilds resume when the outermost one closes.

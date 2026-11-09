@@ -13,6 +13,7 @@ from mamba import after, before, context, description, it
 from harness.graph.graph import Graph
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.graph_build import GraphBuildFailed, WorkerBuild
+from harness.graph.saved_graph import SavedGraph
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's overlays
 
@@ -39,15 +40,18 @@ _IN_PROCESS = ToolCall()
 
 
 class _CountingReads(Graph):
-    """A graph that counts how often this process reads a working copy into it."""
+    """A graph that counts how often its build reads a working copy into it in this process."""
 
     def __init__(self) -> None:
         super().__init__()
         self.reads = 0
+        read = self.build._read_working_copy
 
-    def _read_working_copy(self) -> None:
-        self.reads += 1
-        super()._read_working_copy()
+        def counted() -> None:
+            self.reads += 1
+            read()
+
+        self.build._read_working_copy = counted
 
 
 def _nodes(graph: Graph) -> list[tuple]:
@@ -75,15 +79,40 @@ def _class_names(graph: Graph) -> list[str]:
 
 
 class _CountingTakes(Graph):
-    """A graph that counts the worker answers it took as changes, not as a whole graph read back."""
+    """A graph that counts the worker answers its practices took as changes, not as a whole graph read back."""
 
     def __init__(self) -> None:
         super().__init__()
         self.takes = 0
+        take = self.practices.take
 
-    def _take(self, changes) -> None:
-        self.takes += 1
-        super()._take(changes)
+        def counted(changes) -> None:
+            self.takes += 1
+            take(changes)
+
+        self.practices.take = counted
+
+
+class _SerialisedHere:
+    """Counts the graphs this process serialises as saved graphs while it is open."""
+
+    def __init__(self) -> None:
+        self.graphs = 0
+        self._from_graph = SavedGraph.__dict__["from_graph"]
+
+    def __enter__(self) -> "_SerialisedHere":
+        counter = self
+        made = self._from_graph.__func__
+
+        def counted(cls, graph, files=None):
+            counter.graphs += 1
+            return made(cls, graph, files)
+
+        SavedGraph.from_graph = classmethod(counted)
+        return self
+
+    def __exit__(self, *_exc) -> None:
+        SavedGraph.from_graph = self._from_graph
 
 
 def _practice_state(graph: Graph, key: str) -> dict:
@@ -270,6 +299,29 @@ with description("a graph built for a chat's call"):
 
             with it("should give UX what a fresh build gives it, whichever practice's file it refreshed"):
                 expect(_states_after_each_refresh(self.refreshed, "ux")).to(equal(_each_file(self.fresh["ux"])))
+
+        # A validate's refresh used to serialise the refreshed files' nodes in the server, under the graph's lock, which
+        # stopped every chat's answers for seconds at a time while validators ran (B10).
+        with context("that a validate checks in a worker, after another validate refreshed it"):
+            with before.all:
+                checked = Path(tempfile.mkdtemp())
+                file = _READ_BY_EACH_PRACTICE[0]
+                here = Graph()
+                here.open_saved(self.every)
+                here.refreshed([file], checked / "here.json")
+                apart = Graph()
+                apart.open_saved(self.every)
+                apart.refresh([_READ_BY_EACH_PRACTICE[1]], _FROM_A_CHAT)
+                with _SerialisedHere() as self.serialised:
+                    apart.refreshed([file], checked / "apart.json", _FROM_A_CHAT)
+                self.checked_here = SavedGraph.from_file(checked / "here.json").document
+                self.checked_apart = SavedGraph.from_file(checked / "apart.json").document
+
+            with it("should serialise no node in the process answering chats"):
+                expect(self.serialised.graphs).to(equal(0))
+
+            with it("should write the nodes of the files it names as a refresh in this process writes them"):
+                expect(self.checked_apart).to(equal(self.checked_here))
 
         # Validators refresh one session graph one after another. Each order after the first names the worker's last
         # answer instead of the server writing its graph out, and the server takes back only what the refresh changed.

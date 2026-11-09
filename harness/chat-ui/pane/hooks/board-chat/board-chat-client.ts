@@ -1,8 +1,8 @@
 import type { ChatCommandData } from '@cdd/harness/chat/chat'
 import type { EngineInterface } from 'claude-code'
 
-import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../chat-command'
-import { reasonOf } from '../failure'
+import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../shared/chat-command'
+import { reasonOf } from '../shared/failure'
 import { after, post } from './board'
 import { currentChatName } from './chat-name'
 import { awaitTurn, finish, forgetTurn, isChatBusy, turnsSoFar } from './chat-turns'

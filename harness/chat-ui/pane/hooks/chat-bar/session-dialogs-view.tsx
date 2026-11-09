@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
-import { BRAND } from '../brand'
+import { BRAND } from '../shared/brand'
 import type { ChatBarDraw } from './chat-bar-view'
 import { activateSession, closeSession, createSession, pickSession } from './session-client'
 import { cancelClose, cancelSwitch, toggleLeaving, toggleOpening } from './session-dialogs-client'

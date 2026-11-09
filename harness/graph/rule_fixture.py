@@ -24,7 +24,7 @@ class RuleFixture:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
         graph = Graph()
-        practice = graph.practice_of(practice_class)
+        practice = graph.practices.of(practice_class)
         read = [practice, *([practice.extended] if practice.extended is not None else [])]
         graph.load_working_copy(str(self.root), {each.key: str(self.root) for each in read}, force=True)
         self.practice = practice
@@ -57,12 +57,12 @@ class SchemaRuleRun:
 
     def hits(self) -> list[str]:
         """Each message the rule recorded, node by node, after the graph has checked the practice."""
-        self.context.practice.reading.in_graph.check()
+        self.context.practice.reading.in_graph.rule_run.check()
         return [message for node in self.context.nodes() for message in self._recorded_on(node)]
 
     def node_hits(self, node) -> list[str]:
         """The messages the rule recorded on node alone, after the graph has checked the practice."""
-        self.context.practice.reading.in_graph.check()
+        self.context.practice.reading.in_graph.rule_run.check()
         return self._recorded_on(node)
 
     def _recorded_on(self, node) -> list[str]:

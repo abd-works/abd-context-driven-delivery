@@ -116,14 +116,14 @@ class PracticeInventory:
     @data_field
     def edge_types(self) -> list[str]:
         """The edge kinds the practice holds that a person filters by, in the order the explorer tree shows them."""
-        ordered = sorted(self._practice.reading.in_graph.edge_types.values(), key=lambda edge_type: edge_type.order)
+        ordered = sorted(self._practice.reading.in_graph.edge_index.types.values(), key=lambda edge_type: edge_type.order)
         return [edge_type.kind for edge_type in ordered if edge_type.is_offered]
 
     @property
     @data_field
     def rules(self) -> list[str]:
         """Each rule the practice runs, named ``practice.node.rule`` with the pattern that owns it in front."""
-        return self._practice.reading.in_graph.rule_labels
+        return self._practice.reading.in_graph.rule_run.rule_labels
 
     @property
     @data_field

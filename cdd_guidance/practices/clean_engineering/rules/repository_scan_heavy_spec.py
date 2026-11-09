@@ -46,7 +46,7 @@ class RepositoryScan:
 
     def __init__(self) -> None:
         graph = Graph()
-        practices = [graph.practice_of(kind) for kind in (CleanEngineering, Ddd, Bdd)]
+        practices = [graph.practices.of(kind) for kind in (CleanEngineering, Ddd, Bdd)]
         graph.load_files(str(_REPO), [practice.key for practice in practices], _SCANNED)
         self.clean, self.ddd, self.bdd = (practice.reading.in_graph for practice in practices)
         self.hits: list[tuple[str, list[str]]] = []
