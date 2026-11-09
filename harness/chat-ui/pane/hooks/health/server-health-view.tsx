@@ -102,7 +102,7 @@ function ExpandedView(elements: ElementTable, band: Band) {
       borderStyle="single"
       borderColor={look.border}
       backgroundColor={look.wash}
-      alignSelf="flex-start"
+      alignSelf="stretch"
     >
       {HeadlineView(elements, health)}
       {InstallLineView(elements, install)}
