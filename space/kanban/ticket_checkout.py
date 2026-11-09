@@ -101,6 +101,7 @@ class TicketCheckout:
         self.save_work(leaving)
 
     def write_handoff(self, leaving: list[str]) -> None:
+        """Write a handoff for the ticket's session when leaving names one."""
         if LEAVE_HANDOFF in leaving:
             self._ticket.session.handoffs.write(LeavingHandoff(self._ticket).document)
 
@@ -126,7 +127,9 @@ class TicketCheckout:
     def return_to_default_branch(self, leaving: list[str]) -> None:
         """A closed ticket's own branch leaves the repository's checkout once its work is committed, so the next
         session does not start on it. Uncommitted work keeps it checked out, so nothing is carried to the default branch."""
-        if not (LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving) or not self.branch.is_checked_out:
+        if not (LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving):
+            return
+        if not self.branch.is_checked_out:
             return
         self._repo.branch_named(self._repo.default_branch).check_out()
 
