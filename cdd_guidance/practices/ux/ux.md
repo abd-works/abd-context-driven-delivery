@@ -135,6 +135,8 @@ outputs:
 
 Lock screens as runnable greybox — typed controls and key interactions.
 
+**In Claude Design, the canvas is the default.** When the session runs in Claude Design, generate this fidelity with `format=claude_design` unless the person names another format: the screens become prototype screens on a Claude Design canvas with the story explorer (step 10), not greybox html, which a Claude Design session cannot show.
+
 #### Sketch
 
 Ask what the person does on this screen to accomplish the outcome, and what they need to see there. Write the controls from those answers.
@@ -156,7 +158,7 @@ Ask what the person does on this screen to accomplish the outcome, and what they
    - Brand/css tokens already exist somewhere in the workspace (check before deciding).
    Do not invent brand. When active, pick the sibling folder under `specifications/` for the brand that applies (e.g. `specifications/abd-works/`) and start from its matching page rather than inventing tokens; if no named brand applies, `specifications/generic/` (no brand layer) is the default. Fall back to whatever brand/css tokens already exist in the workspace when neither covers it. Add a thin css layer to the greybox html; keep the Story Demo shell fully functional. Brand applied here carries forward to **front_end_code** automatically — do not re-apply.
 9. Document every faked behaviour explicitly — list all stubs; no silent pretence of production services.
-10. **Claude Design channel.** When the session runs in Claude Design, port each story's screen as a prototype screen on the canvas instead of a greybox: the product's own markup and stylesheets, data from the stories' fixtures, real domain logic, the shared fixture bar, and buttons that move the story explorer to the next story. Follow `model/claude_design/story_canvas.md` § Prototype screens.
+10. **Claude Design channel.** When the session runs in Claude Design, use `format=claude_design` by default and port each story's screen as a prototype screen on the canvas instead of a greybox: the product's own markup and stylesheets, data from the stories' fixtures, real domain logic, the shared fixture bar, and buttons that move the story explorer to the next story. Follow `model/claude_design/story_canvas.md` § Prototype screens.
 
 #### Scaffold
 
