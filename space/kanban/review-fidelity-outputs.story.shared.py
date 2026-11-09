@@ -62,7 +62,7 @@ def _(s):
 
     @s.when("the Person lists checkout-flow's story_map files")
     def _(world):
-        world.files = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).progress_of(STORY_MAP).files())
+        world.files = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).work.progress_of(STORY_MAP).files())
 
     @s.then("the files panel lists .context/story-map.md as there")
     def _(world):
@@ -89,7 +89,7 @@ def _(s):
 
     @s.when("the Person lists pet-visits' bdd behavior files")
     def _(world):
-        world.files = world.data_of(world.Ticket.load(PET_VISITS.name).progress_of("bdd-behavior").files())
+        world.files = world.data_of(world.Ticket.load(PET_VISITS.name).work.progress_of("bdd-behavior").files())
 
     @s.then("the files panel lists src/mine_spec.py")
     def _(world):
@@ -109,7 +109,7 @@ def _(s):
 
     @s.when("the Person lists no-such-ticket's story_map files")
     def _(world):
-        world.refusal = refusal_of(lambda: world.Ticket.load(NO_SUCH_TICKET).progress_of(STORY_MAP).files())
+        world.refusal = refusal_of(lambda: world.Ticket.load(NO_SUCH_TICKET).work.progress_of(STORY_MAP).files())
 
     @s.then("a toast says cdd fidelity-progress.files failed: TicketNotFoundError: no ticket named 'no-such-ticket' on the board")
     def _(world):
@@ -142,7 +142,7 @@ def _(s):
     @s.when("the Person views checkout-flow's story_map files")
     def _(world):
         ticket = world.Ticket.load(CHECKOUT_FLOW.name)
-        world.files = world.data_of(ticket.progress_of(STORY_MAP).files())
+        world.files = world.data_of(ticket.work.progress_of(STORY_MAP).files())
         world.opened = world.data_of(ticket.session.read_file(path=STORY_MAP_FILE))
 
     @s.then("the files panel shows the tabs .context/story-map.md and .context/story-map.drawio")
@@ -181,7 +181,7 @@ def _(s):
 
     @s.when("the Person reviews story_map on billing-report")
     def _(world):
-        world.reviewed = world.data_of(world.Ticket.load(BILLING_REPORT.name).progress_of(STORY_MAP).finish_review())
+        world.reviewed = world.data_of(world.Ticket.load(BILLING_REPORT.name).work.progress_of(STORY_MAP).finish_review())
 
     @s.then("billing-report's session log ends with review stories story_map")
     def _(world):
@@ -215,7 +215,7 @@ def _(s):
 
     @s.when("the Person reviews stories-no_such_fidelity")
     def _(world):
-        world.refusal = refusal_of(lambda: world.Ticket.load(BILLING_REPORT.name).progress_of(NO_SUCH_FIDELITY).finish_review())
+        world.refusal = refusal_of(lambda: world.Ticket.load(BILLING_REPORT.name).work.progress_of(NO_SUCH_FIDELITY).finish_review())
 
     @s.then("the board says no fidelity named stories-no_such_fidelity on ticket billing-report")
     def _(world):

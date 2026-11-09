@@ -976,12 +976,7 @@ class AgentTool(AgentToolDestination):
         session = self.toolset.session_for(call)
         if session is None:
             return
-        logged_args = {
-            key: value
-            for key, value in call.arguments.items()
-            if isinstance(value, (str, int, float, bool, list))
-        }
-        session.log.by(call.chat).tool(self.mcp_name, logged_args)
+        session.log.by(call.chat).tool(self.mcp_name, call.named_paths)
 
     @property
     def kind(self) -> str:

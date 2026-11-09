@@ -27,7 +27,8 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 )
 import space.session.practice_session_output as session_output_module
 from harness.graph.saved_graph import SavedGraph
-from cdd_guidance.actions.validate.checked_graph import CheckedGraph, PathsNotFoundError
+from cdd_guidance.actions.validate.checked_graph import CheckedGraph
+from space.session.session_files import NamedPathNotFoundError
 from cdd_guidance.actions.validate.validate import Validate
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
@@ -395,17 +396,28 @@ with description("a validate action on practice guidance") as self:
                 report = self.action.validate(guidance=["stories-story-map"], paths=[str(self.folder / "board/.context/story-map.md")])
                 expect(report).to(contain("Boarding Stuff"))
 
+            # The graph reads only under the session's root, so a file of the project outside it would be checked as
+            # nothing.
+            with context("that is named a file of the project outside the session's root"):
+                with before.each:
+                    (self.folder / "outside.md").write_text("# Outside\n", encoding="utf-8")
+
+                with it("should refuse it, naming the session's root"):
+                    expect(lambda: self.action.validate(guidance=["stories-story-map"], paths=["outside.md"])).to(
+                        raise_error(NamedPathNotFoundError, contain(f"under the session's root {(self.folder / 'board').resolve()} at outside.md"))
+                    )
+
         # A graph built from nothing reports no violations, which reads as a clean validate.
         with context("that is named by a path that is not there"):
             with it("should refuse, naming the path and the root it was read from"):
                 expect(lambda: self.action.validate(guidance=["stories-story-map"], paths=["board/.context/missing.md"])).to(
-                    raise_error(PathsNotFoundError, contain(f"board/.context/missing.md, read from {self.folder}"))
+                    raise_error(NamedPathNotFoundError, contain(f"board/.context/missing.md, read from {self.folder}"))
                 )
 
             with it("should save no report"):
                 try:
                     self.action.validate(guidance=["stories-story-map"], paths=["board/.context/missing.md"])
-                except PathsNotFoundError:
+                except NamedPathNotFoundError:
                     pass
                 expect((self.session / "validation-reports").exists()).to(equal(False))
 

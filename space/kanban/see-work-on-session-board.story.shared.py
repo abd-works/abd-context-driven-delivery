@@ -30,6 +30,7 @@ from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.ux.ux import Ux
 from harness.catalog_generator.catalog_practice import CatalogPractice
+from space.session.sessions import BoardPractices
 from space.repo.repo import Repo
 from space.kanban.session_board_examples import (
     BACK_TO_BACKLOG,
@@ -89,7 +90,7 @@ def _(s):
 def _(s):
     @s.given("a board with the Stories, DDD, and UX practices chosen")
     def _(world):
-        world.board = world.Board(Repo(world.project.root), CatalogPractice.of_practices([Stories(), Ddd(), Ux()]))
+        world.board = world.Board(Repo(world.project.root), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
     @s.when("the session board reads the board")
     def _(world):

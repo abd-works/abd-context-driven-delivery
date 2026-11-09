@@ -33,6 +33,52 @@ class SessionNameRequiredError(ValueError):
         )
 
 
+class PracticeNotFoundError(LookupError):
+    """Raised when a caller names a practice, such as clean_engineering, that the board or ticket does not have. It
+    names the practice and what was searched for it."""
+
+    def __init__(self, practice: str, within: str) -> None:
+        self.practice = practice
+        self.within = within
+        super().__init__(f"no practice named {practice!r} on {within}")
+
+
+class BoardPractices:
+    """*BoardPractices* are the practices a checkout's session board works through, each as the catalog shows it: its
+    name, colour, fidelities, pages, and skills. They are the same for every session, so they are made once for the
+    checkout and kept by its *Sessions*; every board read asks them for a practice by its class, which the board's own
+    instance and each session's share, rather than searching the list again."""
+
+    def __init__(self, catalogued: list[CatalogPractice]) -> None:
+        # Each practice's catalog view by the practice's class, in the order the board shows them.
+        self._by_class = {type(entry.practice): entry for entry in catalogued}
+
+    @property
+    def catalogued(self) -> list[CatalogPractice]:
+        """The catalog's view of each practice, in the order the board shows them."""
+        return list(self._by_class.values())
+
+    def of(self, kind: type) -> CatalogPractice:
+        """The catalog's view of the practice of class kind, the class of the board's own instance and of every
+        session's."""
+        found = self._by_class.get(kind)
+        if found is None:
+            raise PracticeNotFoundError(kind.__name__, "the board")
+        return found
+
+    def works_through(self, kind: type) -> bool:
+        """Whether the practice of class kind is one the board works through."""
+        return kind in self._by_class
+
+    def keyed(self, key: str) -> CatalogPractice:
+        """The catalog's view of the board's practice whose folder name is key, such as clean_engineering, as a tool
+        names it."""
+        found = next((entry for entry in self._by_class.values() if entry.practice.key == key), None)
+        if found is None:
+            raise PracticeNotFoundError(key, "the board")
+        return found
+
+
 @agent_toolset
 class Sessions:
     """The work sessions of one checkout: open ones in ``.sessions/{name}/``, closed ones in ``.sessions/_complete/``,
@@ -62,13 +108,13 @@ class Sessions:
         return SERVED_SESSIONS.of_project(project)
 
     @cached_property
-    def board_practices(self) -> list[CatalogPractice]:
+    def board_practices(self) -> BoardPractices:
         """Every practice CDD has, as the catalog shows it, made once for this checkout's board with the one skill
         install their slash commands are named by: what the board shows of a practice, its name, colour, fidelities,
         pages, and skills, is the same for every session, so no single session's instances stand for it, and no other
         reader changes these. The board is made again for every call, so it is held here, where the process keeps the
         checkout's sessions."""
-        return CatalogPractice.of_practices(PracticeCatalogue.create_all())
+        return BoardPractices(CatalogPractice.of_practices(PracticeCatalogue.create_all()))
 
     @cached_property
     def file_manager(self) -> FileManager:

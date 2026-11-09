@@ -15,14 +15,6 @@ from harness.mcp.mcp_server import mcp
 _NEVER_WALKED = frozenset({".git", ".venv", "node_modules"})
 
 
-class ContextFileNotFound(FileNotFoundError):
-    """Raised when read_context_file is named a context file that is not in the session's project."""
-
-    def __init__(self, path: Path) -> None:
-        super().__init__(f"no context file at {path.as_posix()}; name it from the project's root, or absolute")
-        self.path = path
-
-
 @agent_toolset
 class GrillContext(GuidanceAction):
     """Interview a plan relentlessly against the codebase context until reaching shared understanding."""
@@ -78,10 +70,7 @@ class GrillContext(GuidanceAction):
         """Confirm a context file and return its path.
         Pass the path, from the project's root or absolute. Do not paste the file body into this call. Read the file with the editor.
         Use after explore_context_files to choose files that are relevant."""
-        target = self.path_named(path)
-        if not target.is_file():
-            raise ContextFileNotFound(target)
-        return str(target)
+        return str(self.session.session_files.existing(path))
 
     @mcp
     @agent_tool

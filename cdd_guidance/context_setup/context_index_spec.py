@@ -25,7 +25,6 @@ from mamba import after, before, context, description, it
 
 from cdd_guidance.context_setup.context_index import (
     ContextIndex,
-    SegmentNotFound,
     EmbedResult,
     EmbeddingProvider,
     RankedChunk,
@@ -34,6 +33,7 @@ from cdd_guidance.context_setup.context_index import (
 )
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
+from space.session.session_files import NamedPathNotFoundError
 from space.session.throwaway_project import ThrowawayProject
 
 
@@ -205,7 +205,7 @@ with description("a ContextIndex"):
         with context("and is named a segment that is not there"):
             with it("should refuse it rather than embed empty text"):
                 expect(lambda: self.index.embed(["docs/.context/missing-segment.md"], out_path="docs/rag")).to(
-                    raise_error(SegmentNotFound)
+                    raise_error(NamedPathNotFoundError)
                 )
 
     # ── Tool: Search Memory ───────────────────────────────────────────────────

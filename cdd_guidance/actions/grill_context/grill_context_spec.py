@@ -17,9 +17,10 @@ from expects import be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
-from cdd_guidance.actions.grill_context.grill_context import ContextFileNotFound, GrillContext
+from cdd_guidance.actions.grill_context.grill_context import GrillContext
 from harness.agent_tools.agent_tools import AgentToolSet
 from space.session import Session, Sessions
+from space.session.session_files import NamedPathNotFoundError
 
 
 def _session_at(folder: Path) -> Session:
@@ -133,10 +134,11 @@ with description("GrillContext toolset"):
                 result = json.loads(gc.explore_context_files(folder="billing"))
                 expect([Path(item["path"]).parent for item in result]).to(equal([(Path(self.root) / "billing").resolve()]))
 
+    # A served call always works in a session, which reads the path from its project and refuses one that is not there.
     with context("read_context_file tool"):
         with before.each:
-            self.gc = GrillContext()
             self.tmp = tempfile.TemporaryDirectory()
+            self.gc = GrillContext(_session_at(Path(self.tmp.name)))
 
         with context("that reads a file that exists"):
             with it("should return the file path"):
@@ -156,9 +158,9 @@ with description("GrillContext toolset"):
                 expect(gc.read_context_file(path="billing/module-context.md")).to(equal(str(target.resolve())))
 
         with context("that names a file that is not there"):
-            with it("should refuse it as a context file not found"):
+            with it("should refuse it, naming the path and the project it was read from"):
                 gc = GrillContext(_session_at(Path(self.tmp.name)))
-                expect(lambda: gc.read_context_file(path="missing.md")).to(raise_error(ContextFileNotFound))
+                expect(lambda: gc.read_context_file(path="missing.md")).to(raise_error(NamedPathNotFoundError, contain("nothing at missing.md, read from")))
 
     with context("write_grill_answer tool"):
         with before.each:

@@ -63,7 +63,7 @@ with story("Send Next Fidelity Action"):
         with when("the Person runs billing-report's next step"):
             # Person -> Ticket.next_action <- review on stories-story-map
             # Person -> Ticket.finish_review(['stories-story-map'])
-            # Ticket -> Ticket.record('review stories story_map')
+            # Ticket -> TicketWork.record('review stories story_map')
             # Board page -> Board.show()
             pass
         with then("billing-report's story_map marks Review ✓"):

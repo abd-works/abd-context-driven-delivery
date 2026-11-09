@@ -17,6 +17,8 @@ class IdeLayout:
     _FOLDERS = {"Cursor": ".cursor", "VS Code": ".github", "Kilo": ".kilo", "Claude": ".claude"}
     # The file an IDE other than Claude Code reads its MCP servers from, in its settings folder or its install folder.
     MCP_CONFIG_NAME = "mcp.json"
+    # The folders an install writes guidance into inside an IDE's folder, with the kind of guidance each holds.
+    _GUIDANCE_FOLDERS = {"skills": "skill", "rules": "rule", "agents": "agent"}
 
     def __init__(self, ide: str) -> None:
         self.ide = ide
@@ -25,6 +27,15 @@ class IdeLayout:
     def every(cls) -> list[IdeLayout]:
         """The layout of each IDE CDD installs into."""
         return [cls(ide) for ide in cls._FOLDERS]
+
+    @classmethod
+    def installed_guidance_kind(cls, path: str) -> str:
+        """skill, rule, or agent for a path inside a folder an install writes that guidance into, such as
+        ``.cursor/rules/`` or ``.claude/skills/``, in any IDE's folder; empty for any other path. A hook that logs or
+        toasts a file asks this, so every IDE's folders are known in one place."""
+        posix = str(path).replace("\\", "/").lower()
+        found = (kind for folder in cls._FOLDERS.values() for name, kind in cls._GUIDANCE_FOLDERS.items() if f"/{folder}/{name}/" in posix)
+        return next(found, "")
 
     @property
     def folder_name(self) -> str:

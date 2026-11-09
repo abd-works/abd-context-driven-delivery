@@ -114,13 +114,6 @@ class PracticeSessionOutput:
         return self
 
     @property
-    def working(self) -> FidelitySessionOutput | None:
-        """What the fidelity this practice was made at has in this session, the one that fidelity holds, which a log
-        line about work on the practice names; none for a practice made at no fidelity."""
-        current = self._guidance.fidelities.current
-        return current.session_output if current is not None else None
-
-    @property
     def chosen_outputs(self) -> dict:
         """What session.json's ``outputs`` keeps for this practice: the root a person chose, and under each fidelity's
         name what that fidelity keeps for itself."""

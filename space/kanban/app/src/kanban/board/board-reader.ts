@@ -1,4 +1,4 @@
-import type { BoardData } from '@cdd/space/kanban/board'
+import { BoardClientGenerated, type BoardData } from '@cdd/space/kanban/board'
 
 import type { BoardPage } from './board-page'
 
@@ -9,13 +9,17 @@ export class BoardReader {
   private reads = 0
   private latestApplied = 0
   private isPolling = false
+  // The board tool the reads go through, made at the first read, once the page has its api. It is not the page's board,
+  // which stays the read it was made from until the store holds a new one, so announcements compare two reads.
+  private source: BoardClientGenerated | null = null
 
   constructor(private readonly page: BoardPage) {}
 
   // Reads can overlap with a move's own read, so a slower, older answer never replaces a newer one.
   async refresh(): Promise<void> {
     const order = ++this.reads
-    const shown = await this.page.board.show()
+    this.source ??= new BoardClientGenerated(this.page.api)
+    const shown = await this.source.show()
     if (!shown || order < this.latestApplied) return
     this.latestApplied = order
     await this.apply(shown.toJSON())

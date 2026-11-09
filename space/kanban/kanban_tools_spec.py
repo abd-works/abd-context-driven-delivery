@@ -27,8 +27,9 @@ from space.kanban.report import ReportRule  # noqa: E402
 from space.kanban.session_board_examples import saved_graph, saved_practice  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
-from space.repo.repo import Branch  # noqa: E402
-from space.kanban.board import FidelityNotFoundError, NotAStageError, PracticeNotFoundError  # noqa: E402
+from space.repo.repo import Branch, Repo  # noqa: E402
+from space.kanban.board import FidelityNotFoundError, NotAStageError  # noqa: E402
+from space.session.sessions import PracticeNotFoundError  # noqa: E402
 from space.session.file_manager import PathOutsideRootsError  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 from space.session import Sessions  # noqa: E402
@@ -764,7 +765,7 @@ with description("the board tools") as self:
             # One fidelity object per session: the progress's fidelity is the one an action on the ticket's session works with.
             with it("should give each progress the fidelity its ticket's session holds"):
                 ticket = Ticket.load("pet-visits", project=self.project.root)
-                expect(ticket.progress_of("stories-story-map").fidelity is ticket.session.practices["stories"].fidelities["story_map"]).to(be_true)
+                expect(ticket.work.progress_of("stories-story-map").fidelity is ticket.session.practices["stories"].fidelities["story_map"]).to(be_true)
 
             with it("should give the board the ticket's session.json"):
                 expect(self.project.ticket_json("pet-visits")["session"]["session_file"]).to(equal(".sessions/pet-visits/session.json"))
@@ -1106,6 +1107,20 @@ with description("the board tools") as self:
         with it("should say a ticket has no branch yet"):
             expect(self.project.call("ticket.branch", ticket="sign-up")["exists"]).to(be_false)
 
+        # A ticket's checkout holds its own branch, made once with the ticket however many of its answers ask for it:
+        # what opening it offers asks both whether its branch exists and where its worktree is.
+        with context("whose opening and leaving choices are asked for twice"):
+            with before.each:
+                with patch.object(Repo, "branch_named", autospec=True, side_effect=Repo.branch_named) as made:
+                    self.answers = [self.project.call(tool, ticket="sign-up") for tool in ("ticket.open_choices", "ticket.leave_choices") * 2]
+                self.own_branches_made = sum(1 for call in made.call_args_list if call.args[1] == "sign-up")
+
+            with it("should make the ticket's own branch once for each ticket the calls read"):
+                expect(self.own_branches_made).to(equal(4))
+
+            with it("should give the same answers each time"):
+                expect(self.answers[2:]).to(equal(self.answers[:2]))
+
         with it("should name no worktree for a ticket that has none"):
             expect(self.project.ticket_json("sign-up")["worktree"]).to(equal(""))
 
@@ -1173,7 +1188,7 @@ with description("the board tools") as self:
             with it("should offer to close it with a handoff and a commit and push of main"):
                 expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "choices": ["handoff", "commit", "push"], "chosen": ["handoff", "commit", "push"]}))
 
-            # Ticket.leave never merges the default branch, so leaving offers no merge a person could pick for nothing.
+            # TicketCheckout.leave never merges the default branch, so leaving offers no merge a person could pick for nothing.
             with it("should offer to leave it for another with a handoff and a commit and push of main, and no merge"):
                 expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "main", "choices": ["handoff", "commit", "push"], "chosen": ["handoff", "commit", "push"]}))
 
