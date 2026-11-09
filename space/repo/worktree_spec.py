@@ -1,4 +1,5 @@
 """BDD spec — a worktree opened for a branch, and whether it is up to date with origin."""
+import os
 import shutil
 import subprocess
 import tempfile
@@ -73,6 +74,19 @@ with description("a worktree opened for a branch") as self:
 
             with it("should still open the worktree folder"):
                 expect(WorkState(self.clone).worktree_folder.is_dir()).to(be_true)
+
+    with context("whose folder holds files past Windows' 260-character path limit"):
+        with before.each:
+            self.opened = Repo(self.clone).branch_named("feature/a").open_in_worktree()
+            self.worktrees = Repo(self.clone).worktrees
+            deep = self.opened.path.resolve().joinpath(".retired", *("fixture-folder-" * 4 for _ in range(5)))
+            long_deep = f"\\\\?\\{deep}" if os.name == "nt" else str(deep)
+            os.makedirs(long_deep, exist_ok=True)
+            Path(long_deep, "fixture.md").write_text("retired", encoding="utf-8")
+
+        with it("should remove the folder"):
+            self.worktrees.remove(self.opened)
+            expect(self.opened.path.exists()).to(be_false)
 
     with context("whose folder cannot be removed"):
         with before.each:

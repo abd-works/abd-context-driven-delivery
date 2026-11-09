@@ -24,19 +24,22 @@ export class CloseRefused {
 export async function activateSession($: EngineInterface, sessionName: string): Promise<ChatBarClient> {
   const { leaving, opening } = await currentChatBarView($)
   await cancelSwitch($)
-  return whileBusy($, `Opening ${sessionName}`, async () => {
-    if (leaving.includes(DELETE_WORKTREE)) await moveToMainCheckout($)
-    try {
-      await callTool<TicketData>($, 'ticket.activate', { ticket: sessionName, leaving, opening })
-    } catch (failure) {
-      $.ui.toast(`${sessionName} did not open: ${reasonOf(failure)}`)
-    }
-    await refreshChatBar($)
-    const after = await currentChatBar($)
-    // The chat bar's switch moves this chat to the new session's worktree, so its branch and files follow CDD.
-    await followSession($, after)
-    return after
-  })
+  if (leaving.includes(DELETE_WORKTREE)) await moveToMainCheckout($)
+  const after = await whileBusy($, `Opening ${sessionName}`, () => activatedSession($, sessionName, leaving, opening))
+  // The chat bar's switch moves this chat to the new session's worktree, so its branch and files follow CDD. The move
+  // runs after the wheel stops: where the agent is asked to move the chat, its answer waits for the agent's turn to end.
+  await followSession($, after)
+  return after
+}
+
+async function activatedSession($: EngineInterface, sessionName: string, leaving: string[], opening: string[]): Promise<ChatBarClient> {
+  try {
+    await callTool<TicketData>($, 'ticket.activate', { ticket: sessionName, leaving, opening })
+  } catch (failure) {
+    $.ui.toast(`${sessionName} did not open: ${reasonOf(failure)}`)
+  }
+  await refreshChatBar($)
+  return currentChatBar($)
 }
 
 // Picking a session opens the activation dialog on it, with what leaving the active session and opening this one can
@@ -78,11 +81,16 @@ export async function openClose($: EngineInterface, chatBar: ChatBarClient): Pro
 export async function closeSession($: EngineInterface, chatBar: ChatBarClient): Promise<ChatBarClient | null | CloseRefused> {
   const { leaving } = await currentChatBarView($)
   await cancelClose($)
-  return whileBusy($, `Closing ${chatBar.sessionName}`, () => closedSession($, chatBar, leaving))
+  if (leaving.includes(DELETE_WORKTREE)) await moveToMainCheckout($)
+  const after = await whileBusy($, `Closing ${chatBar.sessionName}`, () => closedSession($, chatBar, leaving))
+  if (after instanceof CloseRefused) return after
+  // With the session closed, the chat goes back to the main checkout, which closing returned to the default branch.
+  // The move runs after the wheel stops, as a switch's does.
+  await followSession($, after)
+  return after.hasSession ? after : null
 }
 
-async function closedSession($: EngineInterface, chatBar: ChatBarClient, leaving: string[]): Promise<ChatBarClient | null | CloseRefused> {
-  if (leaving.includes(DELETE_WORKTREE)) await moveToMainCheckout($)
+async function closedSession($: EngineInterface, chatBar: ChatBarClient, leaving: string[]): Promise<ChatBarClient | CloseRefused> {
   try {
     await callTool<TicketData>($, 'ticket.close', { ticket: chatBar.sessionName, leaving })
   } catch (failure) {
@@ -92,8 +100,5 @@ async function closedSession($: EngineInterface, chatBar: ChatBarClient, leaving
   const left = leaving.map(step => LEFT_STEPS[step] ?? step)
   $.ui.toast(`${left.length ? `${chatBar.title}: ${left.join(', ')} · ` : ''}Session ${chatBar.title} closed`)
   await refreshChatBar($)
-  const after = await currentChatBar($)
-  // With the session closed, the chat goes back to the main checkout, which closing returned to the default branch.
-  await followSession($, after)
-  return after.hasSession ? after : null
+  return currentChatBar($)
 }

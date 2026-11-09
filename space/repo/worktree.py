@@ -214,9 +214,17 @@ class Worktrees:
 
     def _rmtree_logged(self, target: Path) -> None:
         try:
-            shutil.rmtree(target, ignore_errors=True)
+            shutil.rmtree(self._long_path(target), ignore_errors=True)
         except OSError as exc:
             logger.info("rmtree failed for %s: %s", target, exc)
+
+    def _long_path(self, target: Path) -> str:
+        """Windows refuses paths past 260 characters unless they carry the \\\\?\\ prefix, and a checkout's retired
+        fixtures run past it, so their files would outlive the worktree."""
+        resolved = str(target.resolve())
+        if os.name != "nt" or resolved.startswith("\\\\?\\"):
+            return resolved
+        return "\\\\?\\" + resolved
 
     def _powershell_remove_item(self, target: Path) -> None:
         command = f'Remove-Item -LiteralPath "{target}" -Recurse -Force -ErrorAction SilentlyContinue'
