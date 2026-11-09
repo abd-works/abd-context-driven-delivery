@@ -24,6 +24,11 @@ async function turnWheel($: EngineInterface, doing: string): Promise<void> {
   }
 }
 
+// The wheel outlives a reload, which cuts off the work that would clear it, so a fresh start or a refresh clears it.
+export async function clearBusy($: EngineInterface): Promise<void> {
+  await update($, busy, () => ({ doing: '', frame: 0 }))
+}
+
 // Shows doing with a turning wheel while work runs, and clears it once the work ends, however it ends.
 export async function whileBusy<T>($: EngineInterface, doing: string, work: () => Promise<T>): Promise<T> {
   await update($, busy, () => ({ doing, frame: 0 }))
