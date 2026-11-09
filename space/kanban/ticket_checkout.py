@@ -147,11 +147,12 @@ class TicketCheckout:
         return branch if branch.is_checked_out or branch.worktree is not None else None
 
     def open(self, opening: list[str]) -> None:
-        """Create what opening names for the ticket: its own branch, checked out, and its own worktree."""
-        if OPEN_BRANCH in opening:
-            self._repo.switch_branch(self.branch.name)
+        """Open the ticket the way opening names: in its own worktree, which creates its branch when missing, or else by
+        switching this checkout to its branch, created when missing. The two are alternatives, so a worktree wins."""
         if OPEN_WORKTREE in opening:
             self._repo.switch_worktree(self.branch.name)
+        elif OPEN_BRANCH in opening:
+            self._repo.switch_branch(self.branch.name)
         if opening:
             self._ticket.board.reread()
             self._record(branch=self.branch.name, worktree=self.worktree)
@@ -269,8 +270,9 @@ class LeaveChoices:
 
 
 class OpenChoices:
-    """What opening a ticket can create for it now: its own branch while the repository has none, and its own worktree
-    while it has none. ``TicketCheckout.open`` creates each one chosen."""
+    """How opening a ticket with no worktree of its own can go: switch this checkout to its branch, or open its own
+    worktree, each creating the branch when missing. They are alternatives, and the worktree is chosen at first.
+    ``TicketCheckout.open`` does the one chosen."""
 
     def __init__(self, branch: Branch, worktree: str, candidate_branches: list[str]) -> None:
         self._branch = branch
@@ -292,5 +294,11 @@ class OpenChoices:
     @property
     @data_field
     def choices(self) -> list[str]:
-        """Each choice opening offers now, all chosen at first."""
-        return [*([] if self.has_branch else [OPEN_BRANCH]), *([] if self._worktree else [OPEN_WORKTREE])]
+        """Each way opening offers now: none while the ticket has a worktree, where its chat moves instead."""
+        return [] if self._worktree else [OPEN_BRANCH, OPEN_WORKTREE]
+
+    @property
+    @data_field
+    def chosen(self) -> list[str]:
+        """The way a person starts with chosen: its own worktree, while one is offered."""
+        return [OPEN_WORKTREE] if OPEN_WORKTREE in self.choices else []

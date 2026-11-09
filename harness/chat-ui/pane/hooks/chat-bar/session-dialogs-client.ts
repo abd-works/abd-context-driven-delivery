@@ -63,7 +63,7 @@ export async function showSwitch($: EngineInterface, name: string, leaving: Leav
     leaving: leaving?.chosen ?? [],
     openChoices: opening.choices,
     candidateBranches: opening.candidate_branches,
-    opening: opening.choices,
+    opening: opening.chosen,
   }))
 }
 
@@ -86,6 +86,7 @@ export async function toggleLeaving($: EngineInterface, choice: string): Promise
   await update($, chatBarView, view => ({ ...view, leaving: toggled(view.leaving, choice, view.leaveChoices) }))
 }
 
+// The ways of opening are alternatives, as OpenChoices offers them, so a press picks one.
 export async function toggleOpening($: EngineInterface, choice: string): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, opening: toggled(view.opening, choice, view.openChoices) }))
+  await update($, chatBarView, view => ({ ...view, opening: [choice] }))
 }

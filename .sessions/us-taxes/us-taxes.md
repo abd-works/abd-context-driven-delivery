@@ -1,3 +1,0 @@
-# US Taxes
-
-bfsjhbfsdfjsfkgjd

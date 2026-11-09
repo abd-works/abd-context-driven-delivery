@@ -34,9 +34,15 @@ function leaveLabelOf(word: string, branch: string): string {
     commit: 'commit',
     push: 'push',
     merge: 'merge into main',
-    delete_branch: `delete branch ${branch}`,
+    delete_branch: `delete branch ${branch} and close the session`,
     delete_worktree: 'delete worktree',
   }
+  return labels[word] ?? word
+}
+
+// Each way the Ticket offers to open a session, by the word TicketCheckout.open reads, as the dialog words it.
+function openLabelOf(word: string, session: string): string {
+  const labels: Record<string, string> = { branch: `switch this folder to branch ${session}`, worktree: 'create worktree' }
   return labels[word] ?? word
 }
 
@@ -74,7 +80,7 @@ export function ActivateView($: EngineInterface, elements: ElementTable, { chatB
   const switchTo = view.switchTo
   if (!switchTo) return null
   const leaving = leavingChoices($, 'leave', view)
-  const opening: Choice[] = view.openChoices.map(word => ({ key: `open-${word}`, label: `create ${word}`, isChosen: view.opening.includes(word), onPress: () => toggleOpening($, word) }))
+  const opening: Choice[] = view.openChoices.map(word => ({ key: `open-${word}`, label: openLabelOf(word, switchTo), isChosen: view.opening.includes(word), onPress: () => toggleOpening($, word) }))
   return (
     <Box key="activate" flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.accent} backgroundColor={BRAND.raised}>
       <Text weight="semibold" color={BRAND.text}>{`Open ${switchTo}`}</Text>

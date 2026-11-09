@@ -26,7 +26,7 @@ from space.kanban.board import (
 )
 from space.kanban.format_choice import FormatChoice
 from space.kanban.report import Report, ReportFile
-from space.kanban.ticket_checkout import LeaveChoices, OpenChoices, TicketCheckout
+from space.kanban.ticket_checkout import LEAVE_DELETE_BRANCH, LeaveChoices, OpenChoices, TicketCheckout
 from space.repo.repo import Branch
 from space.session import Session
 from space.session.session_log import LogEntry
@@ -253,13 +253,20 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def activate(self, leaving: list[str] | None = None, opening: list[str] | None = None) -> Ticket:
-        """Make ticket the current session. leaving names what to do with the active ticket's work first: handoff, commit, push, merge. opening names what to create for ticket: branch, worktree."""
+        """Make ticket the current session. leaving names what to do with the active ticket's work first: handoff, commit, push, merge, delete_branch, delete_worktree; deleting its branch closes it, so it moves to Complete. opening names how to open ticket: branch switches this checkout to its branch, worktree opens its own worktree."""
         active = self._board.active
         if active is not None and active.name != self.name:
-            active.checkout.leave(leaving or [])
+            active._leave_for_another(leaving or [])
         self.checkout.open(opening or [])
         self._board.sessions.switch(self.name)
         return self
+
+    def _leave_for_another(self, leaving: list[str]) -> None:
+        """A session whose branch is deleted has nowhere left for its work, so it closes; any other is only left."""
+        if LEAVE_DELETE_BRANCH in leaving:
+            self.close(leaving)
+            return
+        self.checkout.leave(leaving)
 
     @mcp
     @agent_tool
