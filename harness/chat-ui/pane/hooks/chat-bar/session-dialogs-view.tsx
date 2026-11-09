@@ -2,7 +2,7 @@ import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../shared/brand'
 import type { ChatBarDraw } from './chat-bar-view'
-import { activateSession, closeSession, createSession, pickSession } from './session-client'
+import { activateSession, closeSession, createSession, MAIN_SESSION, pickSession } from './session-client'
 import { cancelClose, cancelSwitch, toggleLeaving, toggleOpening } from './session-dialogs-client'
 import { stageIconOf } from './stage-client'
 
@@ -60,6 +60,12 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
   if (!view.isSessionListOpen) return null
   return (
     <Box key="session-list" flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+      <Box key="session-row-main" flexDirection="row" gap={1}>
+        <Text color={BRAND.muted}>⌂</Text>
+        <Button key="session-main" plain onPress={() => pickSession($, chatBar, MAIN_SESSION)}>
+          <Text color={chatBar.hasSession ? BRAND.text : BRAND.accent}>{MAIN_SESSION}</Text>
+        </Button>
+      </Box>
       {chatBar.openTickets.map(ticket => (
         <Box key={`session-row-${ticket.name}`} flexDirection="row" gap={1}>
           <Text color={BRAND.accent}>{stageIconOf(ticket.stage)}</Text>

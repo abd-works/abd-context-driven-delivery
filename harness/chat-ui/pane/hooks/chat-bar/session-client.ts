@@ -45,10 +45,15 @@ export async function activateSession($: EngineInterface, sessionName: string): 
   return after
 }
 
+// Main is the default session: the default branch in the repository's own folder. board.open_main opens it, as
+// ticket.activate opens a ticket's session.
+export const MAIN_SESSION = 'main'
+
 // Null when the switch failed: the failure stays above the line and the chat stays where it is.
 async function activatedSession($: EngineInterface, sessionName: string, leaving: string[], opening: string[]): Promise<ChatBarClient | null> {
   try {
-    await callTool<TicketData>($, 'ticket.activate', { ticket: sessionName, leaving, opening })
+    if (sessionName === MAIN_SESSION) await callTool<object>($, 'board.open_main', { leaving })
+    else await callTool<TicketData>($, 'ticket.activate', { ticket: sessionName, leaving, opening })
   } catch (failure) {
     await refreshChatBar($)
     await showFailure($, `${sessionName} did not open: ${reasonOf(failure)}`)
@@ -58,13 +63,16 @@ async function activatedSession($: EngineInterface, sessionName: string, leaving
   return currentChatBar($)
 }
 
+// Main has nothing to create: it is the repository's own folder, which board.open_main puts on the default branch.
+const MAIN_OPENS_AS_IT_IS = { has_branch: true, candidate_branches: [], choices: [], chosen: [] } as OpenChoicesData
+
 // Picking a session opens the activation dialog on it, with what leaving the active session and opening this one can
 // do now, as their Tickets answer.
 export async function pickSession($: EngineInterface, chatBar: ChatBarClient, name: string): Promise<void> {
   try {
     const [leaving, opening] = await Promise.all([
       chatBar.hasSession ? callTool<LeaveChoicesData>($, 'ticket.leave_choices', { ticket: chatBar.sessionName }) : null,
-      callTool<OpenChoicesData>($, 'ticket.open_choices', { ticket: name }),
+      name === MAIN_SESSION ? MAIN_OPENS_AS_IT_IS : callTool<OpenChoicesData>($, 'ticket.open_choices', { ticket: name }),
     ])
     await showSwitch($, name, leaving, opening)
   } catch (failure) {

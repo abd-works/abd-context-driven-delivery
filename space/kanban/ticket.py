@@ -257,12 +257,12 @@ class Ticket(Card):
         """Make ticket the current session. leaving names what to do with the active ticket's work first: handoff, commit, push, merge, delete_branch, delete_worktree; deleting its branch closes it, so it moves to Complete. opening names how to open ticket: branch switches this checkout to its branch, worktree opens its own worktree."""
         active = self._board.active
         if active is not None and active.name != self.name:
-            active._leave_for_another(leaving or [])
+            active.leave_for_another(leaving or [])
         self.checkout.open(opening or [])
         self._board.sessions.switch(self.name)
         return self
 
-    def _leave_for_another(self, leaving: list[str]) -> None:
+    def leave_for_another(self, leaving: list[str]) -> None:
         """A session whose branch is deleted has nowhere left for its work, so it closes; any other is only left."""
         if LEAVE_DELETE_BRANCH in leaving:
             self.close(leaving)
@@ -322,7 +322,7 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
-        """Close ticket: its session ends, its folder moves to _complete/, and it shows in Complete. leaving names what to do with its work first: handoff, commit, push, merge."""
+        """Close ticket: its session ends, its folder moves to _complete/, it shows in Complete, and main opens, the default branch in the repository's own folder. leaving names what to do with its work first: handoff, commit, push, merge, delete_branch, delete_worktree."""
         chosen = leaving or []
         self.checkout.write_handoff(chosen)
         # A worktree something still holds open fails to delete; deleting it first stops the close with nothing changed.
@@ -331,7 +331,7 @@ class Ticket(Card):
         closed = self._board.ticket_of(self._session.move_to_closed())
         # The work is saved after the folder moves, so the move is committed with it.
         self.checkout.save_work(chosen)
-        self.checkout.return_to_default_branch(chosen)
+        self.checkout.return_to_default_branch()
         return closed
 
     @mcp

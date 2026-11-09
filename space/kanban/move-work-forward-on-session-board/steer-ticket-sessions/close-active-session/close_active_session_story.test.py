@@ -61,6 +61,18 @@ with story("Close Active Session"):
             pass
         with and_("the checkout is back on main"):
             pass
+    with scenario("Return to main whatever is chosen"):
+        # Evidence: requested 2026-11-09: closing a session goes to main, the default session in the repository's own folder.
+        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), on its own branch"):
+            pass
+        with when("the Person closes checkout-flow with nothing chosen"):
+            # Person -> Ticket.close([])
+            # Ticket -> TicketCheckout.return_to_default_branch()
+            pass
+        with then("the checkout is back on main"):
+            pass
+        with and_("no ticket is active"):
+            pass
     with scenario("Offer to commit a branch open in its worktree"):
         # Evidence: observed: e2e-report B3 — the close dialog said "branch none yet" for a ticket whose branch exists in a worktree, and labelled the choices with the ticket title.
         with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), its branch open in its own worktree"):

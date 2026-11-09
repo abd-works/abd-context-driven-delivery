@@ -73,6 +73,14 @@ Observed: the arrows on a card, or a drag, move its ticket whatever its session'
 
 Observed: Activate on a card or the details opens a dialog with what to do on leaving and on opening, then calls `ticket.activate`.
 
+### (S) Person --> [Delete Ticket Branch](move-work-forward-on-session-board/steer-ticket-sessions/delete-ticket-branch/delete_ticket_branch_story.test.md)
+
+Requested 2026-11-09: leaving a session offers delete branch whenever its branch is in git, checked out or not. Deleting the branch deletes it here and on origin without merging it, deletes the worktree that has it checked out, and closes the session, so it shows in Complete. Merge is its own choice.
+
+### (S) Person --> [Open Main Session](move-work-forward-on-session-board/steer-ticket-sessions/open-main-session/open_main_session_story.test.md)
+
+Requested 2026-11-09: main is the default session, listed first in the chat bar's sessions. `Board.open_main` leaves the active ticket as the person chose, puts the repository's own folder on the default branch, and opens main; closing a ticket opens main the same way.
+
 ### (S) Person --> [Write Ticket Handoff](move-work-forward-on-session-board/steer-ticket-sessions/write-ticket-handoff/write_ticket_handoff_story.test.md)
 
 Observed: the Handoff button fills the prompt with `/space-session-handoff-session`.

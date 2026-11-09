@@ -59,16 +59,17 @@ with story("Activate Ticket"):
             pass
         with and_("the checkout-flow branch is still there"):
             pass
-    with scenario("Delete the branch left, without merging it"):
-        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), on its own branch pushed to origin"):
+    with scenario("Merge the branch left while its worktree stays"):
+        # Evidence: requested 2026-11-09: a merge no longer refuses while the worktree stays, since main's checkout merges it.
+        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), its branch open in its own worktree"):
             pass
-        with when("the Person activates billing-report, committing, pushing, and deleting checkout-flow's branch"):
-            # Person -> Ticket.activate(leaving=['commit', 'push', 'delete_branch'])
-            # TicketCheckout -> Branch.delete(unmerged=True)
+        with when("the Person activates billing-report, committing, pushing, and merging checkout-flow"):
+            # Person -> Ticket.activate(leaving=['commit', 'push', 'merge'])
+            # TicketCheckout -> Branch.land_on_default()
             pass
         with then("main on origin holds checkout-flow's work"):
             pass
-        with and_("the checkout-flow branch is gone"):
+        with and_("the worktree folder is still there"):
             pass
     with scenario("Delete the worktree left"):
         with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), its branch open in its own worktree"):

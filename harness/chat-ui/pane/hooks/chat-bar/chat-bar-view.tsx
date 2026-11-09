@@ -76,7 +76,7 @@ function SessionNameView($: EngineInterface, { Box, Button, Text }: ElementTable
       {health.band}
       <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
         <Button key="session-name-button" plain onPress={() => toggleCard($)}>
-          <Text weight="semibold" color={chatBar.sessionName ? BRAND.text : BRAND.muted}>{chatBar.sessionName || 'no session'}</Text>
+          <Text weight="semibold" color={BRAND.text}>{chatBar.sessionName || 'main'}</Text>
         </Button>
       </Box>
       {GlyphButtonView({ Box, Button, Text }, 'session-list-button', '▾', BRAND.muted, () => toggleSessionList($))}
@@ -111,16 +111,9 @@ function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBa
 // The line, left to right: health mark, session name, │, fidelity dots and the action chip, the stage path, then the
 // session's buttons, packed to the left on one row.
 function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
-  const { Box, Button, Text } = elements
+  const { Box, Text } = elements
   const { chatBar } = draw
-  if (!chatBar.hasSession) {
-    return (
-      <Box key="line" flexDirection="row" gap={1} alignItems="center">
-        {SessionNameView($, elements, draw)}
-        <Button key="fix-no-session" label="Fix" onPress={() => askChatToFix($, `no session is open (${chatBar.openTickets.length} sessions listed)`)} />
-      </Box>
-    )
-  }
+  if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}>{SessionNameView($, elements, draw)}</Box>
   return (
     <Box key="line" flexDirection="row" gap={1} flexWrap="wrap" alignItems="center">
         {SessionNameView($, elements, draw)}

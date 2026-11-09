@@ -1254,6 +1254,20 @@ with description("the board tools") as self:
             with it("should offer the same when closing it"):
                 expect(self.project.call("ticket.close_choices", ticket="pet-visits")["choices"]).to(equal(["handoff", "commit", "push", "merge", "delete_branch"]))
 
+            with it("should leave no ticket active once main is opened"):
+                self.project.call("board.open_main", leaving=["commit"])
+                expect(self.project.call("board.overview")["active"]).to(equal(None))
+
+            with it("should put the repository's folder on main once main is opened"):
+                self.project.call("board.open_main", leaving=["commit"])
+                branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=self.project.root, check=True, capture_output=True, text=True)
+                expect(branch.stdout.strip()).to(equal("main"))
+
+            with it("should put the repository's folder on main when it closes, whatever was chosen"):
+                self.project.call("ticket.close", ticket="pet-visits", leaving=["commit"])
+                branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=self.project.root, check=True, capture_output=True, text=True)
+                expect(branch.stdout.strip()).to(equal("main"))
+
             # Its branch is checked out in this checkout already, which is that branch's worktree.
             with it("should offer nothing to create on opening it, since its branch is checked out here"):
                 expect(self.project.call("ticket.open_choices", ticket="pet-visits")).to(equal({"has_branch": True, "candidate_branches": [], "choices": [], "chosen": []}))
