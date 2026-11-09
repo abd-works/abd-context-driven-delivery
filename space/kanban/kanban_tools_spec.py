@@ -1240,7 +1240,7 @@ with description("the board tools") as self:
 
             # Its branch is checked out in this checkout already, which is that branch's worktree.
             with it("should offer nothing to create on opening it, since its branch is checked out here"):
-                expect(self.project.call("ticket.open_choices", ticket="pet-visits")).to(equal({"has_branch": True, "choices": []}))
+                expect(self.project.call("ticket.open_choices", ticket="pet-visits")).to(equal({"has_branch": True, "candidate_branches": [], "choices": []}))
 
             with it("should commit the branch the ticket being left is on"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit"])
