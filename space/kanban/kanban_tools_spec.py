@@ -1162,6 +1162,10 @@ with description("the board tools") as self:
 
             # git deletes no branch a worktree has checked out, so deleting the branch takes its worktree with it.
             with it("should delete its worktree when leaving deletes its branch"):
+                # Deleting the worktree pushes its work first, so the project needs an origin to push to.
+                origin = Path(tempfile.mkdtemp(prefix="kanban-origin-"))
+                subprocess.run(["git", "init", "-q", "--bare", str(origin)], check=True)
+                subprocess.run(["git", "remote", "add", "origin", str(origin)], cwd=self.project.root, check=True)
                 self.project.call("ticket.activate", ticket="sign-up")
                 self.project.call("ticket.activate", ticket="pet-visits", leaving=["delete_branch"])
                 expect(self.opened.exists()).to(be_false)
