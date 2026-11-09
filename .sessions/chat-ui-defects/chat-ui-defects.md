@@ -33,3 +33,7 @@ New:
 - B9 the details header shows "context-driven-delivery" whatever project the board runs in; show the board's own project name
 - B10 graph app: node source never appears (`graph.source` returns null, and the failed call is an uncaught promise), and the Violations switch shows nothing. The graph emptying after a session switch is the refactor's per-session graph; round 6 moved graph builds into a worker process
 - B11 the shared cdd server stalled for minutes during parallel graph validates, and board calls such as `ticket.branch` then hang with no feedback; round 6 runs graph builds one at a time. Show progress or a timeout message on the board when a call is slow
+
+Found while testing the chat bar by hand:
+- the chat bar shows "no session" and an empty session list: the cdd header names the folder the chat connected from (the desktop app's `spare-*` folder), not the folder it works in now. Fixed: every chat bar call sends `chat_folder` (`$.session.root()`), and `ToolCall.sent` makes it the call's project, so sessions follow the chat's branch and worktree
+- the chat bar offers "Move this chat there" in a chat that runs in its own worktree, but the desktop app never moves such a chat, so the button always fails; hide it, or say the chat can't move and offer to open a new chat in that folder

@@ -1,1 +1,6 @@
-{"name": "chat-ui-defects", "workpath": "C:\\dev\\abd-context-driven-delivery", "repo_path": "C:\\dev\\abd-context-driven-delivery"}
+{
+  "name": "chat-ui-defects",
+  "workpath": "C:\\dev\\abd-context-driven-delivery",
+  "repo_path": "C:\\dev\\abd-context-driven-delivery",
+  "branch": "claude/chat-ui-defects-cef4bc"
+}

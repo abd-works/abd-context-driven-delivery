@@ -12,6 +12,9 @@ from harness.agent_tools.chat_pointer import ChatPointer
 # names several.
 _PATH_ARGUMENTS = ("path", "file_path", "target_notebook", "target_directory", "working_directory", "transcript_path", "agent_transcript_path")
 _PATHS_ARGUMENT = "paths"
+# The argument naming the folder the calling chat works in now. Claude Code fills in the X-CDD-Project header once, when
+# the chat connects, so the header goes stale when the chat later moves to another folder, branch, or worktree.
+CHAT_FOLDER_ARGUMENT = "chat_folder"
 
 
 class SessionOpener(Protocol):
@@ -80,9 +83,11 @@ class ToolCall:
         answers_a_chat: bool = False,
     ) -> ToolCall:
         """A call as a chat sent it: the chat its arguments name is taken out of them and kept as the call's chat, so
-        the tool is handed only its own arguments."""
+        the tool is handed only its own arguments. A ``chat_folder`` argument names the folder the chat works in now,
+        and is the call's project in place of project, so its sessions are read from that folder's checkout."""
         chat, remaining = ChatPointer.taken_from(arguments)
-        return cls(remaining, project, chat, tool=tool, mcp_host=mcp_host, answers_a_chat=answers_a_chat)
+        chat_folder = str(remaining.pop(CHAT_FOLDER_ARGUMENT, "") or "").strip()
+        return cls(remaining, chat_folder or project, chat, tool=tool, mcp_host=mcp_host, answers_a_chat=answers_a_chat)
 
     @property
     def identity(self) -> str:
