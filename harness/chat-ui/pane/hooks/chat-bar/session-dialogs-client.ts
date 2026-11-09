@@ -17,12 +17,13 @@ const chatBarView = atom(
     closing: null,
     leaveChoices: [],
     leaveBranch: '',
+    leaveOwnBranch: '',
     leaving: [],
     openChoices: [],
     candidateBranches: [],
     opening: [],
   } as ChatBarViewJson,
-  { shape: 'chat-bar-view-5' },
+  { shape: 'chat-bar-view-6' },
 )
 
 // A press turns choice on or off; the chosen stay in the order the Ticket offers them, so a choice sent reads the same
@@ -58,6 +59,7 @@ export async function showSwitch($: EngineInterface, name: string, leaving: Leav
     switchTo: name,
     leaveChoices: leaving?.choices ?? [],
     leaveBranch: leaving?.branch ?? '',
+    leaveOwnBranch: leaving?.own_branch ?? '',
     leaving: leaving?.chosen ?? [],
     openChoices: opening.choices,
     candidateBranches: opening.candidate_branches,
@@ -72,7 +74,7 @@ export async function cancelSwitch($: EngineInterface): Promise<void> {
 // The close dialog offers what ticket.close_choices answers, with those chosen at first, and the branch closing commits
 // and pushes, or none when nothing checked out is the session's.
 export async function showClose($: EngineInterface, choices: LeaveChoicesData): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, closing: { branch: choices.branch || null }, leaveChoices: choices.choices, leaveBranch: choices.branch, leaving: choices.chosen }))
+  await update($, chatBarView, view => ({ ...view, closing: { branch: choices.branch || null }, leaveChoices: choices.choices, leaveBranch: choices.branch, leaveOwnBranch: choices.own_branch, leaving: choices.chosen }))
 }
 
 export async function cancelClose($: EngineInterface): Promise<void> {

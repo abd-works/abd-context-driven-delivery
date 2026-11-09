@@ -29,8 +29,10 @@ export type ChatBarViewJson = {
   switchTo: string | null
   closing: { branch: string | null } | null
   leaveChoices: string[]
-  // The branch leaving acts on, which the LEAVE line names; empty when nothing checked out is the session's.
+  // The branch leaving commits and pushes, which the LEAVE line names; empty when nothing checked out is the session's.
   leaveBranch: string
+  // The session's own branch, which merge and delete branch act on, checked out or not; empty while git has none.
+  leaveOwnBranch: string
   leaving: string[]
   openChoices: string[]
   // The branches that could each be the session's when more than one holds its name; none is chosen for it.

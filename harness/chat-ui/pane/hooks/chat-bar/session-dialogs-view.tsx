@@ -41,7 +41,7 @@ function leaveLabelOf(word: string, branch: string): string {
 }
 
 function leavingChoices($: EngineInterface, prefix: string, view: ChatBarDraw['view']): Choice[] {
-  return view.leaveChoices.map(word => ({ key: `${prefix}-${word}`, label: leaveLabelOf(word, view.leaveBranch), isChosen: view.leaving.includes(word), onPress: () => toggleLeaving($, word) }))
+  return view.leaveChoices.map(word => ({ key: `${prefix}-${word}`, label: leaveLabelOf(word, view.leaveOwnBranch), isChosen: view.leaving.includes(word), onPress: () => toggleLeaving($, word) }))
 }
 
 // The LEAVE line names the session being left and the branch its work is on.

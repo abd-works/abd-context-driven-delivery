@@ -120,12 +120,18 @@ class TicketCheckout:
     @property
     def leave_choices(self) -> LeaveChoices:
         """What leaving the ticket for another can do with its work now."""
-        return LeaveChoices(self._checked_out_work_branch)
+        return LeaveChoices(self._checked_out_work_branch, self._own_branch)
 
     @property
     def close_choices(self) -> LeaveChoices:
         """What closing the ticket can do with its work now: the same as leaving it for another."""
-        return LeaveChoices(self._checked_out_work_branch)
+        return LeaveChoices(self._checked_out_work_branch, self._own_branch)
+
+    @property
+    def _own_branch(self) -> Branch | None:
+        """The ticket's own branch while git has it, checked out or not, and it is not the default branch: leaving can
+        merge and delete it. None otherwise."""
+        return self.branch if self.branch.exists and not self.branch.is_default else None
 
     @property
     def open_choices(self) -> OpenChoices:
@@ -168,20 +174,17 @@ class TicketCheckout:
 
     def save_work(self, leaving: list[str]) -> None:
         """Commit and push the branch the ticket's work is on, in the checkout that has it: the repository, or the
-        ticket's own worktree. Then do what leaving names with the branch: delete its worktree, merge it into the default
-        branch, or merge and delete it. Nothing while no checkout has it, because those steps act on whatever is checked
-        out. Work on the default branch is committed and pushed there; it has no branch to merge and no worktree to
-        remove."""
-        if not set(leaving) & {LEAVE_COMMIT, LEAVE_PUSH, *LEAVE_BRANCH_STEPS}:
-            return
+        ticket's own worktree; work on the default branch is committed and pushed there. Then do what leaving names with
+        the ticket's own branch, checked out or not: delete its worktree, merge it into the default branch, or merge and
+        delete it."""
         branch = self._checked_out_work_branch
-        if branch is None:
+        if branch is not None:
+            self._commit_and_push(branch, leaving)
+        own = self._own_branch
+        if own is None or not set(leaving) & LEAVE_BRANCH_STEPS:
             return
-        self._commit_and_push(branch, leaving)
-        if branch.is_default or not set(leaving) & LEAVE_BRANCH_STEPS:
-            return
-        self._delete_worktree(branch, leaving)
-        self._merge(branch, leaving)
+        self._delete_worktree(own, leaving)
+        self._merge(own, leaving)
 
     def _commit_and_push(self, branch: Branch, leaving: list[str]) -> None:
         # Checked out in the repository itself, else in the ticket's own worktree.
@@ -227,25 +230,35 @@ class LeaveChoices:
     once merged, and a delete of its worktree while it has one. ``TicketCheckout.leave`` does exactly these, so a dialog
     offers only what will be done."""
 
-    def __init__(self, branch: Branch | None) -> None:
+    def __init__(self, branch: Branch | None, own_branch: Branch | None) -> None:
         self._branch = branch
+        self._own_branch = own_branch
 
     @property
     @data_field
     def branch(self) -> str:
-        """The branch leaving commits, pushes, and merges; empty when nothing checked out is the ticket's."""
+        """The branch leaving commits and pushes; empty when nothing checked out is the ticket's."""
         return self._branch.name if self._branch is not None else ""
+
+    @property
+    @data_field
+    def own_branch(self) -> str:
+        """The ticket's own branch, which leaving merges and deletes, checked out or not; empty while git has none."""
+        return self._own_branch.name if self._own_branch is not None else ""
 
     @property
     @data_field
     def choices(self) -> list[str]:
         """Each choice leaving offers now, in the order a dialog lists them."""
-        if self._branch is None:
-            return [LEAVE_HANDOFF]
-        if self._branch.is_default:
-            return [LEAVE_HANDOFF, LEAVE_COMMIT, LEAVE_PUSH]
-        worktree = [LEAVE_DELETE_WORKTREE] if own_worktree_of(self._branch) is not None else []
-        return [LEAVE_HANDOFF, LEAVE_COMMIT, LEAVE_PUSH, LEAVE_MERGE, LEAVE_DELETE_BRANCH, *worktree]
+        saving = [LEAVE_COMMIT, LEAVE_PUSH] if self._branch is not None else []
+        return [LEAVE_HANDOFF, *saving, *self._branch_steps]
+
+    @property
+    def _branch_steps(self) -> list[str]:
+        if self._own_branch is None:
+            return []
+        worktree = [LEAVE_DELETE_WORKTREE] if own_worktree_of(self._own_branch) is not None else []
+        return [LEAVE_MERGE, LEAVE_DELETE_BRANCH, *worktree]
 
     @property
     @data_field

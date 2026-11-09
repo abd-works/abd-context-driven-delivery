@@ -1205,11 +1205,11 @@ with description("the board tools") as self:
                 expect(self.project.call("ticket.work_branch", ticket="pet-visits")).to(equal({"name": "main", "exists": True, "is_checked_out": True}))
 
             with it("should offer to close it with a handoff and a commit and push of main"):
-                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "choices": ["handoff", "commit", "push"], "chosen": ["handoff", "commit", "push"]}))
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "", "choices": ["handoff", "commit", "push"], "chosen": ["handoff", "commit", "push"]}))
 
             # TicketCheckout.leave never merges the default branch, so leaving offers no merge a person could pick for nothing.
             with it("should offer to leave it for another with a handoff and a commit and push of main, and no merge"):
-                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "main", "choices": ["handoff", "commit", "push"], "chosen": ["handoff", "commit", "push"]}))
+                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "", "choices": ["handoff", "commit", "push"], "chosen": ["handoff", "commit", "push"]}))
 
             with it("should commit its work on main, merging nothing"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit", "merge"])
@@ -1220,6 +1220,18 @@ with description("the board tools") as self:
                 self.project.call("ticket.close", ticket="pet-visits", leaving=["commit", "merge"])
                 branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=self.project.root, check=True, capture_output=True, text=True)
                 expect(branch.stdout.strip()).to(equal("main"))
+
+        # As after its worktree was deleted: git still has the branch, and the main checkout is on main.
+        with context("with the active ticket's own branch in git but checked out nowhere"):
+            with before.each:
+                subprocess.run(["git", "branch", "pet-visits"], cwd=self.project.root, check=True)
+                Sessions(self.project.root).switch("pet-visits")
+
+            with it("should offer to leave it for another with a delete of its branch, naming that branch"):
+                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge", "delete_branch"], "chosen": ["handoff", "commit", "push"]}))
+
+            with it("should offer the same when closing it"):
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")["choices"]).to(equal(["handoff", "commit", "push", "merge", "delete_branch"]))
 
         with context("with the active ticket on its own branch"):
             with before.each:
@@ -1233,7 +1245,7 @@ with description("the board tools") as self:
                 expect(self.project.call("ticket.branch", ticket="pet-visits")["is_checked_out"]).to(be_true)
 
             with it("should offer to leave it for another with a merge into main and a delete of its branch, neither chosen at first"):
-                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge", "delete_branch"], "chosen": ["handoff", "commit", "push"]}))
+                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "pet-visits", "own_branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge", "delete_branch"], "chosen": ["handoff", "commit", "push"]}))
 
             with it("should offer the same when closing it"):
                 expect(self.project.call("ticket.close_choices", ticket="pet-visits")["choices"]).to(equal(["handoff", "commit", "push", "merge", "delete_branch"]))
