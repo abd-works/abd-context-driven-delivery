@@ -31,7 +31,7 @@ class RuleFixture:
 
     def read_only(self, paths: list[str]) -> None:
         """Read again only the files or folders at paths, as a load of the files being edited does."""
-        self.practice.graph.load_files(str(self.root), [self.practice.key], paths)
+        self.practice.reading.graph.load_files(str(self.root), [self.practice.key], paths)
 
     @property
     def context(self) -> RuleCheckContext:
@@ -57,12 +57,12 @@ class SchemaRuleRun:
 
     def hits(self) -> list[str]:
         """Each message the rule recorded, node by node, after the graph has checked the practice."""
-        self.context.practice.in_graph.check()
+        self.context.practice.reading.in_graph.check()
         return [message for node in self.context.nodes() for message in self._recorded_on(node)]
 
     def node_hits(self, node) -> list[str]:
         """The messages the rule recorded on node alone, after the graph has checked the practice."""
-        self.context.practice.in_graph.check()
+        self.context.practice.reading.in_graph.check()
         return self._recorded_on(node)
 
     def _recorded_on(self, node) -> list[str]:

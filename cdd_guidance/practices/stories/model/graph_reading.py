@@ -9,33 +9,68 @@ from functools import cached_property
 from pathlib import Path
 
 from harness.graph.skipped_folders import scanned_files
-from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.practice_reading import PracticeReading
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 _STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
 
 
-def align_story_node(node) -> None:
-    """A step sits on its label's line; a scenario, story, or background runs to the close of its call; an example
-    sits on its export."""
-    if node.type in {"Step", "Given", "When", "Then"}:
-        node.source.align_to_label(node.name)
-    elif node.type in {"Scenario", "Story", "Background"}:
-        node.source.widen_to_call_close()
-    elif node.type == "Example":
-        node.source.align_to_example_export(node.practice.in_graph.source_root, node.name)
+class StoriesReading(PracticeReading):
+    """How Stories takes part in the graph: it reads the story tests under its root, through the TypeScript format
+    Stories holds, or the story maps there when there are none, with edited files only what they touch; writes the
+    story map onto its graph; and links each step to the Clean Engineering operations it calls and each example to the
+    classes and properties it shows, so it reads after Clean Engineering."""
 
+    reads_after = ("clean_engineering",)
+    source_ordered_types = frozenset({"Background", "Scenario", "Step", "Story"})
+    # A step is recorded as the Given, When, or Then it is, while the schema keeps every step's rules on Step (its
+    # given, when, and then types are each a Step), so each carries Step's rules; its check says which kind it judges.
+    rule_types = {
+        "SubEpic": ("Epic", "StoryNode"),
+        "Epic": ("StoryNode",),
+        "Story": ("StoryNode",),
+        "Given": ("Step",),
+        "When": ("Step",),
+        "Then": ("Step",),
+    }
 
-class StoriesReading:
-    """One read of the Stories practice's working copy: the story tests under its root, through the TypeScript format
-    Stories holds, or the story maps there when there are none; with edited files, only what they touch."""
+    recorded_map = None
+    """The story map this practice last wrote onto its graph, whose nodes its links start from."""
 
-    def __init__(self, practice: PracticeGuidance) -> None:
-        self.practice = practice
-        self.graph = practice.graph
-        self.root = Path(practice.in_graph.source_root)
+    @property
+    def root(self) -> Path:
+        """The folder the practice reads its story tests and story maps from."""
+        return Path(self.in_graph.source_root)
 
-    def story_map(self):
+    @property
+    def object_model(self) -> PracticeReading | None:
+        """The part of the Clean Engineering practice the graph that holds Stories reads beside it, whose operations its
+        steps call and whose classes its examples show; none when the graph reads none."""
+        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+
+        loaded = self.graph.loaded(CleanEngineering) if self.graph is not None else None
+        return loaded.reading if loaded is not None else None
+
+    @property
+    def domain_model(self) -> PracticeReading | None:
+        """The part of the DDD practice the graph that holds Stories reads beside it, whose aggregates its scenarios
+        name; none when the graph reads none."""
+        from cdd_guidance.practices.ddd.ddd import Ddd
+
+        loaded = self.graph.loaded(Ddd) if self.graph is not None else None
+        return loaded.reading if loaded is not None else None
+
+    def read_working_copy(self) -> None:
+        """Read the story tests, or the story maps when there are none, write the story map onto its graph, and link
+        each step to the operations it calls and each example to the classes and properties it shows."""
+        self.recorded_map = self._story_map()
+        self.graph.report_progress("stories · record")
+        self.recorded_map.record(self.practice, on_node=lambda detail: self.graph.report_progress(f"stories · record · {detail}"))
+        clean = self.object_model
+        if clean is not None:
+            StoryLinks(self, clean).link()
+
+    def _story_map(self):
         model = self._story_tests()
         if model.epics:
             return model
@@ -50,7 +85,7 @@ class StoriesReading:
             self.graph.report_progress(f"stories · {index}/{len(sources)} · {relative}")
             files[relative] = path.read_text(encoding="utf-8")
         self.graph.report_progress("stories · parse")
-        return self.practice.typescript_stories.parse(files, on_file=lambda detail: self.graph.report_progress(f"stories · parse · {detail}"))
+        return self.practice.formats.adapter("typescript").parse(files, on_file=lambda detail: self.graph.report_progress(f"stories · parse · {detail}"))
 
     def _story_maps(self):
         """The story maps under the practice's root; with edited files, only the story maps among them."""
@@ -69,7 +104,7 @@ class StoriesReading:
         found = scanned_files(self.root, {".ts", ".tsx"})
         if edited is None:
             return found
-        reader = self.practice.typescript_stories
+        reader = self.practice.formats.adapter("typescript")
         stories = {path.parent for path in found if reader.is_story_file(path.as_posix())}
         stories = {story for story in stories if any(story == file.parent or story in file.parents for file in edited)}
         return [path for path in found if path in edited or any(story in path.parents for story in stories)]
@@ -82,7 +117,7 @@ class StoryLinks:
     names its source holds) and from the graph's own edges, never from the parsed object behind a node: a refresh in a
     worker process holds the steps and examples it did not read again as plain nodes, and links them the same way."""
 
-    def __init__(self, stories: PracticeGuidance, clean: PracticeGuidance) -> None:
+    def __init__(self, stories: PracticeReading, clean: PracticeReading) -> None:
         self.stories = stories
         self.clean = clean
         self.graph = stories.graph

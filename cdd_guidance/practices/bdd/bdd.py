@@ -13,7 +13,7 @@ from harness.guidance.guidance import PracticeGuidance
 
 
 @agent_toolset
-class Bdd(BddGraphReading, PracticeGuidance):
+class Bdd(PracticeGuidance):
     """# Instructions"""
 
     # Its section of a sketch is the one its sketch format reads, held as that one lens.
@@ -53,7 +53,7 @@ class Bdd(BddGraphReading, PracticeGuidance):
         )
 
     # In the knowledge graph: BDD's describe trees, linked to the Clean Engineering members each observation drives.
-    node_types = ("Spec", "Description", "Context", "Observation")
+    reading_type = BddGraphReading
 
 
 BddModel.register_practice(Bdd)

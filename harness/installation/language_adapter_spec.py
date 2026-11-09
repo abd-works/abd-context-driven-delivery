@@ -542,3 +542,23 @@ with description("a language adapter"):
     with description("the installer"):
         with it("should deploy this channel beside the others"):
             expect("language-adapter" in InstallDiagnostics.CHANNELS).to(be_true)
+
+
+with description("the TypeScript files of the kanban toolsets being written"):
+    with it("should make each class's data shape once for each file it is written into"):
+        import harness.installation.language_adapter as language_adapter
+
+        made: list[tuple[int, type]] = []
+        original = language_adapter._DataShape
+
+        class CountedShape(original):
+            def __init__(self, shape, owner) -> None:
+                made.append((id(owner), shape))
+                super().__init__(shape, owner)
+
+        language_adapter._DataShape = CountedShape
+        try:
+            _install(Path(tempfile.mkdtemp(prefix="adapter-shapes-")))
+        finally:
+            language_adapter._DataShape = original
+        expect(len(made)).to(equal(len(set(made))))

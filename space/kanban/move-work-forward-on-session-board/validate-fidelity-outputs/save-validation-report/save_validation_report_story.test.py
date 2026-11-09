@@ -17,7 +17,7 @@ with story("Save Validation Report"):
             pass
         with when("Claude Code validates ddd-tactics on that file"):
             # Validate -> Graph.load_files(folder, ['ddd'], [file], [])
-            # Graph -> Ddd.in_graph.check()
+            # Graph -> Ddd.reading.in_graph.check()
             # Validate -> Graph.saved(files) written to <report>.json
             # Validate -> ChatLog.validation(FidelitySessionOutput(Ddd tactics), ['private-method-naming ...'])
             pass

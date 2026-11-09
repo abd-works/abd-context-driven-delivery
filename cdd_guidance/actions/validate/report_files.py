@@ -15,7 +15,7 @@ class ReportFiles:
 
     def __init__(self, session: Any, fidelities: list[Any]) -> None:
         self._session = session
-        self.paths: list[Path] = [self._claimed(fidelity.new_report_path()) for fidelity in fidelities]
+        self.paths: list[Path] = [self._claimed(fidelity.session_output.new_report_path()) for fidelity in fidelities]
 
     def graph_file(self) -> Path:
         """Where the graph the call builds is written: beside its first report, else a file of its own in the session,

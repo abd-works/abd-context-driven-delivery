@@ -116,7 +116,7 @@ class SchemaFields:
     @classmethod
     def of(cls, practices, overlays) -> SchemaFields:
         """The fields of practices' schemas and of the schema each overlay keeps for one of them (``practice_file``)."""
-        schemas = [practice.schema_types for practice in practices]
+        schemas = [practice.schema for practice in practices]
         pattern_files = (overlay.practice_file(practice.key, "schema.yaml") for overlay in overlays for practice in practices)
         schemas.extend(Schema.load(path) for path in sorted(path for path in pattern_files if path.is_file()))
         return cls(tuple(field for schema in schemas for field in cls._fields_of(schema)))
@@ -210,7 +210,7 @@ class SchemaEdges:
     def sync(self) -> None:
         """Record every schema relationship edge between the model objects on the graph now."""
         self.nodes = [
-            node for practice in self.graph.practices.values() for node in practice.in_graph.nodes() if hasattr(node, "semantic_type") and hasattr(node, "subtree")
+            node for practice in self.graph.practices.values() for node in practice.reading.in_graph.nodes() if hasattr(node, "semantic_type") and hasattr(node, "subtree")
         ]
         self._by_type = {}
         for node in self.nodes:

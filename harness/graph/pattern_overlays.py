@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from harness.annotations.class_folder import class_folder
-from harness.guidance.guidance import rules_in
+from harness.guidance.practice_reading import rules_in
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
@@ -108,7 +108,7 @@ class PatternOverlays:
     def checks_of(self, practice: Any) -> dict[str, Any]:
         """The graph rules practice checks with these overlays applied, by slug: its own, then those each applied
         pattern adds to it."""
-        merged = dict(practice.graph_checks())
+        merged = dict(practice.reading.graph_checks)
         for overlay in self.graph_overlays:
             merged.update(overlay.rules_for(practice))
         return merged

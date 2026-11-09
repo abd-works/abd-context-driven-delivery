@@ -24,7 +24,7 @@ def _Node(name: str, node_type: str, facts: dict) -> Node:
     node = Node(Graph().practice("stories"), node_type, f"stories:{node_type}:{name}", name, Source(".", 1, 1))
     for key, value in facts.items():
         node.set_fact(key, value)
-    node.practice.in_graph.hold(node)
+    node.practice.reading.in_graph.hold(node)
     return node
 
 

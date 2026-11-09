@@ -31,7 +31,7 @@ with description("a graph"):
             self.register = Node(
                 self.practice, "Operation", "clean_engineering:Operation:register.ts:register:Account", "register", Source(".", 1, 1)
             )
-            root = self.practice.in_graph.root
+            root = self.practice.reading.in_graph.root
             root.children.extend([self.failure, self.register])
             self.graph.filter.select_rules(["limit-operation-parameters"])
             self.graph.filter.select_violations()
@@ -60,7 +60,7 @@ with description("a graph"):
             self.other = Node(self.practice, "OoadClass", "id:other", "Customer", Source(".", 1, 1))
             self.module.stage = "discovery"
             self.class_node.stage = "implementation"
-            root = self.practice.in_graph.root
+            root = self.practice.reading.in_graph.root
             root.children.extend([self.module, self.class_node, self.other])
             self.graph.record(EdgeType("owns", 2, "direct"), self.module, self.class_node)
             self.graph.filter.select_relationships(["owns"])
@@ -69,7 +69,7 @@ with description("a graph"):
             expect(self.class_node.stage).to(equal("implementation"))
 
         with it("should give the edge the child node's stage"):
-            edge = self.practice.in_graph.edges("owns")[0]
+            edge = self.practice.reading.in_graph.edges("owns")[0]
             expect(edge.stage).to(equal("implementation"))
 
         with it("should return the nodes on the selected edge"):
@@ -90,7 +90,7 @@ with description("a graph"):
     with context("with a package between a module and a class"):
         with before.all:
             graph = Graph()
-            root = graph.practice("clean_engineering").in_graph.root
+            root = graph.practice("clean_engineering").reading.in_graph.root
             module, package = "clean_engineering:Module:src/domain:domain", "clean_engineering:Package:src/domain/customer:customer"
             customer = "clean_engineering:OoadClass:src/domain/customer/Customer.ts:Customer"
             saved = SavedPractice.from_record("clean_engineering", {
@@ -106,7 +106,7 @@ with description("a graph"):
                 ],
             })
             graph.restored_from(SavedGraph([], {"clean_engineering": saved}))
-            self.tree = data_of(graph.practice("clean_engineering").in_graph.root.serialize())
+            self.tree = data_of(graph.practice("clean_engineering").reading.in_graph.root.serialize())
 
         with it("should parent the package on the module"):
             package = next(child for child in self.tree["children"][0]["children"] if child["name"] == "customer")

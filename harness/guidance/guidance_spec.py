@@ -406,9 +406,9 @@ with description("practice and fidelity template files"):
             from cdd_guidance.practices.stories.stories import Stories
 
             stories = Stories()
-            expect(stories.schema).to(contain("epic:"))
+            expect(stories.schema.text).to(contain("epic:"))
             expect(stories.schema_guide()).to(contain("conforms to this schema"))
-            expect(stories.instructions).to(contain(stories.schema))
+            expect(stories.instructions).to(contain(stories.schema.text))
             scenarios = stories.fidelities.entries["scenarios"]
             expect(scenarios.instructions).to(contain("conforms to this schema"))
             expect(scenarios.instructions).to(contain("story:"))

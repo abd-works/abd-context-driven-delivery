@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 from functools import cache
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Callable
@@ -21,6 +22,8 @@ if TYPE_CHECKING:
     from space.session.session import Session
 
 _OUTPUT_PATTERN_MARKS = {"*", "{"}
+# Report and handoff names end with the time they were made, written so names sort by time.
+REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
 
 
 class PracticeRootInContextError(ValueError):
@@ -220,6 +223,18 @@ class FidelitySessionOutput:
     @property
     def reports_folder(self) -> Path:
         return self._session.reports_folder
+
+    def reports(self) -> list[Path]:
+        """This fidelity's validation reports in the session, oldest first: report names end with their date, which
+        sorts by time."""
+        folder = self.reports_folder
+        return sorted(folder.glob(f"{self._fidelity.slug}-*.md")) if folder.is_dir() else []
+
+    def new_report_path(self) -> Path:
+        """Where a validation report of this fidelity made now is saved in the session."""
+        folder = self.reports_folder
+        folder.mkdir(parents=True, exist_ok=True)
+        return folder / f"{self._fidelity.slug}-{datetime.now(timezone.utc).strftime(REPORT_DATE_FORMAT)}.md"
 
     @property
     def _chosen(self) -> dict:

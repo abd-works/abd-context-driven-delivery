@@ -130,7 +130,7 @@ with description("a story tree rendered to code"):
         with context("with one scenario renamed on the model"):
             with before.each:
                 stories = Stories(fidelity="acceptance_tests")
-                model = stories._to_object_model({_TS_PATH: _CUSTOMER_TYPESCRIPT}, Format("typescript"))
+                model = stories.formats.parse(Format("typescript"), {_TS_PATH: _CUSTOMER_TYPESCRIPT})
                 story = model.epics[0].epics[0].stories[0]
                 story.scenarios[1].name = "CustomerProfile exists already"
                 self.rendered = stories.render("typescript", model)["content"][_TS_PATH]

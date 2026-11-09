@@ -199,3 +199,26 @@ with description("a rules collection a session log names"):
             from harness.guidance.rule import RulesCollection
 
             expect(RulesCollection().practice_key).to(equal(""))
+
+
+with description("a practice's rules handed to the agent after two edits"):
+    with it("should make their injection once"):
+        import harness.guidance.rule as rule_module
+        from cdd_guidance.practices.stories.stories import Stories
+
+        made: list[object] = []
+        original = rule_module.RuleInjection
+
+        class CountedInjection(original):
+            def __init__(self, rules, practice) -> None:
+                made.append(rules)
+                super().__init__(rules, practice)
+
+        rule_module.RuleInjection = CountedInjection
+        try:
+            rules = Stories().rules
+            for edited in ("tests/story-map.md", "tests/other/story-map.md"):
+                rules.inject_rules(HookPayload({"hook_event_name": "afterFileEdit", "file_path": edited}))
+        finally:
+            rule_module.RuleInjection = original
+        expect(made).to(equal([rules]))

@@ -9,7 +9,9 @@ import os
 import re
 from pathlib import Path
 
-from harness.graph.graph import Graph, Node
+from harness.graph.graph import Node
+from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import scanned_files, skips_folder
 
@@ -31,15 +33,25 @@ _HINT_WORD = re.compile(r"[A-Za-z0-9_]+")
 _IMPORTED_FILE_ENDINGS = (".py", "/__init__.py", "", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx", "/index.js")
 
 
-class GraphReading:
-    """Clean Engineering's operations over the graph it is read in: reading the code, then the model documents."""
+class GraphReading(PracticeReading):
+    """How Clean Engineering takes part in the graph: it reads the code, then the model documents. Its classes are the
+    classes the source view opens and folds, their operations and properties the members it opens a call to, and its
+    checks run on each class as a whole."""
 
-    graph: Graph
-    # The format the practice's model documents are written in, which reads each into the class model it describes.
-    model_document_format: type[CleanEngineeringModel]
+    class_types = ("OoadClass",)
+    member_types = ("Operation", "Property")
+    class_node_type = "OoadClass"
+    anchor_types = {
+        "module": "Module",
+        "class": "OoadClass",
+        "property": "Property",
+        "operation": "Operation",
+        "parameter": "Parameter",
+        "package": "Package",
+    }
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, practice: PracticeGuidance) -> None:
+        super().__init__(practice)
         # The class model each model document read describes, by the document's path from the source root.
         self._model_documents: dict[str, CleanEngineeringModel] = {}
         # Whether the model documents have been read for the graph this practice is in.
@@ -85,7 +97,7 @@ class GraphReading:
     def _read_code(self) -> None:
         self.graph.report_progress("clean_engineering · folders")
         folders = self._code_folders(self.graph.scope_folders())
-        files = self.graph.source_files(self._source_root, self.readable_suffixes)
+        files = self.graph.source_files(self._source_root, self.practice.formats.suffixes)
         modules = self._parsed_modules(files)
         self._record_public_sources(folders, modules)
         self._class_names = {cls.name for module in modules.values() for cls in module.classes}
@@ -124,7 +136,7 @@ class GraphReading:
     def _parsed_module(self, file: Path) -> Module:
         """The file's module, read by its language's class model from the practice's formats, with its source facts
         loaded. Raises UnreadableSource for a file its language cannot read."""
-        module = self.format_for(file).parse(file.read_text(encoding="utf-8")).file_module()
+        module = self.practice.formats.for_file(file).parse(file.read_text(encoding="utf-8")).file_module()
         module.load_source_facts(file, self._source_root)
         return module
 
@@ -138,7 +150,7 @@ class GraphReading:
             public = sorted(
                 path
                 for path in directory.iterdir()
-                if path.is_file() and path.suffix.lower() in self.readable_suffixes and folder.holds_public_source(path.name)
+                if path.is_file() and path.suffix.lower() in self.practice.formats.suffixes and folder.holds_public_source(path.name)
             )
             folder.take_public_sources([parsed.get(path.resolve()) or self._module_read_now(path, unreadable) for path in public])
 
@@ -166,7 +178,7 @@ class GraphReading:
         held = {node.source.file for kind in ("Module", "Package") for node in self.in_graph.nodes(kind)}
         return [
             path
-            for path in scanned_files(self._source_root, self.readable_suffixes)
+            for path in scanned_files(self._source_root, self.practice.formats.suffixes)
             if path not in parsed and path.parent.relative_to(self._source_root).as_posix() not in held
         ]
 
@@ -325,7 +337,7 @@ class GraphReading:
     def _folder_module(self, folder: Path, filenames: list[str]) -> Module | None:
         """The folder's Module, typed ``Module`` when it holds a module card and ``Package`` when it holds only source;
         none for a folder with neither."""
-        has_code = any(Path(name).suffix.lower() in self.readable_suffixes for name in filenames)
+        has_code = any(Path(name).suffix.lower() in self.practice.formats.suffixes for name in filenames)
         if not has_code and not (folder / ".context").is_dir():
             return None
         module = Module(name=folder.name, sequential_order=1)
@@ -351,7 +363,7 @@ class GraphReading:
         for file in self._model_files():
             relative = file.relative_to(self._source_root).as_posix()
             self.graph.report_progress(f"clean_engineering · model · {relative}")
-            self._model_documents[relative] = self.model_document_format().parse(file.read_text(encoding="utf-8"))
+            self._model_documents[relative] = self.practice.model_document_format().parse(file.read_text(encoding="utf-8"))
 
     def _model_files(self) -> list[Path]:
         """Each scoped folder's and each of its parents' ``.context/*-model.md``, up to the root. ``.context`` is a

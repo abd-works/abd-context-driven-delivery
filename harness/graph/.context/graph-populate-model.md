@@ -4,7 +4,7 @@
 
 A practice reader parses its files with the practice's own model and adds each parsed object (a class, an operation, a story, a spec's observation) to its practice in the graph as the node itself (`practice.in_graph.add(node, ...)`), so a rule reads its measurements from the same object the explorer shows. A node with no parsed object behind it, such as a story's example or a LERN tier file, is a plain `Node` made with `practice.in_graph.add_named`. Edges are recorded with `Graph.link`, on the parent's practice; an edge's place under its parent in the explorer tree comes from `EDGE_ORDER`.
 
-A load runs in this order (`Graph._read_working_copy` in `graph.py`): each practice `read`s, in the order its `reads_after` needs; then each practice `link`s its nodes to other practices' nodes; then each applied overlay `read`s; then each practice's `in_graph.check()` runs its checks and records each finding as a `Violation` on its node; then each practice `rebuild_tree`s. `save_json` writes the result to `{folder}/.context/graph.json`, and a later `load_working_copy` reads that file back instead of parsing when it is still current.
+A load runs in this order (`Graph._read_working_copy` in `graph.py`): each practice's reading part `read`s, in the order its `reads_after` needs, and links its nodes to the nodes of the practices it read after; then each applied overlay `read`s; then each practice's `reading.in_graph.check()` runs its checks and records each finding as a `Violation` on its node; then each practice `rebuild_tree`s. `save_json` writes the result to `{folder}/.context/graph.json`, and a later `load_working_copy` reads that file back instead of parsing when it is still current.
 
 A node's id is `{practice}:{type}:{file or folder}:{name}`, with the owning class or operation added when the name alone is not unique. The practice sections below give each one.
 
@@ -186,7 +186,7 @@ A parsed object a practice reader added, or a plain node read back from `graph.j
 + set_fact(key, value): None
 + has_fact(key): bool
 + place(file, start_line, end_line): None
-	// -> practice.guidance.align_node(node): the practice moves a node it found by a nearby line onto the lines that declare it
+	// a practice whose reader finds a node by a nearby line, as Stories' recording does, moves it onto the lines that declare it
 + populate(parent=None): None
 	// for each edge kind by order, for each edge leaving this node:
 	//   direct: edge.child.populate(this)
@@ -318,23 +318,26 @@ The text the explorer's source view shows.
 
 ## A practice in the graph (PracticeGuidance)
 
-What one practice gives the graph is declared on its own `PracticeGuidance` class (`harness/guidance/guidance.py`); the base reads nothing and checks the rules in `{package}.rules`, so a practice that only checks rules overrides nothing. Each practice's readers live in `{practice}/model/graph_reading.py`.
+What one practice gives the graph is its reading part, a *PracticeReading* (`harness/guidance/practice_reading.py`) the practice holds as `practice.reading`, of the kind its class names (`reading_type`); the base reads nothing and checks the rules in `{package}.rules`, so a practice that only checks rules names no kind of its own. Each practice's kind of reading lives in `{practice}/model/graph_reading.py`.
 
++ held_in(graph, nodes): None
+	// the graph hands the part itself and the practice's PracticeNodes
 + graph: Graph | None
 	// the graph that holds this practice; none for a practice no graph holds
-+ extended: PracticeGuidance | None
-	// the practice extends names, held: one of the same set of practices
++ in_graph: PracticeNodes | None
 + checks(): dict[str, PracticeGraphRule]
-	// graph_checks() with the rules the graph's overlays add
+	// graph_checks with the rules the graph's overlays add
 + package: str
 	// the practice's Python package, from PracticeCatalogue
 + reads_after: tuple[str, ...]
 + node_types: tuple[str, ...]
 	// offered by the explorer before any node of them is read
++ read(): None
+	// offers node_types, then read_working_copy
 + read_working_copy(): None
-+ link_to_other_practices(): None
-+ align_node(node): None
-+ graph_checks(): dict[str, PracticeGraphRule]
+	// reads the practice's nodes, then links them to the nodes of the practices it reads after
++ graph_checks: dict[str, PracticeGraphRule]
+	// read once
 + own_graph_checks(): dict[str, PracticeGraphRule]
 	// -> rules_in(f"{package}.rules"): the module's BY_SLUG, else its RULES
 
@@ -475,9 +478,8 @@ The graph names no practice, so each practice's `PracticeGuidance` class says wh
 - `class_types`, `member_types` — the classes and their operations and properties a source view can open.
 - `class_node_type` — the type its checks run on as a whole class; another practice's node inside one skips those checks.
 - `source_ordered_types` — the types the explorer lists in file order.
-- `extends`, `anchor_types` — the practice whose types its schema builds on with `is:`, and the `is:` words another practice uses for its own types.
+- `anchor_types` — the `is:` words another practice uses for this practice's types; the practice whose types a schema builds on with `is:` is the practice's `extends`.
 - `rule_types` — node types that also carry the rules the schema gives other types.
-- `align_node(node)` — moves a node found by a nearby line onto the lines that declare it.
 
 A pattern's `GraphOverlay` declares `direct_kinds`, the relationship kinds of its schema the explorer shows as children.
 

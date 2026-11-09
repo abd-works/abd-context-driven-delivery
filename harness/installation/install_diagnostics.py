@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.json_file import JsonFile
+
+if TYPE_CHECKING:
+    from harness.installation.installer import InstallChannels
 
 _COLORS = ("green", "yellow", "red")
 # How much of the deployed set may change between two installs before the change reads as a warning, then a failure.
@@ -41,6 +44,27 @@ class InstallDiagnostics:
                 path.relative_to(self.folder / "language-adapters").as_posix() for path in self._files("language-adapters", "*.ts")
             ),
         }
+
+    def deployed(self, channels: InstallChannels) -> dict[str, list[str]]:
+        """What the folder holds on each channel after the install channels belong to: the toolsets it deployed and
+        what each server channel published. Read outside an install, a channel whose names live outside the folder,
+        such as MCP, names what the last install recorded."""
+        published = channels.published
+        if not channels.installing:
+            published = {channel: names or self.installed_items(channel) for channel, names in published.items()}
+        return self.channels_in_folder(channels.deployed, published)
+
+    def diagnosed(self, channels: InstallChannels) -> tuple[str, str]:
+        """The colour of what the install channels belong to deployed, against the last install, and the report of what
+        changed on each channel, with the status of each server the install points at."""
+        color, compared = self.compared(self.deployed(channels))
+        status = "\n".join(line for server in channels.servers for line in server.status())
+        return color, f"{compared}\n{status}"
+
+    def record_run(self, channels: InstallChannels, report: str) -> None:
+        """Append the install channels belong to, with its report and the colour the report names, to the history."""
+        color = next((line for line in report.splitlines() if line in _COLORS), "green")
+        self.record_install(self.deployed(channels), report, color)
 
     def compared(self, actual: dict[str, list[str]]) -> tuple[str, str]:
         """The colour of actual against the last install, and the report of what changed on each channel."""

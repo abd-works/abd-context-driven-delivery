@@ -26,7 +26,7 @@ class WebDomainAccessOverlay(GraphOverlay):
                 continue
             semantic, facts = tier
             relative = file.relative_to(root).as_posix()
-            node = ddd.in_graph.add_named(semantic, f"ddd:{semantic}:{relative}", file.name, Source.whole_file(relative, str(root)))
+            node = ddd.reading.in_graph.add_named(semantic, f"ddd:{semantic}:{relative}", file.name, Source.whole_file(relative, str(root)))
             for key, value in facts.items():
                 node.set_fact(key, value)
 

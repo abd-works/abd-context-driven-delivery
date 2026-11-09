@@ -45,7 +45,7 @@ class FixtureGraph:
 
     def __init__(self, fixture: dict[str, Any]) -> None:
         edges_of_type = fixture["edges_of_type"]
-        self.practices = {key: SimpleNamespace(in_graph=FixturePractice(held, edges_of_type)) for key, held in fixture["practices"].items()}
+        self.practices = {key: SimpleNamespace(reading=SimpleNamespace(in_graph=FixturePractice(held, edges_of_type))) for key, held in fixture["practices"].items()}
         self.filter = SimpleNamespace(clear=lambda: None)
 
     def answer(self, request: dict[str, Any]) -> dict[str, Any]:

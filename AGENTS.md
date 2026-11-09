@@ -4,7 +4,7 @@ Agentic tools that bring agile product, delivery, and engineering practices to A
 
 ## Layout
 
-- `cdd_guidance/practices/` — Stories, DDD, UX, Clean Engineering, BDD. Each practice is one `{practice}.md` (Overview, shared rules, a section per fidelity with its Rules) plus a thin `{practice}.py` (whose class also says what the knowledge graph reads from the practice, with the readers in `model/graph_reading.py`), templates, `_examples/`, and `rules/rule_examples.py`, the spec support that checks a failing and a repaired example against one rule.
+- `cdd_guidance/practices/` — Stories, DDD, UX, Clean Engineering, BDD. Each practice is one `{practice}.md` (Overview, shared rules, a section per fidelity with its Rules) plus a thin `{practice}.py` (whose class names the practice's part in the knowledge graph, a *PracticeReading* kept in `model/graph_reading.py`), templates, `_examples/`, and `rules/rule_examples.py`, the spec support that checks a failing and a repaired example against one rule.
 - `cdd_guidance/actions/` — the shared verbs: partition, document, sketch, grill, generate, validate, satisfy, render, iterate, repair.
 - `cdd_guidance/patterns/`, `cdd_guidance/builders/` — stack patterns (LERN, MERN) and builders for new toolsets and practices.
 - `cdd_guidance/rules/` — always-on rules, installed into every IDE. `cdd_guidance/references/` — reference docs installed to `<ide>/references/`.

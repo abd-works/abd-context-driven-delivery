@@ -22,18 +22,18 @@ _CART = "export class Cart {\n  total() { return 1; }\n  place(a, b, c, d, e, f)
 
 def _nodes(graph: Graph) -> list[tuple]:
     practice = graph.practice("clean_engineering")
-    found = practice.in_graph.nodes()
+    found = practice.reading.in_graph.nodes()
     return sorted((node.node_id, node.name, node.type, node.source.file, node.source.start_line, node.source.end_line, node.stage) for node in found)
 
 
 def _edges(graph: Graph) -> list[tuple]:
     practice = graph.practice("clean_engineering")
-    return sorted((edge.parent.node_id, edge.child.node_id, edge.kind, edge.order, edge.display) for edge in practice.in_graph.edges())
+    return sorted((edge.parent.node_id, edge.child.node_id, edge.kind, edge.order, edge.display) for edge in practice.reading.in_graph.edges())
 
 
 def _violations(graph: Graph) -> list[tuple]:
     practice = graph.practice("clean_engineering")
-    found = [violation for node in practice.in_graph.nodes() for violation in node.rules.violations]
+    found = [violation for node in practice.reading.in_graph.nodes() for violation in node.rules.violations]
     return sorted((violation.rule, violation.node_id, violation.subject, violation.location, violation.line, violation.message) for violation in found)
 
 
@@ -62,8 +62,8 @@ with description("a saved graph"):
             expect(_violations(self.restored)).to(equal(_violations(self.graph)))
 
         with it("should keep the facts about the practice as a whole on its root"):
-            expect(self.restored.practice("clean_engineering").in_graph.root.data).to(
-                equal(self.graph.practice("clean_engineering").in_graph.root.facts)
+            expect(self.restored.practice("clean_engineering").reading.in_graph.root.data).to(
+                equal(self.graph.practice("clean_engineering").reading.in_graph.root.facts)
             )
 
     with context("as its document"):
@@ -108,7 +108,7 @@ with description("a saved graph asked which rules a practice checks"):
             self.checks = saved.checks_of(self.practice)
 
     with it("should answer the practice's own rules"):
-        expect(list(self.checks)).to(contain(*self.practice.graph_checks()))
+        expect(list(self.checks)).to(contain(*self.practice.reading.graph_checks))
 
     with it("should answer the rules the overlays it was saved with add"):
         expect(list(self.checks)).to(contain("node-repository-parses-on-read"))
@@ -117,4 +117,4 @@ with description("a saved graph asked which rules a practice checks"):
         expect(self.graphs.made).to(equal(0))
 
     with it("should leave the practice it was asked about out of any graph"):
-        expect(self.practice.graph).to(be_none)
+        expect(self.practice.reading.graph).to(be_none)
