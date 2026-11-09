@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from expects import contain, equal, expect
-from mamba import context, description, it
+from mamba import before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
@@ -138,4 +138,28 @@ with description("a class whose doc comment names its module path and a dependen
         with it("should keep a dependency with no details as it was"):
             expect([item.details for item in _kept_cart(MarkdownCleanEngineeringModel()).dependencies]).to(
                 equal([{"direction": "downstream", "crosses": "product identity"}, {}])
+            )
+
+
+with description("a class's doc comment"):
+    with context("written from a class with a module path, stereotypes, and a detailed dependency, and read into another"):
+        with before.all:
+            from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
+
+            written = OoadClass("Cart", 1)
+            written.intent = "Holds a shopper's lines."
+            written.stereotypes = ["Aggregate Root"]
+            written.module_path = ["Sales | custom", "Cart"]
+            written.dependencies = [Relationship(target="Product", kind="dependency", label="Customer/Supplier", details={"direction": "downstream"})]
+            self.comment = written.doc_comment(marked=True)
+            self.read = OoadClass("Cart", 1)
+            self.comment.describe(self.read)
+
+        with it("should mark the class's stereotypes"):
+            expect(self.comment.stereotypes).to(equal(["Aggregate Root"]))
+
+        with it("should give the class read its intent, module path, and dependency"):
+            dependency = self.read.dependencies[0]
+            expect((self.read.intent, self.read.module_path, dependency.target, dependency.details)).to(
+                equal(("Holds a shopper's lines.", ["Sales | custom", "Cart"], "Product", {"direction": "downstream"}))
             )

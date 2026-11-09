@@ -85,10 +85,7 @@ class JsonOoadClass(OoadClass):
 
 
 class JsonModule(Module):
-    def load_class(self, source: OoadClass) -> JsonOoadClass:
-        loaded = JsonOoadClass(name=source.name, sequential_order=source.sequential_order)
-        loaded.update_self(source)
-        return loaded
+    class_type = JsonOoadClass
 
     @classmethod
     def from_record(cls, record: dict, sequential_order: int) -> "JsonModule":
@@ -116,10 +113,7 @@ class JsonModule(Module):
 
 
 class JsonCleanEngineeringModel(CleanEngineeringModel):
-    def load_module(self, source: Module) -> JsonModule:
-        loaded = JsonModule(name=source.name, sequential_order=source.sequential_order)
-        loaded.update_self(source)
-        return loaded
+    module_type = JsonModule
 
     def parse(self, text: str) -> "JsonCleanEngineeringModel":
         try:

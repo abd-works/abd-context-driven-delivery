@@ -438,3 +438,32 @@ with description("a class read from its file"):
 
     with it("should compose its peers as an aggregate root"):
         expect(self.oclass.composes_peers).to(be_true)
+
+
+with description("a model of each format translating another model"):
+    with before.all:
+        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+
+        source = CleanEngineeringModel("Shop", 1)
+        source.modules = [Module("cart", 1, description="The cart.")]
+        cart = OoadClass("Cart", 1)
+        cart.intent = "Holds the lines."
+        source.modules[0].classes = [cart]
+        formats = CleanEngineering().formats
+        self.translated = {}
+        for key in formats:
+            model = formats.adapter_class(key)()
+            model.translate_from(source)
+            self.translated[key] = model
+
+    with it("should hold modules of the kind its format names"):
+        kinds = {key: type(model.modules[0]) is model.module_type for key, model in self.translated.items()}
+        expect(kinds).to(equal({key: True for key in self.translated}))
+
+    with it("should hold classes of the kind its modules name"):
+        kinds = {key: type(model.modules[0].classes[0]) is model.modules[0].class_type for key, model in self.translated.items()}
+        expect(kinds).to(equal({key: True for key in self.translated}))
+
+    with it("should fill each class it loads from the class it translates"):
+        described = {key: model.modules[0].classes[0].intent for key, model in self.translated.items()}
+        expect(described).to(equal({key: "Holds the lines." for key in self.translated}))

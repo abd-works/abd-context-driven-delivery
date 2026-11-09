@@ -5,6 +5,7 @@ from expects import be_true, equal, expect, have_key
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.rules.class_graph import ClassGraph
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_files
 
 _CART = (
@@ -100,3 +101,32 @@ with description("Clean Engineering reading code into its graph"):
 
         with it("should count only its public files"):
             expect(self.shop.get_fact("public_source_files")).to(equal(1))
+
+    with context("with a module whose other public file does not parse, read by a load of one edited file"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "shop/.context/module-context.md": "# Shop\n",
+                    "shop/cart.py": _CART,
+                    "shop/broken.py": "class Broken(:\n    pass\n",
+                }
+            )
+            self.fixture.read_only(["shop/cart.py"])
+            self.shop = next(node for node in self.fixture.practice.reading.in_graph.nodes("Module") if node.name == "shop")
+
+        with it("should keep the file that does not parse on its module, as a load of the whole folder does"):
+            expect([kept.split(":")[0] for kept in self.shop.get_fact("unreadable_sources") or []]).to(equal(["shop/broken.py"]))
+
+    with context("with a class read again by a refresh"):
+        with before.all:
+            self.fixture = practice_from_files({"shop/cart.py": _CART, "shop/till.py": "class Till:\n    pass\n"})
+            self.index = self.fixture.practice.reading.code_index
+            self.index.classes_named("Cart")
+            self.fixture.practice.reading.graph.refresh([str(self.fixture.root / "shop/cart.py")])
+            self.cart = next(node for node in self.fixture.practice.reading.in_graph.nodes("OoadClass") if node.name == "Cart")
+
+        with it("should name the class the refresh read, not the one it replaced"):
+            expect(self.index.classes_named("Cart")).to(equal([self.cart]))
+
+        with it("should be the index the class rules ask"):
+            expect(ClassGraph(self.fixture.context).named("Till")).to(equal(self.index.classes_named("Till")))

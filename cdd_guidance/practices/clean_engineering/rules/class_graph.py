@@ -10,6 +10,8 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Callable
 
+from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
+from cdd_guidance.practices.clean_engineering.model.graph_reading import CodeIndex, GraphReading
 from cdd_guidance.practices.clean_engineering.model.operation import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 
@@ -18,7 +20,8 @@ if TYPE_CHECKING:
     from harness.graph.rule_context import RuleCheckContext
 
 _IDENTIFIER = re.compile(r"[A-Za-z_]\w*")
-_HOLDER = "_module"
+# A constructor handing its base a message: Python's `super().__init__("...")`, a brace language's `super("...")`.
+_HANDS_MESSAGE = re.compile(r"\bsuper\(\)\.__init__\(\s*[^)\s]|\bsuper\(\s*[^)\s]")
 # Standard value types: Python's paths, dates, and numbers, and the script values a constructor fills a field with.
 _STANDARD_VALUES = frozenset(
     {
@@ -67,22 +70,37 @@ class ClassGraph:
     """Every production class in the practice, its public operations, and the fields it holds."""
 
     def __init__(self, context: "RuleCheckContext") -> None:
-        self.classes = [
-            node
-            for node in context.nodes("OoadClass")
-            if node.name != _HOLDER and not is_test_code(node.source.file)
-        ]
-        self.by_name: dict[str, list["Node"]] = {}
-        for node in self.classes:
-            self.by_name.setdefault(node.name, []).append(node)
+        self.classes = [node for node in context.nodes("OoadClass") if _is_production_class(node)]
+        # The index of the classes Clean Engineering read by name, which its type linking asks too.
+        self._index = _code_index_of(context.practice)
         self._operations: dict[str, list["Node"]] = {}
         for edge in context.edges("owns"):
             if edge.child.type == "Operation" and edge.parent.type == "OoadClass":
                 self._operations.setdefault(edge.parent.node_id, []).append(edge.child)
+        # A class mixed in comes before the base a class derives from: `class Model(Reading, BaseModel)`.
+        self._mixins = {base for node in self.classes for base in self.bases_of(node)[:-1]}
         self._defining: dict[str, set[str]] = {}
         for node in context.nodes("OoadClass"):
             for operation in self.operations(node):
                 self._defining.setdefault(operation.name, set()).add(node.node_id)
+
+    def named(self, type_name: str) -> list["Node"]:
+        """The production classes the graph holds called type_name."""
+        return [node for node in self._index.classes_named(type_name) if _is_production_class(node)]
+
+    def is_mixin(self, node: "Node") -> bool:
+        """True for a class another class mixes in before the base it derives from, such as a reading mixed into a model."""
+        return node.name in self._mixins
+
+    def gives_own_message(self, failure: str) -> bool:
+        """True when a failure the graph declares writes its own message: its constructor hands its base one, such
+        as ``super().__init__(f"paths are required to commit")``."""
+        return any(
+            _HANDS_MESSAGE.search(operation.get_fact("body_text") or "")
+            for node in self.named(failure)
+            for operation in self.operations(node)
+            if operation.name in CONSTRUCTOR_NAMES
+        )
 
     def operations(self, node: "Node") -> list["Node"]:
         """The public operations the graph records for this class."""
@@ -117,14 +135,14 @@ class ClassGraph:
         if type_name in seen:
             return False
         return any(
-            self._derives(base, is_kind, seen | {type_name}) for node in self.by_name.get(type_name, []) for base in self.bases_of(node)
+            self._derives(base, is_kind, seen | {type_name}) for node in self.named(type_name) for base in self.bases_of(node)
         )
 
     def _is_value_itself(self, type_name: str) -> bool:
         """A standard value, a collection base, a failure, or a class of the graph its stereotype marks as a value."""
         if type_name in _STANDARD_VALUES or type_name in _VALUE_BASES or _named_failure(type_name):
             return True
-        return any(_declares_value(node) for node in self.by_name.get(type_name, []))
+        return any(_declares_value(node) for node in self.named(type_name))
 
     def bases_of(self, node: "Node") -> list[str]:
         """The names of the classes it derives from, each by its own name: ``Epic`` for ``pkg.Epic``, ``list`` for
@@ -137,6 +155,17 @@ class ClassGraph:
             not shape.get("is_property") and shape["name"] not in CONSTRUCTOR_NAMES and not shape["name"].startswith("__")
             for shape in node.get_fact("operation_shapes", []) or []
         )
+
+
+def _code_index_of(practice) -> CodeIndex:
+    """The code index of the Clean Engineering practice whose rules run: the practice itself, or the one a practice
+    that holds its rules, such as DDD, extends."""
+    reading = practice.reading
+    return reading.code_index if isinstance(reading, GraphReading) else practice.extended.reading.code_index
+
+
+def _is_production_class(node: "Node") -> bool:
+    return node.name != MODULE_FUNCTION_HOLDER and not is_test_code(node.source.file)
 
 
 def _named_failure(type_name: str) -> bool:

@@ -30,8 +30,9 @@ class DiagramNode(ABC):
 
     Card placement and arrow routing read and set `geometry`; `group` keeps cards of one module together."""
 
-    def __init__(self) -> None:
-        self.geometry = Geometry(0, 0, CELL_WIDTH, CELL_MIN_HEIGHT)
+    def __init__(self, width: float = CELL_WIDTH) -> None:
+        # The box starts as wide as its kind of card and as tall as what it holds; placement moves it.
+        self.geometry = Geometry(0, 0, width, float(self.height()))
         self.cell_id = ''
         self.parent_id = '1'
         self.group = ''
@@ -47,7 +48,6 @@ class DiagramClass(OoadClass, DiagramNode):
     def __init__(self, name: str = '', sequential_order: int = 1, **kwargs) -> None:
         OoadClass.__init__(self, name, sequential_order, **kwargs)
         DiagramNode.__init__(self)
-        self.geometry = Geometry(0, 0, CELL_WIDTH, float(self.height()))
 
     def height(self) -> int:
         n_content = len(self.properties) + len(self.operations)
@@ -88,9 +88,8 @@ class DiagramModule(Module, DiagramNode):
 
     def __init__(self, name: str = '', sequential_order: int = 1, **kwargs) -> None:
         Module.__init__(self, name, sequential_order, **kwargs)
-        DiagramNode.__init__(self)
         self.nested = False
-        self.geometry = Geometry(0, 0, MODULE_CELL_WIDTH, float(self.height()))
+        DiagramNode.__init__(self, MODULE_CELL_WIDTH)
 
     def height(self) -> int:
         return self.header_height()

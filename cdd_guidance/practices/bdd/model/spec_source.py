@@ -12,15 +12,26 @@ _CODE_LIKE_NAME = re.compile(r"\b[A-Z][a-z]+(?:[A-Z][a-z]+)+\b")
 _ASSERTION = re.compile(r"\bexpect\s*\(|\bassert\b")
 
 
+# A string literal, triple-quoted ones first: a sample spec a test holds as text is not the file's own code.
+_STRING_LITERAL = re.compile(r'"""[\s\S]*?"""|' + r"'''[\s\S]*?'''|`[^`]*`|" + r'"(?:\\.|[^"\\\n])*"|' + r"'(?:\\.|[^'\\\n])*'")
+
+
 def has_signature_marker(text: str) -> bool:
-    return any(language.comment(SIGNATURE) in text for language in (PYTHON, TYPESCRIPT))
+    """Whether a comment of the spec's own code marks a signature-only body; a marker inside a string is not one."""
+    code = _code_of(text)
+    return any(language.comment(SIGNATURE) in code for language in (PYTHON, TYPESCRIPT))
 
 
 def is_developed(text: str) -> bool:
     """Whether a spec is past behavior and realization fidelity: no `it` still carries a signature marker, and the
     spec asserts. Development replaces each marker with a test body, so a spec with none left and real assertions is a
     finished test, and the rules that keep a behavior sketch free of test bodies no longer apply to it."""
-    return not has_signature_marker(text) and _ASSERTION.search(text) is not None
+    return not has_signature_marker(text) and _ASSERTION.search(_code_of(text)) is not None
+
+
+def _code_of(text: str) -> str:
+    """The spec's text with each string literal emptied."""
+    return _STRING_LITERAL.sub('""', text)
 
 
 def reads_like_code(label: str) -> bool:

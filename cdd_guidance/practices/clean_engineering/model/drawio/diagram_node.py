@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional, Tuple
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
+from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import style_value
 from cdd_guidance.practices.clean_engineering.model.type_refs import pascal_type_names
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     DiagramClass,
@@ -30,12 +31,6 @@ MODULE_CHILD_STYLE = (
     'fontColor=#000000;fontSize=12;align=left;verticalAlign=top;'
     'spacingLeft=10;spacingTop=10;strokeWidth=2;'
 )
-
-
-def _style_kind(style: str) -> str:
-    """The kind a cell's style names after `kind=`; empty when it names none."""
-    found = re.search(r'(?:^|;)kind=([^;]*)', style)
-    return found.group(1) if found else ''
 
 
 MEMBER_CHARACTER_WIDTH = 5.5
@@ -160,6 +155,8 @@ class DrawIOImportedClass(ImportedClass, DrawIOClass):
 class DrawIOModule(DiagramModule, DrawioVertex):
     """Draw.io rounded modules-view cell."""
 
+    class_type = DrawIOClass
+
     KIND = ""
     """The kind of module a cell draws, written in its style as `kind=...;` so the drawing reads back as the cell type
     that drew it; a plain module names none."""
@@ -168,17 +165,12 @@ class DrawIOModule(DiagramModule, DrawioVertex):
     def draws(cls, style: str) -> bool:
         """True when a cell with this style is one this type draws: its style names this type's kind; a plain module
         draws any cell, so a reader that knows no kind of its own reads every cell as a plain module."""
-        return not cls.KIND or _style_kind(style) == cls.KIND
+        return not cls.KIND or style_value(style, 'kind') == cls.KIND
 
     def __init__(self, name: str = '', sequential_order: int = 1, **kwargs) -> None:
         super().__init__(name, sequential_order, **kwargs)
         # The words written on the arrow to each dependency, by the dependency's name; most arrows carry none.
         self.dependency_labels: Dict[str, str] = {}
-
-    def load_class(self, source: OoadClass) -> DrawIOClass:
-        loaded = DrawIOClass(name=source.name, sequential_order=source.sequential_order)
-        loaded.translate_from(source)
-        return loaded
 
     def html(self) -> str:
         name_html = html.escape(self.name)

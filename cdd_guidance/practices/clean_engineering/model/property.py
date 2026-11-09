@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
 from cdd_guidance.practices.clean_engineering.model.field_types import RELATIONSHIP_STRENGTH, Relationship
-from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
+from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names, name_with_type
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
@@ -189,9 +189,7 @@ class Property(InvariantHolder, OoadNode):
         )
 
     def save(self) -> str:
-        if self.type_hint:
-            return f"{self.name}: {self.type_hint}"
-        return self.name
+        return name_with_type(self.name, self.type_hint)
 
     def render(self) -> str:
         return self.save()

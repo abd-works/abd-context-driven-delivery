@@ -64,7 +64,7 @@ class GraphBddModel(BddModel):
 
     def _call(self, owner: str, name: str, depth: int, trail: set, code: Optional[Node]) -> CallGraph:
         """A call on owner.name, then the interactions the model gives it, then what it returns."""
-        described = self._clean.described_member(owner, name) if self._clean is not None else None
+        described = self._clean.model_documents.described_member(owner, name) if self._clean is not None else None
         # A described property, a described getter, and a getter's code node all read as a property.
         subject = described if described is not None else code
         is_property = subject is not None and subject.type == "Property"
@@ -100,7 +100,7 @@ class GraphBddModel(BddModel):
         """The code's member owner.name, when the graph loaded it."""
         if self._clean is None:
             return None
-        return next((member for member in self._clean.members_named(name) if member.get_fact("owner") == owner), None)
+        return next((member for member in self._clean.code_index.members_named(name) if member.get_fact("owner") == owner), None)
 
 
 def _member_named(interaction: str) -> Optional[tuple[str, str]]:

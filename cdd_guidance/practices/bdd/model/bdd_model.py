@@ -107,12 +107,12 @@ class BddModel(ModelNode):
     def setup_at(self, path: tuple) -> CodeBody:
         """The setup read for the describe at this path of names; empty when this spec has none."""
         node = self._node_at(path)
-        return getattr(node, "setup", CodeBody()) if node is not None else CodeBody()
+        return CodeBody() if node is None else node.setup
 
     def body_at(self, path: tuple) -> CodeBody:
-        """The test body read for the it at this path of names; empty when this spec has none."""
-        node = self._node_at(path)
-        return getattr(node, "body", CodeBody()) if node is not None else CodeBody()
+        """The test body read for the it at this path of names; empty when this spec has no it there."""
+        observation = self._node_at(path)
+        return observation.body if isinstance(observation, Observation) else CodeBody()
 
     def written_at(self, path: tuple):
         """How the block at this path of names was written; None when this spec has no such block."""

@@ -493,15 +493,15 @@ class ToolsRunYaml:
 
 
 class ToolsetInvoke:
-    """Expand an action or invoke a tool on a live toolset instance."""
+    """Expand an action or invoke a tool on a live toolset instance. The request names the action or the tool, which is
+    right at the YAML boundary only: the run resolves the name once, on the instance it makes, and holds the member."""
 
-    def __init__(self, instance: Any, toolset_path: str, project: Path) -> None:
-        self._instance = instance
+    def __init__(self, toolset_path: str, project: Path, member: Any, arguments: Mapping[str, Any]) -> None:
         self._toolset_path = toolset_path
         self._project = project
-        self._arguments: dict[str, Any] = {}
-        self._action_name: str | None = None
-        self._tool_name: str | None = None
+        # The action (an AgentInstructions) or the tool (an AgentTool) the run expands or invokes.
+        self._member = member
+        self._arguments = dict(arguments)
 
     @classmethod
     def create(cls, request: dict[str, Any], project: Path) -> ToolsetInvoke:
@@ -545,11 +545,25 @@ class ToolsetInvoke:
             instance = AgentToolSet.instantiate({"toolset": toolset, "context": dict(context or {})})
         except TypeError as exc:
             raise AgentHarnessError(str(exc)) from exc
-        invoke = cls(instance, toolset, project)
-        invoke._arguments = dict(arguments or {})
-        invoke._action_name = action
-        invoke._tool_name = tool
-        return invoke
+        if action is not None:
+            return ActionExpansion(toolset, project, cls._action_of(instance, action), arguments or {})
+        return cls(toolset, project, cls._tool_of(instance, tool), arguments or {})
+
+    @staticmethod
+    def _action_of(instance: Any, action: str) -> Any:
+        """The action the toolset instance holds under the name the request gives."""
+        try:
+            return instance.instructions[action]
+        except KeyError as exc:
+            raise AgentHarnessError(f"unknown action {action!r}") from exc
+
+    @staticmethod
+    def _tool_of(instance: Any, tool: str) -> Any:
+        """The tool the toolset instance publishes under the name the request gives."""
+        member = instance.tools.get(tool)
+        if member is None:
+            raise AgentHarnessError(f"unknown tool {tool!r}")
+        return member
 
     @classmethod
     def _session_named(cls, name: str, project: Path) -> Any:
@@ -566,11 +580,10 @@ class ToolsetInvoke:
     @property
     def toolset(self) -> Any:
         """The toolset the request is run on, made for the session the request names."""
-        return self._instance
+        return self._member.toolset
 
     def response(self) -> RunResponse:
-        if self._action_name:
-            return self.expanded_action()
+        """The tool's answer to the request's arguments."""
         return self.invoked_tool()
 
     def run(self, timeout_seconds: float | None = None) -> RunResponse:
@@ -579,48 +592,46 @@ class ToolsetInvoke:
             return self.response()
         return ToolRunDeadline(timeout_seconds).run(self.response, self._toolset_path)
 
-    def expanded_action(self) -> RunResponse:
+    def invoked_tool(self) -> RunResponse:
         try:
-            expanded = self._instance.instructions[self._action_name].expand(
-                self._arguments
-            )
-        except KeyError as exc:
-            raise AgentHarnessError(f"unknown action {self._action_name!r}") from exc
+            result = self._invoke_member()
+        except TypeError as exc:
+            raise AgentHarnessError(str(exc)) from exc
         return RunResponse(
             ok=True,
             toolset=self._toolset_path,
-            action=self._action_name,
+            tool=self._member.name,
+            result=result,
+            resources={},
+        )
+
+    def _invoke_member(self) -> Any:
+        from harness.agent_tools.agent_tools import AgentOperation
+
+        if isinstance(self._member, AgentOperation):
+            return self._member.invoke(self._arguments, project=self._project)
+        return self._member.callable(**self._arguments)
+
+
+class ActionExpansion(ToolsetInvoke):
+    """The run of one action: its instructions, expanded with the request's arguments."""
+
+    def response(self) -> RunResponse:
+        return self.expanded_action()
+
+    def expanded_action(self) -> RunResponse:
+        """The action's instructions, expanded with the request's arguments."""
+        expanded = self._member.expand(self._arguments)
+        return RunResponse(
+            ok=True,
+            toolset=self._toolset_path,
+            action=self._member.name,
             result=expanded.result,
             instructions=expanded.instructions,
             tools=list(expanded.tools),
             arguments=self._arguments,
             resources={},
         )
-
-    def invoked_tool(self) -> RunResponse:
-        from harness.agent_tools.agent_tools import AgentOperation
-
-        member = self._instance.tools.get(self._tool_name)
-        if member is None:
-            raise AgentHarnessError(f"unknown tool {self._tool_name!r}")
-        try:
-            result = self._invoke_member(member)
-        except TypeError as exc:
-            raise AgentHarnessError(str(exc)) from exc
-        return RunResponse(
-            ok=True,
-            toolset=self._toolset_path,
-            tool=self._tool_name,
-            result=result,
-            resources={},
-        )
-
-    def _invoke_member(self, member: Any) -> Any:
-        from harness.agent_tools.agent_tools import AgentOperation
-
-        if isinstance(member, AgentOperation):
-            return member.invoke(self._arguments, project=self._project)
-        return getattr(self._instance, self._tool_name)(**self._arguments)
 
 
 def invoke_run_request(request: dict[str, Any], project: Path, timeout_seconds: float | None = None) -> RunResponse:

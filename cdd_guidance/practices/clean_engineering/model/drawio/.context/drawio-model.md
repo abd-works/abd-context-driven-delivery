@@ -46,7 +46,7 @@ The rounded modules-view cell.
 	// a nested module uses the child style
 + from_cell(value: str, sequential_order: int): DrawIOModule | None
 	// class operation: the module a cell label names, with its purpose and seam terms; None when it names none
-+ load_class(source: OoadClass): DrawIOClass
++ class_type: type[DrawIOClass]
 	-> DrawIOClass.translate_from
 
 ## DrawIOClass : DiagramClass, DrawioVertex
@@ -99,7 +99,7 @@ The `drawio` format. A modules view when the model has modules and no class memb
 	-> render
 + kept_previous(): str | None
 	// previous when this render keeps its positions
-+ load_module(source: Module): DrawIOModule
++ module_type: type[DrawIOModule]
 + load_module_cell(source: Module): DrawIOModule
 	// a Draw.io cell for a container module the containment forest made
 + imported_class(source: OoadClass, from_module: str = ""): DrawIOImportedClass

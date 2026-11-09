@@ -73,10 +73,10 @@ with description("a saved graph of a spec and the code it tests"):
 
     with context("with a Clean Engineering model beside the code"):
         with it("should give the code's operation the model's interactions"):
-            expect(self.clean.reading.described_member("Cart", "add").callees).to(equal(["Ledger.record"]))
+            expect(self.clean.reading.model_documents.described_member("Cart", "add").callees).to(equal(["Ledger.record"]))
 
         with it("should keep every member the model describes, the ones with no code too"):
-            expect(self.clean.reading.described_member("Ledger", "record").return_type).to(equal("str"))
+            expect(self.clean.reading.model_documents.described_member("Ledger", "record").return_type).to(equal("str"))
 
         with it("should save no copy of the model's members beside the code's nodes"):
             root_facts = json.loads(self.saved)["practices"]["clean_engineering"]["root_facts"]

@@ -24,6 +24,8 @@ _COPIED_SHARE = 0.75
 _NAME_COPY = re.compile(r"^_*(?P<owner>[a-z]\w*?)(?:_name|_slug|Name|Slug)$")
 _KEYED_COLLECTIONS = frozenset({"dict", "Dict", "Mapping", "MutableMapping", "Record", "Map"})
 _STRING_KEYS = frozenset({"str", "string"})
+# The fields a class is named by. Only a class that has a name can have its name copied.
+_NAMING_FIELDS = frozenset({"name", "slug", "title", "key", "label"})
 
 
 class HideInnerDetails(ProductionCodeRule):
@@ -82,7 +84,8 @@ class DoNotInventParallelObjectModels(PracticeGraphRule):
 
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
         classes = context.index(ClassGraph)
-        fields = {node.node_id: classes.fields(node) for node in classes.classes}
+        # A mixin's annotations declare what the class it is mixed into holds, so it holds no model of its own.
+        fields = {node.node_id: {} if classes.is_mixin(node) else classes.fields(node) for node in classes.classes}
         holders: dict[str, list["Node"]] = {}
         for node in classes.classes:
             for field in fields[node.node_id]:
@@ -108,7 +111,8 @@ def _copied_fields(node: "Node", holders: dict[str, list["Node"]], fields: dict[
         theirs = set(fields[other_id])
         if other is node or _related(node, other) or (len(own), node.node_id) > (len(theirs), other_id):
             continue
-        shared = own & theirs
+        # A field copies another only with the same type: three common names, such as `result`, are no copied model.
+        shared = {field for field in own & theirs if fields[node.node_id][field] == fields[other_id][field]}
         if _copies(shared, own, theirs):
             return [
                 f"Class '{node.name}' copies the fields {sorted(shared)} of '{other.name}'. "
@@ -135,7 +139,7 @@ def _copied_references(node: "Node", classes: ClassGraph, fields: dict[str, str]
     for field, hint in fields.items():
         named = _NAME_COPY.match(field) if named_copies else None
         owner = _class_named(named.group("owner"), classes) if named else ""
-        if owner and owner != node.name:
+        if owner and owner != node.name and _has_name(owner, classes):
             hits.append(
                 f"Class '{node.name}' holds '{field}', a name copy of a '{owner}'; hold the {owner} itself."
             )
@@ -158,9 +162,25 @@ def _member_keyed_by_name(field: str, hint: str, classes: ClassGraph) -> str:
     words = _words(field)
     for length in range(len(words) - 1, 0, -1):
         member = _class_named("_".join(words[:length]), classes)
-        if member and member not in mentioned:
+        if member and member not in mentioned and _holds_value(member, words[length:], classes):
             return member
     return ""
+
+
+def _has_name(owner: str, classes: ClassGraph) -> bool:
+    """True when the class is named by a field of its own, such as `name` or `title`, which a copy could repeat."""
+    return any(_NAMING_FIELDS & {field.lstrip("_") for field in classes.fields(node)} for node in classes.named(owner))
+
+
+def _holds_value(member: str, value_words: list[str], classes: ClassGraph) -> bool:
+    """True when the member class holds the value the dict keeps for each one: `fidelity_states` copies a `Fidelity`'s
+    `state`. A dict whose values the member does not hold, such as each file's text by its path, copies nothing of it."""
+    value = "_".join(value_words)
+    wanted = {value, value.removesuffix("s"), f"{value}s"}
+    return any(
+        wanted & {field.lstrip("_") for field in classes.fields(node)} or wanted & {operation.name for operation in classes.operations(node)}
+        for node in classes.named(member)
+    )
 
 
 def _key_type(hint: str) -> str:
@@ -174,7 +194,7 @@ def _key_type(hint: str) -> str:
 
 def _class_named(snake: str, classes: ClassGraph) -> str:
     pascal = "".join(word.capitalize() for word in _words(snake))
-    return pascal if pascal in classes.by_name else ""
+    return pascal if bool(classes.named(pascal)) else ""
 
 
 def _words(name: str) -> list[str]:
