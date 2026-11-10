@@ -114,6 +114,7 @@ export const register: Register = on => {
     }
     const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), actions }
     const elements = $.ui.resolve(e)
+    try {
     const chatBar = await currentChatBar($)
     return ChatBarView($, elements, {
       chatBar,
@@ -125,6 +126,11 @@ export const register: Register = on => {
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
       width: e.props.bodyColumns,
     })
+    } catch (failure) {
+      // A draw that throws shows why, in red, instead of leaving no bar at all.
+      return h(elements.Text, { color: '#EF4444' }, `chat bar failed to draw: ${failure instanceof Error ? `${failure.message}
+${failure.stack ?? ''}` : String(failure)}`)
+    }
   })
 
   // The files pane beside the chat: a fidelity's files or its validation report, never drawn in the chat itself.
