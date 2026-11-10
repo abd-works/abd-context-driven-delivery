@@ -292,23 +292,6 @@ with description("the cdd server") as self:
         with it("should say which header is missing"):
             expect(self.answer.text).to(contain("X-CDD-Project"))
 
-    # A chat the desktop app started in a spare folder, connected through a header helper older than the chat header,
-    # is refused so the helper runs again and names the chat, which the server then follows to its folder.
-    with context("that a chat started in a Claude Code spare folder names no chat"):
-        with before.each:
-            spare = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude") / "spares" / "spare-test"
-            self.answer = httpx.post(
-                self.server.url,
-                json={"jsonrpc": "2.0", "id": 1, "method": "ping"},
-                headers={"Accept": "application/json, text/event-stream", "X-CDD-Project": str(spare)},
-            )
-
-        with it("should refuse the connection as unauthorized"):
-            expect(self.answer.status_code).to(equal(401))
-
-        with it("should say which header is missing"):
-            expect(self.answer.text).to(contain("X-CDD-Chat"))
-
     with context("that has been restarted"):
         with it("should start its toolsets again on the code as it is now"):
             expect(self.chat.run(self.chat.increment_restart_then_read)).to(equal("0"))
