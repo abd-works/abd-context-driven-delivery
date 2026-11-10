@@ -32,9 +32,13 @@ OPEN_WORKTREE = "worktree"
 
 
 def own_worktree_of(branch: Branch) -> Worktree | None:
-    """The worktree beside the repository that has branch checked out; none while the repository itself has it, since
-    git lists the main checkout among its worktrees too."""
-    return None if branch.is_checked_out else branch.worktree
+    """The linked worktree beside the main clone that has branch checked out; none while the main clone itself has it,
+    since git lists the main clone among its worktrees too. Asked from inside that worktree, the branch is checked out
+    there, and the worktree is still its own."""
+    worktree = branch.worktree
+    if worktree is None or worktree.path == branch.repo.main_clone.root:
+        return None
+    return worktree
 
 
 class TicketCheckout:
@@ -228,7 +232,14 @@ class TicketCheckout:
         if worktree is None or not {LEAVE_DELETE_WORKTREE, LEAVE_DELETE_BRANCH} & set(leaving):
             return
         worktree.close(f"{self._ticket.name}: leave session")
+        self._work_from_main_clone()
         self._ticket.board.reread()
+
+    def _work_from_main_clone(self) -> None:
+        """The ticket may have been read from the worktree just deleted, where git can no longer run, so its branch is
+        read from the main clone from now on."""
+        self._repo = self._repo.main_clone
+        self.branch = self._repo.branch_named(self.branch.name)
 
     def _merge(self, branch: Branch, leaving: list[str]) -> None:
         """Merge the branch into the default branch and push it when leaving names merge; delete it, here and on

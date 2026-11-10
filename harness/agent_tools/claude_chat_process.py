@@ -51,20 +51,27 @@ class ClaudeChatProcess:
     def working_folder(self) -> Path | None:
         """The checkout holding the folder this process's session works in now; none when the process records no folder
         that is still there."""
-        folder = self._recorded_folder()
+        recorded = self._recorded("cwd")
+        folder = Path(recorded) if recorded else None
         if folder is None or not folder.is_dir():
             return None
         resolved = folder.resolve()
         return next((above for above in (resolved, *resolved.parents) if (above / ".git").exists()), resolved)
 
-    def _recorded_folder(self) -> Path | None:
+    @property
+    def session_id(self) -> str:
+        """The id of the session this process runs now, which names the chat's transcript; empty when it records none."""
+        return self._recorded("sessionId")
+
+    def _recorded(self, field: str) -> str:
+        """One field of the session file; empty when the file is gone, unreadable, or does not hold it."""
         if not self.session_file.is_file():
-            return None
+            return ""
         try:
-            recorded = json.loads(self.session_file.read_text(encoding="utf-8")).get("cwd")
+            value = json.loads(self.session_file.read_text(encoding="utf-8")).get(field)
         except (OSError, ValueError):
-            return None
-        return Path(recorded) if isinstance(recorded, str) and recorded else None
+            return ""
+        return value if isinstance(value, str) else ""
 
 
 class _ProcessTree:

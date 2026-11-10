@@ -70,8 +70,7 @@ class Worktree:
         work may be behind origin."""
         repository = self.repository
         try:
-            repository.fetch()
-            repository.pull()
+            repository.catch_up_with_origin()
         except RepoConnectError as exc:
             self.sync_failure = str(exc)
             logger.warning("worktree %s is not up to date with origin: %s", self.path, exc)
@@ -99,7 +98,9 @@ class Worktrees:
         return self._repo if folder == self._repo.root else self._repo.checkout_at(folder)
 
     def __iter__(self) -> Iterator[Worktree]:
-        listing = self._repo.git.run("worktree", "list", "--porcelain")
+        # Every checkout lists the same worktrees; the main clone lists them even after the checkout these were read
+        # from is removed.
+        listing = self._repo.main_clone.git.run("worktree", "list", "--porcelain")
         for block in listing.split("\n\n"):
             fields = dict(line.split(" ", 1) for line in block.splitlines() if " " in line)
             if "worktree" in fields:
@@ -170,12 +171,14 @@ class Worktrees:
     def remove(self, worktree: Worktree) -> None:
         """Stop the checkout's hook daemon, then remove worktree's folder and forget it, forcing the folder away when git
         cannot delete a locked checkout. A folder still there afterwards raises WorktreeNotRemovedError, so a close is
-        never reported done for a checkout that still exists."""
+        never reported done for a checkout that still exists. The main clone runs git for it, since these worktrees may
+        have been listed from inside the checkout being removed."""
         dest = worktree.path
+        git = self._repo.main_clone.git
         # The checkout's hook daemon runs from its folder; stopped first, it neither outlives the checkout nor holds it.
         HookDaemon(dest).stop()
         try:
-            self._repo.git.run("worktree", "remove", "--force", str(dest))
+            git.run("worktree", "remove", "--force", str(dest))
         except RepoConnectError as exc:
             logger.info("worktree remove failed; forcing directory delete: %s", exc)
         if dest.exists():
@@ -184,7 +187,7 @@ class Worktrees:
             self._force_remove_directory_windows(dest)
         if dest.exists():
             self._unregister_held(dest)
-        self._repo.git.run("worktree", "prune")
+        git.run("worktree", "prune")
 
     def _unregister_held(self, dest: Path) -> None:
         """A folder a running process works in (a chat, its shells) cannot be deleted on Windows. git forgets it all the

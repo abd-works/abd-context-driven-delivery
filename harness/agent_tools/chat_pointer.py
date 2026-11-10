@@ -11,6 +11,8 @@ from pathlib import Path
 
 # A chat id becomes part of a file pattern, so only the letters, digits, and dashes of an id may reach it.
 _CHAT_ID = re.compile(r"[0-9A-Za-z-]+")
+# What a connect script sends when its IDE names no chat, and what the server writes for a chat it cannot name.
+_NOT_A_CHAT = ("unnamed", "unknown", "no-chat")
 _IN_LOG_LINE = re.compile(
     r" ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}) (.+)$",
     re.IGNORECASE,
@@ -72,6 +74,15 @@ class ChatPointer:
         Claude projects folder, in the folder of the project the chat started in. None when no such transcript is there."""
         found = cls._claude_transcript(chat_id)
         return cls.of(chat_id, found) if found is not None else None
+
+    @classmethod
+    def from_request(cls, chat_id: str) -> ChatPointer | None:
+        """The chat a request's headers name by its id: with its transcript when one is found, else by its id alone, so
+        what the chat keeps open stays its own; none when the id is empty or is not a chat id."""
+        cleaned = (chat_id or "").strip()
+        if not _CHAT_ID.fullmatch(cleaned) or cleaned in _NOT_A_CHAT:
+            return None
+        return cls.from_claude_chat(cleaned) or cls(cleaned)
 
     @classmethod
     def from_claude_session(cls, chat_id: str) -> ChatPointer | None:

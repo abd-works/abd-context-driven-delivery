@@ -649,7 +649,16 @@ class McpHost:
         """The call as the chat sent it: the tool it names, the project its header names, and the chat its arguments
         name, answered by this host for that chat."""
         resolved = self._checkout_server.resolve_call_name(name)
-        return ToolCall.sent(arguments, self._requested_project(resolved), tool=resolved, mcp_host=self, answers_a_chat=True)
+        return ToolCall.sent(arguments, self._requested_project(resolved), tool=resolved, mcp_host=self, answers_a_chat=True, sender=self._requesting_chat())
+
+    def _requesting_chat(self) -> ChatPointer | None:
+        """The chat the request comes from, so what it keeps open is its own and never shared with every chat in the
+        same folder: the session the Claude Code process ``X-CDD-Chat-Process`` names runs now, else the chat
+        ``X-CDD-Chat`` names; none when the request names neither."""
+        headers = self._request_headers()
+        process = ClaudeChatProcess.from_header(headers.get(CHAT_PROCESS_HEADER))
+        running = process.session_id if process is not None else ""
+        return ChatPointer.from_request(running or headers.get(CHAT_HEADER) or "")
 
     async def _answer_off_loop(self, call: ToolCall) -> object:
         """Run the call on a worker thread, because a synchronous call on the event loop holds every other chat's
@@ -696,11 +705,7 @@ class McpHost:
         connects, so the project header holds the folder the chat started in, such as the desktop app's spare folder,
         which is wrong once the chat moves. Only ``cdd.ping`` and ``cdd.restart`` work without
         one; anything else would act on whichever folder the server started in."""
-        try:
-            request = self._protocol.request_context.request
-        except LookupError:
-            request = None
-        headers = request.headers if request is not None else {}
+        headers = self._request_headers()
         named = headers.get(PROJECT_HEADER)
         if tool in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL):
             return Path(named) if named else None
@@ -714,6 +719,14 @@ class McpHost:
         if project.resolve() == self._claude_settings:
             raise ProjectIsClaudeSettings(tool, project)
         return project
+
+    def _request_headers(self) -> Any:
+        """The headers of the request being answered; none for a call made outside a request."""
+        try:
+            request = self._protocol.request_context.request
+        except LookupError:
+            return {}
+        return request.headers if request is not None else {}
 
     def _folder_of_chat_process(self, pid: str | None) -> Path | None:
         process = ClaudeChatProcess.from_header(pid)

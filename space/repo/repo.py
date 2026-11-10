@@ -11,7 +11,7 @@ from harness.agent_tools.agent_tools import tool_subject
 from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command
 from harness.mcp.mcp_server import long_call, mcp
-from harness.process.git import Git
+from harness.process.git import Git, RepoConnectError
 from space.repo.latest_release import LatestRelease
 from space.repo.worktree import Worktree, Worktrees
 from harness.agent_tools.tool_call import ToolCall
@@ -19,6 +19,8 @@ from space.work_state import WorkState
 
 # A file git reports as changed that is the hook server's running log, not work: it never blocks a switch or a close.
 _RUNTIME_LOG = "events.log"
+# The session files every branch only appends to, which a merge keeps both sides of.
+_UNION_MERGED_LOGS = (".sessions/**/session.log merge=union", ".sessions/**/session.err merge=union")
 
 
 class BranchNameRequiredError(ValueError):
@@ -234,7 +236,20 @@ class Repo:
         return self.current_commit
 
     def push_upstream(self) -> None:
+        """Push the current branch to origin, first merging in what origin's copy has that this branch lacks, so a push
+        never fails because work was pushed to the branch from elsewhere."""
+        self.catch_up_with_origin()
         self.git.run("push", "-u", "origin", self.current_branch.name)
+
+    def catch_up_with_origin(self) -> None:
+        """Merge origin's copy of the current branch into it when origin has commits this branch lacks; nothing when
+        origin has no copy yet or this branch already holds every commit of it."""
+        branch = self.current_branch.name
+        self.fetch()
+        tracked = f"origin/{branch}"
+        if not self.has_ref(f"refs/remotes/{tracked}") or self.git.succeeds("merge-base", "--is-ancestor", tracked, "HEAD"):
+            return
+        self._merge(tracked, "")
 
     def needs_push(self) -> bool:
         """True when origin has no copy of the current branch yet or the branch is ahead of it. A git failure is raised,
@@ -247,15 +262,36 @@ class Repo:
     def fetch(self) -> None:
         self.git.run("fetch", "origin")
 
-    def pull(self) -> None:
-        self.git.run("pull", "--ff-only")
-
     def merge_from(self, other: Branch, message: str = "") -> str:
         """Merge other into the current branch without checking other out."""
         if other == self.current_branch:
             return self.current_commit
-        self.git.run("merge", other.name, *(["-m", message] if message else ["--no-edit"]))
+        self._merge(other.name, message)
         return self.current_commit
+
+    def _merge(self, ref: str, message: str) -> None:
+        """Merge ref into the current branch. Every branch appends to the same session logs, so those merge by keeping
+        the lines of both sides instead of stopping the merge on a conflict."""
+        self._merge_session_logs_by_union()
+        try:
+            self.git.run("merge", ref, *(["-m", message] if message else ["--no-edit"]))
+        except RepoConnectError:
+            # A merge left half done blocks every later checkout and commit, so the checkout goes back as it was.
+            self.git.succeeds("merge", "--abort")
+            raise
+
+    def _merge_session_logs_by_union(self) -> None:
+        """Tell git, in this repository's own attributes file, which no checkout commits, to merge session logs by
+        union: each line either side wrote is kept."""
+        common = Path(self.git.run("rev-parse", "--git-common-dir"))
+        attributes = (common if common.is_absolute() else self.root / common) / "info" / "attributes"
+        written = attributes.read_text(encoding="utf-8") if attributes.is_file() else ""
+        missing = [line for line in _UNION_MERGED_LOGS if line not in written.splitlines()]
+        if not missing:
+            return
+        attributes.parent.mkdir(parents=True, exist_ok=True)
+        lead = "" if not written or written.endswith("\n") else "\n"
+        attributes.write_text(written + lead + "".join(f"{line}\n" for line in missing), encoding="utf-8")
 
     def _relative(self, path: str | Path) -> str:
         resolved = Path(path).resolve()
@@ -563,20 +599,24 @@ class Branch:
             repository.push_upstream()
 
     def land_on_default(self) -> None:
-        """Merge this branch into the default branch on this clone and push the default branch."""
-        repository = self._repo
+        """Merge this branch into the default branch in the main clone and push the default branch. A linked worktree
+        cannot check the default branch out while the main clone has it, and may be gone by now, so the main clone does
+        the merge whichever checkout this branch was found from."""
+        repository = self._repo.main_clone
         default = repository.default_branch
         repository.branch_named(default).check_out()
-        repository.pull()
+        repository.catch_up_with_origin()
         repository.merge_from(self, message=f"merge {self.name} into {default}")
         repository.push_upstream()
 
     def delete(self, unmerged: bool = False) -> None:
         """Delete this branch here and on origin. git refuses a branch not merged into the default branch unless
-        unmerged says the person chose to delete it as it is."""
-        self._repo.git.run("branch", "-D" if unmerged else "-d", self.name)
-        if self._repo.has_ref(f"refs/remotes/origin/{self.name}"):
-            self._repo.git.run("push", "origin", "--delete", self.name)
+        unmerged says the person chose to delete it as it is. The main clone deletes it, since a linked worktree this
+        branch was found from may be removed already."""
+        repository = self._repo.main_clone
+        repository.git.run("branch", "-D" if unmerged else "-d", self.name)
+        if repository.has_ref(f"refs/remotes/origin/{self.name}"):
+            repository.git.run("push", "origin", "--delete", self.name)
 
     def close(self, commit_message: str = "branch: close") -> None:
         """Save this branch, land it on the default branch, and delete it here and on origin. Refuses the default

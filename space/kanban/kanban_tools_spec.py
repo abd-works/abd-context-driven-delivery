@@ -907,13 +907,14 @@ with description("the board tools") as self:
                 title="Sign up",
             )
 
-        with it("should name review as the next action"):
-            expect(_next_action(self.project.ticket_json("sign-up"))).to(equal("review"))
+        # Review is never required, so a story map generated and validated without violations is done.
+        with it("should name generate on the next fidelity as the next action"):
+            expect(_next_action(self.project.ticket_json("sign-up"))).to(equal("generate"))
 
         # (S) Person --> Invoke Next Fidelity Action
         with it("should name each fidelity's own next action"):
             ticket = self.project.ticket_json("sign-up")
-            expect((progress_in(ticket, "stories-story-map")["next_action"], progress_in(ticket, "stories-scenarios")["next_action"])).to(equal(("review", "generate")))
+            expect((progress_in(ticket, "stories-story-map")["next_action"], progress_in(ticket, "stories-scenarios")["next_action"])).to(equal(("", "generate")))
 
         # The validating agent adds its judgment to the report after validate has logged its graph's result.
         with context("with a report whose judgment fails rules the graph passed"):

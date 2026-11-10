@@ -88,13 +88,15 @@ class ToolCall:
         tool: str = "",
         mcp_host: Any = None,
         answers_a_chat: bool = False,
+        sender: ChatPointer | None = None,
     ) -> ToolCall:
         """A call as a chat sent it: the chat its arguments name is taken out of them and kept as the call's chat, so
-        the tool is handed only its own arguments. A ``chat_folder`` argument names the folder the chat works in now,
-        and is the call's project in place of project, so its sessions are read from that folder's checkout."""
+        the tool is handed only its own arguments; sender, the chat the request itself names, is the call's chat when
+        the arguments name none. A ``chat_folder`` argument names the folder the chat works in now, and is the call's
+        project in place of project, so its sessions are read from that folder's checkout."""
         chat, remaining = ChatPointer.taken_from(arguments)
         chat_folder = str(remaining.pop(CHAT_FOLDER_ARGUMENT, "") or "").strip()
-        return cls(remaining, chat_folder or project, chat, tool=tool, mcp_host=mcp_host, answers_a_chat=answers_a_chat)
+        return cls(remaining, chat_folder or project, chat or sender, tool=tool, mcp_host=mcp_host, answers_a_chat=answers_a_chat)
 
     @property
     def chat_id(self) -> str:

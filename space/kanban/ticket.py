@@ -27,8 +27,10 @@ from space.kanban.board import (
 from space.kanban.format_choice import FormatChoice
 from space.kanban.report import Report, ReportFile
 from space.kanban.ticket_checkout import LEAVE_DELETE_BRANCH, LeaveChoices, OpenChoices, TicketCheckout
+from harness.process.git import RepoConnectError
 from space.repo.repo import Branch
-from space.session import Session
+from space.repo.worktree import WorktreeNotRemovedError
+from space.session import Session, Sessions
 from space.session.session import MAIN_SESSION_NAME
 from space.session.session_log import LogEntry
 from space.session.file_manager import FileEntry
@@ -283,8 +285,18 @@ class Ticket(Card):
         if active is not None and active.name != self.name:
             active.leave_for_another(leaving or [])
         self.checkout.open(opening or [])
-        self._board.sessions.switch(self.name)
+        self._sessions_holding_its_folder.switch(self.name)
         return self
+
+    @property
+    def _sessions_holding_its_folder(self) -> Sessions:
+        """The sessions of the checkout that holds the ticket's session folder: its own worktree once opening it there
+        moved the folder in, else the board's. Switching through the board's sessions then would make the folder again
+        in the checkout it left."""
+        worktree = self.checkout.worktree
+        if worktree and (Path(worktree) / self._board.sessions.folder.name / self.name).is_dir():
+            return Sessions.of_project(Path(worktree))
+        return self._board.sessions
 
     def leave_for_another(self, leaving: list[str]) -> None:
         """A session whose branch is deleted has nowhere left for its work, so it closes; any other is only left."""
@@ -355,10 +367,18 @@ class Ticket(Card):
             raise MainStaysOpenError("close")
         chosen = leaving or []
         self.checkout.write_handoff(chosen)
-        # A worktree something still holds open fails to delete; deleting it first stops the close with nothing changed.
-        self.checkout.free_worktree(chosen)
+        kept_in = self._session.session_path.parent
+        # The folder goes among the main clone's closed sessions before the worktree is deleted, since a ticket opened in
+        # its own worktree keeps its folder there. A worktree something still holds open fails to delete, and the folder
+        # then goes back, so the close stops with nothing changed.
+        self._session.move_to_closed()
+        try:
+            self.checkout.free_worktree(chosen)
+        except (WorktreeNotRemovedError, RepoConnectError):
+            self._session.move_back_to(kept_in)
+            raise
         self._session.close()
-        closed = self._board.ticket_of(self._session.move_to_closed())
+        closed = self._board.ticket_of(self._session)
         # The work is saved after the folder moves, so the move is committed with it.
         self.checkout.save_work(chosen)
         self.checkout.return_to_default_branch()
