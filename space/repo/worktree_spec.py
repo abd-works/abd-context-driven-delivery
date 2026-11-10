@@ -13,7 +13,6 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from space.repo.repo import Repo  # noqa: E402
-from space.repo.worktree import WorktreeNotRemovedError  # noqa: E402
 from space.work_state import WorkState  # noqa: E402
 
 
@@ -88,17 +87,17 @@ with description("a worktree opened for a branch") as self:
             self.worktrees.remove(self.opened)
             expect(self.opened.path.exists()).to(be_false)
 
-    with context("whose folder cannot be removed"):
+    with context("whose folder a running program holds open"):
         with before.each:
             self.opened = Repo(self.clone).branch_named("feature/a").open_in_worktree()
             self.worktrees = Repo(self.clone).worktrees
             # Stands in for a checkout a running program holds open: every way of deleting the folder leaves it there.
             self.worktrees._rmtree_logged = lambda folder: None
             self.worktrees._force_remove_directory_windows = lambda folder: False
-            self.opened.path.joinpath(".git").unlink()
 
-        with it("should say the worktree was not removed, naming its folder"):
-            expect(lambda: self.worktrees.remove(self.opened)).to(raise_error(WorktreeNotRemovedError))
+        with it("should leave git no longer listing the worktree"):
+            self.worktrees.remove(self.opened)
+            expect(Repo(self.clone).branch_named("feature/a").worktree).to(be_none)
 
 
 with description("a branch on a clone") as self:

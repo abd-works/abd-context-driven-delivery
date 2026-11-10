@@ -17,8 +17,6 @@ const LEFT_STEPS: Record<string, string> = { handoff: 'handoff written', commit:
 const DELETE_WORKTREE = 'delete_worktree'
 // Deleting a branch deletes the worktree that has it checked out, so the chat moves out for it too.
 const DELETE_BRANCH = 'delete_branch'
-// Asks the board to keep the worktree the chat could not leave; a branch deleted with it goes from origin only.
-const KEEP_WORKTREE = 'keep_worktree'
 
 // ticket.close refused to close the session. reason is the server's own text.
 export class CloseRefused {
@@ -31,19 +29,19 @@ async function leftWorktreeFor($: EngineInterface, leaving: string[]): Promise<s
   return leaving.includes(DELETE_WORKTREE) || leaving.includes(DELETE_BRANCH) ? moveToMainCheckout($) : ''
 }
 
-// A switch or close goes ahead even when the chat could not leave its worktree: the worktree is kept, a branch chosen
-// for deleting is still deleted on origin, and the person is told the worktree was kept.
-async function leavingWithoutDeletes($: EngineInterface, leaving: string[], action: string): Promise<string[]> {
+// A switch or close goes ahead even when the chat could not leave its worktree: the board still deletes the worktree
+// and branch, and git forgets a folder the chat holds open, which is left on disk until it is free.
+async function leftWorktreeOrNot($: EngineInterface, leaving: string[], action: string): Promise<string[]> {
   const stuck = await whileBusy($, 'Moving this chat out of its worktree', () => leftWorktreeFor($, leaving))
   if (!stuck) return leaving
-  await showFailure($, `${action}, but its worktree was kept: ${stuck}`)
-  return [...leaving.filter(step => step !== DELETE_WORKTREE), KEEP_WORKTREE]
+  $.ui.toast(`${action}; this chat was still in its worktree, so that folder stays on disk until it is free`)
+  return leaving
 }
 
 export async function activateSession($: EngineInterface, sessionName: string): Promise<ChatBarClient> {
   const view = await currentChatBarView($)
   await cancelSwitch($)
-  const leaving = await leavingWithoutDeletes($, view.leaving, `${sessionName} opened`)
+  const leaving = await leftWorktreeOrNot($, view.leaving, `${sessionName} opens`)
   const opening = view.opening
   const after = await whileBusy($, `Opening ${sessionName}`, () => activatedSession($, sessionName, leaving, opening))
   if (!after) return currentChatBar($)
@@ -111,7 +109,7 @@ export async function openClose($: EngineInterface, chatBar: ChatBarClient): Pro
 export async function closeSession($: EngineInterface, chatBar: ChatBarClient): Promise<ChatBarClient | CloseRefused> {
   const view = await currentChatBarView($)
   await cancelClose($)
-  const leaving = await leavingWithoutDeletes($, view.leaving, `${chatBar.title} closed`)
+  const leaving = await leftWorktreeOrNot($, view.leaving, `${chatBar.title} closes`)
   const after = await whileBusy($, `Closing ${chatBar.sessionName}`, () => closedSession($, chatBar, leaving))
   if (after instanceof CloseRefused) return after
   // With the session closed, the chat goes back to the main checkout, which closing returned to the default branch.

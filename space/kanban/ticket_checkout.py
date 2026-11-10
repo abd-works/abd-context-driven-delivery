@@ -21,9 +21,6 @@ LEAVE_PUSH = "push"
 LEAVE_MERGE = "merge"
 LEAVE_DELETE_BRANCH = "delete_branch"
 LEAVE_DELETE_WORKTREE = "delete_worktree"
-# Named with delete_branch when the chat could not leave the ticket's worktree: the worktree stays, and with it the
-# branch it has checked out, so the branch is deleted on origin only.
-LEAVE_KEEP_WORKTREE = "keep_worktree"
 LEAVE_HANDOFF = "handoff"
 # What leaving does to the branch itself, beyond saving the work on it.
 LEAVE_BRANCH_STEPS = {LEAVE_MERGE, LEAVE_DELETE_BRANCH, LEAVE_DELETE_WORKTREE}
@@ -189,7 +186,7 @@ class TicketCheckout:
         delete_worktree or delete_branch: git deletes no branch a worktree has checked out, so deleting the branch takes
         its worktree with it. A merge needs neither, since the default branch's checkout merges it."""
         worktree = own_worktree_of(branch)
-        if worktree is None or LEAVE_KEEP_WORKTREE in leaving or not {LEAVE_DELETE_WORKTREE, LEAVE_DELETE_BRANCH} & set(leaving):
+        if worktree is None or not {LEAVE_DELETE_WORKTREE, LEAVE_DELETE_BRANCH} & set(leaving):
             return
         worktree.close(f"{self._ticket.name}: leave session")
         self._ticket.board.reread()
@@ -199,9 +196,7 @@ class TicketCheckout:
         origin, when leaving names delete_branch. Each is its own choice: deleting never merges."""
         if LEAVE_MERGE in leaving:
             branch.land_on_default()
-        if LEAVE_DELETE_BRANCH in leaving and LEAVE_KEEP_WORKTREE in leaving:
-            branch.delete_on_origin()
-        elif LEAVE_DELETE_BRANCH in leaving:
+        if LEAVE_DELETE_BRANCH in leaving:
             # git deletes no branch the checkout is on, so the checkout goes back to the default branch first.
             if branch.is_checked_out:
                 self._repo.branch_named(self._repo.default_branch).check_out()

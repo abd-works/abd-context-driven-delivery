@@ -183,8 +183,18 @@ class Worktrees:
         if dest.exists():
             self._force_remove_directory_windows(dest)
         if dest.exists():
-            raise WorktreeNotRemovedError(dest)
+            self._unregister_held(dest)
         self._repo.git.run("worktree", "prune")
+
+    def _unregister_held(self, dest: Path) -> None:
+        """A folder a running process works in (a chat, its shells) cannot be deleted on Windows. git forgets it all the
+        same once its .git link is gone, so its branch is free to delete; the folder left on disk holds no checkout."""
+        link = dest / ".git"
+        if link.is_file():
+            link.unlink()
+        if (dest / ".git").exists():
+            raise WorktreeNotRemovedError(dest)
+        logger.warning("worktree %s is in use; git no longer lists it, and its folder is left to delete once free", dest)
 
     def _force_remove_directory_windows(self, path: Path) -> bool:
         """Last resort when git/shutil cannot delete a locked checkout (Windows only)."""
