@@ -136,15 +136,10 @@ export async function followSession($: EngineInterface, chatBar: ChatBarClient):
   await readChatFolder($, chatBar)
 }
 
-// The desktop app's change_directory sometimes only adds the folder to the chat the first time, and moves the chat
-// when asked again, so a move that has not happened is asked once more before it counts as refused.
-const MOVE_ASKS = 2
-
+// Asks the move once: the agent's change_directory is asked a single time, and the chat is waited on through the
+// late-move limit before the move counts as refused.
 async function movedTo($: EngineInterface, folder: string): Promise<boolean> {
-  for (let ask = 0; ask < MOVE_ASKS; ask += 1) {
-    const asked = await moveChatTo($, folder)
-    if (!asked) return false
-    if (await arrivedIn($, folder, asked)) return true
-  }
-  return arrivedLate($, folder)
+  const asked = await moveChatTo($, folder)
+  if (!asked) return false
+  return (await arrivedIn($, folder, asked)) || (await arrivedLate($, folder))
 }
