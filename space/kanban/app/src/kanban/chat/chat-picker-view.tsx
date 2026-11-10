@@ -6,7 +6,7 @@ export function ChatPickerView() {
   return (
     <label className="header-field">
       <span>Chat</span>
-      <select className="chat-picker" aria-label="Chat to send commands to" value={state.targetChat ?? ''} onChange={event => page.pickChat(event.target.value)}>
+      <select className="chat-picker" aria-label="Chat to send commands to" value={state.targetChat ?? ''} onChange={event => void page.pickChat(event.target.value)}>
         {state.targetChat ? null : <option value="">Pick a chat</option>}
         {state.chats.map(chat => {
           const shown = page.chatName(chat)

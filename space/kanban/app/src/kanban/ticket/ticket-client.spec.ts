@@ -273,14 +273,14 @@ describe('Open Ticket Chat', () => {
       expect((await clicked()).store.state.targetChat).toBe('ticket-chat')
     })
 
-    it('should name that chat by the ticket', async () => {
+    it('should name that chat by the ticket, then by its own name', async () => {
       const page = await clicked()
       const chat = page.store.state.chats.find(entry => entry.id === 'ticket-chat')!
-      expect(page.chatName(chat)).toBe(ACTIVE)
+      expect(page.chatName(chat)).toBe(`${ACTIVE} · abd · first words`)
     })
   })
 
-  // A chat a person picks while the ticket is selected stays the ticket's chat, in place of the one in its worktree.
+  // A chat a person picks while the ticket is selected is assigned to it, in place of the one in its worktree.
   describe('with another chat picked while the ticket is selected', () => {
     async function pickedThenClicked() {
       const { page } = await board.page()
@@ -290,10 +290,16 @@ describe('Open Ticket Chat', () => {
       await page.chat.refresh()
       await page.reader.refresh()
       await ticketOn(page, ACTIVE).choose()
-      page.pickChat('other-chat')
+      await page.pickChat('other-chat')
       await ticketOn(page, ACTIVE).choose()
       return page
     }
+
+    it('should list the picked chat by the ticket and its own name', async () => {
+      const page = await pickedThenClicked()
+      const chat = page.store.state.chats.find(entry => entry.id === 'other-chat')!
+      expect(page.chatName(chat)).toBe(`${ACTIVE} · ${chat.name || chat.id}`)
+    })
 
     it('should choose the picked chat again when the ticket is clicked', async () => {
       expect((await pickedThenClicked()).store.state.targetChat).toBe('other-chat')

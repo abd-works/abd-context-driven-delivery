@@ -92,20 +92,6 @@ export class ChatClient {
     void this.readMessages()
   }
 
-  // A chat a person picks while a ticket is selected becomes that ticket's chat; picking none gives it back to the chat
-  // working in its worktree.
-  chooseFor(ticket: string, chat: string): void {
-    const { [ticket]: _earlier, ...others } = this.store.state.ticketChats
-    this.store.change({ ticketChats: chat ? { ...others, [ticket]: chat } : others })
-    this.choose(chat)
-  }
-
-  // The chat a person picked for ticket, while it is connected.
-  pickedFor(ticket: string): ChatData | undefined {
-    const picked = this.store.state.ticketChats[ticket]
-    return picked ? this.connected(picked) : undefined
-  }
-
   // A message the chat took but did not show goes back in its queue, and the chat takes it again.
   resend(message: string): Promise<void> {
     return this.actOnTarget(chat => chat.resend(message))
@@ -178,7 +164,8 @@ export class ChatClient {
   }
 }
 
-// One ticket's chat: the one a person picked for it, else the connected chat Python names as working on it. The ticket owns it, so whatever the board sends
+// One ticket's chat, the connected chat Python names as its chat: the one a person assigned to it, else the one named
+// after it, else the one working in its worktree. The ticket owns it, so whatever the board sends
 // for the ticket goes to that chat without a caller finding it again.
 export class TicketChat {
   constructor(
@@ -187,9 +174,8 @@ export class TicketChat {
     private readonly working: { id: string } | null,
   ) {}
 
-  // The chat a person picked for the ticket comes first, then the one Python finds working in its worktree.
   get found(): ChatData | undefined {
-    return this.chats.pickedFor(this.ticket) ?? (this.working ? this.chats.connected(this.working.id) : undefined)
+    return this.working ? this.chats.connected(this.working.id) : undefined
   }
 
   get isOpening(): boolean {

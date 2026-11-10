@@ -76,17 +76,23 @@ export class BoardPage {
     await Promise.all([this.tiles.reload(), this.panels.reload(), this.files.reload()])
   }
 
-  // A ticket's chat, the one a person picked for it or the one Python finds working on it, goes by the ticket's name.
+  // A chat keeps its own name in the chat list, after the name of the ticket it serves, the ticket it was picked for or
+  // the one Python finds it working on, so a person still recognises the chat they picked.
   chatName(chat: ChatData): string {
-    return this.board.tickets.find(ticket => ticket.chat.found?.id === chat.id)?.name ?? (chat.name || chat.id)
+    const own = chat.name || chat.id
+    const ticket = this.board.tickets.find(entry => entry.chat.found?.id === chat.id)
+    return ticket ? `${ticket.name} · ${own}` : own
   }
 
-  // A chat picked in the chat list while a ticket is selected becomes that ticket's chat; with no ticket selected it is
-  // only the chat commands go to when no ticket has one.
-  pickChat(chat: string): void {
+  // A chat picked in the chat list while a ticket is selected is assigned to that ticket, kept in its session.json, so
+  // the board sends its commands there from now on; with no ticket selected it is only the chat commands go to when no
+  // ticket has one.
+  async pickChat(chat: string): Promise<void> {
+    this.chat.choose(chat)
     const selected = this.board.tickets.find(ticket => ticket.address === this.store.state.selected)
-    if (selected) this.chat.chooseFor(selected.name, chat)
-    else this.chat.choose(chat)
+    if (!selected) return
+    await selected.assignChat(chat)
+    await this.reader.refresh()
   }
 
   ticket(json: TicketData): TicketClient {

@@ -25,6 +25,8 @@ LEAVE_DELETE_WORKTREE = "delete_worktree"
 LEAVE_HANDOFF = "handoff"
 # What leaving does to the branch itself, beyond saving the work on it.
 LEAVE_BRANCH_STEPS = {LEAVE_MERGE, LEAVE_DELETE_BRANCH, LEAVE_DELETE_WORKTREE}
+# The session.json field that keeps the chat a person assigned to a ticket.
+ASSIGNED_CHAT = "chat"
 OPEN_BRANCH = "branch"
 OPEN_WORKTREE = "worktree"
 
@@ -89,12 +91,32 @@ class TicketCheckout:
 
     @property
     def chat(self) -> Chat | None:
-        """The connected chat working on the ticket: the one working in its worktree or a folder inside it, else one
-        whose mod names no folder and that is titled by the ticket's name, as the board titles the chat it opens for it."""
-        worktree = self.worktree
+        """The connected chat the ticket works in. A chat a person assigned to it, kept in its session.json, is its chat
+        and no other is looked for. Unassigned, it is the chat named after the ticket, as the board names the chat it
+        opens for it, else the one working in its worktree or a folder inside it. None while no such chat is connected,
+        and the board offers to open one."""
         chats = self._ticket.board.chats
-        working = next((chat for chat in chats if worktree and chat.folder and Path(chat.folder).resolve().is_relative_to(Path(worktree).resolve())), None)
-        return working or next((chat for chat in chats if not chat.folder and chat.name == self._ticket.name), None)
+        assigned = self.assigned_chat
+        if assigned:
+            return next((chat for chat in chats if chat.id == assigned), None)
+        named = next((chat for chat in chats if chat.name == self._ticket.name), None)
+        return named or self._chat_in_worktree(chats)
+
+    @property
+    def assigned_chat(self) -> str:
+        """The id of the chat a person assigned to the ticket; empty while none is."""
+        return str(self._ticket.session.fields.get(ASSIGNED_CHAT, "") or "")
+
+    def assign_chat(self, chat: str) -> None:
+        """Make chat, a chat's id, the ticket's chat from now on; an empty chat gives it back to the chat named after
+        it."""
+        self._ticket.session.save_fields(**{ASSIGNED_CHAT: chat})
+
+    def _chat_in_worktree(self, chats: list[Chat]) -> Chat | None:
+        worktree = self.worktree
+        if not worktree:
+            return None
+        return next((chat for chat in chats if chat.folder and Path(chat.folder).resolve().is_relative_to(Path(worktree).resolve())), None)
 
     @property
     def leave_choices(self) -> LeaveChoices:

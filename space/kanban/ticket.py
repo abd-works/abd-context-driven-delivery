@@ -226,10 +226,17 @@ class Ticket(Card):
     @property
     @data_field(key="working_chat", reference=True)
     def chat(self) -> Chat | None:
-        """The connected chat working on the ticket, which every command the board sends for it goes to, sent by its id as
-        working_chat: the one working in its worktree or a folder inside it, else one whose mod names no folder and that
-        is titled by the ticket's name, as the board titles the chat it opens for it. None while no chat works on it."""
+        """The connected chat the ticket works in, which every command the board sends for it goes to, sent by its id as
+        working_chat: the chat a person assigned to it, else the one named after the ticket, else the one working in its
+        worktree. None while no such chat is connected."""
         return self.checkout.chat
+
+    @mcp
+    @agent_tool
+    def assign_chat(self, chat: str = "") -> Ticket:
+        """Make chat, the id of a connected chat, ticket's chat, kept in its session.json, so every command the board sends for ticket goes there and no chat named after it is looked for; an empty chat gives ticket back to the chat named after it."""
+        self.checkout.assign_chat(chat)
+        return self
 
     @property
     @data_field

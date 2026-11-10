@@ -1213,6 +1213,32 @@ with description("the board tools") as self:
                     Chat.load("elsewhere").check_in(name="other", folder=str(self.project.root))
                     expect(self.project.ticket_json("sign-up")["working_chat"]).to(equal(None))
 
+                with it("should name the chat named after the ticket before the one in its worktree"):
+                    Chat.load("ticket-chat").check_in(name="first words", folder=str(self.opened / "src"))
+                    Chat.load("named").check_in(name="sign-up", folder=str(self.project.root))
+                    expect(self.project.ticket_json("sign-up")["working_chat"]).to(equal({"id": "named"}))
+
+                with context("that a person assigns another chat to"):
+                    with before.each:
+                        Chat.load("named").check_in(name="sign-up")
+                        Chat.load("picked").check_in(name="story map from design canvas backlog", folder=str(self.project.root))
+                        self.project.call("ticket.assign_chat", ticket="sign-up", chat="picked")
+
+                    with it("should name the assigned chat as its chat"):
+                        expect(self.project.ticket_json("sign-up")["working_chat"]).to(equal({"id": "picked"}))
+
+                    with it("should keep the assigned chat in the ticket's session.json"):
+                        session = json.loads((self.project.root / ".sessions" / "sign-up" / "session.json").read_text(encoding="utf-8"))
+                        expect(session["chat"]).to(equal("picked"))
+
+                    with it("should name no chat while the assigned one is not connected, rather than look for another"):
+                        Chat.load("picked")._folder.joinpath("chat.json").unlink()
+                        expect(self.project.ticket_json("sign-up")["working_chat"]).to(equal(None))
+
+                    with it("should give the ticket back to the chat named after it when the assignment is cleared"):
+                        self.project.call("ticket.assign_chat", ticket="sign-up", chat="")
+                        expect(self.project.ticket_json("sign-up")["working_chat"]).to(equal({"id": "named"}))
+
         with context("with the active ticket on no branch of its own"):
             with before.each:
                 Sessions(self.project.root).switch("pet-visits")
@@ -1365,7 +1391,7 @@ with description("the board tools") as self:
             names = set(self.project.server.tools)
             expect(names).to(equal({
                 "board.show", "board.overview", "board.open_main", "board.help", "board.folders", "stage.set_wip_limit",
-                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.leave_choices", "ticket.open_choices", "ticket.format_choices", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
+                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.leave_choices", "ticket.open_choices", "ticket.format_choices", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations", "ticket.assign_chat",
                 "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
                 "session.choose_workpath", "session.folder_files", "session.read_file",

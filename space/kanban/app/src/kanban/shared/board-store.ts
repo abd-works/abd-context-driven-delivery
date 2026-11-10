@@ -85,9 +85,6 @@ export type BoardState = {
   targetChat: string | null
   // The chat a person chose, kept while it is away so it is chosen again when it reconnects.
   pickedChat: string | null
-  // The chat a person picked for each ticket while it was selected, by ticket name: that ticket's commands go there and
-  // a press on its card chooses it again, in place of the chat Python finds working in its worktree.
-  ticketChats: Record<string, string>
   // When each ticket's new chat was opened, by ticket name, so a person clicking again does not open a second one.
   startingChats: Record<string, number>
   // The latest messages sent to the target chat, newest first, and whether the list of them is open.
@@ -105,7 +102,7 @@ const TOAST_MILLISECONDS = 3200
 const FAILURE_TOAST_MILLISECONDS = 6000
 const SAVED_KEY = 'cdd-session-board'
 
-type SavedLayout = Pick<BoardState, 'boardHeight' | 'panelWidths' | 'hidesDisabled' | 'pickedChat' | 'ticketChats'>
+type SavedLayout = Pick<BoardState, 'boardHeight' | 'panelWidths' | 'hidesDisabled' | 'pickedChat'>
 
 const initialState = (): BoardState => ({
   board: null,
@@ -129,7 +126,6 @@ const initialState = (): BoardState => ({
   chats: [],
   targetChat: null,
   pickedChat: null,
-  ticketChats: {},
   startingChats: {},
   messages: [],
   isMessagesOpen: false,
@@ -146,9 +142,9 @@ function savedLayout(): Partial<SavedLayout> {
   }
 }
 
-function saveLayout({ boardHeight, panelWidths, hidesDisabled, pickedChat, ticketChats }: BoardState): void {
+function saveLayout({ boardHeight, panelWidths, hidesDisabled, pickedChat }: BoardState): void {
   try {
-    globalThis.localStorage?.setItem(SAVED_KEY, JSON.stringify({ boardHeight, panelWidths, hidesDisabled, pickedChat, ticketChats }))
+    globalThis.localStorage?.setItem(SAVED_KEY, JSON.stringify({ boardHeight, panelWidths, hidesDisabled, pickedChat }))
   } catch {
     // The layout simply is not remembered in this browser.
   }
