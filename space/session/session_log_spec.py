@@ -53,7 +53,7 @@ with description("a session loop"):
         with it("should be one session object, which holds no chat of either"):
             repo = Path(tempfile.mkdtemp())
             (repo / ".git").mkdir()
-            Sessions(repo).switch("alpha", repo)
+            Sessions(repo).switch("alpha", repo, ToolCall.sent({"conversation_id": "chat-2"}, repo))
             first = ToolCall.sent({"conversation_id": "chat-1"}, repo).session_named(".sessions/alpha/session.json")
             second = ToolCall.sent({"conversation_id": "chat-2"}, repo).session
             expect(first is second).to(equal(True))
@@ -64,7 +64,8 @@ with description("a session loop"):
             self.repo = Path(tempfile.mkdtemp()).resolve()
             (self.repo / ".git").mkdir()
             (self.repo / "docs").mkdir()
-            Sessions(self.repo).switch("alpha", self.repo)
+            for chat in ("chat-1", "chat-2"):
+                Sessions(self.repo).switch("alpha", self.repo, ToolCall.sent({"conversation_id": chat}, self.repo))
             self.session = ToolCall.sent({"conversation_id": "chat-1"}, self.repo).session
 
         with it("should be the session object a call naming the checkout's top reads"):

@@ -678,7 +678,14 @@ class AgentToolSet(AgentToolSetOrigin):
         return self
 
     def session_for(self, call: ToolCall) -> Any:
-        """The session this toolset's tools log call in: the session open in the call's project."""
+        """The session this toolset's tools log call in: the session whose session.json the call names in ``session``,
+        as a board command names its ticket's, else the session the call's chat has open."""
+        named = call.arguments.get("session")
+        if isinstance(named, str) and named.strip().endswith("session.json"):
+            try:
+                return call.session_named(named.strip())
+            except LookupError:
+                pass
         return call.session
 
     @property
@@ -939,9 +946,10 @@ class AgentTool(AgentToolDestination):
     def answer(self, call: ToolCall) -> Any:
         """Answer call on its toolset made for it: log the call in the session it works in, then call the tool with each
         argument in the type its parameter declares."""
-        tool = self.on(self.toolset.for_call(call))
-        tool.log_session_invocation(call)
-        return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+        with call.being_answered():
+            tool = self.on(self.toolset.for_call(call))
+            tool.log_session_invocation(call)
+            return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
 
     def on(self, toolset: Any) -> AgentTool:
         """This tool on toolset, a toolset of the same class made for one call; the tool as it is when toolset is its

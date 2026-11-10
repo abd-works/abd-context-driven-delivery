@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 import threading
+import time
 from functools import cached_property
 from pathlib import Path
 
@@ -17,14 +19,18 @@ from harness.annotations.name import Name
 from space.repo.repo import Repo
 from space.session.file_manager import FileManager
 from space.session.session import COMPLETE_FOLDER, MAIN_SESSION_NAME, SESSION_FILE, Session, SessionNotFoundError
+from space.work_state import SESSIONS_FOLDER, WorkState
 
 BACKLOG_FOLDER = "_backlog"
 # Folders in `.sessions` whose names start with this are the ones the sessions share, such as the backlog.
 _SHARED_FOLDER_MARK = "_"
+# How long one ``git worktree list`` answers for, so a board read that loads every session asks git once.
+_WORKTREE_LISTING_SECONDS = 2.0
+_BRANCH_REF = "refs/heads/"
 
 
 class SessionNameRequiredError(ValueError):
-    """Raised when switch-session has no name and ``.sessions/session.json`` has no session or branch."""
+    """Raised when switch-session has no name and the chat has no session or branch open."""
 
     def __init__(self) -> None:
         super().__init__(
@@ -81,10 +87,11 @@ class BoardPractices:
 
 @agent_toolset
 class Sessions:
-    """The work sessions of one checkout: open ones in ``.sessions/{name}/``, closed ones in ``.sessions/_complete/``,
-    and the one saved as open in ``.sessions/session.json``. ``main`` works on the whole repository and is open when no
-    other is. The open session is read from that file each time it is asked for, so a switch or a close made by another
-    chat or by the hook server is seen at once.
+    """The work sessions of one checkout: open ones in ``.sessions/{name}/``, closed ones in ``.sessions/_complete/``.
+    Which one is open is kept per chat by the cdd server under ``~/.cdd`` (*WorkState*), never in the checkout: the
+    chat a call comes from keeps its own, and a call naming no chat keeps one for this checkout folder. ``main`` works
+    on the whole repository and is open when no other is. The open session is read each time it is asked for, so a
+    switch or a close made through another client of the same chat is seen at once.
 
     One *Session* is kept here for each session folder, made the first time it is read and read again from its folder
     on each ask, so every call in a session, from any chat, works on the same object, which holds that session's graph
@@ -95,9 +102,8 @@ class Sessions:
         # The checkout holding the project, made once: every session this loads works in it.
         self.repo = Repo.of_project(project)
         self.root = self.repo.root
-        # This checkout's own choice of open session. A linked worktree keeps its own, so a chat there never changes the
-        # session open in the main clone; in the main clone it is the repository's `work_state`.
-        self._state = self.repo.own_work_state
+        # One ``git worktree list``, read again after a moment, from which each session's root is derived.
+        self._worktree_listing: tuple[float, dict[str, Path]] = (0.0, {})
         self._held: dict[Path, Session] = {}
         self._held_lock = threading.Lock()
 
@@ -124,7 +130,7 @@ class Sessions:
     @property
     def folder(self) -> Path:
         """The `.sessions` folder that holds the sessions and what they share on the board."""
-        return self._state.sessions_folder
+        return self.root / SESSIONS_FOLDER
 
     @property
     def backlog_folder(self) -> Path:
@@ -138,7 +144,7 @@ class Sessions:
         preferred = self.folder / name
         candidates = [preferred]
         if name != MAIN_SESSION_NAME:
-            candidates.insert(0, self.repo.work_state.sessions_folder / name)
+            candidates.insert(0, self.repo.main_clone.root / SESSIONS_FOLDER / name)
         return next((folder for folder in candidates if (folder / SESSION_FILE).is_file()), preferred)
 
     def all(self) -> list[Session]:
@@ -179,13 +185,55 @@ class Sessions:
 
     def load(self, folder: Path) -> Session:
         """The session kept in folder, read without opening it: the one object these sessions hold for that folder,
-        with the workpath its session.json names now, so a change saved by another process is seen."""
+        working in the root ``root_of`` derives now, so a worktree opened or a workpath chosen since is seen."""
         session = self._held_at(Path(folder))
-        stored = session.fields.get("workpath", "")
-        workpath = Path(stored) if stored else self.root
-        if session.workpath is None or session.work_root != workpath.resolve():
+        workpath = self.root_of(session)
+        if session.workpath is None or session.work_root != workpath:
             session.workpath = workpath
         return session
+
+    def root_of(self, session: Session) -> Path:
+        """Where session writes, derived when asked and never saved on a switch: a workpath a person chose by hand in
+        its session.json, else its own worktree as git lists it, else this checkout."""
+        stored = str(session.fields.get("workpath", "") or "").strip()
+        chosen = Path(stored).resolve() if stored else None
+        # WHY: older switches saved the checkout itself, or a worktree since removed, as the workpath; neither was chosen.
+        if chosen is not None and chosen.is_dir() and chosen not in (self.root, self.repo.main_clone.root):
+            return chosen
+        if session.name and session.name != MAIN_SESSION_NAME:
+            worktree = self._worktree_of(session.name)
+            if worktree is not None:
+                return worktree
+        return self.root
+
+    def _worktree_of(self, name: str) -> Path | None:
+        """The linked worktree of the branch called name, else of the one branch whose name holds name as a whole word,
+        as git lists them now."""
+        listed = self._worktrees_by_branch()
+        if name in listed:
+            return listed[name]
+        word = re.compile(rf"(^|[/_-]){re.escape(name)}($|[/_-])")
+        matches = [folder for branch, folder in listed.items() if word.search(branch)]
+        return matches[0] if len(matches) == 1 else None
+
+    def _worktrees_by_branch(self) -> dict[str, Path]:
+        read_at, listed = self._worktree_listing
+        if read_at and time.monotonic() - read_at < _WORKTREE_LISTING_SECONDS:
+            return listed
+        main = self.repo.main_clone.root
+        try:
+            listing = self.repo.main_clone.git.run("worktree", "list", "--porcelain")
+        except (RuntimeError, OSError):  # a folder in no repository has no worktrees
+            listing = ""
+        listed = {}
+        for block in listing.split("\n\n"):
+            fields = dict(line.split(" ", 1) for line in block.splitlines() if " " in line)
+            folder = Path(fields["worktree"]).resolve() if fields.get("worktree") else None
+            branch = fields.get("branch", "").removeprefix(_BRANCH_REF)
+            if folder is not None and branch and folder != main and folder.is_dir():
+                listed[branch] = folder
+        self._worktree_listing = (time.monotonic(), listed)
+        return listed
 
     def _held_at(self, folder: Path) -> Session:
         """The one Session held for folder, made the first time it is asked for."""
@@ -205,63 +253,77 @@ class Sessions:
             self._held.pop(Path(moved_from).resolve(), None)
             self._held[session.session_path.resolve()] = session
 
+    def open_state(self, chat: str = "") -> WorkState:
+        """What chat keeps open, under ``~/.cdd``: the chat named, else the chat of the call being answered, else this
+        checkout folder's own entry, for a call that names no chat."""
+        if not chat:
+            call = ToolCall.answering()
+            chat = call.chat_id if call is not None else ""
+        return WorkState(self.root, chat)
+
+    def open_name_for(self, chat: str = "") -> str:
+        """The name of the session chat has open; main when none is."""
+        return self.open_state(chat).session or MAIN_SESSION_NAME
+
     @property
     def open_name(self) -> str:
-        """The name of the session saved as open; main when none is."""
-        return self._state.session or MAIN_SESSION_NAME
+        """The name of the session open for the call being answered; main when none is."""
+        return self.open_name_for()
 
-    def create(self, name: str, workpath: Path, *, title: str = "", scope: str = "", parent: str = "") -> Session:
-        """A new session called name, working in workpath, with the title, scope, and parent a board ticket shows saved
-        in its ``session.json``; it is not opened, because a session made for later, such as a board ticket, is not the
-        one being worked on."""
+    def create(self, name: str, workpath: Path | None = None, *, title: str = "", scope: str = "", parent: str = "") -> Session:
+        """A new session called name, its name, title, scope, and parent written once in its ``session.json``. workpath
+        is kept only when it is a folder chosen other than this checkout, since the root is otherwise derived. It is not
+        opened, because a session made for later, such as a board ticket, is not the one being worked on."""
         session = self._held_at(self.folder / Name(name).title_slug)
-        session.workpath = Path(workpath).resolve()
-        session.save()
-        session.save_fields(**{key: value for key, value in (("title", title), ("scope", scope), ("parent", parent)) if value})
+        chosen = Path(workpath).resolve() if workpath is not None else None
+        kept = chosen if chosen is not None and chosen != self.root else None
+        fields = (("name", session.name), ("title", title), ("scope", scope), ("parent", parent), ("workpath", str(kept) if kept else ""))
+        session.save_fields(**{key: value for key, value in fields if value})
+        session.workpath = self.root_of(session)
         session.log.seed_first_loop()
         return session
 
-    def open(self, session: Session, workpath: Path | None = None) -> Session:
-        """Make session the open session of this checkout, working in workpath when one is given."""
-        if workpath is not None:
-            session.workpath = Path(workpath).resolve()
-        session.save()
-        self._state.session = "" if session.name == MAIN_SESSION_NAME else session.name
+    def open(self, session: Session, chat: str = "") -> Session:
+        """Make session the one chat has open. Nothing is written in the checkout: the choice is kept under ``~/.cdd``."""
+        self.open_state(chat).session = "" if session.name == MAIN_SESSION_NAME else session.name
         return session
 
     @mcp
     @command(name="current-session")
     @agent_tool
-    def current(self) -> Session:
-        """The open session of this project; the main session, which works on the whole repository, when none is named."""
-        return self.load(self.folder_of(self.open_name))
+    def current(self, call: ToolCall | None = None) -> Session:
+        """The open session of this chat; the main session, which works on the whole repository, when none is named."""
+        return self.load(self.folder_of(self.open_name_for(call.chat_id if call is not None else "")))
 
     @mcp
     @command(name="switch-session")
     @agent_tool
-    def switch(self, name: str = "", workpath: Path | None = None) -> str:
-        """Open the session called ``name``, creating its folder when missing, and save it as the open session of this project. Returns how to keep its log.
+    def switch(self, name: str = "", workpath: Path | None = None, call: ToolCall | None = None) -> str:
+        """Open the session called ``name`` for this chat, creating its folder when missing. Returns how to keep its log.
 
-        ``name`` defaults to ``session`` in ``.sessions/session.json``, then to the saved ``branch``.
-        ``workpath`` is the folder it works in; a new session works in the checkout's top when none is given.
-        Does not touch branches or worktrees."""
-        wanted = self._name_to_switch_to(name)
+        ``name`` defaults to the session this chat has open, then to its open ``branch``.
+        ``workpath`` is a folder a new session works in; without one its root is derived: its worktree, else the checkout.
+        A switch writes nothing in the checkout and does not touch branches or worktrees."""
+        chat = call.chat_id if call is not None else ""
+        wanted = self._name_to_switch_to(name, chat)
         folder = self.folder_of(wanted)
-        is_kept = (folder / SESSION_FILE).is_file()
-        session = self.load(folder) if is_kept else self.create(wanted, workpath if workpath is not None else self.root)
-        return self.open(session, workpath).log.instructions()
+        is_kept = (folder / SESSION_FILE).is_file() or wanted == MAIN_SESSION_NAME
+        session = self.load(folder) if is_kept else self.create(wanted, workpath)
+        return self.open(session, chat).log.instructions()
 
-    def _name_to_switch_to(self, name: str) -> str:
-        cleaned = Name(name or self._state.session or self._state.branch_name).title_slug
+    def _name_to_switch_to(self, name: str, chat: str = "") -> str:
+        state = self.open_state(chat)
+        cleaned = Name(name or state.session or state.branch_name).title_slug
         if not cleaned:
             raise SessionNameRequiredError()
         return cleaned
 
     def close(self, session: Session) -> None:
-        """Close session: when it is the open one, main becomes the open session."""
-        if session.name != self.open_name:
+        """Close session: when it is the one the call's chat has open, main becomes its open session."""
+        state = self.open_state()
+        if session.name != (state.session or MAIN_SESSION_NAME):
             return
-        self._state.session = ""
+        state.session = ""
 
 
 class CallSessions:
@@ -292,7 +354,7 @@ class CallSessions:
         return self.of_project(project).current()
 
     def open_in(self, call: ToolCall) -> Session:
-        return self.saved_in(call.project)
+        return self.of_project(call.project).current(call)
 
     def named_in(self, session_file: str, call: ToolCall) -> Session:
         project = call.project if call.project is not None else Path(session_file).resolve().parent

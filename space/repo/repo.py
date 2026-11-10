@@ -14,6 +14,7 @@ from harness.mcp.mcp_server import long_call, mcp
 from harness.process.git import Git
 from space.repo.latest_release import LatestRelease
 from space.repo.worktree import Worktree, Worktrees
+from harness.agent_tools.tool_call import ToolCall
 from space.work_state import WorkState
 
 # A file git reports as changed that is the hook server's running log, not work: it never blocks a switch or a close.
@@ -21,12 +22,12 @@ _RUNTIME_LOG = "events.log"
 
 
 class BranchNameRequiredError(ValueError):
-    """Raised when a branch command has no name and none is saved in ``.sessions/session.json``."""
+    """Raised when a branch command has no name and none is saved in the chat's open state under ``~/.cdd``."""
 
     def __init__(self) -> None:
         super().__init__(
             "branch name is required: pass name, or switch to a branch first so "
-            "it is saved in .sessions/session.json"
+            "it is saved as this chat's open branch"
         )
 
 
@@ -62,10 +63,10 @@ class CommitMessageRequiredError(ValueError):
 
 
 class NoOpenWorktreeError(RuntimeError):
-    """Raised when close-worktree runs with no worktree saved in ``.sessions/session.json``."""
+    """Raised when close-worktree runs with no worktree saved in the chat's open state under ``~/.cdd``."""
 
     def __init__(self) -> None:
-        super().__init__("no open worktree: .sessions/session.json has no worktree")
+        super().__init__("no open worktree: this chat has no worktree open")
 
 
 class Commit:
@@ -119,7 +120,7 @@ class Repo:
         """The clone holding project, the project a tool call names, as this process holds it. One cdd server answers
         every chat, so each call is handed its project and acts on that project's clone, never on a clone named by an
         earlier call; every call and every session of that checkout works on the one Repo held for it, which holds the
-        one WorkState of its ``.sessions/session.json``."""
+        one WorkState of its the chat's open state under ``~/.cdd``."""
         folder = Path(project).resolve()
         return SERVED_CHECKOUTS.at(cls._marked_checkout(folder) or folder)
 
@@ -268,17 +269,17 @@ class Repo:
         primary = self.primary_root()
         return self if primary == self.root else self.checkout_at(primary)
 
-    @cached_property
+    @property
     def own_work_state(self) -> WorkState:
-        """The ``.sessions/session.json`` of this checkout itself, made once. In the main clone it is the repository's
-        ``work_state``; a linked worktree keeps its own, where it saves the session open there, so a chat in a worktree
-        never changes the session open in the main clone."""
-        return WorkState(self.root)
+        """The branch, worktree, and session open for this checkout folder, kept under ``~/.cdd`` and never in the
+        checkout: the entry of the chat whose call is being answered, else this folder's own."""
+        call = ToolCall.answering()
+        return WorkState(self.root, call.chat_id if call is not None else "")
 
-    @cached_property
+    @property
     def work_state(self) -> WorkState:
-        """The branch, worktree, and session saved as open in the main clone's ``.sessions/session.json``; every checkout
-        of the repository reads the main clone's ``own_work_state``."""
+        """The branch, worktree, and session open in the main clone for the calling chat; every checkout of the
+        repository reads the main clone's ``own_work_state``."""
         return self.main_clone.own_work_state
 
     @property
@@ -310,10 +311,10 @@ class Repo:
     def switch_branch(self, name: str = "") -> str:
         """Switch the main clone to branch ``name``, creating it when missing.
 
-        ``name`` defaults to ``branch`` in ``.sessions/session.json``. Commits the branch being
+        ``name`` defaults to ``branch`` in the chat's open state under ``~/.cdd``. Commits the branch being
         left and pushes it (the default branch is committed but not pushed), checks out
         ``name`` (a new branch starts from origin's copy or the default branch), and saves
-        ``name`` as ``branch`` in ``.sessions/session.json``. Does not touch worktrees or sessions.
+        ``name`` as ``branch`` in the chat's open state under ``~/.cdd``. Does not touch worktrees or sessions.
         """
         branch = self._named_or_saved_branch(name).switch_to()
         self.work_state.branch_name = branch.name
@@ -325,7 +326,7 @@ class Repo:
     def close_branch(self, name: str = "", commit_message: str = "branch: close") -> str:
         """Close branch ``name``: commit, push, merge into the default branch, push it, delete ``name``.
 
-        ``name`` defaults to ``branch`` in ``.sessions/session.json``. Refuses the default branch and
+        ``name`` defaults to ``branch`` in the chat's open state under ``~/.cdd``. Refuses the default branch and
         a branch still open in a worktree. Deletes ``name`` locally and on origin, leaves the main
         clone on the default branch, and saves the default branch as ``branch``. Does not touch sessions.
         The release that landed (the open session, else ``name``) keeps its end-to-end results, its
@@ -346,10 +347,10 @@ class Repo:
     def switch_worktree(self, name: str = "") -> str:
         """Open the sibling worktree for branch ``name``, creating the branch and folder when missing.
 
-        ``name`` defaults to ``branch`` in ``.sessions/session.json`` and must not be the default
+        ``name`` defaults to ``branch`` in the chat's open state under ``~/.cdd`` and must not be the default
         branch. When the main clone has ``name`` checked out, it is committed, pushed, and the main
         clone goes back to the default branch so the worktree can take it. Saves ``branch`` and the
-        worktree path as ``worktree`` in ``.sessions/session.json``; later repo tools act in it.
+        worktree path as ``worktree`` in the chat's open state under ``~/.cdd``; later repo tools act in it.
         When the worktree cannot be brought up to date with origin, the reply says so and why.
         """
         opened = self._named_or_saved_branch(name).move_to_worktree()
@@ -362,10 +363,10 @@ class Repo:
     @agent_tool
     @mcp
     def close_worktree(self, commit_message: str = "worktree: close") -> str:
-        """Close the worktree saved in ``.sessions/session.json``: commit, push its branch, remove the folder.
+        """Close the worktree saved in the chat's open state under ``~/.cdd``: commit, push its branch, remove the folder.
 
         Does not merge; the branch stays open as ``branch``. Clears ``worktree`` in
-        ``.sessions/session.json`` and returns later repo tools to the main clone.
+        the chat's open state under ``~/.cdd`` and returns later repo tools to the main clone.
         """
         worktree = self.open_worktree
         if worktree is None:
@@ -380,7 +381,7 @@ class Repo:
         """Switch the main clone to a branch, creating it when missing.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Call MCP ``repo.switch_branch``."""
+        the chat's open state under ``~/.cdd`` is used. Call MCP ``repo.switch_branch``."""
         return ""
 
     @command(name="close-branch")
@@ -389,7 +390,7 @@ class Repo:
         """Close a branch: commit, push, merge into main, push main, delete the branch.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Call MCP ``repo.close_branch``."""
+        the chat's open state under ``~/.cdd`` is used. Call MCP ``repo.close_branch``."""
         return ""
 
     @command(name="switch-worktree")
@@ -398,7 +399,7 @@ class Repo:
         """Open the sibling worktree for a branch other than main, creating it when missing.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Call MCP ``repo.switch_worktree``."""
+        the chat's open state under ``~/.cdd`` is used. Call MCP ``repo.switch_worktree``."""
         return ""
 
     @command(name="close-worktree")
@@ -598,7 +599,7 @@ class Branch:
 class ServedCheckouts:
     """The repository of every checkout this process works in, each made once and held while it runs, so every tool
     call and every session of one checkout work on the same Repo, and two objects never read and write one
-    ``.sessions/session.json``."""
+    the chat's open state under ``~/.cdd``."""
 
     def __init__(self) -> None:
         self._at: dict[Path, Repo] = {}

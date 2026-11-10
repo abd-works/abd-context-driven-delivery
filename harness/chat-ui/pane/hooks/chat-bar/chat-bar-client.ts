@@ -177,9 +177,10 @@ export class MoveRefused {
 
 // The one place this mod's chat bar calls cdd: a reply that is not JSON, or one flagged isError, is a CddToolFailed
 // carrying the server's own text. Every call names the folder the chat works in now as chat_folder, so the server reads
-// the sessions of that folder's branch and worktree, not of the folder the chat connected from.
+// the sessions of that folder's branch and worktree, not of the folder the chat connected from, and names the chat as
+// conversation_id, so the server answers with the session this chat has open, as it does for the agent's own calls.
 export async function callTool<T>($: EngineInterface, tool: string, args: object): Promise<T> {
-  const result = await $.mcp.call(SERVER, tool, { ...args, chat_folder: await $.session.root() })
+  const result = await $.mcp.call(SERVER, tool, { ...args, chat_folder: await $.session.root(), conversation_id: await $.session.id() })
   const text = result.content[0]?.text ?? ''
   if (result.isError) throw new CddToolFailed(tool, text || `${tool} failed`)
   try {

@@ -140,9 +140,11 @@ with description("a session"):
             first = (Sessions(self.called).current().session_path / "session.log").read_text(encoding="utf-8").splitlines()[0]
             expect("--- 1" in first).to(equal(True))
 
-        with it("should record the name in repo sessions session.json"):
-            state = json.loads((self.repo / ".sessions" / "session.json").read_text(encoding="utf-8"))
-            expect(state.get("session")).to(equal("alpha"))
+        with it("should keep the name as the open session under the cdd home"):
+            expect(WorkState(self.repo).session).to(equal("alpha"))
+
+        with it("should write no open-session pointer in the checkout"):
+            expect((self.repo / ".sessions" / "session.json").exists()).to(equal(False))
 
     with context("whose session.json holds a board ticket's title, scope, and parent"):
         with before.each:
@@ -171,9 +173,8 @@ with description("a session"):
             Sessions(self.repo).switch("alpha", self.work)
             Sessions(self.called).current().close()
 
-        with it("should remove the session from repo sessions session.json"):
-            state = json.loads((self.repo / ".sessions" / "session.json").read_text(encoding="utf-8"))
-            expect("session" in state).to(equal(False))
+        with it("should clear the open session kept under the cdd home"):
+            expect(WorkState(self.repo).session).to(equal(""))
 
         with it("should go back to the main session"):
             expect(Sessions(self.called).current().name).to(equal("main"))
@@ -268,13 +269,12 @@ with description("a session"):
             with it("should read the workpath from that session"):
                 expect(Sessions(self.called).current().workpath).to(equal(self.work.resolve()))
 
-        with context("when repo session.json current changes on disk"):
+        with context("that another client of the same chat switches"):
             with it("should reload the named session instead of keeping stale memory"):
                 Sessions(self.repo).switch("alpha", self.work)
                 Sessions(self.repo).switch("beta", self.work)
                 expect(Sessions(self.called).current().name).to(equal("beta"))
-                pointer = self.repo / ".sessions" / "session.json"
-                pointer.write_text('{"session": "alpha"}', encoding="utf-8")
+                WorkState(self.repo).session = "alpha"
                 expect(Sessions(self.called).current().name).to(equal("alpha"))
 
     # (S) Session --> Open Session Loop

@@ -16,6 +16,7 @@ from cdd_guidance.practices.ddd.ddd import Ddd  # noqa: E402
 from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
 from cdd_guidance.practices.ux.ux import Ux  # noqa: E402
 from harness.catalog_generator.catalog_practice import CatalogPractice  # noqa: E402
+from space.work_state import WorkState
 from space.session.sessions import BoardPractices  # noqa: E402
 from harness.guidance.guidance import FidelityGuidance  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
@@ -52,7 +53,7 @@ class SessionsFolder:
         return path
 
     def current(self, name: str) -> None:
-        (self.root / "session.json").write_text(json.dumps({"session": name}), encoding="utf-8")
+        WorkState(self.project).session = name
 
 
 def names(items) -> list:

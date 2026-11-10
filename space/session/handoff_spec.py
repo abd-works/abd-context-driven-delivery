@@ -20,6 +20,7 @@ from harness.agent_tools.agent_tools import AgentToolSet
 from space.session.session import Session, SessionNotFoundError
 from space.session.sessions import Sessions
 from space.session.throwaway_project import ThrowawayProject
+from space.work_state import WorkState
 
 
 def _open_session(root: Path, name: str = "my-session") -> Path:
@@ -30,9 +31,7 @@ def _open_session(root: Path, name: str = "my-session") -> Path:
 
 
 def _save_current(root: Path, name: str) -> None:
-    sessions = root / ".sessions"
-    sessions.mkdir(parents=True, exist_ok=True)
-    (sessions / "session.json").write_text(json.dumps({"session": name}), encoding="utf-8")
+    WorkState(root).session = name
 
 
 with description("a session's handoff tools"):

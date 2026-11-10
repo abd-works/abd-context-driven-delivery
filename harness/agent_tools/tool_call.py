@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, ClassVar, Protocol
+from typing import Any, ClassVar, Iterator, Protocol
 
 from harness.agent_tools.chat_pointer import ChatPointer
 
@@ -15,6 +17,8 @@ _PATHS_ARGUMENT = "paths"
 # The argument naming the folder the calling chat works in now. Claude Code fills in the X-CDD-Project header once, when
 # the chat connects, so the header goes stale when the chat later moves to another folder, branch, or worktree.
 CHAT_FOLDER_ARGUMENT = "chat_folder"
+# The chat id a call names when the server cannot name its chat.
+_NO_CHAT = "unknown"
 
 
 class SessionOpener(Protocol):
@@ -53,6 +57,9 @@ class ToolCall:
     work in its own process."""
 
     _sessions: ClassVar[SessionOpener | None] = None
+    # The call a tool is answering on this thread, so code deep under it, such as a board switching its session, keeps
+    # the open session of the call's own chat without each layer passing the chat on.
+    _answering: ClassVar[ContextVar[ToolCall | None]] = ContextVar("answering_call", default=None)
 
     def __init__(
         self,
@@ -88,6 +95,26 @@ class ToolCall:
         chat, remaining = ChatPointer.taken_from(arguments)
         chat_folder = str(remaining.pop(CHAT_FOLDER_ARGUMENT, "") or "").strip()
         return cls(remaining, chat_folder or project, chat, tool=tool, mcp_host=mcp_host, answers_a_chat=answers_a_chat)
+
+    @property
+    def chat_id(self) -> str:
+        """The id of the chat the call came from; empty when it names none."""
+        chat = self.chat.id if self.chat is not None else ""
+        return "" if chat == _NO_CHAT else chat
+
+    @classmethod
+    def answering(cls) -> ToolCall | None:
+        """The call a tool is answering now on this thread; none outside a call."""
+        return cls._answering.get()
+
+    @contextmanager
+    def being_answered(self) -> Iterator[ToolCall]:
+        """Mark this call as the one being answered while the tool runs."""
+        token = ToolCall._answering.set(self)
+        try:
+            yield self
+        finally:
+            ToolCall._answering.reset(token)
 
     @property
     def identity(self) -> str:
