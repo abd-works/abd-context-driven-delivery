@@ -9,7 +9,7 @@ import { dismissFailure, showFailure, type ChatBarClient } from './chat-bar-clie
 // Where this chat works against where the active session's work is: the ticket's own worktree, else the repository's
 // main checkout, where activating it checked its branch out. A switch made in the chat bar moves the chat there with
 // Claude Code's own /cd; one made elsewhere shows in the band until the person moves it.
-const chatFolder = atom({ plugin: 'cdd-board', key: 'chatFolder' } as const, { current: '', expected: '' } as ChatFolderJson)
+const chatFolder = atom({ plugin: 'cdd-board', key: 'chatFolder' } as const, { current: '', expected: '', added: [] } as ChatFolderJson, { shape: 'chat-folder-2' })
 
 // Windows names one folder with either slash and any case, so a folder is compared in one spelling.
 const spelled = (folder: string): string => folder.split('\\').join('/').replace(/\/+$/, '').toLowerCase()
@@ -18,7 +18,19 @@ const sameFolder = (one: string, other: string): boolean => spelled(one) === spe
 // Atom chatFolder, declared in pane/types/index.d.ts and kept in this file.
 export async function currentChatFolder($: EngineInterface): Promise<ChatFolderJson & { isElsewhere: boolean }> {
   const folder = await read($, chatFolder)
-  return { ...folder, isElsewhere: Boolean(folder.current && folder.expected && !sameFolder(folder.current, folder.expected)) }
+  const isIn = [folder.current, ...(folder.added ?? [])].some(one => sameFolder(one, folder.expected))
+  return { ...folder, isElsewhere: Boolean(folder.current && folder.expected && !isIn) }
+}
+
+// The app added folder beside the session's own: a chat asked to move there counts as there.
+export async function folderAdded($: EngineInterface, folder: string): Promise<void> {
+  await update($, chatFolder, json => ({ ...json, added: [...(json.added ?? []).filter(one => !sameFolder(one, folder)), folder] }))
+}
+
+// True when the chat works in folder: the session's own, or one the app added beside it.
+async function isChatIn($: EngineInterface, folder: string): Promise<boolean> {
+  const { added } = await read($, chatFolder)
+  return [await $.session.cwd(), ...(added ?? [])].some(one => sameFolder(one, folder))
 }
 
 // The folder holding a .git folder git names, in git's own spelling.
@@ -38,7 +50,7 @@ async function workFolderOf($: EngineInterface, chatBar: ChatBarClient): Promise
 // Reads where the chat is and where the active session's work is, so the band can say when they differ.
 export async function checkChatFolder($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
   const [current, expected] = await Promise.all([$.session.cwd(), workFolderOf($, chatBar)])
-  await update($, chatFolder, () => ({ current, expected }))
+  await update($, chatFolder, json => ({ ...json, current, expected }))
 }
 
 // The desktop app moves a chat when the agent's turn ends. A chat still not there this long after the turn that was
@@ -65,7 +77,7 @@ export async function moveToMainCheckout($: EngineInterface): Promise<string> {
 async function arrivedIn($: EngineInterface, folder: string, asked: MoveAsked): Promise<boolean> {
   let sinceTurnEnded = 0
   while (sinceTurnEnded < MOVE_AFTER_TURN_MILLISECONDS) {
-    if (sameFolder(await $.session.cwd(), folder)) return true
+    if (await isChatIn($, folder)) return true
     await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
     // The app moves the chat once it is idle, so a turn that starts after the asked one (a second move request, a
     // queued prompt) starts the count again instead of being counted against the move.
@@ -82,7 +94,7 @@ const LATE_MOVE_MILLISECONDS = 60_000
 async function reportLateMove($: EngineInterface, folder: string): Promise<void> {
   await showFailure($, `The app did not move this chat to ${folder}`)
   for (let waited = 0; waited < LATE_MOVE_MILLISECONDS; waited += MOVE_CHECK_MILLISECONDS) {
-    if (sameFolder(await $.session.cwd(), folder)) return dismissFailure($)
+    if (await isChatIn($, folder)) return dismissFailure($)
     await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
   }
 }
