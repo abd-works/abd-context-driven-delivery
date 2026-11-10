@@ -274,14 +274,8 @@ class Session:
         return kept
 
     def move_to_closed(self) -> Session:
-        """Move this session's folder among the closed sessions of the main clone, where the board lists closed work:
-        a session kept in a ticket's linked worktree would otherwise go with the worktree when its branch closes."""
-        return self._move_folder_to(self.repo.main_clone.root / self.sessions.folder.name / COMPLETE_FOLDER)
-
-    def move_back_to(self, folder: Path) -> Session:
-        """Move this session's folder back into folder, the sessions folder it was kept in, such as when a close that
-        moved it could not finish."""
-        return self._move_folder_to(folder)
+        """Move this session's folder among the closed sessions, where the board lists closed work."""
+        return self._move_folder_to(self.sessions.folder / COMPLETE_FOLDER)
 
     def move_to_archive(self) -> Session:
         return self._move_folder_to(self.sessions.folder / ARCHIVE_FOLDER)

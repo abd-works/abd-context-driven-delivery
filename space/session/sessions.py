@@ -129,8 +129,10 @@ class Sessions:
 
     @property
     def folder(self) -> Path:
-        """The `.sessions` folder that holds the sessions and what they share on the board."""
-        return self.root / SESSIONS_FOLDER
+        """The `.sessions` folder that holds the sessions and what they share on the board: the repository's own, in its
+        main clone, whichever checkout these sessions serve. A ticket's record stays on main, and its worktree's branch
+        carries only the work."""
+        return self.repo.main_clone.root / SESSIONS_FOLDER
 
     @property
     def backlog_folder(self) -> Path:
@@ -138,8 +140,7 @@ class Sessions:
         return self.folder / BACKLOG_FOLDER
 
     def folder_of(self, name: str) -> Path:
-        """The folder of the session called name, in this checkout's ``.sessions``: a ticket opened in its own worktree
-        keeps its details there, committed on its branch, and the board loaded in that worktree shows them."""
+        """The folder of the session called name, in the repository's own ``.sessions``."""
         return self.folder / name
 
     def all(self) -> list[Session]:

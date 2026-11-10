@@ -201,8 +201,7 @@ with description("a ticket's work through the cdd server") as self:
     with context("that work is pushed from the worktree"):
         with before.all:
             self.worktree = self.clone.worktree_of("walk-worktree")
-            (self.worktree / "feature.txt").write_text("first
-", encoding="utf-8")
+            (self.worktree / "feature.txt").write_text("first\n", encoding="utf-8")
             self.chat.answer("repo.push_commit", message="Add feature", untracked=True, sync_remote=True)
 
         with it("should commit the work on the worktree's branch"):
@@ -222,10 +221,8 @@ with description("a ticket's work through the cdd server") as self:
     with context("that work was pushed to its branch from elsewhere"):
         with before.all:
             self.worktree = self.clone.worktree_of("walk-worktree")
-            self.clone.push_from_elsewhere("walk-worktree", "elsewhere.txt", "from elsewhere
-", "Change from elsewhere")
-            (self.worktree / "feature.txt").write_text("second
-", encoding="utf-8")
+            self.clone.push_from_elsewhere("walk-worktree", "elsewhere.txt", "from elsewhere\n", "Change from elsewhere")
+            (self.worktree / "feature.txt").write_text("second\n", encoding="utf-8")
             self.chat.answer("repo.push_commit", message="Change feature", untracked=True, sync_remote=True)
 
         with it("should bring that work in"):
@@ -295,8 +292,7 @@ with description("a ticket's work through the cdd server") as self:
             for title in ("Walk one", "Walk two"):
                 self.chat.answer("ticket.create", title=title)
             self.chat.answer("ticket.activate", ticket="walk-one", opening=["worktree"])
-            (self.clone.worktree_of("walk-one") / "one.txt").write_text("one
-", encoding="utf-8")
+            (self.clone.worktree_of("walk-one") / "one.txt").write_text("one\n", encoding="utf-8")
             self.chat.answer("ticket.activate", ticket="walk-two", leaving=["handoff", "commit", "push"], opening=["worktree"])
             self.on_two = self.chat.answer("sessions.current")["name"]
             self.board_on_two = board_tickets(self.chat.answer("board.show"))

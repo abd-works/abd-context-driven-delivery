@@ -229,7 +229,7 @@ with description("a session"):
             with it("should keep the session in a folder named by its slug"):
                 expect((self.repo / ".sessions" / "chat-ui" / "session.json").is_file()).to(equal(True))
 
-        # A ticket opened in its own worktree keeps its details there, committed on its branch.
+        # Every ticket's record stays in the repository's own .sessions; a ticket's worktree carries only its work.
         with context("from a linked worktree of the checkout"):
             with before.each:
                 self.worktree = Path(tempfile.mkdtemp())
@@ -243,8 +243,8 @@ with description("a session"):
             with after.each:
                 shutil.rmtree(self.worktree, ignore_errors=True)
 
-            with it("should log into the ticket's folder in the worktree"):
-                expect(Sessions(self.called).current().session_path).to(equal(self.worktree.resolve() / ".sessions" / "alpha"))
+            with it("should log into the ticket's folder in the repository's own .sessions"):
+                expect(Sessions(self.called).current().session_path).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
 
             with it("should keep the worktree's own choice of session in the worktree"):
                 expect(WorkState(self.worktree).session).to(equal("alpha"))
@@ -253,8 +253,8 @@ with description("a session"):
                 with before.each:
                     Sessions(self.worktree).switch("main")
 
-                with it("should log into the worktree's own main session"):
-                    expect(Sessions(self.called).current().session_path).to(equal(self.worktree.resolve() / ".sessions" / "main"))
+                with it("should log into the repository's main session"):
+                    expect(Sessions(self.called).current().session_path).to(equal(self.repo.resolve() / ".sessions" / "main"))
 
         with context("with a repo path"):
             with before.each:

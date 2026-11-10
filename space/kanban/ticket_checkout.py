@@ -4,7 +4,6 @@ can do with them."""
 from __future__ import annotations
 
 import re
-import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -27,7 +26,6 @@ LEAVE_HANDOFF = "handoff"
 LEAVE_BRANCH_STEPS = {LEAVE_MERGE, LEAVE_DELETE_BRANCH, LEAVE_DELETE_WORKTREE}
 # The session.json field that keeps the chat a person assigned to a ticket.
 ASSIGNED_CHAT = "chat"
-OPEN_BRANCH = "branch"
 OPEN_WORKTREE = "worktree"
 
 
@@ -152,72 +150,31 @@ class TicketCheckout:
         return branch if branch.is_checked_out or branch.worktree is not None else None
 
     def open(self, opening: list[str]) -> None:
-        """Open the ticket the way opening names: in its own worktree, which creates its branch when missing, or else by
-        switching this checkout to its branch, created when missing. The two are alternatives, so a worktree wins. A
-        ticket opened in its own worktree takes its session folder along, so its details are committed on its branch."""
-        if opening:
-            self._publish_sessions_on_default()
-        if OPEN_WORKTREE in opening:
-            self._repo.switch_worktree(self.branch.name)
-        elif OPEN_BRANCH in opening:
-            self._clear_published_copy()
-            self._repo.switch_branch(self.branch.name)
-        if opening:
-            self._ticket.board.reread()
-        if OPEN_WORKTREE in opening:
-            self._move_session_folder_into_worktree()
-        if opening:
-            self._take_session_from_default()
+        """Open the ticket the way opening names, which can only be in its own worktree, creating its branch when
+        missing: the repository's own folder stays on main. The session folders not yet committed are committed on main
+        and pushed first, so the ticket's branch starts from a main that has them; the ticket's record stays there and
+        its branch carries only the work."""
+        refused = [way for way in opening if way != OPEN_WORKTREE]
+        if refused:
+            raise OpeningNotOfferedError(refused[0], self._ticket.name)
+        if OPEN_WORKTREE not in opening:
+            return
+        self._save_sessions_on_main()
+        self._repo.switch_worktree(self.branch.name)
+        self._ticket.board.reread()
 
-    @property
-    def _session_relative(self) -> str:
-        """The ticket's session folder named from a checkout's top, the same in every checkout: ``.sessions/{name}``."""
-        return f"{self._ticket.board.sessions.folder.name}/{self._ticket.name}"
-
-    def _publish_sessions_on_default(self) -> None:
-        """The default branch on origin is where every session folder comes from, so it is pushed there before the
-        ticket's branch is opened. While the main clone is on the default branch, every session folder not yet committed
-        is committed and pushed. A ticket whose folder is only on a local branch or worktree has it committed on the
-        default branch and pushed. Then no branch switch takes a ticket off the board."""
+    def _save_sessions_on_main(self) -> None:
+        """Commit the session folders not yet committed on main, and push main, while the repository's own folder has
+        main checked out."""
         repository = self._repo.main_clone
-        message = f"sessions: save before opening {self._ticket.name}"
-        if repository.branch_named(repository.default_branch).is_checked_out:
-            folder = self._ticket.board.sessions.folder
-            if folder.is_dir() and repository.is_dirty(folder):
-                repository.publish_on_default(folder, folder.name, message)
+        folder = self._ticket.board.sessions.folder
+        if not repository.branch_named(repository.default_branch).is_checked_out or not folder.is_dir():
             return
-        session_folder = self._ticket.session.session_path
-        if session_folder.is_dir() and not repository.holds_on_default(self._session_relative):
-            repository.publish_on_default(session_folder, self._session_relative, message)
-
-    def _clear_published_copy(self) -> None:
-        """A session folder this checkout has but does not track, once its files are on the default branch, would stop
-        git checking out a branch that has them; the branch brings it back from the default branch."""
-        repository = self._repo.main_clone
-        if repository.holds_on_default(self._session_relative):
-            repository.remove_untracked(self._session_relative)
-
-    def _take_session_from_default(self) -> None:
-        """The checkout the ticket now works in takes its session folder from the default branch when it lacks it, such
-        as an existing branch that started before the folder was pushed."""
-        worktree = self.worktree
-        checkout = self._repo.checkout_at(worktree) if worktree else self._repo.main_clone
-        if (checkout.root / self._session_relative).is_dir():
+        if not repository.is_dirty(folder):
             return
-        checkout.take_in_default()
-
-    def _move_session_folder_into_worktree(self) -> None:
-        """Move the ticket's session folder from the checkout it was opened from into its worktree's ``.sessions``,
-        unless the worktree already has one."""
-        worktree = self.worktree
-        if not worktree:
-            return
-        here = self._ticket.board.sessions.folder / self._ticket.name
-        there = Path(worktree) / here.parent.name / self._ticket.name
-        if here.is_dir() and not there.exists() and here.resolve() != there.resolve():
-            there.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(here), str(there))
-            self._ticket.board.reread()
+        repository.commit([str(folder)], f"sessions: save before opening {self._ticket.name}", untracked=True)
+        if repository.has_origin:
+            repository.push_upstream()
 
     def open_worktree(self) -> None:
         """Open the ticket's own worktree beside the repository, creating its branch when missing. The board lists
@@ -306,6 +263,16 @@ class TicketCheckout:
         self._repo.branch_named(self._repo.default_branch).check_out()
 
 
+class OpeningNotOfferedError(ValueError):
+    """Raised when a ticket is asked to open a way it is not offered, such as on a branch in the repository's own
+    folder, which stays on main. It names that way and the ticket."""
+
+    def __init__(self, opening: str, ticket: str) -> None:
+        super().__init__(f"cannot open {ticket!r} by {opening!r}: a ticket opens only in its own worktree")
+        self.opening = opening
+        self.ticket = ticket
+
+
 class LeaveChoices:
     """What leaving a ticket can do with its work now, closing it or switching to another: a handoff always; a commit
     and a push of the branch its work is on while a checkout has it, since those steps act on whatever is checked out;
@@ -351,9 +318,9 @@ class LeaveChoices:
 
 
 class OpenChoices:
-    """How opening a ticket with no worktree of its own can go: switch this checkout to its branch, or open its own
-    worktree, each creating the branch when missing. They are alternatives, and the worktree is chosen at first.
-    ``TicketCheckout.open`` does the one chosen."""
+    """How opening a ticket with no worktree of its own can go: in its own worktree, creating its branch when missing,
+    chosen at first. The repository's own folder stays on main, so there is no other way. ``TicketCheckout.open`` does
+    it."""
 
     def __init__(self, branch: Branch, worktree: str, candidate_branches: list[str]) -> None:
         self._branch = branch
@@ -376,7 +343,7 @@ class OpenChoices:
     @data_field
     def choices(self) -> list[str]:
         """Each way opening offers now: none while the ticket has a worktree, where its chat moves instead."""
-        return [] if self._worktree else [OPEN_BRANCH, OPEN_WORKTREE]
+        return [] if self._worktree else [OPEN_WORKTREE]
 
     @property
     @data_field

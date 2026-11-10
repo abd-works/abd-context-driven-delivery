@@ -597,7 +597,7 @@ def _(s):
 
     @s.when("the Person chooses merge and confirms")
     def _(world):
-        world.ticket.activate(leaving=["commit", "push", "merge"], opening=["branch"])
+        world.ticket.activate(leaving=["commit", "push", "merge"], opening=["worktree"])
 
     @s.then("billing-report is the active ticket with a thick orange outline")
     def _(world):
@@ -605,8 +605,8 @@ def _(s):
 
     @s.and_("a toast says Checkout flow: committed, pushed, merged to main · Billing report: branch created · Billing report is now active")
     def _(world):
-        left_and_opened = (world.project.origin_log("main")[0], world.project.git("rev-parse", "--abbrev-ref", "HEAD"))
-        expect(left_and_opened).to(equal((LEAVE_SESSION_COMMIT, BILLING_REPORT.name)))
+        left_and_opened = (world.project.origin_log("main")[0], BILLING_REPORT.name in world.project.git("branch", "--list", BILLING_REPORT.name))
+        expect(left_and_opened).to(equal((LEAVE_SESSION_COMMIT, True)))
 
 
 OUTSIDE_BRANCH = "claude/checkout-flow-cef4bc"
@@ -1027,7 +1027,7 @@ def _(s):
 
     @s.when("the Person activates billing-report with a new branch")
     def _(world):
-        world.Ticket.load(BILLING_REPORT.name).activate(leaving=[], opening=["branch"])
+        world.Ticket.load(BILLING_REPORT.name).activate(leaving=[], opening=["worktree"])
 
     @s.then("the repository has the branch billing-report")
     def _(world):

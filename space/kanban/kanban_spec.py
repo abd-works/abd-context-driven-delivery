@@ -418,7 +418,7 @@ with description("a ticket") as self:
             ))
 
         with it("should offer its own branch and worktree on opening it, each chosen"):
-            expect(self.ticket.open_choices().choices).to(equal(["branch", "worktree"]))
+            expect(self.ticket.open_choices().choices).to(equal(["worktree"]))
 
         with it("should command an action on its next fidelity in its own session, naming no format so the fidelity's kept format holds"):
             expect(self.ticket.next_fidelity.commands["generate"]).to(equal("/actions-generate stories-story-map session=.sessions/pet-visits/session.json"))
