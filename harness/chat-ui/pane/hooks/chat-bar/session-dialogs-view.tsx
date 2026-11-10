@@ -60,7 +60,7 @@ function leaveHeadingOf(session: string, branch: string): string {
 export function SessionListView($: EngineInterface, { Box, Button, Input, Text }: ElementTable, { chatBar, view }: ChatBarDraw) {
   if (!view.isSessionListOpen) return null
   return (
-    <Box key="session-list" flexDirection="column" paddingX={1} borderStyle="single" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+    <Box key="session-list" flexDirection="column" alignSelf="flex-end" paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
       <Box key="session-row-main" flexDirection="row" gap={1}>
         <Text color={BRAND.muted}>⌂</Text>
         <Button key="session-main" plain onPress={() => pickSession($, chatBar, MAIN_SESSION)}>
