@@ -25,20 +25,25 @@ def main() -> None:
     runtime = json.loads((HOME / "runtime.json").read_text(encoding="utf-8"))
     sys.path.insert(0, runtime["source"])
     from harness.mcp.cdd_home import CddHome
-    from harness.mcp.mcp_daemon import CHAT_HEADER, PROJECT_HEADER, McpDaemon
+    from harness.agent_tools.claude_chat_process import ClaudeChatProcess
+    from harness.mcp.mcp_daemon import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER, McpDaemon
 
     daemon = McpDaemon(CddHome(HOME))
     daemon.ensure()
-    print(json.dumps(answer(sys.argv[1:], daemon.url, PROJECT_HEADER, CHAT_HEADER)))
+    process = ClaudeChatProcess.from_ancestors()
+    chat_process = {CHAT_PROCESS_HEADER: str(process.pid)} if process is not None else {}
+    print(json.dumps(answer(sys.argv[1:], daemon.url, PROJECT_HEADER, CHAT_HEADER, chat_process)))
 
 
-def answer(arguments: list[str], url: str, project_header: str, chat_header: str) -> dict:
+def answer(arguments: list[str], url: str, project_header: str, chat_header: str, chat_process: dict[str, str] | None = None) -> dict:
     """What the script prints: the headers alone for an IDE's ``headersHelper``, or, asked with ``--address``, the
     server's address with the headers, for a language adapter that connects on its own. A Claude Code chat's id goes
-    in the chat header, so the server reads the folder the chat works in now from its transcript."""
+    in the chat header, and chat_process, the header naming the Claude Code process that runs this script, goes with
+    it, so the server reads the folder the chat's session works in now on every call."""
     headers = {
         project_header: project_folder([word for word in arguments if word != ADDRESS_FLAG]),
         chat_header: os.environ.get(CHAT_ID_VARIABLE, "").strip() or UNNAMED_CHAT,
+        **(chat_process or {}),
     }
     return {"url": url, "headers": headers} if ADDRESS_FLAG in arguments else headers
 

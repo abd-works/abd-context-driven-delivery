@@ -46,6 +46,11 @@ with description("what a chat's connect script prints") as self:
             os.environ[connect.CHAT_ID_VARIABLE] = "chat-7"
             expect(connect.answer([r"C:\dev\pets"], _URL, "x-cdd-project", "x-cdd-chat")).to(equal({"x-cdd-project": r"C:\dev\pets", "x-cdd-chat": "chat-7"}))
 
+    with context("for a headers helper run by a Claude Code chat process"):
+        with it("should name that process, so the server can read the folder its session works in now"):
+            headers = connect.answer([r"C:\dev\pets"], _URL, "x-cdd-project", "x-cdd-chat", {"x-cdd-chat-process": "40364"})
+            expect(headers["x-cdd-chat-process"]).to(equal("40364"))
+
     with context("for a language adapter, asked for the server's address in the project's folder"):
         with it("should be the server's address with the headers naming the folder it runs in"):
             expect(connect.answer(["--address"], _URL, "x-cdd-project", "x-cdd-chat")).to(equal({"url": _URL, "headers": {"x-cdd-project": os.getcwd(), "x-cdd-chat": connect.UNNAMED_CHAT}}))

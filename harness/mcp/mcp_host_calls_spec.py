@@ -19,19 +19,24 @@ from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 from space.session.throwaway_project import ThrowawayProject
 
-from harness.mcp.mcp_daemon import CHAT_HEADER, PROJECT_HEADER
+from harness.mcp.mcp_daemon import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER
 from harness.mcp.mcp_server import CALL_SECONDS, LONG_CALL_SECONDS, McpHost, ToolNotEnrolled
 
 _CALL_OUTCOMES = "harness.mcp._examples.call_outcomes.call_outcomes:CallOutcomes"
 _MOVED_CHAT = "7a2d9c4e-1111-2222-3333-444455556666"
+_CHAT_PROCESS = "40364"
 
 
-def _call(host: McpHost, name: str, project: Path, chat_id: str = "") -> types.CallToolResult:
+def _call(host: McpHost, name: str, project: Path, chat_id: str = "", chat_process: str = "") -> types.CallToolResult:
     """Send one tools/call request to the host's protocol handler, as a chat that started on project sends it; with
-    chat_id, as the Claude Code chat of that id."""
+    chat_id, as the Claude Code chat of that id; with chat_process, from the Claude Code process of that id."""
     handler = host._protocol.request_handlers[types.CallToolRequest]
     request = types.CallToolRequest(method="tools/call", params=types.CallToolRequestParams(name=name, arguments={}))
-    headers = {PROJECT_HEADER: str(project), **({CHAT_HEADER: chat_id} if chat_id else {})}
+    headers = {
+        PROJECT_HEADER: str(project),
+        **({CHAT_HEADER: chat_id} if chat_id else {}),
+        **({CHAT_PROCESS_HEADER: chat_process} if chat_process else {}),
+    }
     chat = SimpleNamespace(headers=headers)
     token = request_ctx.set(RequestContext(request_id=1, meta=None, session=None, lifespan_context=None, request=chat))
     try:
@@ -81,6 +86,26 @@ with description("a cdd server answering a chat's tool calls") as self:
 
         with it("should work on the checkout the chat moved to"):
             answer = _call(self.host, "call-outcomes.ledger_folder", self.project, _MOVED_CHAT).content[0].text
+            expect(answer).to(equal(str(self.moved_to.resolve())))
+
+    with context("from a Claude Code chat process whose session moved out of the spare folder it started in"):
+        with before.each:
+            self.config = Path(tempfile.mkdtemp())
+            self.prior_config = os.environ.get("CLAUDE_CONFIG_DIR")
+            os.environ["CLAUDE_CONFIG_DIR"] = str(self.config)
+            self.moved_to = ThrowawayProject().root
+            session_file = self.config / "sessions" / f"{_CHAT_PROCESS}.json"
+            session_file.parent.mkdir(parents=True)
+            session_file.write_text(json.dumps({"pid": int(_CHAT_PROCESS), "cwd": str(self.moved_to)}), encoding="utf-8")
+
+        with after.each:
+            if self.prior_config is None:
+                os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            else:
+                os.environ["CLAUDE_CONFIG_DIR"] = self.prior_config
+
+        with it("should work on the folder the session works in now, though the chat names no transcript"):
+            answer = _call(self.host, "call-outcomes.ledger_folder", self.project, "unnamed", _CHAT_PROCESS).content[0].text
             expect(answer).to(equal(str(self.moved_to.resolve())))
 
     with context("with a tool that fails"):

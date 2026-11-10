@@ -18,6 +18,9 @@ DEFAULT_SERVER_PORT = 47800
 PROJECT_HEADER = "X-CDD-Project"
 # The Claude Code chat a request comes from, so the server can follow that chat into whatever folder it works in now.
 CHAT_HEADER = "X-CDD-Chat"
+# The Claude Code process a request comes from. Its session file names the folder the session works in now, which stays
+# right after the desktop app moves a chat out of the spare folder it started in.
+CHAT_PROCESS_HEADER = "X-CDD-Chat-Process"
 PING_PATH = "/ping"
 MCP_PATH = "/mcp"
 _PING_SECONDS = 2
