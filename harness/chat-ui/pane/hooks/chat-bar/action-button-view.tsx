@@ -5,14 +5,13 @@ import { GlyphButtonView } from '../shared/glyph-button-view'
 import { chooseAction, clearChosenAction, toggleActionPicker } from './action-picker-client'
 import { moveNext, type ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
-import { reviewFidelity } from './chat-bar-client'
 import { runAction } from './fidelity-progress-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
 // The canvas's glyph for each action a stage sends and for advance, the button's own move to the next stage: play,
 // check, eye, cycle, pencil, open-out, page, and the move-on arrow. An action the canvas has no glyph for shows a dot.
-const ACTION_ICONS: Record<string, string> = { generate: '▶', validate: '✓', review: '◉', iterate: '↻', sketch: '✎', render: '↗', document: '▯', advance: '➜' }
+const ACTION_ICONS: Record<string, string> = { generate: '▶', validate: '✓', iterate: '↻', sketch: '✎', render: '↗', document: '▯', advance: '➜' }
 const iconOf = (action: string): string => ACTION_ICONS[action] ?? '•'
 
 // The action the button shows: advance once the stage is done, else the action fidelity's next action, else, for a
@@ -29,14 +28,13 @@ function shownActionOf(chatBar: ChatBarClient, chosenAction: string | null): str
   return chosenAction && chatBar.actionFidelity ? chosenAction : actionOf(chatBar)
 }
 
-// The action button runs what it shows: advance moves the session on, review records the person's approval, and every
-// other action is a command the chat runs. A picked action is run once, and the button then shows the next one again.
+// The action button runs what it shows: advance moves the session on, and every other action is a command the chat runs. A picked action is run once, and the button then shows the next one again.
 async function pressAction($: EngineInterface, chatBar: ChatBarClient, action: string): Promise<unknown> {
   const fidelity = chatBar.actionFidelity
   await clearChosenAction($)
   if (action === 'advance') return moveNext($, chatBar)
   if (!fidelity) return
-  return action === 'review' ? reviewFidelity($, fidelity) : runAction($, fidelity, action)
+  return runAction($, fidelity, action)
 }
 
 // The orange chip of the canvas, an orange Box holding the next action's icon, then the ▾ that opens

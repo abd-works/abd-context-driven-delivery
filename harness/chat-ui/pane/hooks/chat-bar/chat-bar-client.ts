@@ -95,9 +95,10 @@ export class ChatBarClient {
     return columns.map((column, place) => new StageClient(column, place, sessionPlace, column.name === this.shownStage && column.name !== this.stage))
   }
 
-  // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them.
+  // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them. Review is
+  // left out: the chat bar has nothing for it to do.
   get actions(): string[] {
-    return this.board?.columns.find(column => column.name === this.shownStage)?.actions ?? []
+    return (this.board?.columns.find(column => column.name === this.shownStage)?.actions ?? []).filter(action => action !== REVIEW)
   }
 
   // The shown stage's fidelities of the practices this session has turned on: the ticket's progress on each fidelity
@@ -252,27 +253,9 @@ export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Prom
   return currentChatBar($)
 }
 
+const REVIEW = 'review'
+
 export async function runHandoff($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
   await $.prompt.fill({ text: `Write a handoff for ticket ${chatBar.sessionName} with /space-session-handoff-session session=${chatBar.sessionFile}`, mode: 'append' })
 }
 
-// fidelity-progress.finish_review refused the review, most often because the latest Validate did not pass. reason is the server's text.
-export class ReviewRefused {
-  constructor(readonly reason: string) {}
-}
-
-// Review is the person's own approval, recorded by the Python FidelityProgress, which refuses it until the latest
-// Validate passed. The chat bar then reads the board again and answers the fidelity as it now stands.
-export async function reviewFidelity($: EngineInterface, fidelity: FidelityProgressClient): Promise<FidelityProgressClient | ReviewRefused> {
-  const ticket = fidelity.progress.ticket.name
-  const slug = fidelity.slug
-  try {
-    await callTool<FidelityProgressData>($, 'fidelity-progress.finish_review', { ticket, fidelity: slug })
-  } catch (failure) {
-    $.ui.toast(`${slug} not reviewed: ${reasonOf(failure)}`)
-    return new ReviewRefused(reasonOf(failure))
-  }
-  $.ui.toast(`${slug} reviewed on ${ticket}`)
-  await refreshChatBar($)
-  return (await currentChatBar($)).fidelities.find(entry => entry.slug === slug) ?? fidelity
-}
