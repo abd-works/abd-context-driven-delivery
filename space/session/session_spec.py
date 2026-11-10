@@ -29,7 +29,6 @@ from harness.mcp.mcp_server import McpServer
 from space.repo.repo import Repo
 from space.session import Session, Sessions
 from harness.agent_tools.chat_pointer import ChatPointer
-from space.session.practice_session_output import PracticeRootInContextError
 from space.session.session_log import LoopNotFoundError
 from space.session.sessions import SessionNameRequiredError
 from space.work_state import WorkState
@@ -845,17 +844,16 @@ with description("a practice"):
                         self.session.choose_workpath("work/inner")
                         expect(self.stories.folder).to(equal((self.work / "docs").resolve()))
 
-            with context("that a person chooses a .context folder as the practice's root"):
-                with it("should refuse it, since the practice's documents already go in its root's .context"):
-                    expect(lambda: self.stories.keep_root(self.work / ".context")).to(
-                        raise_error(PracticeRootInContextError)
-                    )
+            with context("that a person chooses a folder inside .context as the practice's root"):
+                with before.each:
+                    self.stories.keep_root(self.work / ".context" / "stories")
 
-                with it("should name the practice and the folder it refused"):
-                    try:
-                        self.stories.keep_root(self.work / ".context")
-                    except PracticeRootInContextError as refused:
-                        expect((refused.practice, refused.root)).to(equal(("stories", self.work / ".context")))
+                with it("should write the practice's documents in that folder itself"):
+                    outputs = self.fidelity.output_paths()
+                    expect(outputs["markdown"]).to(equal([(self.work / ".context" / "stories" / "story-map.md").resolve().as_posix()]))
+
+                with it("should say the practice root is chosen"):
+                    expect(self.stories.is_root_chosen).to(equal(True))
 
             with context("with session.json naming a root folder for the fidelity too"):
                 with before.each:

@@ -159,19 +159,18 @@ class Source:
             self.end_line = closed
         self._text = None
 
-    def align_to_example_export(self, root: str, name: str) -> None:
-        """Point this slice at the fixture named ``name`` under ``root``: a fixture function, or an exported constant
-        such as ``export const DONE = {...}``. A story test imports both from its examples file, so an example it
-        names belongs there, not at the test that uses it."""
+    def align_to_example_export(self, root: str, name: str, files: Iterable[Path]) -> None:
+        """Point this slice at the fixture named ``name`` in one of ``files``, the TypeScript files under ``root`` the
+        read is scoped to: a fixture function, or an exported constant such as ``export const DONE = {...}``. A story
+        test imports both from its examples file, so an example it names belongs there, not at the test that uses it.
+        Only the files given are searched, so a read limited to the files being edited never opens any other file."""
         if not root or not name:
             return
         root_path = Path(root)
-        if not root_path.is_dir():
-            return
         function = re.compile(rf"(?:export\s+)?function\s+{re.escape(name)}\b")
         constant = re.compile(rf"\bexport\s+const\s+{re.escape(name)}\b")
-        for path in sorted(root_path.rglob("*.ts")):
-            if any(part in {"node_modules", "dist", "build"} for part in path.parts):
+        for path in sorted(files):
+            if not path.is_file():
                 continue
             lines = path.read_text(encoding="utf-8").splitlines()
             for index, line in enumerate(lines):

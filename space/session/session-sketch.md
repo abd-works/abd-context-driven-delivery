@@ -344,7 +344,7 @@ Sessions, a session, and its log
 + enable(is_enabled: bool): PracticeSessionOutput
 	// MCP `practice-session-output.enable`
 + choose_root(path: str): PracticeSessionOutput
-	// MCP `practice-session-output.choose_root`; refuses a `.context` folder with `PracticeRootInContextError`
+	// MCP `practice-session-output.choose_root`; a root inside `.context` holds the practice's documents itself
 + use_default_root(): PracticeSessionOutput
 	// MCP `practice-session-output.use_default_root`
 + keep_root(root: Path): None
@@ -596,7 +596,7 @@ it should list every practice CDD has, opened or not
 it should write the practice's files under that folder
   -> expect(the fidelity's output paths).to start with folder
 it should refuse a .context folder
-  -> expect(choose_root(".context")).to raise PracticeRootInContextError
+  -> expect(choose_root(".context/stories")).to write story-map.md in .context/stories
 ```
 
 ##### with a root a person chose for the practice

@@ -26,19 +26,6 @@ _OUTPUT_PATTERN_MARKS = {"*", "{"}
 REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
 
 
-class PracticeRootInContextError(ValueError):
-    """A practice root was chosen inside a ``.context`` folder, which would put the practice's code among its documents
-    and its documents in a ``.context`` within a ``.context``. It names the practice and the folder it refused."""
-
-    def __init__(self, practice: str, root: Path) -> None:
-        self.practice = practice
-        self.root = root
-        super().__init__(
-            f"{root} is inside a .context folder: choose the folder for {practice}'s code, "
-            "and its documents and diagrams go in that folder's .context"
-        )
-
-
 @identity("session_file", "name")
 @language_adapter(language="typescript")
 @agent_toolset
@@ -167,9 +154,6 @@ class PracticeSessionOutput:
     def keep_root(self, root: Path) -> None:
         """Write this practice's files under root, kept in session.json relative to the workpath, so the root still
         names the same folder after the workpath moves."""
-        # A practice root holds the practice's code; its documents and diagrams go in the root's own .context.
-        if CONTEXT_FOLDER in Path(root).parts:
-            raise PracticeRootInContextError(self.name, Path(root))
         relative = os.path.relpath(Path(root).resolve(), self._session.work_root)
         self._save_chosen_outputs({**self.chosen_outputs, "root": Path(relative).as_posix()})
 
@@ -314,5 +298,11 @@ class FidelitySessionOutput:
         return [PurePosixPath(names[0]).with_name(chosen_name).as_posix()] if chosen_name and is_single_file else names
 
     def _under_root(self, name: str) -> str:
+        """A declared name under this fidelity's root. A root inside a ``.context`` folder, such as
+        ``harness/.context/stories``, holds the practice's documents itself, so a declared ``.context/story-map.md``
+        lands in it as ``story-map.md`` rather than in a ``.context`` within the ``.context``."""
         folder_mark = "/" if name.endswith("/") else ""
-        return f"{(self.root / name).as_posix()}{folder_mark}"
+        declared = PurePosixPath(name)
+        if CONTEXT_FOLDER in self.root.parts and declared.parts[:1] == (CONTEXT_FOLDER,):
+            declared = PurePosixPath(*declared.parts[1:])
+        return f"{(self.root / declared).as_posix()}{folder_mark}"

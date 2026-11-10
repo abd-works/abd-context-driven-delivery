@@ -288,6 +288,10 @@ Observed: with Active session only on, a ticket that is not the active session d
 
 Observed (checked 2026-11-10): a press on a card points the board at the ticket's own chat (`ticket-client.tsx:184-188`), and the card's chat button opens the worktree, making it first if needed, then a new Claude chat on it through `/api/claude/open` and `ClaudeLink` (`ticket-client.tsx:196-205`, `chat-client.tsx:72-80`, `claude-link.ts`). It opens a new chat rather than the one the ticket ran in, and Activate opens none. Was: Intended (`.sessions/_backlog/suggest-the-next-step.md` "open associated chat on session open / manually"): opening a ticket's session opens the Claude Code chat it ran in. Observed today: a press on a ticket switches to its chat by hand (`/api/claude/open`, `ClaudeLink`).
 
+### (S) Person --> Choose Where A Backlog Item Works
+
+Observed (checked 2026-11-10): starting a backlog item opens Where <item> works, a folder browser that starts at the whole repository with Up and one button per folder; Use <folder> starts the item's session with that folder as its workpath (`root-choice-client.ts` `start`, `root-choice-view.tsx`).
+
 ## (E) Maintain Tickets
 
 ### (S) Person --> [Add Backlog Item](../../kanban/.context/move-work-forward-on-session-board/steer-ticket-sessions/add-backlog-item/add_backlog_item_story.test.md)
@@ -373,6 +377,10 @@ Observed: the arrow takes an In progress ticket to Done without crossing a colum
 ### (S) Person --> [Open Help](../../kanban/.context/move-work-forward-on-session-board/guide-work-through-practices/open-help/open_help_story.test.md)
 
 Observed: `Board.help`; the ? on a tile or practice name opens the overview, guidance and rules in a side panel, with a link to the Forge page.
+
+### (S) Person --> Choose Session And Practice Roots
+
+Observed (checked 2026-11-10): Roots of <ticket> lists the session's root and each practice's root, marked default until a person chooses another; Change browses the folders and Use sets the session's workpath (`chooseWorkpath`) or that practice's root (`root-choice-client.ts`, `root-choice-view.tsx`).
 
 ## (E) Customize Board Workflow
 
@@ -691,6 +699,10 @@ Requested (2026-11-06, as the Session Board does): the chat bar turns the active
 ### (S) Person --> Open Fidelity Help
 
 Requested (2026-11-06, as the Session Board does): the chat bar opens the same help for a fidelity or practice through `board.help`.
+
+### (S) Person --> Choose Session Folders From Chat Bar
+
+Requested (2026-11-10, "new session or session where folders aren't set on switch --> probably one dialog box, eg expand above chat bar"): when the chat bar creates a session that does not come from a backlog item, or switches to a session whose workpath and practice roots are not set, one dialog opens above the chat bar to choose the workpath and each practice's root, as the board's Choose Where A Backlog Item Works and Choose Session And Practice Roots do.
 
 ## (E) Work Fidelity Outputs In Chat Bar
 

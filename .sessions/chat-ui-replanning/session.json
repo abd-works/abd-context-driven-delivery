@@ -1,5 +1,15 @@
 {
   "name": "chat-ui-replanning",
   "title": "chat-ui-replanning",
-  "scope": "feature"
+  "scope": "feature",
+  "workpath": "C:\\dev\\abd-context-driven-delivery\\harness",
+  "repo_path": "C:\\dev\\abd-context-driven-delivery",
+  "outputs": {
+    "stories": {
+      "root": ".context/stories"
+    },
+    "ux": {
+      "root": ".context/ux"
+    }
+  }
 }

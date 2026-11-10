@@ -1135,13 +1135,14 @@ with description("an example a story test imports"):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(body, encoding="utf-8")
         self.story_test = "verify-account/verify_account_story.test.ts"
+        self.files = [root / relative for relative in files if relative.endswith(".ts")]
 
     with after.each:
         self.temp.cleanup()
 
-    def _aligned(self, name: str) -> Source:
+    def _aligned(self, name: str, files: list[Path] | None = None) -> Source:
         source = Source(self.story_test, 4, 4, self.temp.name)
-        source.align_to_example_export(self.temp.name, name)
+        source.align_to_example_export(self.temp.name, name, self.files if files is None else files)
         return source
 
     with context("that is a fixture function"):
@@ -1164,6 +1165,14 @@ with description("an example a story test imports"):
     with context("that is a constant the story test declares itself"):
         with it("should stay at the story test"):
             expect(self._aligned("LOCAL").file).to(equal(self.story_test))
+
+    with context("that is declared only in a file outside the files the read is scoped to"):
+        with it("should stay at the story test"):
+            expect(self._aligned("VERIFIED", [Path(self.temp.name) / self.story_test]).file).to(equal(self.story_test))
+
+    with context("that names a file the read was scoped to but that is gone"):
+        with it("should stay at the story test"):
+            expect(self._aligned("VERIFIED", [Path(self.temp.name) / "gone/gone.examples.ts"]).file).to(equal(self.story_test))
 
 
 with description("a graph's practice"):

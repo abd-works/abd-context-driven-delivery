@@ -13,7 +13,7 @@ import re
 import zlib
 from functools import cached_property
 from typing import TYPE_CHECKING, Callable, Optional
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 from harness.graph.graph import Node
 
@@ -183,11 +183,20 @@ class StoryRecording:
         elif node.type in {"Scenario", "Story", "Background"}:
             node.source.widen_to_call_close()
         elif node.type == "Example":
-            node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name)
+            node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name, self._example_files)
 
     def text_of(self, file: str) -> str:
         return self.story_map.source_texts.get(file, "") if file else ""
 
+
+    @cached_property
+    def _example_files(self) -> list[Path]:
+        """The TypeScript files an example's export is looked for in: the ones the story map was read from, so a read of
+        the files being edited opens no file it did not read, and nothing outside the folders a read scans."""
+        root = self.practice.reading.in_graph.source_root
+        if not root:
+            return []
+        return [Path(root) / file for file in sorted(self.story_map.source_texts) if file.endswith(".ts")]
 
     @cached_property
     def _function_sources(self) -> dict[str, str]:

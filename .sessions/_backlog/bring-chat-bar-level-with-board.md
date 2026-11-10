@@ -41,6 +41,10 @@ From `board-enhancements.md`: "add feature to backlog widget for existing apps" 
 
 *Person*. Requested (2026-11-06, as the Session Board does): the chat bar opens the same help for a fidelity or practice through `board.help`.
 
+#### Story: Choose Session Folders From Chat Bar
+
+*Person*. Requested (2026-11-10, "new session or session where folders aren't set on switch --> probably one dialog box, eg expand above chat bar"): when the chat bar creates a session that does not come from a backlog item, or switches to a session whose workpath and practice roots are not set, one dialog opens above the chat bar to choose the workpath and each practice's root, as the board's Choose Where A Backlog Item Works and Choose Session And Practice Roots (built today) do.
+
 ### Feature: Work Fidelity Outputs In Chat Bar → Review Fidelity Outputs In Chat Bar
 
 #### Story: Fix Violations From Chat Bar

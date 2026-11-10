@@ -271,6 +271,8 @@ section: body
 - *Display Report Errors In Code Fences*
 - *Refactor Knowledge Graph App To Web Domain Access*
 - *Attach Violations To Latest Graph*
+- *Choose Where A Backlog Item Works*
+- *Choose Session And Practice Roots*
 
 ### Increment 1: Maintain Tickets On Board
 
@@ -552,6 +554,7 @@ section: body
 - *Mark Session Done In Stage*
 - *Choose Session Practices*
 - *Open Fidelity Help*
+- *Choose Session Folders From Chat Bar*
 - *Fix Violations From Chat Bar*
 - *Add Backlog Item From Chat Bar*
 - *Commit Work From Chat Bar*

@@ -168,6 +168,7 @@ with description("a generate action on practice guidance") as self:
             with before.each:
                 other = self.project / ".sessions" / "beta"
                 other.mkdir(parents=True)
+                (self.project / "src").mkdir(exist_ok=True)
                 (other / "session.json").write_text('{"name": "beta", "workpath": "' + (self.project / "src").as_posix() + '"}', encoding="utf-8")
                 server = McpServer(project=self.project)
                 server.start(("cdd_guidance.actions.generate.generate:Generate",))
