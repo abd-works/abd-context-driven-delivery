@@ -1,6 +1,6 @@
 # The chat bar is option B, the stage strip
 
-The bar above the chat prompt shows the active session as one line, the stage strip, built from the session board's ideas within what a Claude Code mod can draw. Its design is `harness/chat-ui/design/StageStrip.dc.html`, published as version 48 of the Claude Design canvas https://claude.ai/artifact/RRarviRS8Hw74sQhWSaWXn (board "B · Stage strip with action bar"). The icons it draws are in `design/icons/` and `icons.json` holds each one as a single filled path.
+The bar above the chat prompt shows the active session as one line, the stage strip, built from the session board's ideas within what a Claude Code mod can draw. Its design is `harness/.context/ux/ChatBar.dc.html`, published as version 48 of the Claude Design canvas https://claude.ai/artifact/RRarviRS8Hw74sQhWSaWXn (board "B · Stage strip with action bar"). The icons it draws are written into that artboard, each as a single filled path.
 
 The line reads left to right:
 
