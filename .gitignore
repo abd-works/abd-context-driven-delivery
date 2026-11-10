@@ -87,6 +87,10 @@ scripts/.run/
 _*
 !**/__init__.py
 !**/__main__.py
+# Backlog items are kept work, not scratch: each is a markdown file in the board's backlog folder.
+!.sessions/_backlog/
+!.sessions/_backlog/**/
+!.sessions/_backlog/**/*.md
 # Rule fixture folders are source, not scratch.
 !**/_examples/
 !**/_examples/**
