@@ -17,12 +17,12 @@ for _cat in ("tools", "cdd_guidance/practices"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_below, be_true, contain, equal, expect, raise_error
+from expects import be_below, be_false, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.mcp.mcp_server import McpHost
-from harness.process.git import Git
+from harness.process.git import Git, RepoConnectError
 from space.repo.repo import (
     BranchInWorktreeError,
     BranchNameRequiredError,
@@ -65,6 +65,93 @@ with description("a Repo"):
             self.repo.branch_named("session/demo").check_out()
             (self.clone / "a.py").write_text("work\n", encoding="utf-8")
             expect(self.repo.branch_named("session/demo").changed_files()).to(equal(["a.py"]))
+
+        # (S) Repo --> Push Branch
+        with context("with a commit pushed to its branch from elsewhere"):
+            with before.each:
+                self.repo.branch_named("session/demo").check_out()
+                (self.clone / "a.py").write_text("work\n", encoding="utf-8")
+                self.repo.commit([str(self.clone)], "first turn", untracked=True)
+                self.repo.push_upstream()
+                self.elsewhere = _clone_of(self.origin, Path(self.tmp.name) / "elsewhere", "session/demo")
+                (self.elsewhere / "b.py").write_text("from elsewhere\n", encoding="utf-8")
+                _git(self.elsewhere, "add", "-A")
+                _git(self.elsewhere, "commit", "-m", "elsewhere turn")
+                _git(self.elsewhere, "push", "origin", "session/demo")
+                (self.clone / "a.py").write_text("more work\n", encoding="utf-8")
+                self.repo.commit([str(self.clone)], "second turn", untracked=True)
+
+            with it("should take that commit in when it pushes"):
+                self.repo.push_upstream()
+                expect((self.clone / "b.py").is_file()).to(be_true)
+
+            with it("should push its own commit after it"):
+                self.repo.push_upstream()
+                expect(_git(self.origin, "log", "--format=%s", "session/demo")).to(contain("second turn"))
+
+            with context("that changed the same lines of the same file"):
+                with before.each:
+                    (self.elsewhere / "a.py").write_text("theirs\n", encoding="utf-8")
+                    _git(self.elsewhere, "commit", "-am", "conflicting turn")
+                    _git(self.elsewhere, "push", "origin", "session/demo")
+
+                with it("should refuse the push, naming the conflict"):
+                    expect(lambda: self.repo.push_upstream()).to(raise_error(RepoConnectError))
+
+                with it("should leave no merge half done"):
+                    try:
+                        self.repo.push_upstream()
+                    except RepoConnectError:
+                        pass
+                    expect((self.clone / ".git" / "MERGE_HEAD").exists()).to(be_false)
+
+        # Every branch appends to the same session logs, so landing one never stops on them.
+        with context("with a session log both main and a branch appended to"):
+            with before.each:
+                log = self.clone / ".sessions" / "main" / "session.log"
+                log.parent.mkdir(parents=True)
+                log.write_text("start\n", encoding="utf-8")
+                self.repo.commit([str(self.clone)], "log start", untracked=True)
+                self.repo.push_upstream()
+                self.repo.branch_named("session/demo").check_out()
+                log.write_text("start\non the branch\n", encoding="utf-8")
+                self.repo.commit([str(self.clone)], "branch line", untracked=True)
+                self.repo.branch_named("main").check_out()
+                log.write_text("start\non main\n", encoding="utf-8")
+                self.repo.commit([str(self.clone)], "main line", untracked=True)
+                self.repo.merge_from(self.repo.branch_named("session/demo"), message="merge demo")
+                self.merged = log.read_text(encoding="utf-8")
+
+            with it("should keep the lines main wrote"):
+                expect(self.merged).to(contain("on main"))
+
+            with it("should keep the lines the branch wrote"):
+                expect(self.merged).to(contain("on the branch"))
+
+        # Every tool call appends a line to the session log, so a switch never stops on it.
+        with context("with a line not yet committed in a session log the next branch changed too"):
+            with before.each:
+                log = self.clone / ".sessions" / "main" / "session.log"
+                log.parent.mkdir(parents=True)
+                log.write_text("start\n", encoding="utf-8")
+                self.repo.commit([str(self.clone)], "log start", untracked=True)
+                self.repo.push_upstream()
+                self.repo.branch_named("session/demo").check_out()
+                log.write_text("start\non the branch\n", encoding="utf-8")
+                self.repo.commit([str(self.clone)], "branch line", untracked=True)
+                self.repo.branch_named("main").check_out()
+                log.write_text("start\nnot committed\n", encoding="utf-8")
+                self.repo.branch_named("session/demo").switch_to()
+                self.switched = log.read_text(encoding="utf-8")
+
+            with it("should switch to that branch"):
+                expect(self.repo.current_branch.name).to(equal("session/demo"))
+
+            with it("should carry the line not yet committed along"):
+                expect(self.switched).to(contain("not committed"))
+
+            with it("should keep the branch's own line"):
+                expect(self.switched).to(contain("on the branch"))
 
 
 # (E) Open Work Session
@@ -181,8 +268,9 @@ with description("a branch opened through the repo toolset"):
                 (self.clone / "main-work.txt").write_text("main work\n", encoding="utf-8")
                 self.toolset.switch_branch("feature/a")
 
-            with it("should commit that work on main before switching away"):
-                expect(_git(self.clone, "ls-tree", "--name-only", "main")).to(contain("main-work.txt"))
+            # A switch commits nothing: git carries uncommitted work to the branch switched to.
+            with it("should carry that work, uncommitted, onto the branch switched to"):
+                expect(_git(self.clone, "status", "--porcelain")).to(contain("main-work.txt"))
 
             with it("should not push main to origin"):
                 expect(_git(self.origin, "ls-tree", "--name-only", "main")).not_to(contain("main-work.txt"))
@@ -192,9 +280,9 @@ with description("a branch opened through the repo toolset"):
                 self.toolset.switch_branch("feature/a")
                 (self.clone / "work.txt").write_text("feature work\n", encoding="utf-8")
 
-            with it("should push that work to origin before switching away"):
+            with it("should carry that work, uncommitted, onto the branch switched to"):
                 self.toolset.switch_branch("feature/b")
-                expect(_git(self.origin, "ls-tree", "--name-only", "feature/a")).to(contain("work.txt"))
+                expect(_git(self.clone, "status", "--porcelain")).to(contain("work.txt"))
 
             # (S) Repo --> Close Branch
             with it("should merge the branch into main on origin when closed"):
@@ -435,6 +523,13 @@ def _clone_with_origin(root: Path) -> tuple[Path, Path]:
     _git(clone, "commit", "-m", "ignore session state")
     _git(clone, "push", "origin", "main")
     return origin, clone
+
+
+def _clone_of(origin: Path, folder: Path, branch: str) -> Path:
+    """Another clone of origin with branch checked out, standing for a person pushing from elsewhere."""
+    subprocess.run(["git", "clone", "-b", branch, str(origin), str(folder)], check=True, capture_output=True)
+    _init_repository(folder)
+    return folder
 
 
 def _remove_tree(tmp: tempfile.TemporaryDirectory) -> None:

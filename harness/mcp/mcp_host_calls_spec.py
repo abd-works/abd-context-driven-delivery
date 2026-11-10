@@ -96,7 +96,7 @@ with description("a cdd server answering a chat's tool calls") as self:
             self.moved_to = ThrowawayProject().root
             session_file = self.config / "sessions" / f"{_CHAT_PROCESS}.json"
             session_file.parent.mkdir(parents=True)
-            session_file.write_text(json.dumps({"pid": int(_CHAT_PROCESS), "cwd": str(self.moved_to)}), encoding="utf-8")
+            session_file.write_text(json.dumps({"pid": int(_CHAT_PROCESS), "sessionId": _MOVED_CHAT, "cwd": str(self.moved_to)}), encoding="utf-8")
 
         with after.each:
             if self.prior_config is None:
@@ -107,6 +107,14 @@ with description("a cdd server answering a chat's tool calls") as self:
         with it("should work on the folder the session works in now, though the chat names no transcript"):
             answer = _call(self.host, "call-outcomes.ledger_folder", self.project, "unnamed", _CHAT_PROCESS).content[0].text
             expect(answer).to(equal(str(self.moved_to.resolve())))
+
+        with it("should answer for the session that process runs now"):
+            expect(_call(self.host, "call-outcomes.clerk", self.project, "unnamed", _CHAT_PROCESS).content[0].text).to(equal(_MOVED_CHAT))
+
+    # Two chats in one checkout each keep their own open session, so the call is answered for the chat that sent it.
+    with context("from a chat its request names, though its arguments do not"):
+        with it("should answer for that chat"):
+            expect(_call(self.host, "call-outcomes.clerk", self.project, _MOVED_CHAT).content[0].text).to(equal(_MOVED_CHAT))
 
     with context("with a tool that fails"):
         with before.each:

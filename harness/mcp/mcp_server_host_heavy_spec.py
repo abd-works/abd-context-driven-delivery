@@ -25,6 +25,7 @@ from mamba import after, before, context, description, it
 from mcp import McpError, types
 
 from harness.mcp.spec_support import SpecServer
+from space.work_state import WorkState
 
 _LINGER_SECONDS = 1
 _HOSTING_DEMO = "harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo"
@@ -133,8 +134,9 @@ class TwoWorktrees:
     def remove(self) -> None:
         shutil.rmtree(self.root, ignore_errors=True)
 
-    def saved_session(self, worktree: Path) -> str:
-        return json.loads((worktree / ".sessions" / "session.json").read_text(encoding="utf-8"))["session"]
+    def saved_session(self, worktree: Path, home: Path) -> str:
+        """The session open in worktree, as the cdd server keeps it under its home folder, never in the checkout."""
+        return WorkState(worktree, home=home).session
 
     def _git(self, folder: Path, *arguments: str) -> None:
         subprocess.run(["git", *arguments], cwd=folder, check=True, capture_output=True)
@@ -264,8 +266,9 @@ with description("the cdd server") as self:
             expect(self.server.daemon.ping().pid).to(equal(self.started.pid))
             expect(projects).to(contain(str(self.worktrees.first), str(self.worktrees.second)))
 
-        with it("should save each chat's session in its own worktree"):
-            saved = (self.worktrees.saved_session(self.worktrees.first), self.worktrees.saved_session(self.worktrees.second))
+        with it("should keep each chat's session for its own worktree"):
+            home = self.server.home.folder
+            saved = (self.worktrees.saved_session(self.worktrees.first, home), self.worktrees.saved_session(self.worktrees.second, home))
             expect(saved).to(equal(("alpha", "beta")))
 
         with it("should give each chat its own worktree's session"):

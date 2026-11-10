@@ -112,6 +112,22 @@ with description("a chat pointer"):
         with it("should not be the chat of another call"):
             expect(ToolCall.sent({"path": "cart.py"}, self.config).chat).to(be_none)
 
+    # Every chat in one checkout shares that folder's open session unless its call names the chat.
+    with context("of a tool call whose request names its chat but whose arguments do not"):
+        with before.each:
+            self.call = ToolCall.sent({"path": "cart.py"}, self.config, sender=ChatPointer.from_request("chat-b"))
+
+        with it("should be the chat the request names"):
+            expect(self.call.chat_id).to(equal("chat-b"))
+
+        with it("should give way to a chat the arguments name"):
+            named = ToolCall.sent({"conversation_id": "chat-a", "path": "cart.py"}, self.config, sender=ChatPointer.from_request("chat-b"))
+            expect(named.chat_id).to(equal("chat-a"))
+
+    with context("named by a request from an IDE that names no chat"):
+        with it("should be none"):
+            expect(ChatPointer.from_request("unnamed")).to(be_none)
+
     with context("at the end of a session.log line"):
         with it("should read the chat id, the transcript, and the line range"):
             line = (

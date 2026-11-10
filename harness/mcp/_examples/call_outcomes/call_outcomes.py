@@ -33,6 +33,12 @@ class CallOutcomes:
 
     @mcp
     @agent_tool
+    def clerk(self) -> str:
+        """Answer the id of the chat the call came from, the clerk posting to the ledger."""
+        return ToolCall.answering().chat_id
+
+    @mcp
+    @agent_tool
     def post_entry(self) -> str:
         """Fail, because the ledger is locked."""
         raise LedgerIsLocked("the ledger is locked for month end")

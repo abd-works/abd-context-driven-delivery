@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import shutil
+import tempfile
 import threading
 from functools import cached_property
 from pathlib import Path
@@ -235,6 +237,11 @@ class Repo:
         self.git.run("commit", "-m", message, *named)
         return self.current_commit
 
+    @property
+    def has_origin(self) -> bool:
+        """Whether this clone has a remote called origin to push to."""
+        return self.git.succeeds("remote", "get-url", "origin")
+
     def push_upstream(self) -> None:
         """Push the current branch to origin, first merging in what origin's copy has that this branch lacks, so a push
         never fails because work was pushed to the branch from elsewhere."""
@@ -262,6 +269,62 @@ class Repo:
     def fetch(self) -> None:
         self.git.run("fetch", "origin")
 
+    @property
+    def default_tip(self) -> str:
+        """The default branch as origin has it, else as this clone has it."""
+        tracked = f"origin/{self.default_branch}"
+        return tracked if self.has_ref(f"refs/remotes/{tracked}") else self.default_branch
+
+    def holds_on_default(self, relative: str) -> bool:
+        """Whether the default branch, as origin has it once fetched, holds the path relative, named from the top."""
+        if self.has_origin:
+            self.fetch()
+        return bool(self.git.run("ls-tree", "--name-only", self.default_tip, "--", relative))
+
+    def publish_on_default(self, folder: Path, relative: str, message: str) -> None:
+        """Commit the files of folder at relative on the default branch and push it, whichever branch the main clone
+        has out: there itself while it is on the default branch, else in a scratch checkout of the default branch."""
+        main = self.main_clone
+        if main.branch_named(main.default_branch).is_checked_out:
+            target = main.root / relative
+            if Path(folder).resolve() != target.resolve():
+                shutil.copytree(folder, target, dirs_exist_ok=True)
+            main.commit([str(target)], message, untracked=True)
+            if main.has_origin:
+                main.push_upstream()
+            return
+        main._publish_through_scratch_checkout(Path(folder), relative, message)
+
+    def _publish_through_scratch_checkout(self, folder: Path, relative: str, message: str) -> None:
+        """The default branch is checked out nowhere it can be committed in, so a scratch checkout of it takes the
+        commit, which is pushed, or else moved onto the local default branch, and then removed."""
+        scratch = Path(tempfile.mkdtemp(prefix="cdd-publish-"))
+        self.git.run("worktree", "add", "--detach", str(scratch), self.default_tip)
+        try:
+            shutil.copytree(folder, scratch / relative, dirs_exist_ok=True)
+            checkout = Git(scratch)
+            checkout.run("add", "-A", "--", relative)
+            if not checkout.run("diff", "--cached", "--name-only"):
+                return
+            checkout.run("commit", "-m", message)
+            if self.has_origin:
+                checkout.run("push", "origin", f"HEAD:{self.default_branch}")
+                self.fetch()
+            else:
+                self.git.run("update-ref", f"refs/heads/{self.default_branch}", checkout.run("rev-parse", "HEAD"))
+        finally:
+            self.git.run("worktree", "remove", "--force", str(scratch))
+
+    def take_in_default(self) -> None:
+        """Merge the default branch, as origin has it, into the branch checked out, so what landed there, such as a
+        ticket's session folder, reaches this branch; nothing when this branch holds it all already."""
+        if self.has_origin:
+            self.fetch()
+        tip = self.default_tip
+        if self.git.succeeds("merge-base", "--is-ancestor", tip, "HEAD"):
+            return
+        self._merge(tip, "")
+
     def merge_from(self, other: Branch, message: str = "") -> str:
         """Merge other into the current branch without checking other out."""
         if other == self.current_branch:
@@ -272,7 +335,7 @@ class Repo:
     def _merge(self, ref: str, message: str) -> None:
         """Merge ref into the current branch. Every branch appends to the same session logs, so those merge by keeping
         the lines of both sides instead of stopping the merge on a conflict."""
-        self._merge_session_logs_by_union()
+        self.prepare_merges()
         try:
             self.git.run("merge", ref, *(["-m", message] if message else ["--no-edit"]))
         except RepoConnectError:
@@ -280,7 +343,12 @@ class Repo:
             self.git.succeeds("merge", "--abort")
             raise
 
-    def _merge_session_logs_by_union(self) -> None:
+    def remove_untracked(self, relative: str) -> None:
+        """Remove the files at relative, named from the top, that git does not track here, such as a session folder
+        whose files are committed on the default branch and would block checking out a branch that has them."""
+        self.git.run("clean", "-fdq", "--", relative)
+
+    def prepare_merges(self) -> None:
         """Tell git, in this repository's own attributes file, which no checkout commits, to merge session logs by
         union: each line either side wrote is kept."""
         common = Path(self.git.run("rev-parse", "--git-common-dir"))
@@ -347,10 +415,11 @@ class Repo:
     def switch_branch(self, name: str = "") -> str:
         """Switch the main clone to branch ``name``, creating it when missing.
 
-        ``name`` defaults to ``branch`` in the chat's open state under ``~/.cdd``. Commits the branch being
-        left and pushes it (the default branch is committed but not pushed), checks out
-        ``name`` (a new branch starts from origin's copy or the default branch), and saves
-        ``name`` as ``branch`` in the chat's open state under ``~/.cdd``. Does not touch worktrees or sessions.
+        ``name`` defaults to ``branch`` in the chat's open state under ``~/.cdd``. Commits nothing: work
+        left uncommitted goes along to ``name``, as git carries it, and git refuses the switch when it would
+        overwrite that work. Checks out ``name`` (a new branch starts from origin's copy or the default
+        branch) and saves ``name`` as ``branch`` in the chat's open state under ``~/.cdd``. Does not touch
+        worktrees or sessions.
         """
         branch = self._named_or_saved_branch(name).switch_to()
         self.work_state.branch_name = branch.name
@@ -414,7 +483,7 @@ class Repo:
     @command(name="switch-branch")
     @agent_instructions
     def switch_branch_command(self) -> str:
-        """Switch the main clone to a branch, creating it when missing.
+        """Switch the main clone to a branch, creating it when missing. Nothing is committed: uncommitted work goes along.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
         the chat's open state under ``~/.cdd`` is used. Call MCP ``repo.switch_branch``."""
@@ -558,11 +627,14 @@ class Branch:
         return [*committed, *(line[3:].strip('"') for line in uncommitted)]
 
     def check_out(self) -> Branch:
-        """Check this branch out in its clone; a branch the clone does not have starts from ``start_point``."""
+        """Check this branch out in its clone; a branch the clone does not have starts from ``start_point``. Changes
+        not committed go along and are merged into the branch checked out, so a session log every tool call appends to
+        never stops a switch; its lines merge by union."""
+        self._repo.prepare_merges()
         if self.exists:
-            self._repo.git.run("checkout", self.name)
+            self._repo.git.run("checkout", "-m", self.name)
         else:
-            self._repo.git.run("checkout", "-b", self.name, self.start_point)
+            self._repo.git.run("checkout", "-m", "-b", self.name, self.start_point)
         return self
 
     def switch_to(self) -> Branch:

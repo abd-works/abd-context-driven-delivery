@@ -1128,8 +1128,10 @@ with description("the board tools") as self:
             with it("should move the ticket's session folder into the worktree"):
                 expect((self.opened / ".sessions" / "sign-up" / "session.json").is_file()).to(be_true)
 
-            with it("should leave no session folder for the ticket in the checkout it was opened from"):
-                expect((self.project.root / ".sessions" / "sign-up").exists()).to(be_false)
+            # Session folders belong to main: they are committed there before the ticket's branch starts from it.
+            with it("should keep the ticket's session folder committed on main"):
+                tracked = subprocess.run(["git", "ls-tree", "-r", "--name-only", "main", ".sessions/sign-up"], cwd=self.project.root, capture_output=True, text=True, check=True).stdout
+                expect(tracked).to(contain("session.json"))
 
         with it("should say a ticket has no branch yet"):
             expect(self.project.call("ticket.branch", ticket="sign-up")["exists"]).to(be_false)

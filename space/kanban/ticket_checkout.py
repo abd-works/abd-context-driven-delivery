@@ -155,14 +155,56 @@ class TicketCheckout:
         """Open the ticket the way opening names: in its own worktree, which creates its branch when missing, or else by
         switching this checkout to its branch, created when missing. The two are alternatives, so a worktree wins. A
         ticket opened in its own worktree takes its session folder along, so its details are committed on its branch."""
+        if opening:
+            self._publish_sessions_on_default()
         if OPEN_WORKTREE in opening:
             self._repo.switch_worktree(self.branch.name)
         elif OPEN_BRANCH in opening:
+            self._clear_published_copy()
             self._repo.switch_branch(self.branch.name)
         if opening:
             self._ticket.board.reread()
         if OPEN_WORKTREE in opening:
             self._move_session_folder_into_worktree()
+        if opening:
+            self._take_session_from_default()
+
+    @property
+    def _session_relative(self) -> str:
+        """The ticket's session folder named from a checkout's top, the same in every checkout: ``.sessions/{name}``."""
+        return f"{self._ticket.board.sessions.folder.name}/{self._ticket.name}"
+
+    def _publish_sessions_on_default(self) -> None:
+        """The default branch on origin is where every session folder comes from, so it is pushed there before the
+        ticket's branch is opened. While the main clone is on the default branch, every session folder not yet committed
+        is committed and pushed. A ticket whose folder is only on a local branch or worktree has it committed on the
+        default branch and pushed. Then no branch switch takes a ticket off the board."""
+        repository = self._repo.main_clone
+        message = f"sessions: save before opening {self._ticket.name}"
+        if repository.branch_named(repository.default_branch).is_checked_out:
+            folder = self._ticket.board.sessions.folder
+            if folder.is_dir() and repository.is_dirty(folder):
+                repository.publish_on_default(folder, folder.name, message)
+            return
+        session_folder = self._ticket.session.session_path
+        if session_folder.is_dir() and not repository.holds_on_default(self._session_relative):
+            repository.publish_on_default(session_folder, self._session_relative, message)
+
+    def _clear_published_copy(self) -> None:
+        """A session folder this checkout has but does not track, once its files are on the default branch, would stop
+        git checking out a branch that has them; the branch brings it back from the default branch."""
+        repository = self._repo.main_clone
+        if repository.holds_on_default(self._session_relative):
+            repository.remove_untracked(self._session_relative)
+
+    def _take_session_from_default(self) -> None:
+        """The checkout the ticket now works in takes its session folder from the default branch when it lacks it, such
+        as an existing branch that started before the folder was pushed."""
+        worktree = self.worktree
+        checkout = self._repo.checkout_at(worktree) if worktree else self._repo.main_clone
+        if (checkout.root / self._session_relative).is_dir():
+            return
+        checkout.take_in_default()
 
     def _move_session_folder_into_worktree(self) -> None:
         """Move the ticket's session folder from the checkout it was opened from into its worktree's ``.sessions``,
