@@ -32,6 +32,11 @@ function Set-TestEnvironment {
     $env:PYTHONPATH = (($roots | ForEach-Object { Join-Path $repo $_ }) -join [IO.Path]::PathSeparator)
     $env:PYTHONUTF8 = "1"
     $env:PYTHONIOENCODING = "utf-8"
+    # Specs keep what chats have open in a cdd home of their own, never the one the running cdd server uses, and no
+    # spec answers as the chat that started the run.
+    $env:CDD_HOME = Join-Path ([IO.Path]::GetTempPath()) ("cdd-spec-home-" + [guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Force $env:CDD_HOME | Out-Null
+    Remove-Item Env:CLAUDE_CODE_SESSION_ID -ErrorAction SilentlyContinue
 }
 
 function Get-RepoFiles {
