@@ -43,7 +43,7 @@ export async function checkChatFolder($: EngineInterface, chatBar: ChatBarClient
 
 // The desktop app moves a chat when the agent's turn ends. A chat still not there this long after the turn that was
 // asked to move it has ended was refused, so the person hears so then instead of waiting on a fixed timeout.
-const MOVE_AFTER_TURN_MILLISECONDS = 3_000
+const MOVE_AFTER_TURN_MILLISECONDS = 5_000
 const MOVE_CHECK_MILLISECONDS = 500
 
 // Where the move was asked of: /cd moves at once; the agent moves the chat when a turn started after the ask ends.
