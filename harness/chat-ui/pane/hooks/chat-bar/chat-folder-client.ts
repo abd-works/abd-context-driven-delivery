@@ -106,8 +106,13 @@ async function moveChatTo($: EngineInterface, folder: string): Promise<MoveAsked
   }
 }
 
+// The desktop app rewrites a Windows path to backslashes before change_directory runs, and auto mode refuses a call
+// whose input changed after it was reviewed; asking in the spelling the app uses leaves nothing to rewrite.
+const DRIVE_PATH = /^[A-Za-z]:\//
+const inWindowsSpelling = (folder: string): string => (DRIVE_PATH.test(folder) ? folder.split('/').join('\\') : folder)
+
 async function askAgentToMove($: EngineInterface, folder: string): Promise<void> {
-  const answer = await $.prompt.submit({ text: `Move this chat to ${folder}: call the change_directory tool with that path, and do nothing else.`, asUser: true })
+  const answer = await $.prompt.submit({ text: `Move this chat to ${inWindowsSpelling(folder)}: call the change_directory tool with that path, and do nothing else.`, asUser: true })
   if (answer.drop !== undefined) throw new Error(answer.drop || 'the chat did not take the request')
 }
 
