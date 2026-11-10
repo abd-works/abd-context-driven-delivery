@@ -138,7 +138,7 @@ function FormatChipsView($: EngineInterface, elements: ElementTable, { formats }
   const { Box } = elements
   if (!formats.choices.length) return null
   return (
-    <Box key="format-chips" flexDirection="row" gap={0}>
+    <Box key="format-chips" flexDirection="row" gap={0} marginX={1}>
       {formats.choices.map(choice => {
         const isOn = formats.picked.includes(choice.label)
         const colour = isOn ? BRAND.onAccent : choice.made && choice.made === choice.offered ? BRAND.success : BRAND.muted
