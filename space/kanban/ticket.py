@@ -561,7 +561,9 @@ class FidelityProgress:
 
     @property
     def remaining_actions(self) -> list[str]:
-        return [action for action in self._stage.steps if action not in self._done_actions]
+        """Its stage's actions not yet done; review is never required, so a fidelity generated and validated without
+        violations is done."""
+        return [action for action in self._stage.steps if action not in self._done_actions and action != REVIEW]
 
     @property
     @data_field

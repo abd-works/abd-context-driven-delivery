@@ -437,8 +437,8 @@ with description("a ticket") as self:
         with before.each:
             self.lines = [GENERATE_STORY_MAP]
 
-        with it("should show Generate done and Validate and Review remaining for that fidelity"):
-            expect(story_map(ticket_with(self.lines)).remaining_actions).to(equal(["validate", "review"]))
+        with it("should show Generate done and Validate remaining for that fidelity"):
+            expect(story_map(ticket_with(self.lines)).remaining_actions).to(equal(["validate"]))
 
         with context("with log lines whose paths hold spaces and commas"):
             with it("should still find the practice and fidelity by name"):
@@ -450,7 +450,7 @@ with description("a ticket") as self:
                 self.lines.append(VALIDATE_STORY_MAP_WITH_VIOLATIONS)
 
             with it("should still need Validate for that fidelity"):
-                expect(story_map(ticket_with(self.lines)).remaining_actions).to(equal(["validate", "review"]))
+                expect(story_map(ticket_with(self.lines)).remaining_actions).to(equal(["validate"]))
 
         with context("that has a validate with no violations"):
             with before.each:
@@ -539,13 +539,13 @@ with description("a ticket") as self:
                 expect(self.ticket.next_fidelity).to(be_none)
 
     # (S) Person --> Send Next Fidelity Action
-    with context("that a person has moved on with an earlier stage's fidelity still to review"):
+    with context("that a person has moved on with an earlier stage's fidelity still to validate"):
         with before.each:
-            self.ticket = ticket_with([GENERATE_STORY_MAP, VALIDATE_STORY_MAP])
+            self.ticket = ticket_with([GENERATE_STORY_MAP])
             self.ticket.move_to("Specification")
 
-        with it("should name Review on that fidelity as next"):
-            expect((self.ticket.next_fidelity.fidelity.slug, self.ticket.next_fidelity.next_action)).to(equal(("stories-story-map", "review")))
+        with it("should name Validate on that fidelity as next"):
+            expect((self.ticket.next_fidelity.fidelity.slug, self.ticket.next_fidelity.next_action)).to(equal(("stories-story-map", "validate")))
 
     # (S) Person --> Drag Ticket To A Stage
     with context("that a person has dragged into a later stage's done part"):
