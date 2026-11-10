@@ -15,20 +15,27 @@ function keyOf(chatBar: ChatBarClient): string {
   return [chatBar.ticketName, chatBar.shownStage, ...chatBar.actionFidelities.map(fidelity => fidelity.slug)].join(' ')
 }
 
-// The chips for the fidelities the action button acts on, read from Python again only when those fidelities change.
+// The chips for the fidelities the action button acts on. The bar never waits for Python: when those fidelities change,
+// the chips are read in the background and the bar draws again once they arrive.
 export async function currentFormatChips($: EngineInterface, chatBar: ChatBarClient): Promise<FormatChips> {
   const key = keyOf(chatBar)
-  let held = (await read($, formatChoices)) ?? { key: '', choices: [], picked: null }
+  const held = (await read($, formatChoices)) ?? { key: '', choices: [], picked: null }
   if (held.key !== key && chatBar.ticketName && chatBar.actionFidelities.length) {
-    try {
-      const choices = await callTool<FormatChoiceJson[]>($, 'ticket.format_choices', { ticket: chatBar.ticketName, fidelities: chatBar.actionFidelities.map(fidelity => fidelity.slug) })
-      held = { key, choices, picked: null }
-    } catch {
-      held = { key, choices: [], picked: null }
-    }
-    await update($, formatChoices, () => held)
+    await update($, formatChoices, () => ({ key, choices: [], picked: null }))
+    void readChoices($, chatBar, key)
+    return { choices: [], picked: [] }
   }
   return { choices: held.choices, picked: held.picked ?? held.choices.filter(choice => choice.starts_picked).map(choice => choice.label) }
+}
+
+async function readChoices($: EngineInterface, chatBar: ChatBarClient, key: string): Promise<void> {
+  let choices: FormatChoiceJson[] = []
+  try {
+    choices = await callTool<FormatChoiceJson[]>($, 'ticket.format_choices', { ticket: chatBar.ticketName, fidelities: chatBar.actionFidelities.map(fidelity => fidelity.slug) })
+  } catch {
+    return
+  }
+  await update($, formatChoices, held => (held?.key === key ? { key, choices, picked: null } : held))
 }
 
 // A press on a chip turns it on or off.
