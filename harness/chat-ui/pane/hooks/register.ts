@@ -32,6 +32,8 @@ import { toggleCard } from './chat-bar/session-dialogs-client'
 import { withChatNamed } from './session/session-log-client'
 
 const PLUGIN = 'cdd-board'
+// The presses that change which fidelities or stage the action button acts on: a fidelity's dot or card row, a stage.
+const CHANGES_FIDELITIES = /^(dot-|card-pick-|stage-pick-)/
 const CHECK_IN_MILLISECONDS = 1000
 const CDD_TOOL = /^mcp__(plugin_cdd_)?cdd__/
 
@@ -98,7 +100,7 @@ export const register: Register = on => {
   // A press can change which fidelities or stage the action button acts on, so the format chips are read again after it.
   on('ui.press', async ($, e, next) => {
     const pressed = await next(e)
-    if (e.plugin === PLUGIN) await loadFormatChips($, await currentChatBar($))
+    if (e.plugin === PLUGIN && CHANGES_FIDELITIES.test(e.element)) void loadFormatChips($, await currentChatBar($)).catch(logged($, 'reading the format chips'))
     return pressed
   })
 
