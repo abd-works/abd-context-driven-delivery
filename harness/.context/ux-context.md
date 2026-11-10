@@ -1,6 +1,6 @@
 # UX context — Integrated Session Flow
 
-Notes the [information architecture](information-architecture.drawio) cannot show. Its screens come from the epic Connect Sessions Across Channels And Apps in [story-map.md](story-map.md#e-connect-sessions-across-channels-and-apps), and from two others: the Chat Bar's Generate Fidelity Outputs In Chat Bar (Display Action Before Fidelity Dots, Select Several Fidelities, Choose Format), and Play Stories On Design Canvas Screens (Show Screen Frames In Story UI, Navigate The Browser Story Explorer, Frame Design Canvas Screens In Explorer). Every story on them was requested on 2026-11-06 and none is built yet.
+Notes the [information architecture](information-architecture.drawio) cannot show. Its screens come from the epic Connect Sessions Across Channels And Apps in [story-map.md](stories/story-map.md#e-connect-sessions-across-channels-and-apps), and from two others: the Chat Bar's Generate Fidelity Outputs In Chat Bar (Display Action Before Fidelity Dots, Select Several Fidelities, Choose Format), and Play Stories On Design Canvas Screens (Show Screen Frames In Story UI, Navigate The Browser Story Explorer, Frame Design Canvas Screens In Explorer). Every story on them was requested on 2026-11-06 and none is built yet.
 
 ## Invariants
 

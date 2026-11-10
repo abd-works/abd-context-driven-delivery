@@ -1,0 +1,241 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-11-06T20:45:00Z"
+ },
+ "title": "Integrated Harness Flow",
+ "launch": {
+  "view": "canvas",
+  "page": "options"
+ },
+ "pages": [
+  {
+   "id": "pieces",
+   "name": "Pieces today"
+  },
+  {
+   "id": "options",
+   "name": "Integrated options"
+  }
+ ],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1960,
+   "h": 920,
+   "title": "Session Board",
+   "is_interactive": true,
+   "page": "pieces"
+  },
+  "ChatBar.dc.html": {
+   "x": 2040,
+   "y": 0,
+   "w": 960,
+   "h": 560,
+   "title": "Chat Bar · stage strip",
+   "is_interactive": true,
+   "page": "pieces"
+  },
+  "StoryUiEditor.dc.html": {
+   "x": 0,
+   "y": 1320,
+   "w": 1440,
+   "h": 860,
+   "title": "Story UI editor (mockup)",
+   "is_interactive": true,
+   "page": "pieces"
+  },
+  "StoryMapCanvas.dc.html": {
+   "x": 1520,
+   "y": 1320,
+   "w": 1600,
+   "h": 860,
+   "title": "Story map canvas (mockup)",
+   "is_interactive": true,
+   "page": "pieces"
+  },
+  "StoryExplorer.dc.html": {
+   "x": 0,
+   "y": 2580,
+   "w": 1280,
+   "h": 800,
+   "title": "Story explorer (mockup)",
+   "is_interactive": true,
+   "page": "pieces"
+  },
+  "KnowledgeGraph.dc.html": {
+   "x": 1360,
+   "y": 2580,
+   "w": 1280,
+   "h": 800,
+   "title": "Knowledge graph explorer (mockup)",
+   "is_interactive": true,
+   "page": "pieces"
+  },
+  "OptionC.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1600,
+   "h": 960,
+   "title": "Integrated journey · the chat is home, views beside it",
+   "is_interactive": true,
+   "page": "options"
+  },
+  "ChatBand.dc.html": {
+   "x": 0,
+   "y": 1360,
+   "w": 1200,
+   "h": 96,
+   "title": "Chat Band pane",
+   "page": "options"
+  },
+  "BoardPane.dc.html": {
+   "x": 1280,
+   "y": 1360,
+   "w": 900,
+   "h": 420,
+   "title": "Kanban Board pane",
+   "page": "options"
+  },
+  "StoryMapPane.dc.html": {
+   "x": 2260,
+   "y": 1360,
+   "w": 800,
+   "h": 520,
+   "title": "Story Map pane (screen frames open the explorer)",
+   "page": "options"
+  },
+  "InspectorPane.dc.html": {
+   "x": 3140,
+   "y": 1360,
+   "w": 800,
+   "h": 520,
+   "title": "Inspector pane (files, folding, violation cards)",
+   "page": "options"
+  },
+  "KnowledgeGraphPane.dc.html": {
+   "x": 4020,
+   "y": 1360,
+   "w": 800,
+   "h": 520,
+   "title": "Knowledge Graph pane (ticket scope)",
+   "page": "options"
+  },
+  "StoryExplorerPane.dc.html": {
+   "x": 4900,
+   "y": 1360,
+   "w": 800,
+   "h": 360,
+   "title": "Story Explorer pane (below the story map by default)",
+   "page": "options"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "ChatBar.dc.html",
+  "StoryUiEditor.dc.html",
+  "StoryMapCanvas.dc.html",
+  "StoryExplorer.dc.html",
+  "KnowledgeGraph.dc.html",
+  "OptionC.dc.html",
+  "ChatBand.dc.html",
+  "BoardPane.dc.html",
+  "StoryMapPane.dc.html",
+  "InspectorPane.dc.html",
+  "KnowledgeGraphPane.dc.html",
+  "StoryExplorerPane.dc.html"
+ ],
+ "notes": {
+  "row-channels": {
+   "x": 0,
+   "y": -300,
+   "text": "Channels: Session Board and Chat Bar",
+   "kind": "title1",
+   "maxW": 3000,
+   "page": "pieces"
+  },
+  "row-editing": {
+   "x": 0,
+   "y": 1020,
+   "text": "Story editing: Story UI editor and story map canvas",
+   "kind": "title1",
+   "maxW": 3120,
+   "page": "pieces"
+  },
+  "row-playing": {
+   "x": 0,
+   "y": 2280,
+   "text": "Playing and checking: story explorer and knowledge graph",
+   "kind": "title1",
+   "maxW": 2640,
+   "page": "pieces"
+  },
+  "connect-channels": {
+   "x": 3080,
+   "y": 0,
+   "w": 440,
+   "fill": "orange",
+   "text": "How the channels reach the apps (story-map, Integrate Practice Content Editor Apps):\n\nBoard › Invoke Story UI Editor In Session Context\nBoard › Invoke Design Canvas Story Explorer In Session Context\nBoard › Invoke Knowledge Graph Explorer In Session Context\n\nChat bar › the same three, From Chat Bar\nChat bar › Open UX Design In Claude Design\nChat bar › Trace Story Through Artifacts\n\nAll Intended: nothing on the board or the chat bar opens these apps yet.",
+   "page": "pieces"
+  },
+  "connect-editing": {
+   "x": 3200,
+   "y": 1320,
+   "w": 440,
+   "fill": "blue",
+   "text": "Story UI edits a session's story-map.md (Author Story Maps).\nThe story map canvas draws that map with a screen under each story (Play The Product Story On A Design Canvas).\n\nOpen question: one story map, two editors. Which one owns layout, which owns content?",
+   "page": "pieces"
+  },
+  "connect-playing": {
+   "x": 2720,
+   "y": 2580,
+   "w": 440,
+   "fill": "teal",
+   "text": "The explorer plays a story's scenarios on its screen; the graph shows the same story's nodes, links and rule violations.\n\nTrace Story Through Artifacts would join them: pick a story, see its scenarios, tests and code.\n\nBefore the channels invoke an app, each is tested on a real session: Test Story UI Editor On Session Story Map, Test Design Canvas Explorer On Session Story Map, Test Knowledge Graph Explorer On Session Files.",
+   "page": "pieces"
+  },
+  "options-title": {
+   "x": 0,
+   "y": -300,
+   "text": "The integrated journey",
+   "kind": "title1",
+   "maxW": 1600,
+   "page": "options"
+  },
+  "panes-title": {
+   "x": 0,
+   "y": 1100,
+   "text": "The panes every option assembles",
+   "kind": "title1",
+   "maxW": 4820,
+   "page": "options"
+  },
+  "options-try": {
+   "x": 2240,
+   "y": 380,
+   "w": 560,
+   "fill": "orange",
+   "page": "options",
+   "text": "Try it (Play):\n\n1. ▶ on the band (▾ picks generate, render, sketch, iterate, document or fix): generate reloads the graph; violations appear on the band's dots, the board's tiles, the story map's cards and the Inspector at once.\n2. Press the practice squares on the band to pick which practices the next action runs on: pick UX alone and ▶ generates only UX, so only UX violations appear.\n3. ▾ beside the session name opens the session list box: pick billing-report, or press its ticket on the board: every view switches session.\n4. The icons at the band's right open and close views, with their names on hover; the diagram, markdown and code icons, as on the board's tiles, pick the formats for the next action; a fifth view closes the oldest.\n5. Story map › Screen frames › ▶ a screen: the story explorer opens as its own view below the story map; press another story's screen and the explorer changes to it.\n6. Knowledge graph › Only violations, then press a marked node: its violation opens in the Inspector.\n7. Board › ▾ on a ticket: Files for the whole ticket or for one practice opens the Inspector on those files.\n8. Inspector › file tabs at the top: open any file, with or without violations; ▾ / ▸ fold a heading, def or diagram and everything under it; a violation's whole section is light red.\n9. Inspector › Show violations: one switch for the violation cards on the right and the marks in the file. The cards group under their rule, as in the board's violation report: ▾ / ▸ folds a rule, Fix rule sits on it, This file only keeps the open file's. On a card: Open, Fix this one; Fix every violation under the cards.\n10. Inspector › information-architecture.drawio: it opens as its diagram with the violating shape in red; press a shape for its lines in Source.\n11. The arrows on a view: ◀ ▶ move it into the next column, under the views already there (or into a column of its own at the edge); ▲ ▼ move it up and down its column. Nothing else moves, and an arrow with nowhere to go is hidden. Layout ▾ sets a starting arrangement."
+  },
+  "options-compare": {
+   "x": 1680,
+   "y": 0,
+   "w": 520,
+   "fill": "blue",
+   "page": "options",
+   "text": "The chat is home: Claude Code with its chat band in the left column, and up to four views beside it: the board, the story map, the story explorer, the knowledge graph and the Inspector; a fifth closes the oldest.\n\nDefault: the board above the story map in the middle, the story explorer below the story map when a screen frame opens it, the Inspector on the right. The arrows on a view move it into the next column or up and down its own, leaving the other views in place; the layout ▾ sets a starting arrangement.\n\nThe Knowledge Graph is for browsing the ticket's practice trees and sends a node's violation to the Inspector, which joins the graph's file view with the board's report formatting."
+  }
+ },
+ "designSystems": [
+  {
+   "title": "abd.works Design System",
+   "namespace": "abd-works",
+   "artifact": "https://claude.ai/artifact/AxVa2LCgZ2ehejazDSEtnM",
+   "version": "1793753510-2ec0",
+   "copiedAt": "2026-11-06T20:45:00Z"
+  }
+ ]
+}
