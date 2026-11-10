@@ -1,1 +1,0 @@
-{ "name": "chat-pilot", "version": "0.1.0", "description": "Polls the local pilot server and passes its commands into this chat" }
