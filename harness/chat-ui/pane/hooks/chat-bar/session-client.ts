@@ -75,7 +75,7 @@ const MAIN_OPENS_AS_IT_IS = { has_branch: true, candidate_branches: [], choices:
 export async function pickSession($: EngineInterface, chatBar: ChatBarClient, name: string): Promise<void> {
   try {
     const [leaving, opening] = await Promise.all([
-      chatBar.hasSession && !chatBar.isMain ? callTool<LeaveChoicesData>($, 'ticket.leave_choices', { ticket: chatBar.sessionName }) : null,
+      chatBar.hasSession ? callTool<LeaveChoicesData>($, 'ticket.leave_choices', { ticket: chatBar.sessionName }) : null,
       name === MAIN_SESSION ? MAIN_OPENS_AS_IT_IS : callTool<OpenChoicesData>($, 'ticket.open_choices', { ticket: name }),
     ])
     await showSwitch($, name, leaving, opening)
