@@ -479,7 +479,7 @@ with description("the board tools") as self:
                 expect((self.opened["name"], self.opened["column"]["name"])).to(equal(("loyalty-points", "Discovery")))
 
             with it("should leave the current session as it is"):
-                expect(self.project.call("board.show")["active"]).to(equal(None))
+                expect(self.project.call("board.show")["active"]["name"]).to(equal("main"))
 
         with context("that opens a ticket on a folder in the repository"):
             with before.each:
@@ -541,8 +541,8 @@ with description("the board tools") as self:
                 Sessions(self.project.root).switch("pet-visits")
                 self.project.call("ticket.close", ticket="pet-visits")
 
-            with it("should leave no ticket active"):
-                expect(self.project.call("board.show")["active"]).to(equal(None))
+            with it("should make main the active ticket"):
+                expect(self.project.call("board.show")["active"]["name"]).to(equal("main"))
 
         # (S) Person --> Archive Ticket
         with context("that archives a ticket"):
@@ -819,7 +819,7 @@ with description("the board tools") as self:
                 expect(self.moved["ticket"]).to(equal("sign-up"))
 
             with it("should take the ticket off the board's stages"):
-                expect(self.project.tickets_in("Discovery")).to(equal([]))
+                expect(self.project.tickets_in("Discovery")).to(equal(["main"]))
 
             # (S) Person --> Add Backlog Item, Start Backlog Item
             with context("that starts the item again"):
@@ -1254,9 +1254,9 @@ with description("the board tools") as self:
             with it("should offer the same when closing it"):
                 expect(self.project.call("ticket.close_choices", ticket="pet-visits")["choices"]).to(equal(["handoff", "commit", "push", "merge", "delete_branch"]))
 
-            with it("should leave no ticket active once main is opened"):
+            with it("should make main the active ticket once main is opened"):
                 self.project.call("board.open_main", leaving=["commit"])
-                expect(self.project.call("board.overview")["active"]).to(equal(None))
+                expect(self.project.call("board.overview")["active"]["name"]).to(equal("main"))
 
             with it("should put the repository's folder on main once main is opened"):
                 self.project.call("board.open_main", leaving=["commit"])
@@ -1329,7 +1329,7 @@ with description("the board tools") as self:
 
         with it("should name every open ticket in its column"):
             named = {ticket["name"] for column in self.overview["columns"] for ticket in column["tickets"]}
-            expect(named).to(equal({f"ticket-{number}" for number in range(12)}))
+            expect(named).to(equal({"main", *(f"ticket-{number}" for number in range(12))}))
 
         with it("should send each ticket of a column by its name alone"):
             expect({tuple(ticket) for column in self.overview["columns"] for ticket in column["tickets"]}).to(equal({("name",)}))

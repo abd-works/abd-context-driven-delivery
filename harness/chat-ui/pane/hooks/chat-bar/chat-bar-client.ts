@@ -13,6 +13,9 @@ import { StageClient, shownStageName } from './stage-client'
 
 // The chat bar: the active session's line above the prompt. Sources: harness/chat-ui/.context/story-map.md,
 // cdr/0001-stage-strip-band.md, design/StageStrip.dc.html. Every rule lives in the Python Ticket; this file shows its answers.
+// Main is the default session: the default branch in the repository's own folder, a ticket on the board like any other.
+export const MAIN_SESSION = 'main'
+
 const chatBar = atom({ plugin: 'cdd-board', key: 'chatBar' } as const, { board: null, problem: null, failure: null } as ChatBarJson, { shape: 'chat-bar-overview-2' })
 
 
@@ -35,13 +38,20 @@ export class ChatBarClient {
   // An action the person ran that failed, in the server's own words, shown until they dismiss it.
   readonly failure: string | null
 
-  // The tickets a person can switch to, each named in the stage it is in, as board.overview sends them.
+  // The tickets a person can switch to, each named in the stage it is in, as board.overview sends them. Main is a
+  // ticket too, but the session list shows it first on its own row, so it is left out here.
   get openTickets(): { name: string; stage: string }[] {
-    return (this.board?.columns ?? []).flatMap(column => column.tickets.map(ticket => ({ name: ticket.name, stage: column.name })))
+    return (this.board?.columns ?? []).flatMap(column => column.tickets.filter(ticket => ticket.name !== MAIN_SESSION).map(ticket => ({ name: ticket.name, stage: column.name })))
   }
 
+  // Every session has a ticket, main among them, so the bar draws the full panel whenever the board has answered.
   get hasSession(): boolean {
     return this.ticket !== null
+  }
+
+  // Main, the default session, opens with board.open_main and never closes, so the bar offers no close for it.
+  get isMain(): boolean {
+    return this.ticket?.is_main ?? false
   }
 
   get sessionName(): string {

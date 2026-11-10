@@ -114,7 +114,7 @@ story-actions.spec       describe Choose Session Root
 activation-client.spec  describe Close Active Session
 story-actions.spec      describe Close Active Session
 kanban_tools_spec       it should show the ticket in Complete
-kanban_tools_spec       it should leave no ticket active
+kanban_tools_spec       it should make main the active ticket
 ```
 
 ### Restrict Actions To Active Session

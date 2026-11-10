@@ -59,8 +59,8 @@ test.describe('Open Board', () => {
       await openBoard(page)
     })
 
-    test('Then the header reads cdd-board-surface-fixture · 9 tickets · active: Checkout flow', async ({ page }) => {
-      await expect(page.locator('.header-meta')).toHaveText('cdd-board-surface-fixture · 9 tickets · active: Checkout flow')
+    test('Then the header reads cdd-board-surface-fixture · 10 tickets · active: Checkout flow', async ({ page }) => {
+      await expect(page.locator('.header-meta')).toHaveText('cdd-board-surface-fixture · 10 tickets · active: Checkout flow')
     })
 
     test('And the session board reads the board again every two seconds', async ({ page }) => {

@@ -210,7 +210,7 @@ def expect_no_next(ticket: dict) -> None:
 
 
 def expect_active(board: dict, name: str | None) -> None:
-    """The board names the ticket of the session saved as open; none while no ticket's session is."""
+    """The board names the ticket of the session saved as open, main's while main is."""
     _expect_equal(board["active"] and board["active"]["name"], name, "the active ticket")
 
 

@@ -6,7 +6,7 @@
 
 - Its columns are always the same: Backlog, one stage for each stage name, then Complete. Practices play no part in them, because the session of each ticket says which practices that ticket works on.
 - Has a reference to one repository, and shows one ticket for each of the repository's sessions.
-- The main session is in use when no named session is open, so it is not a ticket. Closed sessions are finished tickets; archived sessions are off the board.
+- The main session is in use when no named session is open. It is a ticket like any other, placed in its stage's column and listed first, but it opens with `board.open_main` on the repository's own folder and the default branch, and it never closes, archives, or goes to the Backlog. Closed sessions are finished tickets; archived sessions are off the board.
 
 ### card
 
@@ -104,7 +104,7 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 + cards: list[Card]
 	// its tickets, then its backlog items
 + active: Ticket
-	// reference data field: the ticket of the session saved as open, sent by its name, since its column sends it whole; none while the main session is, since main is not on the board
+	// reference data field: the ticket of the session saved as open, sent by its name, since its column sends it whole; main's ticket while the main session is
 	-> Sessions.open_name
 	-> Board.ticket
 + worktrees: dict[Branch, Worktree]

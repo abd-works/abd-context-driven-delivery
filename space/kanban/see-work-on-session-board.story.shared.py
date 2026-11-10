@@ -67,7 +67,7 @@ STAGES = ("Discovery", "Specification", "Implementation")
 
 @shared_stories.scenario("Open Board", "Open the board on a project")
 def _(s):
-    @s.given("the board of project cdd-board-surface-fixture shows 9 tickets")
+    @s.given("the board of project cdd-board-surface-fixture shows 10 tickets")
     def _(world):
         seed_surface_fixture(world.project)
 
@@ -79,11 +79,11 @@ def _(s):
     def _(world):
         world.read = world.data_of(world.Board.load().show())
 
-    @s.then("the header reads cdd-board-surface-fixture · 9 tickets · active: Checkout flow")
+    @s.then("the header reads cdd-board-surface-fixture · 10 tickets · active: Checkout flow")
     def _(world):
         tickets = [name for column in world.read["columns"] for name in names_in(column)]
         header = (world.read["project"], len(tickets), active_in(world.read)["title"])
-        expect(header).to(equal((SURFACE_FIXTURE_PROJECT, 9, "Checkout flow")))
+        expect(header).to(equal((SURFACE_FIXTURE_PROJECT, 10, "Checkout flow")))
 
 
 @shared_stories.scenario("Display Board", "Draw the columns of the board")
@@ -199,17 +199,17 @@ def _(s):
     def _(world):
         world.read = world.data_of(world.Board.load().show())
 
-    @s.then("the Discovery stage shows the tickets Pet visits and Sign up")
+    @s.then("the Discovery stage shows the tickets main, Pet visits, and Sign up")
     def _(world):
-        expect([ticket["title"] for ticket in column_in(world.read, "Discovery")["in_progress"]]).to(equal(["Pet visits", "Sign up"]))
+        expect([ticket["title"] for ticket in column_in(world.read, "Discovery")["in_progress"]]).to(equal([MAIN.title, "Pet visits", "Sign up"]))
 
     @s.and_("the Complete column shows Browse pets")
     def _(world):
         expect([ticket["title"] for ticket in column_in(world.read, "Complete")["tickets"]]).to(equal(["Browse pets"]))
 
-    @s.but_("main and old-spike are not on the board")
+    @s.but_("old-spike is not on the board")
     def _(world):
-        expect((ticket_in(world.read, MAIN.name), ticket_in(world.read, OLD_SPIKE.name))).to(equal((None, None)))
+        expect(ticket_in(world.read, OLD_SPIKE.name)).to(be_none)
 
 
 @shared_stories.scenario("Display Ticket Card", "Place a ticket in the stage of its latest move")

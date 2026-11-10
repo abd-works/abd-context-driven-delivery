@@ -103,7 +103,7 @@ function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBa
     <Box key="session-buttons" flexDirection="row" gap={1}>
       {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
       {fidelity ? IconButtonView(elements, 'files-button', '▤', 'files', () => openFiles($, fidelity)) : null}
-      {IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
+      {chatBar.isMain ? null : IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
     </Box>
   )
 }
