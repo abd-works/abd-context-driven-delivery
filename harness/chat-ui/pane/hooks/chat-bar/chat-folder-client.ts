@@ -69,7 +69,18 @@ export async function moveToMainCheckout($: EngineInterface): Promise<string> {
   if (sameFolder(current, main)) return ''
   const asked = await moveChatTo($, main)
   if (!asked) return `this chat did not move out of ${current}`
-  return (await arrivedIn($, main, asked)) ? '' : `the app did not move this chat out of ${current}, so its worktree is held open`
+  if ((await arrivedIn($, main, asked)) || (await arrivedLate($, main))) return ''
+  return `the app did not move this chat out of ${current}, so its worktree is held open`
+}
+
+// A delete waits on the move, so a move the app makes late (while it reconnects the folder's MCP servers, say) still
+// counts: the chat is checked until the late-move limit before the switch or close is refused.
+async function arrivedLate($: EngineInterface, folder: string): Promise<boolean> {
+  for (let waited = 0; waited < LATE_MOVE_MILLISECONDS; waited += MOVE_CHECK_MILLISECONDS) {
+    if (sameFolder(await $.session.root(), folder)) return true
+    await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
+  }
+  return false
 }
 
 // True once the chat is in folder; false once the move had its chance: the asked turn ended and the app still had not.
@@ -92,10 +103,7 @@ const LATE_MOVE_MILLISECONDS = 60_000
 
 async function reportLateMove($: EngineInterface, folder: string): Promise<void> {
   await showFailure($, `The app did not move this chat to ${folder}`)
-  for (let waited = 0; waited < LATE_MOVE_MILLISECONDS; waited += MOVE_CHECK_MILLISECONDS) {
-    if (sameFolder(await $.session.root(), folder)) return dismissFailure($)
-    await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
-  }
+  if (await arrivedLate($, folder)) await dismissFailure($)
 }
 
 function askedTurnEnded(asked: MoveAsked): boolean {
