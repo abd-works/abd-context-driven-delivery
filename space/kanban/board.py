@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from harness.agent_tools import agent_toolset
+from harness.agent_tools.tool_call import ToolCall
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.catalog_generator.catalog_examples import CatalogFidelity
 from harness.chat.chat import Chat
@@ -103,8 +104,14 @@ class Board:
     @tool_subject
     def load(cls, project: Path | str) -> Board:
         """The board of project, with every practice chosen; a tool call is handed the project the call names. The board
-        lists the sessions of the checkout it is loaded in: a ticket's worktree shows its own ``.sessions``."""
+        lists the sessions of the checkout it is loaded in: a chat working in a ticket's worktree sees that worktree's
+        ``.sessions``."""
         sessions = Sessions.of_project(project)
+        call = ToolCall.answering()
+        if call is not None:
+            worktree = sessions.open_state(call.chat_id).worktree_folder
+            if worktree is not None and Path(worktree).is_dir():
+                sessions = Sessions.of_project(worktree)
         return cls(sessions.repo, sessions.board_practices)
 
     @property

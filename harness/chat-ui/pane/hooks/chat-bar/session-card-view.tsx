@@ -28,21 +28,14 @@ function cardColumnsOf(chatBar: ChatBarClient): CardColumns {
   return { name: chatBar.sessionName.length + NAME_TO_DOTS, fidelities: Math.max(0, ...chatBar.fidelities.map(rowWidthOf)) + FOLDER_GAP }
 }
 
-// The session name over the name, FIDELITY over the dots, the shown stage in orange over the folders, and a ✕ that
-// closes a card pinned open.
-function HeaderView($: EngineInterface, elements: ElementTable, chatBar: ChatBarClient, columns: CardColumns) {
+// The session name, then the shown stage in orange, on one line that never wraps, and a ✕ at the far end, apart from the
+// stage, that closes a card pinned open.
+function HeaderView($: EngineInterface, elements: ElementTable, chatBar: ChatBarClient, _columns: CardColumns) {
   const { Box, Text } = elements
   return (
-    <Box key="card-header" flexDirection="row">
-      <Box width={columns.name}>
-        <Text weight="bold" color={BRAND.text}>{chatBar.sessionName}</Text>
-      </Box>
-      <Box width={columns.fidelities}>
-        <Text size="caption" color={BRAND.muted}>FIDELITY</Text>
-      </Box>
-      <Box key="card-stage">
-        <Text weight="bold" color={BRAND.accent}>{chatBar.shownStage}</Text>
-      </Box>
+    <Box key="card-header" flexDirection="row" gap={2} alignItems="center">
+      <Text weight="bold" color={BRAND.text} wrap="truncate-end">{chatBar.sessionName}</Text>
+      <Text weight="bold" color={BRAND.accent}>{chatBar.shownStage}</Text>
       <Box flexGrow={1} />
       {GlyphButtonView(elements, 'card-close', '✕', BRAND.muted, () => closeCard($))}
     </Box>
