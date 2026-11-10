@@ -493,9 +493,9 @@ with description("the board tools") as self:
             with before.each:
                 self.project.call("ticket.create", title="Pet records", scope="feature")
 
-            with it("should leave the session working on the repository"):
+            with it("should save no workpath, so the session works on the repository"):
                 fields = json.loads((self.project.sessions / "pet-records" / "session.json").read_text(encoding="utf-8"))
-                expect(fields["workpath"]).to(equal(str(self.project.root.resolve())))
+                expect("workpath" in fields).to(equal(False))
 
         # (S) Person --> Split Ticket Into Child Tickets
         with context("that opens a ticket split from another"):
