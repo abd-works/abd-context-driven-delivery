@@ -23,6 +23,7 @@ export type ChatBarDraw = {
   view: ChatBarViewJson
   picker: ActionPickerJson
   folder: ChatFolderJson & { isElsewhere: boolean }
+  busy: { doing: string; wheel: string }
   health: { band: unknown; panel: unknown }
   width: number
 }
@@ -174,6 +175,7 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
     <Box key="chat-bar" flexDirection="column" width={draw.width}>
       {chatBar.problem ? ProblemView($, elements, `The board did not answer: ${chatBar.problem}`) : null}
       {FailureView($, elements, draw)}
+      {draw.busy.doing ? <Text key="busy" color={BRAND.accent}>{`${draw.busy.wheel} ${draw.busy.doing}…`}</Text> : null}
       {ElsewhereView($, elements, draw)}
       {CloseView($, elements, draw)}
       {ActivateView($, elements, draw)}

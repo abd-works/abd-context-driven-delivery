@@ -52,6 +52,8 @@ export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: 
 // main checkout), so the band can say when they differ.
 export type ChatFolderJson = { current: string; expected: string }
 
+// What the chat bar is doing while a switch or close runs, which the band shows with a turning wheel; empty when idle.
+export type BusyJson = { doing: string; frame: number }
 
 declare module 'claude-code' {
   interface PluginState {
@@ -66,6 +68,7 @@ declare module 'claude-code' {
       fidelityFiles: FidelityFilesJson
       shownStage: string | null
       chatFolder: ChatFolderJson
+      busy: BusyJson
     }
   }
 }

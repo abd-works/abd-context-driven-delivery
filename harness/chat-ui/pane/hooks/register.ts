@@ -7,6 +7,7 @@ import { openedBoard } from './board-chat/board-server'
 import { currentChatBar, refreshChatBar } from './chat-bar/chat-bar-client'
 import { ChatBarView } from './chat-bar/chat-bar-view'
 import { checkChatFolder, currentChatFolder } from './chat-bar/chat-folder-client'
+import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
 import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
 import { FidelityFilesView } from './chat-bar/fidelity-files-view'
@@ -56,6 +57,7 @@ async function readActive($: EngineInterface): Promise<void> {
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'board', description: 'Open the CDD session board, starting it when it is not running' })
+    await clearBusy($)
     const chat = await $.session.id()
     await readName($).catch(logged($, 'naming the chat'))
     $.clock.every(CHECK_IN_MILLISECONDS, () => {
@@ -100,7 +102,7 @@ export const register: Register = on => {
     // A press on the health mark reads the board and the server again, and shows the card with the diagnostics open.
     const actions = {
       toggleCard: async () => {
-        await Promise.all([readActive($), refreshHealth($), openDetails($)])
+        await Promise.all([clearBusy($), readActive($), refreshHealth($), openDetails($)])
         await toggleCard($)
       },
       openDetails: () => openDetails($),
@@ -115,6 +117,7 @@ export const register: Register = on => {
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
       folder: await currentChatFolder($),
+      busy: await currentBusy($),
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
       width: e.props.bodyColumns,
     })
