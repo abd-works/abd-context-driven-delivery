@@ -4,7 +4,7 @@ import type { EngineInterface } from 'claude-code'
 import type { ChatFolderJson } from '../../types'
 import { isChatBusy, turnsSoFar } from '../board-chat/chat-turns'
 import { reasonOf } from '../shared/failure'
-import { dismissFailure, showFailure, type ChatBarClient } from './chat-bar-client'
+import { showFailure, type ChatBarClient } from './chat-bar-client'
 
 // Where this chat works against where the active session's work is: the ticket's own worktree, else the repository's
 // main checkout, where activating it checked its branch out. A switch made in the chat bar moves the chat there with
@@ -67,20 +67,8 @@ export async function moveToMainCheckout($: EngineInterface): Promise<string> {
   const [current, main] = await Promise.all([$.session.root(), mainCheckoutOf($)])
   if (!main) return `git found no main checkout from ${current}`
   if (sameFolder(current, main)) return ''
-  const asked = await moveChatTo($, main)
-  if (!asked) return `this chat did not move out of ${current}`
-  if ((await arrivedIn($, main, asked)) || (await arrivedLate($, main))) return ''
+  if (await movedTo($, main)) return ''
   return `the app did not move this chat out of ${current}, so its worktree is held open`
-}
-
-// A delete waits on the move, so a move the app makes late (while it reconnects the folder's MCP servers, say) still
-// counts: the chat is checked until the late-move limit before the switch or close is refused.
-async function arrivedLate($: EngineInterface, folder: string): Promise<boolean> {
-  for (let waited = 0; waited < LATE_MOVE_MILLISECONDS; waited += MOVE_CHECK_MILLISECONDS) {
-    if (sameFolder(await $.session.root(), folder)) return true
-    await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
-  }
-  return false
 }
 
 // True once the chat is in folder; false once the move had its chance: the asked turn ended and the app still had not.
@@ -96,14 +84,16 @@ async function arrivedIn($: EngineInterface, folder: string, asked: MoveAsked): 
   return false
 }
 
-// The app sometimes moves the chat later than the grace period, such as while it reconnects the folder's MCP servers.
-// The failure shows at once, and is taken back if the chat arrives after all, so a move that worked never reads as one
-// that failed.
+// The app sometimes moves the chat later than the grace period, such as while it reconnects the folder's MCP servers,
+// so a move is waited on this long before the person is told it failed.
 const LATE_MOVE_MILLISECONDS = 60_000
 
-async function reportLateMove($: EngineInterface, folder: string): Promise<void> {
-  await showFailure($, `The app did not move this chat to ${folder}`)
-  if (await arrivedLate($, folder)) await dismissFailure($)
+async function arrivedLate($: EngineInterface, folder: string): Promise<boolean> {
+  for (let waited = 0; waited < LATE_MOVE_MILLISECONDS; waited += MOVE_CHECK_MILLISECONDS) {
+    if (sameFolder(await $.session.root(), folder)) return true
+    await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
+  }
+  return false
 }
 
 function askedTurnEnded(asked: MoveAsked): boolean {
@@ -141,9 +131,20 @@ export async function followSession($: EngineInterface, chatBar: ChatBarClient):
   await readChatFolder($, chatBar)
   const { expected, isElsewhere } = await currentChatFolder($)
   if (!isElsewhere) return
-  const asked = await moveChatTo($, expected)
-  if (!asked) return
   $.ui.toast(`Moving this chat to ${expected}${chatBar.sessionName ? `, for ${chatBar.sessionName}` : ''}`)
-  if (!(await arrivedIn($, expected, asked))) await reportLateMove($, expected)
+  if (!(await movedTo($, expected))) await showFailure($, `The app did not move this chat to ${expected}`)
   await readChatFolder($, chatBar)
+}
+
+// The desktop app's change_directory sometimes only adds the folder to the chat the first time, and moves the chat
+// when asked again, so a move that has not happened is asked once more before it counts as refused.
+const MOVE_ASKS = 2
+
+async function movedTo($: EngineInterface, folder: string): Promise<boolean> {
+  for (let ask = 0; ask < MOVE_ASKS; ask += 1) {
+    const asked = await moveChatTo($, folder)
+    if (!asked) return false
+    if (await arrivedIn($, folder, asked)) return true
+  }
+  return arrivedLate($, folder)
 }
