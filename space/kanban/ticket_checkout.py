@@ -54,10 +54,6 @@ class TicketCheckout:
     def _recorded(self) -> dict:
         return self._ticket.session.fields
 
-    def _record(self, **checkout: str) -> None:
-        if any(self._recorded.get(key, "") != value for key, value in checkout.items()):
-            self._ticket.session.save_fields(**checkout)
-
     def _found_branch(self) -> Branch:
         """The recorded branch while the repository has it, else the ticket's branch found in git and recorded."""
         recorded = self._recorded.get("branch", "")
@@ -65,10 +61,7 @@ class TicketCheckout:
             return self._repo.branch_named(recorded)
         named = self._repo.branch_named(self._ticket.name)
         candidates = [] if named.exists else self.candidate_branches
-        found = named if named.exists or len(candidates) != 1 else candidates[0]
-        if found.exists:
-            self._record(branch=found.name)
-        return found
+        return named if named.exists or len(candidates) != 1 else candidates[0]
 
     @property
     def candidate_branches(self) -> list[Branch]:
@@ -88,16 +81,10 @@ class TicketCheckout:
 
     @property
     def worktree(self) -> str:
-        """The folder of the ticket's own worktree, where its chat works; empty while it has none. The recorded folder
-        while git lists the branch's worktree there, else the folder git lists, recorded."""
+        """The folder of the ticket's own worktree, where its chat works, as git lists it; empty while it has none. It
+        is read from git each time and never written to the session, so switching never changes a tracked file."""
         found = self._ticket.board.worktrees.get(self.branch)
-        folder = str(found.path) if found else ""
-        recorded = self._recorded.get("worktree", "")
-        if found and recorded and Path(recorded).resolve() == found.path:
-            return recorded
-        if self.branch.exists:
-            self._record(worktree=folder)
-        return folder
+        return str(found.path) if found else ""
 
     @property
     def chat(self) -> Chat | None:
@@ -146,7 +133,6 @@ class TicketCheckout:
             self._repo.switch_branch(self.branch.name)
         if opening:
             self._ticket.board.reread()
-            self._record(branch=self.branch.name, worktree=self.worktree)
 
     def open_worktree(self) -> None:
         """Open the ticket's own worktree beside the repository, creating its branch when missing. The board lists

@@ -529,10 +529,9 @@ class Branch:
         return self
 
     def switch_to(self) -> Branch:
-        """Check this branch out in its clone after saving the branch being left."""
-        leaving = self._repo.current_branch
-        if leaving != self:
-            leaving.save(f"branch: switch to {self.name}")
+        """Check this branch out in its clone. Nothing is committed: a switch moves between branches and leaves the
+        work as it is, and git refuses the checkout when uncommitted work would be overwritten."""
+        if self._repo.current_branch != self:
             self.check_out()
         return self
 
@@ -587,6 +586,9 @@ class Branch:
         occupied = self.worktree
         if occupied is not None and occupied.path.resolve() != repository.root:
             raise BranchInWorktreeError(self.name, occupied.path)
+        leaving = repository.current_branch
+        if leaving != self:
+            leaving.save(commit_message)
         self.switch_to()
         self.save(commit_message)
         self.land_on_default()
