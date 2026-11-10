@@ -1,0 +1,415 @@
+<mxfile host="65bd71144e">
+    <diagram name="Story Map" id="story-map">
+        <mxGraphModel dx="3677" dy="1164" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3340" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <UserObject label="See Work On Session Board" link="story-map.md#e-see-work-on-session-board" id="e-see-work-on-session-board">
+                    <mxCell style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                        <mxGeometry x="-1020" y="380" width="530" height="60" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Open Board" link="story-map.md#s-person----open-board" id="s-person----open-board">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-1020" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Display Board" link="story-map.md#s-board-app----display-board" id="s-board-app----display-board">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-960" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Display Connected Status" link="story-map.md#s-board-app----display-board" id="s-board-app----display-board/display-connected-status">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-960" y="509" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Draw Board Columns" link="story-map.md#s-board-app----display-board" id="s-board-app----display-board/draw-board-columns">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-960" y="561" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Refresh Board After Tool Calls" link="story-map.md#s-board-app----display-board" id="s-board-app----display-board/refresh-board-after-tool-calls">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-960" y="613" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Announce Ticket Changes" link="story-map.md#s-board-app----display-board" id="s-board-app----display-board/announce-ticket-changes">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-960" y="665" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Arrange Board And Details" link="story-map.md#s-person----arrange-board-and-details" id="s-person----arrange-board-and-details">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-900" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Resize Board And Details" link="story-map.md#s-person----arrange-board-and-details" id="s-person----arrange-board-and-details/resize-board-and-details">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-900" y="509" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Expand Board Or Details" link="story-map.md#s-person----arrange-board-and-details" id="s-person----arrange-board-and-details/expand-board-or-details">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-900" y="561" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Display Backlog Items As Tickets" link="story-map.md#s-board-app----display-backlog-items-as-tickets" id="s-board-app----display-backlog-items-as-tickets">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-840" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Display Ticket Card" link="story-map.md#s-board-app----display-ticket-card" id="s-board-app----display-ticket-card">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-780" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Display Sessions As Tickets" link="story-map.md#s-board-app----display-ticket-card" id="s-board-app----display-ticket-card/display-sessions-as-tickets">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-780" y="509" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Place Ticket In Column" link="story-map.md#s-board-app----display-ticket-card" id="s-board-app----display-ticket-card/place-ticket-in-column">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-780" y="561" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Display Active Ticket" link="story-map.md#s-board-app----display-ticket-card" id="s-board-app----display-ticket-card/display-active-ticket">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-780" y="613" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Show Active Ticket On Status Line" link="story-map.md#s-board-app----display-ticket-card" id="s-board-app----display-ticket-card/show-active-ticket-on-status-line">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-780" y="665" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Display Ticket Details" link="story-map.md#s-board-app----display-ticket-details" id="s-board-app----display-ticket-details">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-720" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Expand Ticket" link="story-map.md#s-board-app----display-ticket-details" id="s-board-app----display-ticket-details/expand-ticket">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-720" y="509" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Set Stage WIP Limit" link="story-map.md#s-person----set-stage-wip-limit" id="s-person----set-stage-wip-limit">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-660" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Arrange Side Panel" link="story-map.md#s-person----arrange-side-panel" id="s-person----arrange-side-panel">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-600" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Resize Side Panel" link="story-map.md#s-person----arrange-side-panel" id="s-person----arrange-side-panel/resize-side-panel">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-600" y="509" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Expand Side Panel" link="story-map.md#s-person----arrange-side-panel" id="s-person----arrange-side-panel/expand-side-panel">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-600" y="561" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Close Side Panel" link="story-map.md#s-person----arrange-side-panel" id="s-person----arrange-side-panel/close-side-panel">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-600" y="613" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Scroll Fixed Columns" link="story-map.md#s-person----arrange-side-panel" id="s-person----arrange-side-panel/scroll-fixed-columns">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-600" y="665" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Steer Ticket Sessions" link="story-map.md#e-steer-ticket-sessions" id="e-steer-ticket-sessions">
+                    <mxCell style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                        <mxGeometry x="-460" y="380" width="350" height="60" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Add Backlog Item" link="story-map.md#s-person----add-backlog-item" id="s-person----add-backlog-item">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-80" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Start Backlog Item" link="story-map.md#s-person----add-backlog-item" id="s-person----add-backlog-item/start-backlog-item">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-80" y="509" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Open Ticket Session" link="story-map.md#s-person----open-ticket-session" id="s-person----open-ticket-session">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-460" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Create Ticket Branch And Worktree" link="story-map.md#s-person----open-ticket-session" id="s-person----open-ticket-session/create-ticket-branch-and-worktree">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-460" y="509" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Close Active Session" link="story-map.md#s-person----close-active-session" id="s-person----close-active-session">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-400" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Restrict Actions To Active Session" link="story-map.md#s-person----restrict-actions-to-active-session" id="s-person----restrict-actions-to-active-session">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-540" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Move Ticket" link="story-map.md#s-person----move-ticket" id="s-person----move-ticket">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-340" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Move Ticket To Next Column" link="story-map.md#s-person----move-ticket" id="s-person----move-ticket/move-ticket-to-next-column">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-340" y="509" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Move Ticket To Previous Column" link="story-map.md#s-person----move-ticket" id="s-person----move-ticket/move-ticket-to-previous-column">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-340" y="561" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Activate Ticket" link="story-map.md#s-person----activate-ticket" id="s-person----activate-ticket">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-280" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Split Ticket Into Child Tickets" link="story-map.md#s-person----split-ticket-into-child-tickets" id="s-person----split-ticket-into-child-tickets">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="240" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Archive Ticket" link="story-map.md#s-person----archive-ticket" id="s-person----archive-ticket">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="100" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Write Ticket Handoff" link="story-map.md#s-person----write-ticket-handoff" id="s-person----write-ticket-handoff">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-220" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Display Latest Handoff" link="story-map.md#s-board-app----display-latest-handoff" id="s-board-app----display-latest-handoff">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-160" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Guide Work Through Practices" link="story-map.md#e-guide-work-through-practices" id="e-guide-work-through-practices">
+                    <mxCell style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                        <mxGeometry x="680" y="380" width="470" height="60" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Display Fidelity Progress" link="story-map.md#s-board-app----display-fidelity-progress" id="s-board-app----display-fidelity-progress">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="680" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Open Practice Tile" link="story-map.md#s-person----open-practice-tile" id="s-person----open-practice-tile">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="740" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Choose Ticket Practices" link="story-map.md#s-person----choose-ticket-practices" id="s-person----choose-ticket-practices">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="800" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Send Action To Stage Practices" link="story-map.md#s-person----send-action-to-stage-practices" id="s-person----send-action-to-stage-practices">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="860" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Mark Ticket Done In Stage" link="story-map.md#s-person----mark-ticket-done-in-stage" id="s-person----mark-ticket-done-in-stage">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="920" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Add Active Ticket To System Prompt" link="story-map.md#s-board-app----add-active-ticket-to-system-prompt" id="s-board-app----add-active-ticket-to-system-prompt">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="980" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Open Help" link="story-map.md#s-person----open-help" id="s-person----open-help">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1040" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Send Next Fidelity Action" link="story-map.md#s-person----send-next-fidelity-action" id="s-person----send-next-fidelity-action">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1100" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Name Next Fidelity" link="story-map.md#s-person----send-next-fidelity-action" id="s-person----send-next-fidelity-action/name-next-fidelity">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1100" y="509" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Generate Fidelity Outputs" link="story-map.md#e-generate-fidelity-outputs" id="e-generate-fidelity-outputs">
+                    <mxCell style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                        <mxGeometry x="1180" y="380" width="290" height="60" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Choose Action And Formats" link="story-map.md#s-person----choose-action-and-formats" id="s-person----choose-action-and-formats">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1180" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Resolve Fidelity Output Paths" link="story-map.md#s-claude-code----resolve-fidelity-output-paths" id="s-claude-code----resolve-fidelity-output-paths">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1240" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Generate Fidelity Output" link="story-map.md#s-person----generate-fidelity-output" id="s-person----generate-fidelity-output">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1300" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Render Fidelity Format" link="story-map.md#s-person----render-fidelity-format" id="s-person----render-fidelity-format">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1360" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Send Tile Action To Chat" link="story-map.md#s-person----send-tile-action-to-chat" id="s-person----send-tile-action-to-chat">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1420" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Validate Fidelity Outputs" link="story-map.md#e-validate-fidelity-outputs" id="e-validate-fidelity-outputs">
+                    <mxCell style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                        <mxGeometry x="1500" y="380" width="290" height="60" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Validate Fidelity" link="story-map.md#s-person----validate-fidelity" id="s-person----validate-fidelity">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1500" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Save Validation Report" link="story-map.md#s-claude-code----save-validation-report" id="s-claude-code----save-validation-report">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1560" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Open Validation Report" link="story-map.md#s-person----open-validation-report" id="s-person----open-validation-report">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1620" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Fix Report Violations" link="story-map.md#s-person----fix-report-violations" id="s-person----fix-report-violations">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1680" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Display Violations Band" link="story-map.md#s-board-app----display-violations-band" id="s-board-app----display-violations-band">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1740" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Show Violations Band" link="story-map.md#s-board-app----display-violations-band" id="s-board-app----display-violations-band/show-violations-band">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1740" y="509" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Review Fidelity Outputs" link="story-map.md#e-review-fidelity-outputs" id="e-review-fidelity-outputs">
+                    <mxCell style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                        <mxGeometry x="1820" y="380" width="230" height="60" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="List Ticket Files" link="story-map.md#s-person----list-ticket-files" id="s-person----list-ticket-files">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1820" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Browse Ticket Folder" link="story-map.md#s-person----browse-ticket-folder" id="s-person----browse-ticket-folder">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1880" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="View Fidelity Files" link="story-map.md#s-person----view-fidelity-files" id="s-person----view-fidelity-files">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="1940" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Review Fidelity" link="story-map.md#s-person----review-fidelity" id="s-person----review-fidelity">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="2000" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Ignore Early Review" link="story-map.md#s-person----review-fidelity" id="s-person----review-fidelity/ignore-early-review">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="2000" y="509" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Complete Stage Work" link="story-map.md#s-person----review-fidelity" id="s-person----review-fidelity/complete-stage-work">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="2000" y="561" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Move Work Forward On Session Board" link="story-map.md#e-move-work-forward-on-session-board" id="e-move-work-forward-on-session-board">
+                    <mxCell style="epic;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;fontSize=12;" parent="1" vertex="1">
+                        <mxGeometry x="-1020" y="290" width="3070" height="60" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+            <UserObject label="Maintain Tickets" link="story-map.md#e-maintain-tickets" id="e-maintain-tickets">
+                    <mxCell style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                        <mxGeometry x="-80" y="380" width="290" height="60" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Edit Ticket Text" link="story-map.md#s-person----edit-ticket-text" id="s-person----edit-ticket-text">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="-20" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Reorder Tickets In Column" link="story-map.md#s-person----reorder-tickets-in-column" id="s-person----reorder-tickets-in-column">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="40" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Delete Ticket" link="story-map.md#s-person----delete-ticket" id="s-person----delete-ticket">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="160" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Organize Ticket Hierarchy" link="story-map.md#e-organize-ticket-hierarchy" id="e-organize-ticket-hierarchy">
+                    <mxCell style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                        <mxGeometry x="240" y="380" width="410" height="60" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Add Child Ticket" link="story-map.md#s-person----add-child-ticket" id="s-person----add-child-ticket">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="300" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Display Child Tickets In Parent" link="story-map.md#s-board-app----display-child-tickets-in-parent" id="s-board-app----display-child-tickets-in-parent">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="360" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Expand Parent Ticket" link="story-map.md#s-person----expand-parent-ticket" id="s-person----expand-parent-ticket">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="420" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Detach Child Ticket" link="story-map.md#s-person----detach-child-ticket" id="s-person----detach-child-ticket">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="480" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Move Child Ticket To Another Parent" link="story-map.md#s-person----move-child-ticket-to-another-parent" id="s-person----move-child-ticket-to-another-parent">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="540" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                <UserObject label="Nest Child Branch And Session" link="story-map.md#s-claude-code----nest-child-branch-and-session" id="s-claude-code----nest-child-branch-and-session">
+                    <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
+                        <mxGeometry x="600" y="457" width="50" height="50" as="geometry"/>
+                    </mxCell>
+                </UserObject>
+                </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

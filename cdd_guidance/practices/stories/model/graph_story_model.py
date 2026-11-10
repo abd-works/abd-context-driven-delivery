@@ -1,0 +1,310 @@
+"""GraphStoryModel accepts a loaded story model and records it on a practice graph.
+
+Each node holds the story object it was written from as ``Node.model``; rules read the scenario, its steps, and
+its story from there. The node records only what the object does not know, such as a story file's exports.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+
+from harness.graph.graph import edge_order
+from harness.graph.node_data import encode_node_data
+
+from cdd_guidance.practices.stories.model.source_location import SourceLocation
+from cdd_guidance.practices.stories.model.story_model import Epic, Step, StepType, Story, StoryModel
+
+_EXPORT_CONST = re.compile(r"export const (\w+)")
+_DOMAIN_CLASS = re.compile(r"\bclass\s+([A-Z]\w*)\b")
+_ORCHESTRATION_EXPORT = re.compile(r"export function (?:activate|handle|process)\w*\s*\(")
+_NAMED_IMPORT = re.compile(r"import\s*(?:type\s*)?\{(?P<names>[^}]+)\}\s*from\s*['\"](?P<module>[^'\"]+)['\"]")
+
+
+def _imported_modules(text: str) -> dict[str, str]:
+    """Each name the story file imports, mapped to the module it comes from."""
+    imported: dict[str, str] = {}
+    for match in _NAMED_IMPORT.finditer(text):
+        for part in match.group("names").split(","):
+            name = part.strip().split(" as ")[-1].removeprefix("type ").strip()
+            if name:
+                imported.setdefault(name, match.group("module"))
+    return imported
+
+
+_EVIDENCE_LINE = re.compile(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)")
+
+
+def _opening_docblock(lines: list[str]) -> str:
+    """The file's first `/** … */` comment, when it comes before any story."""
+    text = "\n".join(lines)
+    start = text.find("/**")
+    end = text.find("*/", start)
+    if start == -1 or end == -1 or "Story:" in text[start:end]:
+        return ""
+    return text[start:end]
+
+
+class GraphStoryModel:
+    """One loaded story model, written as graph nodes and edges."""
+
+    def __init__(self, model: StoryModel) -> None:
+        self.model = model
+        self._models: dict = {}
+        self._lines: dict[str, list[str]] = {}
+        self._cursor: dict[str, int] = {}
+        self._on_node = None
+        self._node_at = 0
+        self._node_total = 0
+
+    def record(self, practice, *, on_node=None) -> None:
+        nodes: list[list] = []
+        edges: list[list] = []
+        root_id = practice.root_node.node_id
+        self._on_node = on_node
+        self._models = {}
+        self._node_at = 0
+        self._node_total = sum(self._story_count(epic) for epic in self.model.epics)
+        try:
+            with self.model.batch_schema_sync():
+                for epic in self.model.epics:
+                    self._epic(practice.source_root, root_id, epic, True, nodes, edges)
+            practice.apply_nodes(nodes, self._models)
+            practice.apply_edges(edges)
+            practice.loaded = ["nodes", "edges", "rules"]
+        finally:
+            self._on_node = None
+
+    def _story_count(self, epic: Epic) -> int:
+        return len(epic.stories) + sum(self._story_count(child) for child in epic.epics)
+
+    def _epic(self, root: str, parent_id: str, epic: Epic, top: bool, nodes: list, edges: list) -> None:
+        story_file = self._file_under(epic) or self._file(epic)
+        folder = self._folder(story_file, up=1 if top and epic.epics else 0)
+        semantic = "Epic" if top else "SubEpic"
+        node_id = f"stories:{semantic}:{folder}:{epic.name}"
+        source_file, line, end = self._name_span(root, story_file, epic.name, folder)
+        epic.source = SourceLocation(source_file, line, end)
+        epic.load_map_facts()
+        epic.evidence = self._epic_evidence(root, story_file, epic, top)
+        nodes.append(self._row(node_id, epic.name, semantic, source_file, line, end, epic))
+        edges.append([parent_id, node_id, "decomposedInto", edge_order("decomposedInto"), "direct"])
+        for child in epic.epics:
+            self._epic(root, node_id, child, False, nodes, edges)
+        for story in epic.stories:
+            self._story(root, node_id, story, nodes, edges)
+
+    def _story(self, root: str, parent_id: str, story: Story, nodes: list, edges: list) -> None:
+        self._node_at += 1
+        if self._on_node is not None:
+            self._on_node(f"{self._node_at}/{self._node_total} · {story.name}")
+        file = self._file(story)
+        node_id = f"stories:Story:{file}:{story.name}"
+        line, end = self._source_span(story, root, file)
+        story.load_map_facts()
+        nodes.append(self._row(node_id, story.name, "Story", file or ".", line, end, story, self._file_facts(root, file)))
+        edges.append([parent_id, node_id, "decomposedInto", edge_order("decomposedInto"), "direct"])
+        for background in story.backgrounds:
+            self._background(root, file, node_id, background, nodes, edges)
+        scoped = [name for background in story.backgrounds for name in background.examples]
+        for scenario in story.scenarios:
+            self._scenario(root, file, node_id, scenario, nodes, edges, scoped)
+
+    def _background(self, root: str, file: str, parent_id: str, background, nodes: list, edges: list) -> None:
+        label = background.name or "background"
+        node_id = f"stories:Background:{file}:{label}"
+        line, end = self._source_span(background, root, file)
+        self._ensure_source(background, file, line, end)
+        background.load_map_facts()
+        nodes.append(self._row(node_id, label, "Background", file or ".", line, end, background))
+        edges.append([parent_id, node_id, "background", edge_order("background"), "direct"])
+        for step in background.steps:
+            self._step(root, file, node_id, step, nodes, edges, edge_kind="steps")
+
+    def _scenario(self, root: str, file: str, parent_id: str, scenario, nodes: list, edges: list, scoped: list[str] = ()) -> None:
+        """Record the scenario with its own examples and those its story's Background scopes. A scenario read from a
+        story test sits in that file, not in the story map its Story came from."""
+        file = self._file(scenario) or file
+        node_id = f"stories:Scenario:{file}:{scenario.name}"
+        line, end = self._source_span(scenario, root, file)
+        self._ensure_source(scenario, file, line, end)
+        scenario.load_map_facts()
+        nodes.append(
+            self._row(
+                node_id,
+                scenario.name,
+                "Scenario",
+                file or ".",
+                line,
+                end,
+                scenario,
+                {
+                    "is_outline": bool(getattr(scenario, "is_outline", False)),
+                    "story_name": getattr(scenario, "story_name", "") or "",
+                },
+            )
+        )
+        edges.append([parent_id, node_id, "scenarios", edge_order("scenarios"), "direct"])
+        for step in scenario.steps:
+            self._step(root, file, node_id, step, nodes, edges, edge_kind="steps")
+        for name in dict.fromkeys([*scenario.examples, *scoped]):
+            example_id = f"stories:Example:{file}:{name}"
+            nodes.append([example_id, name, "Example", "stories", file or ".", line, end])
+            edges.append([node_id, example_id, "examples", edge_order("examples"), "direct"])
+
+    def _step(
+        self,
+        root: str,
+        file: str,
+        parent_id: str,
+        step: Step,
+        nodes: list,
+        edges: list,
+        *,
+        edge_kind: str = "steps",
+    ) -> None:
+        semantic = _step_semantic(step)
+        label = f"{step.keyword.lower()} {step.text}".strip()
+        line, end = self._source_span(step, root, file, fallback_text=step.text)
+        node_id = f"stories:{semantic}:{file}:{line}:{hash(label) & 0xFFFFFF}"
+        nodes.append([node_id, label, semantic, "stories", file or ".", line, end])
+        self._models[node_id] = step
+        edges.append([parent_id, node_id, edge_kind, edge_order(edge_kind), "direct"])
+        for continuation in step.ands:
+            self._step(root, file, node_id, continuation, nodes, edges, edge_kind="ands")
+
+    def _row(
+        self,
+        node_id: str,
+        name: str,
+        semantic: str,
+        file: str,
+        line: int,
+        end: int,
+        node,
+        extra: dict | None = None,
+    ) -> list:
+        self._models[node_id] = node
+        payload = encode_node_data(extra or {})
+        row = [node_id, name, semantic, "stories", file, line, end]
+        if payload:
+            row.extend(["", payload])
+        return row
+
+    def _epic_evidence(self, root: str, story_file: str, epic: Epic, top: bool) -> list[str]:
+        """What the epic declares, else the sub-epic file's opening docblock, else the labels its children carry."""
+        if epic.evidence:
+            return list(epic.evidence)
+        if not top and story_file:
+            declared = _EVIDENCE_LINE.search(_opening_docblock(self._file_lines(root, story_file)))
+            if declared:
+                return [part.strip() for part in declared.group(1).split(",") if part.strip()]
+        labels: list[str] = []
+        for child in epic.epics:
+            labels.extend(self._epic_evidence(root, self._file_under(child), child, False))
+        for story in epic.stories:
+            labels.extend(story.evidence)
+        return list(dict.fromkeys(labels))
+
+    def _file_under(self, epic: Epic) -> str:
+        for story in epic.stories:
+            file = self._file(story)
+            if file:
+                return file
+        for child in epic.epics:
+            file = self._file_under(child)
+            if file:
+                return file
+        return ""
+
+    def _file(self, node) -> str:
+        """The file the node was read from; empty while it only holds the placeholder a new node starts with."""
+        if not getattr(node, "has_source_file", False):
+            return ""
+        return str(node.source.file).replace("\\", "/")
+
+    def _folder(self, file: str, up: int) -> str:
+        parts = [part for part in file.split("/") if part]
+        if parts:
+            parts = parts[:-1]
+        if up and len(parts) >= up:
+            parts = parts[:-up]
+        return "/".join(parts) or "."
+
+    def _ensure_source(self, node, file: str, line: int, end: int) -> None:
+        if self._file(node):
+            return
+        node.source = SourceLocation(file or ".", line, end)
+
+    def _name_span(self, root: str, file: str, name: str, folder: str) -> tuple[str, int, int]:
+        line = self._line_containing(root, file, name) if file and name else None
+        if line is not None:
+            return file, line, line
+        return folder or ".", 0, 0
+
+    def _line_containing(self, root: str, file: str, text: str) -> int | None:
+        if not text:
+            return None
+        for index, line in enumerate(self._file_lines(root, file), start=1):
+            if text in line:
+                return index
+        return None
+
+    def _file_facts(self, root: str, file: str) -> dict:
+        """Facts the story file owns. They sit on the Story node; its scenarios, steps, and examples read them through get_fact."""
+        text = "\n".join(self._file_lines(root, file)) if file else ""
+        return {
+            "export_names": _EXPORT_CONST.findall(text),
+            "domain_class_names": _DOMAIN_CLASS.findall(text),
+            "exports_orchestration": bool(_ORCHESTRATION_EXPORT.search(text)),
+            "imported_modules": _imported_modules(text),
+        }
+
+    def _file_lines(self, root: str, file: str) -> list[str]:
+        lines = self._lines.get(file)
+        if lines is None:
+            path = Path(root, file) if root and file else None
+            lines = path.read_text(encoding="utf-8").splitlines() if path is not None and path.is_file() else []
+            self._lines[file] = lines
+        return lines
+
+    def _source_span(self, node, root: str, file: str, fallback_text: str = "") -> tuple[int, int]:
+        source = getattr(node, "source", None)
+        if source is not None and getattr(source, "line", None):
+            start = int(source.line or 1)
+            end = int(getattr(source, "end_line", None) or start)
+            return start, end
+        line = self._next_line(root, file, fallback_text or getattr(node, "name", ""))
+        return line, line
+
+    def _next_line(self, root: str, file: str, text: str) -> int:
+        lines = self._file_lines(root, file)
+        start = self._cursor.get(file, 0)
+        if not text:
+            return 1
+        # Search on from the last node found first, so a repeated name lands on its own entry; a diagram
+        # need not list its cells in the map's order, so search from the top when that finds nothing.
+        for index in [*range(start, len(lines)), *range(0, start)]:
+            if text in lines[index]:
+                self._cursor[file] = index + 1
+                return index + 1
+        return 1
+
+
+def _step_semantic(step: Step) -> str:
+    if step.step_type == StepType.GIVEN:
+        return "Given"
+    if step.step_type == StepType.WHEN:
+        return "When"
+    if step.step_type == StepType.THEN:
+        return "Then"
+    keyword = (step.keyword or "").casefold()
+    if keyword == "given":
+        return "Given"
+    if keyword == "when":
+        return "When"
+    if keyword == "then":
+        return "Then"
+    return "Step"
+

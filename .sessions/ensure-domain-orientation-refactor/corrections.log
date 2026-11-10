@@ -1,7 +1,0 @@
-2026-11-06 ticket.py, kanban-model.md
-Mistake: moved every fidelity action's command onto Ticket.commands(action, fidelities, formats), and proposed the model's Generate.commands_for(session, fidelities, formats) instead. Both pass the session, the fidelities and the formats into the operation as parameters, so every caller has to gather state that the session already holds.
-Correction: keep state on the object it belongs to and let operations read it. A session holds its practices; a practice holds its fidelities and its current fidelity; a fidelity holds its actions and its format; an action is made for its session. A command reads `session.practices.stories.fidelities.story_map.actions.generate(format="drawio")`, and a format given once is saved on the fidelity for the next action on it.
-
-2026-11-06 - Clean Engineering model validation judged the wrong files
-Mistake: the brief for the model-fidelity validation told the judge to compare each module's model document with the code. The judge reported which model documents are out of date and did not check the code against the model rules, although validate's reply named the Python files as the files to judge.
-Correction: model-fidelity validation checks the graph validate builds from the code (its classes, operations, properties, and relationships) against the model rules: one object model, classes with one responsibility, state held on the object, typed relationships and one-way dependencies. Whether a model document matches the code is a separate, secondary check.
