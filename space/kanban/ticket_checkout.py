@@ -215,7 +215,7 @@ class TicketCheckout:
             branch.land_on_default()
         if LEAVE_DELETE_BRANCH in leaving:
             # git deletes no branch the checkout is on, so the checkout goes back to the default branch first.
-            if branch.is_checked_out:
+            if branch.is_checked_out and self._repo.root == self._repo.main_clone.root:
                 self._repo.branch_named(self._repo.default_branch).check_out()
             branch.delete(unmerged=LEAVE_MERGE not in leaving)
 
@@ -223,6 +223,10 @@ class TicketCheckout:
         """Closing a ticket opens main, the default branch in the repository's own folder, so the closed ticket's own
         branch leaves the repository's checkout. Work left uncommitted goes with the checkout, as git carries it."""
         if not self.branch.is_checked_out or self.branch.is_default:
+            return
+        # A linked worktree cannot check out the default branch while the main checkout has it; the chat goes back to
+        # the main checkout instead, so the worktree keeps its branch.
+        if self._repo.root != self._repo.main_clone.root:
             return
         self._repo.branch_named(self._repo.default_branch).check_out()
 
