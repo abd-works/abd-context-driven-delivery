@@ -18,7 +18,7 @@ const typedText = (text: string): string =>
 // A mod cannot read the title the app shows for a chat, so the board names it by its folder and the first thing the
 // person typed. The board keeps sending to the chat's id; the name is only what a person reads in its picker.
 export async function readName($: EngineInterface): Promise<void> {
-  const folder = (await $.session.cwd()).split(/[\\/]/).filter(Boolean).at(-1) ?? ''
+  const folder = (await $.session.root()).split(/[\\/]/).filter(Boolean).at(-1) ?? ''
   const typed = (await $.session.messages()).filter(message => message.role === 'user').map(message => typedText(message.text))
   const opening = typed.find(text => text && !SUMMARY_OPENINGS.some(summary => text.startsWith(summary))) ?? ''
   const words = opening.length > NAME_CHARACTERS ? `${opening.slice(0, NAME_CHARACTERS)}…` : opening

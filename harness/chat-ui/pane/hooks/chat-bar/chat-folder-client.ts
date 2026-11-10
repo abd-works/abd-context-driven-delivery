@@ -37,7 +37,7 @@ async function workFolderOf($: EngineInterface, chatBar: ChatBarClient): Promise
 
 // Reads where the chat is and where the active session's work is, so the band can say when they differ.
 export async function checkChatFolder($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
-  const [current, expected] = await Promise.all([$.session.cwd(), workFolderOf($, chatBar)])
+  const [current, expected] = await Promise.all([$.session.root(), workFolderOf($, chatBar)])
   await update($, chatFolder, () => ({ current, expected }))
 }
 
@@ -53,7 +53,7 @@ type MoveAsked = { byAgent: boolean; turnsBefore: number }
 async function arrivedIn($: EngineInterface, folder: string, asked: MoveAsked): Promise<boolean> {
   let sinceTurnEnded = 0
   while (sinceTurnEnded < MOVE_AFTER_TURN_MILLISECONDS) {
-    if (sameFolder(await $.session.cwd(), folder)) return true
+    if (sameFolder(await $.session.root(), folder)) return true
     await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
     // The app moves the chat once it is idle, so a turn that starts after the asked one (a second move request, a
     // queued prompt) starts the count again instead of being counted against the move.
@@ -70,7 +70,7 @@ const LATE_MOVE_MILLISECONDS = 60_000
 async function reportLateMove($: EngineInterface, folder: string): Promise<void> {
   await showFailure($, `The app did not move this chat to ${folder}`)
   for (let waited = 0; waited < LATE_MOVE_MILLISECONDS; waited += MOVE_CHECK_MILLISECONDS) {
-    if (sameFolder(await $.session.cwd(), folder)) return dismissFailure($)
+    if (sameFolder(await $.session.root(), folder)) return dismissFailure($)
     await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
   }
 }
