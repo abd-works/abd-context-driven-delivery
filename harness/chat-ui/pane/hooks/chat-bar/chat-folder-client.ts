@@ -67,7 +67,9 @@ async function arrivedIn($: EngineInterface, folder: string, asked: MoveAsked): 
   while (sinceTurnEnded < MOVE_AFTER_TURN_MILLISECONDS) {
     if (sameFolder(await $.session.cwd(), folder)) return true
     await $.clock.sleep(MOVE_CHECK_MILLISECONDS)
-    if (askedTurnEnded(asked)) sinceTurnEnded += MOVE_CHECK_MILLISECONDS
+    // The app moves the chat once it is idle, so a turn that starts after the asked one (a second move request, a
+    // queued prompt) starts the count again instead of being counted against the move.
+    sinceTurnEnded = askedTurnEnded(asked) ? sinceTurnEnded + MOVE_CHECK_MILLISECONDS : 0
   }
   return false
 }
