@@ -76,9 +76,17 @@ export class BoardPage {
     await Promise.all([this.tiles.reload(), this.panels.reload(), this.files.reload()])
   }
 
-  // A chat working on a ticket, as Python names it, goes by the ticket's name.
+  // A ticket's chat, the one a person picked for it or the one Python finds working on it, goes by the ticket's name.
   chatName(chat: ChatData): string {
-    return this.board.tickets.find(ticket => ticket.workingChat?.id === chat.id)?.name ?? (chat.name || chat.id)
+    return this.board.tickets.find(ticket => ticket.chat.found?.id === chat.id)?.name ?? (chat.name || chat.id)
+  }
+
+  // A chat picked in the chat list while a ticket is selected becomes that ticket's chat; with no ticket selected it is
+  // only the chat commands go to when no ticket has one.
+  pickChat(chat: string): void {
+    const selected = this.board.tickets.find(ticket => ticket.address === this.store.state.selected)
+    if (selected) this.chat.chooseFor(selected.name, chat)
+    else this.chat.choose(chat)
   }
 
   ticket(json: TicketData): TicketClient {

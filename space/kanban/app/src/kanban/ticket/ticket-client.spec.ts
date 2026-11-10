@@ -280,6 +280,33 @@ describe('Open Ticket Chat', () => {
     })
   })
 
+  // A chat a person picks while the ticket is selected stays the ticket's chat, in place of the one in its worktree.
+  describe('with another chat picked while the ticket is selected', () => {
+    async function pickedThenClicked() {
+      const { page } = await board.page()
+      await board.connectChat(page, 'other-chat')
+      const worktree = board.openWorktree(ACTIVE)
+      await board.chat('ticket-chat', 'abd · first words', worktree).checkIn()
+      await page.chat.refresh()
+      await page.reader.refresh()
+      await ticketOn(page, ACTIVE).choose()
+      page.pickChat('other-chat')
+      await ticketOn(page, ACTIVE).choose()
+      return page
+    }
+
+    it('should choose the picked chat again when the ticket is clicked', async () => {
+      expect((await pickedThenClicked()).store.state.targetChat).toBe('other-chat')
+    })
+
+    it("should send the ticket's commands to the picked chat", async () => {
+      const page = await pickedThenClicked()
+      const other = board.chat('other-chat', '', '')
+      await ticketOn(page, ACTIVE).closeSession()
+      expect(await other.checkIn()).toEqual([{ kind: 'command', text: '/space:session:close-session session=.sessions/checkout-flow/session.json' }])
+    })
+  })
+
   // A person can act on a ticket from its card or its report without clicking the ticket first.
   describe('with another chat picked last', () => {
     async function closedWithoutClicking() {
