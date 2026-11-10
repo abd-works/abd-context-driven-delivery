@@ -10,7 +10,7 @@ import { checkChatFolder } from './chat-bar/chat-folder-client'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
 import { isStagePickerOpen } from './chat-bar/stage-client'
-import { currentFormatChips } from './chat-bar/format-choices-client'
+import { currentFormatChips, loadFormatChips } from './chat-bar/format-choices-client'
 import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
 import { FidelityFilesView } from './chat-bar/fidelity-files-view'
 import { currentChatBarView } from './chat-bar/session-dialogs-client'
@@ -49,6 +49,7 @@ async function readActive($: EngineInterface): Promise<void> {
   await refreshChatBar($)
   const chatBar = await currentChatBar($)
   if (chatBar.problem) return
+  await loadFormatChips($, chatBar)
   await checkChatFolder($, chatBar)
   // The system prompt is cached; when the active session's summary changes, it is composed again next turn.
   if (chatBar.statusLine !== shownStatus) await $.ui.invalidate('prompt.section')
@@ -92,6 +93,13 @@ export const register: Register = on => {
     const ran = await next(await withChatNamed($, e))
     if (CDD_TOOL.test(e.tool)) await refreshChatBar($)
     return ran
+  })
+
+  // A press can change which fidelities or stage the action button acts on, so the format chips are read again after it.
+  on('ui.press', async ($, e, next) => {
+    const pressed = await next(e)
+    if (e.plugin === PLUGIN) await loadFormatChips($, await currentChatBar($))
+    return pressed
   })
 
   on('prompt.submit', async ($, e, next) => {
