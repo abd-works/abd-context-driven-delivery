@@ -53,7 +53,7 @@ type MoveAsked = { byAgent: boolean; turnsBefore: number }
 // a chat still in the worktree holds its folder open, so the delete fails halfway. Answers why the chat is not in the
 // main checkout, or '' once it is.
 export async function moveToMainCheckout($: EngineInterface): Promise<string> {
-  const [current, main] = await Promise.all([$.session.cwd(), mainCheckoutOf($)])
+  const [current, main] = await Promise.all([$.session.root(), mainCheckoutOf($)])
   if (!main) return `git found no main checkout from ${current}`
   if (sameFolder(current, main)) return ''
   const asked = await moveChatTo($, main)
