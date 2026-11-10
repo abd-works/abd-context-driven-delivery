@@ -31,14 +31,23 @@ export function currentFidelityFiles($: EngineInterface) {
 // One tab per file the fidelity declares, in the order fidelity-progress.files sends its formats (markdown, then code,
 // then diagrams); the first tab's text is read straight away.
 export async function openFiles($: EngineInterface, fidelity: FidelityProgressClient): Promise<void> {
+  await openFilesOf($, [fidelity])
+}
+
+// Every file of several fidelities, each once, as tabs of one files pane: the files button opens the files of every
+// selected fidelity together.
+export async function openFilesOf($: EngineInterface, fidelities: FidelityProgressClient[]): Promise<void> {
+  const [first] = fidelities
+  if (!first) return
+  const named = fidelities.map(fidelity => fidelity.slug).join(', ')
   try {
-    const files = await callTool<Record<string, FileEntryData[]>>($, 'fidelity-progress.files', { ticket: fidelity.progress.ticket.name, fidelity: fidelity.slug })
-    const paths = [...new Set(Object.values(files).flat().map(entry => entry.path))]
-    await update($, fidelityFiles, () => ({ fidelity: fidelity.slug, tabs: paths.map(path => ({ path, text: null })), shown: paths[0] ?? null, isOutOfDate: false }))
-    await openPane($, `${fidelity.slug} files`)
+    const read = await Promise.all(fidelities.map(fidelity => callTool<Record<string, FileEntryData[]>>($, 'fidelity-progress.files', { ticket: fidelity.progress.ticket.name, fidelity: fidelity.slug })))
+    const paths = [...new Set(read.flatMap(files => Object.values(files).flat().map(entry => entry.path)))]
+    await update($, fidelityFiles, () => ({ fidelity: first.slug, tabs: paths.map(path => ({ path, text: null })), shown: paths[0] ?? null, isOutOfDate: false }))
+    await openPane($, `${named} files`)
     if (paths[0]) await showFile($, paths[0])
   } catch (failure) {
-    $.ui.toast(`${fidelity.slug} files: ${reasonOf(failure)}`)
+    $.ui.toast(`${named} files: ${reasonOf(failure)}`)
   }
 }
 

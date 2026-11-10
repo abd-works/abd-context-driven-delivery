@@ -6,7 +6,7 @@ import { GlyphButtonView } from '../shared/glyph-button-view'
 import { ActionButtonView, PickerView } from './action-button-view'
 import { toggleFormat, type FormatChips } from './format-choices-client'
 import { askChatToFix, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
-import { openFiles, openReport } from './fidelity-files-client'
+import { openFilesOf, openReport } from './fidelity-files-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
 import { openClose } from './session-client'
@@ -119,11 +119,11 @@ function IconButtonView(elements: ElementTable, key: string, icon: string, words
 // Handoff, files and close as icons. Files shows the action fidelity's files, else the first fidelity's.
 function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
   const { Box } = elements
-  const fidelity = chatBar.actionFidelity ?? chatBar.fidelities[0]
+  const fidelities = chatBar.actionFidelities.length ? chatBar.actionFidelities : chatBar.fidelities.slice(0, 1)
   return (
     <Box key="session-buttons" flexDirection="row" gap={1}>
       {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
-      {fidelity ? IconButtonView(elements, 'files-button', '▤', 'files', () => openFiles($, fidelity)) : null}
+      {fidelities.length ? IconButtonView(elements, 'files-button', '▤', 'files', () => openFilesOf($, fidelities)) : null}
       {chatBar.isMain ? null : IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
     </Box>
   )
