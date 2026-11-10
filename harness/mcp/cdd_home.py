@@ -119,10 +119,11 @@ class CddHome:
         if not (source / ".claude-plugin" / "plugin.json").is_file():
             return
         target = self.claude_plugins / BOARD_PLUGIN
+        # A file the running app holds open can survive the delete on Windows, so the copy writes over what is left.
         shutil.rmtree(target, ignore_errors=True)
         for part in BOARD_MOD_PARTS:
             if (source / part).is_dir():
-                shutil.copytree(source / part, target / part, ignore=shutil.ignore_patterns("*.test.*"))
+                shutil.copytree(source / part, target / part, ignore=shutil.ignore_patterns("*.test.*"), dirs_exist_ok=True)
         JsonFile(target / self.INSTALL_COMMAND).write({"command": self.install_command})
         manifest_file = JsonFile(target / ".claude-plugin" / "plugin.json")
         manifest = manifest_file.read()
