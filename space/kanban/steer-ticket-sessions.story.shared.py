@@ -351,7 +351,7 @@ def _(s):
 
     @s.then("the close dialog offers a handoff, and to commit and push checkout-flow")
     def _(world):
-        expect((world.choices["branch"], world.choices["chosen"])).to(equal((CHECKOUT_FLOW.name, ["handoff", "commit", "push"])))
+        expect((world.choices["branch"], world.choices["choices"][:3])).to(equal((CHECKOUT_FLOW.name, ["handoff", "commit", "push"])))
 
 
 @shared_stories.scenario("Close Active Session", "Close a session whose work is on main")

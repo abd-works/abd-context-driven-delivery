@@ -250,9 +250,8 @@ class LeaveChoices:
     @property
     @data_field
     def chosen(self) -> list[str]:
-        """The choices a person starts with chosen: a handoff, a commit and a push; what changes the branch waits for
-        them."""
-        return [choice for choice in self.choices if choice not in LEAVE_BRANCH_STEPS]
+        """The choices a person starts with chosen: none, so leaving does only what the person ticks."""
+        return []
 
 
 class OpenChoices:

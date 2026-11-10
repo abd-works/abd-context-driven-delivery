@@ -1209,11 +1209,11 @@ with description("the board tools") as self:
                 expect(self.project.call("ticket.work_branch", ticket="pet-visits")).to(equal({"name": "main", "exists": True, "is_checked_out": True}))
 
             with it("should offer to close it with a handoff and a commit and push of main"):
-                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "", "choices": ["handoff", "commit", "push"], "chosen": ["handoff", "commit", "push"]}))
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "", "choices": ["handoff", "commit", "push"], "chosen": []}))
 
             # TicketCheckout.leave never merges the default branch, so leaving offers no merge a person could pick for nothing.
             with it("should offer to leave it for another with a handoff and a commit and push of main, and no merge"):
-                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "", "choices": ["handoff", "commit", "push"], "chosen": ["handoff", "commit", "push"]}))
+                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "", "choices": ["handoff", "commit", "push"], "chosen": []}))
 
             with it("should commit its work on main, merging nothing"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit", "merge"])
@@ -1232,7 +1232,7 @@ with description("the board tools") as self:
                 Sessions(self.project.root).switch("pet-visits")
 
             with it("should offer to leave it for another with a delete of its branch, naming that branch"):
-                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge", "delete_branch"], "chosen": ["handoff", "commit", "push"]}))
+                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge", "delete_branch"], "chosen": []}))
 
             with it("should offer the same when closing it"):
                 expect(self.project.call("ticket.close_choices", ticket="pet-visits")["choices"]).to(equal(["handoff", "commit", "push", "merge", "delete_branch"]))
@@ -1249,7 +1249,7 @@ with description("the board tools") as self:
                 expect(self.project.call("ticket.branch", ticket="pet-visits")["is_checked_out"]).to(be_true)
 
             with it("should offer to leave it for another with a merge into main and a delete of its branch, neither chosen at first"):
-                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "pet-visits", "own_branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge", "delete_branch"], "chosen": ["handoff", "commit", "push"]}))
+                expect(self.project.call("ticket.leave_choices", ticket="pet-visits")).to(equal({"branch": "pet-visits", "own_branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge", "delete_branch"], "chosen": []}))
 
             with it("should offer the same when closing it"):
                 expect(self.project.call("ticket.close_choices", ticket="pet-visits")["choices"]).to(equal(["handoff", "commit", "push", "merge", "delete_branch"]))
@@ -1299,7 +1299,7 @@ with description("the board tools") as self:
 
             # Nothing checked out is its own, so nothing is committed or pushed; its branch can still be merged and deleted.
             with it("should offer to close it with a handoff and a merge and delete of its branch, and no commit or push"):
-                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "own_branch": "pet-visits", "choices": ["handoff", "merge", "delete_branch"], "chosen": ["handoff"]}))
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "own_branch": "pet-visits", "choices": ["handoff", "merge", "delete_branch"], "chosen": []}))
 
             with it("should commit nothing on a branch that is not checked out"):
                 self.project.call("ticket.activate", ticket="sign-up", leaving=["commit"])
