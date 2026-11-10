@@ -1801,7 +1801,7 @@ a board
   with no session saved as open
     ```
     -> BoardData.project
-    it should have no active ticket, since main is not on the board
+    it should make main the active ticket
     ```
   with a sessions folder of work sessions, closed sessions, default, backlog items, and archived sessions
     ```
@@ -2683,7 +2683,7 @@ the board tools
       <- Ticket
       -> Board.show()
       <- Board
-      it should leave no ticket active
+      it should make main the active ticket
       ```
     that archives a ticket
       ```
@@ -3262,7 +3262,7 @@ Open Board
   Open the board on a project
     ```
     // the graph holds no operation this observation calls
-    it Then the header reads cdd-board-surface-fixture · 9 tickets · active: Checkout flow
+    it Then the header reads cdd-board-surface-fixture · 10 tickets · active: Checkout flow
     ```
     ```
     // the graph holds no operation this observation calls

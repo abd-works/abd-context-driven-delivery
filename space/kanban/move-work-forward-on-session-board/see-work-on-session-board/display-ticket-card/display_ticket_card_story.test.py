@@ -12,7 +12,7 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # Actor: Board App
 #
 # Acceptance criteria:
-# - Display Sessions As Tickets: each work session shows as one ticket and the main session is not on the board. Observed.
+# - Display Sessions As Tickets: each session shows as one ticket, main first. Observed.
 # - Place Ticket In Column: a ticket shows in the stage of its latest move, or before any move in the earliest stage its session shows work in. Observed.
 # - Display Active Ticket: the active ticket has a thick orange outline. Observed.
 # - Show Active Ticket On Status Line: the chat's status line names the active ticket, its stage, its next guidance, and its violations. Inferred: `statusOf` in `harness/chat-ui/pane/hooks/register.ts`.
@@ -26,11 +26,11 @@ with story("Display Ticket Card"):
             # Board -> Sessions.all()
             # Session <- pet-visits, sign-up, browse-pets
             pass
-        with then("the Discovery [stage](../../../.context/kanban-model.md#stage--column) shows the [tickets](../../../.context/kanban-model.md#ticket--card) Pet visits and Sign up"):
+        with then("the Discovery [stage](../../../.context/kanban-model.md#stage--column) shows the [tickets](../../../.context/kanban-model.md#ticket--card) main, Pet visits, and Sign up"):
             pass
         with and_("the Complete [column](../../../.context/kanban-model.md#column) shows Browse pets"):
             pass
-        with but_("main and old-spike are not on the board"):
+        with but_("old-spike is not on the board"):
             pass
     with scenario("Place a ticket in the stage of its latest move"):
         # Evidence: observed: kanban_tools_spec 'should show the ticket in the next stage'; Ticket.column in ticket.py; fixture-repo.ts second-spec.

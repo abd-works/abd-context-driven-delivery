@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
 import type { LeaveChoicesData, OpenChoicesData, TicketData } from '@cdd/space/kanban/ticket'
 
 import { reasonOf } from '../shared/failure'
-import { callTool, currentChatBar, refreshChatBar, showFailure, type ChatBarClient } from './chat-bar-client'
+import { callTool, currentChatBar, MAIN_SESSION, refreshChatBar, showFailure, type ChatBarClient } from './chat-bar-client'
 import { whileBusy } from './busy-client'
 import { followSession, moveToMainCheckout } from './chat-folder-client'
 import { cancelClose, cancelSwitch, currentChatBarView, showClose, showSwitch } from './session-dialogs-client'
@@ -45,10 +45,8 @@ export async function activateSession($: EngineInterface, sessionName: string): 
   return after
 }
 
-// Main is the default session: the default branch in the repository's own folder. board.open_main opens it, as
-// ticket.activate opens a ticket's session.
-export const MAIN_SESSION = 'main'
-
+// board.open_main opens main, the default branch in the repository's own folder, as ticket.activate opens any other
+// ticket's session.
 // Null when the switch failed: the failure stays above the line and the chat stays where it is.
 async function activatedSession($: EngineInterface, sessionName: string, leaving: string[], opening: string[]): Promise<ChatBarClient | null> {
   try {
@@ -71,7 +69,7 @@ const MAIN_OPENS_AS_IT_IS = { has_branch: true, candidate_branches: [], choices:
 export async function pickSession($: EngineInterface, chatBar: ChatBarClient, name: string): Promise<void> {
   try {
     const [leaving, opening] = await Promise.all([
-      chatBar.hasSession ? callTool<LeaveChoicesData>($, 'ticket.leave_choices', { ticket: chatBar.sessionName }) : null,
+      chatBar.hasSession && !chatBar.isMain ? callTool<LeaveChoicesData>($, 'ticket.leave_choices', { ticket: chatBar.sessionName }) : null,
       name === MAIN_SESSION ? MAIN_OPENS_AS_IT_IS : callTool<OpenChoicesData>($, 'ticket.open_choices', { ticket: name }),
     ])
     await showSwitch($, name, leaving, opening)
@@ -101,8 +99,8 @@ export async function openClose($: EngineInterface, chatBar: ChatBarClient): Pro
   }
 }
 
-// Null when closing leaves no session active.
-export async function closeSession($: EngineInterface, chatBar: ChatBarClient): Promise<ChatBarClient | null | CloseRefused> {
+// Closing opens main, so the bar answers with main's ticket.
+export async function closeSession($: EngineInterface, chatBar: ChatBarClient): Promise<ChatBarClient | CloseRefused> {
   const { leaving } = await currentChatBarView($)
   await cancelClose($)
   const stuck = await whileBusy($, 'Moving this chat out of its worktree', () => leftWorktreeFor($, leaving))
@@ -116,7 +114,7 @@ export async function closeSession($: EngineInterface, chatBar: ChatBarClient): 
   // With the session closed, the chat goes back to the main checkout, which closing returned to the default branch.
   // The move runs after the wheel stops, as a switch's does.
   await followSession($, after)
-  return after.hasSession ? after : null
+  return after
 }
 
 async function closedSession($: EngineInterface, chatBar: ChatBarClient, leaving: string[]): Promise<ChatBarClient | CloseRefused> {

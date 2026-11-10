@@ -155,8 +155,8 @@ with description("a board") as self:
             expect(Board.load(self.worktree / "docs").repo.root).to(equal(self.checkout.resolve()))
 
     with context("with no session saved as open"):
-        with it("should have no active ticket, since main is not on the board"):
-            expect(Board(Repo(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Stories()]))).active).to(be_none)
+        with it("should make main the active ticket"):
+            expect(Board(Repo(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Stories()]))).active.name).to(equal("main"))
 
     # (S) Board App --> Display Ticket Card, Display Backlog Items As Tickets
     with context("with a sessions folder of work sessions, closed sessions, default, backlog items, and archived sessions"):
@@ -172,10 +172,10 @@ with description("a board") as self:
             self.board = Board(Repo(sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
         with it("should show every work session as a ticket"):
-            expect(names(self.board.tickets)).to(equal(["pet-visits", "sign-up", "browse-pets"]))
+            expect(names(self.board.tickets)).to(equal(["main", "pet-visits", "sign-up", "browse-pets"]))
 
-        with it("should leave main off the board"):
-            expect(names(self.board.tickets)).not_to(contain("main"))
+        with it("should show main first, in Discovery while it has no work"):
+            expect(self.board.ticket("main").column.name).to(equal("Discovery"))
 
         with it("should show each backlog item in the Backlog column"):
             expect([card.title for card in self.board.column("Backlog").cards]).to(equal(["Returns and refunds"]))
@@ -194,16 +194,16 @@ with description("a board") as self:
             expect(list(data_of(self.board)["active"])).to(contain("progress"))
 
         with it("should offer the tickets in a stage to switch to, neither backlog items nor closed tickets"):
-            expect(names(self.board.open_tickets)).to(equal(["pet-visits", "sign-up"]))
+            expect(names(self.board.open_tickets)).to(equal(["main", "pet-visits", "sign-up"]))
 
         with it("should show tickets and backlog items alike as the board's cards"):
-            expect([card.title for card in self.board.cards]).to(equal(["Pet visits", "Sign up", "Browse pets", "Returns and refunds"]))
+            expect([card.title for card in self.board.cards]).to(equal(["main", "Pet visits", "Sign up", "Browse pets", "Returns and refunds"]))
 
         with it("should count both a ticket and a backlog item as a card"):
             expect(all(isinstance(card, Card) for card in self.board.cards)).to(be_true)
 
         with it("should give each card one column"):
-            expect([card.column.name for card in self.board.cards]).to(equal(["Discovery", "Discovery", "Complete", "Backlog"]))
+            expect([card.column.name for card in self.board.cards]).to(equal(["Discovery", "Discovery", "Discovery", "Complete", "Backlog"]))
 
         with it("should list every column with its tickets or items"):
             expect([column["name"] for column in data_of(self.board)["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
@@ -224,7 +224,7 @@ with description("a board") as self:
 
         with it("should send each card's title and last activity, whether a ticket or a backlog item"):
             sent = [data_of(card) for card in self.board.cards]
-            expect([(bool(card["title"]), "last_activity" in card) for card in sent]).to(equal([(True, True)] * 4))
+            expect([(bool(card["title"]), "last_activity" in card) for card in sent]).to(equal([(True, True)] * 5))
 
     # (S) Person --> Open Help
     with context("with help open on a fidelity the catalog has no page for"):
@@ -356,7 +356,7 @@ with description("a backlog item") as self:
             expect(self.board.backlog_items[0].text).to(equal("Book a vet visit online."))
 
         with it("should be off the stages"):
-            expect(names(self.board.tickets)).to(equal([]))
+            expect(names(self.board.tickets)).to(equal(["main"]))
 
 GENERATE_STORY_MAP = "generate /work, /work/docs stories story_map markdown stories no-chat"
 VALIDATE_STORY_MAP_WITH_VIOLATIONS = "validate Stories story_map graph-rule actor-named-in-step map.md:12 no-chat"

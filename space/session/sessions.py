@@ -142,8 +142,9 @@ class Sessions:
         return next((folder for folder in candidates if (folder / SESSION_FILE).is_file()), preferred)
 
     def all(self) -> list[Session]:
-        """The work sessions, open ones first then closed: not main, and not the folders the sessions share."""
-        return [self.load(folder) for folder in self._work_session_folders()]
+        """Every session the board shows: main first, the default session that works on the whole repository, then the
+        work sessions, open ones before closed; never the folders the sessions share."""
+        return [self.load(self.folder_of(MAIN_SESSION_NAME)), *(self.load(folder) for folder in self._work_session_folders())]
 
     def _work_session_folders(self) -> list[Path]:
         if not self.folder.is_dir():

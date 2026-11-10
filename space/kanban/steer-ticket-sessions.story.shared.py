@@ -178,7 +178,7 @@ def _(s):
 
     @s.but_("no new ticket is opened")
     def _(world):
-        expect(tickets_on(world.data_of(world.Board.load().show()))).to(equal([SIGN_UP_HELD.name]))
+        expect(tickets_on(world.data_of(world.Board.load().show()))).to(equal(["main", SIGN_UP_HELD.name]))
 
 
 @shared_stories.scenario("Open Ticket Session", "Open a new ticket")
@@ -312,9 +312,9 @@ def _(s):
     def _(world):
         expect(world.project.origin_log(CHECKOUT_FLOW.name)[0]).to(equal(LEAVE_SESSION_COMMIT))
 
-    @s.and_("no ticket is active")
+    @s.and_("main is the active ticket")
     def _(world):
-        expect_active(world.data_of(world.Board.load().show()), None)
+        expect_active(world.data_of(world.Board.load().show()), "main")
 
 
 @shared_stories.scenario("Close Active Session", "Commit the closed session's folder and return to main")
@@ -843,9 +843,9 @@ def _(s):
     def _(world):
         world.Board.load().open_main(leaving=["commit"])
 
-    @s.then("no ticket is active")
+    @s.then("main is the active ticket")
     def _(world):
-        expect(world.data_of(world.Board.load().overview())["active"]).to(be_none)
+        expect_active(world.data_of(world.Board.load().overview()), "main")
 
     @s.and_("the checkout is on main")
     def _(world):
@@ -866,9 +866,9 @@ def _(s):
     def _(world):
         world.Board.load().open_main(leaving=["delete_branch"])
 
-    @s.then("no ticket is active")
+    @s.then("main is the active ticket")
     def _(world):
-        expect(world.data_of(world.Board.load().overview())["active"]).to(be_none)
+        expect_active(world.data_of(world.Board.load().overview()), "main")
 
     @s.and_("the checkout-flow branch is gone")
     def _(world):
@@ -889,9 +889,9 @@ def _(s):
     def _(world):
         world.Board.load().open_main(leaving=[])
 
-    @s.then("no ticket is active")
+    @s.then("main is the active ticket")
     def _(world):
-        expect(world.data_of(world.Board.load().overview())["active"]).to(be_none)
+        expect_active(world.data_of(world.Board.load().overview()), "main")
 
     @s.and_("checkout-flow's worktree is still there")
     def _(world):
@@ -916,9 +916,9 @@ def _(s):
     def _(world):
         expect(world.project.git("rev-parse", "--abbrev-ref", "HEAD")).to(equal("main"))
 
-    @s.and_("no ticket is active")
+    @s.and_("main is the active ticket")
     def _(world):
-        expect(world.data_of(world.Board.load().overview())["active"]).to(be_none)
+        expect_active(world.data_of(world.Board.load().overview()), "main")
 
 
 @shared_stories.scenario("Activate Ticket", "Delete the worktree left")

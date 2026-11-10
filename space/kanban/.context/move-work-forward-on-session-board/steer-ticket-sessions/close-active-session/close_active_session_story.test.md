@@ -17,7 +17,7 @@
 *When* the Person confirms
 *Then* checkout-flow shows in Complete and is selected
 *And* a toast says Checkout flow: committed, pushed · Session Checkout flow closed
-*And* no ticket is active
+*And* main is the active ticket
 
 #### Scenario: Complete a ticket that has no branch of its own
 

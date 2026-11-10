@@ -44,7 +44,7 @@ with story("Close Active Session"):
             pass
         with and_("a toast says Checkout flow: committed, pushed · Session Checkout flow closed"):
             pass
-        with and_("no ticket is active"):
+        with and_("main is the active ticket"):
             pass
     with scenario("Commit the closed session's folder and return to main"):
         # Evidence: observed: e2e-report B4 — the close commit was made before the session folder moved to .sessions/_complete/, so the move stayed uncommitted, and the closed ticket's branch stayed checked out.
@@ -71,7 +71,7 @@ with story("Close Active Session"):
             pass
         with then("the checkout is back on main"):
             pass
-        with and_("no ticket is active"):
+        with and_("main is the active ticket"):
             pass
     with scenario("Offer to commit a branch open in its worktree"):
         # Evidence: observed: e2e-report B3 — the close dialog said "branch none yet" for a ticket whose branch exists in a worktree, and labelled the choices with the ticket title.

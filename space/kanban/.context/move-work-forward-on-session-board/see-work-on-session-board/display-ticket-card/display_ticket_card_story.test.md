@@ -6,9 +6,9 @@
 
 *Given* the [repository](../../../kanban-model.md#repo)'s .sessions/ holds the work [sessions](../../../kanban-model.md#session) pet-visits and sign-up, the closed session browse-pets, main, and the archived session old-spike
 *When* the session board reads the [board](../../../kanban-model.md#board)
-*Then* the Discovery [stage](../../../kanban-model.md#stage--column) shows the [tickets](../../../kanban-model.md#ticket--card) Pet visits and Sign up
+*Then* the Discovery [stage](../../../kanban-model.md#stage--column) shows the [tickets](../../../kanban-model.md#ticket--card) main, Pet visits, and Sign up
 *And* the Complete [column](../../../kanban-model.md#column) shows Browse pets
-*But* main and old-spike are not on the board
+*But* old-spike is not on the board
 
 #### Scenario: Place a ticket in the stage of its latest move
 

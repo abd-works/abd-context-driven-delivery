@@ -20,7 +20,7 @@ with story("Open Main Session"):
             # Board -> Branch(main).check_out()
             # Board -> Sessions.switch('main')
             pass
-        with then("no ticket is active"):
+        with then("main is the active ticket"):
             pass
         with and_("the checkout is on main"):
             pass
@@ -35,7 +35,7 @@ with story("Open Main Session"):
             # Board -> Ticket.leave_for_another(['delete_branch'])
             # Ticket -> Ticket.close(['delete_branch'])
             pass
-        with then("no ticket is active"):
+        with then("main is the active ticket"):
             pass
         with and_("the checkout-flow branch is gone"):
             pass
@@ -48,7 +48,7 @@ with story("Open Main Session"):
         with when("the Person opens main with nothing chosen"):
             # Person -> Board.open_main(leaving=[])
             pass
-        with then("no ticket is active"):
+        with then("main is the active ticket"):
             pass
         with and_("checkout-flow's worktree is still there"):
             pass

@@ -23,7 +23,7 @@ with story("Open Board"):
             # Board page -> Chat.list()
             # Chat <- the chats whose cdd-board mod checked in lately
             pass
-        with then("the header reads cdd-board-surface-fixture · 9 tickets · active: Checkout flow"):
+        with then("the header reads cdd-board-surface-fixture · 10 tickets · active: Checkout flow"):
             pass
         with and_("the session board reads the [board](../../../.context/kanban-model.md#board) again every two seconds"):
             pass

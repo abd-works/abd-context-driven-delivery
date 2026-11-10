@@ -29,6 +29,7 @@ from space.kanban.report import Report, ReportFile
 from space.kanban.ticket_checkout import LEAVE_DELETE_BRANCH, LeaveChoices, OpenChoices, TicketCheckout
 from space.repo.repo import Branch
 from space.session import Session
+from space.session.session import MAIN_SESSION_NAME
 from space.session.session_log import LogEntry
 from space.session.file_manager import FileEntry
 
@@ -41,6 +42,13 @@ MARKED_DONE = "done"
 MARKED_IN_PROGRESS = "in-progress"
 # The actions that check or convert a fidelity's output, so they wait until there is some.
 ONCE_THERE_IS_OUTPUT = (VALIDATE, REVIEW, RENDER)
+
+
+class MainStaysOpenError(ValueError):
+    """Raised when a tool would close, archive, or shelve main, the default session, which stays on the board."""
+
+    def __init__(self, action: str) -> None:
+        super().__init__(f"main is the default session and stays open; it cannot {action}")
 
 
 class TicketNotFoundError(LookupError):
@@ -109,6 +117,13 @@ class Ticket(Card):
         return self.checkout.work_branch
 
     @property
+    @data_field
+    def is_main(self) -> bool:
+        """Whether this is main, the default session on the repository's own folder: it opens with board.open_main and
+        never closes, archives, or goes to the Backlog."""
+        return self.name == MAIN_SESSION_NAME
+
+    @property
     def title(self) -> str:
         return self._session.title or self._session.name
 
@@ -153,6 +168,8 @@ class Ticket(Card):
         """The columns besides the stages a person can drop it on. The Backlog takes any ticket, which keeps its whole
         folder there. Complete takes one from Implementation's Done, or the active ticket through its Close dialog,
         because closing it asks what to do with its work."""
+        if self.is_main:
+            return []
         final = self._board.stages[-1]
         closes = not self.is_closed and (self.is_active or (self.column is final and self.is_done))
         return [BACKLOG_COLUMN, *([COMPLETE_COLUMN] if closes else [])]
@@ -282,20 +299,22 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def move_next(self) -> Ticket:
-        """Move ticket on: from In progress to its stage's Done, from Done to the next column, whatever its work. Out of Implementation it closes."""
+        """Move ticket on: from In progress to its stage's Done, from Done to the next column, whatever its work. Out of Implementation it closes, but main, the default session, stays in Implementation's Done."""
         column = self.column
         if not isinstance(column, Stage):
             return self
         if not self.is_done:
             return self.marks.mark(MARKED_DONE, column)
         following = column.next_stage
+        if following is None and self.is_main:
+            return self
         return self.marks.enter(following) if following else self.close()
 
     @mcp
     @agent_tool
     @noSessionLog
     def move_previous(self) -> Ticket | BacklogItem:
-        """Move ticket back: from Done to its stage's In progress, from In progress to the previous column's Done. Out of Complete it reopens in Implementation; out of Discovery it goes to the Backlog with its work."""
+        """Move ticket back: from Done to its stage's In progress, from In progress to the previous column's Done. Out of Complete it reopens in Implementation; out of Discovery it goes to the Backlog with its work, but main stays in Discovery."""
         column = self.column
         if not isinstance(column, Stage):
             reopened, final = self._board.ticket_of(self._session.reopen()), self._board.stages[-1]
@@ -304,6 +323,8 @@ class Ticket(Card):
         if self.is_done:
             return self.marks.mark(MARKED_IN_PROGRESS, column)
         earlier = column.previous_stage
+        if earlier is None and self.is_main:
+            return self
         return self.marks.place(earlier, MARKED_DONE) if earlier else self._return_to_backlog()
 
     @mcp
@@ -323,6 +344,8 @@ class Ticket(Card):
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
         """Close ticket: its session ends, its folder moves to _complete/, it shows in Complete, and main opens, the default branch in the repository's own folder. leaving names what to do with its work first: handoff, commit, push, merge, delete_branch, delete_worktree."""
+        if self.is_main:
+            raise MainStaysOpenError("close")
         chosen = leaving or []
         self.checkout.write_handoff(chosen)
         # A worktree something still holds open fails to delete; deleting it first stops the close with nothing changed.
@@ -338,7 +361,9 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def archive(self) -> Ticket:
-        """Archive ticket: its session ends, its folder moves to _archive/, and it leaves the board."""
+        """Archive ticket: its session ends, its folder moves to _archive/, and it leaves the board. Main never archives."""
+        if self.is_main:
+            raise MainStaysOpenError("archive")
         self._session.close()
         return self._board.ticket_of(self._session.move_to_archive())
 
@@ -354,6 +379,8 @@ class Ticket(Card):
     def _return_to_backlog(self) -> BacklogItem:
         """Into the Backlog from any column: its session closes and its whole folder becomes a backlog item, so starting
         the item brings the ticket back with its work."""
+        if self.is_main:
+            raise MainStaysOpenError("go to the Backlog")
         self._session.close()
         kept_in_backlog = self._board.ticket_of(self._session.move_to_backlog())
         item = self._board.backlog_item_of(kept_in_backlog)

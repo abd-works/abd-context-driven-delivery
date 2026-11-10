@@ -229,7 +229,7 @@ class Board:
     @property
     @data_field
     def active(self) -> Ticket | None:
-        """The ticket of the session saved as open; none while main is, since main is not on the board. Sent whole, so
+        """The ticket of the session saved as open, main's own ticket while main is. Sent whole, so
         a reader such as the chat bar draws the active session from it without finding the ticket again by its name."""
         return self.ticket(self.sessions.open_name)
 
@@ -241,8 +241,8 @@ class Board:
 
     def ticket(self, name: str) -> Ticket | None:
         """The ticket called name, open before closed, read from its own session folder: a tool names one ticket, so
-        the board reads no other session to find it. The main session works on the whole repository and is no ticket."""
-        session = self.sessions.named(name) if name != MAIN_SESSION_NAME else None
+        the board reads no other session to find it. Main, the default session, is a ticket like any other."""
+        session = self.sessions.named(name)
         return self.make_ticket(session) if session is not None else None
 
     def backlog_item(self, title: str) -> BacklogItem | None:
@@ -269,7 +269,7 @@ class Board:
     def open_main(self, leaving: list[str] | None = None) -> BoardOverview:
         """Open main, the default session: leave the active ticket first, doing what leaving names with its work (handoff, commit, push, merge, delete_branch, delete_worktree), then put the repository's own folder on the default branch. Returns the board as overview does."""
         active = self.active
-        if active is not None:
+        if active is not None and active.name != MAIN_SESSION_NAME:
             active.leave_for_another(leaving or [])
         default = self.repo.branch_named(self.repo.default_branch)
         if not default.is_checked_out:

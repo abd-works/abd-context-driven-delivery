@@ -79,7 +79,7 @@ Requested 2026-11-09: leaving a session offers delete branch whenever its branch
 
 ### (S) Person --> [Open Main Session](move-work-forward-on-session-board/steer-ticket-sessions/open-main-session/open_main_session_story.test.md)
 
-Requested 2026-11-09: main is the default session, listed first in the chat bar's sessions. `Board.open_main` leaves the active ticket as the person chose, puts the repository's own folder on the default branch, and opens main; closing a ticket opens main the same way.
+Requested 2026-11-09: main is the default session, listed first in the chat bar's sessions. `Board.open_main` leaves the active ticket as the person chose, puts the repository's own folder on the default branch, and opens main; closing a ticket opens main the same way. Requested 2026-11-09: main is a ticket on the board like any other, in its stage's column (Discovery while it has no work), with the practices its session.json names; it never closes, archives, or goes to the Backlog.
 
 ### (S) Person --> [Write Ticket Handoff](move-work-forward-on-session-board/steer-ticket-sessions/write-ticket-handoff/write_ticket_handoff_story.test.md)
 

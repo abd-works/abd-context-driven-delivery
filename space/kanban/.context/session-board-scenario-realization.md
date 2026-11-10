@@ -2161,7 +2161,7 @@ it should show the board of the whole checkout, where sessions keep their folder
 #### with no session saved as open
 
 ```
-it should have no active ticket, since main is not on the board
+it should make main the active ticket
 -> Board.active
   -> Sessions.of_project(project).current()
   <- Session
@@ -3235,7 +3235,7 @@ it should show the ticket in Complete
 ##### that closes the active ticket
 
 ```
-it should leave no ticket active
+it should make main the active ticket
 -> Ticket.close(ticket="pet-visits")
   -> Session.close()
   -> Session.move_to_closed()
