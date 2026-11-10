@@ -179,7 +179,7 @@ export class MoveRefused {
 // carrying the server's own text. Every call names the folder the chat works in now as chat_folder, so the server reads
 // the sessions of that folder's branch and worktree, not of the folder the chat connected from.
 export async function callTool<T>($: EngineInterface, tool: string, args: object): Promise<T> {
-  const result = await $.mcp.call(SERVER, tool, { ...args, chat_folder: await $.session.cwd() })
+  const result = await $.mcp.call(SERVER, tool, { ...args, chat_folder: await $.session.root() })
   const text = result.content[0]?.text ?? ''
   if (result.isError) throw new CddToolFailed(tool, text || `${tool} failed`)
   try {

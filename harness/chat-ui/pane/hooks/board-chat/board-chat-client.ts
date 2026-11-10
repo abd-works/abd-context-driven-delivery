@@ -60,7 +60,7 @@ async function run($: EngineInterface, chat: string, command: ChatCommandData): 
 // Checks in through the board, which runs chat.check_in on the cdd server every chat shares. The folder the chat works in
 // lets the board find a ticket's chat: the one working in the ticket's worktree.
 export async function checkIn($: EngineInterface, chat: string): Promise<void> {
-  const answer = await post($, { chat, operation: 'check-in', body: { is_busy: isChatBusy(), name: currentChatName(), folder: await $.session.cwd() } })
+  const answer = await post($, { chat, operation: 'check-in', body: { is_busy: isChatBusy(), name: currentChatName(), folder: await $.session.root() } })
   if (!answer.ok) return
   for (const command of JSON.parse(answer.text) as ChatCommandData[]) await run($, chat, command)
 }

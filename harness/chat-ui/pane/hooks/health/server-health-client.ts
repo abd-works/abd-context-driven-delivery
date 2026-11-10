@@ -97,7 +97,7 @@ export async function hideDetails($: EngineInterface): Promise<void> {
 export async function runInstall($: EngineInterface): Promise<void> {
   await update($, install, () => ({ state: 'running', error: null }))
   try {
-    const folder = await $.session.cwd()
+    const folder = await $.session.root()
     const run = await $.process.run([...(await installCommand($)), folder], { cwd: folder, timeoutMs: INSTALL_TIMEOUT_MS })
     await update($, install, () => (run.exitCode === 0 ? { state: 'installed', error: null } : { state: 'failed', error: lastLines(run.stderr) }))
   } catch (failure) {

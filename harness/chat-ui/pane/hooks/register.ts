@@ -6,7 +6,7 @@ import { readName } from './board-chat/chat-name'
 import { openedBoard } from './board-chat/board-server'
 import { currentChatBar, refreshChatBar } from './chat-bar/chat-bar-client'
 import { ChatBarView } from './chat-bar/chat-bar-view'
-import { checkChatFolder, currentChatFolder, folderAdded } from './chat-bar/chat-folder-client'
+import { checkChatFolder } from './chat-bar/chat-folder-client'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
 import { currentFidelityFiles, FILES_PANE, forgetFiles } from './chat-bar/fidelity-files-client'
@@ -71,12 +71,6 @@ export const register: Register = on => {
 
   on('command.run', { command: 'board' }, async $ => ({ text: await openedBoard($) }))
 
-  // The desktop app may answer a move by adding the folder beside the session's own; the chat bar counts that as there.
-  on('classic.DirectoryAdded', async ($, e, next) => {
-    await folderAdded($, e.directory)
-    return next(e)
-  })
-
   on('turn.start', async ($, e, next) => {
     if (!e.agentId) turnStarted()
     return next(e)
@@ -122,7 +116,6 @@ export const register: Register = on => {
       chatBar: await currentChatBar($),
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
-      folder: await currentChatFolder($),
       busy: await currentBusy($),
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
       width: e.props.bodyColumns,

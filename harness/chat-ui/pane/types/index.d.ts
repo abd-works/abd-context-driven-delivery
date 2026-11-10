@@ -50,9 +50,8 @@ export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: 
 
 // Where this chat works (its session root) and where the active session's work is (its ticket's worktree, else the
 // main checkout), so the band can say when they differ.
-// added: the folders the app added beside the session's own (the desktop app adds one where a move does not change
-// the session's folder), so a chat counts as in a folder it was added to.
-export type ChatFolderJson = { current: string; expected: string; added: string[] }
+// asked: the folder the chat bar last asked the chat to move to by itself, so it asks once for each new folder.
+export type ChatFolderJson = { current: string; expected: string; asked: string }
 
 // What the chat bar is doing while a switch or close runs, which the band shows with a turning wheel; empty when idle.
 export type BusyJson = { doing: string; frame: number }

@@ -1,11 +1,10 @@
 import type { EngineInterface } from 'claude-code'
 
-import type { ActionPickerJson, ChatBarViewJson, ChatFolderJson } from '../../types'
+import type { ActionPickerJson, ChatBarViewJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { GlyphButtonView } from '../shared/glyph-button-view'
 import { ActionButtonView, PickerView } from './action-button-view'
 import { askChatToFix, dismissFailure, fixFailure, runHandoff, type ChatBarClient } from './chat-bar-client'
-import { followSession } from './chat-folder-client'
 import { openFiles, openReport } from './fidelity-files-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
@@ -22,7 +21,6 @@ export type ChatBarDraw = {
   chatBar: ChatBarClient
   view: ChatBarViewJson
   picker: ActionPickerJson
-  folder: ChatFolderJson & { isElsewhere: boolean }
   busy: { doing: string; wheel: string }
   health: { band: unknown; panel: unknown }
   width: number
@@ -131,18 +129,6 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
   )
 }
 
-// This chat works in another folder than the active session's work, as after a switch made on the board or in another
-// chat: the band says so and moves it on a press.
-function ElsewhereView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar, folder }: ChatBarDraw) {
-  if (!folder.isElsewhere) return null
-  return (
-    <Box key="elsewhere" flexDirection="row" gap={1} alignItems="center">
-      <Text color={BRAND.error}>{`This chat works in ${folder.current}; ${chatBar.sessionName || 'the open session'} works in ${folder.expected}.`}</Text>
-      <Button key="follow-session" label="Move this chat there" onPress={() => followSession($, chatBar)} />
-    </Box>
-  )
-}
-
 // The board did not answer, in red above the line, with Fix to send it to the chat; the next read that works clears it.
 function ProblemView($: EngineInterface, { Box, Button, Text }: ElementTable, shown: string) {
   return (
@@ -176,7 +162,6 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {chatBar.problem ? ProblemView($, elements, `The board did not answer: ${chatBar.problem}`) : null}
       {FailureView($, elements, draw)}
       {draw.busy.doing ? <Text key="busy" color={BRAND.accent}>{`${draw.busy.wheel} ${draw.busy.doing}…`}</Text> : null}
-      {ElsewhereView($, elements, draw)}
       {CloseView($, elements, draw)}
       {ActivateView($, elements, draw)}
       {SessionListView($, elements, draw)}
